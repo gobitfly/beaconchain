@@ -1,0 +1,15 @@
+:root {
+  --grey_1: #e9e9e9;
+  --grey_4: #f4f4f4;
+  --light_grey: #f0f0f0;
+  --almost-black: #232024;
+  --light_black: #2a262c;
+
+  --page-background-color: var(--grey_1);
+  --text-color: var(--light_black);
+
+  &.dark-mode {
+    --page-background-color: var(-almost-black);
+    --text-color: #2a262c;
+  }
+}
