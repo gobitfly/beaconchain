@@ -4,7 +4,10 @@ export default defineI18nConfig(() => ({
   messages: {
     en: {
       login: {
-        title: 'Login'
+        password: 'Password',
+        submit: 'Login',
+        title: 'Login',
+        email: 'Email address'
       }
     }
   }

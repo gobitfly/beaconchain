@@ -1,14 +1,13 @@
 <script setup lang="ts">
+
 </script>
 
 <template>
-  <div>
+  <div class="min-h-full">
     <NuxtPage />
+    <BcMainFooter />
   </div>
 </template>
 
 <style lang="scss">
-@import "./assets/css/colors.scss";
-@import "./assets/css/global.scss";
-
 </style>

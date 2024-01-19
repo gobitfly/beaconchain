@@ -1,0 +1,15 @@
+@import "./colors.scss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  margin: 0;
+  padding: 0;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--page-background-color);
+  color: var(--text-color);
+}
