@@ -5,7 +5,6 @@
 <template>
   <div class="min-h-full">
     <NuxtPage />
-    <BcMainFooter />
   </div>
 </template>
 

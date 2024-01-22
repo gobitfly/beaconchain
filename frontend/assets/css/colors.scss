@@ -5,11 +5,11 @@
   --almost-black: #232024;
   --light_black: #2a262c;
 
-  --page-background-color: var(--grey_1);
+  --background-color: var(--grey_1);
   --text-color: var(--light_black);
 
   &.dark-mode {
-    --page-background-color: var(--almost-black);
+    --background-color: var(--almost-black);
     --text-color:  var(--light_grey);
   }
 

@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { useLatestState } from '~/stores/latestState'
+import { useLatestState } from '~/stores/useLatestState'
 
-const { latest, getLatestState } = useLatestState()
-const { data: latestTest } = await useAsyncData('latest_state', () => getLatestState())
+const { getLatestState } = useLatestState()
+const { error } = await useAsyncData('latest_state', () => getLatestState())
+
 </script>
 <template>
-  <div>
-    test: {{ latestTest?.currentEpoch }}
-    Current Epoch: {{ latest?.currentEpoch }}
+  <BcPageWrapper>
+    {{ error }}
     <NuxtLink to="/login" class="test-link">
       Login
     </NuxtLink>
-  </div>
+  </BcPageWrapper>
 </template>
 
 <style lang="scss" scoped>

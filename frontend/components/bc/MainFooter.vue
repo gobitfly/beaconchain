@@ -15,5 +15,7 @@
   right: 0;
   display: flex;
   justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 </style>
