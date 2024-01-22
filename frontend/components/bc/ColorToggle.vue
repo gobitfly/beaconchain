@@ -7,7 +7,7 @@ const toggleTheme = () => {
 
 </script>
 <template>
-  <Button :label="`toggle: ${colorMode.value}`" @click="toggleTheme" />
+  <Button :label="`toggle: ${colorMode.value}`" size="small" @click="toggleTheme" />
 </template>
 
 <style lang="scss" scoped>

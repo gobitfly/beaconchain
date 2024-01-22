@@ -1,5 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import path from 'path'
+// import path from 'path'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -11,7 +11,7 @@ export default defineNuxtConfig({
       apiServerV1: process.env.API_SERVER_V1
     }
   },
-  css: ['~/assets/css/main.scss'],
+  css: ['~/assets/css/colors.scss', '~/assets/css/main.scss', '~/assets/css/prime.scss'],
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/eslint-module',
@@ -20,8 +20,7 @@ export default defineNuxtConfig({
       storesDirs: ['./stores/**']
     }],
     ['nuxt-primevue', {
-      unstyled: true,
-      importPT: { from: path.resolve(__dirname, './presets/lara/') } // import and apply preset
+      /* unstyled: true */
     }]
   ],
   typescript: {
@@ -36,7 +35,6 @@ export default defineNuxtConfig({
   },
   postcss: {
     plugins: {
-      tailwindcss: {},
       autoprefixer: {}
     }
   }

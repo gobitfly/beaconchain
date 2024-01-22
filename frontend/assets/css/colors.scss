@@ -4,13 +4,19 @@
   --light_grey: #f0f0f0;
   --almost-black: #232024;
   --light_black: #2a262c;
+  --primary-color: #F89811;
+  --primary-contrast-color: var(--grey_4);
 
   --background-color: var(--grey_1);
   --text-color: var(--light_black);
+  --text-color-inverted: var(--light_grey);
 
   &.dark-mode {
+    --primary-color: #FFAA31;
+    --primary-contrast-color: var(--light_black);
     --background-color: var(--almost-black);
     --text-color:  var(--light_grey);
+    --text-color-inverted: var(--light_black);
   }
 
 
