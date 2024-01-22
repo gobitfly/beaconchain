@@ -9,13 +9,10 @@ export const useLatestState = defineStore('latest-state-store', () => {
   const reactiveState = reactive(latestState)
   async function getLatestState () {
     if (process.server) {
-      console.log('store before update', latestState.value)
       const res = await useCustomFetch<LatestState>('/latestState')
       latestState.value = res
-      console.log('we are on the client', latestState.value)
     } else {
       // TODO remove this once we can load the data also from the client
-      console.log('we are on the client and have cors issues', latestState.value)
     }
     return latestState.value
   }
