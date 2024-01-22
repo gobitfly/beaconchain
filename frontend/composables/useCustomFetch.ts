@@ -37,6 +37,6 @@ export function useCustomFetch<T> (pathName: string, options: NitroFetchOptions<
   const url = useRequestURL()
   const { public: { apiClientV1 } } = useRuntimeConfig()
   const path = mockedPaths[pathName] ? `${pathName}.json` : pathName
-  const baseURL = mockedPaths[pathName] ? `${url.protocol}${url.host}/mock` : apiClientV1
+  const baseURL = mockedPaths[pathName] ? process.server ? `${url.protocol}${url.host}/mock` : './mock' : apiClientV1
   return $fetch<T>(path, { ...options, baseURL })
 }

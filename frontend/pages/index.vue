@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { useLatestState } from '~/stores/useLatestState'
-
-const { getLatestState } = useLatestState()
-const { error } = await useAsyncData('latest_state', () => getLatestState())
+const latestStateStore = useLatestState()
+const { getLatestState } = latestStateStore
+await useAsyncData('latest_state', () => getLatestState())
 
 </script>
 <template>
   <BcPageWrapper>
-    {{ error }}
     <NuxtLink to="/login" class="test-link">
       Login
     </NuxtLink>
+    <Button label="test" @click="()=>getLatestState()" />
   </BcPageWrapper>
 </template>
 
