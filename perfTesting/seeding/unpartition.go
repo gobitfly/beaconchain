@@ -53,7 +53,7 @@ func (*SeederUnpartitioned) CreateSchema(s *Seeder) error {
 	}
 
 	_, err = db.DB.Exec(fmt.Sprintf(`
-		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s (epoch, validatorindex)
+		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s using BRIN (epoch, validatorindex)
 	`, s.TableName))
 	if err != nil {
 		return err

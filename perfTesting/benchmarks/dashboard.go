@@ -32,16 +32,21 @@ func (b *Benchmarker) RunRandomValis(validatorAmount int, epochs int) {
 		epoch = ""
 	}
 
+	/*
+		SELECT
+					sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards
+				FROM %s
+				WHERE validatorindex IN (
+					select * from create_random_series_big(%d, %d)
+				) %s
+	*/
 	query := fmt.Sprintf(`
 		SELECT 
-			epoch, 
-			validatorindex, 
 			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards 
 		FROM %s
 		WHERE validatorindex IN (
 			%s
 		) %s
-		GROUP BY epoch, validatorindex
 	`, b.TableName, createRandomSeries(validatorAmount, b.ValidatorsInDB-1), epoch)
 
 	err := db.DB.Select(&data, query)
@@ -49,10 +54,41 @@ func (b *Benchmarker) RunRandomValis(validatorAmount int, epochs int) {
 		panic(err)
 	}
 
-	if len(data) != validatorAmount*epochs {
+	if len(data) != 1 { // validatorAmount*epochs
 		panic(fmt.Sprintf("Expected %d rows, got %d", validatorAmount*epochs, len(data)))
 	}
 }
+
+/*
+CREATE OR REPLACE FUNCTION create_random_series_big(amount INT, max INT)
+RETURNS SETOF INT AS $$
+DECLARE
+    start INT := floor(random() * max)::INT;
+    count INT := 0;
+    rrange INT := floor(max / amount) - 1;
+BEGIN
+    FOR i IN 1..amount LOOP
+        -- Avoid division by zero
+        IF rrange <= 1 THEN
+            RAISE EXCEPTION 'Invalid input: amount too large for the given max value';
+        END IF;
+
+        -- Generate random number and return it
+        start := (start + 1 + floor(random() * (rrange - 1)))::INT % max;  -- Update start
+        RETURN NEXT start;
+        count := count + 1;
+
+        -- Check if enough numbers generated
+        IF count = amount THEN
+            EXIT;
+        END IF;
+    END LOOP;
+
+    -- No need for a final RETURN since we use RETURN NEXT within the loop
+END;
+$$ LANGUAGE plpgsql;
+
+*/
 
 func createRandomSeries(amount, max int) string {
 

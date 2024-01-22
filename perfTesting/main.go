@@ -43,7 +43,7 @@ func main() {
 		err = RunBenchmark(tableName)
 	case "seed":
 		//seeder := seeding.GetUnpartitioned(tableName)
-		seeder := seeding.GetSeederPartitionEpoch(tableName, 225, true)
+		seeder := seeding.GetSeederPartitionEpoch(tableName, 100, true)
 		//seeder := seeding.GetSeederPartitionHashIndex(tableName, 64, true)
 
 		//seeder := seeding.GetSeederPartitionExotic(tableName, 30, 6, true)
