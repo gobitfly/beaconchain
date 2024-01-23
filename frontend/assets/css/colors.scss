@@ -1,47 +1,41 @@
 :root {
-  --grey_1: #e9e9e9;
-  --grey_4: #f4f4f4;
-  --light_grey: #f0f0f0;
+  --grey-1: #e9e9e9;
+  --grey-4: #f4f4f4;
+  --light-grey: #f0f0f0;
+  --light-grey-3: #D3D3D3;
+  --dark-grey: #5C4E4E;
   --almost-black: #232024;
-  --light_black: #2a262c;
+  --light-black: #2a262c;
+  --dark-blue: #2F2E42;
+  --purple-blue: #3E4461;
   --primary-color: #F89811;
-  --primary-contrast-color: var(--grey_4);
+  --blue: #2E82AE;
+  --light-blue: #66BCE9;
 
-  --background-color: var(--grey_1);
-  --text-color: var(--light_black);
-  --text-color-inverted: var(--light_grey);
+  --primary-contrast-color: var(--grey-4);
+
+  --background-color: var(--grey-1);
+  --text-color: var(--light-black);
+  --text-color-inverted: var(--light-grey);
+
+  --container-background: var(--grey-4);
+  --container-color: var(--Light-Black);
+  --container-border-color: var(--light-grey-3);
+
+  --link-color: var(--blue);
 
   &.dark-mode {
     --primary-color: #FFAA31;
-    --primary-contrast-color: var(--light_black);
+    --primary-contrast-color: var(--light-black);
     --background-color: var(--almost-black);
-    --text-color:  var(--light_grey);
-    --text-color-inverted: var(--light_black);
+    --text-color:  var(--light-grey);
+    --text-color-inverted: var(--light-black);
+
+
+    --container-background: var(--light-black);
+    --container-color: var(--grey-4);
+    --container-border-color: var(--dark-grey);
+
+    --link-color: var(--blue);
   }
-
-
-  // primeVue color palete
-  --primary-50: 236 253 245;
-  --primary-100: 209 250 229;
-  --primary-200: 167 243 208;
-  --primary-300: 110 231 183;
-  --primary-400: 52 211 153;
-  --primary-500: 16 185 129;
-  --primary-600: 5 150 105;
-  --primary-700: 4 120 87;
-  --primary-800: 6 95 70;
-  --primary-900: 4 78 56;
-  --primary-950: 2 44 34;
-  --surface-0: 255 255 255;
-  --surface-50: 248 250 252;
-  --surface-100: 241 245 249;
-  --surface-200: 226 232 240;
-  --surface-300: 203 213 225;
-  --surface-400: 148 163 184;
-  --surface-500: 100 116 139;
-  --surface-600: 71 85 105;
-  --surface-700: 45 55 72;
-  --surface-800: 30 41 59;
-  --surface-900: 15 23 42;
-  --surface-950: 3 6 23;
 }

@@ -11,7 +11,7 @@ export default defineNuxtConfig({
       apiServerV1: process.env.API_SERVER_V1
     }
   },
-  css: ['~/assets/css/colors.scss', '~/assets/css/main.scss', '~/assets/css/prime.scss'],
+  css: ['~/assets/css/main.scss', '~/assets/css/prime.scss'],
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/eslint-module',

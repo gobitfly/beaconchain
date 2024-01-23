@@ -1,7 +1,6 @@
-@import "./colors.scss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "~/assets/css/colors.scss";
+@import "~/assets/css/variables.scss";
+@import "~/assets/fonts/fonts.scss";
 
 html {
   margin: 0;
@@ -12,4 +11,16 @@ body {
   padding: 0;
   background-color: var(--background-color);
   color: var(--text-color);
+  font-family: var(--roboto-family); 
+  font-weight: var(--roboto-regular);
+}
+
+a {
+  color: inherit;
+  &:hover{
+    opacity: 0.9;
+  }
+  &.link{
+    color: var(--link-color);
+  }
 }
