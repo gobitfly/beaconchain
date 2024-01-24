@@ -2,8 +2,9 @@
 import { useToast } from 'primevue/usetoast'
 import { useField, useForm } from 'vee-validate'
 import { computed } from 'vue'
+import { useUserStore } from '~/stores/useUserStore'
 
-const { public: { apiClientV1 } } = useRuntimeConfig()
+const { doLogin } = useUserStore()
 
 const { handleSubmit, resetForm, errors, values } = useForm()
 const { value: email } = useField('email', validateField)
@@ -28,15 +29,8 @@ const inputValid = computed(() => {
 
 const onSubmit = handleSubmit(async (values) => {
   if (inputValid.value) {
-    await $fetch('/login', {
-      body: {
-        email: values.email,
-        password: values.password
-      },
-      baseURL: apiClientV1,
-      method: 'POST',
-      referrerPolicy: 'origin-when-cross-origin'
-    })
+    await doLogin(values.email, values.password)
+
     toast.add({ severity: 'info', summary: 'Form Submitted', detail: `user: ${values.email} pw: ${values.password}`, life: 3000 })
     resetForm()
   }

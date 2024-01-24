@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useLatestState } from '~/stores/useLatestState'
-const { getLatestState } = useLatestState()
+import { useLatestStateStore } from '~/stores/useLatestStateStore'
+const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
 
 </script>

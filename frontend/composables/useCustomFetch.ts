@@ -2,7 +2,8 @@ import type { NitroFetchOptions } from 'nitropack'
 // import { defu } from 'defu'
 
 const mockedPaths:Record<string, boolean> = {
-  '/latestState': true
+  '/latestState': false,
+  '/login': true
 }
 
 export function useCustomFetch<T> (pathName: string, options: NitroFetchOptions<string & {}> = {}): Promise<T> {

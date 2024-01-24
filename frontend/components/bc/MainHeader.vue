@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useLatestState } from '~/stores/useLatestState'
+import { useLatestStateStore } from '~/stores/useLatestStateStore'
 
-const { latest } = storeToRefs(useLatestState())
+const { latest } = storeToRefs(useLatestStateStore())
 
 </script>
 <template>
