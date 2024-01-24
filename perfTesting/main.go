@@ -6,20 +6,21 @@ import (
 	"perftesting/benchmarks"
 	"perftesting/db"
 	"perftesting/seeding"
+	"perftesting/seeding_strat_valepoch"
 	"time"
 )
 
 var CONF = GlobalConf{
 	// ---- Benchmark specific ---
-	BenchmarkDuration:    5 * time.Minute, // duration of benchmark
-	BenchUseLatestEpochs: true,            // -- if true it plays with non random epochs to see effects of caching
-	BenchLatestEpoch:     215,             // -- head epoch if BenchUseLatestEpochs is true
-	BenchEpochDepth:      6,               // how many epochs of data to return per vali
+	BenchmarkDuration:    20 * time.Minute, // duration of benchmark
+	BenchUseLatestEpochs: false,            // -- if true it plays with non random epochs to see effects of caching
+	BenchLatestEpoch:     215,              // -- head epoch if BenchUseLatestEpochs is true
+	BenchEpochDepth:      6,                // how many epochs of data to return per vali
 
 	// ---- Seeder specific ---
 	SeederValidatorsInDB: 1000000, // 1m valis
-	SeederEpochsInDB:     225,     // 1 day of data (or 225 days of aggregate data)
-	SeederNoOfPartitions: 10,      // unused right now
+	SeederEpochsInDB:     1,       // 1 day of data (or 225 days of aggregate data)
+	SeederNoOfPartitions: 70,      // unused right now
 }
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 		err = RunBenchmark(tableName)
 	case "seed":
 		//seeder := seeding.GetUnpartitioned(tableName)
-		seeder := seeding.GetSeederPartitionEpoch(tableName, 100, true)
+		seeder := seeding_strat_valepoch.GetSeederPartitionEpoch(tableName, CONF.SeederNoOfPartitions, true)
 		//seeder := seeding.GetSeederPartitionHashIndex(tableName, 64, true)
 
 		//seeder := seeding.GetSeederPartitionExotic(tableName, 30, 6, true)
@@ -67,13 +68,13 @@ func RunSeeder(tableName string, seeder *seeding.Seeder) error {
 	seeder.ValidatorsInDB = CONF.SeederValidatorsInDB
 
 	fmt.Printf("creating schema\n")
-	err := seeder.Schemer.CreateSchema(seeder)
+	err := seeder.CreateSchema()
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("seeding\n")
-	err = seeder.SeedRandomSampleData()
+	err = seeder.FillTable()
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,8 @@ func RunBenchmark(tableName string) error {
 		EpochDepth:      CONF.BenchEpochDepth,
 	}
 
-	benchmark.RunBenchmarkParallel(CONF.BenchmarkDuration)
+	//benchmark.RunBenchmarkParallel(CONF.BenchmarkDuration)
+	benchmark.RunBenchmarkDBKiller(CONF.BenchmarkDuration)
 	//benchmark.RunBenchmarkSequential(CONF.BenchmarkDuration / 8)
 	return nil
 }

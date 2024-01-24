@@ -3,6 +3,7 @@ package benchmarks
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -11,6 +12,44 @@ var reportMap map[string]Report
 var mutex sync.Mutex
 
 var initOffset = 0
+
+func (b *Benchmarker) RunBenchmarkDBKiller(duration time.Duration) {
+	reportMap = map[string]Report{}
+	runContext := getContext(duration)
+
+	// 10/s
+	// TODO change to 100ms
+	for i := 0; i < 10; i++ {
+		runContext.RunSingle("10 Validators", 1*time.Millisecond, func() { b.RunRandomValis(10, b.EpochDepth) })
+		runContext.RunSingle("100 Validators", 1*time.Millisecond, func() { b.RunRandomValis(100, b.EpochDepth) })
+		runContext.RunSingle("1000 Validators", 1*time.Millisecond, func() { b.RunRandomValis(1000, b.EpochDepth) }) // 100ms
+
+		// 5/s
+		runContext.RunSingle("10.000 Validators", 1*time.Millisecond, func() { b.RunRandomValis(10000, b.EpochDepth) })
+
+		if b.ValidatorsInDB > 100000 {
+			// 1/s
+			runContext.RunSingle("100.000 Validators", 1*time.Millisecond, func() { b.RunRandomValis(100000, b.EpochDepth) })
+
+			// 0.5/s
+			runContext.RunSingle("200.000 Validators", 1*time.Millisecond, func() { b.RunRandomValis(200000, b.EpochDepth) })
+		} else {
+			fmt.Println("!! Skipping 100.000 Validators")
+			fmt.Println("!! Skipping 200.000 Validators")
+		}
+	}
+
+	// 1/10m
+	runContext.RunSingle("ExporterAggr 6 Epochs", 5*time.Minute, func() { b.RunGetAllForExport(b.EpochDepth) })
+
+	runContext.RunSingle("ExporterAggr 31 Epochs", 5*time.Minute, func() { b.RunGetAllForExport(31) })
+
+	runContext.wg.Wait()
+
+	fmt.Println("\n== Benchmark finished ==")
+
+	printResult(duration)
+}
 
 func (b *Benchmarker) RunBenchmarkParallel(duration time.Duration) {
 	reportMap = map[string]Report{}
@@ -37,32 +76,15 @@ func (b *Benchmarker) RunBenchmarkParallel(duration time.Duration) {
 	}
 
 	// 1/10m
-	runContext.RunSingle("ExporterAggr 6 Epochs", 10*time.Minute, func() { b.RunGetAllForExport(6) })
+	runContext.RunSingle("ExporterAggr 6 Epochs", 10*time.Minute, func() { b.RunGetAllForExport(b.EpochDepth) })
 
-	runContext.RunSingle("ExporterAggr 31 Epochs", 10*time.Minute, func() { b.RunGetAllForExport(31) })
+	//runContext.RunSingle("ExporterAggr 31 Epochs", 10*time.Minute, func() { b.RunGetAllForExport(31) })
 
 	runContext.wg.Wait()
 
 	fmt.Println("\n== Benchmark finished ==")
 
-	// Print trace information from reportMap
-	for key, value := range reportMap {
-		fmt.Printf("Trace Name: %s\n", key)
-		fmt.Printf("Max: %s\n", value.Max)
-		fmt.Printf("Min: %s\n", value.Min)
-		fmt.Printf("Avg: %s\n", value.Avg())
-		fmt.Printf("IterationCount: %d\n", value.IterationCount)
-		fmt.Println()
-	}
-}
-
-func getContext(duration time.Duration) *RunContext {
-	endTime := time.Now().Add(duration)
-
-	return &RunContext{
-		wg:      &sync.WaitGroup{},
-		endTime: endTime,
-	}
+	printResult(duration)
 }
 
 func (b *Benchmarker) RunBenchmarkSequential(duration time.Duration) {
@@ -86,14 +108,42 @@ func (b *Benchmarker) RunBenchmarkSequential(duration time.Duration) {
 
 	fmt.Println("\n== Benchmark finished ==")
 
-	// Print trace information from reportMap
-	for key, value := range reportMap {
-		fmt.Printf("Trace Name: %s\n", key)
+	printResult(duration)
+}
+
+func printResult(duration time.Duration) {
+	for _, value := range SortReportMapByID(reportMap) {
+		fmt.Printf("Trace Name: %s\n", value.TraceName)
 		fmt.Printf("Max: %s\n", value.Max)
 		fmt.Printf("Min: %s\n", value.Min)
 		fmt.Printf("Avg: %s\n", value.Avg())
 		fmt.Printf("IterationCount: %d\n", value.IterationCount)
+		fmt.Printf("Req/s: %.3f\n", float64(value.IterationCount)/duration.Seconds())
 		fmt.Println()
+	}
+}
+
+func SortReportMapByID(reportMap map[string]Report) []Report {
+	// Convert the map to a slice of Report structs
+	reports := make([]Report, 0, len(reportMap))
+	for _, value := range reportMap {
+		reports = append(reports, value)
+	}
+
+	// Define a custom sorting function
+	sort.Slice(reports, func(i, j int) bool {
+		return reports[i].ID < reports[j].ID
+	})
+
+	return reports
+}
+
+func getContext(duration time.Duration) *RunContext {
+	endTime := time.Now().Add(duration)
+
+	return &RunContext{
+		wg:      &sync.WaitGroup{},
+		endTime: endTime,
 	}
 }
 
@@ -155,6 +205,8 @@ func Trace(traceName string, f func()) time.Duration {
 		reportMap[traceName] = report
 	} else {
 		reportMap[traceName] = Report{
+			TraceName:      traceName,
+			ID:             len(reportMap),
 			Max:            elapsed,
 			Min:            elapsed,
 			All:            elapsed,
