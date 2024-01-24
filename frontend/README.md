@@ -1,3 +1,12 @@
+# Beaconch.in Good to know
+
+## Usefull VSC Plugins
+- Nuxtr
+- EsLint
+- Prettier -COde Formatter
+- TypeScript Vue Plugin (Volar)
+- Vue language Features (Volar)
+
 # Nuxt 3 Minimal Starter
 
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
