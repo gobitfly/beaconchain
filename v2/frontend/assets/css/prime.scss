@@ -1,0 +1,181 @@
+@import "~/assets/css/colors.scss";
+@import "~/assets/css/variables.scss";
+@import "~/assets/fonts/fonts.scss";
+
+// Button
+// TODO: Check spacings / sizes, Add different button versions we use
+
+.p-button {
+  font-family: var(--roboto-family);
+  font-weight: var(--roboto-medium);
+  color: var(--primary-contrast-color);
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+    box-shadow 0.2s;
+  border-radius: var(--border-radius);
+
+  &:not(:disabled):hover {
+    background: var(--primary-color);
+    color: var(--primary-contrast-color);
+    border-color: var(--primary-color);
+  }
+  &:not(:disabled):active {
+    background: var(--primary-color);
+    color: var(--primary-contrast-color);
+    border-color: var(--primary-color);
+  }
+
+  &.p-button-raised {
+    box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2),
+      0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  &.p-button-rounded {
+    border-radius: 2rem;
+  }
+
+  &.p-button-sm {
+    font-size: 0.875rem;
+    padding: 0.65625rem 1.09375rem;
+  }
+
+  &.p-button-lg {
+    font-size: 1.25rem;
+    padding: 0.9375rem 1.5625rem;
+  }
+
+  .p-button-label {
+    transition-duration: 0.2s;
+  }
+}
+
+// Toast
+// TODO: apply our styles
+
+.p-toast {
+  opacity: 1;
+}
+.p-toast .p-toast-message {
+  margin: 0 0 1rem 0;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: var(--border-radius);
+}
+.p-toast .p-toast-message .p-toast-message-content {
+  padding: 1rem;
+  border-width: 0 0 0 6px;
+}
+.p-toast .p-toast-message .p-toast-message-content .p-toast-message-text {
+  margin: 0 0 0 1rem;
+}
+.p-toast .p-toast-message .p-toast-message-content .p-toast-message-icon {
+  font-size: 2rem;
+}
+.p-toast
+  .p-toast-message
+  .p-toast-message-content
+  .p-toast-message-icon.p-icon {
+  width: 2rem;
+  height: 2rem;
+}
+.p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
+  font-weight: 700;
+}
+.p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
+  margin: 0.5rem 0 0 0;
+}
+.p-toast .p-toast-message .p-toast-icon-close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.p-toast .p-toast-message .p-toast-icon-close:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+.p-toast .p-toast-message .p-toast-icon-close:focus-visible {
+  outline: 0 none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 0.2rem #a7f3d0;
+}
+.p-toast .p-toast-message.p-toast-message-info {
+  background: rgba(219, 234, 254, 0.7);
+  border: solid #3b82f6;
+  border-width: 0 0 0 6px;
+  color: #3b82f6;
+}
+.p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-info .p-toast-icon-close {
+  color: #3b82f6;
+}
+.p-toast .p-toast-message.p-toast-message-success {
+  background: rgba(228, 248, 240, 0.7);
+  border: solid #1ea97c;
+  border-width: 0 0 0 6px;
+  color: #1ea97c;
+}
+.p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-success .p-toast-icon-close {
+  color: #1ea97c;
+}
+.p-toast .p-toast-message.p-toast-message-warn {
+  background: rgba(255, 242, 226, 0.7);
+  border: solid #cc8925;
+  border-width: 0 0 0 6px;
+  color: #cc8925;
+}
+.p-toast .p-toast-message.p-toast-message-warn .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-warn .p-toast-icon-close {
+  color: #cc8925;
+}
+.p-toast .p-toast-message.p-toast-message-error {
+  background: rgba(255, 231, 230, 0.7);
+  border: solid #ff5757;
+  border-width: 0 0 0 6px;
+  color: #ff5757;
+}
+.p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
+.p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
+  color: #ff5757;
+}
+
+// InputText
+// TODO: Apply our styles
+
+.p-inputtext {
+  font-family: var(--font-family);
+  font-feature-settings: var(--font-feature-settings, normal);
+  font-size: 1rem;
+  color: #4b5563;
+  background: #ffffff;
+  padding: 0.75rem 0.75rem;
+  border: 1px solid #d1d5db;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+    box-shadow 0.2s;
+  appearance: none;
+  border-radius: var(--border-radius);
+
+  &:enabled:hover {
+    border-color: var(--primary-color);
+  }
+  &:enabled:focus {
+    outline: 0 none;
+    outline-offset: 0;
+    box-shadow: 0 0 0 0.2rem #a7f3d0;
+    border-color: var(--primary-color);
+  }
+  &.p-invalid.p-component {
+    border-color: #e24c4c;
+  }
+  &.p-inputtext-sm {
+    font-size: 0.875rem;
+    padding: 0.65625rem 0.65625rem;
+  }
+  &.p-inputtext-lg {
+    font-size: 1.25rem;
+    padding: 0.9375rem 0.9375rem;
+  }
+}

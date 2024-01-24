@@ -1,0 +1,8 @@
+{
+  "login": {
+    "password": "Password",
+    "submit": "Login",
+    "title": "Login",
+    "email": "Email address"
+  }
+}

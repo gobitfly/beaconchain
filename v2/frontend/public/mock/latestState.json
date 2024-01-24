@@ -1,0 +1,39 @@
+{
+    "lastProposedSlot": 4181855,
+    "currentSlot": 4181855,
+    "currentEpoch": 130682,
+    "currentFinalizedEpoch": 130679,
+    "finalityDelay": 3,
+    "syncing": false,
+    "rates": {
+        "tickerCurrency": "ETH",
+        "tickerCurrencySymbol": "ETH",
+        "selectedCurrency": "ETH",
+        "selectedCurrencySymbol": "ETH",
+        "mainCurrency": "ETH",
+        "mainCurrencySymbol": "ETH",
+        "mainCurrencyPrice": 1,
+        "mainCurrencyPriceFormatted": "1",
+        "mainCurrencyKFormatted": "1",
+        "mainCurrencyTickerPrice": 1,
+        "mainCurrencyTickerPriceFormatted": "1",
+        "mainCurrencyTickerPriceKFormatted": "1",
+        "elCurrency": "ETH",
+        "elCurrencySymbol": "ETH",
+        "elCurrencyPrice": 1,
+        "elCurrencyPriceFormatted": "1",
+        "elCurrencyKFormatted": "1",
+        "clCurrency": "ETH",
+        "clCurrencySymbol": "ETH",
+        "clCurrencyPrice": 1,
+        "clCurrencyPriceFormatted": "1",
+        "clCurrencyKFormatted": "1",
+        "mainCurrencyTickerPrices": {
+            "ETH": {
+                "symbol": "ETH",
+                "roundPrice": 1,
+                "truncPrice": "1"
+            }
+        }
+    }
+}
