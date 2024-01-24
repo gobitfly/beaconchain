@@ -3,7 +3,7 @@
 </script>
 <template>
   <div class="main-footer">
-    <BcColorToggle />
+    <BcThemeToggle />
   </div>
 </template>
 
