@@ -20,12 +20,9 @@ func (b *Benchmarker) RunGetAllForExport(epochs int) {
 
 	err := db.DB.Select(&data, fmt.Sprintf(`
 		SELECT 
-			epoch, 
-			validatorindex, 
 			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards 
 		FROM %s
-		WHERE epoch BETWEEN %d AND %d
-		GROUP BY epoch, validatorindex`,
+		WHERE epoch BETWEEN %d AND %d`,
 		b.TableName, randomStartEpoch, randomEndEpoch))
 
 	if err != nil {

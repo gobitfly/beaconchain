@@ -1,21 +1,18 @@
-package seeding
+package seeding_strat_valepoch
 
 import (
 	"fmt"
 	"perftesting/db"
+	"perftesting/seeding"
 )
 
 type SeederUnpartitioned struct{}
 
-func GetUnpartitioned(tableName string) *Seeder {
-	temp := &Seeder{}
-	temp.TableName = tableName
-	temp.BatchSize = 100000
-	temp.Schemer = &SeederUnpartitioned{}
-	return temp
+func GetUnpartitioned(tableName string, columnarEngine bool) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederUnpartitioned{})
 }
 
-func (*SeederUnpartitioned) CreateSchema(s *Seeder) error {
+func (*SeederUnpartitioned) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			validatorindex BIGINT,

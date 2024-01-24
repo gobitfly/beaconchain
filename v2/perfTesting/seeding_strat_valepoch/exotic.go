@@ -1,31 +1,25 @@
-package seeding
+package seeding_strat_valepoch
 
 import (
 	"fmt"
 	"math"
 	"perftesting/db"
+	"perftesting/seeding"
 )
 
-// Reversed exotic, in theory does not really makes sense but I wanted to see if my assumptions about performance is correct
-
-type SeederPartitionExoticReverse struct {
+type SeederPartitionExotic struct {
 	NumberOfEpochPartitions int
 	NumberOfValiPartitions  int
 }
 
-func GetSeederPartitionExoticReverse(tableName string, noOfEpochPartitions, notOfValiPartitions int, columnarEngine bool) *Seeder {
-	temp := &Seeder{}
-	temp.TableName = tableName
-	temp.BatchSize = 100000
-	temp.ColumnEngine = columnarEngine
-	temp.Schemer = &SeederPartitionExoticReverse{
+func GetSeederPartitionExotic(tableName string, noOfEpochPartitions, notOfValiPartitions int, columnarEngine bool) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionExotic{
 		NumberOfEpochPartitions: noOfEpochPartitions,
 		NumberOfValiPartitions:  notOfValiPartitions,
-	}
-	return temp
+	})
 }
 
-func (conf *SeederPartitionExoticReverse) CreateSchema(s *Seeder) error {
+func (conf *SeederPartitionExotic) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			validatorindex BIGINT,
@@ -56,7 +50,7 @@ func (conf *SeederPartitionExoticReverse) CreateSchema(s *Seeder) error {
 			deposits_amount BIGINT,
 			withdrawals_count BIGINT,
 			withdrawals_amount BIGINT
-		) PARTITION BY hash(validatorindex)
+		) PARTITION BY range (epoch)
 	`, s.TableName))
 	if err != nil {
 		return err
@@ -71,41 +65,34 @@ func (conf *SeederPartitionExoticReverse) CreateSchema(s *Seeder) error {
 
 	partRange := int(math.Ceil(float64(s.EpochsInDB) / float64(conf.NumberOfEpochPartitions)))
 
-	for i := 0; i < conf.NumberOfValiPartitions; i++ {
-		partName := fmt.Sprintf("%s_v_%d", s.TableName, i)
+	for i := 0; i < conf.NumberOfEpochPartitions; i++ {
+		partName := fmt.Sprintf("%s_e_%d", s.TableName, i)
 		partitionCreate := fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %[2]s PARTITION OF %[1]s
-				FOR VALUES WITH (MODULUS %[4]d, REMAINDER %[3]d)
-				PARTITION BY range(epoch)
-		`, s.TableName, partName, i, conf.NumberOfValiPartitions)
+				FOR VALUES FROM (%[3]d) TO (%[4]d)
+				PARTITION BY hash(validatorindex)
+		`, s.TableName, partName, i*partRange, (i+1)*partRange)
 
 		_, err = db.DB.Exec(partitionCreate)
 		if err != nil {
-			fmt.Printf("here")
 			return err
 		}
 
-		for j := 0; j < conf.NumberOfEpochPartitions; j++ {
+		for j := 0; j < conf.NumberOfValiPartitions; j++ {
 			partitionCreate := fmt.Sprintf(`
-			CREATE TABLE IF NOT EXISTS %s_e_%d PARTITION OF %[1]s
-				FOR VALUES FROM (%[3]d) TO (%[4]d)
-		`, partName, j, j*partRange, (j+1)*partRange)
+			CREATE TABLE IF NOT EXISTS %s_v_%d PARTITION OF %[1]s
+				FOR VALUES WITH (MODULUS %[3]d, REMAINDER %[2]d)
+		`, partName, j, conf.NumberOfValiPartitions)
 
 			_, err = db.DB.Exec(partitionCreate)
 			if err != nil {
-				fmt.Printf("or here?")
 				return err
 			}
 
 			// Column engine leaves
 			if s.ColumnEngine {
-				fmt.Printf("adding column engine to %s_e_%d\n", partName, j)
-				_, err = db.DB.Exec(fmt.Sprintf(`
-				SELECT google_columnar_engine_add(
-					relation => '%s_e_%d',
-					columns => 'attestations_head_reward,attestations_source_reward,attestations_target_reward,blocks_cl_reward,epoch,validatorindex'
-				);
-				`, partName, j))
+				fmt.Printf("adding column engine to %s_v_%d\n", partName, j)
+				err = s.AddToColumnEngine(fmt.Sprintf("%s_v_%d", partName, j), "attestations_head_reward,attestations_source_reward,attestations_target_reward,blocks_cl_reward,epoch,validatorindex")
 				if err != nil {
 					return err
 				}

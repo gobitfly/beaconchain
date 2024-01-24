@@ -1,26 +1,22 @@
-package seeding
+package seeding_strat_valepoch
 
 import (
 	"fmt"
 	"perftesting/db"
+	"perftesting/seeding"
 )
 
 type SeederPartitionHashIndex struct {
 	NumberOfPartitions int
 }
 
-func GetSeederPartitionHashIndex(tableName string, noOfPartitions int, columnarEngine bool) *Seeder {
-	temp := &Seeder{}
-	temp.TableName = tableName
-	temp.BatchSize = 100000
-	temp.ColumnEngine = columnarEngine
-	temp.Schemer = &SeederPartitionHashIndex{
+func GetSeederPartitionHashIndex(tableName string, noOfPartitions int, columnarEngine bool) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionHashIndex{
 		NumberOfPartitions: noOfPartitions,
-	}
-	return temp
+	})
 }
 
-func (conf *SeederPartitionHashIndex) CreateSchema(s *Seeder) error {
+func (conf *SeederPartitionHashIndex) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			validatorindex BIGINT,
@@ -78,12 +74,7 @@ func (conf *SeederPartitionHashIndex) CreateSchema(s *Seeder) error {
 		// Column engine leaves
 		if s.ColumnEngine {
 			fmt.Printf("adding column engine to %[1]s_%[2]d\n", s.TableName, i)
-			_, err = db.DB.Exec(fmt.Sprintf(`
-				SELECT google_columnar_engine_add(
-					relation => '%[1]s_%[2]d',
-					columns => 'attestations_head_reward,attestations_source_reward,attestations_target_reward,blocks_cl_reward,epoch,validatorindex'
-				);
-				`, s.TableName, i))
+			err = s.AddToColumnEngine(fmt.Sprintf("%[1]s_%[2]d", s.TableName, i), "attestations_head_reward,attestations_source_reward,attestations_target_reward,blocks_cl_reward,epoch,validatorindex")
 			if err != nil {
 				return err
 			}

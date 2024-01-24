@@ -20,6 +20,8 @@ type RunContext struct {
 }
 
 type Report struct {
+	TraceName      string
+	ID             int
 	Max            time.Duration
 	Min            time.Duration
 	All            time.Duration
