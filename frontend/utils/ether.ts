@@ -1,8 +1,8 @@
 import { formatEther, commify } from '@ethersproject/units'
-import { BigNumberish } from '@ethersproject/bignumber'
-import { NumberFormatConfig } from './format'
+import { type BigNumberish } from '@ethersproject/bignumber'
+import { type NumberFormatConfig, addPlusSign } from './format'
 
-export function formatEth (eth: string, { precision = 5, fixed = 5 }: NumberFormatConfig): string {
+export function formatEth (eth: string, { precision, fixed, addPositiveSign }: NumberFormatConfig = { precision: 5, fixed: 5, addPositiveSign: false }): string {
   if (!eth) {
     return ''
   }
@@ -13,7 +13,8 @@ export function formatEth (eth: string, { precision = 5, fixed = 5 }: NumberForm
       dec += '0'
     }
   }
-  return commify(dec.length ? `${split[0]}.${dec}` : split[0])
+  const label = commify(dec.length ? `${split[0]}.${dec}` : split[0])
+  return addPositiveSign ? addPlusSign(label) : label
 }
 
 export function formatWeiToEth (wei: BigNumberish, config: NumberFormatConfig): string {
