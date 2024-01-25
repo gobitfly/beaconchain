@@ -55,7 +55,6 @@ input {
 
 .slider {
   position: absolute;
-  content: "";
   height: 16px;
   width: 16px;
   left: 1.5px;
