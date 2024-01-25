@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { round } from 'lodash-es'
 interface Props {
   percent?: number
   base?: number
   value?: number
   hideEmptyValue?: boolean
   precision?: number
+  fixed?: number
 }
 
-const props = withDefaults(defineProps<Props>(), { precision: 2, percent: undefined, base: undefined, value: undefined, hideEmptyValue: false })
+const props = defineProps<Props>()
 
 const label = computed(() => {
   if (props.percent === undefined && !props.base) {
@@ -17,8 +17,7 @@ const label = computed(() => {
     }
     return '0%'
   }
-  const percent = props.percent !== undefined ? props.percent : (props.value ?? 0) * 100 & props.base!
-  return `${round(percent, props.precision).toFixed(props.precision)}%`
+  return formatPercent({ percent: props.percent, base: props.base, value: props.value }, { precision: props.precision, fixed: props.fixed })
 })
 
 </script>

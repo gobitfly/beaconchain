@@ -36,6 +36,8 @@
     "vue-tsc": "^1.8.27"
   },
   "dependencies": {
+    "@ethersproject/bignumber": "^5.7.0",
+    "@ethersproject/units": "^5.7.0",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@pinia/nuxt": "^0.5.1",
     "lodash-es": "^4.17.21",
