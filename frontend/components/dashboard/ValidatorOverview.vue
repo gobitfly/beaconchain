@@ -1,7 +1,12 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+
+</script>
 <template>
   <div class="container">
     {{ $t("test") }}
+    <div>
+      <BcFormatPercent :percent="80" />
+    </div>
   </div>
 </template>
 
