@@ -5,10 +5,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiClientV1: process.env.API_CLIENT_V1
+      apiClient: process.env.API_CLIENT
     },
     private: {
-      apiServerV1: process.env.API_SERVER_V1
+      apiServer: process.env.API_SERVER
     }
   },
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss'],
