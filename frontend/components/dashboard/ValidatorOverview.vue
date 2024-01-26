@@ -98,6 +98,7 @@ const dataList = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow-x: auto;
   gap: 50px;
   height: 101px;
   border: 1px solid var(--container-border-color);
