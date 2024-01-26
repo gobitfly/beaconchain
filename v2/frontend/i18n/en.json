@@ -1,5 +1,6 @@
 {
   "validator_state": {
+    "active": "active",
     "pending": "peinding",
     "exited": "exited",
     "slashed": "slashed"

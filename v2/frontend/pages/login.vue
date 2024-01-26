@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
 import { useField, useForm } from 'vee-validate'
-import { computed } from 'vue'
 import { useUserStore } from '~/stores/useUserStore'
 
 const { doLogin } = useUserStore()

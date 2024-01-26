@@ -3,15 +3,30 @@ import type { LoginResponse } from '~/types/user'
 // import { defu } from 'defu'
 
 export enum API_PATH {
-  LATEST_STATE= '/latestState',
-  LOGIN= '/login',
-  REFRESH_TOKEN= '/refreshToken'
+  DASHBOARD_OVERVIEW = '/dashboard/overview',
+  LATEST_STATE = '/latestState',
+  LOGIN = '/login',
+  REFRESH_TOKEN = '/refreshToken'
 }
 
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]
 
-const mapping:Record<string, {path:string, noAuth?:boolean, mock?: boolean}> = {
+export type PathValues = Record<string, string>
+
+type MappingData = {
+  path: string,
+  getPath?: (values?: PathValues) => string,
+  noAuth?: boolean,
+  mock?: boolean
+}
+
+const mapping: Record<string, MappingData> = {
+  [API_PATH.DASHBOARD_OVERVIEW]: {
+    path: '/validator-dashboards/{dashboard_id}',
+    getPath: values => `/validator-dashboards/${values?.validatorId}`,
+    mock: true
+  },
   [API_PATH.LATEST_STATE]: {
     path: '/latestState',
     mock: false
@@ -28,7 +43,7 @@ const mapping:Record<string, {path:string, noAuth?:boolean, mock?: boolean}> = {
   }
 }
 
-export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}): Promise<T> {
+export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}, pathValues?: PathValues): Promise<T> {
   // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
   const refreshToken = useCookie('refreshToken')
   const accessToken = useCookie('accessToken')
@@ -40,7 +55,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
 
   const url = useRequestURL()
   const { public: { apiClient }, private: pConfig } = useRuntimeConfig()
-  const path = map.mock ? `${pathName}.json` : map.path
+  const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
   let baseURL = map.mock ? './mock' : apiClient
 
   if (process.server) {
@@ -54,7 +69,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
     return res as T
   } else if (!map.noAuth) {
     if (!accessToken.value && refreshToken.value) {
-      const res = await useCustomFetch<{access_token:string}>(API_PATH.REFRESH_TOKEN, { method: 'POST', body: { refresh_token: refreshToken.value } })
+      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { method: 'POST', body: { refresh_token: refreshToken.value } })
       accessToken.value = res.access_token
     }
 
