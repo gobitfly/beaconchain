@@ -1,22 +1,15 @@
 import { round } from 'lodash-es'
-
-interface Value {
-  value?: number
-  percent?: number
-  base?: number
-}
-
 export interface NumberFormatConfig {
   precision?: number
   fixed?:number
   addPositiveSign?: boolean
 }
 
-export function formatPercent ({ percent, value, base }: Value, { precision, fixed, addPositiveSign }: NumberFormatConfig = { precision: 5, fixed: 5, addPositiveSign: false }):string {
-  if (percent === undefined && !base) {
+export function formatPercent (percent?: number, { precision, fixed, addPositiveSign }: NumberFormatConfig = { precision: 2, fixed: 2, addPositiveSign: false }):string {
+  if (percent === undefined) {
     return ''
   }
-  let result = percent !== undefined ? percent : (value ?? 0) * 100 & base!
+  let result = percent
   if (precision !== undefined) {
     result = round(result, precision)
   }
@@ -25,6 +18,13 @@ export function formatPercent ({ percent, value, base }: Value, { precision, fix
     return `${result.toFixed(fixed)}%`
   }
   return addPositiveSign ? addPlusSign(label) : label
+}
+
+export function formatAndCalculatePercent (value?: number, base?: number, config?: NumberFormatConfig):string {
+  if (!base) {
+    return ''
+  }
+  return formatPercent((value ?? 0) * 100 & base, config)
 }
 
 export function addPlusSign (value: string): string {

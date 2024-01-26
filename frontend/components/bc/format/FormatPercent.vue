@@ -17,7 +17,11 @@ const label = computed(() => {
     }
     return '0%'
   }
-  return formatPercent({ percent: props.percent, base: props.base, value: props.value }, { precision: props.precision, fixed: props.fixed })
+  const config = { precision: props.precision, fixed: props.fixed }
+  if (props.percent !== undefined) {
+    return formatPercent(props.percent, config)
+  }
+  return formatAndCalculatePercent(props.value, props.base, config)
 })
 
 </script>

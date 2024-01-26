@@ -14,10 +14,10 @@ export function formatEth (eth: string, { precision, fixed, addPositiveSign }: N
     }
   }
   const label = commify(dec.length ? `${split[0]}.${dec}` : split[0])
-  return addPositiveSign ? addPlusSign(label) : label
+  return `${addPositiveSign ? addPlusSign(label) : label} ETH`
 }
 
-export function formatWeiToEth (wei: BigNumberish, config: NumberFormatConfig): string {
+export function formatWeiToEth (wei: BigNumberish, config: NumberFormatConfig = {}): string {
   if (!wei) {
     return ''
   }
