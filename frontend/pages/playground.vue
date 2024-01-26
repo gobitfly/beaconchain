@@ -19,28 +19,86 @@ const { latest } = storeToRefs(useLatestStateStore())
       </Button>
     </NuxtLink>
     <div class="icon_holder">
-      <div><IconSlotAttestation /> Attestation</div>
-      <div><IconSlotHeadAttestation /> Head Attestation</div>
-      <div><IconSlotSourceAttestation /> Source Attestation</div>
-      <div><IconSlotTargetAttestation /> Target Attestation</div>
-      <div><IconSlotBlockProposal /> Block Proposal</div>
-      <div><IconSlotSlashing /> Slashing</div>
-      <div><IconSlotSync /> Slot Sync</div>
+      <div>
+        <IconSlotAttestation /> Attestation
+      </div>
+      <div>
+        <IconSlotHeadAttestation /> Head Attestation
+      </div>
+      <div>
+        <IconSlotSourceAttestation /> Source Attestation
+      </div>
+      <div>
+        <IconSlotTargetAttestation /> Target Attestation
+      </div>
+      <div>
+        <IconSlotBlockProposal /> Block Proposal
+      </div>
+      <div>
+        <IconSlotSlashing /> Slashing
+      </div>
+      <div>
+        <IconSlotSync /> Slot Sync
+      </div>
+    </div>
+    <div class="icon_holder">
+      <div>
+        <SlotVizTile :data="{ state: 'scheduled' }" /> Sceduled
+      </div>
+      <div>
+        <SlotVizTile :data="{ state: 'missed' }" /> Missed
+      </div>
+      <div>
+        <SlotVizTile :data="{ state: 'proposed' }" /> Proposed
+      </div>
+      <div>
+        <SlotVizTile :data="{ state: 'proposed', duties: [{ type: 'propsal', failedCount: 1 }] }" /> Proposed, validator missed
+      </div>
+      <div>
+        <SlotVizTile :data="{ state: 'proposed', duties: [{ type: 'propsal', successCount: 1 }] }" /> Proposed, validator proposed
+      </div>
+      <div>
+        <SlotVizTile :data="{state:'proposed', duties:[{type:'propsal', failedCount:1, successCount: 1}]}" /> Proposed,
+        validator mixed
+      </div>
+      <div>
+        <SlotVizTile
+          :data="{state:'proposed', duties:[{type:'propsal', successCount: 1},{type:'attestation', successCount: 1}]}"
+        />
+        Proposed, validator 2 icons
+      </div>
+      <div>
+        <SlotVizTile
+          :data="{state:'proposed', duties:[{type:'propsal', failedCount:1},{type:'attestation', successCount: 1},{type:'slashing', successCount: 1}]}"
+        />
+        Proposed, 3 icons
+      </div>
+      <div>
+        <SlotVizTile :data="{state:'proposed', duties:[{type:'slashing', successCount: 1}]}" /> Proposed, slash
+      </div>
+      <div>
+        <SlotVizTile :data="{state:'proposed', duties:[{type:'sync', successCount: 1}]}" /> Proposed, slash
+      </div>
+      <div>
+        <SlotVizTile :data="{state:'proposed', duties:[{type:'attestation', pendingCount:1}]}" /> Proposed, validator
+        pending
+      </div>
     </div>
     <BcMainFooter />
   </div>
 </template>
 
-<style lang="scss" scoped>
-.icon_holder{
+<style lang="scss" scoped>.icon_holder {
   margin: 10px;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.content{
-    padding: var(--padding-large);
+
+.content {
+  padding: var(--padding-large);
 }
+
 .row {
-    margin-bottom: var(--padding);
-}
-</style>
+  margin-bottom: var(--padding);
+}</style>

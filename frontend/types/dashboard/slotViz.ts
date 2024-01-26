@@ -1,5 +1,8 @@
+export type SlotVizIcons = 'attestation' | 'head_attestation' | 'source_attestation' | 'target_attestation' | 'block_proposal' | 'slashing' | 'sync'
+
 export type SlotVizValidatorDuties = {
   type: 'propsal' | 'slashing' | 'attestation' | 'sync'
+  pendingCount?: number,
   successCount?: number,
   successEarning?: string, // wei
   failedCount?: number,

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { type SlotVizIcons } from '~/types/dashboard/slotViz'
+
 interface Props {
-  icon: 'attestation' | 'head_attestation' | 'source_attestation' | 'target_attestation' | 'block_proposal' | 'slashing' | 'sync'
+  icon: SlotVizIcons
 }
 const props = defineProps<Props>()
 
