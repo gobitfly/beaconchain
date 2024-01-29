@@ -35,7 +35,7 @@ const columns = [
     <div class="title">
       {{ column.title }}
     </div>
-    <div v-for="link in column.links" :key="link[0]">
+    <div v-for="link in column.links" :key="link[0]" class="link-line">
       <a :href="link[1]" class="link">{{ link[0] }}</a>
     </div>
   </div>
@@ -46,5 +46,9 @@ const columns = [
   color: var(--Light-Grey);
   font-size: 20px;
   font-weight: bold;
+  line-height: 33px;
+}
+.link-line {
+  line-height: 27px;
 }
 </style>
