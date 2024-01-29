@@ -22,13 +22,14 @@
   justify-content: center;
   align-items: center;
   margin-top: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 13px;
 }
 
 #columns-of-links {
   display: flex;
   gap: 130px;
   justify-content: center;
+  margin-bottom: 10px;
 }
 
 #very-last-line {
