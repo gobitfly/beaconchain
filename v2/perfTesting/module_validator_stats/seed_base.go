@@ -1,4 +1,4 @@
-package seeding_strat_valepoch
+package module_validator_stats
 
 import (
 	"fmt"
@@ -11,10 +11,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type ValiEpochFiller struct{}
+type SeederData struct {
+	ValidatorsInDB int
+	EpochsInDB     int
+}
 
-func getValiEpochSeeder(tableName string, columnarEngine bool, scheme seeding.SeederScheme) *seeding.Seeder {
-	return seeding.GetSeeder(tableName, columnarEngine, scheme, &ValiEpochFiller{})
+func getValiEpochSeeder(tableName string, columnarEngine bool, scheme seeding.SeederScheme, filler seeding.SeederFiller) *seeding.Seeder {
+	return seeding.GetSeeder(tableName, columnarEngine, scheme, filler)
 }
 
 func generateRandomEntries(count int, validator int) []Entry {
@@ -82,9 +85,9 @@ func generateRandomEntries(count int, validator int) []Entry {
 	return entries
 }
 
-func (ValiEpochFiller) FillTable(s *seeding.Seeder) error {
-	iterations := s.ValidatorsInDB // valis
-	epochs := s.EpochsInDB         // epochs (one day)
+func (data SeederData) FillTable(s *seeding.Seeder) error {
+	iterations := data.ValidatorsInDB // valis
+	epochs := data.EpochsInDB         // epochs (one day)
 	batchSize := s.BatchSize
 
 	timeStart := time.Now()

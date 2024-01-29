@@ -1,22 +1,25 @@
-package seeding_strat_valepoch
+package module_validator_stats
 
 import (
 	"fmt"
+	"math"
 	"perftesting/db"
 	"perftesting/seeding"
 )
 
-type SeederPartitionHashIndex struct {
+type SeederPartitionEpoch struct {
+	SeederData
 	NumberOfPartitions int
 }
 
-func GetSeederPartitionHashIndex(tableName string, noOfPartitions int, columnarEngine bool) *seeding.Seeder {
-	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionHashIndex{
-		NumberOfPartitions: noOfPartitions,
-	})
+func GetSeederPartitionEpoch(tableName string, noOfEpochPartitions int, columnarEngine bool, data SeederData) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionEpoch{
+		SeederData:         data,
+		NumberOfPartitions: noOfEpochPartitions,
+	}, data)
 }
 
-func (conf *SeederPartitionHashIndex) CreateSchema(s *seeding.Seeder) error {
+func (conf *SeederPartitionEpoch) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			validatorindex BIGINT,
@@ -47,24 +50,26 @@ func (conf *SeederPartitionHashIndex) CreateSchema(s *seeding.Seeder) error {
 			deposits_amount BIGINT,
 			withdrawals_count BIGINT,
 			withdrawals_amount BIGINT
-		) PARTITION BY hash(validatorindex)
+		) PARTITION BY range (epoch)
 	`, s.TableName))
 	if err != nil {
 		return err
 	}
 
 	_, err = db.DB.Exec(fmt.Sprintf(`
-		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s (validatorindex, epoch)
+		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s (validatorindex)
 	`, s.TableName))
 	if err != nil {
 		return err
 	}
 
+	partRange := int(math.Ceil(float64(conf.EpochsInDB) / float64(conf.NumberOfPartitions)))
+
 	for i := 0; i < conf.NumberOfPartitions; i++ {
 		partitionCreate := fmt.Sprintf(`
-			CREATE TABLE IF NOT EXISTS %s_%d PARTITION OF %[1]s
-				FOR VALUES WITH (MODULUS %[3]d, REMAINDER %[2]d)
-		`, s.TableName, i, conf.NumberOfPartitions)
+			CREATE TABLE IF NOT EXISTS %[1]s_%[2]d PARTITION OF %[1]s
+				FOR VALUES FROM (%[3]d) TO (%[4]d)
+		`, s.TableName, i, i*partRange, (i+1)*partRange)
 
 		_, err = db.DB.Exec(partitionCreate)
 		if err != nil {

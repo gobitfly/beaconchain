@@ -6,17 +6,22 @@ import (
 )
 
 type Benchmarker struct {
-	TableName       string
-	ValidatorsInDB  int
-	EpochsInDB      int
-	UseLatestEpochs bool // when true it will not randomly select epochs but use the latest epoch as base for the requests
-	LatestEpoch     int
-	EpochDepth      int
+	TableName string
+	Duration  time.Duration
+	do        BenchmarkTest
+}
+
+func NewBenchmarker(tableName string, duration time.Duration, do BenchmarkTest) *Benchmarker {
+	return &Benchmarker{
+		TableName: tableName,
+		Duration:  duration,
+		do:        do,
+	}
 }
 
 type RunContext struct {
-	wg      *sync.WaitGroup
-	endTime time.Time
+	Wg      *sync.WaitGroup
+	EndTime time.Time
 }
 
 type Report struct {
@@ -30,4 +35,8 @@ type Report struct {
 
 func (r *Report) Avg() time.Duration {
 	return r.All / time.Duration(r.IterationCount)
+}
+
+type BenchmarkTest interface {
+	RunBenchmark(b Benchmarker)
 }
