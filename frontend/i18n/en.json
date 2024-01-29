@@ -15,6 +15,9 @@
     "31d": "last 31d",
     "365d": "last 365d"
   },
+  "slotViz": {
+    "head": "Head"
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator": {
