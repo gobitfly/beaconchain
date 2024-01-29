@@ -1,7 +1,11 @@
 {
+  "common": {
+    "slot": "Slot",
+    "validator": "Validator"
+  },
   "validator_state": {
     "active": "active",
-    "pending": "peinding",
+    "pending": "pending",
     "exited": "exited",
     "slashed": "slashed"
   },

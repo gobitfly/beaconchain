@@ -32,18 +32,12 @@ const data = computed(() => {
   } else if (hasPending) {
     inner = 'pending'
   }
-  if (slot.duties?.find(s => s.type === 'propsal')) {
-    icons.push('block_proposal')
-  }
-  if (slot.duties?.find(s => s.type === 'slashing')) {
-    icons.push('slashing')
-  }
-  if (slot.duties?.find(s => s.type === 'sync')) {
-    icons.push('sync')
-  }
-  if (slot.duties?.find(s => s.type === 'attestation')) {
-    icons.push('attestation')
-  }
+  const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
+  types.forEach((type) => {
+    if (slot.duties?.find(s => s.type === type)) {
+      icons.push(type)
+    }
+  })
 
   const tooltipLayout: TolltipLayout = slot.duties?.length ? 'dark' : 'default'
 
@@ -59,7 +53,7 @@ const data = computed(() => {
 
 </script>
 <template>
-  <BcTooltip :target="data.id" :layout="data.tooltipLayout">
+  <SlotVizTooltip :id="data.id" :data="props.data">
     <div :id="data.id" class="tile" :class="data.outer">
       <div class="inner" :class="data.inner">
         <IconPlus v-show="data.icons?.length > 2" class="plus" />
@@ -67,14 +61,7 @@ const data = computed(() => {
         <SlotVizIcon v-if="data.icons?.length === 2" :icon="data.icons[1]" class="second_icon" />
       </div>
     </div>
-    <template #tooltip>
-      <div class="tooltip-content">
-        <h3>My Tooltip</h3>
-        <p>This is a tooltip with complex content.</p>
-        <Button label="Click Me" />
-      </div>
-    </template>
-  </BcTooltip>
+  </SlotVizTooltip>
 </template>
 <style lang="scss" scoped>
 .tile {

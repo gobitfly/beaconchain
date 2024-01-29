@@ -7,18 +7,45 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const bcTooltip = ref<HTMLElement | null >(null)
+const isOpen = ref(false)
 
 const classList = computed(() => {
-  return [props.layout || 'default', props.position || 'bottom']
+  return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed']
+})
+
+const handleClick = () => {
+  isOpen.value = !isOpen.value
+  if (!isOpen.value) {
+    bcTooltip.value?.blur()
+  }
+}
+
+const hide = (event: MouseEvent) => {
+  if (event.target === bcTooltip.value || isParent(bcTooltip.value, event.target as HTMLElement)) {
+    return
+  }
+  isOpen.value = false
+  if (!isOpen.value) {
+    bcTooltip.value?.blur()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', hide)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', hide)
 })
 
 </script>
 <template>
-  <div class="bc-tooltip-wrapper" :class="classList">
+  <div ref="bcTooltip" class="bc-tooltip-wrapper" :class="classList" @click="handleClick()" @blur="isOpen = false">
     <slot />
-    <div class="bc-tooltip">
+    <div class="bc-tooltip" @click="$event.stopImmediatePropagation()">
       <slot name="tooltip">
-        Placeholder
+        {{ text }}
       </slot>
     </div>
   </div>
@@ -34,6 +61,9 @@ const classList = computed(() => {
     &.dark {
         --tt-bg-color: var(--light-black);
         --tt-color: var(--light-grey);
+        .bc-tooltip{
+            border: solid 1px var(--container-border-color);
+        }
     }
 
     &::after {
@@ -72,11 +102,18 @@ const classList = computed(() => {
     }
 
     &:hover,
-    &:focus {
+    &:focus,
+    &.open {
 
         &::after,
         .bc-tooltip {
             opacity: 1;
+        }
+    }
+    &.open{
+        &::after,
+        .bc-tooltip {
+            pointer-events: unset;
         }
     }
 

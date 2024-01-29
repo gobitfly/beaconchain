@@ -1,13 +1,13 @@
-export type SlotVizIcons = 'attestation' | 'head_attestation' | 'source_attestation' | 'target_attestation' | 'block_proposal' | 'slashing' | 'sync'
+export type SlotVizIcons = 'attestation' | 'head_attestation' | 'source_attestation' | 'target_attestation' | 'proposal' | 'slashing' | 'sync'
 
 export type SlotVizValidatorDuties = {
-  type: 'propsal' | 'slashing' | 'attestation' | 'sync'
+  type: 'proposal' | 'slashing' | 'attestation' | 'sync'
   pendingCount?: number,
   successCount?: number,
   successEarning?: string, // wei
   failedCount?: number,
   failedEarnings?: string, // wei
-  validator?: number // in case it's a propsal
+  validator?: number // in case it's a proposal
 }
 
 export type SlotVizSlot = {

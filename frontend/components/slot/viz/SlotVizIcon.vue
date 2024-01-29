@@ -12,7 +12,7 @@ const props = defineProps<Props>()
   <IconSlotHeadAttestation v-else-if="props.icon === 'head_attestation'" />
   <IconSlotSourceAttestation v-else-if="props.icon === 'source_attestation'" />
   <IconSlotTargetAttestation v-else-if="props.icon === 'target_attestation'" />
-  <IconSlotBlockProposal v-else-if="props.icon === 'block_proposal'" />
+  <IconSlotBlockProposal v-else-if="props.icon === 'proposal'" />
   <IconSlotSlashing v-else-if="props.icon === 'slashing'" />
   <IconSlotSync v-else-if="props.icon === 'sync'" />
 </template>
