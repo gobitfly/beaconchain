@@ -47,6 +47,7 @@ const columns = [
   font-size: 20px;
   font-weight: bold;
   line-height: 33px;
+  margin-bottom: 10px;
 }
 .link-line {
   line-height: 27px;
