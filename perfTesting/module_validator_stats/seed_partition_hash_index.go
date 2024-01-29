@@ -1,23 +1,22 @@
-package seeding_strat_valepoch
+package module_validator_stats
 
 import (
 	"fmt"
-	"math"
 	"perftesting/db"
 	"perftesting/seeding"
 )
 
-type SeederPartitionEpoch struct {
+type SeederPartitionHashIndex struct {
 	NumberOfPartitions int
 }
 
-func GetSeederPartitionEpoch(tableName string, noOfEpochPartitions int, columnarEngine bool) *seeding.Seeder {
-	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionEpoch{
-		NumberOfPartitions: noOfEpochPartitions,
-	})
+func GetSeederPartitionHashIndex(tableName string, noOfPartitions int, columnarEngine bool, data SeederData) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederPartitionHashIndex{
+		NumberOfPartitions: noOfPartitions,
+	}, data)
 }
 
-func (conf *SeederPartitionEpoch) CreateSchema(s *seeding.Seeder) error {
+func (conf *SeederPartitionHashIndex) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			validatorindex BIGINT,
@@ -48,26 +47,24 @@ func (conf *SeederPartitionEpoch) CreateSchema(s *seeding.Seeder) error {
 			deposits_amount BIGINT,
 			withdrawals_count BIGINT,
 			withdrawals_amount BIGINT
-		) PARTITION BY range (epoch)
+		) PARTITION BY hash(validatorindex)
 	`, s.TableName))
 	if err != nil {
 		return err
 	}
 
 	_, err = db.DB.Exec(fmt.Sprintf(`
-		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s (validatorindex)
+		CREATE INDEX IF NOT EXISTS %s_validatorindex ON %[1]s (validatorindex, epoch)
 	`, s.TableName))
 	if err != nil {
 		return err
 	}
 
-	partRange := int(math.Ceil(float64(s.EpochsInDB) / float64(conf.NumberOfPartitions)))
-
 	for i := 0; i < conf.NumberOfPartitions; i++ {
 		partitionCreate := fmt.Sprintf(`
-			CREATE TABLE IF NOT EXISTS %[1]s_%[2]d PARTITION OF %[1]s
-				FOR VALUES FROM (%[3]d) TO (%[4]d)
-		`, s.TableName, i, i*partRange, (i+1)*partRange)
+			CREATE TABLE IF NOT EXISTS %s_%d PARTITION OF %[1]s
+				FOR VALUES WITH (MODULUS %[3]d, REMAINDER %[2]d)
+		`, s.TableName, i, conf.NumberOfPartitions)
 
 		_, err = db.DB.Exec(partitionCreate)
 		if err != nil {

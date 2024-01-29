@@ -6,13 +6,11 @@ import (
 )
 
 type Seeder struct {
-	TableName      string
-	ValidatorsInDB int
-	EpochsInDB     int
-	BatchSize      int
-	schemer        SeederScheme
-	filler         SeederFiller
-	ColumnEngine   bool
+	TableName    string
+	BatchSize    int
+	schemer      SeederScheme
+	filler       SeederFiller
+	ColumnEngine bool
 }
 
 type SeederScheme interface {
@@ -47,6 +45,6 @@ func (s *Seeder) AddToColumnEngine(table, columns string) error {
 			relation => '%s',
 			columns => '%s'
 		);
-		`, table))
+		`, table, columns))
 	return err
 }
