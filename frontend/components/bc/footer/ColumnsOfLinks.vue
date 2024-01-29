@@ -35,8 +35,8 @@ const columns = [
     <div class="title">
       {{ column.title }}
     </div>
-    <div v-for="link in column.links" :key="link[0]" class=":global(link)">
-      <a :href="link[1]">{{ link[0] }}</a>
+    <div v-for="link in column.links" :key="link[0]">
+      <a :href="link[1]" class="link">{{ link[0] }}</a>
     </div>
   </div>
 </template>
