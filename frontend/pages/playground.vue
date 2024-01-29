@@ -43,44 +43,44 @@ const { latest } = storeToRefs(useLatestStateStore())
     </div>
     <div class="icon_holder">
       <div>
-        <SlotVizTile :data="{ state: 'scheduled' }" /> Sceduled
+        <SlotVizTile :data="{ state: 'scheduled', id: 1 }" /> Sceduled
       </div>
       <div>
-        <SlotVizTile :data="{ state: 'missed' }" /> Missed
+        <SlotVizTile :data="{ state: 'missed', id: 2 }" /> Missed
       </div>
       <div>
-        <SlotVizTile :data="{ state: 'proposed' }" /> Proposed
+        <SlotVizTile :data="{ state: 'proposed', id: 3 }" /> Proposed
       </div>
       <div>
-        <SlotVizTile :data="{ state: 'proposed', duties: [{ type: 'propsal', failedCount: 1 }] }" /> Proposed, validator missed
+        <SlotVizTile :data="{ state: 'proposed', id: 4, duties: [{ type: 'propsal', failedCount: 1 }] }" /> Proposed, validator missed
       </div>
       <div>
-        <SlotVizTile :data="{ state: 'proposed', duties: [{ type: 'propsal', successCount: 1 }] }" /> Proposed, validator proposed
+        <SlotVizTile :data="{ state: 'proposed', id: 5, duties: [{ type: 'propsal', successCount: 1 }] }" /> Proposed, validator proposed
       </div>
       <div>
-        <SlotVizTile :data="{state:'proposed', duties:[{type:'propsal', failedCount:1, successCount: 1}]}" /> Proposed,
+        <SlotVizTile :data="{state:'proposed', id: 6, duties:[{type:'propsal', failedCount:1, successCount: 1}]}" /> Proposed,
         validator mixed
       </div>
       <div>
         <SlotVizTile
-          :data="{state:'proposed', duties:[{type:'propsal', successCount: 1},{type:'attestation', successCount: 1}]}"
+          :data="{state:'proposed', id: 7, duties:[{type:'propsal', successCount: 1},{type:'attestation', successCount: 1}]}"
         />
         Proposed, validator 2 icons
       </div>
       <div>
         <SlotVizTile
-          :data="{state:'proposed', duties:[{type:'propsal', failedCount:1},{type:'attestation', successCount: 1},{type:'slashing', successCount: 1}]}"
+          :data="{state:'proposed', id: 8, duties:[{type:'propsal', failedCount:1},{type:'attestation', successCount: 1},{type:'slashing', successCount: 1}]}"
         />
         Proposed, 3 icons
       </div>
       <div>
-        <SlotVizTile :data="{state:'proposed', duties:[{type:'slashing', successCount: 1}]}" /> Proposed, slash
+        <SlotVizTile :data="{state:'proposed', id: 9, duties:[{type:'slashing', successCount: 1}]}" /> Proposed, slash
       </div>
       <div>
-        <SlotVizTile :data="{state:'proposed', duties:[{type:'sync', successCount: 1}]}" /> Proposed, slash
+        <SlotVizTile :data="{state:'proposed', id: 10, duties:[{type:'sync', successCount: 1}]}" /> Proposed, slash
       </div>
       <div>
-        <SlotVizTile :data="{state:'proposed', duties:[{type:'attestation', pendingCount:1}]}" /> Proposed, validator
+        <SlotVizTile :data="{state:'proposed', id: 11, duties:[{type:'attestation', pendingCount:1}]}" /> Proposed, validator
         pending
       </div>
     </div>

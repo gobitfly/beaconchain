@@ -11,11 +11,13 @@ export type SlotVizValidatorDuties = {
 }
 
 export type SlotVizSlot = {
+  id: number
   state: 'orphaned' | 'missed' | 'proposed' | 'scheduled'
   duties?: SlotVizValidatorDuties[] // in case of a dashboard slotviz, the duties of the dashboard's validators
 }
 
 export type SlotVizEpoch = {
+  id: number
   state: 'head' | 'finalized' | 'scheduled'
   slots: SlotVizSlot[]
 }
