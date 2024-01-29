@@ -1,0 +1,24 @@
+:root {
+  --border-radius: 4px;
+
+  --navbar-height: 50px;
+  --navbar2-height: 56px;
+
+  --padding-xl: 32px;
+  --padding-large: 20px;
+  --padding: 10px;
+  --padding-small: 5px;
+  --padding-tiny: 2px;
+  --padding-line: 1px;
+
+  --content-width: 1360px;
+  --content-margin: var(--padding-large);
+
+  @media screen and (max-width: 1399px) {
+    --content-width: calc(100% - var(--content-margin));
+  }
+
+  @media screen and (max-width: 800px) {
+    --content-margin: var(--padding);
+  }
+}

@@ -1,0 +1,114 @@
+@font-face {
+  font-family: "Montserrat";
+  font-weight: 500 600;
+  src: url("/fonts/Montserrat-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-weight: 500 600;
+  font-style: italic;
+  src: url("/fonts/Montserrat-Italic-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 400;
+  src: url("/fonts/Roboto-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 400;
+  font-style: italic;
+  src: url("/fonts/Roboto-Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 500;
+  src: url("/fonts/Roboto-Medium.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 500;
+  font-style: italic;
+  src: url("/fonts/Roboto-Mediumtalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 700;
+  src: url("/fonts/Roboto-Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 700;
+  font-style: italic;
+  src: url("/fonts/Roboto-BoldItalic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-weight: 300 500;
+  src: url("/fonts/Inter-VariableFont_slnt,wght.ttf") format("truetype");
+}
+
+:root {
+  --montserrat-family: "Montserrat";
+  --montserrat-medium: 500;
+  --montserrat-semi-bold: 600;
+
+  --roboto-family: "Roboto";
+  --roboto-regular: 400;
+  --roboto-medium: 500;
+  --roboto-bold: 700;
+
+  --inter-family: "Inter";
+  --inter-light: 300;
+  --inter-regular: 400;
+  --inter-medium: 500;
+
+  --header1_font_family: var(--montserrat-family);
+  --header1_font_size: 24px;
+  --header1_font_weight: var(--montserrat-medium);
+
+  --big_text_font_family: var(--roboto-family);
+  --big_text_font_size: 24px;
+  --big_text_font_weight: var(--roboto-medium);
+  
+  --big_text_label_font_family: var(--roboto-family);
+  --big_text_label_font_size: 20px;
+  --big_text_label_font_weight: var(--roboto-medium);
+  
+  --small_text_font_family: var(--roboto-family);
+  --small_text_font_size: 12px;
+  --small_text_font_weight: var(--roboto-regular);
+}
+
+.h1,
+h1 {
+  font-family: var(--header1_font_family);
+  font-size: var(--header1_font_size);
+  font-weight: var(--header1_font_weight);
+}
+
+.big_text{
+  font-family: var(--big_text_font_family);
+  font-size: var(--big_text_font_size);
+  font-weight: var(--big_text_font_weight);
+}
+
+.big_text_label{
+  font-family: var(--big_text_label_font_family);
+  font-size: var(--big_text_label_font_size);
+  font-weight: var(--big_text_label_font_weight);
+}
+
+.small_text{
+  font-family: var(--small_text_font_family);
+  font-size: var(--small_text_font_size);
+  font-weight: var(--small_text_font_weight);
+}

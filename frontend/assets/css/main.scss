@@ -1,0 +1,26 @@
+@import "~/assets/css/colors.scss";
+@import "~/assets/css/variables.scss";
+@import "~/assets/css/fonts.scss";
+
+html {
+  margin: 0;
+  padding: 0;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--roboto-family);
+  font-weight: var(--roboto-regular);
+}
+
+a {
+  color: inherit;
+  &:hover {
+    opacity: 0.9;
+  }
+  &.link {
+    color: var(--link-color);
+  }
+}
