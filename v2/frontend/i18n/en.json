@@ -1,0 +1,33 @@
+{
+  "validator_state": {
+    "active": "active",
+    "pending": "peinding",
+    "exited": "exited",
+    "slashed": "slashed"
+  },
+  "statistics": {
+    "24h": "last 24h",
+    "7d": "last 7d",
+    "31d": "last 31d",
+    "365d": "last 365d"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "validator": {
+      "overview": {
+        "your_active_validators": "Your Active Validators",
+        "total_efficiency": "Total Efficiency",
+        "total_rewards": "Total Rewards",
+        "proposal_luck": "Proposal Luck",
+        "sync_committee_luck": "Sync Committee Luck",
+        "total_apr": "Total APR"
+      }
+    }
+  },
+  "login": {
+    "password": "Password",
+    "submit": "Login",
+    "title": "Login",
+    "email": "Email address"
+  }
+}
