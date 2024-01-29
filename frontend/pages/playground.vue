@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { BcMainFooter } from '#build/components'
+import type { BcFooterMainFooter } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
@@ -19,7 +19,7 @@ const { latest } = storeToRefs(useLatestStateStore())
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </Button>
     </NuxtLink>
-    <BcMainFooter />
+    <BcFooterMainFooter />
   </div>
 </template>
 

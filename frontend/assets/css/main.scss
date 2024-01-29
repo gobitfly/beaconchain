@@ -16,11 +16,10 @@ body {
 }
 
 a {
-  color: inherit;
-  &:hover {
+  color: var(--link-color);
+  text-decoration: none;
+  font-size: 16px;
+  a:hover {
     opacity: 0.9;
-  }
-  &.link {
-    color: var(--link-color);
   }
 }
