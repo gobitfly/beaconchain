@@ -18,7 +18,7 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-  a:hover {
+  &:hover {
     opacity: 0.9;
   }
   &.link {
