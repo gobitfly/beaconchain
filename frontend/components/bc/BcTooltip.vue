@@ -13,7 +13,7 @@ const { doSelect } = useTooltipStore()
 const { selected } = storeToRefs(useTooltipStore())
 
 const hover = ref(false)
-const isSelected = computed(() => selected.value === bcTooltip.value)
+const isSelected = computed(() => !!bcTooltip.value && selected.value === bcTooltip.value)
 const isOpen = computed(() => isSelected.value || hover.value)
 
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })

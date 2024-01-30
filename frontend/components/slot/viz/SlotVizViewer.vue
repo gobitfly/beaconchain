@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { type SlotVizData } from '~/types/dashboard/slotViz'
+import { formatNumber } from '~/utils/format'
 interface Props {
   data: SlotVizData
 }
@@ -17,7 +18,7 @@ const rows = computed(() => {
     <div class="rows">
       <div v-for="row in rows" :key="row.id" class="row">
         <div class="epoch">
-          {{ row.state === 'head' ? $t('slotViz.head') : row.id.toLocaleString('en-US') }}
+          {{ row.state === 'head' ? $t('slotViz.head') : formatNumber(row.id) }}
         </div>
       </div>
     </div>

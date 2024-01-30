@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { type SlotVizSlot, type SlotVizIcons } from '~/types/dashboard/slotViz'
 import { type TolltipLayout } from '~/types/layouts'
+import { formatNumber } from '~/utils/format'
 type Row = { count: number; icon: SlotVizIcons; class: string; change?: string; validator?: number; }
 interface Props {
   id: string
   data: SlotVizSlot
 }
 const props = defineProps<Props>()
+const { t: $t } = useI18n()
 
 const data = computed(() => {
   const slot = props.data
@@ -33,13 +35,12 @@ const data = computed(() => {
     }
     const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
     types.forEach(type => addDuty(type))
-    if (slot.id === 45) {
-      console.log('rows', rows)
-    }
   }
+  const stateLabel = $t(`slot_state.${slot.state}`)
+  const slotLabel = `${stateLabel} ${$t('common.slot')} ${formatNumber(slot.id)}`
 
   return {
-    id: slot.id,
+    slotLabel,
     tooltipLayout,
     rows,
     hasDuties
@@ -52,7 +53,7 @@ const data = computed(() => {
     <slot />
     <template #tooltip>
       <div v-if="!data.hasDuties">
-        {{ $t('common.slot') }}: {{ data.id }}
+        {{ data.slotLabel }}
       </div>
       <div class="with-duties">
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">

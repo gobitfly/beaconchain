@@ -9,6 +9,12 @@
     "exited": "exited",
     "slashed": "slashed"
   },
+  "slot_state":{
+    "orphaned": "Orphaned",
+    "missed": "Missed",
+    "proposed": "Proposed",
+    "scheduled": "Scheduled"
+  },
   "statistics": {
     "24h": "last 24h",
     "7d": "last 7d",
