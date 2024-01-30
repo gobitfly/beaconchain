@@ -94,17 +94,15 @@ const dataList = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/main.scss';
 .container {
+  @include main.container;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow-x: auto;
   gap: 50px;
   height: 101px;
-  border: 1px solid var(--container-border-color);
-  border-radius: var(--border-radius);
-  color: var(--container-color);
-  background: var(--container-background);
   padding-left: var(--padding-xl);
   padding-right: var(--padding-xl);
 }
