@@ -90,13 +90,13 @@ type SyncCommitteeInfo struct {
 	Participation float64  `json:"participation"`
 	Bits          []byte   `json:"bits"`
 	SyncCommittee []uint64 `json:"sync_committee"`
-	Signature     []byte   `json:"signature"`
+	Signature     Hash     `json:"signature"`
 }
 
 type Eth1DataInfo struct {
-	BlockHash    string `json:"block_hash"`
-	DepositCount string `json:"deposit_count"`
-	DepositRoot  []byte `json:"deposit_root"`
+	BlockHash    Hash   `json:"block_hash"`
+	DepositCount uint64 `json:"deposit_count"`
+	DepositRoot  Hash   `json:"deposit_root"`
 }
 
 type BlobInfo struct {
