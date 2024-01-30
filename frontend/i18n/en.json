@@ -1,15 +1,28 @@
 {
+  "common": {
+    "slot": "Slot",
+    "validator": "Validator"
+  },
   "validator_state": {
     "active": "active",
-    "pending": "peinding",
+    "pending": "pending",
     "exited": "exited",
     "slashed": "slashed"
+  },
+  "slot_state":{
+    "orphaned": "Orphaned",
+    "missed": "Missed",
+    "proposed": "Proposed",
+    "scheduled": "Scheduled"
   },
   "statistics": {
     "24h": "last 24h",
     "7d": "last 7d",
     "31d": "last 31d",
     "365d": "last 365d"
+  },
+  "slotViz": {
+    "head": "Head"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -29,5 +42,17 @@
     "submit": "Login",
     "title": "Login",
     "email": "Email address"
+  },
+  "footer": {
+    "legal_notices": "Legal Notices",
+    "resources": "Resources",
+    "links": "Links",
+    "imprint": "Imprint",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "api_docs": "API Docs",
+    "pricing": "Pricing",
+    "advertise": "Advertise",
+    "press_kit": "Press Kit"
   }
 }

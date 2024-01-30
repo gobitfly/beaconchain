@@ -1,0 +1,46 @@
+{
+    "validator_state": {
+      "active": "actif",
+      "pending": "en attente",
+      "exited": "quitté",
+      "slashed": "slashé"
+    },
+    "statistics": {
+      "24h": "sur 24h",
+      "7d": "sur 7d",
+      "31d": "sur 31d",
+      "365d": "sur 365j"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "validator": {
+        "overview": {
+          "your_active_validators": "Vos validateurs actifs",
+          "total_efficiency": "Efficacité totale",
+          "total_rewards": "Récompense totale",
+          "proposal_luck": "Chance: Proposal",
+          "sync_committee_luck": "Chance: Sync Committee",
+          "total_apr": "APR total"
+        }
+      }
+    },
+    "login": {
+      "password": "Mot de passe",
+      "submit": "Identifiant",
+      "title": "Identifiant",
+      "email": "Adresse e-mail"
+    },
+    "footer": {
+      "legal_notices": "Mentions légales",
+      "resources": "Ressources",
+      "links": "Liens",
+      "imprint": "À propos",
+      "terms": "Termes et conditions",
+      "privacy": "Protection des données",
+      "api_docs": "Docs de l'API",
+      "pricing": "Tarifs",
+      "advertise": "Devenez annonceur",
+      "press_kit": "Dossier de presse"
+    }
+  }
+  

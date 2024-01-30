@@ -15,7 +15,7 @@ console.log(`route id: ${route.params.id}, query: ${route.query}`)
       <DashboardValidatorOverview class="overview" />
     </template>
     <div>
-      here comes the main dashboard content
+      <DashboardValidatorSlotViz />
     </div>
   </BcPageWrapper>
 </template>

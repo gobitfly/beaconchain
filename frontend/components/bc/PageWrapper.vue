@@ -14,7 +14,7 @@
       </div>
       <slot name="bottom" />
     </div>
-    <BcMainFooter />
+    <BcFooterMainFooter />
   </div>
 </template>
 

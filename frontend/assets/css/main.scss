@@ -17,10 +17,23 @@ body {
 
 a {
   color: inherit;
+  text-decoration: none;
   &:hover {
     opacity: 0.9;
   }
   &.link {
+    font-size: 16px;
     color: var(--link-color);
   }
+}
+
+@mixin container() {  
+  color: var(--container-color);
+  background-color: var(--container-background);
+  border: 1px solid var(--container-border-color);
+  border-radius: var(--border-radius);
+}
+
+.container {
+  @include container;
 }
