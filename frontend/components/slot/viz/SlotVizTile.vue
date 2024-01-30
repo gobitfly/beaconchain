@@ -90,7 +90,7 @@ const data = computed(() => {
   .first_icon {
     position: absolute;
     top: 10px;
-    left: 3px;
+    left: 1px;
     width: 16px;
     height: 14px;
 

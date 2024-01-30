@@ -24,3 +24,14 @@ a {
     color: var(--link-color);
   }
 }
+
+@mixin container() {  
+  color: var(--container-color);
+  background-color: var(--container-background);
+  border-color: var(--container-border-color);
+  border-radius: var(--border-radius);
+}
+
+.container {
+  @include container;
+}

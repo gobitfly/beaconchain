@@ -29,23 +29,33 @@ const rows = computed(() => {
   </div>
 </template>
 <style lang="scss" scoped>
+@use '~/assets/css/main.scss';
+@use '~/assets/css/fonts.scss';
+
 .content {
+  @include main.container;
   display: flex;
   gap: var(--padding);
   overflow-x: auto;
+  overflow-y: hidden;
   width: 100%;
-  height: 220px;
+  min-height: 180px;
+
+  .epoch {
+    @include fonts.small_text;
+  }
 
   .rows {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--padding-large);
-    height: 30px;
 
     .row {
       display: flex;
       align-items: center;
+      justify-content: flex-start;
+      height: 30px;
       gap: var(--padding);
     }
   }

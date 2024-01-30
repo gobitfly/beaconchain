@@ -33,6 +33,9 @@ const data = computed(() => {
     }
     const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
     types.forEach(type => addDuty(type))
+    if (slot.id === 45) {
+      console.log('rows', rows)
+    }
   }
 
   return {
@@ -53,7 +56,7 @@ const data = computed(() => {
       </div>
       <div class="with-duties">
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
-          <div v-for="row in rows" :key="row.icon" class="row" :class="row.class">
+          <div v-for="row in rows" :key="row.class" class="row" :class="row.class">
             <span>{{ row.count }}x</span>
             <SlotVizIcon :icon="row.icon" class="icon" />
             <div class="value-col">

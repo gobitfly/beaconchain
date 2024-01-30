@@ -39,11 +39,15 @@
         },
         {
           "id": 104,
-          "state": "scheduled"
+          "state": "scheduled",
+          "duties": [
+            { "type": "proposal", "pendingCount": 1, "validator": 1234 }
+          ]
         },
         {
           "id": 105,
-          "state": "scheduled"
+          "state": "scheduled",
+          "duties": [{ "type": "attestation", "pendingCount": 3 }]
         },
         {
           "id": 106,
@@ -165,19 +169,53 @@
         },
         {
           "id": 70,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 71,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "successCount": 1,
+              "successEarning": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 72,
-          "state": "proposed"
+          "state": "missed",
+          "duties": [
+            {
+              "type": "proposal",
+              "successCount": 1,
+              "successEarning": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 73,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "attestation",
+              "failedCount": 3,
+              "failedEarnings": "11200000000000000",
+              "successCount": 5,
+              "successEarning": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 74,
@@ -319,7 +357,17 @@
         },
         {
           "id": 43,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "successCount": 1,
+              "successEarning": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 44,
@@ -327,7 +375,20 @@
         },
         {
           "id": 45,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "successCount": 1,
+              "validator": 1234,
+              "successEarning": "11200000000000000"
+            },
+            {
+              "type": "attestation",
+              "successCount": 3,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 46,
@@ -335,7 +396,25 @@
         },
         {
           "id": 47,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "validator": 1234
+            },
+            {
+              "type": "attestation",
+              "successCount": 4,
+              "successEarning": "11200000000000000"
+            },
+            {
+              "type": "slashing",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 48,
@@ -453,7 +532,25 @@
         },
         {
           "id": 11,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "validator": 1234
+            },
+            {
+              "type": "attestation",
+              "successCount": 4,
+              "successEarning": "11200000000000000"
+            },
+            {
+              "type": "slashing",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 12,
@@ -461,7 +558,14 @@
         },
         {
           "id": 13,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "slashing",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 14,
@@ -469,15 +573,37 @@
         },
         {
           "id": 15,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "sync",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 16,
-          "state": "proposed"
+          "state": "proposed",
+          "duties": [
+            {
+              "type": "attestation",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 17,
-          "state": "proposed"
+          "state": "missed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "validator": 1234
+            }
+          ]
         },
         {
           "id": 18,
