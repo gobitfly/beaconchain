@@ -1,11 +1,28 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // import path from 'path'
 
+import { gitDescribeSync } from 'git-describe'
+let gitVersion = ''
+
+try {
+  const info = gitDescribeSync()
+  if (info.tag != null) {
+    gitVersion = info.tag
+  }
+} catch (err) {
+  console.error('The version number of the explorer cannot be read with git-describe')
+}
+if (gitVersion === '') {
+  console.error('The version number of the explorer is unknown. "2" will be shown by default.')
+  gitVersion = '2'
+}
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiClient: process.env.API_CLIENT
+      apiClient: process.env.API_CLIENT,
+      gitVersion
     },
     private: {
       apiServer: process.env.API_SERVER
