@@ -15,25 +15,44 @@
 
 <style lang="scss" scoped>
 #main-footer {
-  position: absolute;
-  bottom: 0;
+  display: flex;
+  flex-direction: column;
   left: 0;
   right: 0;
-  justify-content: center;
-  align-items: center;
   margin-top: 4px;
   margin-bottom: 13px;
+  @media (min-width: 600px) { // large screen
+    justify-content: center;
+  }
+  @media (max-width: 600px) { // mobile
+    justify-content: flex-start;
+    width: 100%;
+  }
 }
 
 #columns-of-links {
   display: flex;
-  gap: 130px;
-  justify-content: center;
-  margin-bottom: 10px;
+  @media (min-width: 600px) { // large screen
+    justify-content: center;
+    flex-direction: row;
+    gap: 130px;
+  }
+  @media (max-width: 600px) { // mobile
+    justify-content: flex-start;
+    flex-direction: column;
+    gap: 0px;
+  }
 }
 
 #very-last-line {
-  justify-content: center;
   display: flex;
+  flex-direction: row;
+  margin-top: 10px;
+  @media (min-width: 600px) { // large screen
+    justify-content: center;
+  }
+  @media (max-width: 600px) { // mobile
+    justify-content: flex-start;
+  }
 }
 </style>
