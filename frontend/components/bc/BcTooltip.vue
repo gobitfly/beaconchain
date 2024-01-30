@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
   text?: string,
@@ -8,14 +9,20 @@ interface Props {
 
 const props = defineProps<Props>()
 const bcTooltip = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
+const { doSelect } = useTooltipStore()
+const { selected } = storeToRefs(useTooltipStore())
+
+const hover = ref(false)
+const isSelected = computed(() => selected.value === bcTooltip.value)
+const isOpen = computed(() => isSelected.value || hover.value)
+
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
 
 const classList = computed(() => {
   return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed']
 })
 
-const handleClick = () => {
+const setPosition = () => {
   const rect = bcTooltip.value?.getBoundingClientRect()
   if (!rect) {
     return
@@ -37,10 +44,23 @@ const handleClick = () => {
       break
   }
   pos.value = { top: `${top}px`, left: `${left}px` }
+}
 
-  isOpen.value = !isOpen.value
-  if (!isOpen.value) {
-    bcTooltip.value?.blur()
+const handleClick = () => {
+  if (isSelected.value) {
+    doSelect(null)
+  } else {
+    doSelect(bcTooltip.value)
+    setPosition()
+  }
+}
+
+const onHover = (enter:boolean) => {
+  if (!enter) {
+    hover.value = false
+  } else if (!selected.value) {
+    hover.value = true
+    setPosition()
   }
 }
 
@@ -48,7 +68,10 @@ const hide = (event: MouseEvent) => {
   if (event.target === bcTooltip.value || isParent(bcTooltip.value, event.target as HTMLElement)) {
     return
   }
-  isOpen.value = false
+  if (isSelected.value) {
+    doSelect(null)
+  }
+  hover.value = false
   if (!isOpen.value) {
     bcTooltip.value?.blur()
   }
@@ -60,11 +83,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', hide)
+  if (isSelected.value) {
+    doSelect(null)
+  }
 })
 
 </script>
 <template>
-  <div ref="bcTooltip" @click="handleClick()" @blur="isOpen = false">
+  <div ref="bcTooltip" @mouseover="onHover(true)" @mouseleave="hover = false" @click="handleClick()" @blur="onHover(false)">
     <slot />
     <Teleport v-if="isOpen" to="body">
       <div class="bc-tooltip-wrapper" :style="pos">
@@ -130,21 +156,13 @@ onUnmounted(() => {
     border-color: transparent transparent var(--tt-bg-color) transparent;
   }
 
-  &:hover,
-  &:focus,
+  &.hover,
   &.open {
     opacity: 1;
+    pointer-events: unset;
 
     &:not(.dark)::after {
       opacity: 1;
-    }
-  }
-
-  &.open {
-    pointer-events: unset;
-
-    &::after {
-      pointer-events: unset;
     }
   }
 

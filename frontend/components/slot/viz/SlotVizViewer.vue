@@ -17,7 +17,7 @@ const rows = computed(() => {
     <div class="rows">
       <div v-for="row in rows" :key="row.id" class="row">
         <div class="epoch">
-          {{ row.state === 'head' ? $t('slotViz.head') : row.id }}
+          {{ row.state === 'head' ? $t('slotViz.head') : row.id.toLocaleString('en-US') }}
         </div>
       </div>
     </div>
@@ -38,8 +38,9 @@ const rows = computed(() => {
   gap: var(--padding);
   overflow-x: auto;
   overflow-y: hidden;
-  width: 100%;
   min-height: 180px;
+  min-height: 180px;
+  padding: var(--padding-large) var(--padding-large) var(--padding-large) 9px;
 
   .epoch {
     @include fonts.small_text;

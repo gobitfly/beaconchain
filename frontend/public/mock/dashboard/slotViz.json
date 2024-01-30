@@ -1,8 +1,8 @@
 {
-  "currentSlot": 4,
+  "currentSlot": 265874,
   "epochs": [
     {
-      "id": "4",
+      "id": 265875,
       "state": "scheduled",
       "slots": [
         {
@@ -140,7 +140,7 @@
       ]
     },
     {
-      "id": "3",
+      "id": 265874,
       "state": "head",
       "slots": [
         {
@@ -308,7 +308,7 @@
       ]
     },
     {
-      "id": "2",
+      "id": 265873,
       "state": "finalized",
       "slots": [
         {
@@ -483,7 +483,7 @@
       ]
     },
     {
-      "id": "1",
+      "id": 265872,
       "state": "finalized",
       "slots": [
         {
