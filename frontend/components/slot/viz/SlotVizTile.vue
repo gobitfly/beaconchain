@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type SlotVizSlot, type SlotVizIcons } from '~/types/dashboard/slotViz'
-import { type TolltipLayout } from '~/types/layouts'
+import { type TooltipLayout } from '~/types/layouts'
 interface Props {
   data: SlotVizSlot
 }
@@ -20,12 +20,12 @@ const data = computed(() => {
       outer = 'proposed'
       break
   }
-  const hasFaied = !!slot.duties?.find(s => s.failedCount)
+  const hasFailed = !!slot.duties?.find(s => s.failedCount)
   const hasSuccess = !!slot.duties?.find(s => s.successCount)
   const hasPending = !!slot.duties?.find(s => s.pendingCount)
-  if (hasFaied && hasSuccess) {
+  if (hasFailed && hasSuccess) {
     inner = 'mixed'
-  } else if (hasFaied) {
+  } else if (hasFailed) {
     inner = 'missed'
   } else if (hasSuccess) {
     inner = 'proposed'
@@ -39,7 +39,7 @@ const data = computed(() => {
     }
   })
 
-  const tooltipLayout: TolltipLayout = slot.duties?.length ? 'dark' : 'default'
+  const tooltipLayout: TooltipLayout = slot.duties?.length ? 'dark' : 'default'
 
   return {
     id: `slot_${slot.id}`,
