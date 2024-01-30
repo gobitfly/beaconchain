@@ -1,6 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // import path from 'path'
 
+// TODO: understanding why 'git-describe' returns an emtpy version tag
+//       (maybe we need Semver? see https://www.npmjs.com/package/git-describe )
+
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
 let gitVersion = ''
