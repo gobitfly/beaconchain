@@ -31,6 +31,10 @@ onMounted(() => {
   width: 36px;
   height: 19px;
   border-radius: 9.5px;
+  background-color: #c0adad;
+}
+
+.dark-mode .darklight-switch {
   background-color: var(--dark-grey);
 }
 
