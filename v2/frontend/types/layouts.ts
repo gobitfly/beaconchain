@@ -1,1 +1,1 @@
-export type TolltipLayout = 'dark' | 'default'
+export type TooltipLayout = 'dark' | 'default'

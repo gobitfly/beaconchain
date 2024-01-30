@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type SlotVizSlot, type SlotVizIcons } from '~/types/dashboard/slotViz'
-import { type TolltipLayout } from '~/types/layouts'
+import { type TooltipLayout } from '~/types/layouts'
 import { formatNumber } from '~/utils/format'
 type Row = { count: number; icon: SlotVizIcons; class: string; change?: string; validator?: number; }
 interface Props {
@@ -15,7 +15,7 @@ const data = computed(() => {
   const rows: Row[][] = []
 
   const hasDuties = !!slot.duties?.length
-  const tooltipLayout: TolltipLayout = hasDuties ? 'dark' : 'default'
+  const tooltipLayout: TooltipLayout = hasDuties ? 'dark' : 'default'
   if (hasDuties) {
     const addDuty = (type: SlotVizIcons) => {
       const duty = slot.duties?.find(s => s.type === type)
