@@ -21,6 +21,7 @@
   right: 0;
   margin-top: 4px;
   margin-bottom: 13px;
+  margin-left: 10px;
   @media (min-width: 600px) { // large screen
     justify-content: center;
   }
@@ -39,6 +40,7 @@
   }
   @media (max-width: 600px) { // mobile
     justify-content: flex-start;
+    align-items: flex-start;
     flex-direction: column;
     gap: 0px;
   }
