@@ -1,30 +1,31 @@
 <script setup lang="ts">
+const { t: $t } = useI18n()
 const columns = [
   {
-    title: 'Legal Notices',
+    title: $t('footer.legal_notices'),
     links: [
-      ['Imprint', ''],
-      ['Terms', ''],
-      ['Privacy', '']
+      [$t('footer.imprint'), ''],
+      [$t('footer.terms'), ''],
+      [$t('footer.privacy'), '']
     ]
   },
   {
-    title: 'Resources',
+    title: $t('footer.resources'),
     links: [
-      ['API Docs', ''],
-      ['Pricing', ''],
-      ['Advertise', ''],
+      [$t('footer.api_docs'), ''],
+      [$t('footer.pricing'), ''],
+      [$t('footer.advertise'), ''],
       ['Swag Shop', '']
     ]
   },
   {
-    title: 'Links',
+    title: $t('footer.links'),
     links: [
       ['Discord', ''],
       ['Twitter', ''],
       ['Github', ''],
       ['Github Mobile App', ''],
-      ['Press Kit', '']
+      [$t('footer.press_kit'), '']
     ]
   }
 ]
@@ -47,7 +48,12 @@ const columns = [
   font-size: 20px;
   font-weight: bold;
   line-height: 33px;
-  margin-bottom: 10px;
+  @media (min-width: 600px) { // large screen
+    margin-bottom: 10px;
+  }
+  @media (max-width: 600px) { // mobile
+    margin-top: 10px;
+  }
 }
 .link-line {
   line-height: 27px;
