@@ -27,6 +27,10 @@ export function formatAndCalculatePercent (value?: number, base?: number, config
   return formatPercent((value ?? 0) * 100 & base, config)
 }
 
+export function formatNumber (value?: number):string {
+  return value?.toLocaleString('en-US') ?? ''
+}
+
 export function addPlusSign (value: string): string {
   if (!value || value === '0' || value.startsWith('-')) {
     return value

@@ -86,6 +86,8 @@
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 12px;
   --small_text_font_weight: var(--roboto-regular);
+
+  --paragraph_4_font_size: 14px;
 }
 
 .h1,
@@ -107,8 +109,12 @@ h1 {
   font-weight: var(--big_text_label_font_weight);
 }
 
-.small_text{
+@mixin small_text(){
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
   font-weight: var(--small_text_font_weight);
+} 
+
+.small_text{
+  @include small_text
 }

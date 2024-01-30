@@ -4,6 +4,7 @@ import type { LoginResponse } from '~/types/user'
 
 export enum API_PATH {
   DASHBOARD_OVERVIEW = '/dashboard/overview',
+  DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   REFRESH_TOKEN = '/refreshToken'
@@ -25,6 +26,11 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_OVERVIEW]: {
     path: '/validator-dashboards/{dashboard_id}',
     getPath: values => `/validator-dashboards/${values?.validatorId}`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SLOTVIZ]: {
+    path: '/validator-slot-viz/{dashboard_id}',
+    getPath: values => `/validator-slot-viz/${values?.validatorId}`,
     mock: true
   },
   [API_PATH.LATEST_STATE]: {
