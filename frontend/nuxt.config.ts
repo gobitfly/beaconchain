@@ -2,6 +2,7 @@
 // import path from 'path'
 
 import { gitDescribeSync } from 'git-describe'
+import { warn } from 'vue'
 let gitVersion = ''
 
 try {
@@ -10,10 +11,10 @@ try {
     gitVersion = info.tag
   }
 } catch (err) {
-  console.error('The version number of the explorer cannot be read with git-describe')
+  warn('The version number of the explorer cannot be read with git-describe')
 }
 if (gitVersion === '') {
-  console.error('The version number of the explorer is unknown. "2" will be shown by default.')
+  warn('The version number of the explorer is unknown. "2" will be shown by default.')
   gitVersion = '2'
 }
 
