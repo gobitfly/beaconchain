@@ -30,7 +30,7 @@ a {
 @mixin container() {  
   color: var(--container-color);
   background-color: var(--container-background);
-  border-color: var(--container-border-color);
+  border: 1px solid var(--container-border-color);
   border-radius: var(--border-radius);
 }
 
