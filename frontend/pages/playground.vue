@@ -65,7 +65,7 @@ onMounted(async () => {
     <div class="icon_holder">
       <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
     </div>
-    <BcMainFooter />
+    <BcFooterMainFooter />
   </div>
 </template>
 

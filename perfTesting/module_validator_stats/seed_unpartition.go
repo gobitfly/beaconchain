@@ -1,4 +1,4 @@
-package seeding_strat_valepoch
+package module_validator_stats
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 
 type SeederUnpartitioned struct{}
 
-func GetUnpartitioned(tableName string, columnarEngine bool) *seeding.Seeder {
-	return getValiEpochSeeder(tableName, columnarEngine, &SeederUnpartitioned{})
+func GetUnpartitioned(tableName string, columnarEngine bool, data SeederData) *seeding.Seeder {
+	return getValiEpochSeeder(tableName, columnarEngine, &SeederUnpartitioned{}, data)
 }
 
 func (*SeederUnpartitioned) CreateSchema(s *seeding.Seeder) error {

@@ -36,5 +36,17 @@
     "submit": "Login",
     "title": "Login",
     "email": "Email address"
+  },
+  "footer": {
+    "legal_notices": "Legal Notices",
+    "resources": "Resources",
+    "links": "Links",
+    "imprint": "Imprint",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "api_docs": "API Docs",
+    "pricing": "Pricing",
+    "advertise": "Advertise",
+    "press_kit": "Press Kit"
   }
 }
