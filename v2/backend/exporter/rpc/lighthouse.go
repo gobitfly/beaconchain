@@ -94,6 +94,7 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 }
 
 // GetChainHead gets the chain head from Lighthouse
+// Deprecated: Use retriever.GetChainHead() instead
 func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 	headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/head", lc.endpoint))
 	if err != nil {
