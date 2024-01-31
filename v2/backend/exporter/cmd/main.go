@@ -33,12 +33,12 @@ func startModules() {
 		// TODO: EL, DB
 	}
 
-	registeredModules := []modules.ModuleInterface{
-		modules.NewDashboardDataModule(moduleContext, 27889),
+	registeredModules := []modules.ModuleInterfaceEpoch{
+		modules.NewDashboardDataModule(moduleContext),
 		// todo: add more modules here
 	}
 
 	for _, module := range registeredModules {
-		module.Start()
+		module.Start(27889)
 	}
 }
