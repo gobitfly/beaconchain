@@ -14,24 +14,22 @@ import (
 
 type dashboardData struct {
 	ModuleContext
-	Epoch int // todo remove
 }
 
-func NewDashboardDataModule(moduleContext ModuleContext, epoch int) ModuleInterface {
+func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterfaceEpoch {
 	return &dashboardData{
 		ModuleContext: moduleContext,
-		Epoch:         epoch,
 	}
 }
 
-func (d *dashboardData) Start() {
+func (d *dashboardData) Start(epoch int) {
 	spec, err := d.CL.GetSpec()
 	if err != nil {
 		commons.LogFatal(err, "can not get spec", 0)
 		return
 	}
 
-	data := d.getData(d.Epoch, int(spec.Data.SlotsPerEpoch))
+	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
 	if data == nil {
 		return
 	}
