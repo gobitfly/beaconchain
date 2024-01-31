@@ -40,6 +40,7 @@
     "@ethersproject/units": "^5.7.0",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@pinia/nuxt": "^0.5.1",
+    "git-describe": "^4.1.1",
     "lodash-es": "^4.17.21",
     "pinia": "^2.1.7",
     "primevue": "^3.46.0",
