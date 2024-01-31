@@ -44,7 +44,7 @@ const rows = computed(() => {
   padding: var(--padding-large) var(--padding-large) var(--padding-large) 9px;
 
   .epoch {
-    @include fonts.small_text;
+    @include fonts.small_text_bold;
   }
 
   .rows {

@@ -12,6 +12,11 @@ const bcTooltip = ref<HTMLElement | null>(null)
 const { doSelect } = useTooltipStore()
 const { selected } = storeToRefs(useTooltipStore())
 
+// this const will be avaiable on template
+const slots = useSlots()
+
+const hasContent = computed(() => !!slots.tooltip || !!props.text)
+
 const hover = ref(false)
 const isSelected = computed(() => !!bcTooltip.value && selected.value === bcTooltip.value)
 const isOpen = computed(() => isSelected.value || hover.value)
@@ -47,9 +52,10 @@ const setPosition = () => {
 }
 
 const handleClick = () => {
+  console.log(slots)
   if (isSelected.value) {
     doSelect(null)
-  } else {
+  } else if (hasContent.value) {
     doSelect(bcTooltip.value)
     setPosition()
   }
@@ -58,7 +64,7 @@ const handleClick = () => {
 const onHover = (enter:boolean) => {
   if (!enter) {
     hover.value = false
-  } else if (!selected.value) {
+  } else if (!selected.value && hasContent.value) {
     hover.value = true
     setPosition()
   }
@@ -90,7 +96,14 @@ onUnmounted(() => {
 
 </script>
 <template>
-  <div ref="bcTooltip" @mouseover="onHover(true)" @mouseleave="hover = false" @click="handleClick()" @blur="onHover(false)">
+  <div
+    ref="bcTooltip"
+    class="slot_container"
+    @mouseover="onHover(true)"
+    @mouseleave="hover = false"
+    @click="handleClick()"
+    @blur="onHover(false)"
+  >
     <slot />
     <Teleport v-if="isOpen" to="body">
       <div class="bc-tooltip-wrapper" :style="pos">
@@ -105,6 +118,9 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.slot_container{
+  display: inline;
+}
 .bc-tooltip-wrapper {
   position: fixed;
   width: 1px;

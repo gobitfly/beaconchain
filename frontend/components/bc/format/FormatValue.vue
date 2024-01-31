@@ -1,19 +1,32 @@
 <script setup lang="ts">
-interface Props {
-  value?: string
-}
+import type { BigNumber } from '@ethersproject/bignumber'
+import type { ValueConvertOptions } from '~/types/value'
 
+interface Props {
+  value?: string | BigNumber
+  options? : ValueConvertOptions
+}
 const props = defineProps<Props>()
 
-const label = computed(() => {
+const { converter } = useValue()
+
+const data = computed(() => {
   if (!props.value) {
-    return ''
+    return {
+      label: '',
+      tooltip: ''
+    }
   }
-  // TODO: handly currency conversion depending on the selected currency
-  return formatWeiToEth(props.value)
+  const res = converter.value.weiToValue(props.value, props.options)
+  return {
+    label: res.label,
+    tooltip: res.fullLabel
+  }
 })
 
 </script>
 <template>
-  {{ label }}
+  <BcTooltip :text="data.tooltip">
+    {{ data.label }}
+  </BcTooltip>
 </template>

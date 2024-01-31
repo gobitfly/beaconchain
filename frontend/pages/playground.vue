@@ -62,6 +62,19 @@ onMounted(async () => {
         <IconSlotSync /> Slot Sync
       </div>
     </div>
+
+    <div>
+      Conversions
+      <div>
+        Native 1Eth+ :<BcFormatValue value="1000000010000000000" />
+      </div>
+      <div>
+        less then 1Eth+ :<BcFormatValue value="0000000010002000001" />
+      </div>
+      <div>
+        less then 1Eth+ :<BcFormatValue value="0000000000000001000" />
+      </div>
+    </div>
     <div class="icon_holder">
       <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
     </div>
@@ -69,7 +82,8 @@ onMounted(async () => {
   </div>
 </template>
 
-<style lang="scss" scoped>.icon_holder {
+<style lang="scss" scoped>
+.icon_holder {
   margin: 10px;
   display: flex;
   flex-wrap: wrap;

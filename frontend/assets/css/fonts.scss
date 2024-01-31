@@ -13,6 +13,20 @@
 
 @font-face {
   font-family: "Roboto";
+  font-weight: 300;
+  src: url("/fonts/Roboto-Light.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-weight: 300;
+  font-style: italic;
+  src: url("/fonts/Roboto-LightItalic.ttf") format("truetype");
+}
+
+
+@font-face {
+  font-family: "Roboto";
   font-weight: 400;
   src: url("/fonts/Roboto-Regular.ttf") format("truetype");
 }
@@ -62,6 +76,7 @@
   --montserrat-semi-bold: 600;
 
   --roboto-family: "Roboto";
+  --roboto-light: 300;
   --roboto-regular: 400;
   --roboto-medium: 500;
   --roboto-bold: 700;
@@ -81,11 +96,12 @@
   
   --big_text_label_font_family: var(--roboto-family);
   --big_text_label_font_size: 20px;
-  --big_text_label_font_weight: var(--roboto-medium);
+  --big_text_label_font_weight: var(--roboto-regular);
   
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 12px;
-  --small_text_font_weight: var(--roboto-regular);
+  --small_text_font_weight: var(--roboto-light);
+  --small_text_bold_font_weight: var(--roboto-medium);
 
   --paragraph_4_font_size: 14px;
 }
@@ -117,4 +133,14 @@ h1 {
 
 .small_text{
   @include small_text
+}
+
+@mixin small_text_bold(){
+  font-family: var(--small_text_font_family);
+  font-size: var(--small_text_font_size);
+  font-weight: var(--small_text_bold_font_weight);
+} 
+
+.small_text_bold{
+  @include small_text_bold
 }
