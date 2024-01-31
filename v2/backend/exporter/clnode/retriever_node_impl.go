@@ -8,20 +8,44 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobitfly/beaconchain/commons"
+	"github.com/gobitfly/beaconchain/commons/utils"
 )
 
 /**
 * This implementation retrieves data directly from node
  */
 
-func NewNodeDataRetriever(endpoint string) Retriever {
-	return &nodeImplRetriever{
-		endpoint: endpoint,
-		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
+func NewNodeDataRetriever(endpoint string, chainConfig *ClChainConfig) (Retriever, error) {
+	retriever := Retriever{
+		RetrieverInt: &nodeImplRetriever{
+			endpoint: endpoint,
+			httpClient: &http.Client{
+				Timeout: 120 * time.Second,
+			},
 		},
 	}
+
+	if chainConfig != nil {
+		retriever.ChainConfig = *chainConfig
+	} else {
+		config, err := retriever.GetSpec()
+		if err != nil {
+			return retriever, fmt.Errorf("error retrieving chain config: %v", err)
+		}
+		retriever.ChainConfig = config.Data
+	}
+
+	return retriever, nil
+}
+
+func (r *nodeImplRetriever) GetFinalityCheckpoints(state_id string) (StandardFinalityCheckpointsResponse, error) {
+	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", r.endpoint, state_id)
+	return get[StandardFinalityCheckpointsResponse](r, requestUrl)
+}
+
+func (r *nodeImplRetriever) GetBlockHeader(block_id string) (StandardBeaconHeaderResponse, error) {
+	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/headers/head", r.endpoint)
+	return get[StandardBeaconHeaderResponse](r, requestUrl)
 }
 
 func (r *nodeImplRetriever) GetSyncCommitteesAssignments(epoch int, slot int64) (GetSyncCommitteeAssignmentsResponse, error) {
@@ -66,12 +90,12 @@ func (r *nodeImplRetriever) GetAttestationRewards(epoch int) (GetAttestationRewa
 
 // Helper for get and unmarshal
 func get[T any](r *nodeImplRetriever, url string) (T, error) {
-	return commons.Unmarshal[T](genericRequest("GET", url, r.httpClient))
+	return utils.Unmarshal[T](genericRequest("GET", url, r.httpClient))
 }
 
 // Helper for post and unmarshal
 func post[T any](r *nodeImplRetriever, url string) (T, error) {
-	return commons.Unmarshal[T](genericRequest("POST", url, r.httpClient))
+	return utils.Unmarshal[T](genericRequest("POST", url, r.httpClient))
 }
 
 func genericRequest(method string, requestUrl string, httpClient *http.Client) ([]byte, error) {

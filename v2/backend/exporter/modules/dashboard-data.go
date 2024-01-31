@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gobitfly/beaconchain/commons"
 	"github.com/gobitfly/beaconchain/commons/utils"
 	"github.com/gobitfly/beaconchain/exporter/clnode"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
@@ -25,7 +24,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterfaceEpoch {
 func (d *dashboardData) Start(epoch int) {
 	spec, err := d.CL.GetSpec()
 	if err != nil {
-		commons.LogFatal(err, "can not get spec", 0)
+		utils.LogFatal(err, "can not get spec", 0)
 		return
 	}
 
@@ -67,7 +66,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	logrus.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
 	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch)
 	if err != nil {
-		commons.LogError(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
+		utils.LogError(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 		return nil
 	}
 
@@ -75,7 +74,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	logrus.Infof("retrieving proposer assignments")
 	result.proposerAssignments, err = d.CL.GetPropoalAssignments(epoch)
 	if err != nil {
-		commons.LogError(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
+		utils.LogError(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
@@ -83,7 +82,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	logrus.Infof("retrieving sync committee assignments")
 	result.syncCommitteeAssignments, err = d.CL.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
 	if err != nil {
-		commons.LogError(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
+		utils.LogError(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
@@ -91,7 +90,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	logrus.Infof("retrieving attestation rewards data")
 	result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
 	if err != nil {
-		commons.LogError(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
+		utils.LogError(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
@@ -100,26 +99,26 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 		logrus.Infof("retrieving data for block at slot %d", slot)
 		block, err := d.CL.GetSlot(slot)
 		if err != nil {
-			commons.LogFatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			utils.LogFatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		if block.Data.Message.Slot == "" {
 			// todo better network handling, if 404 just log info, else log error
-			commons.LogError(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			utils.LogError(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockData[slot] = &block
 
 		blockReward, err := d.CL.GetPropoalRewards(slot)
 		if err != nil {
-			commons.LogError(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+			utils.LogError(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockRewardData[slot] = &blockReward
 
 		syncRewards, err := d.CL.GetSyncRewards(slot)
 		if err != nil {
-			commons.LogError(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
+			utils.LogError(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.syncCommitteeRewardData[slot] = &syncRewards
@@ -129,7 +128,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	logrus.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
 	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch)
 	if err != nil {
-		commons.LogError(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
+		utils.LogError(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 		return nil
 	}
 
