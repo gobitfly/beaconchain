@@ -51,8 +51,10 @@
     "terms": "Terms",
     "privacy": "Privacy",
     "api_docs": "API Docs",
-    "pricing": "Pricing",
+    "api_pricing": "API Pricing",
+    "premium" : "Premium Account",
     "advertise": "Advertise",
+    "status": "Site Status",
     "press_kit": "Press Kit"
   }
 }

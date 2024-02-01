@@ -38,8 +38,10 @@
       "terms": "Termes et conditions",
       "privacy": "Protection des données",
       "api_docs": "Docs de l'API",
-      "pricing": "Tarifs",
+      "api_pricing": "Tarifs d'accès à l'API",
+      "premium": "Compte Premium",
       "advertise": "Devenez annonceur",
+      "status": "Statut du site",
       "press_kit": "Dossier de presse"
     }
   }

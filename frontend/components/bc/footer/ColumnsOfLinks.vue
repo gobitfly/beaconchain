@@ -13,9 +13,11 @@ const columns = [
     title: $t('footer.resources'),
     links: [
       [$t('footer.api_docs'), '/api/v2/docs/index.html', 'fas fa-laptop-code'],
-      [$t('footer.pricing'), '/premium', 'fas fa-file-invoice-dollar'],
+      [$t('footer.api_pricing'), '/pricing', 'fas fa-file-invoice-dollar'],
+      [$t('footer.premium'), '/premium', 'fas fa-user-astronaut'],
       [$t('footer.advertise'), '/advertisewithus', 'fas fa-ad'],
-      ['Swag Shop', 'https://shop.beaconcha.in', 'fas fa-shopping-cart']
+      ['Swag Shop', 'https://shop.beaconcha.in', 'fas fa-shopping-cart'],
+      [$t('footer.status'), 'https://status.beaconcha.in/', 'fas fa-check-circle']
     ]
   },
   {
@@ -23,7 +25,7 @@ const columns = [
     links: [
       ['Discord', 'https://dsc.gg/beaconchain', 'fab fa-discord'],
       ['Twitter', 'https://twitter.com/beaconcha_in', 'fab fa-twitter'],
-      ['Github', 'https://github.com/gobitfly', 'fab fa-github'],
+      ['Github', 'https://github.com/gobitfly/beaconchain', 'fab fa-github'],
       ['Github Mobile App', 'https://github.com/gobitfly/eth2-beaconchain-explorer-app', 'fab fa-github'],
       [$t('footer.press_kit'), '/presskit', 'fas fa-newspaper']
     ]

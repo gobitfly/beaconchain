@@ -13,11 +13,15 @@ try {
   if (info.tag != null) {
     gitVersion = info.tag
   }
+  if (gitVersion === '' && info.hash != null) {
+    warn('The GitHub tag of the explorer is unknown. Reading the GitHub hash instead.')
+    gitVersion = info.hash
+  }
 } catch (err) {
-  warn('The version number of the explorer cannot be read with git-describe')
+  warn('The GitHub tag and hash of the explorer cannot be read with git-describe.')
 }
 if (gitVersion === '') {
-  warn('The version number of the explorer is unknown. "2" will be shown by default.')
+  warn('Neither the GitHub tag nor the GitHub hash could be read. The version number of the explorer shown on the front end will be "2" by default.')
   gitVersion = '2'
 }
 
