@@ -1,13 +1,12 @@
 package modules
 
 import (
-	"fmt"
 	"strconv"
 
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/commons/utils"
-	"github.com/gobitfly/beaconchain/exporter/clnode"
-	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ctypes "github.com/gobitfly/beaconchain/consapi/types"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,22 +31,28 @@ func (d *dashboardData) Start(epoch int) {
 	if data == nil {
 		return
 	}
-	result := process(data, utils.MustParseHex(spec.Data.GenesisForkVersion))
+
+	domain, err := utils.GetSigningDomain()
+	if err != nil {
+		utils.LogFatal(err, "can not get signing domain", 0)
+		return
+	}
+
+	process(data, domain)
 
 	// todo store in db
 
-	fmt.Printf("done %v", result)
 }
 
 type Data struct {
-	startBalances            clnode.GetValidatorsResponse
-	endBalances              clnode.GetValidatorsResponse
-	proposerAssignments      clnode.GetProposerAssignmentsResponse
-	syncCommitteeAssignments clnode.GetSyncCommitteeAssignmentsResponse
-	attestationRewards       clnode.GetAttestationRewardsResponse
-	beaconBlockData          map[int]*clnode.GetBeaconSlotResponse
-	beaconBlockRewardData    map[int]*clnode.GetBlockRewardsResponse
-	syncCommitteeRewardData  map[int]*clnode.GetSyncCommitteeRewardsResponse
+	startBalances            ctypes.StandardValidatorsResponse
+	endBalances              ctypes.StandardValidatorsResponse
+	proposerAssignments      ctypes.StandardProposerAssignmentsResponse
+	syncCommitteeAssignments ctypes.StandardSyncCommitteesResponse
+	attestationRewards       ctypes.StandardAttestationRewardsResponse
+	beaconBlockData          map[int]*ctypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[int]*ctypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[int]*ctypes.StandardSyncCommitteeRewardsResponse
 }
 
 func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
@@ -58,9 +63,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + int(slotsPerEpoch)
 
-	result.beaconBlockData = make(map[int]*clnode.GetBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[int]*clnode.GetBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[int]*clnode.GetSyncCommitteeRewardsResponse)
+	result.beaconBlockData = make(map[int]*ctypes.StandardBeaconSlotResponse)
+	result.beaconBlockRewardData = make(map[int]*ctypes.StandardBlockRewardsResponse)
+	result.syncCommitteeRewardData = make(map[int]*ctypes.StandardSyncCommitteeRewardsResponse)
 
 	// retrieve the validator balances at the start of the epoch
 	logrus.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
@@ -102,7 +107,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 			utils.LogFatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		if block.Data.Message.Slot == "" {
+		if block.Data.Message.StateRoot == "" {
 			// todo better network handling, if 404 just log info, else log error
 			utils.LogError(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
@@ -138,7 +143,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
-	idealAttestationRewards := make(map[string]int)
+	idealAttestationRewards := make(map[decimal.Decimal]int)
 	for i, idealReward := range data.attestationRewards.Data.IdealRewards {
 		idealAttestationRewards[idealReward.EffectiveBalance] = i
 	}
@@ -149,10 +154,10 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	for i := 0; i < len(validatorsData); i++ {
 		validatorsData[i] = &validatorDashboardDataRow{}
 		if i < len(data.startBalances.Data) {
-			validatorsData[i].BalanceStart = mustParseInt64(data.startBalances.Data[i].Balance)
+			validatorsData[i].BalanceStart = data.startBalances.Data[i].Balance
 			pubkeyToIndexMapStart[data.startBalances.Data[i].Validator.Pubkey] = int64(i)
 		}
-		validatorsData[i].BalanceEnd = mustParseInt64(data.endBalances.Data[i].Balance)
+		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
 
 		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
@@ -160,7 +165,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 	// write scheduled block data
 	for _, proposerAssignment := range data.proposerAssignments.Data {
-		proposerIndex := mustParseInt(proposerAssignment.ValidatorIndex)
+		proposerIndex := proposerAssignment.ValidatorIndex
 		validatorsData[proposerIndex].BlockScheduled++
 	}
 
@@ -171,14 +176,14 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 	// write proposer rewards data
 	for _, reward := range data.beaconBlockRewardData {
-		validatorsData[mustParseInt(reward.Data.ProposerIndex)].BlocksClReward += mustParseInt64(reward.Data.Attestations) + mustParseInt64(reward.Data.AttesterSlashings) + mustParseInt64(reward.Data.ProposerSlashings) + mustParseInt64(reward.Data.SyncAggregate)
+		validatorsData[reward.Data.ProposerIndex].BlocksClReward += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
 	}
 
 	// write sync committee reward data & sync committee execution stats
 	for _, rewards := range data.syncCommitteeRewardData {
 		for _, reward := range rewards.Data {
-			validatorIndex := mustParseInt(reward.ValidatorIndex)
-			syncReward := mustParseInt64(reward.Reward)
+			validatorIndex := reward.ValidatorIndex
+			syncReward := reward.Reward
 			validatorsData[validatorIndex].SyncReward += syncReward
 
 			if syncReward > 0 {
@@ -189,7 +194,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 	// write block specific data
 	for _, block := range data.beaconBlockData {
-		validatorsData[mustParseInt64(block.Data.Message.ProposerIndex)].BlocksProposed++
+		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed++
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
 
@@ -198,15 +203,16 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			// if signature is invalid and the validator was in the state at the beginning of the epoch I count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there were no valid deposits in the block prior I DO NOT count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there was a VALID deposit in the blocks prior I DO COUNT the deposit towards the balance
-			err := deposit.VerifyDepositSignature(&ethpb.Deposit_Data{
-				PublicKey:             utils.MustParseHex(depositData.Data.Pubkey),
+
+			err := utils.VerifyDepositSignature(&phase0.DepositData{
+				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
 				WithdrawalCredentials: utils.MustParseHex(depositData.Data.WithdrawalCredentials),
-				Amount:                uint64(mustParseInt64(depositData.Data.Amount)),
-				Signature:             utils.MustParseHex(depositData.Data.Signature),
+				Amount:                phase0.Gwei(uint64(depositData.Data.Amount)),
+				Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
 			}, domain)
 
 			if err != nil {
-				logrus.Errorf("deposit at index %d in slot %s is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature)
+				logrus.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
 				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {
@@ -221,13 +227,13 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 			validatorIndex := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
 
-			validatorsData[validatorIndex].DepositsAmount += mustParseInt64(depositData.Data.Amount)
+			validatorsData[validatorIndex].DepositsAmount += depositData.Data.Amount
 			validatorsData[validatorIndex].DepositsCount++
 		}
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
-			validatorIndex := mustParseInt64(withdrawal.ValidatorIndex)
-			validatorsData[validatorIndex].WithdrawalsAmount += mustParseInt64(withdrawal.Amount)
+			validatorIndex := withdrawal.ValidatorIndex
+			validatorsData[validatorIndex].WithdrawalsAmount = validatorsData[validatorIndex].WithdrawalsAmount.Add(withdrawal.Amount)
 			validatorsData[validatorIndex].WithdrawalsCount++
 		}
 	}
@@ -235,24 +241,24 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
 
-		validatorIndex := mustParseInt(attestationReward.ValidatorIndex)
+		validatorIndex := attestationReward.ValidatorIndex
 
-		validatorsData[validatorIndex].AttestationsHeadReward = mustParseInt64(attestationReward.Head)
-		validatorsData[validatorIndex].AttestationsSourceReward = mustParseInt64(attestationReward.Source)
-		validatorsData[validatorIndex].AttestationsTargetReward = mustParseInt64(attestationReward.Target)
-		validatorsData[validatorIndex].AttestationsInactivityReward = mustParseInt64(attestationReward.Inactivity)
-		validatorsData[validatorIndex].AttestationsInclusionsReward = mustParseInt64(attestationReward.InclusionDelay)
+		validatorsData[validatorIndex].AttestationsHeadReward = attestationReward.Head
+		validatorsData[validatorIndex].AttestationsSourceReward = attestationReward.Source
+		validatorsData[validatorIndex].AttestationsTargetReward = attestationReward.Target
+		validatorsData[validatorIndex].AttestationsInactivityReward = attestationReward.Inactivity
+		validatorsData[validatorIndex].AttestationsInclusionsReward = attestationReward.InclusionDelay
 		validatorsData[validatorIndex].AttestationReward = validatorsData[validatorIndex].AttestationsHeadReward +
 			validatorsData[validatorIndex].AttestationsSourceReward +
 			validatorsData[validatorIndex].AttestationsTargetReward +
 			validatorsData[validatorIndex].AttestationsInactivityReward +
 			validatorsData[validatorIndex].AttestationsInclusionsReward
 		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[data.startBalances.Data[validatorIndex].Validator.EffectiveBalance]]
-		validatorsData[validatorIndex].AttestationsIdealHeadReward = mustParseInt64(idealRewardsOfValidator.Head)
-		validatorsData[validatorIndex].AttestationsIdealTargetReward = mustParseInt64(idealRewardsOfValidator.Target)
-		validatorsData[validatorIndex].AttestationsIdealHeadReward = mustParseInt64(idealRewardsOfValidator.Head)
-		validatorsData[validatorIndex].AttestationsIdealInactivityReward = mustParseInt64(idealRewardsOfValidator.Inactivity)
-		validatorsData[validatorIndex].AttestationsIdealInclusionsReward = mustParseInt64(idealRewardsOfValidator.InclusionDelay)
+		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
+		validatorsData[validatorIndex].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
+		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
+		validatorsData[validatorIndex].AttestationsIdealInactivityReward = idealRewardsOfValidator.Inactivity
+		validatorsData[validatorIndex].AttestationsIdealInclusionsReward = idealRewardsOfValidator.InclusionDelay
 
 		validatorsData[validatorIndex].AttestationIdealReward = validatorsData[validatorIndex].AttestationsIdealHeadReward +
 			validatorsData[validatorIndex].AttestationsIdealSourceReward +
@@ -316,12 +322,12 @@ type validatorDashboardDataRow struct {
 
 	Slashed bool // done
 
-	BalanceStart int64 // done
-	BalanceEnd   int64 // done
+	BalanceStart decimal.Decimal // done
+	BalanceEnd   decimal.Decimal // done
 
 	DepositsCount  int   // done
 	DepositsAmount int64 // done
 
-	WithdrawalsCount  int   // done
-	WithdrawalsAmount int64 // done
+	WithdrawalsCount  int             // done
+	WithdrawalsAmount decimal.Decimal // done
 }

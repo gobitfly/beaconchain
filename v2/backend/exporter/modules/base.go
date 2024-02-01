@@ -1,15 +1,20 @@
 package modules
 
-import "github.com/gobitfly/beaconchain/exporter/clnode"
+import (
+	"github.com/gobitfly/beaconchain/consapi"
+	"github.com/sirupsen/logrus"
+)
+
+var logger = logrus.New().WithField("module", "exporter")
 
 type ModuleInterfaceEpoch interface {
 	Start(epoch int)
 }
 
 type ModuleInterfaceSlot interface {
-	Start(slot int64)
+	Start() error
 }
 
 type ModuleContext struct {
-	CL clnode.Retriever
+	CL consapi.Retriever
 }

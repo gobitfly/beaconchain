@@ -20,18 +20,21 @@ import (
 	gtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gobitfly/beaconchain/commons/types"
 	"github.com/gobitfly/beaconchain/commons/utils"
+	"github.com/gobitfly/beaconchain/consapi"
 	"golang.org/x/sync/errgroup"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
+// TODO replace most lc.cl.Endpoint with lc.cl and use the interface
+
 // LighthouseLatestHeadEpoch is used to cache the latest head epoch for participation requests
 var LighthouseLatestHeadEpoch uint64 = 0
 
 // LighthouseClient holds the Lighthouse client info
 type LighthouseClient struct {
-	endpoint            string
+	cl                  *consapi.NodeImplRetriever
 	assignmentsCache    *lru.Cache
 	assignmentsCacheMux *sync.Mutex
 	slotsCache          *lru.Cache
@@ -40,10 +43,10 @@ type LighthouseClient struct {
 }
 
 // NewLighthouseClient is used to create a new Lighthouse client
-func NewLighthouseClient(endpoint string, chainID *big.Int) (*LighthouseClient, error) {
+func NewLighthouseClient(cl *consapi.NodeImplRetriever, chainID *big.Int) (*LighthouseClient, error) {
 	signer := gtypes.NewCancunSigner(chainID)
 	client := &LighthouseClient{
-		endpoint:            endpoint,
+		cl:                  cl,
 		assignmentsCacheMux: &sync.Mutex{},
 		slotsCacheMux:       &sync.Mutex{},
 		signer:              signer,
@@ -57,7 +60,7 @@ func NewLighthouseClient(endpoint string, chainID *big.Int) (*LighthouseClient, 
 func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 	blkCh := make(chan *types.Block, 10)
 	go func() {
-		stream, err := eventsource.Subscribe(fmt.Sprintf("%s/eth/v1/events?topics=head", lc.endpoint), "")
+		stream, err := eventsource.Subscribe(fmt.Sprintf("%s/eth/v1/events?topics=head", lc.cl.Endpoint), "")
 
 		if err != nil {
 			utils.LogFatal(err, "getting eventsource stream error", 0)
@@ -96,30 +99,19 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 // GetChainHead gets the chain head from Lighthouse
 // Deprecated: Use retriever.GetChainHead() instead
 func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
-	headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/head", lc.endpoint))
+	parsedHead, err := lc.cl.GetBlockHeader("head")
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving chain head: %w", err)
-	}
-
-	var parsedHead StandardBeaconHeaderResponse
-	err = json.Unmarshal(headResp, &parsedHead)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing chain head: %w", err)
+		return &types.ChainHead{}, err
 	}
 
 	id := parsedHead.Data.Header.Message.StateRoot
 	if parsedHead.Data.Header.Message.Slot == 0 {
 		id = "genesis"
 	}
-	finalityResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", lc.endpoint, id))
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving finality checkpoints of head: %w", err)
-	}
 
-	var parsedFinality StandardFinalityCheckpointsResponse
-	err = json.Unmarshal(finalityResp, &parsedFinality)
+	parsedFinality, err := lc.cl.GetFinalityCheckpoints(id)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing finality checkpoints of head: %w", err)
+		return &types.ChainHead{}, err
 	}
 
 	// The epoch in the Finalized Object is not the finalized epoch, but the epoch for the checkpoint - the 'real' finalized epoch is the one before
@@ -150,7 +142,7 @@ func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 
 func (lc *LighthouseClient) GetValidatorQueue() (*types.ValidatorQueue, error) {
 	// pre-filter the status, to return much less validators, thus much faster!
-	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/head/validators?status=pending_queued,active_exiting,active_slashed", lc.endpoint))
+	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/head/validators?status=pending_queued,active_exiting,active_slashed", lc.cl.Endpoint))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator for head valiqdator queue check: %w", err)
 	}
@@ -185,30 +177,20 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	}
 	lc.assignmentsCacheMux.Unlock()
 
-	proposerResp, err := lc.get(fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", lc.endpoint, epoch))
+	parsedProposerResponse, err := lc.cl.GetPropoalAssignments(int(epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving proposer duties for epoch %v: %w", epoch, err)
 	}
-	var parsedProposerResponse StandardProposerDutiesResponse
-	err = json.Unmarshal(proposerResp, &parsedProposerResponse)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing proposer duties: %w", err)
-	}
 
 	// fetch the block root that the proposer data is dependent on
-	headerResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/%s", lc.endpoint, parsedProposerResponse.DependentRoot))
+	parsedHeader, err := lc.cl.GetBlockHeader(parsedProposerResponse.DependentRoot)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving chain header: %w", err)
-	}
-	var parsedHeader StandardBeaconHeaderResponse
-	err = json.Unmarshal(headerResp, &parsedHeader)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing chain header: %w", err)
+		return nil, fmt.Errorf("error retrieving proposer duties dependent header for epoch %v: %w", epoch, err)
 	}
 	depStateRoot := parsedHeader.Data.Header.Message.StateRoot
 
 	// Now use the state root to make a consistent committee query
-	committeesResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%s/committees?epoch=%d", lc.endpoint, depStateRoot, epoch))
+	committeesResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%s/committees?epoch=%d", lc.cl.Endpoint, depStateRoot, epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving committees data: %w", err)
 	}
@@ -271,10 +253,11 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 }
 
 // GetEpochProposerAssignments will get the epoch proposer assignments from Lighthouse RPC api
+// Deprecated: use cl retriever GetPropoalAssignments
 func (lc *LighthouseClient) GetEpochProposerAssignments(epoch uint64) (*StandardProposerDutiesResponse, error) {
 	var err error
 
-	proposerResp, err := lc.get(fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", lc.endpoint, epoch))
+	proposerResp, err := lc.get(fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", lc.cl.Endpoint, epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving proposer duties for epoch %v: %w", epoch, err)
 	}
@@ -288,9 +271,9 @@ func (lc *LighthouseClient) GetEpochProposerAssignments(epoch uint64) (*Standard
 }
 
 func (lc *LighthouseClient) GetValidatorState(epoch uint64) (*StandardValidatorsResponse, error) {
-	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
+	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.cl.Endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
 	if err != nil && epoch == 0 {
-		validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.endpoint, "genesis"))
+		validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.cl.Endpoint, "genesis"))
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
 		}
@@ -329,9 +312,9 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 		data.Finalized = false
 	}
 
-	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
+	validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.cl.Endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
 	if err != nil && epoch == 0 {
-		validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.endpoint, "genesis"))
+		validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.cl.Endpoint, "genesis"))
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
 		}
@@ -584,9 +567,9 @@ func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64,
 
 	validatorBalances := make(map[uint64]uint64)
 
-	resp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validator_balances", lc.endpoint, epoch*int64(utils.Config.Chain.ClConfig.SlotsPerEpoch)))
+	resp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validator_balances", lc.cl.Endpoint, epoch*int64(utils.Config.Chain.ClConfig.SlotsPerEpoch)))
 	if err != nil && epoch == 0 {
-		resp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/genesis/validator_balances", lc.endpoint))
+		resp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/genesis/validator_balances", lc.cl.Endpoint))
 		if err != nil {
 			return validatorBalances, err
 		}
@@ -608,7 +591,7 @@ func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64,
 }
 
 func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block, error) {
-	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/0x%x", lc.endpoint, blockroot))
+	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/0x%x", lc.cl.Endpoint, blockroot))
 	if err != nil {
 		if err == errNotFound {
 			// no block found
@@ -624,7 +607,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 
 	slot := uint64(parsedHeaders.Data.Header.Message.Slot)
 
-	resp, err := lc.get(fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", lc.endpoint, parsedHeaders.Data.Root))
+	resp, err := lc.get(fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", lc.cl.Endpoint, parsedHeaders.Data.Root))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving block data at slot %v: %w", slot, err)
 	}
@@ -643,9 +626,9 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 func (lc *LighthouseClient) GetBlockHeader(slot uint64) (*StandardBeaconHeaderResponse, error) {
 	var parsedHeaders *StandardBeaconHeaderResponse
 
-	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/%d", lc.endpoint, slot))
+	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/%d", lc.cl.Endpoint, slot))
 	if err != nil && slot == 0 {
-		headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers", lc.endpoint))
+		headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers", lc.cl.Endpoint))
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving chain head for slot %v: %w", slot, err)
 		}
@@ -689,9 +672,9 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 
 	var parsedHeaders *StandardBeaconHeaderResponse
 
-	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/%d", lc.endpoint, slot))
+	resHeaders, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers/%d", lc.cl.Endpoint, slot))
 	if err != nil && slot == 0 {
-		headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers", lc.endpoint))
+		headResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/headers", lc.cl.Endpoint))
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving chain head for slot %v: %w", slot, err)
 		}
@@ -752,9 +735,9 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 
 				block.EpochAssignments = assignments
 
-				validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
+				validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.cl.Endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
 				if err != nil && epoch == 0 {
-					validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.endpoint, "genesis"))
+					validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.cl.Endpoint, "genesis"))
 					if err != nil {
 						return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
 					}
@@ -813,7 +796,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	}
 	lc.slotsCacheMux.Unlock()
 
-	resp, err := lc.get(fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", lc.endpoint, parsedHeaders.Data.Root))
+	resp, err := lc.get(fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", lc.cl.Endpoint, parsedHeaders.Data.Root))
 	if err != nil && slot == 0 {
 		return nil, fmt.Errorf("error retrieving block data at slot %v: %w", slot, err)
 	}
@@ -838,9 +821,9 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 			return nil, err
 		}
 
-		validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
+		validatorsResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%d/validators", lc.cl.Endpoint, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch))
 		if err != nil && epoch == 0 {
-			validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.endpoint, "genesis"))
+			validatorsResp, err = lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", lc.cl.Endpoint, "genesis"))
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
 			}
@@ -1208,7 +1191,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 
 	logger.Infof("requesting validator inclusion data for epoch %v", request_epoch)
 
-	resp, err := lc.get(fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.endpoint, request_epoch))
+	resp, err := lc.get(fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.Endpoint, request_epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator participation data for epoch %v: %w", request_epoch, err)
 	}
@@ -1242,7 +1225,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 }
 
 func (lc *LighthouseClient) GetSyncCommittee(stateID string, epoch uint64) (*StandardSyncCommittee, error) {
-	syncCommitteesResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%s/sync_committees?epoch=%d", lc.endpoint, stateID, epoch))
+	syncCommitteesResp, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/states/%s/sync_committees?epoch=%d", lc.cl.Endpoint, stateID, epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving sync_committees for epoch %v (state: %v): %w", epoch, stateID, err)
 	}
@@ -1255,7 +1238,7 @@ func (lc *LighthouseClient) GetSyncCommittee(stateID string, epoch uint64) (*Sta
 }
 
 func (lc *LighthouseClient) GetBlobSidecars(stateID string) (*StandardBlobSidecarsResponse, error) {
-	res, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/blob_sidecars/%s", lc.endpoint, stateID))
+	res, err := lc.get(fmt.Sprintf("%s/eth/v1/beacon/blob_sidecars/%s", lc.cl.Endpoint, stateID))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blob_sidecars for %v: %w", stateID, err)
 	}
