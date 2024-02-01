@@ -500,7 +500,7 @@
         },
         {
           "id": 3,
-          "state": "proposed"
+          "state": "missed"
         },
         {
           "id": 4,
@@ -512,7 +512,25 @@
         },
         {
           "id": 6,
-          "state": "proposed"
+          "state": "missed",
+          "duties": [
+            {
+              "type": "proposal",
+              "failedCount": 1,
+              "failedEarnings": "11200000000000000",
+              "validator": 1234
+            },
+            {
+              "type": "attestation",
+              "successCount": 4,
+              "successEarning": "11200000000000000"
+            },
+            {
+              "type": "slashing",
+              "successCount": 1,
+              "successEarning": "11200000000000000"
+            }
+          ]
         },
         {
           "id": 7,
