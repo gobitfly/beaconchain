@@ -6,18 +6,23 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type VDBManage struct {
-	Paging Paging           `json:"paging,omitempty"`
-	Groups []VDBManageGroup `json:"groups"`
+type VDBManageTable struct {
+	Default VDBManageTableGroup   `json:"default"`
+	Groups  []VDBManageTableGroup `json:"groups,omitempty"`
 }
 
-type VDBManageGroup struct {
-	Name       string               `json:"name"`
-	Id         uint64               `json:"id"`
-	Validators []VDBManageValidator `json:"validators"`
+type VDBManageTableGroup struct {
+	Name  string `json:"name,omitempty"`
+	Id    uint64 `json:"id,omitempty"`
+	Count uint64 `json:"count"`
 }
 
-type VDBManageValidator struct {
+type VDBManageDetails struct {
+	Paging     Paging                 `json:"paging,omitempty"`
+	Validators []VDBManageDetailsItem `json:"validators"`
+}
+
+type VDBManageDetailsItem struct {
 	Index                 uint64           `json:"index,omitempty"`
 	Pubkey                PubKey           `json:"pubkey"`
 	Balance               *decimal.Decimal `json:"balance"`

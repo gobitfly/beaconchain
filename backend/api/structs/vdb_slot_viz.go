@@ -14,6 +14,7 @@ type VDBSlotVizEpoch struct {
 }
 
 type VDBSlotVizSlot struct {
+	Number uint64           `json:"number"`
 	Status string           `json:"status"` // proposed, missed, scheduled, orphaned
 	Duties []VDBSlotVizDuty `json:"duties"`
 }
