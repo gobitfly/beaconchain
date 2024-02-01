@@ -1,6 +1,12 @@
 package config
 
-import _ "embed"
+import (
+	_ "embed"
+
+	"github.com/gobitfly/beaconchain/consapi/types"
+)
+
+var ClConfig *types.StandardSpec
 
 //go:embed default.config.yml
 var DefaultConfigYml string

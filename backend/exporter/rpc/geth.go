@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 
-	"github.com/gobitfly/beaconchain/exporter/contracts/oneinchoracle"
+	"github.com/gobitfly/beaconchain/commons/contracts/oneinchoracle"
 
-	"github.com/gobitfly/beaconchain/exporter/erc20"
+	"github.com/gobitfly/beaconchain/commons/erc20"
 
 	"fmt"
 	"math/big"
