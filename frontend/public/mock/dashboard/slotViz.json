@@ -174,7 +174,7 @@
             {
               "type": "proposal",
               "failedCount": 1,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "validator": 1234
             }
           ]
@@ -210,7 +210,7 @@
             {
               "type": "attestation",
               "failedCount": 3,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "successCount": 5,
               "successEarning": "11200000000000000",
               "validator": 1234
@@ -362,7 +362,7 @@
             {
               "type": "proposal",
               "failedCount": 1,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "successCount": 1,
               "successEarning": "11200000000000000",
               "validator": 1234
@@ -401,7 +401,7 @@
             {
               "type": "proposal",
               "failedCount": 1,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "validator": 1234
             },
             {
@@ -537,7 +537,7 @@
             {
               "type": "proposal",
               "failedCount": 1,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "validator": 1234
             },
             {
@@ -600,7 +600,7 @@
             {
               "type": "proposal",
               "failedCount": 1,
-              "failedEarnings": "11200000000000000",
+              "failedEarnings": "-11200000000000000",
               "validator": 1234
             }
           ]

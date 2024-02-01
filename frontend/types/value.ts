@@ -5,4 +5,10 @@ export type ValueConvertOptions = {
   targetCurrency?: Currency
   fixedDecimalCount?: number
   minUnit?: CryptoUnits
+  addPlus?: boolean
+}
+
+export type ExtendedLabel = {
+  label: string | number
+  fullLabel?: string
 }

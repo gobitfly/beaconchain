@@ -4,7 +4,8 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 interface Props {
   text?: string,
   layout?: 'dark' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom'
+  position?: 'top' | 'left' | 'right' | 'bottom',
+  hide?: boolean
 }
 
 const props = defineProps<Props>()
@@ -16,6 +17,7 @@ const { selected } = storeToRefs(useTooltipStore())
 const slots = useSlots()
 
 const hasContent = computed(() => !!slots.tooltip || !!props.text)
+const canBeOpened = computed(() => !props.hide && hasContent.value)
 
 const hover = ref(false)
 const isSelected = computed(() => !!bcTooltip.value && selected.value === bcTooltip.value)
@@ -52,10 +54,9 @@ const setPosition = () => {
 }
 
 const handleClick = () => {
-  console.log(slots)
   if (isSelected.value) {
     doSelect(null)
-  } else if (hasContent.value) {
+  } else if (canBeOpened.value) {
     doSelect(bcTooltip.value)
     setPosition()
   }
@@ -64,13 +65,13 @@ const handleClick = () => {
 const onHover = (enter:boolean) => {
   if (!enter) {
     hover.value = false
-  } else if (!selected.value && hasContent.value) {
+  } else if (canBeOpened.value && !selected.value) {
     hover.value = true
     setPosition()
   }
 }
 
-const hide = (event: MouseEvent) => {
+const doHide = (event: MouseEvent) => {
   if (event.target === bcTooltip.value || isParent(bcTooltip.value, event.target as HTMLElement)) {
     return
   }
@@ -84,11 +85,11 @@ const hide = (event: MouseEvent) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', hide)
+  document.addEventListener('click', doHide)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', hide)
+  document.removeEventListener('click', doHide)
   if (isSelected.value) {
     doSelect(null)
   }
@@ -120,6 +121,9 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .slot_container{
   display: inline;
+  &.active{
+    cursor: pointer;
+  }
 }
 .bc-tooltip-wrapper {
   position: fixed;

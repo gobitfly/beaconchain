@@ -64,16 +64,7 @@ onMounted(async () => {
     </div>
 
     <div>
-      Conversions
-      <div>
-        Native 1Eth+ :<BcFormatValue value="1000000010000000000" />
-      </div>
-      <div>
-        less then 1Eth+ :<BcFormatValue value="0000000010002000001" />
-      </div>
-      <div>
-        less then 1Eth+ :<BcFormatValue value="0000000000000001000" />
-      </div>
+      <PlaygroundConversion />
     </div>
     <div class="icon_holder">
       <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
@@ -96,4 +87,9 @@ onMounted(async () => {
 
 .row {
   margin-bottom: var(--padding);
-}</style>
+}
+
+:deep(.bad-color){
+  color: pink
+}
+</style>
