@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 
+	"github.com/gobitfly/beaconchain/commons/utils"
 	"github.com/gobitfly/beaconchain/exporter/clnode"
 	"github.com/gobitfly/beaconchain/exporter/modules"
 )
@@ -28,17 +29,23 @@ func main() {
 }
 
 func startModules() {
+	cl, err := clnode.NewNodeDataRetriever(conf.CLNode, nil)
+	if err != nil {
+		utils.LogFatal(err, "error initializing clnode", 0)
+		return
+	}
+
 	moduleContext := modules.ModuleContext{
-		CL: clnode.NewNodeDataRetriever(conf.CLNode),
+		CL: cl,
 		// TODO: EL, DB
 	}
 
-	registeredModules := []modules.ModuleInterface{
-		modules.NewDashboardDataModule(moduleContext, 27889),
+	registeredModules := []modules.ModuleInterfaceEpoch{
+		modules.NewDashboardDataModule(moduleContext),
 		// todo: add more modules here
 	}
 
 	for _, module := range registeredModules {
-		module.Start()
+		module.Start(27889)
 	}
 }
