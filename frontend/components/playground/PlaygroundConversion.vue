@@ -86,6 +86,18 @@ const onCurrencyChange = (event: Event) => {
     <div>
       Negative with custom color:<BcFormatValue value="-10010000000000" :options="{addPlus: true}" :use-colors="true" negative-class="bad-color" />
     </div>
+    <div>
+      Input in  gwei [1001000]: <BcFormatValue value="1001000" :options="{sourceUnit:'GWEI'}" />
+    </div>
+    <div>
+      Input in eth [2]: <BcFormatValue value="2" :options="{sourceUnit:'MAIN'}" />
+    </div>
+    <div>
+      Input in eth [2] fixed out in GWEI: <BcFormatValue value="2" :options="{sourceUnit:'MAIN', fixedUnit:'GWEI'}" />
+    </div>
+    <div>
+      Input in eth [2] fixed out in WEI: <BcFormatValue value="2" :options="{sourceUnit:'MAIN', fixedUnit:'WEI'}" />
+    </div>
   </div>
 </template>
 

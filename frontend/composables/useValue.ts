@@ -10,7 +10,7 @@ export function useValue () {
   const { currency, rates } = useCurrency()
 
   const converter = computed(() => {
-    const weiToValue = (wei?:string | BigNumber, options?: ValueConvertOptions):ExtendedLabel => {
+    const weiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions): ExtendedLabel => {
       if (!wei) {
         return { label: '' }
       }
@@ -24,6 +24,13 @@ export function useValue () {
         }
       }
 
+      // If a different sourceUnit is defiend we multiply accodringly. We usually get gwei, but you never know.
+      if (options?.sourceUnit === 'GWEI') {
+        value = value.mul(OneGwei)
+      } else if (options?.sourceUnit === 'MAIN') {
+        value = value.mul(OneEther)
+      }
+
       // If we don't show the native currency but the input is not ETH we first convert it to ETH
       if (!useNative && source !== 'ETH' && source !== target && rates.value[source]) {
         value = bigDiv(value, rates.value[source])
@@ -32,7 +39,7 @@ export function useValue () {
       if (source !== target && rates.value[target]) {
         value = bigMul(value, rates.value[target])
       }
-      let currencyLabel:string = target
+      let currencyLabel: string = target
       const minDecimalCount: number | undefined = options?.fixedDecimalCount
       let maxDecimalCount: number = options?.fixedDecimalCount ?? 5
 
@@ -40,11 +47,11 @@ export function useValue () {
         maxDecimalCount = Math.min(maxDecimalCount, 2)
       }
       if (useNative && (!options?.minUnit || options?.minUnit !== 'MAIN')) {
-        if ((!options?.minUnit || options?.minUnit === 'WEI') && lessThenGwei(value.abs(), maxDecimalCount)) {
+        if (options?.fixedUnit === 'WEI' || ((!options?.minUnit || options?.minUnit === 'WEI') && lessThenGwei(value.abs(), maxDecimalCount))) {
           value = value.mul(OneEther)
           maxDecimalCount = 0
           currencyLabel = 'WEI'
-        } else if ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThenEth(value.abs(), maxDecimalCount)) {
+        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThenEth(value.abs(), maxDecimalCount))) {
           value = value.mul(OneGwei)
           currencyLabel = 'GWEI'
         }
