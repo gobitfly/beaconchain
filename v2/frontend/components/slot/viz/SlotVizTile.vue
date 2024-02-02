@@ -9,7 +9,6 @@ const props = defineProps<Props>()
 const data = computed(() => {
   const slot = props.data
   let outer = ''
-  let inner = ''
   const icons: SlotVizIcons[] = []
   switch (slot.state) {
     case 'missed':
@@ -20,18 +19,27 @@ const data = computed(() => {
       outer = 'proposed'
       break
   }
-  const hasFailed = !!slot.duties?.find(s => s.failedCount)
-  const hasSuccess = !!slot.duties?.find(s => s.successCount)
-  const hasPending = !!slot.duties?.find(s => s.pendingCount)
-  if (hasFailed && hasSuccess) {
-    inner = 'mixed'
-  } else if (hasFailed) {
-    inner = 'missed'
-  } else if (hasSuccess) {
-    inner = 'proposed'
-  } else if (hasPending) {
+
+  let inner = ''
+  if (slot.state === 'scheduled') {
     inner = 'pending'
+  } else {
+    const hasFailed = !!slot.duties?.find(s => s.failedCount)
+    const hasSuccess = !!slot.duties?.find(s => s.successCount)
+    const hasPending = !!slot.duties?.find(s => s.pendingCount)
+    if (!hasFailed && !hasSuccess && !hasPending) {
+      inner = 'proposed'
+    } else if (hasFailed && hasSuccess) {
+      inner = 'mixed'
+    } else if (hasFailed) {
+      inner = 'missed'
+    } else if (hasSuccess) {
+      inner = 'proposed'
+    } else if (hasPending) {
+      inner = 'pending'
+    }
   }
+
   const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
   types.forEach((type) => {
     if (slot.duties?.find(s => s.type === type)) {
@@ -50,7 +58,6 @@ const data = computed(() => {
     firstIconClass: `count_${icons.length}`
   }
 })
-
 </script>
 <template>
   <SlotVizTooltip :id="data.id" :data="props.data">
