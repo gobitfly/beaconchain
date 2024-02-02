@@ -19,6 +19,7 @@ onMounted(async () => {
 })
 
 </script>
+
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
