@@ -15,7 +15,7 @@ export function useCurrentAds () {
   const ads = computed(() => {
     const configs: AdConfiguration[] = configurations.value[path]?.filter(c => c.enabled) ?? []
     configurations.value.global?.forEach((config) => {
-      if (config.enabled && !configs.find(c => c.jquery_selector === config.jquery_selector)) {
+      if (config.enabled && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
         configs.push(config)
       }
     })

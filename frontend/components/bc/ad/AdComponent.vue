@@ -9,7 +9,7 @@ const props = defineProps<Props>()
 const adComponent = ref<HTMLElement | null>(null)
 const interval = ref<NodeJS.Timeout | null>(null)
 
-const containerId = computed(() => `${props.ad.key}-${props.ad.jquery_selector}`)
+const containerId = computed(() => `${props.ad.key}-${props.ad.jquery_selector}-${props.ad.insert_mode}`)
 
 const refreshAd = () => {
   const ins = document.getElementById(containerId.value)?.firstElementChild

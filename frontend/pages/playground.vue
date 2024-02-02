@@ -94,6 +94,13 @@ onMounted(async () => {
       </div>
       Ad should be before this text, but after the box
     </div>
+    <div class="ad_test_container">
+      Ad should be after this text, but before the box
+      <div id="around_me" class="ad_test">
+        Should come around me
+      </div>
+      Ad should be before this text, but after the box
+    </div>
     <BcFooterMainFooter />
   </div>
 </template>
