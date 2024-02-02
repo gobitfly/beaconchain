@@ -4,13 +4,20 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 interface Props {
   text?: string,
   layout?: 'dark' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom'
+  position?: 'top' | 'left' | 'right' | 'bottom',
+  hide?: boolean
 }
 
 const props = defineProps<Props>()
 const bcTooltip = ref<HTMLElement | null>(null)
 const { doSelect } = useTooltipStore()
 const { selected } = storeToRefs(useTooltipStore())
+
+// this const will be avaiable on template
+const slots = useSlots()
+
+const hasContent = computed(() => !!slots.tooltip || !!props.text)
+const canBeOpened = computed(() => !props.hide && hasContent.value)
 
 const hover = ref(false)
 const isSelected = computed(() => !!bcTooltip.value && selected.value === bcTooltip.value)
@@ -49,7 +56,7 @@ const setPosition = () => {
 const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
-  } else {
+  } else if (canBeOpened.value) {
     doSelect(bcTooltip.value)
     setPosition()
   }
@@ -58,13 +65,13 @@ const handleClick = () => {
 const onHover = (enter:boolean) => {
   if (!enter) {
     hover.value = false
-  } else if (!selected.value) {
+  } else if (canBeOpened.value && !selected.value) {
     hover.value = true
     setPosition()
   }
 }
 
-const hide = (event: MouseEvent) => {
+const doHide = (event: MouseEvent) => {
   if (event.target === bcTooltip.value || isParent(bcTooltip.value, event.target as HTMLElement)) {
     return
   }
@@ -78,11 +85,11 @@ const hide = (event: MouseEvent) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', hide)
+  document.addEventListener('click', doHide)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', hide)
+  document.removeEventListener('click', doHide)
   if (isSelected.value) {
     doSelect(null)
   }
@@ -90,7 +97,14 @@ onUnmounted(() => {
 
 </script>
 <template>
-  <div ref="bcTooltip" @mouseover="onHover(true)" @mouseleave="hover = false" @click="handleClick()" @blur="onHover(false)">
+  <div
+    ref="bcTooltip"
+    class="slot_container"
+    @mouseover="onHover(true)"
+    @mouseleave="hover = false"
+    @click="handleClick()"
+    @blur="onHover(false)"
+  >
     <slot />
     <Teleport v-if="isOpen" to="body">
       <div class="bc-tooltip-wrapper" :style="pos">
@@ -105,6 +119,12 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.slot_container{
+  display: inline;
+  &.active{
+    cursor: pointer;
+  }
+}
 .bc-tooltip-wrapper {
   position: fixed;
   width: 1px;

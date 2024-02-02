@@ -4,6 +4,7 @@ import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDa
 import { type OverviewTableData } from '~/types/dashboard/overview'
 
 const { t: $t } = useI18n()
+const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'
 
@@ -34,53 +35,53 @@ const dataList = computed(() => {
   if (!v) {
     return list
   }
-  active.value = `${v.validators.active}/${v.validators.total}`
+  active.value = { label: `${v.validators.active}/${v.validators.total}` }
   active.additonalValues = [
     [
-      v.validators.pending ?? 0,
-      v.validators.exited ?? 0,
-      v.validators.slashed ?? 0
+      { label: v.validators.pending ?? 0 },
+      { label: v.validators.exited ?? 0 },
+      { label: v.validators.slashed ?? 0 }
     ],
     [
-      $t('validator_state.pending'),
-      $t('validator_state.exited'),
-      $t('validator_state.slashed')
+      { label: $t('validator_state.pending') },
+      { label: $t('validator_state.exited') },
+      { label: $t('validator_state.slashed') }
     ]
   ]
-  efficiency.value = formatPercent(v.efficiency)
+  efficiency.value = { label: formatPercent(v.efficiency) }
 
-  rewards.value = formatWeiToEth(v.rewards.total)
+  rewards.value = converter.value.weiToValue(v.rewards.total, { addPlus: true })
   const statsLabels = [
-    $t('statistics.24h'),
-    $t('statistics.7d'),
-    $t('statistics.31d'),
-    $t('statistics.365d')
+    { label: $t('statistics.24h') },
+    { label: $t('statistics.7d') },
+    { label: $t('statistics.31d') },
+    { label: $t('statistics.365d') }
   ]
   rewards.additonalValues = [
     [
-      formatWeiToEth(v.rewards['24h']),
-      formatWeiToEth(v.rewards['7d']),
-      formatWeiToEth(v.rewards['31d']),
-      formatWeiToEth(v.rewards['365d'])
+      converter.value.weiToValue(v.rewards['24h'], { addPlus: true }),
+      converter.value.weiToValue(v.rewards['7d'], { addPlus: true }),
+      converter.value.weiToValue(v.rewards['31d'], { addPlus: true }),
+      converter.value.weiToValue(v.rewards['365d'], { addPlus: true })
     ], statsLabels
   ]
 
-  luck.value = formatPercent(v.luck.proposal)
+  luck.value = { label: formatPercent(v.luck.proposal) }
   luck.additonalValues = [
     [
-      formatPercent(v.luck.sync)
+      { label: formatPercent(v.luck.sync) }
     ],
     [
-      $t(`${tPath}sync_committee_luck`)
+      { label: $t(`${tPath}sync_committee_luck`) }
     ]
   ]
-  apr.value = formatPercent(v.apr.total)
+  apr.value = { label: formatPercent(v.apr.total) }
   apr.additonalValues = [
     [
-      formatPercent(v.apr['24h']),
-      formatPercent(v.apr['7d']),
-      formatPercent(v.apr['31d']),
-      formatPercent(v.apr['365d'])
+      { label: formatPercent(v.apr['24h']) },
+      { label: formatPercent(v.apr['7d']) },
+      { label: formatPercent(v.apr['31d']) },
+      { label: formatPercent(v.apr['365d']) }
     ], statsLabels
   ]
   return list

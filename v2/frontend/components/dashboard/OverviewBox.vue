@@ -5,8 +5,6 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const value = computed(() => props.data.value ?? '-')
-
 </script>
 <template>
   <div class="box">
@@ -15,12 +13,16 @@ const value = computed(() => props.data.value ?? '-')
         {{ props.data.label }}
       </div>
       <div class="big_text">
-        {{ value }}
+        <BcTooltip :text="props.data.value?.fullLabel">
+          {{ props.data.value?.label }}
+        </BcTooltip>
       </div>
     </div>
     <div v-for="(infos, index) in props.data.additonalValues" :key="index" class="additional">
-      <div v-for="addValue in infos" :key="addValue" class="small_text">
-        {{ addValue }}
+      <div v-for="(addValue, subIndex) in infos" :key="subIndex" class="small_text">
+        <BcTooltip :text="addValue.fullLabel">
+          {{ addValue.label }}
+        </BcTooltip>
       </div>
     </div>
   </div>

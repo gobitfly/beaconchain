@@ -62,6 +62,10 @@ onMounted(async () => {
         <IconSlotSync /> Slot Sync
       </div>
     </div>
+
+    <div>
+      <PlaygroundConversion />
+    </div>
     <div class="icon_holder">
       <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
     </div>
@@ -69,7 +73,8 @@ onMounted(async () => {
   </div>
 </template>
 
-<style lang="scss" scoped>.icon_holder {
+<style lang="scss" scoped>
+.icon_holder {
   margin: 10px;
   display: flex;
   flex-wrap: wrap;
@@ -82,4 +87,9 @@ onMounted(async () => {
 
 .row {
   margin-bottom: var(--padding);
-}</style>
+}
+
+:deep(.bad-color){
+  color: pink
+}
+</style>
