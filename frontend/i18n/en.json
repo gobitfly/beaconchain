@@ -9,17 +9,17 @@
     "exited": "exited",
     "slashed": "slashed"
   },
-  "slot_state":{
+  "slot_state": {
     "orphaned": "Orphaned",
     "missed": "Missed",
     "proposed": "Proposed",
     "scheduled": "Scheduled"
   },
   "statistics": {
-    "24h": "last 24h",
-    "7d": "last 7d",
-    "31d": "last 31d",
-    "365d": "last 365d"
+    "24h": "(24h)",
+    "7d": "(7d)",
+    "31d": "(31d)",
+    "365d": "(365d)"
   },
   "slotViz": {
     "head": "Head"
@@ -32,7 +32,7 @@
         "total_efficiency": "Total Efficiency",
         "total_rewards": "Total Rewards",
         "proposal_luck": "Proposal Luck",
-        "sync_committee_luck": "Sync Committee Luck",
+        "sync_committee_luck": "Sync C. Luck",
         "total_apr": "Total APR"
       }
     }

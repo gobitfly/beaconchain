@@ -46,7 +46,6 @@ const data = computed(() => {
     hasDuties
   }
 })
-
 </script>
 <template>
   <BcTooltip :target="props.id" :layout="data.tooltipLayout">
@@ -61,7 +60,7 @@ const data = computed(() => {
             <span>{{ row.count }}x</span>
             <SlotVizIcon :icon="row.icon" class="icon" />
             <div class="value-col">
-              <BcFormatValue v-if="row.change" :value="row.change" />
+              <BcFormatValue v-if="row.change" :value="row.change" :options="{addPlus: true}" />
               <div v-if="row.validator">
                 {{ $t('common.validator') }}
                 <NuxtLink :to="`/validator/${ row.validator }`" class="link">
