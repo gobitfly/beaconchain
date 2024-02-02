@@ -1,0 +1,66 @@
+[
+  {
+    "key": "global",
+    "jquery_selector": ".header.bottom",
+    "insert_mode": "replace",
+    "refresh_interval": 0,
+    "for_all_users": true,
+    "banner_id": 0,
+    "html_content": "<div style=\"width:100%\">WTF</div>",
+    "enabled": false
+  },
+  {
+    "key": "/dashboard",
+    "jquery_selector": "top",
+    "insert_mode": "insert",
+    "refresh_interval": 10,
+    "for_all_users": false,
+    "banner_id": 85,
+    "enabled": true
+  },
+  {
+    "key": "/",
+    "jquery_selector": "#bottom_banner",
+    "insert_mode": "insert",
+    "refresh_interval": 10,
+    "for_all_users": false,
+    "banner_id": 85,
+    "enabled": true
+  },
+  {
+    "key": "/playground",
+    "jquery_selector": "#replace_me",
+    "insert_mode": "replace",
+    "refresh_interval": 10,
+    "for_all_users": true,
+    "html_content": "<div style=\"color:red\"><button onclick=\"alert('help me')\">WTF</button></div>",
+    "enabled": true
+  },
+  {
+    "key": "/playground",
+    "jquery_selector": "#inside_me",
+    "insert_mode": "insert",
+    "refresh_interval": 10,
+    "for_all_users": true,
+    "html_content": "<div style=\"color:red\"><button onclick=\"alert('how dare you')\">Click me</button></div>",
+    "enabled": true
+  },
+  {
+    "key": "/playground",
+    "jquery_selector": "#before_me",
+    "insert_mode": "before",
+    "refresh_interval": 10,
+    "for_all_users": true,
+    "banner_id": 85,
+    "enabled": true
+  },
+  {
+    "key": "/playground",
+    "jquery_selector": "#after_me",
+    "insert_mode": "after",
+    "refresh_interval": 10,
+    "for_all_users": true,
+    "banner_id": 85,
+    "enabled": true
+  }
+]
