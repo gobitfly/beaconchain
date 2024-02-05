@@ -5,7 +5,9 @@
 
    First, the file defines identifiers equal to the chain IDs of the networks.
    In your code, you type ChainIDs.Mainnet whenever you want to represent the main Ethereum network,
-   or ChainIDs.Sepolia for the Sepolia testnet and so on. Those constants are integers.
+   or ChainIDs.Sepolia for the Sepolia testnet and so on.
+   Those constants are integers but for a safer code you should define your constants, fields, variables
+   and parameters as the type ChainIDs.
 
    The most important feature of this file is to provide a mapping between those chain IDs and
    information about the networks.
