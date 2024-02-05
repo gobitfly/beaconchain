@@ -22,22 +22,22 @@
 import type { CryptoCurrency } from '~/types/currencies'
 
 export const enum ChainIDs {
- Mainnet = 1,
- Holesky = 17000,
- Sepolia = 11155111,
- Goerli = 5,
+  Ethereum = 1,
+  Holesky = 17000,
+  Sepolia = 11155111,
+  Goerli = 5,
 
- ArbitrumOne = 42161,
- ArbitrumSepolia = 421614,
+  ArbitrumOne = 42161,
+  ArbitrumSepolia = 421614,
 
- Optimism = 10,
- OptimismGoerli = 420,
+  Optimism = 10,
+  OptimismGoerli = 420,
 
- Base = 8453,
- BaseSepolia = 84532,
+  Base = 8453,
+  BaseSepolia = 84532,
 
- Gnosis = 100,
- GnosisChiado = 10200
+  Gnosis = 100,
+  GnosisChiado = 10200
 }
 
 interface ChainInfoFields {
@@ -49,10 +49,10 @@ interface ChainInfoFields {
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
-  [ChainIDs.Mainnet]: { name: 'Ethereum Mainnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/ethereum' },
-  [ChainIDs.Holesky]: { name: 'Holesky Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/holesky' },
-  [ChainIDs.Sepolia]: { name: 'Sepolia Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/sepolia' },
-  [ChainIDs.Goerli]: { name: 'Görli Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/goerli' },
+  [ChainIDs.Ethereum]: { name: 'Ethereum Mainnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/ethereum' },
+  [ChainIDs.Holesky]: { name: 'Holesky Testnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/holesky' },
+  [ChainIDs.Sepolia]: { name: 'Sepolia Testnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/sepolia' },
+  [ChainIDs.Goerli]: { name: 'Görli Testnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/goerli' },
 
   [ChainIDs.ArbitrumOne]: { name: 'Arbitrum One L2', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrumone' },
   [ChainIDs.ArbitrumSepolia]: { name: 'Arbitrum Sepolia Testnet', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrumsepolia' },
