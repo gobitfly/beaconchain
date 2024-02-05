@@ -3,15 +3,16 @@
    To use it, you need to type first:
      import { ChainIDs, ChainInfo } from '~/types/networks'
 
-   First, the file define identifiers equal to the chain IDs of the networks.
+   First, the file defines identifiers equal to the chain IDs of the networks.
    In your code, you type ChainIDs.Mainnet whenever you want to represent the main Ethereum network,
    or ChainIDs.Sepolia for the Sepolia testnet and so on. Those constants are integers.
 
    The most important feature of this file is to provide a mapping between those chain IDs and
-   information about the network.
+   information about the networks.
    For example, when your variable myNetwork is equal to ChainIDs.GnosisChiado (a testnet of Gnosis) :
    * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis
      /!\ not the ID of the testnet! if you want the testnet ID, it is simply myNetwork.
+     So, to test whether a network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
    * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
 */
 
