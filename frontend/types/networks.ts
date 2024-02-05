@@ -1,6 +1,6 @@
 /* This file sets types and fundamental data about different networks.
 
-   To use it, you need to type first:
+   To use it, you need to write first:
      import { ChainIDs, ChainInfo } from '~/types/networks'
 
    First, the file defines identifiers equal to the chain IDs of the networks.
