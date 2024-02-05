@@ -4,7 +4,7 @@
      import { ChainIDs, ChainInfo } from '~/types/networks'
 
    First, the file defines identifiers equal to the chain IDs of the networks.
-   In your code, you write ChainIDs.Mainnet whenever you want to represent the main Ethereum network,
+   In your code, you write ChainIDs.Ethereum whenever you want to represent the main Ethereum network,
    or ChainIDs.Sepolia for the Sepolia testnet and so on.
    Those constants are integers but for a safer code you should define your constants, fields, variables
    and parameters as the type ChainIDs.
