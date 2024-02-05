@@ -49,7 +49,7 @@ interface ChainInfoFields {
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
-  [ChainIDs.Mainnet]: { name: 'Ethereum Mainnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/mainnet' },
+  [ChainIDs.Mainnet]: { name: 'Ethereum Mainnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/ethereum' },
   [ChainIDs.Holesky]: { name: 'Holesky Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/holesky' },
   [ChainIDs.Sepolia]: { name: 'Sepolia Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/sepolia' },
   [ChainIDs.Goerli]: { name: 'Görli Testnet', mainNet: ChainIDs.Mainnet, clCurrency: 'ETH', elCurrency: 'ETH', path: '/goerli' },
