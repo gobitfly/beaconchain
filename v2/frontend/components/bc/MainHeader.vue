@@ -9,7 +9,7 @@ const { latest } = storeToRefs(useLatestStateStore())
   <div class="header top">
     <div class="content">
       <div>Current Epoch: {{ latest?.currentEpoch }}</div>
-      
+
       <NuxtLink to="/login">
         Login
       </NuxtLink>
