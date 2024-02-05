@@ -1,8 +1,58 @@
 {
+  "common": {
+    "slot": "Slot",
+    "validator": "Validator"
+  },
+  "validator_state": {
+    "active": "active",
+    "pending": "pending",
+    "exited": "exited",
+    "slashed": "slashed"
+  },
+  "slot_state": {
+    "orphaned": "Orphaned",
+    "missed": "Missed",
+    "proposed": "Proposed",
+    "scheduled": "Scheduled"
+  },
+  "statistics": {
+    "24h": "(24h)",
+    "7d": "(7d)",
+    "31d": "(31d)",
+    "365d": "(365d)"
+  },
+  "slotViz": {
+    "head": "Head"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "validator": {
+      "overview": {
+        "your_active_validators": "Your Active Validators",
+        "total_efficiency": "Total Efficiency",
+        "total_rewards": "Total Rewards",
+        "proposal_luck": "Proposal Luck",
+        "sync_committee_luck": "Sync C. Luck",
+        "total_apr": "Total APR"
+      }
+    }
+  },
   "login": {
     "password": "Password",
     "submit": "Login",
     "title": "Login",
     "email": "Email address"
+  },
+  "footer": {
+    "legal_notices": "Legal Notices",
+    "resources": "Resources",
+    "links": "Links",
+    "imprint": "Imprint",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "api_docs": "API Docs",
+    "pricing": "Pricing",
+    "advertise": "Advertise",
+    "press_kit": "Press Kit"
   }
 }

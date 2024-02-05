@@ -5,29 +5,30 @@ import (
 	"fmt"
 	"perftesting/benchmarks"
 	"perftesting/db"
+	"perftesting/module_userdata"
+	"perftesting/module_validator_stats"
 	"perftesting/seeding"
-	"perftesting/seeding_strat_valepoch"
 	"time"
 )
 
 var CONF = GlobalConf{
 	// ---- Benchmark specific ---
-	BenchmarkDuration:    20 * time.Minute, // duration of benchmark
-	BenchUseLatestEpochs: false,            // -- if true it plays with non random epochs to see effects of caching
-	BenchLatestEpoch:     215,              // -- head epoch if BenchUseLatestEpochs is true
-	BenchEpochDepth:      6,                // how many epochs of data to return per vali
+	BenchmarkDuration:    5 * time.Minute, // duration of benchmark
+	BenchUseLatestEpochs: false,           // -- if true it plays with non random epochs to see effects of caching
+	BenchLatestEpoch:     215,             // -- head epoch if BenchUseLatestEpochs is true
+	BenchEpochDepth:      1,               // how many epochs of data to return per vali
 
 	// ---- Seeder specific ---
 	SeederValidatorsInDB: 1000000, // 1m valis
 	SeederEpochsInDB:     1,       // 1 day of data (or 225 days of aggregate data)
-	SeederNoOfPartitions: 70,      // unused right now
+	SeederNoOfPartitions: 100,     // unused right now
 }
 
 func main() {
 	var dsn, tableName, cmd string
 
 	flag.StringVar(&tableName, "table.name", "test_ss", "name of table to create")
-	flag.StringVar(&cmd, "cmd", "bench", "bench or seed")
+	flag.StringVar(&cmd, "cmd", "seed", "bench or seed")
 	flag.StringVar(&dsn, "db.dsn", "postgres://user:pass@host:port/dbnames", "data-source-name of db, if it starts with projects/ it will use gcp-secretmanager")
 	flag.Parse()
 
@@ -43,12 +44,23 @@ func main() {
 	case "bench":
 		err = RunBenchmark(tableName)
 	case "seed":
+		/*data := module_validator_stats.SeederData{
+			ValidatorsInDB: CONF.SeederValidatorsInDB,
+			EpochsInDB:     CONF.SeederEpochsInDB,
+		}*/
 		//seeder := seeding.GetUnpartitioned(tableName)
-		seeder := seeding_strat_valepoch.GetSeederPartitionEpoch(tableName, CONF.SeederNoOfPartitions, true)
+		//seeder := module_validator_stats.GetSeederPartitionEpoch(tableName, CONF.SeederNoOfPartitions, false, data)
 		//seeder := seeding.GetSeederPartitionHashIndex(tableName, 64, true)
 
 		//seeder := seeding.GetSeederPartitionExotic(tableName, 30, 6, true)
 		//seeder := seeding.GetSeederPartitionExoticReverse(tableName, 30, 6, true)
+
+		data := module_userdata.SeederData{
+			ValidatorsInDB: CONF.SeederValidatorsInDB,
+			UsersInDB:      5000,
+		}
+		seeder := module_userdata.Get(tableName, false, data)
+
 		err = RunSeeder(tableName, seeder)
 	default:
 		panic("unknown command")
@@ -63,9 +75,6 @@ func main() {
 
 func RunSeeder(tableName string, seeder *seeding.Seeder) error {
 	fmt.Printf("Running seeder\n")
-
-	seeder.EpochsInDB = CONF.SeederEpochsInDB
-	seeder.ValidatorsInDB = CONF.SeederValidatorsInDB
 
 	fmt.Printf("creating schema\n")
 	err := seeder.CreateSchema()
@@ -94,17 +103,21 @@ func RunBenchmark(tableName string) error {
 	}
 
 	fmt.Printf("Running benchmark %v \n", CONF.BenchmarkDuration.String())
-	benchmark := benchmarks.Benchmarker{
-		TableName:       tableName,
-		ValidatorsInDB:  validatorsInDB,
-		EpochsInDB:      epochsInDB,
-		UseLatestEpochs: CONF.BenchUseLatestEpochs,
-		LatestEpoch:     CONF.BenchLatestEpoch,
-		EpochDepth:      CONF.BenchEpochDepth,
-	}
+
+	benchmark := benchmarks.NewBenchmarker(tableName, CONF.BenchmarkDuration, &module_validator_stats.ValEpochParallelBenchmark{
+		Data: module_validator_stats.Data{
+			ValidatorsInDB:  validatorsInDB,
+			EpochsInDB:      epochsInDB,
+			UseLatestEpochs: CONF.BenchUseLatestEpochs,
+			LatestEpoch:     CONF.BenchLatestEpoch,
+			EpochDepth:      CONF.BenchEpochDepth,
+		},
+	})
+
+	benchmark.Run()
 
 	//benchmark.RunBenchmarkParallel(CONF.BenchmarkDuration)
-	benchmark.RunBenchmarkDBKiller(CONF.BenchmarkDuration)
+	//benchmark.RunBenchmarkDBKiller(CONF.BenchmarkDuration)
 	//benchmark.RunBenchmarkSequential(CONF.BenchmarkDuration / 8)
 	return nil
 }

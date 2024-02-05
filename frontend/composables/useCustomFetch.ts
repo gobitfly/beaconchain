@@ -1,43 +1,88 @@
 import type { NitroFetchOptions } from 'nitropack'
+import type { LoginResponse } from '~/types/user'
 // import { defu } from 'defu'
 
-const mockedPaths:Record<string, boolean> = {
-  '/latestState': false,
-  '/login': true
+export enum API_PATH {
+  DASHBOARD_OVERVIEW = '/dashboard/overview',
+  DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  LATEST_STATE = '/latestState',
+  LOGIN = '/login',
+  REFRESH_TOKEN = '/refreshToken'
 }
 
-export function useCustomFetch<T> (pathName: string, options: NitroFetchOptions<string & {}> = {}): Promise<T> {
-  /* const userAuth = useCookie('token')
-  const config = useRuntimeConfig()
+const pathNames = Object.values(API_PATH)
+type PathName = typeof pathNames[number]
 
-  const defaults: NitroFetchOptions<string & {}> = {
-    baseURL: config.baseUrl ?? 'https://api.nuxt.com',
-    // this overrides the default key generation, which includes a hash of
-    // url, method, headers, etc. - this should be used with care as the key
-    // is how Nuxt decides how responses should be deduplicated between
-    // client and server
-    key: url,
+export type PathValues = Record<string, string>
 
-    // set user token if connected
-    headers: userAuth.value
-      ? { Authorization: `Bearer ${userAuth.value}` }
-      : {},
+type MappingData = {
+  path: string,
+  getPath?: (values?: PathValues) => string,
+  noAuth?: boolean,
+  mock?: boolean
+}
 
-    onResponse (_ctx) {
-      // _ctx.response._data = new myBusinessResponse(_ctx.response._data)
-    },
+const mapping: Record<string, MappingData> = {
+  [API_PATH.DASHBOARD_OVERVIEW]: {
+    path: '/validator-dashboards/{dashboard_id}',
+    getPath: values => `/validator-dashboards/${values?.validatorId}`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SLOTVIZ]: {
+    path: '/validator-slot-viz/{dashboard_id}',
+    getPath: values => `/validator-slot-viz/${values?.validatorId}`,
+    mock: true
+  },
+  [API_PATH.LATEST_STATE]: {
+    path: '/latestState',
+    mock: true
+  },
+  [API_PATH.LOGIN]: {
+    path: '/login',
+    noAuth: true,
+    mock: true
+  },
+  [API_PATH.REFRESH_TOKEN]: {
+    path: '/refreshToken',
+    noAuth: true,
+    mock: true
+  }
+}
 
-    onResponseError (_ctx) {
-      // throw new myBusinessError()
-    }
+export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}, pathValues?: PathValues): Promise<T> {
+  // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
+  const refreshToken = useCookie('refreshToken')
+  const accessToken = useCookie('accessToken')
+
+  const map = mapping[pathName]
+  if (!map) {
+    throw new Error(`path ${pathName} not found`)
   }
 
-  // for nice deep defaults, please use unjs/defu
-  const params = defu(options, defaults) */
-
   const url = useRequestURL()
-  const { public: { apiClientV1 } } = useRuntimeConfig()
-  const path = mockedPaths[pathName] ? `${pathName}.json` : pathName
-  const baseURL = mockedPaths[pathName] ? process.server ? `${url.protocol}${url.host}/mock` : './mock' : apiClientV1
-  return $fetch<T>(path, { ...options, baseURL })
+  const { public: { apiClient }, private: pConfig } = useRuntimeConfig()
+  const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
+  let baseURL = map.mock ? './mock' : apiClient
+
+  if (process.server) {
+    baseURL = map.mock ? `${url.protocol}${url.host}/mock` : pConfig?.apiServer
+  }
+
+  if (pathName === API_PATH.LOGIN) {
+    const res = await $fetch<LoginResponse>(path, { ...options, baseURL })
+    refreshToken.value = res.refresh_token
+    accessToken.value = res.access_token
+    return res as T
+  } else if (!map.noAuth) {
+    if (!accessToken.value && refreshToken.value) {
+      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { method: 'POST', body: { refresh_token: refreshToken.value } })
+      accessToken.value = res.access_token
+    }
+
+    if (accessToken.value) {
+      options.headers = new Headers({})
+      options.headers.append('Authorization', `Bearer ${accessToken.value}`)
+    }
+  }
+  return await $fetch<T>(path, { ...options, baseURL })
 }

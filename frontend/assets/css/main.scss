@@ -1,6 +1,6 @@
 @import "~/assets/css/colors.scss";
 @import "~/assets/css/variables.scss";
-@import "~/assets/fonts/fonts.scss";
+@import "~/assets/css/fonts.scss";
 
 html {
   margin: 0;
@@ -11,16 +11,29 @@ body {
   padding: 0;
   background-color: var(--background-color);
   color: var(--text-color);
-  font-family: var(--roboto-family); 
+  font-family: var(--roboto-family);
   font-weight: var(--roboto-regular);
 }
 
 a {
   color: inherit;
-  &:hover{
+  text-decoration: none;
+  &:hover {
     opacity: 0.9;
   }
-  &.link{
+  &.link {
+    font-size: 16px;
     color: var(--link-color);
   }
+}
+
+@mixin container() {  
+  color: var(--container-color);
+  background-color: var(--container-background);
+  border: 1px solid var(--container-border-color);
+  border-radius: var(--border-radius);
+}
+
+.container {
+  @include container;
 }
