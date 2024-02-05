@@ -1,6 +1,6 @@
 const FiatCurrencies = ['AUD', 'CAD', 'CNY', 'EUR', 'GBP', 'JPY', 'USD'] as const
 type FiatCurrency = typeof FiatCurrencies[number]
-const CryptoCurrenies = ['ETH', 'GNO', 'DAI', 'XDAI'] as const
+const CryptoCurrenies = ['ETH', 'GNO', 'DAI', 'xDAI'] as const
 type CryptoCurrency = typeof CryptoCurrenies[number]
 const Native = 'NAT' as const
 type Native = typeof Native
