@@ -10,10 +10,10 @@
    The most important feature of this file is to provide a mapping between those chain IDs and
    information about the networks.
    For example, when your variable myNetwork is equal to ChainIDs.GnosisChiado (a testnet of Gnosis) :
+   * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
    * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis
      /!\ not the ID of the testnet! if you want the testnet ID, it is simply myNetwork.
-     So, to test whether a network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
-   * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
+     So, to test whether your network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
 */
 
 import type { CryptoCurrency } from '~/types/currencies'
