@@ -3,11 +3,12 @@ package api
 import (
 	"time"
 
+	common "github.com/gobitfly/beaconchain/api/structs"
 	"github.com/shopspring/decimal"
 )
 
 type VDBEpochDuties struct {
-	Paging     Paging                    `json:"paging,omitempty"`
+	Paging     common.Paging             `json:"paging,omitempty"`
 	Validators []VDBEpochDutiesValidator `json:"validators,omitempty"`
 }
 
