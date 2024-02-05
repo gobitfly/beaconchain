@@ -4,8 +4,8 @@
 
 <template>
   <div id="main-footer">
-    <div id="columns-of-links">
-      <BcFooterColumnsOfLinks />
+    <div id="links">
+      <BcFooterLinkList />
     </div>
     <div id="very-last-line">
       <BcFooterCopyrightAndVersion />&nbsp;|&nbsp;<BcFooterColorThemeToggle />
@@ -31,7 +31,7 @@
   }
 }
 
-#columns-of-links {
+#links {
   display: flex;
   @media (min-width: 600px) { // large screen
     justify-content: center;
