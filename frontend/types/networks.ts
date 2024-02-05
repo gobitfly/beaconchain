@@ -54,15 +54,15 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Sepolia]: { name: 'Sepolia Testnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/sepolia' },
   [ChainIDs.Goerli]: { name: 'Görli Testnet', mainNet: ChainIDs.Ethereum, clCurrency: 'ETH', elCurrency: 'ETH', path: '/goerli' },
 
-  [ChainIDs.ArbitrumOne]: { name: 'Arbitrum One L2', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrumone' },
-  [ChainIDs.ArbitrumSepolia]: { name: 'Arbitrum Sepolia Testnet', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrumsepolia' },
+  [ChainIDs.ArbitrumOne]: { name: 'Arbitrum One L2', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrum-one' },
+  [ChainIDs.ArbitrumSepolia]: { name: 'Arbitrum Sepolia Testnet', mainNet: ChainIDs.ArbitrumOne, clCurrency: 'ETH', elCurrency: 'ETH', path: '/arbitrum-sepolia' },
 
   [ChainIDs.Optimism]: { name: 'Optimism L2', mainNet: ChainIDs.Optimism, clCurrency: 'ETH', elCurrency: 'ETH', path: '/optimism' },
-  [ChainIDs.OptimismGoerli]: { name: 'Optimism Görli Testnet', mainNet: ChainIDs.Optimism, clCurrency: 'ETH', elCurrency: 'ETH', path: '/optimismgoerli' },
+  [ChainIDs.OptimismGoerli]: { name: 'Optimism Görli Testnet', mainNet: ChainIDs.Optimism, clCurrency: 'ETH', elCurrency: 'ETH', path: '/optimism-goerli' },
 
   [ChainIDs.Base]: { name: 'Base L2', mainNet: ChainIDs.Base, clCurrency: 'ETH', elCurrency: 'ETH', path: '/base' },
-  [ChainIDs.BaseSepolia]: { name: 'Base Sepolia Testnet', mainNet: ChainIDs.Base, clCurrency: 'ETH', elCurrency: 'ETH', path: '/basesepolia' },
+  [ChainIDs.BaseSepolia]: { name: 'Base Sepolia Testnet', mainNet: ChainIDs.Base, clCurrency: 'ETH', elCurrency: 'ETH', path: '/base-sepolia' },
 
   [ChainIDs.Gnosis]: { name: 'Gnosis', mainNet: ChainIDs.Gnosis, clCurrency: 'GNO', elCurrency: 'xDAI', path: '/gnosis' },
-  [ChainIDs.GnosisChiado]: { name: 'Gnosis Chiado Testnet', mainNet: ChainIDs.Gnosis, clCurrency: 'GNO', elCurrency: 'xDAI', path: '/gnosischiado' }
+  [ChainIDs.GnosisChiado]: { name: 'Gnosis Chiado Testnet', mainNet: ChainIDs.Gnosis, clCurrency: 'GNO', elCurrency: 'xDAI', path: '/gnosis-chiado' }
 }
