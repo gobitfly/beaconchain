@@ -11,12 +11,13 @@
 
    The most important feature of this file is to provide a mapping between those chain IDs and
    information about the networks.
-   For example, when your variable myNetwork is equal to 10200 (namely ChainIDs.GnosisChiado, a testnet of Gnosis) :
+   For example, when your variable myNetwork is equal to 10200 (namely ChainIDs.Chiado, a testnet of Gnosis) :
    * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
-   * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis (100)
-     /!\ not the ID of the testnet! if you want the testnet ID, it is simply myNetwork.
+   * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis (100).
      So, to check whether your network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
    * ChainInfo[myNetwork].elCurrency is equal to 'xDAI' whereas ChainInfo[myNetwork].clCurrency is 'GNO'
+
+   To check whether a network is a L2, you can do myNetwork != ChainInfo[myNetwork].L1
 */
 
 import type { CryptoCurrency } from '~/types/currencies'
