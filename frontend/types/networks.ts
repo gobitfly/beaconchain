@@ -29,7 +29,7 @@ export const enum ChainIDs {
 
   ArbitrumOneEthereum = 42161,
   ArbitrumNovaEthereum= 42170,
-  ArbitrumSepolia = 421614,
+  ArbitrumOneSepolia = 421614,
 
   OptimismEthereum = 10,
   OptimismSepolia = 11155420,
@@ -92,13 +92,13 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     elCurrency: 'ETH',
     path: '/arbitrum-nova-ethereum'
   },
-  [ChainIDs.ArbitrumSepolia]: {
-    name: 'Arbitrum Sepolia Testnet',
+  [ChainIDs.ArbitrumOneSepolia]: {
+    name: 'Arbitrum One Sepolia Testnet',
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-sepolia'
+    path: '/arbitrum-one-sepolia'
   },
 
   [ChainIDs.OptimismEthereum]: {
@@ -151,4 +151,12 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     elCurrency: 'xDAI',
     path: '/chiado'
   }
+}
+
+export function isMainNet (network: ChainIDs) : boolean {
+  return (ChainInfo[network].mainNet === network)
+}
+
+export function isL1 (network: ChainIDs) : boolean {
+  return (ChainInfo[network].L1 === network)
 }
