@@ -24,7 +24,7 @@ export function useValue () {
         }
       }
 
-      // If a different sourceUnit is defiend we multiply accodringly. We usually get gwei, but you never know.
+      // If a different sourceUnit is defined we multiply accordingly. We usually get gwei, but you never know.
       if (options?.sourceUnit === 'GWEI') {
         value = value.mul(OneGwei)
       } else if (options?.sourceUnit === 'MAIN') {
