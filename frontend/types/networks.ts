@@ -25,14 +25,13 @@ export const enum ChainIDs {
   Ethereum = 1,
   Holesky = 17000,
   Sepolia = 11155111,
-  Goerli = 5,
 
   ArbitrumOneEthereum = 42161,
   ArbitrumNovaEthereum= 42170,
   ArbitrumSepolia = 421614,
 
   OptimismEthereum = 10,
-  OptimismGoerli = 420,
+  OptimismSepolia = 11155420,
 
   BaseEthereum = 8453,
   BaseSepolia = 84532,
@@ -75,14 +74,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     elCurrency: 'ETH',
     path: '/sepolia'
   },
-  [ChainIDs.Goerli]: {
-    name: 'Görli Testnet',
-    mainNet: ChainIDs.Ethereum,
-    L1: ChainIDs.Goerli,
-    clCurrency: 'ETH',
-    elCurrency: 'ETH',
-    path: '/goerli'
-  },
 
   [ChainIDs.ArbitrumOneEthereum]: {
     name: 'Arbitrum One L2',
@@ -117,13 +108,13 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     elCurrency: 'ETH',
     path: '/optimism-ethereum'
   },
-  [ChainIDs.OptimismGoerli]: {
-    name: 'Optimism Görli Testnet',
+  [ChainIDs.OptimismSepolia]: {
+    name: 'Optimism Sepolia Testnet',
     mainNet: ChainIDs.OptimismEthereum,
-    L1: ChainIDs.Goerli,
+    L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/optimism-goerli'
+    path: '/optimism-sepolia'
   },
 
   [ChainIDs.BaseEthereum]: {
