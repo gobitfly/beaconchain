@@ -1,6 +1,6 @@
 module github.com/gobitfly/beaconchain/consapi
 
-go 1.21.1
+go 1.21
 
 require (
 	github.com/pkg/errors v0.9.1
