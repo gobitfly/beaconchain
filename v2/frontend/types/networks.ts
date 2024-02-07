@@ -15,9 +15,11 @@
    * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
    * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis (100).
      So, to check whether your network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
+     or simply !isMainNet(myNetwork) whose implementation does the same test (first, add the function to your import list)
    * ChainInfo[myNetwork].elCurrency is equal to 'xDAI' whereas ChainInfo[myNetwork].clCurrency is 'GNO'
 
-   To check whether a network is a L2, you can do myNetwork != ChainInfo[myNetwork].L1
+   To check whether a network is a L1, you can do myNetwork === ChainInfo[myNetwork].L1
+   or simply isL1(myNetwork) whose implementation does the same test (first, add the function to your import list)
 */
 
 import type { CryptoCurrency } from '~/types/currencies'
