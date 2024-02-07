@@ -1,6 +1,6 @@
 module github.com/gobitfly/beaconchain/exporter
 
-go 1.21.1
+go 1.21
 
 require (
 	github.com/attestantio/go-eth2-client v0.19.10

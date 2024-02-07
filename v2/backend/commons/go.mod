@@ -1,6 +1,6 @@
 module github.com/gobitfly/beaconchain/commons
 
-go 1.21.1
+go 1.21
 
 require (
 	cloud.google.com/go/bigtable v1.21.0
