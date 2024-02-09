@@ -8,14 +8,14 @@ import (
 )
 
 type VDBSummaryTable struct {
-	Paging          common.Paging          `json:"paging,omitempty"`
-	TotalEfficiency VDBSummaryTableGroup   `json:"total_efficiency,omitempty"`
-	Groups          []VDBSummaryTableGroup `json:"groups,omitempty"`
+	Paging          common.Paging        `json:"paging"`
+	TotalEfficiency VDBSummaryTableRow   `json:"total_efficiency"`
+	Data            []VDBSummaryTableRow `json:"data"`
 }
 
-type VDBSummaryTableGroup struct {
-	Id   uint64 `json:"id,omitempty"`
-	Name string `json:"name"`
+type VDBSummaryTableRow struct {
+	GroupName string `json:"group_name"`
+	GroupId   uint64 `json:"group_id"`
 
 	Efficiency24h float64 `json:"efficiency_24h"`
 	Efficiency7d  float64 `json:"efficiency_7d"`
@@ -26,14 +26,21 @@ type VDBSummaryTableGroup struct {
 }
 
 type VDBSummaryDetails struct {
+	Details24h VDBSummaryDetailsColumn `json:"details_24h"`
+	Details7d  VDBSummaryDetailsColumn `json:"details_7d"`
+	Details31d VDBSummaryDetailsColumn `json:"details_31d"`
+	DetailsAll VDBSummaryDetailsColumn `json:"details_all"`
+}
+
+type VDBSummaryDetailsColumn struct {
 	AttestationsHead       VDBSummaryDetailsItem `json:"att_head"`
 	AttestationsSource     VDBSummaryDetailsItem `json:"att_source"`
 	AttestationsTarget     VDBSummaryDetailsItem `json:"att_target"`
 	AttestationEfficiency  float64               `json:"att_efficiency"`
 	AttestationAvgInclDist float64               `json:"att_avg_incl_dist"`
 
-	SyncCommittee VDBSummaryDetailsItem `json:"sync,omitempty"`
-	Proposals     VDBSummaryDetailsItem `json:"proposals,omitempty"`
+	SyncCommittee VDBSummaryDetailsItem `json:"sync"`
+	Proposals     VDBSummaryDetailsItem `json:"proposals"`
 
 	ElApr VDBSummaryDetailsApr `json:"el_apr"`
 	ClApr VDBSummaryDetailsApr `json:"cl_apr"`
@@ -43,39 +50,20 @@ type VDBSummaryDetails struct {
 }
 
 type VDBSummaryDetailsItem struct {
-	Success    uint64           `json:"success"`
-	Failed     uint64           `json:"failed"`
-	Earned     *decimal.Decimal `json:"earned"`
-	Penalty    *decimal.Decimal `json:"penalty"`
-	Validators []uint64         `json:"validators,omitempty"`
+	Success    uint64          `json:"success"`
+	Failed     uint64          `json:"failed"`
+	Earned     decimal.Decimal `json:"earned"`
+	Penalty    decimal.Decimal `json:"penalty"`
+	Validators []uint64        `json:"validators,omitempty"`
 }
 
 type VDBSummaryDetailsApr struct {
-	Value   *decimal.Decimal `json:"value"`
-	Percent float64          `json:"percent"`
+	Value   decimal.Decimal `json:"value"`
+	Percent float64         `json:"percent"`
 }
 
 type VDBSummaryDetailsLuck struct {
-	Percent  float64        `json:"percent"`
-	Expected *time.Time     `json:"expected"`
-	Average  *time.Duration `json:"average"`
-}
-
-type VDBSummaryChart struct {
-	Intervals []VDBSummaryChartInterval `json:"intervals,omitempty"`
-}
-
-type VDBSummaryChartInterval struct {
-	StartTime  time.Time `json:"start_time"`
-	EndTime    time.Time `json:"end_time"`
-	StartEpoch uint64    `json:"start_epoch"`
-	EndEpoch   uint64    `json:"end_epoch"`
-
-	TotalEfficiency VDBSummaryChartGroup   `json:"total_efficiency,omitempty"`
-	Groups          []VDBSummaryChartGroup `json:"groups,omitempty"`
-}
-
-type VDBSummaryChartGroup struct {
-	Name       string  `json:"name,omitempty"`
-	Efficiency float64 `json:"efficiency"`
+	Percent  float64       `json:"percent"`
+	Expected time.Time     `json:"expected"`
+	Average  time.Duration `json:"average"`
 }

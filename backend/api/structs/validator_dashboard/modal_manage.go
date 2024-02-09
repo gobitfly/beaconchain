@@ -8,28 +8,23 @@ import (
 )
 
 type VDBManageTable struct {
-	Default VDBManageTableGroup   `json:"default"`
-	Groups  []VDBManageTableGroup `json:"groups,omitempty"`
+	Paging common.Paging       `json:"paging"`
+	Data   []VDBManageTableRow `json:"data"`
 }
 
-type VDBManageTableGroup struct {
-	Name  string `json:"name,omitempty"`
-	Id    uint64 `json:"id,omitempty"`
-	Count uint64 `json:"count"`
-}
-
-type VDBManageDetails struct {
-	Paging     common.Paging          `json:"paging,omitempty"`
+type VDBManageTableRow struct {
 	Validators []VDBManageDetailsItem `json:"validators"`
 }
 
 type VDBManageDetailsItem struct {
-	Index                 uint64           `json:"index,omitempty"`
-	Pubkey                common.PubKey    `json:"pubkey"`
-	Balance               *decimal.Decimal `json:"balance"`
-	Status                string           `json:"status"` // active, deposited, pending, inactive
-	WithdrawalCredentials common.Hash      `json:"withdrawal_credentials"`
+	Index                 uint64          `json:"index"`
+	Pubkey                common.PubKey   `json:"pubkey"`
+	GroupName             string          `json:"group_name,omitempty"`
+	GroupId               uint64          `json:"group_id,omitempty"`
+	Balance               decimal.Decimal `json:"balance"`
+	Status                string          `json:"status"` // active, deposited, pending, inactive
+	WithdrawalCredentials common.Hash     `json:"withdrawal_credentials"`
 	// pending
-	QueuePosition  uint64    `json:"queue_position,omitempty"`
-	ActivationTime time.Time `json:"activation_time,omitempty"`
+	QueuePosition  uint64    `json:"queue_position"`
+	ActivationTime time.Time `json:"activation_time"`
 }

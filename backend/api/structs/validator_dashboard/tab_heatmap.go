@@ -1,38 +1,20 @@
 package api
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 
-type VDBHeatmap struct {
-	Epochs []VDBBlocksEpoch `json:"epochs,omitempty"`
-}
-
-type VDBBlocksEpoch struct {
-	Number uint64               `json:"number"`
-	Time   time.Time            `json:"time"`
-	Groups []VDBHeatmapOverview `json:"groups,omitempty"`
-}
-
-type VDBHeatmapOverview struct {
-	Name     string           `json:"name"`
-	Value    *decimal.Decimal `json:"value"`
-	Proposal bool             `json:"proposal,omitempty"`
-	Sync     bool             `json:"sync,omitempty"`
-	Slashing bool             `json:"slashing,omitempty"`
-}
-
 type VDBHeatmapDetails struct {
-	Proposers []VDBHeatmapExtraValidatorDuty `json:"proposers,omitempty"`
-	Syncs     []VDBHeatmapExtraValidatorDuty `json:"syncs,omitempty"`
-	Slashings []VDBHeatmapExtraValidatorDuty `json:"slashings,omitempty"`
+	Epoch uint64 `json:"epoch"`
+
+	Proposers []VDBHeatmapExtraValidatorDuty `json:"proposers"`
+	Syncs     []VDBHeatmapExtraValidatorDuty `json:"syncs"`
+	Slashings []VDBHeatmapExtraValidatorDuty `json:"slashings"`
 
 	AttHead   VDBHeatmapAttestations `json:"att_head"`
 	AttSource VDBHeatmapAttestations `json:"att_source"`
 	AttTarget VDBHeatmapAttestations `json:"att_target"`
-	AttValue  *decimal.Decimal       `json:"att_value"`
+	AttIncome decimal.Decimal        `json:"att_income"`
 }
 
 type VDBHeatmapAttestations struct {

@@ -8,19 +8,19 @@ import (
 )
 
 type VDBBlocks struct {
-	Paging common.Paging      `json:"paging,omitempty"`
-	Blocks []VDBBlocksDetails `json:"blocks,omitempty"`
+	Paging common.Paging      `json:"paging"`
+	Blocks []VDBBlocksDetails `json:"blocks"`
 }
 
 type VDBBlocksDetails struct {
-	Proposer  uint64           `json:"proposer"`
-	GroupName string           `json:"group_name"`
-	GroupId   uint64           `json:"group_id"`
-	Epoch     uint64           `json:"epoch"`
-	Slot      uint64           `json:"slot"`
-	Block     uint64           `json:"block,omitempty"`
-	Age       time.Time        `json:"time"`
-	Status    string           `json:"status"` // success, missed, orphaned, scheduled
-	ElReward  *decimal.Decimal `json:"el_reward,omitempty"`
-	ClReward  *decimal.Decimal `json:"cl_reward,omitempty"`
+	Proposer  uint64          `json:"proposer"`
+	GroupName string          `json:"group_name"`
+	GroupId   uint64          `json:"group_id"`
+	Epoch     uint64          `json:"epoch"`
+	Slot      uint64          `json:"slot"`
+	Block     uint64          `json:"block"`
+	Age       time.Time       `json:"time"`
+	Status    string          `json:"status"` // success, missed, orphaned, scheduled
+	ElReward  decimal.Decimal `json:"el_reward"`
+	ClReward  decimal.Decimal `json:"cl_reward"`
 }

@@ -8,35 +8,43 @@ import (
 )
 
 type VDBDepositsExecution struct {
-	Paging   common.Paging        `json:"paging,omitempty"`
-	Total    *decimal.Decimal     `json:"total"`
-	Deposits []VDBDepositsDetails `json:"deposits"`
+	Paging   common.Paging          `json:"paging"`
+	Total    decimal.Decimal        `json:"total"`
+	Deposits []VDBDepositsDetailsEl `json:"deposits"`
 }
 
 type VDBDepositsConsensus struct {
-	Paging   common.Paging        `json:"paging,omitempty"`
-	Total    *decimal.Decimal     `json:"total"`
-	Deposits []VDBDepositsDetails `json:"deposits"`
+	Paging   common.Paging          `json:"paging"`
+	Total    decimal.Decimal        `json:"total"`
+	Deposits []VDBDepositsDetailsCl `json:"deposits"`
 }
 
-type VDBDepositsDetails struct {
-	PublicKey             common.PubKey    `json:"public_key"`
-	Index                 uint64           `json:"index"`
-	GroupName             string           `json:"group_anme,omitempty"`
-	GroupId               uint64           `json:"group_id,omitempty"`
-	Time                  time.Time        `json:"time"`
-	WithdrawalCredentials common.Hash      `json:"withdrawal_credentials"`
-	Amount                *decimal.Decimal `json:"amount"`
+type VDBDepositsDetailsEl struct {
+	PublicKey             common.PubKey   `json:"public_key"`
+	Index                 uint64          `json:"index"`
+	GroupName             string          `json:"group_anme"`
+	GroupId               uint64          `json:"group_id"`
+	Time                  time.Time       `json:"time"`
+	WithdrawalCredentials common.Hash     `json:"withdrawal_credentials"`
+	Amount                decimal.Decimal `json:"amount"`
 
-	// Execution
-	Block uint64         `json:"block,omitempty"`
-	From  common.Address `json:"from,omitempty"`
-	// Depositor      Address   `json:"depositor,omitempty"`
-	TxHash common.Hash `json:"tx_hash,omitempty"`
-	Valid  bool        `json:"valid,omitempty"`
+	Block uint64         `json:"block"`
+	From  common.Address `json:"from"`
+	// Depositor      Address   `json:"depositor"`
+	TxHash common.Hash `json:"tx_hash"`
+	Valid  bool        `json:"valid"`
+}
 
-	// Consensus
-	Epoch     uint64      `json:"epoch,omitempty"`
-	Slot      uint64      `json:"slot,omitempty"`
-	Signature common.Hash `json:"signature,omitempty"`
+type VDBDepositsDetailsCl struct {
+	PublicKey             common.PubKey   `json:"public_key"`
+	Index                 uint64          `json:"index"`
+	GroupName             string          `json:"group_anme"`
+	GroupId               uint64          `json:"group_id"`
+	Time                  time.Time       `json:"time"`
+	WithdrawalCredentials common.Hash     `json:"withdrawal_credentials"`
+	Amount                decimal.Decimal `json:"amount"`
+
+	Epoch     uint64      `json:"epoch"`
+	Slot      uint64      `json:"slot"`
+	Signature common.Hash `json:"signature"`
 }
