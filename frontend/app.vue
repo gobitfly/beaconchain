@@ -3,6 +3,8 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
 
+useWindowSizeProvider()
+
 </script>
 
 <template>

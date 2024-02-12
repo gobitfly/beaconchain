@@ -4,6 +4,8 @@ import { type SlotVizData } from '~/types/dashboard/slotViz'
 const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
 
+const { width, isMobile } = useWindowSize()
+
 const { latest } = storeToRefs(useLatestStateStore())
 
 const slotVizData = ref<SlotVizData | null>(null)
@@ -25,6 +27,9 @@ onMounted(async () => {
     <h1>Playground for testing UI components</h1>
     <div class="row">
       latest epoch: {{ latest?.currentEpoch }}
+    </div>
+    <div class="row">
+      Width: {{ width }} -> Is mobile: {{ isMobile }}
     </div>
 
     <NuxtLink to="/" class="row">
