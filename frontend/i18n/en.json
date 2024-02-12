@@ -51,8 +51,11 @@
     "terms": "Terms",
     "privacy": "Privacy",
     "api_docs": "API Docs",
-    "pricing": "Pricing",
+    "api_pricing": "API Pricing",
+    "premium" : "beaconcha.in Premium",
     "advertise": "Advertise",
+    "shop": "Swag Shop",
+    "status": "Site Status",
     "press_kit": "Press Kit"
   }
 }

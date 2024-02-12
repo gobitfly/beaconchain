@@ -38,8 +38,11 @@
       "terms": "Termes et conditions",
       "privacy": "Protection des données",
       "api_docs": "Docs de l'API",
-      "pricing": "Tarifs",
+      "api_pricing": "Tarifs d'accès à l'API",
+      "premium": "beaconcha.in Premium",
       "advertise": "Devenez annonceur",
+      "shop": "Boutique fashion",
+      "status": "Statut du site",
       "press_kit": "Dossier de presse"
     }
   }

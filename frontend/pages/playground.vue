@@ -19,6 +19,7 @@ onMounted(async () => {
 })
 
 </script>
+
 <template>
   <div class="content">
     <BcAdControl />
