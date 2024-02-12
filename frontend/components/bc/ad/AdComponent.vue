@@ -25,24 +25,21 @@ const makeSureReviveIsInitiated = () => {
 }
 
 onMounted(() => {
-  if (!adComponent.value) {
-    return
-  }
-  const target = adComponent.value.parentElement
+  const target = adComponent.value?.parentElement
   if (!target) {
     return
   }
 
   switch (props.ad.insert_mode) {
     case 'replace':
-      target.after(adComponent.value)
+      target.after(adComponent.value!)
       target.remove()
       break
     case 'after':
-      target.after(adComponent.value)
+      target.after(adComponent.value!)
       break
     case 'before':
-      target.before(adComponent.value)
+      target.before(adComponent.value!)
       break
   }
   if (props.ad.banner_id) {
