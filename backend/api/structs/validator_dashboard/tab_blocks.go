@@ -8,7 +8,6 @@ import (
 )
 
 type VDBBlocks struct {
-	Paging common.Paging      `json:"paging"`
 	Blocks []VDBBlocksDetails `json:"blocks"`
 }
 

@@ -8,7 +8,6 @@ import (
 )
 
 type VDBWithdrawals struct {
-	Paging      common.Paging           `json:"paging"`
 	Withdrawals []VDBWithdrawalsDetails `json:"withdrawals"`
 }
 

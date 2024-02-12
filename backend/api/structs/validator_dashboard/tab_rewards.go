@@ -3,19 +3,17 @@ package api
 import (
 	"time"
 
-	common "github.com/gobitfly/beaconchain/api/structs"
 	"github.com/shopspring/decimal"
 )
 
 type VDBRewardsTable struct {
-	Paging common.Paging             `json:"paging"`
-	Data   []VDBRewardsTableGroupRow `json:"data"`
+	Epochs []VDBRewardsTableEpoch `json:"epochs"`
 }
 
-type VDBRewardsTableGroupRow struct {
+type VDBRewardsTableEpoch struct {
 	Number uint64               `json:"number"`
 	Time   time.Time            `json:"time"`
-	Data   []VDBRewardsTableRow `json:"data"`
+	Groups []VDBRewardsTableRow `json:"groups"`
 }
 
 type VDBRewardsTableRow struct {

@@ -8,13 +8,11 @@ import (
 )
 
 type VDBDepositsExecution struct {
-	Paging   common.Paging          `json:"paging"`
 	Total    decimal.Decimal        `json:"total"`
 	Deposits []VDBDepositsDetailsEl `json:"deposits"`
 }
 
 type VDBDepositsConsensus struct {
-	Paging   common.Paging          `json:"paging"`
 	Total    decimal.Decimal        `json:"total"`
 	Deposits []VDBDepositsDetailsCl `json:"deposits"`
 }

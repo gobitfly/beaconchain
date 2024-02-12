@@ -8,15 +8,14 @@ import (
 )
 
 type VDBManageTable struct {
-	Paging common.Paging       `json:"paging"`
-	Data   []VDBManageTableRow `json:"data"`
+	Groups []VDBManageTableGroup `json:"groups"`
 }
 
-type VDBManageTableRow struct {
-	Validators []VDBManageDetailsItem `json:"validators"`
+type VDBManageTableGroup struct {
+	Validators []VDBManageTableValidator `json:"validators"`
 }
 
-type VDBManageDetailsItem struct {
+type VDBManageTableValidator struct {
 	Index                 uint64          `json:"index"`
 	Pubkey                common.PubKey   `json:"pubkey"`
 	GroupName             string          `json:"group_name,omitempty"`

@@ -6,7 +6,6 @@ import (
 )
 
 type VDBEpochDuties struct {
-	Paging     common.Paging             `json:"paging"`
 	Validators []VDBEpochDutiesValidator `json:"validators"`
 }
 

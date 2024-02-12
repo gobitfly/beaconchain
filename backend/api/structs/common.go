@@ -8,3 +8,8 @@ type Paging struct {
 	PrevCursor string `json:"prev_cursor"`
 	NextCursor string `json:"next_cursor"`
 }
+
+type ApiResponse struct {
+	Paging Paging      `json:"paging,omitempty"`
+	Data   interface{} `json:"data"`
+}

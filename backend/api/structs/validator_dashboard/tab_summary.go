@@ -3,17 +3,15 @@ package api
 import (
 	"time"
 
-	common "github.com/gobitfly/beaconchain/api/structs"
 	"github.com/shopspring/decimal"
 )
 
 type VDBSummaryTable struct {
-	Paging          common.Paging        `json:"paging"`
-	TotalEfficiency VDBSummaryTableRow   `json:"total_efficiency"`
-	Data            []VDBSummaryTableRow `json:"data"`
+	TotalEfficiency VDBSummaryGroup   `json:"total_efficiency"`
+	Groups          []VDBSummaryGroup `json:"groups"`
 }
 
-type VDBSummaryTableRow struct {
+type VDBSummaryGroup struct {
 	GroupName string `json:"group_name"`
 	GroupId   uint64 `json:"group_id"`
 
