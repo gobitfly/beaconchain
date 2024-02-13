@@ -30,7 +30,7 @@ jobs:
     - uses: WillAbides/setup-go-faster@v1.7.0
       with:
         go-version: ${{ matrix.go }}
-    - run: make all				
+    - run: cd backend; make all				
     - run: "go test ./..."
     - run: "go vet ./..."
     - uses: dominikh/staticcheck-action@v1.2.0

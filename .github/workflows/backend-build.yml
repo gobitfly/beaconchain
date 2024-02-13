@@ -23,7 +23,7 @@ jobs:
       - name: Set up Go 1.20
         uses: actions/setup-go@v4
         with:
-          go-version-file: './go.mod'
+          go-version-file: './backend/go.mod'
         id: go
 
       - name: Output go version
