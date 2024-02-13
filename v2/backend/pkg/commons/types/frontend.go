@@ -44,11 +44,14 @@ const (
 	MonitoringMachineSwitchedToETH2FallbackEventName EventName = "monitoring_fallback_eth2inuse"
 	MonitoringMachineSwitchedToETH1FallbackEventName EventName = "monitoring_fallback_eth1inuse"
 	TaxReportEventName                               EventName = "user_tax_report"
-	RocketpoolCommissionThresholdEventName           EventName = "rocketpool_commision_threshold"
-	RocketpoolNewClaimRoundStartedEventName          EventName = "rocketpool_new_claimround"
-	RocketpoolCollateralMinReached                   EventName = "rocketpool_colleteral_min"
-	RocketpoolCollateralMaxReached                   EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoon                                EventName = "validator_synccommittee_soon"
+	//nolint:misspell
+	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
+	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
+	//nolint:misspell
+	RocketpoolCollateralMinReached EventName = "rocketpool_colleteral_min"
+	//nolint:misspell
+	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
+	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
 )
 
 var MachineEvents = []EventName{

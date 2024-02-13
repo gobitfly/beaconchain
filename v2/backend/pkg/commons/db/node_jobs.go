@@ -312,7 +312,7 @@ func SubmitBLSToExecutionChangesNodeJob(job *types.NodeJob) error {
 		return err
 	}
 	jobStatus := types.SubmittedToNodeNodeJobStatus
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		d, _ := io.ReadAll(resp.Body)
 		if len(d) > 1000 {
 			d = d[:1000]
@@ -448,7 +448,7 @@ func SubmitVoluntaryExitNodeJob(job *types.NodeJob) error {
 		return err
 	}
 	jobStatus := types.SubmittedToNodeNodeJobStatus
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		d, _ := io.ReadAll(resp.Body)
 		if len(d) > 1000 {
 			d = d[:1000]

@@ -131,7 +131,7 @@ func (d *slotExporterData) Start() error {
 		}
 	}
 
-	// at this point we have all all data up to the current chain head in the database
+	// at this point we have all data up to the current chain head in the database
 
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := db.GetAllNonFinalizedSlots()
