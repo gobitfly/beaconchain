@@ -17,8 +17,8 @@ binaries:
 	mkdir -p bin
 
 exporter: binaries
-	cd exporter; go build --ldflags=${LDFLAGS} -o ../bin/exporter ./cmd/main.go
+	go build --ldflags=${LDFLAGS} -o ./bin/exporter ./cmd/exporter/main.go
 
 api: binaries
-	cd api; go build --ldflags=${LDFLAGS} -o ../bin/api ./cmd/main.go
+	go build --ldflags=${LDFLAGS} -o ./bin/api ./cmd/api/main.go
 	
