@@ -41,7 +41,6 @@ func (d *dashboardData) Start(epoch int) {
 	process(data, domain)
 
 	// todo store in db
-
 }
 
 type Data struct {
@@ -197,9 +196,8 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed++
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
-
 			// TODO: properly verify that deposit is valid:
-			// if signature is valid I count the the deposit towards the balance
+			// if signature is valid I count the deposit towards the balance
 			// if signature is invalid and the validator was in the state at the beginning of the epoch I count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there were no valid deposits in the block prior I DO NOT count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there was a VALID deposit in the blocks prior I DO COUNT the deposit towards the balance
@@ -240,7 +238,6 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
-
 		validatorIndex := attestationReward.ValidatorIndex
 
 		validatorsData[validatorIndex].AttestationsHeadReward = attestationReward.Head

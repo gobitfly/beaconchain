@@ -24,59 +24,59 @@ func NewNodeDataRetriever(endpoint string) Retriever {
 	return retriever
 }
 
-func (r *NodeImplRetriever) GetFinalityCheckpoints(state_id any) (types.StandardFinalityCheckpointsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", r.Endpoint, state_id)
-	return get[types.StandardFinalityCheckpointsResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetFinalityCheckpoints(stateID any) (types.StandardFinalityCheckpointsResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", r.Endpoint, stateID)
+	return get[types.StandardFinalityCheckpointsResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetBlockHeader(block_id any) (types.StandardBeaconHeaderResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/headers/%v", r.Endpoint, block_id)
-	return get[types.StandardBeaconHeaderResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetBlockHeader(blockID any) (types.StandardBeaconHeaderResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/headers/%v", r.Endpoint, blockID)
+	return get[types.StandardBeaconHeaderResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetSyncCommitteesAssignments(epoch int, state_id any) (types.StandardSyncCommitteesResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, state_id, epoch)
-	return get[types.StandardSyncCommitteesResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetSyncCommitteesAssignments(epoch int, stateID any) (types.StandardSyncCommitteesResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, epoch)
+	return get[types.StandardSyncCommitteesResponse](r, requestURL)
 }
 
 func (r *NodeImplRetriever) GetSpec() (types.StandardSpecResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/config/spec", r.Endpoint)
-	return get[types.StandardSpecResponse](r, requestUrl)
+	requestURL := fmt.Sprintf("%s/eth/v1/config/spec", r.Endpoint)
+	return get[types.StandardSpecResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetSlot(block_id any) (types.StandardBeaconSlotResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v2/beacon/blocks/%v", r.Endpoint, block_id)
-	return get[types.StandardBeaconSlotResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetSlot(blockID any) (types.StandardBeaconSlotResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v2/beacon/blocks/%v", r.Endpoint, blockID)
+	return get[types.StandardBeaconSlotResponse](r, requestURL)
 }
 
 func (r *NodeImplRetriever) GetValidators(state any) (types.StandardValidatorsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", r.Endpoint, state)
-	return get[types.StandardValidatorsResponse](r, requestUrl)
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%v/validators", r.Endpoint, state)
+	return get[types.StandardValidatorsResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetValidator(validator_id, state any) (types.StandardSingleValidatorsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/states/%s/validators/%v", r.Endpoint, state, validator_id)
-	return get[types.StandardSingleValidatorsResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetValidator(validatorID, state any) (types.StandardSingleValidatorsResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%s/validators/%v", r.Endpoint, state, validatorID)
+	return get[types.StandardSingleValidatorsResponse](r, requestURL)
 }
 
 func (r *NodeImplRetriever) GetPropoalAssignments(epoch int) (types.StandardProposerAssignmentsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
-	return get[types.StandardProposerAssignmentsResponse](r, requestUrl)
+	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
+	return get[types.StandardProposerAssignmentsResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetPropoalRewards(block_id any) (types.StandardBlockRewardsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/rewards/blocks/%v", r.Endpoint, block_id)
-	return get[types.StandardBlockRewardsResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetPropoalRewards(blockID any) (types.StandardBlockRewardsResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/blocks/%v", r.Endpoint, blockID)
+	return get[types.StandardBlockRewardsResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetSyncRewards(block_id any) (types.StandardSyncCommitteeRewardsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/rewards/sync_committee/%v", r.Endpoint, block_id)
-	return post[types.StandardSyncCommitteeRewardsResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetSyncRewards(blockID any) (types.StandardSyncCommitteeRewardsResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/sync_committee/%v", r.Endpoint, blockID)
+	return post[types.StandardSyncCommitteeRewardsResponse](r, requestURL)
 }
 
-func (r *NodeImplRetriever) GetAttestationRewards(block_id any) (types.StandardAttestationRewardsResponse, error) {
-	requestUrl := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/%v", r.Endpoint, block_id)
-	return post[types.StandardAttestationRewardsResponse](r, requestUrl)
+func (r *NodeImplRetriever) GetAttestationRewards(blockID any) (types.StandardAttestationRewardsResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/%v", r.Endpoint, blockID)
+	return post[types.StandardAttestationRewardsResponse](r, requestURL)
 }
 
 // Helper for get and unmarshal
@@ -99,12 +99,12 @@ func post[T any](r *NodeImplRetriever, url string) (T, error) {
 	return utils.Unmarshal[T](result, err)
 }
 
-func genericRequest(method string, requestUrl string, httpClient *http.Client) ([]byte, error) {
+func genericRequest(method string, requestURL string, httpClient *http.Client) ([]byte, error) {
 	data := []byte{}
 	if method == "POST" {
 		data = []byte("[]")
 	}
-	r, err := http.NewRequest(method, requestUrl, bytes.NewBuffer(data))
+	r, err := http.NewRequest(method, requestURL, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
 	}
