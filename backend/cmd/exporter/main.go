@@ -81,10 +81,6 @@ func startModules() {
 	// 	Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
 	// }, domain)
 
-	// if err != nil {
-
-	// 	utils.LogFatal(err, "can not verify deposit signature", 0)
-	// }
 	// return
 
 	registeredModules := []modules.ModuleInterfaceEpoch{
