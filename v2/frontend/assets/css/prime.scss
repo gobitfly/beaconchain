@@ -175,3 +175,69 @@
     padding: 0.9375rem 0.9375rem;
   }
 }
+
+// TabView
+// TODO: Apply our styles
+.p-tabview {
+  .p-tabview-nav {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-width: 0 0 2px 0;
+  
+    li {
+      margin-right: 0;
+    
+      .p-tabview-nav-link {
+        border: solid #e5e7eb;
+        border-width: 0 0 2px 0;
+        border-color: transparent transparent #e5e7eb transparent;
+        background: #ffffff;
+        color: #6b7280;
+        padding: 1.25rem;
+        font-weight: 700;
+        border-top-right-radius: 6px;
+        border-top-left-radius: 6px;
+        transition: box-shadow 0.2s;
+        margin: 0 0 -2px 0;
+      
+        &:not(.p-disabled):focus-visible {
+          outline: 0 none;
+          outline-offset: 0;
+          box-shadow: inset 0 0 0 0.2rem #a7f3d0;
+        }
+      }
+      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
+        background: #ffffff;
+        border-color: #9ca3af;
+        color: #6b7280;
+      }
+      &.p-highlight .p-tabview-nav-link {
+        background: #ffffff;
+        border-color: #10b981;
+        color: #10b981;
+      }
+    }
+  }
+  
+  .p-tabview-nav-btn.p-link {
+    background: #ffffff;
+    color: #10b981;
+    width: 3rem;
+    box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+    border-radius: 0;
+  
+    &:focus-visible {
+      outline: 0 none;
+      outline-offset: 0;
+      box-shadow: inset 0 0 0 0.2rem #a7f3d0;
+    }
+  }
+  .p-tabview-panels {
+    background: #ffffff;
+    padding: 1.25rem;
+    border: 0 none;
+    color: #4b5563;
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+}
