@@ -248,7 +248,7 @@ function searchAhead (input : string, searchable : Searchable) : boolean {
 
   // now we take the disorganized data of the API and fill `organizedResults`, which will be easy to iterate over when populating the drop-down
   organizedResults = { networks: [] }
-  if (foundAhead.data !== undefined && foundAhead.data.length > 0) {
+  if (foundAhead.data !== undefined) {
     for (const finding of foundAhead.data) {
       const toBeAdded = organizeAPIinfo(finding)
       if (toBeAdded.main === '') {
@@ -332,6 +332,8 @@ function isOrganizedResultsEmpty () {
   @include main.container;
   position: absolute;
   z-index: 100;
+  overflow: auto;
+  max-height: 66vh;
 }
 
 .network-frame {
