@@ -1,58 +1,41 @@
 @use '~/assets/css/fonts.scss';
 
 // Button
-// TODO: Check spacings / sizes, Add different button versions we use
-
+// https://primevue.org/button/
 .p-button {
-  font-family: var(--roboto-family);
-  font-weight: var(--roboto-medium);
+  @include fonts.button_text;
+
   color: var(--primary-contrast-color);
-  background: var(--primary-color);
-  border: 1px solid var(--primary-color);
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
+  background: var(--button-color-active);
+  border: 1px solid var(--button-color-active);
+  padding: 8px 24px;
+
   transition: background-color 0.2s, color 0.2s, border-color 0.2s,
     box-shadow 0.2s;
   border-radius: var(--border-radius);
 
+  &.p-disabled {
+    color: var(--button-text-color-disabled);
+    background: var(--button-color-disabled);
+    border-color: var(--button-color-disabled);
+  }
   &:not(:disabled):hover {
-    background: var(--primary-color);
-    color: var(--primary-contrast-color);
-    border-color: var(--primary-color);
+    background: var(--button-color-hover);
+    border-color: var(--button-color-hover);
   }
   &:not(:disabled):active {
-    background: var(--primary-color);
-    color: var(--primary-contrast-color);
-    border-color: var(--primary-color);
+    background: var(--button-color-pressed);
+    border-color: var(--button-color-pressed);
   }
 
-  &.p-button-raised {
-    box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2),
-      0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
-  }
-
-  &.p-button-rounded {
-    border-radius: 2rem;
-  }
-
-  &.p-button-sm {
-    font-size: 0.875rem;
-    padding: 0.65625rem 1.09375rem;
-  }
-
-  &.p-button-lg {
-    font-size: 1.25rem;
-    padding: 0.9375rem 1.5625rem;
-  }
-
-  .p-button-label {
-    transition-duration: 0.2s;
+  &.p-button-icon-only {
+    padding: 8px 10px;
   }
 }
 
 // Toast
+// https://primevue.org/toast/
 // TODO: apply our styles
-
 .p-toast {
   opacity: 1;
 }
@@ -141,8 +124,8 @@
 }
 
 // InputText
+// https://primevue.org/inputtext/
 // TODO: Apply our styles
-
 .p-inputtext {
   font-family: var(--font-family);
   font-feature-settings: var(--font-feature-settings, normal);
@@ -179,6 +162,7 @@
 }
 
 // TabView
+// https://primevue.org/tabview/
 .p-tabview {  
   .p-tabview-nav {
     @include fonts.standard_text;

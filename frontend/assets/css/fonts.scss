@@ -107,6 +107,10 @@
   --small_text_font_weight: var(--roboto-light);
   --small_text_bold_font_weight: var(--roboto-medium);
 
+  --button_font_family: var(--roboto-family);
+  --button_font_size: 14px;
+  --button_font_weight: var(--roboto-medium);
+
   --paragraph_4_font_size: 14px;
 }
 
@@ -157,4 +161,14 @@ h1 {
 
 .small_text_bold{
   @include small_text_bold
+}
+
+@mixin button_text(){
+  font-family: var(--button_font_family);
+  font-size: var(--button_font_size);
+  font-weight: var(--button_font_weight);
+}
+
+.button_text{
+  @include button_text
 }
