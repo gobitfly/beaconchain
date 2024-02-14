@@ -47,7 +47,6 @@ func readConfigSecrets(cfg *types.Config) error {
 }
 
 func ReadConfig(cfg *types.Config, path string) error {
-
 	configPathFromEnv := os.Getenv("BEACONCHAIN_CONFIG")
 
 	if configPathFromEnv != "" { // allow the location of the config file to be passed via env args
@@ -65,7 +64,6 @@ func ReadConfig(cfg *types.Config, path string) error {
 
 		logrus.Infof("seeded config file from secret store")
 	} else {
-
 		err := readConfigFile(cfg, path)
 		if err != nil {
 			return err
@@ -242,7 +240,6 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Chain.GenesisValidatorsRoot = gtr.Data.GenesisValidatorsRoot
 
 		logrus.Infof("loaded chain config from node with genesis time %s", gtr.Data.GenesisTime)
-
 	} else {
 		f, err := os.Open(cfg.Chain.ClConfigPath)
 		if err != nil {
@@ -430,7 +427,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 		}
 	}
 
-	// we check for maching chain id just for safety
+	// we check for machine chain id just for safety
 	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
 		logrus.Fatalf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID)
 	}
