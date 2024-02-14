@@ -25,9 +25,10 @@
   --background-color: var(--grey-1);
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
+  --text-color-disabled: #a5a5a5; // TODO: Should this be a color variable?
 
   --container-background: var(--grey-4);
-  --container-color: var(--Light-Black);
+  --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
 
   --link-color: var(--blue);
@@ -38,9 +39,12 @@
   &.dark-mode {
     --primary-color: #ffaa31;
     --primary-contrast-color: var(--light-black);
+
     --background-color: var(--almost-black);
+
     --text-color: var(--light-grey);
     --text-color-inverted: var(--light-black);
+    --text-color-disabled: #a5a5a5;
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
