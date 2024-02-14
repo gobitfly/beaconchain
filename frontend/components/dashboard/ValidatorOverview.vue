@@ -17,7 +17,7 @@ const { overview } = storeToRefs(useValidatorDashboardOverview())
 const dataList = computed(() => {
   const v = overview.value
   const active: OverviewTableData = {
-    label: $t(`${tPath}your_active_validators`)
+    label: $t(`${tPath}your_online_validators`)
   }
   const efficiency: OverviewTableData = {
     label: $t(`${tPath}total_efficiency`)

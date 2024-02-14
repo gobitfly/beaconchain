@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 
 interface Props {
   validators: number[],
   groupId?: number,
-  context: 'group' | 'sync' | 'propsoal'
+  context: DashboardValidatorContext
 }
 const props = defineProps<Props>()
 

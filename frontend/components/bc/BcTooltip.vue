@@ -62,7 +62,7 @@ const handleClick = () => {
   }
 }
 
-const onHover = (enter:boolean) => {
+const onHover = (enter: boolean) => {
   if (!enter) {
     hover.value = false
   } else if (canBeOpened.value && !selected.value) {
@@ -119,12 +119,14 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.slot_container{
+.slot_container {
   display: inline;
-  &.active{
+
+  &.active {
     cursor: pointer;
   }
 }
+
 .bc-tooltip-wrapper {
   position: fixed;
   width: 1px;
@@ -149,7 +151,8 @@ onUnmounted(() => {
   border-radius: var(--border-radius);
   color: var(--tt-color);
   background: var(--tt-bg-color);
-  font-family: var(--roboto-family);
+  font-family: var(--inter-family);
+  font-weight: var(--inter-light);
   font-size: 10px;
   pointer-events: none;
   transform: translate(-50%, 0);
@@ -188,6 +191,7 @@ onUnmounted(() => {
 
   &.top {
     transform: translate(-50%, -100%);
+
     &::after {
       top: 100%;
       left: 50%;
@@ -198,6 +202,7 @@ onUnmounted(() => {
 
   &.right {
     transform: translate(0, -50%);
+
     &::after {
       top: calc(50% - 5px);
       left: -10px;
@@ -207,11 +212,16 @@ onUnmounted(() => {
 
   &.left {
     transform: translate(-100%, -50%);
+
     &::after {
       top: calc(50% - 5px);
       left: 100%;
       border-color: transparent transparent transparent var(--tt-bg-color);
     }
+  }
+
+  b {
+    font-weight: var(--inter-medium);
   }
 }
 </style>

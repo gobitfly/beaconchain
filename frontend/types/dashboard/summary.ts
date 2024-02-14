@@ -1,7 +1,26 @@
-export type SummaryDetails = 'details_24h' | 'details_7d'| 'details_31d'| 'details_all'
+export const SummaryDetails = ['details_24h', 'details_7d', 'details_31d', 'details_all'] as const
+export type SummaryDetail = typeof SummaryDetails[number]
 
-export const SummaryDetailsEfficiencyProps = ['attestation_head', 'attestation_source', 'attestation_target', 'sync', 'proposals'] as const
+export const SummaryDetailsEfficiencyProps = ['attestation_head', 'attestation_source', 'attestation_target', 'sync', 'proposals', 'slashings'] as const
 export type SummaryDetailsEfficiencyProp = typeof SummaryDetailsEfficiencyProps[number]
+
+export const SummaryDetailsEfficiencyValidatorProps = ['validators_sync', 'validators_proposal', 'validators_slashings', 'validators_attestation'] as const
+export type SummaryDetailsEfficiencyValidatorProp = typeof SummaryDetailsEfficiencyValidatorProps[number]
+
+export const SummaryDetailsEfficiencyLuckProps = ['proposal_luck', 'sync_luck'] as const
+export type SummaryDetailsEfficiencyLuckProp = typeof SummaryDetailsEfficiencyLuckProps[number]
+
+export const SummaryDetailsEfficiencyCustomProps = ['attestation_total'] as const
+export type SummaryDetailsEfficiencyCustomProp = typeof SummaryDetailsEfficiencyCustomProps[number]
+
+export const SummaryDetailsEfficiencySpecialProps = ['efficiency_total', 'apr', 'luck', 'attestation_avg_incl_dist', 'attestation_efficiency'] as const
+export type SummaryDetailsEfficiencySpecialProp = typeof SummaryDetailsEfficiencySpecialProps[number]
+
+export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpecialProp | SummaryDetailsEfficiencyProp | SummaryDetailsEfficiencyCustomProp | SummaryDetailsEfficiencyLuckProp | SummaryDetailsEfficiencyValidatorProp
+
+export type DashboardValidatorContext = 'group' | 'attestation' | 'sync' | 'slashings' | 'propsoal'
+
+export type SummaryRow = { details: SummaryDetail[], prop: SummaryDetailsEfficiencyCombinedProp, title: string, className: string }
 
 // TODO: Replace with types below with the ones we get from the backend
 
@@ -53,6 +72,7 @@ export interface VDBGroupSummaryColumn {
   attestation_avg_incl_dist: number;
   sync: VDBGroupSummaryColumnItem;
   proposals: VDBGroupSummaryColumnItem;
+  slashings: VDBGroupSummaryColumnItem;
   apr: ClElFloat;
   income: ClEl;
   proposal_luck: Luck;

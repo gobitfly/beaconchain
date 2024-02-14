@@ -19,7 +19,8 @@
     "24h": "(24h)",
     "7d": "(7d)",
     "31d": "(31d)",
-    "365d": "(365d)"
+    "365d": "(365d)",
+    "all": "(All Time)"
   },
   "slotViz": {
     "head": "Head"
@@ -28,12 +29,31 @@
     "title": "Dashboard",
     "validator": {
       "overview": {
-        "your_active_validators": "Your Active Validators",
+        "your_online_validators": "Your Online Validators",
         "total_efficiency": "Total Efficiency",
         "total_rewards": "Total Rewards",
         "proposal_luck": "Proposal Luck",
         "sync_committee_luck": "Sync C. Luck",
         "total_apr": "Total APR"
+      },
+      "summary": {
+        "row": {
+          "efficiency_total": "Efficiency",
+          "attestation_total": "Total Attestations",
+          "attestation_head": "Head",
+          "attestation_source": "Source",
+          "attestation_target": "Target",
+          "attestation_efficiency": "Att. Efficiency",
+          "attestation_avg_incl_dist": "Avg. Incl. Distance",
+          "sync": "Sync Committee",
+          "validators_sync": "Validators",
+          "proposals": "Proposals",
+          "validators_proposal": "Validators",
+          "slashings": "Slashings",
+          "validators_slashings": "Validators",
+          "apr": "APR",
+          "luck": "Luck"
+        }
       }
     }
   },
@@ -52,7 +72,7 @@
     "privacy": "Privacy",
     "api_docs": "API Docs",
     "api_pricing": "API Pricing",
-    "premium" : "beaconcha.in Premium",
+    "premium": "beaconcha.in Premium",
     "advertise": "Advertise",
     "shop": "Swag Shop",
     "status": "Site Status",

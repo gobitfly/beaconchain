@@ -34,6 +34,17 @@
       <DashboardTableEfficiency :failed="0" :success="0" />
     </div>
   </div>
+  <DashboardTableSummaryDetails
+    :dashboard-id="1"
+    :row="{
+      group_id: 2,
+      efficiency_24h: 123.123,
+      efficiency_7d: 12.13,
+      efficiency_31d: 15.123,
+      efficiency_all: 123.1233,
+      validators: [1,123,123]
+    }"
+  />
 </template>
 
 <style lang="scss" scoped>
