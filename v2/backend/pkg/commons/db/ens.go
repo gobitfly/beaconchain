@@ -127,7 +127,6 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 		}
 		// We found a register name event
 		if foundNameIndex > -1 && foundResolverIndex > -1 {
-
 			log := logs[foundNameIndex]
 			topics := make([]common.Hash, 0, len(log.GetTopics()))
 
@@ -198,7 +197,6 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			keys[fmt.Sprintf("%s:ENS:I:A:%x:%x", bigtable.chainId, owner, tx.GetHash())] = true
 			keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, owner)] = true
 			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, name)] = true
-
 		} else if foundNameRenewedIndex > -1 { // We found a renew name event
 			log := logs[foundNameRenewedIndex]
 			topics := make([]common.Hash, 0, len(log.GetTopics()))
@@ -237,9 +235,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			}
 			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, nameHash, tx.GetHash())] = true
 			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, nameRenewed.Name)] = true
-
 		} else if foundNameChangedIndex > -1 && foundNewOwnerIndex > -1 { // we found a name change event
-
 			log := logs[foundNewOwnerIndex]
 			topics := make([]common.Hash, 0, len(log.GetTopics()))
 
@@ -269,7 +265,6 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 		}
 		// We found a change address event, there can be multiple within one transaction
 		for _, addressChangeIndex := range foundAddressChangedIndices {
-
 			log := logs[addressChangeIndex]
 			topics := make([]common.Hash, 0, len(log.GetTopics()))
 
@@ -297,7 +292,6 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 
 			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, addressChanged.Node, tx.GetHash())] = true
 			keys[fmt.Sprintf("%s:ENS:V:H:%x", bigtable.chainId, addressChanged.Node)] = true
-
 		}
 	}
 	for key := range keys {
