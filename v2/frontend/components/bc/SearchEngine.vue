@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { warn } from 'vue'
 import { Searchable, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
@@ -95,7 +94,7 @@ function searchAhead (input : string, searchable : Searchable) : boolean {
 
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchable as string !== 'please remove this condition and the following code') {
-    if (Math.random() > 1 / 3) {
+    if (Math.random() > 1 / 4.0) {
       foundAhead = {
         data: [
           {
