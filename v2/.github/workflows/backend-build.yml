@@ -31,6 +31,7 @@ jobs:
 
       - name: Check gofmt
         run: |
+          cd backend
           nonformatted="$(gofmt -l . 2>&1)"
           [ -z "$nonformatted" ] && exit 0
           echo "Following files need to be properly formatted:"
@@ -39,6 +40,7 @@ jobs:
 
       - name: Get dependencies
         run: |
+          cd backend
           go install github.com/swaggo/swag/cmd/swag@v1.7.0 && swag init --parseDependency --parseInternal --parseDepth 1 -g handlers/api.go
           go get -v -t -d ./...
 
@@ -46,4 +48,6 @@ jobs:
       #        run: make test
 
       - name: Build
-        run: make all
+        run: |
+          cd backend
+          make all

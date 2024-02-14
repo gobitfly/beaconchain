@@ -60,7 +60,6 @@ func startModules() {
 
 	moduleContext := modules.ModuleContext{
 		CL: cl,
-		// TODO: EL, DB
 	}
 
 	// slot, err := cl.GetSlot(128038)
