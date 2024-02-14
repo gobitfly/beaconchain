@@ -32,7 +32,7 @@
 
   --link-color: var(--blue);
 
-  --negtive-color: var(--light-red);
+  --negative-color: var(--light-red);
   --positive-color: var(--light-green);
 
   &.dark-mode {
@@ -48,7 +48,7 @@
 
     --link-color: var(--blue);
 
-    --negtive-color: var(--flashy-red);
+    --negative-color: var(--flashy-red);
     --positive-color: var(--flashy-green);
   }
 }

@@ -30,3 +30,7 @@ export const bigDiv = (big: BigNumber, num: number): BigNumber => {
   const { factor, combined } = split(num)
   return big.mul(factor).div(combined)
 }
+
+export const convertSum = (...values:string[]):BigNumber | undefined => {
+  return values?.reduce((sum, newValue) => sum.add(BigNumber.from(newValue)), BigNumber.from('0'))
+}

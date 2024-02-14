@@ -72,6 +72,9 @@ onMounted(async () => {
     <div>
       <PlaygroundConversion />
     </div>
+    <div>
+      <PlaygroundDashboardValidatorSummary />
+    </div>
     <div class="icon_holder">
       <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
     </div>
