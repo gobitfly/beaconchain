@@ -17,6 +17,9 @@
         </Button>
       </div>
     </TabPanel>
+    <TabPanel header="Input">
+      <InputText label="Input" />
+    </TabPanel>
     <TabPanel :disabled="true" header="Disabled" />
   </TabView>
 </template>
