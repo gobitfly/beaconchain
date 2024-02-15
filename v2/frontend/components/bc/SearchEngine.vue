@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { Searchable, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
 import { ChainIDs, ChainInfo } from '~/types/networks'
+const { t: $t } = useI18n()
 
-const props = defineProps({ searchable: { type: String, required: true } })
+const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true } })
 const searchable = props.searchable as Searchable
 const emit = defineEmits(['enter', 'select'])
+
+const engineWidth = props.width + 'px'
+const inputWidth = String(Number(props.width) - 10) + 'px'
+const dropDownWidth = String(Number(props.width) - 2) + 'px'
 
 const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
@@ -378,19 +383,19 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 </script>
 
 <template>
-  <div>
-    <label><input
+  <div id="whole-engine">
+    <input
       id="input-field"
       v-model="inputField"
       type="text"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
-    ></label>
+    >
     <div v-if="showDropDown" id="drop-down">
       <div v-if="waitingForSearchResults">
-        Searching...
+        {{ $t('search_engine.searching') }}
       </div>
       <div v-else-if="isOrganizedResultsEmpty()">
-        No result
+        {{ $t('search_engine.no_result') }}
       </div>
       <div v-else>
         <div v-for="network in organizedResults.networks" :key="network.chainId" class="network-frame">
@@ -418,16 +423,22 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 
-#input-field {
+#whole-engine {
+  width: v-bind(engineWidth);
+}
 
+#input-field {
+  display: block;
+  width: v-bind(inputWidth);
 }
 
 #drop-down {
   @include main.container;
   position: absolute;
-  z-index: 100;
+  z-index: 256;
   overflow: auto;
   max-height: 66vh;
+  width: v-bind(dropDownWidth);
 }
 
 .network-frame {
