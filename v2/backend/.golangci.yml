@@ -1,9 +1,16 @@
 linters:
   enable-all: true
+  enable:
+    # default needs explicit enabling?
+    - unused 
+    - staticcheck
+    - govet
+    - errcheck
+    - gosimple
+    - ineffassign
   disable:
     - exhaustivestruct
     - golint
-    - govet
     - ifshort
     - interfacer
     - maligned
@@ -68,7 +75,6 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
-
   fast: true
 
 linters-settings:
