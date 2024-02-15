@@ -27,15 +27,15 @@ type slotExporterData struct {
 	FirstRun bool
 }
 
-func NewSlotExporter(moduleContext ModuleContext, client *rpc.Client) ModuleInterfaceSlot {
+func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	return &slotExporterData{
 		ModuleContext: moduleContext,
-		Client:        *client,
+		Client:        moduleContext.ConsClient,
 		FirstRun:      true,
 	}
 }
 
-func (d *slotExporterData) Start() error {
+func (d *slotExporterData) Start(args []any) error {
 	// get the current chain head
 	head, err := d.Client.GetChainHead()
 

@@ -3,12 +3,11 @@ package main
 import (
 	"flag"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
+	"github.com/gobitfly/beaconchain/pkg/exporter/services"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,60 +40,14 @@ func main() {
 
 	// err := db.InitWithDSN(conf.DBDSN)
 
-	go startModules()
+	context, err := modules.GetModuleContext()
+	if err != nil {
+		utils.LogFatal(err, "error getting module context", 0)
+	}
+
+	go services.StartHistoricPriceService()
+	go modules.StartAll(context)
 
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()
-}
-
-func startModules() {
-	cl := consapi.NewNodeDataRetriever(conf.CLNode)
-
-	spec, err := cl.GetSpec()
-	if err != nil {
-		utils.LogFatal(err, "error getting spec", 0)
-	}
-
-	config.ClConfig = &spec.Data
-	//utils.Config.Chain.ClConfig = spec.Data
-
-	moduleContext := modules.ModuleContext{
-		CL: cl,
-	}
-
-	// slot, err := cl.GetSlot(128038)
-	// if err != nil {
-	// 	utils.LogFatal(err, "error getting slot", 0)
-	// }
-
-	// domain, err := utils.GetSigningDomain()
-	// if err != nil {
-	// 	utils.LogFatal(err, "can not get signing domain", 0)
-	// 	return
-	// }
-
-	// depositData := slot.Data.Message.Body.Deposits[0]
-	// err = utils.VerifyDepositSignature(&phase0.DepositData{
-	// 	PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
-	// 	WithdrawalCredentials: utils.MustParseHex(depositData.Data.WithdrawalCredentials),
-	// 	Amount:                phase0.Gwei(uint64(depositData.Data.Amount)),
-	// 	Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
-	// }, domain)
-
-	// return
-
-	registeredModules := []modules.ModuleInterfaceEpoch{
-		modules.NewDashboardDataModule(moduleContext),
-		// todo: add more modules here
-	}
-
-	// result, err := cl.GetValidator(1, "head")
-	// if err != nil {
-	// 	utils.LogFatal(err, "error getting validator", 0)
-	// }
-	// fmt.Printf("result:%v", result)
-
-	for _, module := range registeredModules {
-		module.Start(28356)
-	}
 }

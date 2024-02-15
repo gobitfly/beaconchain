@@ -220,3 +220,14 @@ func GetSigningDomain() ([]byte, error) {
 
 	return domain, err
 }
+
+func SyncPeriodOfEpoch(epoch uint64) uint64 {
+	if epoch < Config.Chain.ClConfig.AltairForkEpoch {
+		return 0
+	}
+	return epoch / Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod
+}
+
+func FirstEpochOfSyncPeriod(syncPeriod uint64) uint64 {
+	return syncPeriod * Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod
+}
