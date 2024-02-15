@@ -22,14 +22,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
-	cdb "github.com/gobitfly/beaconchain/pkg/commons/db"
-	cutils "github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 var logger = logrus.StandardLogger().WithField("module", "db-exporter")
 
 func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
-
 	blocksMap := make(map[uint64]map[string]*types.Block)
 	if blocksMap[block.Slot] == nil {
 		blocksMap[block.Slot] = make(map[string]*types.Block)
@@ -51,7 +48,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		metrics.TaskDuration.WithLabelValues("db_save_blocks").Observe(time.Since(start).Seconds())
 	}()
 
-	domain, err := cutils.GetSigningDomain()
+	domain, err := utils.GetSigningDomain()
 	if err != nil {
 		return err
 	}
@@ -186,7 +183,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 
 			// Set proposer to MAX_SQL_INTEGER if it is the genesis-block (since we are using integers for validator-indices right now)
 			if b.Slot == 0 {
-				b.Proposer = cdb.MaxSqlInteger
+				b.Proposer = db.MaxSqlInteger
 			}
 			syncAggBits := []byte{}
 			syncAggSig := []byte{}
@@ -237,7 +234,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				blobTxCount = len(b.BlobKZGCommitments)
 			}
 			_, err = stmtBlock.Exec(
-				b.Slot/cutils.Config.Chain.ClConfig.SlotsPerEpoch,
+				b.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch,
 				b.Slot,
 				b.BlockRoot,
 				b.ParentRoot,
@@ -245,7 +242,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				b.Signature,
 				b.RandaoReveal,
 				b.Graffiti,
-				cutils.GraffitiToString(b.Graffiti),
+				utils.GraffitiToString(b.Graffiti),
 				b.Eth1Data.DepositRoot,
 				b.Eth1Data.DepositCount,
 				b.Eth1Data.BlockHash,
@@ -287,7 +284,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			t = time.Now()
 			logger.Tracef("writing BlobKZGCommitments data")
 			for i, c := range b.BlobKZGCommitments {
-				_, err := stmtBlobs.Exec(b.Slot, b.BlockRoot, i, c, b.BlobKZGProofs[i], cutils.VersionedBlobHash(c).Bytes())
+				_, err := stmtBlobs.Exec(b.Slot, b.BlockRoot, i, c, b.BlobKZGProofs[i], utils.VersionedBlobHash(c).Bytes())
 				if err != nil {
 					return fmt.Errorf("error executing stmtBlobs for block at slot %v index %v: %w", b.Slot, i, err)
 				}
@@ -342,7 +339,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			t = time.Now()
 
 			for i, d := range b.Deposits {
-
 				err := utils.VerifyDepositSignature(&phase0.DepositData{
 					PublicKey:             phase0.BLSPubKey(d.PublicKey),
 					WithdrawalCredentials: d.WithdrawalCredentials,
@@ -369,7 +365,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			blockLog.WithField("duration", time.Since(t)).Tracef("exits")
 			t = time.Now()
 
-			_, err = stmtProposalAssignments.Exec(b.Slot/cutils.Config.Chain.ClConfig.SlotsPerEpoch, b.Proposer, b.Slot, b.Status)
+			_, err = stmtProposalAssignments.Exec(b.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, b.Proposer, b.Slot, b.Status)
 			if err != nil {
 				return fmt.Errorf("error executing stmtProposalAssignments for block %v: %w", b.Slot, err)
 			}
@@ -537,19 +533,18 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 
 	updates := 0
 	for _, v := range validators {
-
 		// exchange farFutureEpoch with the corresponding max sql value
-		if v.WithdrawableEpoch == cdb.FarFutureEpoch {
-			v.WithdrawableEpoch = cdb.MaxSqlNumber
+		if v.WithdrawableEpoch == db.FarFutureEpoch {
+			v.WithdrawableEpoch = db.MaxSqlNumber
 		}
-		if v.ExitEpoch == cdb.FarFutureEpoch {
-			v.ExitEpoch = cdb.MaxSqlNumber
+		if v.ExitEpoch == db.FarFutureEpoch {
+			v.ExitEpoch = db.MaxSqlNumber
 		}
-		if v.ActivationEligibilityEpoch == cdb.FarFutureEpoch {
-			v.ActivationEligibilityEpoch = cdb.MaxSqlNumber
+		if v.ActivationEligibilityEpoch == db.FarFutureEpoch {
+			v.ActivationEligibilityEpoch = db.MaxSqlNumber
 		}
-		if v.ActivationEpoch == cdb.FarFutureEpoch {
-			v.ActivationEpoch = cdb.MaxSqlNumber
+		if v.ActivationEpoch == db.FarFutureEpoch {
+			v.ActivationEpoch = db.MaxSqlNumber
 		}
 
 		c := currentStateMap[v.Index]
@@ -794,7 +789,6 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 			validatorsCount++
 			validatorBalanceSum = new(big.Int).Add(validatorBalanceSum, new(big.Int).SetUint64(v.Balance))
 			validatorEffectiveBalanceSum = new(big.Int).Add(validatorEffectiveBalanceSum, new(big.Int).SetUint64(v.EffectiveBalance))
-
 		}
 	}
 

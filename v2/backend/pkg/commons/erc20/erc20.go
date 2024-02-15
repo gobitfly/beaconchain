@@ -40,7 +40,6 @@ func InitTokenList(path string) {
 		tokenMap[address] = token
 		// logger.Info(address)
 	}
-
 }
 
 func GetTokenDetail(address string) *ERC20TokenDetail {

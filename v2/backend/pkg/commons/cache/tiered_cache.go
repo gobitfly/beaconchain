@@ -86,7 +86,6 @@ func (cache *tieredCache) SetUint64(key string, value uint64, expiration time.Du
 }
 
 func (cache *tieredCache) GetUint64WithLocalTimeout(key string, localExpiration time.Duration) (uint64, error) {
-
 	// try to retrieve the key from the local cache
 	wanted, err := cache.localGoCache.Get([]byte(key))
 	if err == nil {
@@ -119,7 +118,6 @@ func (cache *tieredCache) SetBool(key string, value bool, expiration time.Durati
 }
 
 func (cache *tieredCache) GetBoolWithLocalTimeout(key string, localExpiration time.Duration) (bool, error) {
-
 	// try to retrieve the key from the local cache
 	wanted, err := cache.localGoCache.Get([]byte(key))
 	if err == nil {

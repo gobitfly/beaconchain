@@ -166,7 +166,6 @@ func (lc *LighthouseClient) GetValidatorQueue() (*types.ValidatorQueue, error) {
 
 // GetEpochAssignments will get the epoch assignments from Lighthouse RPC api
 func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error) {
-
 	var err error
 
 	lc.assignmentsCacheMux.Lock()
@@ -375,7 +374,6 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			}
 
 			data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
-
 		}
 		logger.Printf("retrieved validator assignment data for epoch %v", epoch)
 		return nil
@@ -419,7 +417,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 	wg.Go(func() error {
 		for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
-			if slot != 0 && slot > head.HeadSlot { // don't export slots that have not occured yet
+			if slot != 0 && slot > head.HeadSlot { // don't export slots that have not occurred yet
 				continue
 			}
 			start := time.Now()
@@ -451,16 +449,15 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			}
 			mux.Unlock()
 			logger.Infof("processed data for current epoch slot %v in %v", slot, time.Since(start))
-
 		}
 		return nil
 	})
 
-	// we need future blocks to properly tracke fullfilled attestation duties
+	// we need future blocks to properly tracke fulfilled attestation duties
 	data.FutureBlocks = make(map[uint64]map[string]*types.Block)
 	wg.Go(func() error {
 		for slot := (epoch + 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+2)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
-			if slot != 0 && slot > head.HeadSlot { // don't export slots that have not occured yet
+			if slot != 0 && slot > head.HeadSlot { // don't export slots that have not occurred yet
 				continue
 			}
 			start := time.Now()
@@ -486,7 +483,6 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			}
 			mux.Unlock()
 			logger.Infof("processed data for next epoch slot %v in %v", slot, time.Since(start))
-
 		}
 		return nil
 	})
@@ -558,7 +554,6 @@ func uint64List(li []uint64Str) []uint64 {
 }
 
 func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error) {
-
 	if epoch < 0 {
 		epoch = 0
 	}
@@ -646,7 +641,6 @@ func (lc *LighthouseClient) GetBlockHeader(slot uint64) (*StandardBeaconHeaderRe
 		parsedHeaders = &StandardBeaconHeaderResponse{
 			Data: parsedHeader.Data[len(parsedHeader.Data)-1],
 		}
-
 	} else if err != nil {
 		if err == errNotFound { // return dummy block for missed slots
 			// no block found
@@ -692,7 +686,6 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 		parsedHeaders = &StandardBeaconHeaderResponse{
 			Data: parsedHeader.Data[len(parsedHeader.Data)-1],
 		}
-
 	} else if err != nil {
 		if err == errNotFound { // return dummy block for missed slots
 			proposerAssignments, err := lc.GetEpochProposerAssignments(epoch)
@@ -1168,7 +1161,6 @@ func syncCommitteeParticipation(bits []byte) float64 {
 
 // GetValidatorParticipation will get the validator participation from the Lighthouse RPC api
 func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error) {
-
 	head, err := lc.GetChainHead()
 	if err != nil {
 		return nil, err
