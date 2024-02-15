@@ -1,9 +1,16 @@
 linters:
   enable-all: true
+  enable:
+    # default needs explicit enabling?
+    - unused 
+    - staticcheck
+    - govet
+    - errcheck
+    - gosimple
+    - ineffassign
   disable:
     - exhaustivestruct
     - golint
-    - govet
     - ifshort
     - interfacer
     - maligned
@@ -68,7 +75,6 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
-
   fast: true
 
 linters-settings:
@@ -100,8 +106,8 @@ linters-settings:
       db:
         list-mode: lax # allow unless explicitely denied
         files:
-          - "**/db/**/*.go"
-          - "**/db/*go"
+          - "**/commons/db/**/*.go"
+          - "**/commons/db/*go"
         allow:
           - $gostd
         deny:
@@ -110,4 +116,14 @@ linters-settings:
           - pkg: github.com/gobitfly/beaconchain/pkg/exporter
             desc: "DB must not import"
           - pkg: "net/http"
+            desc: "DB must not import"
+      commons:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/commons/**/*.go"
+          - "**/commons/*go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/gobitfly/beaconchain/pkg/exporter
             desc: "DB must not import"
