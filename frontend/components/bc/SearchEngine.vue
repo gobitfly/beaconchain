@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Searchable, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
-import { ChainIDs, ChainInfo } from '~/types/networks'
+import { ChainIDs, ChainInfo, getListOfChainIDs } from '~/types/networks'
 const { t: $t } = useI18n()
 
 const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
@@ -9,7 +9,7 @@ const emit = defineEmits(['enter', 'select'])
 
 const engineWidth = props.width + 'px'
 const inputWidth = String(Number(props.width) - 10) + 'px'
-const dropDownWidth = String(Number(props.width) - 2) + 'px'
+const dropDownWidth = String(Number(props.width) - 10) + 'px'
 const inputHeight = props.height + 'px'
 
 const PeriodOfDropDownUpdates = 2000
@@ -17,18 +17,31 @@ const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
 const showDropDown = ref(false)
+const populateDropDown = ref(true)
 const inputField = ref('')
-let organizedResults : OrganizedResults = { networks: [] }
 let lastKnownInput = ''
-let isMouseInDropDown = false
+let isMouseOverEngine = false
+
+let completeResults : OrganizedResults = { networks: [] }
+let filteredInResults : OrganizedResults = { networks: [] }
+let filteredOutResults : OrganizedResults = { networks: [] }
+const userFilterForNetwork = ref<string>('all')
+const userFilterForProtocol = ref<'y'|'n'>('y')
+const userFilterForAddresses = ref<'y'|'n'>('y')
+const userFilterForTokens = ref<'y'|'n'>('y')
+const userFilterForNFTs = ref<'y'|'n'>('y')
+const userFilterForValidators = ref<'y'|'n'>('y')
 
 function cleanUp () {
   lastKnownInput = ''
   inputField.value = ''
   waitingForSearchResults.value = false
   showDropDown.value = false
-  isMouseInDropDown = false
-  organizedResults = { networks: [] }
+  populateDropDown.value = true
+  isMouseOverEngine = false
+  completeResults = { networks: [] }
+  filteredInResults = { networks: [] }
+  filteredOutResults = { networks: [] }
 }
 
 // In the V1, the server received a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
@@ -40,8 +53,10 @@ function cleanUp () {
 // - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
 setInterval(() => {
   if (waitingForSearchResults.value) {
-    waitingForSearchResults.value = !searchAhead(inputField.value, searchable)
-    // this assignement ensures that the API will be called again in 2s if searchAhead fails for technical reasons
+    if (searchAhead(inputField.value, searchable)) {
+      filterResults()
+      waitingForSearchResults.value = false
+    }
   }
 },
 PeriodOfDropDownUpdates
@@ -76,8 +91,9 @@ function userPressedEnter () {
   // **** TO BE CHANGED ONCE THE NETWORK DROPDOWN IS IMPLEMENTED ****
   const userPreferredNetwork = ChainIDs.Ethereum
   // ****************************************************************
-  let defaultNetwork = organizedResults.networks[0]
-  for (const network of organizedResults.networks) {
+  filterResults()
+  let defaultNetwork = completeResults.networks[0]
+  for (const network of completeResults.networks) {
     if (network.chainId === userPreferredNetwork) {
       defaultNetwork = network
       break
@@ -125,40 +141,53 @@ function searchAhead (input : string, searchable : Searchable) : boolean {
     }
   }
 
-  // now we take the disorganized data of the API and fill `organizedResults`, which will be easy to iterate over when populating the drop-down
-  organizedResults = { networks: [] }
+  // we take the disorganized data of the API and fill `completeResults`, which will be easy to iterate over when populating the drop-down
+  completeResults = { networks: [] }
   if (foundAhead.data !== undefined) {
     for (const finding of foundAhead.data) {
       const toBeAdded = organizeAPIinfo(finding)
       if (toBeAdded.main === '') {
         continue
       }
-      // Picking from `organizedResults` the network that the finding belongs to. Creates the network if needed.
-      let existingNetwork = organizedResults.networks.findIndex(nwElem => nwElem.chainId === finding.chain_id as ChainIDs)
+      // Picking from `completeResults` the network that the finding belongs to. Creates the network if needed.
+      let existingNetwork = completeResults.networks.findIndex(nwElem => nwElem.chainId === finding.chain_id as ChainIDs)
       if (existingNetwork < 0) {
-        existingNetwork = -1 + organizedResults.networks.push({
+        existingNetwork = -1 + completeResults.networks.push({
           chainId: finding.chain_id as ChainIDs,
           types: []
         })
       }
       // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
-      let existingType = organizedResults.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === finding.type as ResultTypes)
+      let existingType = completeResults.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === finding.type as ResultTypes)
       if (existingType < 0) {
-        existingType = -1 + organizedResults.networks[existingNetwork].types.push({
+        existingType = -1 + completeResults.networks[existingNetwork].types.push({
           type: finding.type as ResultTypes,
           found: []
         })
       }
-      // now we can insert the finding at the right place in `organizedResults`
-      organizedResults.networks[existingNetwork].types[existingType].found.push(toBeAdded)
+      // now we can insert the finding at the right place in `completeResults`
+      completeResults.networks[existingNetwork].types[existingType].found.push(toBeAdded)
     }
   }
 
   return true
 }
 
+function filterResults () {
+  /* for (const network of completeResults.networks) {
+    if (userFilterForNetwork != '' && String(network.chainId) !== userFilterForNetwork) { continue }
+  } */
+}
+
+function filterAndRepopulate () {
+  populateDropDown.value = false
+  filterResults()
+  console.log(userFilterForAddresses, userFilterForNetwork)
+  populateDropDown.value = true
+}
+
 function isOrganizedResultsEmpty () {
-  return organizedResults.networks.length === 0
+  return completeResults.networks.length === 0
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -392,13 +421,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       v-model="inputField"
       type="text"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
-      @blur="showDropDown = isMouseInDropDown"
+      @blur="showDropDown = isMouseOverEngine"
     >
     <div
       v-if="showDropDown"
       id="drop-down"
-      @mouseenter="isMouseInDropDown = true"
-      @mouseleave="isMouseInDropDown = false"
+      @mouseenter="isMouseOverEngine = true"
+      @mouseleave="isMouseOverEngine = false"
     >
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
@@ -407,25 +436,52 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         {{ $t('search_engine.no_result') }}
       </div>
       <div v-else>
-        <div v-for="network in organizedResults.networks" :key="network.chainId" class="network-container">
-          <div class="network-title">
-            <h2>{{ ChainInfo[network.chainId].name }}</h2>
-          </div>
-          <div v-for="types in network.types" :key="types.type" class="type-container">
-            <div class="type-title">
-              <h3>{{ TypeInfo[types.type].title }}</h3>
-            </div>
-            <div v-for="(found, i) in types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
-              {{ TypeInfo[types.type].preLabels }}
-              {{ found.main }}
-              <span v-if="found.complement !== ''">
-                {{ TypeInfo[types.type].midLabels }}
-                {{ found.complement }}
-              </span>
-              {{ TypeInfo[types.type].postLabels }}
-            </div>
-          </div>
+        <div id="filter-bar">
+          <label><select
+            id="filter-list"
+            v-model="userFilterForNetwork"
+            class="filter-button"
+            @change="filterAndRepopulate()"
+          >
+            <option value="all">All</option>
+            <option v-for="chain in getListOfChainIDs()" :key="chain" :value="String(chain)">
+              {{ ChainInfo[chain].name }}
+            </option>
+          </select>
+          </label>
+          <label>
+            <input
+              v-model="userFilterForAddresses"
+              class="filter-cb"
+              true-value="y"
+              false-value="n"
+              type="checkbox"
+              @change="filterAndRepopulate()"
+            >
+            <span class="filter-button">Addresses</span>
+          </label>
         </div>
+        <span v-if="populateDropDown">
+          <div v-for="network in completeResults.networks" :key="network.chainId" class="network-container">
+            <div class="network-title">
+              <h2>{{ ChainInfo[network.chainId].name }}</h2>
+            </div>
+            <div v-for="types in network.types" :key="types.type" class="type-container">
+              <div class="type-title">
+                <h3>{{ TypeInfo[types.type].title }}</h3>
+              </div>
+              <div v-for="(found, i) in types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
+                {{ TypeInfo[types.type].preLabels }}
+                {{ found.main }}
+                <span v-if="found.complement !== ''">
+                  {{ TypeInfo[types.type].midLabels }}
+                  {{ found.complement }}
+                </span>
+                {{ TypeInfo[types.type].postLabels }}
+              </div>
+            </div>
+          </div>
+        </span>
       </div>
     </div>
   </label>
@@ -451,7 +507,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   overflow: auto;
   max-height: 66vh;
   width: v-bind(dropDownWidth);
-  padding: 8px;
+  padding: 4px;
 }
 
 .network-container {
@@ -481,5 +537,37 @@ h2 {
 
 h3 {
   margin: 0;
+}
+
+#filter-bar {
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+
+#filter-list {
+  background-color: var(--primary-color);
+}
+.all-networks {
+  background: var(--primary-color);
+}
+
+.filter-cb {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.filter-button {
+  display: inline-block;
+  border-radius: 6px;
+  background-color: var(--light-grey-3);
+  padding: 2px;
+  width: 80px;
+  text-align: center;
+  margin-right: 6px;
+  transition: 0.2s;
+}
+.filter-cb:checked + .filter-button {
+  background-color: var(--primary-color);
 }
 </style>
