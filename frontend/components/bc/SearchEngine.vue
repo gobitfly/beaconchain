@@ -3,13 +3,14 @@ import { Searchable, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadRes
 import { ChainIDs, ChainInfo } from '~/types/networks'
 const { t: $t } = useI18n()
 
-const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true } })
+const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
 const searchable = props.searchable as Searchable
 const emit = defineEmits(['enter', 'select'])
 
 const engineWidth = props.width + 'px'
 const inputWidth = String(Number(props.width) - 10) + 'px'
 const dropDownWidth = String(Number(props.width) - 2) + 'px'
+const inputHeight = props.height + 'px'
 
 const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
@@ -19,12 +20,14 @@ const showDropDown = ref(false)
 const inputField = ref('')
 let organizedResults : OrganizedResults = { networks: [] }
 let lastKnownInput = ''
+let isMouseInDropDown = false
 
 function cleanUp () {
   lastKnownInput = ''
   inputField.value = ''
   waitingForSearchResults.value = false
   showDropDown.value = false
+  isMouseInDropDown = false
   organizedResults = { networks: [] }
 }
 
@@ -383,14 +386,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 </script>
 
 <template>
-  <div id="whole-engine">
+  <label id="whole-engine">
     <input
       id="input-field"
       v-model="inputField"
       type="text"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
+      @blur="showDropDown = isMouseInDropDown"
     >
-    <div v-if="showDropDown" id="drop-down">
+    <div
+      v-if="showDropDown"
+      id="drop-down"
+      @mouseenter="isMouseInDropDown = true"
+      @mouseleave="isMouseInDropDown = false"
+    >
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
@@ -417,7 +426,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         </div>
       </div>
     </div>
-  </div>
+  </label>
 </template>
 
 <style lang="scss" scoped>
@@ -430,6 +439,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 #input-field {
   display: block;
   width: v-bind(inputWidth);
+  height: v-bind(inputHeight);
 }
 
 #drop-down {
