@@ -1,11 +1,27 @@
+<script setup lang="ts">
+const modalVisibility = ref(false)
+
+</script>
+
 <template>
+  <Dialog
+    v-model:visible="modalVisibility"
+    modal
+    header="Dashboard &quot;Hetzner&quot;"
+    :dismissable-mask="true"
+    :closable="false"
+    :draggable="false"
+  >
+    <Button type="button" label="Close" @click="modalVisibility = false" />
+  </Dialog>
+
   <TabView>
     <TabPanel header="Buttons">
       <div class="element_container">
         <Button>
           Simple Text Button
         </Button>
-        <Button label="Labeled" />
+        <Button label="Open Modal" @click="modalVisibility = true" />
         <Button>
           <NuxtLink to="/dashboard">
             Dashboard Link
