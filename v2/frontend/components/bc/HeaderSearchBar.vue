@@ -77,6 +77,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
     id="main-bar"
     :searchable="Searchable.Anything"
     width="460"
+    height="34"
     @enter="redirectToRelevantPage"
     @select="redirectToRelevantPage"
   />
