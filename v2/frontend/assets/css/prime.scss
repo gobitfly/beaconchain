@@ -32,6 +32,21 @@
   }
 }
 
+// Dialog
+// https://primevue.org/dialog/
+.p-dialog {
+  background: var(--container-background);
+  border: 1px solid var(--primary-orange);
+  border-radius: var(--border-radius);
+  .p-dialog-header {
+    color: var(--text-color);
+    padding: var(--padding-large);
+    .p-dialog-title {
+      @include fonts.big_text;
+    }
+  }
+}
+
 // InputText
 // https://primevue.org/inputtext/
 .p-inputtext {
