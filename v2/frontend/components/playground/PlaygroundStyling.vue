@@ -6,9 +6,11 @@
           Simple Text Button
         </Button>
         <Button label="Labeled" />
-        <NuxtLink to="/dashboard">
-          <Button label="Dashboard Link" />
-        </NuxtLink>
+        <Button>
+          <NuxtLink to="/dashboard">
+            Dashboard Link
+          </NuxtLink>
+        </Button>
         <Button :disabled="true">
           Disabled
         </Button>
