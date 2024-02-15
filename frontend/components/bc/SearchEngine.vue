@@ -166,8 +166,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   const response : SearchAheadResults = {}
   response.data = []
 
-  // results are found 75% of the time
-  if (Math.random() > 1 / 4.0) {
+  // results are found 80% of the time
+  if (Math.random() > 1 / 5.0) {
     const n = Math.floor(Number(searched))
     const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
 
@@ -407,9 +407,11 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         {{ $t('search_engine.no_result') }}
       </div>
       <div v-else>
-        <div v-for="network in organizedResults.networks" :key="network.chainId" class="network-frame">
-          <div><h2>{{ ChainInfo[network.chainId].name }}</h2></div>
-          <div v-for="types in network.types" :key="types.type" class="results-of-one-type">
+        <div v-for="network in organizedResults.networks" :key="network.chainId" class="network-container">
+          <div class="network-title">
+            <h2>{{ ChainInfo[network.chainId].name }}</h2>
+          </div>
+          <div v-for="types in network.types" :key="types.type" class="type-container">
             <div class="type-title">
               <h3>{{ TypeInfo[types.type].title }}</h3>
             </div>
@@ -449,21 +451,35 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   overflow: auto;
   max-height: 66vh;
   width: v-bind(dropDownWidth);
+  padding: 8px;
 }
 
-.network-frame {
-
+.network-container {
+  margin-bottom: 24px;
 }
 
-.results-of-one-type {
-
+.network-title {
+  background-color: #b0b0b0;
+  padding-left: 4px;
 }
 
 .type-title {
 
 }
+.type-container {
+  border-bottom: 0.5px dashed var(--light-grey-3);
+  padding: 4px;
+}
 
 .single-result {
   cursor: pointer;
+}
+
+h2 {
+  margin: 0;
+}
+
+h3 {
+  margin: 0;
 }
 </style>
