@@ -66,3 +66,13 @@ func GetFirstAndLastEpochForDay(day uint64) (firstEpoch uint64, lastEpoch uint64
 func GetLastBalanceInfoSlotForDay(day uint64) uint64 {
 	return ((day+1)*EpochsPerDay() - 1) * Config.Chain.ClConfig.SlotsPerEpoch
 }
+
+// DayOfSlot returns the corresponding day of a slot
+func DayOfSlot(slot uint64) uint64 {
+	return Config.Chain.ClConfig.SecondsPerSlot * slot / (24 * 3600)
+}
+
+// WeekOfSlot returns the corresponding week of a slot
+func WeekOfSlot(slot uint64) uint64 {
+	return Config.Chain.ClConfig.SecondsPerSlot * slot / (7 * 24 * 3600)
+}
