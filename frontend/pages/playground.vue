@@ -42,10 +42,13 @@ onMounted(async () => {
       </TabPanel>
       <TabPanel header="Styling">
         <PlaygroundStyling />
-      </TabPanel>
-      <TabPanel header="Slot Viz">
-        <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
-      </TabPanel>
+        <TabPanel header="Ads">
+          <PlaygroundAds />
+        </TabPanel>
+        <TabPanel header="Slot Viz">
+          <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
+        </TabPanel>
+      </tabpanel>
     </TabView>
 
     <BcFooterMainFooter />

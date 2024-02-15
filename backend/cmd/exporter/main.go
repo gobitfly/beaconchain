@@ -60,7 +60,6 @@ func startModules() {
 
 	moduleContext := modules.ModuleContext{
 		CL: cl,
-		// TODO: EL, DB
 	}
 
 	// slot, err := cl.GetSlot(128038)
@@ -82,10 +81,6 @@ func startModules() {
 	// 	Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
 	// }, domain)
 
-	// if err != nil {
-
-	// 	utils.LogFatal(err, "can not verify deposit signature", 0)
-	// }
 	// return
 
 	registeredModules := []modules.ModuleInterfaceEpoch{

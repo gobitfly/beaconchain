@@ -69,7 +69,6 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 }
 
 func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
-
 	if writer.MaxOpenConns == 0 {
 		writer.MaxOpenConns = 50
 	}
@@ -602,7 +601,6 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 			logger.Printf("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
 			canonBlocks = append(canonBlocks, block.BlockRoot)
 		}
-
 	}
 
 	_, err = tx.Exec("UPDATE blocks SET status = '1' WHERE blockroot = ANY($1)", canonBlocks)
@@ -669,7 +667,6 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 			validatorsCount++
 			validatorBalanceSum = new(big.Int).Add(validatorBalanceSum, new(big.Int).SetUint64(v.Balance))
 			validatorEffectiveBalanceSum = new(big.Int).Add(validatorEffectiveBalanceSum, new(big.Int).SetUint64(v.EffectiveBalance))
-
 		}
 	}
 
@@ -1062,7 +1059,6 @@ func GetValidatorsGotSlashed(epoch uint64) ([]struct {
 	SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
 	Reason                 string `db:"reason"`
 }, error) {
-
 	var dbResult []struct {
 		Epoch                  uint64 `db:"epoch"`
 		SlasherIndex           uint64 `db:"slasher"`
@@ -1197,7 +1193,6 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 				BlockRoot: b.BlockRoot,
 			}
 		}
-
 	}
 
 	for _, epoch := range epochMap {
@@ -1861,7 +1856,6 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 
 // delete ad configuration
 func DeleteAdConfiguration(id string) error {
-
 	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
@@ -2360,7 +2354,6 @@ func GetBlockStatus(block int64, latestFinalizedEpoch uint64, epochInfo *types.E
 //
 // If a slot is missed, the map will not contain an entry for it
 func GetSyncParticipationBySlotRange(startSlot, endSlot uint64) (map[uint64]uint64, error) {
-
 	rows := []struct {
 		Slot         uint64
 		Participated uint64
