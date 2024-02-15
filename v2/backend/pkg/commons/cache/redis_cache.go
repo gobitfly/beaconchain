@@ -37,7 +37,6 @@ func (cache *RedisCache) SetString(ctx context.Context, key, value string, expir
 }
 
 func (cache *RedisCache) GetString(ctx context.Context, key string) (string, error) {
-
 	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return "", err
@@ -51,7 +50,6 @@ func (cache *RedisCache) SetUint64(ctx context.Context, key string, value uint64
 }
 
 func (cache *RedisCache) GetUint64(ctx context.Context, key string) (uint64, error) {
-
 	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -69,7 +67,6 @@ func (cache *RedisCache) SetBool(ctx context.Context, key string, value bool, ex
 }
 
 func (cache *RedisCache) GetBool(ctx context.Context, key string) (bool, error) {
-
 	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return false, err

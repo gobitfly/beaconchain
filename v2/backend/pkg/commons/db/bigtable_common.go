@@ -14,7 +14,6 @@ import (
 )
 
 func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_bigtable.Table, batchSize int) error {
-
 	callingFunctionName := utils.GetParentFuncName()
 
 	ctx, done := context.WithTimeout(context.Background(), time.Minute*5)
@@ -52,7 +51,6 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 			return err
 		}
 		logger.Infof("%s: wrote from %v to %v rows to bigtable in %.1f s", callingFunctionName, start, end, time.Since(startTime).Seconds())
-
 	}
 
 	if (iterations * length) < numKeys {
@@ -109,7 +107,6 @@ func (bigtable *Bigtable) ClearByPrefix(table string, family, prefix string, dry
 
 	keysCount := 0
 	err := btTable.ReadRows(context.Background(), rowRange, func(row gcp_bigtable.Row) bool {
-
 		if family == "*" {
 			if dryRun {
 				logger.Infof("would delete key %v", row.Key())

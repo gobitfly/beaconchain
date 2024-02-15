@@ -208,7 +208,6 @@ func (d *slotExporterData) Start() error {
 						return fmt.Errorf("error saving validator queue data: %w", err)
 					}
 				}
-
 			}
 		} else { // check if a late slot has been proposed in the meantime
 			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
@@ -227,11 +226,9 @@ func (d *slotExporterData) Start() error {
 	}
 
 	return nil
-
 }
 
 func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) error {
-
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -374,7 +371,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 	attDuties := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
 	for validator, attestedSlots := range block.AttestationDuties {
-
 		for _, attestedSlot := range attestedSlots {
 			if attDuties[types.Slot(attestedSlot)] == nil {
 				attDuties[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)

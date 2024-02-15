@@ -177,7 +177,6 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-
 		var from []byte
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
@@ -216,7 +215,6 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		}
 
 		c.Transactions = append(c.Transactions, pbTx)
-
 	}
 
 	g := new(errgroup.Group)
@@ -235,7 +233,6 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 					return fmt.Errorf("error tracing block via parity style traces (%v), %v: %w", block.Number(), block.Hash(), err)
 				} else {
 					logger.Errorf("error tracing block via parity style traces (%v), %v: %v", block.Number(), block.Hash(), err)
-
 				}
 				traceError = err
 			} else {
@@ -291,7 +288,6 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		}
 
 		if traceMode == "geth" || (traceError != nil && traceMode == "parity/geth") {
-
 			gethTraceData, err := client.TraceGeth(block.Hash())
 
 			if err != nil {
@@ -525,7 +521,6 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 	ret := make([]*types.Eth1AddressBalance, len(pairs))
 
 	for i, pair := range pairs {
-
 		// if s[1] != "B" {
 		// 	logrus.Fatalf("%v has invalid balance update prefix", pair)
 		// }
@@ -597,7 +592,6 @@ func (client *ErigonClient) GetBalancesForAddresse(address string, tokenStr []st
 
 	res := make([]*types.Eth1AddressBalance, len(tokenStr))
 	for tokenIdx := range tokens {
-
 		res[tokenIdx] = &types.Eth1AddressBalance{
 			Address: common.FromHex(address),
 			Token:   common.FromHex(string(tokens[tokenIdx].Bytes())),
