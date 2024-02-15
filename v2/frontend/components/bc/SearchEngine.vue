@@ -9,7 +9,7 @@ const emit = defineEmits(['enter', 'select'])
 const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
-const newCharGivenSinceSearch = ref(false)
+const waitingForSearchResults = ref(false)
 const showDropDown = ref(false)
 const inputField = ref('')
 let organizedResults : OrganizedResults = { networks: [] }
@@ -18,7 +18,7 @@ let lastKnownInput = ''
 function cleanUp () {
   lastKnownInput = ''
   inputField.value = ''
-  newCharGivenSinceSearch.value = false
+  waitingForSearchResults.value = false
   showDropDown.value = false
   organizedResults = { networks: [] }
 }
@@ -31,8 +31,8 @@ function cleanUp () {
 // - it makes sure that the server does not receive a request more often than every 2 s (equivalent to V1),
 // - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
 setInterval(() => {
-  if (newCharGivenSinceSearch.value) {
-    newCharGivenSinceSearch.value = !searchAhead(inputField.value, searchable)
+  if (waitingForSearchResults.value) {
+    waitingForSearchResults.value = !searchAhead(inputField.value, searchable)
     // this assignement ensures that the API will be called again in 2s if searchAhead fails for technical reasons
   }
 },
@@ -47,7 +47,7 @@ function inputMightHaveChanged () {
   if (inputField.value.length === 0) {
     cleanUp()
   } else {
-    newCharGivenSinceSearch.value = true
+    waitingForSearchResults.value = true
     showDropDown.value = true
   }
 }
@@ -56,7 +56,7 @@ function userPressedEnter () {
   if (inputField.value.length === 0) {
     return
   }
-  if (newCharGivenSinceSearch.value) {
+  if (waitingForSearchResults.value) {
     if (!searchAhead(inputField.value, searchable)) {
       return
     }
@@ -90,141 +90,12 @@ function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: strin
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
 function searchAhead (input : string, searchable : Searchable) : boolean {
-  let foundAhead : SearchAheadResults = { data: [], error: '' }
+  let foundAhead : SearchAheadResults = { data: [] }
 
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
-  if (searchable as string !== 'please remove this condition and the following code') {
-    if (Math.random() > 1 / 4.0) {
-      foundAhead = {
-        data: [
-          {
-            chain_id: 1,
-            type: 'tokens',
-            str_value: input
-          },
-          {
-            chain_id: 1,
-            type: 'tokens',
-            str_value: input + 'Coin'
-          },
-          {
-            chain_id: 1,
-            type: 'addresses',
-            hash_value: '0x' + input + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
-          },
-          {
-            chain_id: 1,
-            type: 'ens_names',
-            str_value: input + '.bitfly.eth',
-            hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
-          },
-          {
-            chain_id: 1,
-            type: 'ens_overview',
-            str_value: input + '.bitfly.eth'
-          },
-          {
-            chain_id: 1,
-            type: 'graffiti',
-            str_value: input + ' tutta la vita'
-          },
-          {
-            chain_id: 1,
-            type: 'count_validators_by_withdrawal_ens_name',
-            str_value: input + '.bitfly.eth',
-            num_value: 7
-          },
-          {
-            chain_id: 17000,
-            type: 'addresses',
-            hash_value: '0x' + input + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
-          },
-          {
-            chain_id: 17000,
-            type: 'count_validators_by_withdrawal_address',
-            hash_value: '0x' + input + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938',
-            num_value: 11
-          },
-          {
-            chain_id: 42161,
-            type: 'addresses',
-            hash_value: '0x' + input + '0000000000000000000000000000CAFFE'
-          },
-          {
-            chain_id: 42161,
-            type: 'transactions',
-            hash_value: '0x' + input + 'a297ab886723ecfbc2cefab2ba385792058b344fbbc1f1e0a1139b2'
-          },
-          {
-            chain_id: 8453,
-            type: 'tokens',
-            str_value: input + 'USD'
-          },
-          {
-            chain_id: 8453,
-            type: 'tokens',
-            str_value: input + '42'
-          },
-          {
-            chain_id: 8453,
-            type: 'tokens',
-            str_value: input + 'Plus'
-          },
-          {
-            chain_id: 8453,
-            type: 'addresses',
-            hash_value: '0x' + input + '00b29F2d2FaDE0a7E3AAaaAAa'
-          },
-          {
-            chain_id: 8453,
-            type: 'count_validators_by_deposit_address',
-            hash_value: '0x' + input + '00b29F2d2FaDE0a7E3AAaaAAa',
-            num_value: 150
-          },
-          {
-            chain_id: 17000,
-            type: 'tokens',
-            str_value: input + ' Coin'
-          },
-          {
-            chain_id: 17000,
-            type: 'ens_names',
-            str_value: input + 'hallo.eth',
-            hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
-          },
-          {
-            chain_id: 17000,
-            type: 'ens_names',
-            str_value: input + '.bitfly.eth',
-            hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
-          },
-          {
-            chain_id: 17000,
-            type: 'ens_overview',
-            str_value: input + 'hallo.eth'
-          },
-          {
-            chain_id: 17000,
-            type: 'ens_overview',
-            str_value: input + '.bitfly.eth'
-          },
-          {
-            chain_id: 17000,
-            type: 'count_validators_by_withdrawal_ens_name',
-            str_value: input + 'hallo.eth',
-            num_value: 2
-          },
-          {
-            chain_id: 17000,
-            type: 'count_validators_by_withdrawal_ens_name',
-            str_value: input + '.bitfly.eth',
-            num_value: 150
-          }
-        ]
-      }
-    }
-    // *** END OF STUFF TO BE REMOVED WHEN THE API IS IMPLEMENTED ***
-  } else {
+  if (searchable as string !== '-- to be removed --') {
+    foundAhead = simulateAPIresponse(input)
+  } else { // *** END OF STUFF TO REMOVE ***
     fetch('/api/2/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -281,6 +152,229 @@ function searchAhead (input : string, searchable : Searchable) : boolean {
 function isOrganizedResultsEmpty () {
   return organizedResults.networks.length === 0
 }
+
+// ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
+function simulateAPIresponse (searched : string) : SearchAheadResults {
+  const response : SearchAheadResults = {}
+  response.data = []
+
+  // results are found 75% of the time
+  if (Math.random() > 1 / 4.0) {
+    const n = Math.floor(Number(searched))
+    const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
+
+    response.data.push(
+      {
+        chain_id: 1,
+        type: 'tokens',
+        str_value: searched
+      },
+      {
+        chain_id: 1,
+        type: 'tokens',
+        str_value: searched + 'Coin'
+      },
+      {
+        chain_id: 1,
+        type: 'addresses',
+        hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
+      },
+      {
+        chain_id: 1,
+        type: 'graffiti',
+        str_value: searched + ' tutta la vita'
+      }
+    )
+    if (searchedIsPositiveInteger) {
+      response.data.push(
+        {
+          chain_id: 1,
+          type: 'epochs',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 1,
+          type: 'slots',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 1,
+          type: 'blocks',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 1,
+          type: 'validators_by_index',
+          num_value: Number(searched)
+        }
+      )
+    } else {
+      response.data.push(
+        {
+          chain_id: 1,
+          type: 'ens_names',
+          str_value: searched + '.bitfly.eth',
+          hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
+        },
+        {
+          chain_id: 1,
+          type: 'ens_overview',
+          str_value: searched + '.bitfly.eth'
+        },
+        {
+          chain_id: 1,
+          type: 'count_validators_by_withdrawal_ens_name',
+          str_value: searched + '.bitfly.eth',
+          num_value: 7
+        }
+      )
+    }
+    response.data.push(
+      {
+        chain_id: 17000,
+        type: 'addresses',
+        hash_value: '0x' + searched + '00bfCb29F2d2FaDEa7EA50F757Ca938'
+      },
+      {
+        chain_id: 17000,
+        type: 'count_validators_by_withdrawal_address',
+        hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938',
+        num_value: 11
+      },
+      {
+        chain_id: 42161,
+        type: 'addresses',
+        hash_value: '0x' + searched + '00000000000000000000000000CAFFE'
+      },
+      {
+        chain_id: 42161,
+        type: 'transactions',
+        hash_value: '0x' + searched + 'a297ab886723ecfbc2cefab2ba385792058b344fbbc1f1e0a1139b2'
+      },
+      {
+        chain_id: 8453,
+        type: 'addresses',
+        hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
+      },
+      {
+        chain_id: 8453,
+        type: 'count_validators_by_deposit_address',
+        hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa',
+        num_value: 150
+      }
+    )
+    if (searchedIsPositiveInteger) {
+      response.data.push(
+        {
+          chain_id: 8453,
+          type: 'epochs',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 8453,
+          type: 'slots',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 8453,
+          type: 'blocks',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 8453,
+          type: 'validators_by_index',
+          num_value: Number(searched)
+        }
+      )
+    } else {
+      response.data.push(
+        {
+          chain_id: 8453,
+          type: 'tokens',
+          str_value: searched + 'USD'
+        },
+        {
+          chain_id: 8453,
+          type: 'tokens',
+          str_value: searched + '42'
+        },
+        {
+          chain_id: 8453,
+          type: 'tokens',
+          str_value: searched + 'Plus'
+        }
+      )
+    }
+    if (searchedIsPositiveInteger) {
+      response.data.push(
+        {
+          chain_id: 17000,
+          type: 'epochs',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 17000,
+          type: 'slots',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 17000,
+          type: 'blocks',
+          num_value: Number(searched)
+        },
+        {
+          chain_id: 17000,
+          type: 'validators_by_index',
+          num_value: Number(searched)
+        }
+      )
+    } else {
+      response.data.push(
+        {
+          chain_id: 17000,
+          type: 'tokens',
+          str_value: searched + ' Coin'
+        },
+        {
+          chain_id: 17000,
+          type: 'ens_names',
+          str_value: searched + 'hallo.eth',
+          hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
+        },
+        {
+          chain_id: 17000,
+          type: 'ens_names',
+          str_value: searched + '.bitfly.eth',
+          hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
+        },
+        {
+          chain_id: 17000,
+          type: 'ens_overview',
+          str_value: searched + 'hallo.eth'
+        },
+        {
+          chain_id: 17000,
+          type: 'ens_overview',
+          str_value: searched + '.bitfly.eth'
+        },
+        {
+          chain_id: 17000,
+          type: 'count_validators_by_withdrawal_ens_name',
+          str_value: searched + 'hallo.eth',
+          num_value: 2
+        },
+        {
+          chain_id: 17000,
+          type: 'count_validators_by_withdrawal_ens_name',
+          str_value: searched + '.bitfly.eth',
+          num_value: 150
+        }
+      )
+    }
+  }
+  return response
+}
+// *** END OF THE FUNCTION TO BE REMOVED WHEN THE API IS IMPLEMENTED ***
 </script>
 
 <template>
@@ -292,7 +386,7 @@ function isOrganizedResultsEmpty () {
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
     ></label>
     <div v-if="showDropDown" id="drop-down">
-      <div v-if="newCharGivenSinceSearch">
+      <div v-if="waitingForSearchResults">
         Searching...
       </div>
       <div v-else-if="isOrganizedResultsEmpty()">

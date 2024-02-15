@@ -199,7 +199,9 @@ export interface OrganizedResults {
   }[]
 }
 
-// Takes a single result element returned by the API and
+// This function executes a guessing procedure, hopefully correct. It is the best doable until the API specification
+// is published to settle the structure of the response in every case. The logic will be improved that day.
+// This function takes a single result element returned by the API and
 // organizes/standardizes it into information ready to be displayed in the drop-down of the search bar.
 // If the data from the API is empty or unexpected then the function returns '' in field `main`,
 // otherwise `main` contains result data. Field `complement` is '' if the API did not give 2 informations.
