@@ -9,7 +9,8 @@
     "luck": "Luck",
     "expected": "Expected",
     "in_day": "In one day | In {count} days",
-    "every_day": "Every day | Every {count} days"
+    "every_day": "Every day | Every {count} days",
+    "id": "ID"
   },
   "validator_state": {
     "active": "active",
@@ -45,6 +46,15 @@
         "total_apr": "Total APR"
       },
       "summary": {
+        "total_group_name": "Total Efficiency",
+        "col":{
+          "group": "Group",
+          "efficiency_24h": "Efficiency (24h)",
+          "efficiency_7d": "Efficiency (7d)",
+          "efficiency_31d": "Efficiency (31d)",
+          "efficiency_all": "Efficiency (All Time)",
+          "validators": "Validators"
+        },
         "row": {
           "efficiency_total": "Efficiency",
           "attestation_total": "Total Attestations",

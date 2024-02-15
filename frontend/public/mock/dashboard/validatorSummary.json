@@ -1,0 +1,64 @@
+{
+  "paging": {
+    "prev_cursor": "prevXYZ",
+    "next_cursor": "nextXYZ"
+  },
+  "data": [
+    {
+      "group_id": -1,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 1,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 2,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 3,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 4,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 5,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    },
+    {
+      "group_id": 6,
+      "efficiency_24h": 123.123,
+      "efficiency_7d": 12.13,
+      "efficiency_31d": 15.123,
+      "efficiency_all": 123.1233,
+      "validators": [1, 123, 123]
+    }
+  ]
+}

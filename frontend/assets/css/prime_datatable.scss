@@ -317,3 +317,69 @@
     }
   }
 }
+
+.p-paginator {
+  .p-paginator-first:not(.p-disabled):not(.p-highlight):hover,
+  .p-paginator-prev:not(.p-disabled):not(.p-highlight):hover,
+  .p-paginator-next:not(.p-disabled):not(.p-highlight):hover,
+  .p-paginator-last:not(.p-disabled):not(.p-highlight):hover {
+    background: #f3f4f6;
+    border-color: transparent;
+    color: #374151;
+  }
+
+  .p-paginator-first {
+    border-top-left-radius: 50%;
+    border-bottom-left-radius: 50%;
+  }
+  .p-paginator-last {
+    border-top-right-radius: 50%;
+    border-bottom-right-radius: 50%;
+  }
+  .p-dropdown {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+    height: 3rem;
+  }
+  .p-dropdown .p-dropdown-label {
+    padding-right: 0;
+  }
+  .p-paginator-page-input {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+  .p-paginator-page-input .p-inputtext {
+    max-width: 3rem;
+  }
+  .p-paginator-current {
+    background-color: transparent;
+    border: 0 none;
+    color: #6b7280;
+    min-width: 3rem;
+    height: 3rem;
+    margin: 0.143rem;
+    padding: 0 0.5rem;
+  }
+  .p-paginator-pages {
+    .p-paginator-page {
+      background-color: transparent;
+      border: 0 none;
+      color: #6b7280;
+      min-width: 3rem;
+      height: 3rem;
+      margin: 0.143rem;
+      transition: box-shadow 0.2s;
+      border-radius: 50%;
+    }
+    .p-paginator-page.p-highlight {
+      background: #f0fdfa;
+      border-color: #f0fdfa;
+      color: #047857;
+    }
+    .p-paginator-page:not(.p-highlight):hover {
+      background: #f3f4f6;
+      border-color: transparent;
+      color: #374151;
+    }
+  }
+}

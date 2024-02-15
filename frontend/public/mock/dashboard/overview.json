@@ -3,6 +3,14 @@
     {
       "id": 1000,
       "name": "Ny group"
+    },
+    {
+      "id": 1,
+      "name": "Number One"
+    },
+    {
+      "id": 2,
+      "name": "The second"
     }
   ],
   "validators": {
