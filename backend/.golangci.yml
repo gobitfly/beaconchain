@@ -1,0 +1,129 @@
+linters:
+  enable-all: true
+  enable:
+    # default needs explicit enabling?
+    - unused 
+    - staticcheck
+    - govet
+    - errcheck
+    - gosimple
+    - ineffassign
+  disable:
+    - exhaustivestruct
+    - golint
+    - ifshort
+    - interfacer
+    - maligned
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - varcheck
+
+    # Disabled for now:
+    - asasalint
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - dogsled
+    - dupl
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - gomnd
+    - gomoddirectives
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - lll
+    - maintidx
+    - makezero
+    - musttag
+    - nakedret
+    - nestif
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - revive
+    # - stylecheck
+    - tagalign
+    - tagliatelle
+    - thelper
+    - unparam
+    - varnamelen
+    - wrapcheck
+    - wsl
+  fast: true
+
+linters-settings:
+  gocognit:
+    min-complexity: 65
+  depguard:
+    rules:
+      main:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/prysmaticlabs/prysm/v3
+            desc: "Depending on your needs you might find something here https://github.com/wealdtech"
+      consapi:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/consapi/**/*.go"
+          - "**/consapi/*go"
+        allow:
+          - $gostd
+          - github.com/gobitfly/beaconchain/pkg/consapi
+        deny:
+          - pkg: github.com/gobitfly/beaconchain
+            desc: "ConsAPI must not import anything from the main package"
+      db:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/commons/db/**/*.go"
+          - "**/commons/db/*go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/gobitfly/beaconchain/pkg/consapi
+            desc: "DB must not import"
+          - pkg: github.com/gobitfly/beaconchain/pkg/exporter
+            desc: "DB must not import"
+          - pkg: "net/http"
+            desc: "DB must not import"
+      commons:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/commons/**/*.go"
+          - "**/commons/*go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/gobitfly/beaconchain/pkg/exporter
+            desc: "DB must not import"

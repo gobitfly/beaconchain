@@ -3,6 +3,7 @@ import type { LoginResponse } from '~/types/user'
 // import { defu } from 'defu'
 
 export enum API_PATH {
+  AD_CONFIGURATIONs = '/adConfigurations',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
@@ -25,6 +26,11 @@ type MappingData = {
 }
 
 const mapping: Record<string, MappingData> = {
+  [API_PATH.AD_CONFIGURATIONs]: {
+    path: '/ad-configurations?={keys}',
+    getPath: values => `/ad-configurations?=dashboard_id}?keys=${values?.keys}`,
+    mock: true
+  },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboard_id}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardId}/groups/${values?.groupId}/summary`,
