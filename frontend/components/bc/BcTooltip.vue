@@ -138,11 +138,12 @@ onUnmounted(() => {
 
 .bc-tooltip {
 
-  --tt-bg-color: var(--light-grey);
+  --tt-bg-color: var(--light-grey-2);
   --tt-color: var(--light-black);
 
   position: relative;
   display: inline-flex;
+  flex-wrap: wrap;
   opacity: 0;
   transition: opacity 1s;
   text-align: center;

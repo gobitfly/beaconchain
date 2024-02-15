@@ -1,7 +1,15 @@
 {
   "common": {
     "slot": "Slot",
-    "validator": "Validator"
+    "validator": "Validator",
+    "earned": "Earned",
+    "penalty": "Penalty",
+    "execution_layer": "Execution Layer",
+    "consensus_layer": "Consensus Layer",
+    "luck": "Luck",
+    "expected": "Expected",
+    "in_day": "In one day | In {count} days",
+    "every_day": "Every day | Every {count} days"
   },
   "validator_state": {
     "active": "active",
@@ -54,6 +62,14 @@
           "apr": "APR",
           "luck": "Luck"
         }
+      },
+      "tooltip": {
+        "attestaion_efficiency": {
+          "title": "Attestation Efficiency: ",
+          "text": "Indicates the percentage of rewards in relation to the theoretical maximum value"
+        },
+        "block_proposal": "Block Proposal",
+        "sync_committee": "Sync Committee"
       }
     }
   },

@@ -56,7 +56,7 @@ const data = computed<SummaryRow[][]>(() => {
 </script>
 <template>
   <div v-if="summary">
-    <DataTable v-for="(table, index) in data" :key="index" :value="table">
+    <DataTable v-for="(table, index) in data" :key="index" class="no-header" :value="table">
       <Column field="title" />
       <Column field="col_1">
         <template #body="slotProps">

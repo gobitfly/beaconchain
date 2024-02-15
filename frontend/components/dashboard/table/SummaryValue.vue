@@ -11,7 +11,6 @@ import {
   type DashboardValidatorContext,
   type VDBSummaryTableRow
 } from '~/types/dashboard/summary'
-import { convertSum } from '~/utils/bigMath'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
@@ -32,9 +31,7 @@ const data = computed(() => {
         count: {
           success: col.attestation_head.count.success + col.attestation_source.count.success + col.attestation_target.count.success,
           failed: col.attestation_head.count.failed + col.attestation_source.count.failed + col.attestation_target.count.failed
-        },
-        earned: convertSum(col.attestation_head.earned, col.attestation_source.earned, col.attestation_target.earned),
-        penalty: convertSum(col.attestation_head.penalty, col.attestation_source.penalty, col.attestation_target.penalty)
+        }
       }
     }
   } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
@@ -43,7 +40,7 @@ const data = computed(() => {
     }
   } else if (SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
     let validators: number[] = []
-    let context:DashboardValidatorContext = 'attestation'
+    let context: DashboardValidatorContext = 'attestation'
     if (props.property === 'validators_attestation') {
       validators = union(col.attestation_head.validators, col.attestation_source.validators, col.attestation_target.validators)
     } else if (props.property === 'validators_proposal') {
@@ -108,94 +105,89 @@ const data = computed(() => {
 
 </script>
 <template>
-  <BcTooltip v-if="data?.efficiency">
-    <DashboardTableEfficiency :success="data.efficiency.count.success" :failed="data.efficiency.count.failed" />
-    <template v-if="data.efficiency.earned || data.efficiency.penalty" #tooltip?>
-      <div v-if="data.efficiency.earned">
-        <b>
-          {{ $t('common.earned') }}
-        </b>
-        <BcFormatValue :value="data.efficiency.earned" />
-      </div>
-      <div v-if="data.efficiency.penalty">
-        <b>
-          {{ $t('common.penality') }}
-        </b>
-        <BcFormatValue :value="data.efficiency.penalty" />
-      </div>
-    </template>
-  </BcTooltip>
-  <DashboardTableValidators v-else-if="data?.validators" :validators="data.validators" :context="data.context" :group-id="props.row.group_id" />
-  <BcTooltip v-else-if="data?.attestationEfficiency">
+  <DashboardTableEfficiency v-if="data?.efficiency" :success="data.efficiency.count.success" :failed="data.efficiency.count.failed" />
+  <DashboardTableValidators
+    v-else-if="data?.validators"
+    :validators="data.validators"
+    :context="data.context"
+    :group-id="props.row.group_id"
+  />
+  <BcTooltip v-else-if="data?.attestationEfficiency" position="top">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
-    <template #tooltip?>
+    <template #tooltip>
       <b>
         {{ $t('dashboard.validator.tooltip.attestaion_efficiency.title') }}
       </b>
       {{ $t('dashboard.validator.tooltip.attestaion_efficiency.text') }}
     </template>
   </BcTooltip>
-  <BcTooltip v-else-if="data?.apr">
+  <BcTooltip v-else-if="data?.apr" position="top">
     <BcFormatPercent :percent="data.apr.total" />
-    <template #tooltip?>
-      <div>
-        <b>
-          {{ $t('common.execution_layer') }}
-        </b>
-        <BcFormatValue :value="data.apr.income.el" /> (<BcFormatPercent :percent="data.apr.apr.el" />)
+    <template #tooltip>
+      <div class="row">
+        <b>{{ $t('common.execution_layer') }}:</b>
+        <BcFormatValue class="space_before" :value="data.apr.income.el" /> (
+        <BcFormatPercent :percent="data.apr.apr.el" />)
       </div>
-      <div>
-        <b>
-          {{ $t('common.consensus_layer') }}
-        </b>
-        <BcFormatValue :value="data.apr.income.cl" /> (<BcFormatPercent :percent="data.apr.apr.cl" />)
+      <div class="row">
+        <b>{{ $t('common.consensus_layer') }}:</b>
+        <BcFormatValue class="space_before" :value="data.apr.income.cl" /> (
+        <BcFormatPercent :percent="data.apr.apr.cl" />)
       </div>
     </template>
   </BcTooltip>
-  <BcTooltip v-else-if="data?.luck">
-    <span><i class="fas fa-cube" /> <BcFormatPercent :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" /> <BcFormatPercent :percent="data.luck.sync.percent" /></span>
-    <template #tooltip?>
-      <b>
-        {{ $t('validator.block_proposal') }}
-      </b>
-      <div>
+  <BcTooltip v-else-if="data?.luck" position="top">
+    <span><i class="fas fa-cube" />
+      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" />
+      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+    </span>
+    <template #tooltip>
+      <div class="row">
+        <b>
+          {{ $t('dashboard.validator.tooltip.block_proposal') }}
+        </b>
+      </div>
+      <div class="row">
         <b>
           {{ $t('common.luck') }}:
         </b>
         <BcFormatPercent :percent="data.luck.proposal.percent" />
       </div>
-      <div>
+      <div class="row">
         <b>
           {{ $t('common.expected') }}:
         </b>
-        {{ $t('common.ind_day', {count:data.luck.proposal.expected}) }}
+        {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
       </div>
-      <div>
+      <div class="row">
         <b>
           {{ $t('common.average') }}:
         </b>
-        {{ $t('common.every_day', {count:data.luck.proposal.average}) }}
+        {{ $t('common.every_day', {}, data.luck.proposal.average) }}
       </div>
-      <b>
-        {{ $t('validator.sync_committee') }}
-      </b>
-      <div>
+      <br>
+      <div class="row next_chapter">
+        <b class="part">
+          {{ $t('dashboard.validator.tooltip.sync_committee') }}
+        </b>
+      </div>
+      <div class="row">
         <b>
           {{ $t('common.luck') }}:
         </b>
         <BcFormatPercent :percent="data.luck.proposal.percent" />
       </div>
-      <div>
+      <div class="row">
         <b>
           {{ $t('common.expected') }}:
         </b>
-        {{ $t('common.ind_day', {count:data.luck.proposal.expected}) }}
+        {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
       </div>
-      <div>
+      <div class="row">
         <b>
           {{ $t('common.average') }}:
         </b>
-        {{ $t('common.every_day', {count:data.luck.proposal.average}) }}
+        {{ $t('common.every_day', {}, data.luck.proposal.average) }}
       </div>
     </template>
   </BcTooltip>
@@ -204,3 +196,20 @@ const data = computed(() => {
     {{ data.simple?.value }}
   </span>
 </template>
+
+<style>
+.row {
+  text-wrap: nowrap;
+  min-width: 100%;
+  text-align: left;
+
+  &.next_chapter {
+    margin-top: var(--padding);
+  }
+}
+.space_before{
+  &::before{
+    content: " ";
+  }
+}
+</style>
