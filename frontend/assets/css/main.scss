@@ -8,12 +8,11 @@ html {
   padding: 0;
 }
 body {
+  @include standard_text;
   margin: 0;
   padding: 0;
   background-color: var(--background-color);
   color: var(--text-color);
-  font-family: var(--roboto-family);
-  font-weight: var(--roboto-regular);
 }
 
 a {
