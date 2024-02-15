@@ -175,3 +175,36 @@
     padding: 0.9375rem 0.9375rem;
   }
 }
+
+// TabView
+.p-tabview {  
+  .p-tabview-nav {
+    li {
+      margin-right: 0;
+    
+      .p-tabview-nav-link {
+        border: solid transparent 1px;
+        border-top-right-radius: var(--border-radius);
+        border-top-left-radius: var(--border-radius);
+        padding: 10px 15px;
+        color: var(--link-color);
+        transition: box-shadow 0.2s;
+      }
+      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
+        color: var(--link-color);
+      }
+      &.p-highlight .p-tabview-nav-link {
+        background: var(--container-background);
+        border-color: var(--container-border-color);
+        color: var(--container-color);
+      }
+      &.p-disabled .p-tabview-nav-link {
+        color: var(--text-color-disabled);
+      }
+    }
+  }
+  .p-tabview-panels {
+    border: 1px solid var(--container-border-color);
+    border-radius: var(--border-radius);
+  }
+}
