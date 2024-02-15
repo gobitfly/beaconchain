@@ -57,5 +57,9 @@
     "shop": "Swag Shop",
     "status": "Site Status",
     "press_kit": "Press Kit"
+  },
+  "search_engine": {
+    "searching": "Searching...",
+    "no_result": "No result"
   }
 }

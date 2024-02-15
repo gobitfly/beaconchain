@@ -74,8 +74,16 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
 
 <template>
   <BcSearchEngine
+    id="main-bar"
     :searchable="Searchable.Anything"
+    width="460"
     @enter="redirectToRelevantPage"
     @select="redirectToRelevantPage"
   />
 </template>
+
+<style lang="scss" scoped>
+#main-bar{
+
+}
+</style>
