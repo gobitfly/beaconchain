@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { type SlotVizData } from '~/types/dashboard/slotViz'
+import { formatNumber } from '~/utils/format'
 const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
 
@@ -23,74 +24,41 @@ onMounted(async () => {
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
-    <div class="row">
-      latest epoch: {{ latest?.currentEpoch }}
-    </div>
-
     <NuxtLink to="/" class="row">
-      <Button>
+      <Button class="row">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </Button>
     </NuxtLink>
-    <div class="icon_holder">
-      <div>
-        <BcTooltip position="left" text="left tt">
-          <IconSlotAttestation /> Attestation
-        </BcTooltip>
-      </div>
-      <div>
-        <BcTooltip position="right" text="right tt">
-          <IconSlotHeadAttestation /> Head Attestation
-        </BcTooltip>
-      </div>
-      <div>
-        <BcTooltip position="top" text="top tt">
-          <IconSlotSourceAttestation /> Source Attestation
-        </BcTooltip>
-      </div>
-      <div>
-        <BcTooltip position="bottom" text="bottom tt">
-          <IconSlotTargetAttestation /> Target Attestation
-        </BcTooltip>
-      </div>
-      <div>
-        <IconSlotBlockProposal /> Block Proposal
-      </div>
-      <div>
-        <IconSlotSlashing /> Slashing
-      </div>
-      <div>
-        <IconSlotSync /> Slot Sync
-      </div>
+    <div class="row">
+      Latest Epoch: {{ formatNumber(latest?.currentEpoch) }}
     </div>
 
-    <div>
-      <PlaygroundConversion />
-    </div>
-    <div class="icon_holder">
-      <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
-    </div>
+    <TabView>
+      <TabPanel header="Icons">
+        <PlaygroundIcons />
+      </TabPanel>
+      <TabPanel header="Conversion">
+        <PlaygroundConversion />
+      </TabPanel>
+      <TabPanel header="Ads">
+        <PlaygroundAds />
+      </TabPanel>
+      <TabPanel header="Slot Viz">
+        <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
+      </TabPanel>
+      <TabPanel :disabled="true" header="Disabled" />
+    </TabView>
+
     <BcFooterMainFooter />
   </div>
 </template>
 
 <style lang="scss" scoped>
-.icon_holder {
-  margin: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
 .content {
   padding: var(--padding-large);
 }
 
 .row {
   margin-bottom: var(--padding);
-}
-
-:deep(.bad-color){
-  color: pink
 }
 </style>
