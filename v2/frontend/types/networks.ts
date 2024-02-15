@@ -24,7 +24,7 @@
 
 import type { CryptoCurrency } from '~/types/currencies'
 
-export const enum ChainIDs {
+export enum ChainIDs {
   Ethereum = 1,
   Holesky = 17000,
   Sepolia = 11155111,
@@ -161,4 +161,16 @@ export function isMainNet (network: ChainIDs) : boolean {
 
 export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
+}
+
+export function getListOfChainIDs () : ChainIDs[] {
+  const list : ChainIDs[] = []
+  const stop = Object.keys(ChainIDs).length
+  const start = stop / 2
+
+  for (let i = start; i < stop; i++) {
+    list.push(Object.values(ChainIDs)[i] as ChainIDs)
+  }
+
+  return list
 }
