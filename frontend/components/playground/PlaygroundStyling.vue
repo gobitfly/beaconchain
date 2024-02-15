@@ -1,7 +1,7 @@
 <template>
   <TabView>
     <TabPanel header="Buttons">
-      <div class="button_container">
+      <div class="element_container">
         <Button>
           Simple Text Button
         </Button>
@@ -20,14 +20,17 @@
       </div>
     </TabPanel>
     <TabPanel header="Input">
-      <InputText label="Input" />
+      <div class="element_container">
+        <InputText placeholder="Input" />
+        <InputText placeholder="Disabled Input" disabled />
+      </div>
     </TabPanel>
-    <TabPanel :disabled="true" header="Disabled" />
+    <TabPanel :disabled="true" header="Disabled Tab" />
   </TabView>
 </template>
 
 <style lang="scss" scoped>
-.button_container {
+.element_container {
   margin: 10px;
   display: flex;
   flex-wrap: wrap;

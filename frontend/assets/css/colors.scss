@@ -5,6 +5,7 @@
   --light-grey: #f0f0f0;
   --light-grey-3: #d3d3d3;
   --dark-grey: #5c4e4e;
+  --very-dark-grey: #362f32;
   --asphalt: #484f56;
   --graphite: #343a40;
   --almost-black: #232024;
@@ -41,6 +42,10 @@
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
 
+  --input-background: var(--grey-4);
+  --input-border-color: var(--light-grey-3);
+  --input-active-text-color: var(--light-black);
+
   --link-color: var(--blue);
 
   --negtive-color: var(--light-red);
@@ -65,6 +70,10 @@
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
     --container-border-color: var(--dark-grey);
+
+    --input-background: var(--very-dark-grey);
+    --input-border-color: var(--dark-grey);
+    --input-active-text-color: var(--light-grey);
 
     --link-color: var(--light-blue);
 
