@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { warn } from 'vue'
-import { Searchable, ResultTypes } from '~/types/search'
+import { Categories, ResultTypes } from '~/types/search'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
 function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
@@ -75,7 +75,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
 <template>
   <BcSearchEngine
     id="main-bar"
-    :searchable="Searchable.Anything"
+    :searchable="Categories.Everything"
     width="460"
     height="34"
     @enter="redirectToRelevantPage"
