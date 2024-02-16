@@ -1,19 +1,19 @@
 <script setup lang="ts">
-const modalVisibility = ref(false)
-
+const dashboardModalVisibility = ref(false)
+const otherModalVisibility = ref(false)
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="modalVisibility"
-    modal
-    header="Dashboard &quot;Hetzner&quot;"
-    :dismissable-mask="true"
-    :closable="false"
-    :draggable="false"
-  >
-    <Button type="button" label="Close" @click="modalVisibility = false" />
-  </Dialog>
+  <BcDialog v-model="dashboardModalVisibility" header="Dashboard &quot;Hetzner&quot;">
+    <div class="element_container">
+      <Button label="Close" @click="dashboardModalVisibility = false" />
+    </div>
+  </BcDialog>
+  <BcDialog v-model="otherModalVisibility" header="This is another modal!">
+    <div class="element_container">
+      <Button label="Close this other modal!" @click="otherModalVisibility = false" />
+    </div>
+  </BcDialog>
 
   <TabView>
     <TabPanel header="Buttons">
@@ -21,7 +21,8 @@ const modalVisibility = ref(false)
         <Button>
           Simple Text Button
         </Button>
-        <Button label="Open Modal" @click="modalVisibility = true" />
+        <Button label="Open Modal" @click="dashboardModalVisibility = true" />
+        <Button label="Open Other Modal" @click="otherModalVisibility = true" />
         <Button>
           <NuxtLink to="/dashboard">
             Dashboard Link
