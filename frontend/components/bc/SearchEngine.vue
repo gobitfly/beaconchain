@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Searchable, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
+import { Categories, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
 import { ChainIDs, ChainInfo, getListOfChainIDs } from '~/types/networks'
 const { t: $t } = useI18n()
 
 const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
-const searchable = props.searchable as Searchable
+const searchable = props.searchable as Categories
 const emit = defineEmits(['enter', 'select'])
 
 const engineWidth = props.width + 'px'
@@ -22,15 +22,34 @@ const inputField = ref('')
 let lastKnownInput = ''
 let isMouseOverEngine = false
 
-let completeResults : OrganizedResults = { networks: [] }
-let filteredInResults : OrganizedResults = { networks: [] }
-let filteredOutResults : OrganizedResults = { networks: [] }
-const userFilterForNetwork = ref<string>('all')
-const userFilterForProtocol = ref<'y'|'n'>('y')
-const userFilterForAddresses = ref<'y'|'n'>('y')
-const userFilterForTokens = ref<'y'|'n'>('y')
-const userFilterForNFTs = ref<'y'|'n'>('y')
-const userFilterForValidators = ref<'y'|'n'>('y')
+const results = {
+  raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
+  organized: {
+    in: { networks: [] } as OrganizedResults, // filtered results, organized
+    out: { networks: [] } as OrganizedResults // filtered out results, organized
+  }
+}
+
+interface UserFilters {
+  ['network']: string,
+  [Categories.Tokens]: 'y'|'n',
+  [Categories.NFTs]: 'y'|'n',
+  [Categories.Protocol]: 'y'|'n',
+  [Categories.Addresses]: 'y'|'n',
+  [Categories.Validators]: 'y'|'n'
+}
+const userFilters = ref<UserFilters>({
+  network: 'all',
+  [Categories.Tokens]: 'n',
+  [Categories.NFTs]: 'n',
+  [Categories.Protocol]: 'n',
+  [Categories.Addresses]: 'n',
+  [Categories.Validators]: 'n'
+})
+const networkButtonColor = ref('var(--light-grey-3)')
+function setNetworkButtonColor () {
+  networkButtonColor.value = (userFilters.value.network === 'all') ? 'var(--light-grey-3)' : 'var(--primary-color)'
+}
 
 function cleanUp () {
   lastKnownInput = ''
@@ -39,9 +58,9 @@ function cleanUp () {
   showDropDown.value = false
   populateDropDown.value = true
   isMouseOverEngine = false
-  completeResults = { networks: [] }
-  filteredInResults = { networks: [] }
-  filteredOutResults = { networks: [] }
+  results.raw = { data: [] }
+  results.organized.in = { networks: [] }
+  results.organized.out = { networks: [] }
 }
 
 // In the V1, the server received a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
@@ -54,7 +73,7 @@ function cleanUp () {
 setInterval(() => {
   if (waitingForSearchResults.value) {
     if (searchAhead(inputField.value, searchable)) {
-      filterResults()
+      filterAndOrganizeResults()
       waitingForSearchResults.value = false
     }
   }
@@ -84,16 +103,17 @@ function userPressedEnter () {
       return
     }
   }
-  if (isOrganizedResultsEmpty()) {
+  if (areResultsEmpty(false)) {
+    // false in the test means that we will pick a filtered-out result if the drop down does not show anything although there are results
     return
   }
   // picks a relevant search-ahead result
   // **** TO BE CHANGED ONCE THE NETWORK DROPDOWN IS IMPLEMENTED ****
   const userPreferredNetwork = ChainIDs.Ethereum
   // ****************************************************************
-  filterResults()
-  let defaultNetwork = completeResults.networks[0]
-  for (const network of completeResults.networks) {
+  filterAndOrganizeResults()
+  let defaultNetwork = results.organized.in.networks[0]
+  for (const network of results.organized.in.networks) {
     if (network.chainId === userPreferredNetwork) {
       defaultNetwork = network
       break
@@ -113,12 +133,12 @@ function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: strin
 
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
-function searchAhead (input : string, searchable : Searchable) : boolean {
-  let foundAhead : SearchAheadResults = { data: [] }
+function searchAhead (input : string, searchable : Categories) : boolean {
+  let error = false
 
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchable as string !== '-- to be removed --') {
-    foundAhead = simulateAPIresponse(input)
+    results.raw = simulateAPIresponse(input)
   } else { // *** END OF STUFF TO REMOVE ***
     fetch('/api/2/search', {
       method: 'POST',
@@ -128,287 +148,311 @@ function searchAhead (input : string, searchable : Searchable) : boolean {
     }).then((received) => {
       if (received.ok && received.status < 400) {
         received.json().then((object) => {
-          foundAhead = object
+          results.raw = object
         })
       } else {
-        return false
+        error = true
       }
     }).catch(() => {
-      return false
+      error = true
     })
-    if (foundAhead === undefined || foundAhead.error !== undefined) {
-      return false
+    if (results.raw === undefined || results.raw.error !== undefined) {
+      error = true
     }
   }
 
-  // we take the disorganized data of the API and fill `completeResults`, which will be easy to iterate over when populating the drop-down
-  completeResults = { networks: [] }
-  if (foundAhead.data !== undefined) {
-    for (const finding of foundAhead.data) {
-      const toBeAdded = organizeAPIinfo(finding)
-      if (toBeAdded.main === '') {
-        continue
-      }
-      // Picking from `completeResults` the network that the finding belongs to. Creates the network if needed.
-      let existingNetwork = completeResults.networks.findIndex(nwElem => nwElem.chainId === finding.chain_id as ChainIDs)
-      if (existingNetwork < 0) {
-        existingNetwork = -1 + completeResults.networks.push({
-          chainId: finding.chain_id as ChainIDs,
-          types: []
-        })
-      }
-      // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
-      let existingType = completeResults.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === finding.type as ResultTypes)
-      if (existingType < 0) {
-        existingType = -1 + completeResults.networks[existingNetwork].types.push({
-          type: finding.type as ResultTypes,
-          found: []
-        })
-      }
-      // now we can insert the finding at the right place in `completeResults`
-      completeResults.networks[existingNetwork].types[existingType].found.push(toBeAdded)
+  if (error) {
+    results.raw = { data: [] }
+  }
+  return !error
+}
+
+// Fills `results.organized` by categorizing and filtering the disorganized data of the API.
+function filterAndOrganizeResults () {
+  // determining whether any filter button is activated
+  let areAllButtonsOff = true
+  for (const k of Object.keys(userFilters.value)) {
+    if (userFilters.value[k as keyof UserFilters] === 'y') {
+      areAllButtonsOff = false
+      break
     }
   }
 
-  return true
+  results.organized.in = { networks: [] }
+  results.organized.out = { networks: [] }
+
+  if (results.raw.data === undefined) {
+    return
+  }
+  for (const finding of results.raw.data) {
+    const chainId = finding.chain_id as ChainIDs
+    const type = finding.type as ResultTypes
+
+    // getting organized information from the finding
+    const toBeAdded = organizeAPIinfo(finding)
+    if (toBeAdded.main === '') {
+      continue
+    }
+    // determining whether the finding is filtered in or out, pointing `place` to the corresponding object
+    let place : OrganizedResults
+    if ((userFilters.value.network === String(chainId) || userFilters.value.network === 'all') &&
+        (userFilters.value[TypeInfo[type].category as keyof UserFilters] === 'y' || areAllButtonsOff /* if all filters are inactive, we default to showing everything */)) {
+      place = results.organized.in
+    } else {
+      place = results.organized.out
+    }
+    // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
+    let existingNetwork = place.networks.findIndex(nwElem => nwElem.chainId === chainId)
+    if (existingNetwork < 0) {
+      existingNetwork = -1 + place.networks.push({
+        chainId,
+        types: []
+      })
+    }
+    // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
+    let existingType = place.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === type)
+    if (existingType < 0) {
+      existingType = -1 + place.networks[existingNetwork].types.push({
+        type,
+        found: []
+      })
+    }
+    // now we can insert the finding at the right place in the organized results
+    place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
+  }
 }
 
-function filterResults () {
-  /* for (const network of completeResults.networks) {
-    if (userFilterForNetwork != '' && String(network.chainId) !== userFilterForNetwork) { continue }
-  } */
-}
-
-function filterAndRepopulate () {
+function refreshDropDown () {
   populateDropDown.value = false
-  filterResults()
-  console.log(userFilterForAddresses, userFilterForNetwork)
-  populateDropDown.value = true
+  filterAndOrganizeResults()
+  populateDropDown.value = true // this triggers Vue to refresh the list of results
 }
 
-function isOrganizedResultsEmpty () {
-  return completeResults.networks.length === 0
+function areResultsEmpty (considerFilteredOutResults : boolean) : boolean {
+  return results.organized.in.networks.length === 0 && (!considerFilteredOutResults || results.organized.out.networks.length === 0)
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
 function simulateAPIresponse (searched : string) : SearchAheadResults {
-  const response : SearchAheadResults = {}
-  response.data = []
+  const response : SearchAheadResults = {}; response.data = []
 
   // results are found 80% of the time
-  if (Math.random() > 1 / 5.0) {
-    const n = Math.floor(Number(searched))
-    const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
+  if (Math.random() < 1 / 5.0) {
+    return response
+  }
 
+  const n = Math.floor(Number(searched))
+  const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
+
+  response.data.push(
+    {
+      chain_id: 1,
+      type: 'tokens',
+      str_value: searched
+    },
+    {
+      chain_id: 1,
+      type: 'tokens',
+      str_value: searched + 'Coin'
+    },
+    {
+      chain_id: 1,
+      type: 'addresses',
+      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
+    },
+    {
+      chain_id: 1,
+      type: 'graffiti',
+      str_value: searched + ' tutta la vita'
+    }
+  )
+  if (searchedIsPositiveInteger) {
     response.data.push(
       {
         chain_id: 1,
-        type: 'tokens',
-        str_value: searched
+        type: 'epochs',
+        num_value: Number(searched)
       },
       {
         chain_id: 1,
-        type: 'tokens',
-        str_value: searched + 'Coin'
+        type: 'slots',
+        num_value: Number(searched)
       },
       {
         chain_id: 1,
-        type: 'addresses',
-        hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
+        type: 'blocks',
+        num_value: Number(searched)
       },
       {
         chain_id: 1,
-        type: 'graffiti',
-        str_value: searched + ' tutta la vita'
+        type: 'validators_by_index',
+        num_value: Number(searched)
       }
     )
-    if (searchedIsPositiveInteger) {
-      response.data.push(
-        {
-          chain_id: 1,
-          type: 'epochs',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 1,
-          type: 'slots',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 1,
-          type: 'blocks',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 1,
-          type: 'validators_by_index',
-          num_value: Number(searched)
-        }
-      )
-    } else {
-      response.data.push(
-        {
-          chain_id: 1,
-          type: 'ens_names',
-          str_value: searched + '.bitfly.eth',
-          hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
-        },
-        {
-          chain_id: 1,
-          type: 'ens_overview',
-          str_value: searched + '.bitfly.eth'
-        },
-        {
-          chain_id: 1,
-          type: 'count_validators_by_withdrawal_ens_name',
-          str_value: searched + '.bitfly.eth',
-          num_value: 7
-        }
-      )
+  } else {
+    response.data.push(
+      {
+        chain_id: 1,
+        type: 'ens_names',
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
+      },
+      {
+        chain_id: 1,
+        type: 'ens_overview',
+        str_value: searched + '.bitfly.eth'
+      },
+      {
+        chain_id: 1,
+        type: 'count_validators_by_withdrawal_ens_name',
+        str_value: searched + '.bitfly.eth',
+        num_value: 7
+      }
+    )
+  }
+  response.data.push(
+    {
+      chain_id: 17000,
+      type: 'addresses',
+      hash_value: '0x' + searched + '00bfCb29F2d2FaDEa7EA50F757Ca938'
+    },
+    {
+      chain_id: 17000,
+      type: 'count_validators_by_withdrawal_address',
+      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938',
+      num_value: 11
+    },
+    {
+      chain_id: 42161,
+      type: 'addresses',
+      hash_value: '0x' + searched + '00000000000000000000000000CAFFE'
+    },
+    {
+      chain_id: 42161,
+      type: 'transactions',
+      hash_value: '0x' + searched + 'a297ab886723ecfbc2cefab2ba385792058b344fbbc1f1e0a1139b2'
+    },
+    {
+      chain_id: 8453,
+      type: 'addresses',
+      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
+    },
+    {
+      chain_id: 8453,
+      type: 'count_validators_by_deposit_address',
+      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa',
+      num_value: 150
     }
+  )
+  if (searchedIsPositiveInteger) {
+    response.data.push(
+      {
+        chain_id: 8453,
+        type: 'epochs',
+        num_value: Number(searched)
+      },
+      {
+        chain_id: 8453,
+        type: 'slots',
+        num_value: Number(searched)
+      },
+      {
+        chain_id: 8453,
+        type: 'blocks',
+        num_value: Number(searched)
+      },
+      {
+        chain_id: 8453,
+        type: 'validators_by_index',
+        num_value: Number(searched)
+      }
+    )
+  } else {
+    response.data.push(
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + 'USD'
+      },
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + '42'
+      },
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + 'Plus'
+      }
+    )
+  }
+  if (searchedIsPositiveInteger) {
     response.data.push(
       {
         chain_id: 17000,
-        type: 'addresses',
-        hash_value: '0x' + searched + '00bfCb29F2d2FaDEa7EA50F757Ca938'
+        type: 'epochs',
+        num_value: Number(searched)
       },
       {
         chain_id: 17000,
-        type: 'count_validators_by_withdrawal_address',
-        hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938',
-        num_value: 11
+        type: 'slots',
+        num_value: Number(searched)
       },
       {
-        chain_id: 42161,
-        type: 'addresses',
-        hash_value: '0x' + searched + '00000000000000000000000000CAFFE'
+        chain_id: 17000,
+        type: 'blocks',
+        num_value: Number(searched)
       },
       {
-        chain_id: 42161,
-        type: 'transactions',
-        hash_value: '0x' + searched + 'a297ab886723ecfbc2cefab2ba385792058b344fbbc1f1e0a1139b2'
+        chain_id: 17000,
+        type: 'validators_by_index',
+        num_value: Number(searched)
+      }
+    )
+  } else {
+    response.data.push(
+      {
+        chain_id: 17000,
+        type: 'tokens',
+        str_value: searched + ' Coin'
       },
       {
-        chain_id: 8453,
-        type: 'addresses',
-        hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
+        chain_id: 17000,
+        type: 'ens_names',
+        str_value: searched + 'hallo.eth',
+        hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
-        chain_id: 8453,
-        type: 'count_validators_by_deposit_address',
-        hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa',
+        chain_id: 17000,
+        type: 'ens_names',
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
+      },
+      {
+        chain_id: 17000,
+        type: 'ens_overview',
+        str_value: searched + 'hallo.eth'
+      },
+      {
+        chain_id: 17000,
+        type: 'ens_overview',
+        str_value: searched + '.bitfly.eth'
+      },
+      {
+        chain_id: 17000,
+        type: 'count_validators_by_withdrawal_ens_name',
+        str_value: searched + 'hallo.eth',
+        num_value: 2
+      },
+      {
+        chain_id: 17000,
+        type: 'count_validators_by_withdrawal_ens_name',
+        str_value: searched + '.bitfly.eth',
         num_value: 150
       }
     )
-    if (searchedIsPositiveInteger) {
-      response.data.push(
-        {
-          chain_id: 8453,
-          type: 'epochs',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 8453,
-          type: 'slots',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 8453,
-          type: 'blocks',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 8453,
-          type: 'validators_by_index',
-          num_value: Number(searched)
-        }
-      )
-    } else {
-      response.data.push(
-        {
-          chain_id: 8453,
-          type: 'tokens',
-          str_value: searched + 'USD'
-        },
-        {
-          chain_id: 8453,
-          type: 'tokens',
-          str_value: searched + '42'
-        },
-        {
-          chain_id: 8453,
-          type: 'tokens',
-          str_value: searched + 'Plus'
-        }
-      )
-    }
-    if (searchedIsPositiveInteger) {
-      response.data.push(
-        {
-          chain_id: 17000,
-          type: 'epochs',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 17000,
-          type: 'slots',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 17000,
-          type: 'blocks',
-          num_value: Number(searched)
-        },
-        {
-          chain_id: 17000,
-          type: 'validators_by_index',
-          num_value: Number(searched)
-        }
-      )
-    } else {
-      response.data.push(
-        {
-          chain_id: 17000,
-          type: 'tokens',
-          str_value: searched + ' Coin'
-        },
-        {
-          chain_id: 17000,
-          type: 'ens_names',
-          str_value: searched + 'hallo.eth',
-          hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
-        },
-        {
-          chain_id: 17000,
-          type: 'ens_names',
-          str_value: searched + '.bitfly.eth',
-          hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
-        },
-        {
-          chain_id: 17000,
-          type: 'ens_overview',
-          str_value: searched + 'hallo.eth'
-        },
-        {
-          chain_id: 17000,
-          type: 'ens_overview',
-          str_value: searched + '.bitfly.eth'
-        },
-        {
-          chain_id: 17000,
-          type: 'count_validators_by_withdrawal_ens_name',
-          str_value: searched + 'hallo.eth',
-          num_value: 2
-        },
-        {
-          chain_id: 17000,
-          type: 'count_validators_by_withdrawal_ens_name',
-          str_value: searched + '.bitfly.eth',
-          num_value: 150
-        }
-      )
-    }
   }
+
   return response
 }
 // *** END OF THE FUNCTION TO BE REMOVED WHEN THE API IS IMPLEMENTED ***
@@ -432,18 +476,18 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
-      <div v-else-if="isOrganizedResultsEmpty()">
+      <div v-else-if="areResultsEmpty(true)">
         {{ $t('search_engine.no_result') }}
       </div>
       <div v-else>
         <div id="filter-bar">
           <label><select
             id="filter-list"
-            v-model="userFilterForNetwork"
+            v-model="userFilters['network']"
             class="filter-button"
-            @change="filterAndRepopulate()"
+            @change="setNetworkButtonColor(); refreshDropDown()"
           >
-            <option value="all">All</option>
+            <option value="all">All networks</option>
             <option v-for="chain in getListOfChainIDs()" :key="chain" :value="String(chain)">
               {{ ChainInfo[chain].name }}
             </option>
@@ -451,18 +495,62 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           </label>
           <label>
             <input
-              v-model="userFilterForAddresses"
+              v-model="userFilters[Categories.Protocol]"
               class="filter-cb"
               true-value="y"
               false-value="n"
               type="checkbox"
-              @change="filterAndRepopulate()"
+              @change="refreshDropDown()"
+            >
+            <span class="filter-button">Protocol</span>
+          </label>
+          <label>
+            <input
+              v-model="userFilters[Categories.Addresses]"
+              class="filter-cb"
+              true-value="y"
+              false-value="n"
+              type="checkbox"
+              @change="refreshDropDown()"
             >
             <span class="filter-button">Addresses</span>
           </label>
+          <label>
+            <input
+              v-model="userFilters[Categories.Tokens]"
+              class="filter-cb"
+              true-value="y"
+              false-value="n"
+              type="checkbox"
+              @change="refreshDropDown()"
+            >
+            <span class="filter-button">Tokens</span>
+          </label>
+          <label>
+            <input
+              v-model="userFilters[Categories.NFTs]"
+              class="filter-cb"
+              true-value="y"
+              false-value="n"
+              type="checkbox"
+              @change="refreshDropDown()"
+            >
+            <span class="filter-button">NFTs</span>
+          </label>
+          <label>
+            <input
+              v-model="userFilters[Categories.Validators]"
+              class="filter-cb"
+              true-value="y"
+              false-value="n"
+              type="checkbox"
+              @change="refreshDropDown()"
+            >
+            <span class="filter-button">Validators</span>
+          </label>
         </div>
         <span v-if="populateDropDown">
-          <div v-for="network in completeResults.networks" :key="network.chainId" class="network-container">
+          <div v-for="network in results.organized.in.networks" :key="network.chainId" class="network-container">
             <div class="network-title">
               <h2>{{ ChainInfo[network.chainId].name }}</h2>
             </div>
@@ -545,10 +633,7 @@ h3 {
 }
 
 #filter-list {
-  background-color: var(--primary-color);
-}
-.all-networks {
-  background: var(--primary-color);
+  background: v-bind(networkButtonColor);
 }
 
 .filter-cb {

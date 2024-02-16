@@ -1,13 +1,17 @@
 import { ChainIDs } from '~/types/networks'
 
-export const enum Searchable {
-    Anything = '',
-    Validators = 'validators',
-    Accounts = 'accounts'
+export enum Categories {
+    Everything = '',
+    Tokens = 'tokens',
+    NFTs = 'NFTs',
+    Protocol = 'protocol',
+    Addresses = 'addresses',
+    Validators = 'validators'
 }
 
 export const enum ResultTypes {
     Tokens = 'tokens',
+    NFTs = 'nfts',
     Epochs = 'epochs',
     Slots = 'slots',
     Blocks = 'blocks',
@@ -35,7 +39,8 @@ interface TypeInfoFields {
   title: string,
   preLabels: string, // to be displayed before the ahead-result returned by the API,
   midLabels: string, // between the two values in the result...
-  postLabels: string // and after. These labels can be text, or HTML code for icons
+  postLabels: string, // and after. These labels can be text, or HTML code for icons
+  category: Categories
 }
 
 export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
@@ -43,133 +48,162 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     title: 'Tokens',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Tokens
+  },
+  [ResultTypes.NFTs]: {
+    title: 'NFTs',
+    preLabels: '',
+    midLabels: '',
+    postLabels: '',
+    category: Categories.NFTs
   },
   [ResultTypes.Epochs]: {
     title: 'Epochs',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.Slots]: {
     title: 'Slots',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.Blocks]: {
     title: 'Blocks',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.BlockRoots]: {
     title: 'Block roots',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.StateRoots]: {
     title: 'State roots',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.Transactions]: {
     title: 'Transactions',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.TransactionBatches]: {
     title: 'Transaction batches',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.StateBatches]: {
     title: 'State batches',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.Addresses]: {
     title: 'Addresses',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Addresses
   },
   [ResultTypes.Ens]: {
     title: 'ENS addresses',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Addresses
   },
   [ResultTypes.EnsOverview]: {
     title: 'Overview of an ENS domain',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Addresses
   },
   [ResultTypes.Graffiti]: {
     title: 'Graffiti',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Protocol
   },
   [ResultTypes.ValidatorsByIndex]: {
     title: 'Validators by index',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByPubkey]: {
     title: 'Validators by public key',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByDepositAddress]: {
     title: 'Validators by deposit address',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByDepositEnsName]: {
     title: 'Validators by ENS of the deposit address',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByWithdrawalCredential]: {
     title: 'Validators by withdrawal credential',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByWithdrawalAddress]: {
     title: 'Validators by withdrawal address',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByWithdrawalEnsName]: {
     title: 'Validators by ENS of the withdrawal address',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByGraffiti]: {
     title: 'Validators by graffiti',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   },
   [ResultTypes.ValidatorsByName]: {
     title: 'Validators by name',
     preLabels: '',
     midLabels: '',
-    postLabels: ''
+    postLabels: '',
+    category: Categories.Validators
   }
 }
 
@@ -200,7 +234,7 @@ export interface OrganizedResults {
 }
 
 // This function executes a guessing procedure, hopefully correct. It is the best doable until the API specification
-// is published to settle the structure of the response in every case. The logic will be improved that day.
+// is published to settle the structure of the response in every case. It will be improved that day if it is incorrect.
 // This function takes a single result element returned by the API and
 // organizes/standardizes it into information ready to be displayed in the drop-down of the search bar.
 // If the data from the API is empty or unexpected then the function returns '' in field `main`,
@@ -213,6 +247,7 @@ export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) :
 
   switch (apiResponseElement.type as ResultTypes) {
     case ResultTypes.Tokens :
+    case ResultTypes.NFTs :
     case ResultTypes.Ens :
     case ResultTypes.EnsOverview :
     case ResultTypes.Graffiti :
@@ -257,4 +292,16 @@ export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) :
   }
 
   return { main: String(apiResponseElement[mainField]), complement }
+}
+
+export function getListOfCategories () : Categories[] {
+  const list : Categories[] = []
+  const stop = Object.keys(Categories).length
+  const start = stop / 2
+
+  for (let i = start; i < stop; i++) {
+    list.push(Object.values(Categories)[i] as Categories)
+  }
+
+  return list
 }
