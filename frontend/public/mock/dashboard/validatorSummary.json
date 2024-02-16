@@ -6,8 +6,8 @@
   "data": [
     {
       "group_id": -1,
-      "efficiency_24h": 123.123,
-      "efficiency_7d": 12.13,
+      "efficiency_24h": 123,
+      "efficiency_7d": 12.1,
       "efficiency_31d": 15.123,
       "efficiency_all": 123.1233,
       "validators": [1, 123, 123]

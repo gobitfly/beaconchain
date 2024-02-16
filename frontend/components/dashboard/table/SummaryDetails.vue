@@ -19,14 +19,23 @@ watch(key, () => {
   getDetails(props.dashboardId, props.row.group_id)
 }, { immediate: true })
 
-const isWideEnough = computed(() => width.value >= 1400)
+const isWideEnough = computed(() => width.value >= 1180)
 const summary = computed(() => detailsMap.value[key.value])
 
 const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4
-  const list:SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
-  const addToList = (detail: SummaryDetail, tableIndex:number, prop: SummaryDetailsEfficiencyCombinedProp) => {
-    let row:SummaryRow | undefined
+  const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
+  const bold: Partial<Record<SummaryDetailsEfficiencyCombinedProp, boolean>> = {
+    efficiency_total: true,
+    attestation_total: true,
+    sync: true,
+    proposals: true,
+    slashings: true,
+    apr: true,
+    luck: true
+  }
+  const addToList = (detail: SummaryDetail, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
+    let row: SummaryRow | undefined
     if (tableIndex && isWideEnough.value) {
       row = list[0].find(row => row.prop === prop)
     }
@@ -35,7 +44,7 @@ const data = computed<SummaryRow[][]>(() => {
       if (prop === 'efficiency_total') {
         title = `${title} ${$t(`statistics.${detail.split('_')[1]}`)}`
       }
-      row = { title, prop, details: [], className: '' }
+      row = { title, prop, details: [], className: bold[prop] ? 'bold' : '' }
       list[tableIndex].push(row)
     }
     row?.details.push(detail)
@@ -56,21 +65,61 @@ const data = computed<SummaryRow[][]>(() => {
 </script>
 <template>
   <div v-if="summary">
-    <DataTable v-for="(table, index) in data" :key="index" class="no-header" :value="table">
-      <Column field="title" />
+    <DataTable v-for="(table, index) in data" :key="index" class="no-header bc-compact-table summary-details-table" :value="table">
+      <Column field="title">
+        <template #body="slotProps">
+          <span :class="slotProps.data.className">
+            {{ slotProps.data.title }}
+          </span>
+        </template>
+      </Column>
       <Column field="col_1">
         <template #body="slotProps">
-          <DashboardTableSummaryValue :class="slotProps.data.class" :data="summary" :detail="slotProps.data.details[0]" :property="slotProps.data.prop" :row="props.row" />
+          <DashboardTableSummaryValue
+            :class="slotProps.data.className"
+            :data="summary"
+            :detail="slotProps.data.details[0]"
+            :property="slotProps.data.prop"
+            :row="props.row"
+          />
         </template>
       </Column>
       <Column v-if="isWideEnough" field="col_2">
         <template #body="slotProps">
-          <DashboardTableSummaryValue :class="slotProps.data.class" :data="summary" :detail="slotProps.data.details[1]" :property="slotProps.data.prop" :row="props.row" />
+          <DashboardTableSummaryValue
+            :class="slotProps.data.className"
+            :data="summary"
+            :detail="slotProps.data.details[1]"
+            :property="slotProps.data.prop"
+            :row="props.row"
+          />
         </template>
       </Column>
       <Column v-if="isWideEnough" field="col_3">
         <template #body="slotProps">
-          <DashboardTableSummaryValue :class="slotProps.data.class" :data="summary" :detail="slotProps.data.details[2]" :property="slotProps.data.prop" :row="props.row" />
+          <DashboardTableSummaryValue
+            :class="slotProps.data.className"
+            :data="summary"
+            :detail="slotProps.data.details[2]"
+            :property="slotProps.data.prop"
+            :row="props.row"
+          />
+        </template>
+      </Column>
+      <Column v-if="isWideEnough" field="col_4">
+        <template #body="slotProps">
+          <DashboardTableSummaryValue
+            :class="slotProps.data.className"
+            :data="summary"
+            :detail="slotProps.data.details[3]"
+            :property="slotProps.data.prop"
+            :row="props.row"
+          />
+        </template>
+      </Column>
+      <Column field="space_filler">
+        <template #body>
+          <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
         </template>
       </Column>
     </DataTable>

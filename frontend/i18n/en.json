@@ -12,6 +12,12 @@
     "every_day": "Every day | Every {count} days",
     "id": "ID"
   },
+  "table": {
+    "first" : "First",
+    "last": "Last", 
+    "of": "of",
+    "showing": "Showing {from} to {to} of {total}"
+  },
   "validator_state": {
     "active": "active",
     "pending": "pending",

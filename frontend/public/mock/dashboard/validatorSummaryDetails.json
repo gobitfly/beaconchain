@@ -2,16 +2,16 @@
   "details_24h": {
     "attestation_head": {
       "count": {
-        "success": 123,
+        "success": 121,
         "failed": 32
       },
-      "earned": "11200000000000000",
+      "earned": "11100000000000000",
       "penalty": "3200000000000000",
       "validators": [1, 213, 1245, 453, 345, 23]
     },
     "attestation_source": {
       "count": {
-        "success": 123,
+        "success": 122,
         "failed": 32
       },
       "earned": "11200000000000000",
@@ -23,7 +23,7 @@
         "success": 123,
         "failed": 32
       },
-      "earned": "11200000000000000",
+      "earned": "11300000000000000",
       "penalty": "3200000000000000",
       "validators": [1, 213, 1245, 453, 345, 23]
     },
@@ -78,7 +78,7 @@
   "details_7d": {
     "attestation_head": {
       "count": {
-        "success": 123,
+        "success": 223,
         "failed": 32
       },
       "earned": "11200000000000000",
@@ -154,7 +154,7 @@
   "details_31d": {
     "attestation_head": {
       "count": {
-        "success": 123,
+        "success": 323,
         "failed": 32
       },
       "earned": "11200000000000000",
@@ -230,7 +230,7 @@
   "details_all": {
     "attestation_head": {
       "count": {
-        "success": 123,
+        "success": 423,
         "failed": 32
       },
       "earned": "11200000000000000",

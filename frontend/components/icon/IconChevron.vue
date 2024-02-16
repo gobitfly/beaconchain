@@ -1,13 +1,13 @@
 <script setup lang="ts">
 interface Props {
-  expanded?: boolean
+  direction?: 'left'| 'right'| 'top' | 'bottom'
 }
 const props = defineProps<Props>()
 </script>
 <template>
   <svg
     class="chevron"
-    :class="{expanded:props.expanded}"
+    :class="props.direction"
     xmlns="http://www.w3.org/2000/svg"
     width="14"
     height="10"
@@ -23,9 +23,17 @@ const props = defineProps<Props>()
 <style lang="scss" scoped>
 .chevron {
   transform: rotate(-90deg);
+  transition: transform 0.2s;
 
-  &.expanded {
+  &.bottom {
     transform: rotate(0);
+  }
+  &.left {
+    transform: rotate(90deg);
+  }
+
+  &.top {
+    transform: rotate(180deg);
   }
 }
 </style>

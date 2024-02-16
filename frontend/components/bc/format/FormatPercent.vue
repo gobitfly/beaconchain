@@ -21,7 +21,7 @@ const data = computed(() => {
     return { label, className }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
-  const config = { precision: props.precision ?? 2, fixed: props.fixed }
+  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2 }
   label = formatPercent(percent, config)
 
   if (props.colorBreakPoint) {

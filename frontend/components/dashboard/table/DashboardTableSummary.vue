@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { warn } from 'vue'
 import { type VDBSummaryTableRow, type VDBSummaryTableResponse } from '~/types/dashboard/summary'
 
 interface Props {
@@ -13,6 +14,14 @@ const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 
 const { overview } = storeToRefs(useValidatorDashboardOverview())
+
+const { width, isMobile } = useWindowSize()
+const colsVisible = computed(() => {
+  return {
+    validator: width.value >= 1400,
+    efficiency_plus: width.value >= 1180
+  }
+})
 
 const expandedRows = ref<VDBSummaryTableRow[]>([])
 
@@ -40,7 +49,15 @@ const mapGroup = (groupId?: number) => {
   if (!group) {
     return groupId
   }
+  if (isMobile.value) {
+    return group.name
+  }
   return `${group.name} (${$t('common.id')}: ${groupId})`
+}
+
+const setOffset = (value: number) => {
+  // TODO implement offset change and load data
+  warn('set offset', value)
 }
 
 </script>
@@ -48,60 +65,77 @@ const mapGroup = (groupId?: number) => {
   <DataTable
     v-model:expandedRows="expandedRows"
     lazy
-    paginator
     :total-records="1000"
     :page-link-size="10"
     :rows="5"
     :value="data"
     data-key="group_id"
+    class="summary_table"
   >
     <Column expander class="expander">
       <template #rowtogglericon="slotProps">
-        <IconChevron class="toggle" :expanded="slotProps.rowExpanded" />
+        <IconChevron class="toggle" :direction="slotProps.rowExpanded ? 'bottom' : 'right'" />
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
+    <Column field="group" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
       <template #body="slotProps">
         {{ mapGroup(slotProps.data.group_id) }}
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_24h')">
+    <Column field="efficiency_24h" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_24h')">
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_24h" :color-break-point="80" />
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_7d')">
+    <Column v-if="colsVisible.efficiency_plus" field="efficiency_7d" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_7d')">
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_7d" :color-break-point="80" />
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_31d')">
+    <Column v-if="colsVisible.efficiency_plus" field="efficiency_31d" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_31d')">
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_31d" :color-break-point="80" />
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_all')">
+    <Column v-if="colsVisible.efficiency_plus" field="efficiency_all" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_all')">
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_all" :color-break-point="80" />
       </template>
     </Column>
-    <Column field="group" :sortable="true" :header="$t('dashboard.validator.summary.col.validators')">
+    <Column v-if="colsVisible.validator" field="validators" :sortable="true" :header="$t('dashboard.validator.summary.col.validators')">
       <template #body="slotProps">
-        <DashboardTableValidators :validators="slotProps.data.validators" :group-id="slotProps.data.group_id" context="group" />
+        <DashboardTableValidators
+          :validators="slotProps.data.validators"
+          :group-id="slotProps.data.group_id"
+          context="group"
+        />
       </template>
     </Column>
     <template #expansion="slotProps">
       <DashboardTableSummaryDetails class="details" :row="slotProps.data" :dashboard-id="props.dashboardId" />
     </template>
+    <template #footer>
+      <BcTableOffsetPager :page-size="5" :total-count="999" :current-offset="10" @set-offset="setOffset" />
+    </template>
   </DataTable>
 </template>
 
 <style lang="scss" scoped>
-:deep(.expander){
+:deep(.expander) {
   width: 32px;
 }
 
-.details{
-  margin-left: 64px;
+.summary_table {
+
+  .details {
+    margin-left:  21px;
+  }
+
+  :deep(td:not(.expander)):not(:last-child),
+  :deep(th:not(.expander)):not(:last-child) {
+    width: 220px;
+    max-width: 220px;
+    min-width: 220px;
+  }
 }
 </style>
