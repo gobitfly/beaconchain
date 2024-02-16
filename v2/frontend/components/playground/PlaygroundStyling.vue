@@ -15,7 +15,7 @@
           Disabled
         </Button>
         <Button class="p-button-icon-only">
-          <IconPlus alt="Plus icon" />
+          <IconPlus alt="Plus icon" width="100%" height="100%" />
         </Button>
       </div>
     </TabPanel>

@@ -7,11 +7,15 @@
 
   color: var(--primary-contrast-color);
   background: var(--button-color-active);
-  border: 1px solid var(--button-color-active);
+  height: var(--default-button-height);
   padding: 8px 24px;
+  border: 1px solid var(--button-color-active);
+  border-radius: var(--border-radius);
+
+  display: flex;
+  justify-content: center;
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  border-radius: var(--border-radius);
 
   &.p-disabled {
     color: var(--button-text-color-disabled);
