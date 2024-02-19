@@ -25,6 +25,7 @@ const data = computed(() => {
         :value="props.success"
         :fixed="undefined"
         :color-break-point="80"
+        :full-on-empty-base="true"
       />
     </span>
 

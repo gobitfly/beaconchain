@@ -10,16 +10,19 @@
     --table-background-color: var(--container-background);
     .p-datatable-tbody {
       > tr {
-        > td {
-          @include standard_text;
-          text-align: left;
-          border-width: 0 0 0 0;
-          padding: 2px 7px;
-          &:first-child {
-            padding-left: 7px;
-          }
-          &:last-child {
-            padding-right: 7px;
+        @include standard_text;
+
+        &:not(.p-datatable-row-expansion){
+          > td {
+            text-align: left;
+            border-width: 0 0 0 0;
+            padding: 2px 7px;
+            &:first-child {
+              padding-left: 7px;
+            }
+            &:last-child {
+              padding-right: 7px;
+            }
           }
         }
       }

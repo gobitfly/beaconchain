@@ -33,7 +33,7 @@ onMounted(async () => {
       Latest Epoch: {{ formatNumber(latest?.currentEpoch) }}
     </div>
 
-    <TabView>
+    <TabView :lazy="true">
       <TabPanel header="Icons">
         <PlaygroundIcons />
       </TabPanel>

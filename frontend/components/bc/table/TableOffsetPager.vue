@@ -38,6 +38,11 @@ const last = () => {
   emit('setOffset', (lastPage.value - 1) * props.pageSize)
 }
 
+// in case the totalCount decreased
+watch(() => lastPage.value < current.value.page, () => {
+  last()
+})
+
 </script>
 <template>
   <div class="bc-pageinator">
@@ -51,10 +56,10 @@ const last = () => {
       <div class="item">
         {{ current.page }} {{ $t('table.of') }} {{ lastPage }}
       </div>
-      <div class="item button" :disabled="current.page === lastPage" @click="next">
+      <div class="item button" :disabled="current.page >= lastPage" @click="next">
         <IconChevron class="toggle" direction="right" />
       </div>
-      <div class="item button" :disabled="current.page === lastPage" @click="last">
+      <div class="item button" :disabled="current.page >= lastPage" @click="last">
         {{ $t('table.last') }}
       </div>
     </div>
@@ -106,6 +111,10 @@ const last = () => {
         }
 
         &[disabled="true"] {
+          pointer-events: none;
+        }
+
+        &[disabled="true"] {
           color: var(--text-color-disabled);
         }
       }
@@ -116,11 +125,10 @@ const last = () => {
       }
 
       &:last-child {
-        border-top-righ-radius: var(--border-radius);
+        border-top-right-radius: var(--border-radius);
         border-bottom-right-radius: var(--border-radius);
       }
     }
-
   }
 
   @media screen and (max-width: 1399px) {

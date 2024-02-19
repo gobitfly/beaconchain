@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { warn } from 'vue'
 import { type VDBSummaryTableRow, type VDBSummaryTableResponse } from '~/types/dashboard/summary'
 
 interface Props {
@@ -22,6 +21,8 @@ const colsVisible = computed(() => {
     efficiency_plus: width.value >= 1180
   }
 })
+
+const currentOffset = ref<number>(0)
 
 const expandedRows = ref<VDBSummaryTableRow[]>([])
 
@@ -56,8 +57,24 @@ const mapGroup = (groupId?: number) => {
 }
 
 const setOffset = (value: number) => {
-  // TODO implement offset change and load data
-  warn('set offset', value)
+  currentOffset.value = value
+}
+
+const allExpanded = computed(() => {
+  return !!data.value?.every(item => expandedRows.value[item.group_id])
+})
+
+const toggleAll = () => {
+  const wasExpanded = allExpanded.value
+  const rows = { ...expandedRows.value }
+  data.value?.forEach((item) => {
+    if (wasExpanded) {
+      delete rows[item.group_id]
+    } else {
+      rows[item.group_id] = item
+    }
+  })
+  expandedRows.value = rows
 }
 
 </script>
@@ -73,6 +90,9 @@ const setOffset = (value: number) => {
     class="summary_table"
   >
     <Column expander class="expander">
+      <template #header>
+        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click="toggleAll" />
+      </template>
       <template #rowtogglericon="slotProps">
         <IconChevron class="toggle" :direction="slotProps.rowExpanded ? 'bottom' : 'right'" />
       </template>
@@ -87,22 +107,42 @@ const setOffset = (value: number) => {
         <BcFormatPercent :percent="slotProps.data.efficiency_24h" :color-break-point="80" />
       </template>
     </Column>
-    <Column v-if="colsVisible.efficiency_plus" field="efficiency_7d" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_7d')">
+    <Column
+      v-if="colsVisible.efficiency_plus"
+      field="efficiency_7d"
+      :sortable="true"
+      :header="$t('dashboard.validator.summary.col.efficiency_7d')"
+    >
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_7d" :color-break-point="80" />
       </template>
     </Column>
-    <Column v-if="colsVisible.efficiency_plus" field="efficiency_31d" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_31d')">
+    <Column
+      v-if="colsVisible.efficiency_plus"
+      field="efficiency_31d"
+      :sortable="true"
+      :header="$t('dashboard.validator.summary.col.efficiency_31d')"
+    >
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_31d" :color-break-point="80" />
       </template>
     </Column>
-    <Column v-if="colsVisible.efficiency_plus" field="efficiency_all" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_all')">
+    <Column
+      v-if="colsVisible.efficiency_plus"
+      field="efficiency_all"
+      :sortable="true"
+      :header="$t('dashboard.validator.summary.col.efficiency_all')"
+    >
       <template #body="slotProps">
         <BcFormatPercent :percent="slotProps.data.efficiency_all" :color-break-point="80" />
       </template>
     </Column>
-    <Column v-if="colsVisible.validator" field="validators" :sortable="true" :header="$t('dashboard.validator.summary.col.validators')">
+    <Column
+      v-if="colsVisible.validator"
+      field="validators"
+      :sortable="true"
+      :header="$t('dashboard.validator.summary.col.validators')"
+    >
       <template #body="slotProps">
         <DashboardTableValidators
           :validators="slotProps.data.validators"
@@ -115,7 +155,7 @@ const setOffset = (value: number) => {
       <DashboardTableSummaryDetails class="details" :row="slotProps.data" :dashboard-id="props.dashboardId" />
     </template>
     <template #footer>
-      <BcTableOffsetPager :page-size="5" :total-count="999" :current-offset="10" @set-offset="setOffset" />
+      <BcTableOffsetPager :page-size="5" :total-count="999" :current-offset="currentOffset" @set-offset="setOffset" />
     </template>
   </DataTable>
 </template>
@@ -125,10 +165,14 @@ const setOffset = (value: number) => {
   width: 32px;
 }
 
+.toggle {
+  cursor: pointer;
+}
+
 .summary_table {
 
   .details {
-    margin-left:  21px;
+    margin-left: 21px;
   }
 
   :deep(td:not(.expander)):not(:last-child),

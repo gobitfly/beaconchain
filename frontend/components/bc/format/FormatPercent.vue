@@ -6,6 +6,7 @@ interface Props {
   hideEmptyValue?: boolean
   precision?: number
   fixed?: number
+  fullOnEmptyBase?: boolean
   colorBreakPoint?: number // if set then the percenage will be colored accordingly
 }
 
@@ -14,6 +15,12 @@ const props = defineProps<Props>()
 const data = computed(() => {
   let label: string | null = null
   let className = ''
+  if (props.base === 0 && props.fullOnEmptyBase) {
+    return {
+      label: '100%',
+      className: 'text-positive'
+    }
+  }
   if (props.percent === undefined && !props.base) {
     if (!props.hideEmptyValue) {
       label = '0%'
