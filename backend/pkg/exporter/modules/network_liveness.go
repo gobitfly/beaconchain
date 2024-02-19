@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/exporter/rpc"
 )
 
 func networkLivenessUpdater(client rpc.Client) {

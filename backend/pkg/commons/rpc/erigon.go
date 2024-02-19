@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 
@@ -491,6 +492,31 @@ type ParityTraceResult struct {
 	TransactionHash     string  `json:"transactionHash"`
 	TransactionPosition int     `json:"transactionPosition"`
 	Type                string  `json:"type"`
+}
+
+func (trace *ParityTraceResult) ConvertFields() ([]byte, []byte, []byte, string) {
+	var from, to, value []byte
+	tx_type := trace.Type
+
+	switch trace.Type {
+	case "create":
+		from = common.FromHex(trace.Action.From)
+		to = common.FromHex(trace.Result.Address)
+		value = common.FromHex(trace.Action.Value)
+	case "suicide":
+		from = common.FromHex(trace.Action.Address)
+		to = common.FromHex(trace.Action.RefundAddress)
+		value = common.FromHex(trace.Action.Balance)
+	case "call":
+		from = common.FromHex(trace.Action.From)
+		to = common.FromHex(trace.Action.To)
+		value = common.FromHex(trace.Action.Value)
+		tx_type = trace.Action.CallType
+	default:
+		spew.Dump(trace)
+		utils.LogFatal(nil, "unknown trace type", 0, map[string]interface{}{"trace type": trace.Type, "tx hash": trace.TransactionHash})
+	}
+	return from, to, value, tx_type
 }
 
 func (client *ErigonClient) TraceParity(blockNumber uint64) ([]*ParityTraceResult, error) {

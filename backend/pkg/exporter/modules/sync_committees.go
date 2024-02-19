@@ -8,8 +8,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/exporter/rpc"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
