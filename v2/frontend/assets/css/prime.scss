@@ -45,6 +45,11 @@
       @include fonts.big_text;
     }
   }
+  &.p-dialog-header-hidden {
+    .p-dialog-header {
+      display: none;
+    }
+  }
 }
 
 // InputText
