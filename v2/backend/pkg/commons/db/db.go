@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -740,66 +739,6 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 	_, err = tx.Exec("delete from blocks where slot in (select slot from blocks where epoch >= $1 group by slot having count(*) > 1) and blockroot = $2;", lookback, []byte{0x1})
 	if err != nil {
 		return fmt.Errorf("error cleaning up blocks table: %w", err)
-	}
-	return nil
-}
-
-func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_graffitiwall").Observe(time.Since(start).Seconds())
-	}()
-
-	stmtGraffitiwall, err := tx.Prepare(`
-		INSERT INTO graffitiwall (
-            x,
-            y,
-            color,
-            slot,
-            validator
-        )
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (slot) DO UPDATE SET
-            x = EXCLUDED.x,
-            y = EXCLUDED.y,
-            color = EXCLUDED.color,
-            validator = EXCLUDED.validator;
-		`)
-	if err != nil {
-		return err
-	}
-	defer stmtGraffitiwall.Close()
-
-	regexes := [...]*regexp.Regexp{
-		regexp.MustCompile("graffitiwall:([0-9]{1,3}):([0-9]{1,3}):#([0-9a-fA-F]{6})"),
-		regexp.MustCompile("gw:([0-9]{3})([0-9]{3})([0-9a-fA-F]{6})"),
-	}
-
-	var matches []string
-	for _, regex := range regexes {
-		matches = regex.FindStringSubmatch(string(block.Graffiti))
-		if len(matches) > 0 {
-			break
-		}
-	}
-	if len(matches) == 4 {
-		x, err := strconv.Atoi(matches[1])
-		if err != nil || x >= 1000 {
-			return fmt.Errorf("error parsing x coordinate for graffiti %v of block %v", string(block.Graffiti), block.Slot)
-		}
-
-		y, err := strconv.Atoi(matches[2])
-		if err != nil || y >= 1000 {
-			return fmt.Errorf("error parsing y coordinate for graffiti %v of block %v", string(block.Graffiti), block.Slot)
-		}
-		color := matches[3]
-
-		logger.Infof("set graffiti at %v - %v with color %v for slot %v by validator %v", x, y, color, block.Slot, block.Proposer)
-		_, err = stmtGraffitiwall.Exec(x, y, color, block.Slot, block.Proposer)
-
-		if err != nil {
-			return fmt.Errorf("error executing graffitiwall statement: %w", err)
-		}
 	}
 	return nil
 }

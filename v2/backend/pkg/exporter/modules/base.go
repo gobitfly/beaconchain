@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/gobitfly/beaconchain/pkg/exporter/rpc"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 
-	"github.com/gobitfly/beaconchain/pkg/exporter/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 
 	"fmt"
 	"strconv"
