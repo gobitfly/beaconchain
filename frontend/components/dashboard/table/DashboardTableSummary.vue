@@ -22,7 +22,7 @@ const colsVisible = computed(() => {
   }
 })
 
-const currentOffset = ref<number>(0)
+const cursor = ref<number | string | undefined>()
 
 const expandedRows = ref<VDBSummaryTableRow[]>([])
 
@@ -56,8 +56,8 @@ const mapGroup = (groupId?: number) => {
   return `${group.name} (${$t('common.id')}: ${groupId})`
 }
 
-const setOffset = (value: number) => {
-  currentOffset.value = value
+const setCursor = (value?: number | string) => {
+  cursor.value = value
 }
 
 const allExpanded = computed(() => {
@@ -155,7 +155,7 @@ const toggleAll = () => {
       <DashboardTableSummaryDetails class="details" :row="slotProps.data" :dashboard-id="props.dashboardId" />
     </template>
     <template #footer>
-      <BcTableOffsetPager :page-size="5" :total-count="999" :current-offset="currentOffset" @set-offset="setOffset" />
+      <BcTablePager :page-size="5" :paging="summary?.paging" :cursor="cursor" @set-cursor="setCursor" />
     </template>
   </DataTable>
 </template>

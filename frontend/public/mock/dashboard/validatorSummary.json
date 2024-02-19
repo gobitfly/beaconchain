@@ -1,7 +1,6 @@
 {
   "paging": {
-    "prev_cursor": "prevXYZ",
-    "next_cursor": "nextXYZ"
+    "total_count": 999
   },
   "data": [
     {
