@@ -29,6 +29,10 @@ type Address struct {
 }
 
 type Luck struct {
+	Proposal LuckItem `json:"proposal"`
+	Sync     LuckItem `json:"sync"`
+}
+type LuckItem struct {
 	Percent  float64       `json:"percent"`
 	Expected time.Time     `json:"expected"`
 	Average  time.Duration `json:"average"`
@@ -47,6 +51,22 @@ type ClElValue struct {
 type ClElValueFloat struct {
 	El float64 `json:"el"`
 	Cl float64 `json:"cl"`
+}
+
+type PeriodicClElValues struct {
+	Total ClElValue `json:"total"`
+	Day   ClElValue `json:"day"`
+	Week  ClElValue `json:"week"`
+	Month ClElValue `json:"month"`
+	Year  ClElValue `json:"year"`
+}
+
+type PeriodicClElValuesFloat struct {
+	Total ClElValueFloat `json:"total"`
+	Day   ClElValueFloat `json:"day"`
+	Week  ClElValueFloat `json:"week"`
+	Month ClElValueFloat `json:"month"`
+	Year  ClElValueFloat `json:"year"`
 }
 
 type HighchartsSeries struct {

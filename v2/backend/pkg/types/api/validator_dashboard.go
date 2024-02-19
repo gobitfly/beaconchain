@@ -7,6 +7,35 @@ import (
 // ------------------------------------------------------------
 // Overview
 
+type VDBOverviewResponse struct {
+	Groups     []VDBOverviewGroup      `json:"groups"`
+	Validators VDBOverviewValidators   `json:"validators"`
+	Efficiency VDBOverviewEfficiency   `json:"efficiency"`
+	Rewards    PeriodicClElValues      `json:"rewards"`
+	Luck       Luck                    `json:"luck"`
+	Apr        PeriodicClElValuesFloat `json:"apr"`
+}
+
+type VDBOverviewValidators struct {
+	Total   uint64 `json:"total"`
+	Active  uint64 `json:"active"`
+	Pending uint64 `json:"pending"`
+	Exited  uint64 `json:"exited"`
+	Slashed uint64 `json:"slashed"`
+}
+
+type VDBOverviewEfficiency struct {
+	Total       float64 `json:"total"`
+	Attestation float64 `json:"attestation"`
+	Proposal    float64 `json:"proposal"`
+	Sync        float64 `json:"sync"`
+}
+
+type VDBOverviewGroup struct {
+	Id   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
 // ------------------------------------------------------------
 // Slot Viz
 
@@ -48,19 +77,23 @@ type VDBSummaryTableResponse struct {
 type VDBSummaryTableRow struct {
 	GroupId uint64 `json:"group_id"`
 
-	Efficiency24h float64 `json:"efficiency_24h"`
-	Efficiency7d  float64 `json:"efficiency_7d"`
-	Efficiency31d float64 `json:"efficiency_31d"`
-	EfficiencyAll float64 `json:"efficiency_all"`
+	EfficiencyDay   float64 `json:"efficiency_day"`
+	EfficiencyWeek  float64 `json:"efficiency_week"`
+	EfficiencyMonth float64 `json:"efficiency_month"`
+	EfficiencyTotal float64 `json:"efficiency_total"`
 
 	Validators []uint64 `json:"validators"`
 }
 
 type VDBGroupSummaryResponse struct {
-	Details24h VDBGroupSummaryColumn `json:"details_24h"`
-	Details7d  VDBGroupSummaryColumn `json:"details_7d"`
-	Details31d VDBGroupSummaryColumn `json:"details_31d"`
-	DetailsAll VDBGroupSummaryColumn `json:"details_all"`
+	Data VDBGroupSummary `json:"data"`
+}
+
+type VDBGroupSummary struct {
+	DetailsDay   VDBGroupSummaryColumn `json:"details_day"`
+	DetailsWeek  VDBGroupSummaryColumn `json:"details_week"`
+	DetailsMonth VDBGroupSummaryColumn `json:"details_month"`
+	DetailsTotal VDBGroupSummaryColumn `json:"details_total"`
 }
 
 type VDBGroupSummaryColumn struct {
@@ -72,13 +105,12 @@ type VDBGroupSummaryColumn struct {
 
 	SyncCommittee VDBGroupSummaryColumnItem `json:"sync"`
 	Proposals     VDBGroupSummaryColumnItem `json:"proposals"`
-	Slashed       VDBGroupSummaryColumnItem `json:"slashed"`
+	Slashed       VDBGroupSummaryColumnItem `json:"slashed"` // Failed slashings are count of validators in the group that were slashed
 
 	Apr    ClElValueFloat `json:"apr"`
 	Income ClElValue      `json:"income"`
 
-	ProposalLuck Luck `json:"proposal_luck"`
-	SyncLuck     Luck `json:"sync_luck"`
+	Luck Luck `json:"luck"`
 }
 
 type VDBGroupSummaryColumnItem struct {
@@ -103,6 +135,10 @@ type VDBRewardsTableRow struct {
 }
 
 type VDBGroupRewardsResponse struct {
+	Data VDBGroupRewards `json:"data"`
+}
+
+type VDBGroupRewards struct {
 	AttestationSource VDBGroupRewardsDetails `json:"attestation_source"`
 	AttestationTarget VDBGroupRewardsDetails `json:"attestation_target"`
 	AttestationHead   VDBGroupRewardsDetails `json:"attestation_head"`
@@ -161,7 +197,21 @@ type VDBBlocksTableRow struct {
 // ------------------------------------------------------------
 // Heatmap Tab
 
-// TODO Highcharts Object
+type VDBHeatmapResponse struct {
+	Data VDBHeatmap `json:"data"`
+}
+
+type VDBHeatmap struct {
+	Epochs   []uint64         `json:"epochs" ts_doc:"X-Axis Categories"`
+	GroupIds []uint64         `json:"group_ids" ts_doc:"Y-Axis Categories"`
+	Data     []VDBHeatmapCell `json:"data"`
+}
+
+type VDBHeatmapCell struct {
+	X     uint64  `json:"x" ts_doc:"Epoch"`
+	Y     uint64  `json:"y" ts_doc:"Group ID"`
+	Value float64 `json:"value" ts_doc:"Attestaton Rewards"`
+}
 
 type VDBHeatmapTooltipResponse struct {
 	Epoch uint64 `json:"epoch"`
