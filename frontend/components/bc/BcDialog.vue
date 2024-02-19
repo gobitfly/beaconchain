@@ -15,7 +15,14 @@ const visible = defineModel<boolean>() // requires two way binding as both the p
     :dismissable-mask="true"
     :closable="false"
     :draggable="false"
+    :class="{'p-dialog-header-hidden':!props.header && !$slots.header}"
   >
+    <template #header>
+      <slot name="header" />
+    </template>
     <slot />
+    <template #footer>
+      <slot name="footer" />
+    </template>
   </Dialog>
 </template>
