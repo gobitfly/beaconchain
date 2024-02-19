@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 
 	"fmt"
@@ -35,7 +36,40 @@ func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	}
 }
 
-func (d *slotExporterData) Start(args []any) error {
+var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64
+
+func (d *slotExporterData) Start(args []any) (err error) {
+	latestEpoch, latestSlot, finalizedEpoch, latestProposed = 0, 0, 0, 0
+	// cache handling
+	defer func() {
+		if err == nil {
+			if latestEpoch > 0 && cache.LatestEpoch.Get() < latestEpoch {
+				err := cache.LatestEpoch.Set(latestEpoch)
+				if err != nil {
+					utils.LogError(err, "error setting latestEpoch in cache", 0)
+				}
+			}
+			if latestSlot > 0 && cache.LatestSlot.Get() < latestSlot {
+				err := cache.LatestSlot.Set(latestSlot)
+				if err != nil {
+					utils.LogError(err, "error setting latestSlot in cache", 0)
+				}
+			}
+			if finalizedEpoch > 0 && cache.LatestFinalizedEpoch.Get() < finalizedEpoch {
+				err := cache.LatestFinalizedEpoch.Set(finalizedEpoch)
+				if err != nil {
+					utils.LogError(err, "error setting latestFinalizedEpoch in cache", 0)
+				}
+			}
+			if latestProposed > 0 && cache.LatestProposedSlot.Get() < latestProposed {
+				err := cache.LatestProposedSlot.Set(latestProposed)
+				if err != nil {
+					utils.LogError(err, "error setting latestProposedSlot in cache", 0)
+				}
+			}
+		}
+	}()
+
 	// get the current chain head
 	head, err := d.Client.GetChainHead()
 
@@ -126,6 +160,9 @@ func (d *slotExporterData) Start(args []any) error {
 					return fmt.Errorf("error committing tx: %w", err)
 				}
 
+				latestEpoch = utils.EpochOfSlot(slot)
+				latestSlot = slot
+
 				return nil
 			}
 		}
@@ -192,6 +229,9 @@ func (d *slotExporterData) Start(args []any) error {
 				} else {
 					logger.Printf("updating epoch %v with participation rate %v", epoch, epochParticipationStats.GlobalParticipationRate)
 					err := db.UpdateEpochStatus(epochParticipationStats, tx)
+					if epochParticipationStats.Finalized && epochParticipationStats.Epoch > finalizedEpoch {
+						finalizedEpoch = epochParticipationStats.Epoch
+					}
 
 					if err != nil {
 						return err
@@ -224,6 +264,9 @@ func (d *slotExporterData) Start(args []any) error {
 	if err != nil {
 		return fmt.Errorf("error committing tx: %w", err)
 	}
+
+	latestEpoch = utils.EpochOfSlot(head.HeadSlot)
+	latestSlot = head.HeadSlot
 
 	return nil
 }
@@ -402,6 +445,12 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 	err = edb.SaveBlock(block, false, tx)
 	if err != nil {
 		return fmt.Errorf("error saving slot to the db: %w", err)
+	}
+
+	if block.Status == 1 {
+		if latestProposed < block.Slot {
+			latestProposed = block.Slot
+		}
 	}
 	// time.Sleep(time.Second)
 

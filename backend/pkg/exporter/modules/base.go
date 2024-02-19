@@ -84,7 +84,7 @@ func StartAll(context ModuleContext) {
 }
 
 func GetModuleContext() (ModuleContext, error) {
-	cl := consapi.NewNodeDataRetriever(utils.Config.NodeJobsProcessor.ClEndpoint)
+	cl := consapi.NewNodeDataRetriever("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
 	spec, err := cl.GetSpec()
 	if err != nil {

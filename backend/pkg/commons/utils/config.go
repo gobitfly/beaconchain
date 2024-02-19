@@ -46,6 +46,12 @@ func readConfigSecrets(cfg *types.Config) error {
 	return ProcessSecrets(cfg)
 }
 
+func confSanityCheck(cfg *types.Config) {
+	if cfg.Chain.ClConfig.SlotsPerEpoch == 0 || cfg.Chain.ClConfig.SecondsPerSlot == 0 {
+		LogFatal(nil, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
+	}
+}
+
 func ReadConfig(cfg *types.Config, path string) error {
 	configPathFromEnv := os.Getenv("BEACONCHAIN_CONFIG")
 
@@ -224,6 +230,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 		logrus.Infof("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
+
+	confSanityCheck(cfg)
 
 	logrus.WithFields(logrus.Fields{
 		"genesisTimestamp":       cfg.Chain.GenesisTimestamp,
