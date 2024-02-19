@@ -91,7 +91,8 @@ func CheckNameNotEmpty(name string) error {
 }
 
 // check request structure (body contains valid json and all required parameters are present)
-func CheckAndGetJson(sc *jsonschema.Schema, r io.Reader, data interface{}) error {
+func CheckAndGetJson(r io.Reader, data interface{}) error {
+	sc := jsonschema.Reflect(data)
 	var i interface{}
 	if json.NewDecoder(r).Decode(&i) != nil {
 		return RequestError{http.StatusBadRequest, errors.New("Request is not in JSON format")}
