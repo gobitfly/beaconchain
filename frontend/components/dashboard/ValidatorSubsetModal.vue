@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 interface Props {
   caption?: string,
+  validators: number[],
 }
 const props = defineProps<Props>()
 
@@ -11,10 +12,18 @@ const visible = defineModel<boolean>()
 <template>
   <BcDialog v-model="visible" :header="header">
     <div>
-      {{ props.caption }} Search Element
+      <span class="">
+        {{ props.caption }}
+      </span> Search Element
     </div>
     <div>
-      Validator List and copy button
+      <span v-for="(v, i) in props.validators" :key="v">
+        <NuxtLink :to="`/validator/${v}`" class="link">
+          {{ v }}
+        </NuxtLink>
+        <span v-if="i !== props.validators.length - 1">, </span>
+      </span>
+      Copy button<br>
     </div>
   </BcDialog>
 </template>
