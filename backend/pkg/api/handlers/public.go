@@ -31,7 +31,7 @@ func PublicGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func PublicDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +39,7 @@ func PublicPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func PublicDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func PublicGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func PublicDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func PublicPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 }
 
 func PublicDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +87,7 @@ func PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,7 @@ func PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) 
 }
 
 func PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +115,7 @@ func PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request)
 }
 
 func PublicDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	ReturnNoContent(w, r)
+	ReturnNoContent(w)
 }
 
 func PublicGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {

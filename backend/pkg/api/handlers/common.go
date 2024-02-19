@@ -176,6 +176,7 @@ func CheckNetwork(network string) error {
 	if network != ETHEREUM && network != GNOSIS {
 		return errors.New(fmt.Sprintf(`Given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ETHEREUM, GNOSIS))
 	}
+	return nil
 }
 
 // --------------------------------------
@@ -196,7 +197,7 @@ func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) 
 
 func returnError(w http.ResponseWriter, code int, err error) {
 	response := apitypes.ApiErrorResponse{
-		Message: err.Error(),
+		Error: err.Error(),
 	}
 	writeResponse(w, code, response)
 }

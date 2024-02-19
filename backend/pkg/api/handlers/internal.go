@@ -137,7 +137,12 @@ func InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	success := false
 	if success {
 		response := apitypes.ApiResponse{
-			Data: apitypes.VDBOverviewPostResponse{"01_981723", 1, req.Name /*, time.Now()*/},
+			Data: struct {
+				Id      string `json:"id"`
+				Network uint64 `json:"network"`
+				Name    string `json:"name"`
+				// CreatedAt time.Time `json:created_at`
+			}{"01_981723", 1, req.Name /*, time.Now()*/},
 		}
 		ReturnCreated(w, response)
 	} else {
