@@ -6,6 +6,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	ctypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
@@ -14,33 +15,37 @@ type dashboardData struct {
 	ModuleContext
 }
 
-func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterfaceEpoch {
+func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	return &dashboardData{
 		ModuleContext: moduleContext,
 	}
 }
 
-func (d *dashboardData) Start(epoch int) {
+func (d *dashboardData) Start(args []any) error {
+	epoch, ok := args[0].(int)
+	if !ok {
+		return errors.New("invalid argument")
+	}
+
 	spec, err := d.CL.GetSpec()
 	if err != nil {
-		utils.LogFatal(err, "can not get spec", 0)
-		return
+		return err
 	}
 
 	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
 	if data == nil {
-		return
+		return errors.New("can not get data")
 	}
 
 	domain, err := utils.GetSigningDomain()
 	if err != nil {
-		utils.LogFatal(err, "can not get signing domain", 0)
-		return
+		return err
 	}
 
 	process(data, domain)
 
 	// todo store in db
+	return nil
 }
 
 type Data struct {

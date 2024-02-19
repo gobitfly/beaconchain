@@ -1,57 +1,99 @@
+@use "~/assets/css/fonts.scss";
 @import "~/assets/css/prime_datatable.scss";
 // Button
-// TODO: Check spacings / sizes, Add different button versions we use
-
+// https://primevue.org/button/
 .p-button {
-  font-family: var(--roboto-family);
-  font-weight: var(--roboto-medium);
+  @include fonts.button_text;
+
   color: var(--primary-contrast-color);
-  background: var(--primary-color);
-  border: 1px solid var(--primary-color);
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
-    box-shadow 0.2s;
+  background: var(--button-color-active);
+  height: var(--default-button-height);
+  padding: 8px 24px;
+  border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
 
+  display: flex;
+  justify-content: center;
+
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+
+  &.p-disabled {
+    color: var(--button-text-color-disabled);
+    background: var(--button-color-disabled);
+    border-color: var(--button-color-disabled);
+  }
   &:not(:disabled):hover {
-    background: var(--primary-color);
-    color: var(--primary-contrast-color);
-    border-color: var(--primary-color);
+    background: var(--button-color-hover);
+    border-color: var(--button-color-hover);
   }
   &:not(:disabled):active {
-    background: var(--primary-color);
-    color: var(--primary-contrast-color);
-    border-color: var(--primary-color);
+    background: var(--button-color-pressed);
+    border-color: var(--button-color-pressed);
   }
 
-  &.p-button-raised {
-    box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2),
-      0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  &.p-button-icon-only {
+    padding: 8px 10px;
+  }
+}
+
+// InputText
+// https://primevue.org/inputtext/
+.p-inputtext {
+  @include fonts.standard_text;
+  color: var(--input-active-text-color);
+  background: var(--input-background);
+  padding: 4px 7px;
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  appearance: none;
+
+  ::placeholder {
+    color: var(--input-placeholder-text-color);
   }
 
-  &.p-button-rounded {
-    border-radius: 2rem;
+  &:enabled:focus {
+    outline: 0 none;
+    outline-offset: 0;
   }
+}
 
-  &.p-button-sm {
-    font-size: 0.875rem;
-    padding: 0.65625rem 1.09375rem;
+// TabView
+// https://primevue.org/tabview/
+.p-tabview {  
+  .p-tabview-nav {
+    li {
+      margin-right: 0;
+    
+      .p-tabview-nav-link {
+        border: solid transparent 1px;
+        border-top-right-radius: var(--border-radius);
+        border-top-left-radius: var(--border-radius);
+        padding: 10px 15px;
+        color: var(--link-color);
+      }
+      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
+        color: var(--link-color);
+      }
+      &.p-highlight .p-tabview-nav-link {
+        background: var(--container-background);
+        border-color: var(--container-border-color);
+        color: var(--container-color);
+      }
+      &.p-disabled .p-tabview-nav-link {
+        color: var(--text-color-disabled);
+      }
+    }
   }
-
-  &.p-button-lg {
-    font-size: 1.25rem;
-    padding: 0.9375rem 1.5625rem;
-  }
-
-  .p-button-label {
-    transition-duration: 0.2s;
+  .p-tabview-panels {
+    border: 1px solid var(--container-border-color);
+    border-radius: var(--border-radius);
   }
 }
 
 // Toast
+// https://primevue.org/toast/
 // TODO: apply our styles
-
 .p-toast {
   opacity: 1;
 }
@@ -137,75 +179,4 @@
 .p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
 .p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
   color: #ff5757;
-}
-
-// InputText
-// TODO: Apply our styles
-
-.p-inputtext {
-  font-family: var(--font-family);
-  font-feature-settings: var(--font-feature-settings, normal);
-  font-size: 1rem;
-  color: #4b5563;
-  background: #ffffff;
-  padding: 0.75rem 0.75rem;
-  border: 1px solid #d1d5db;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
-    box-shadow 0.2s;
-  appearance: none;
-  border-radius: var(--border-radius);
-
-  &:enabled:hover {
-    border-color: var(--primary-color);
-  }
-  &:enabled:focus {
-    outline: 0 none;
-    outline-offset: 0;
-    box-shadow: 0 0 0 0.2rem #a7f3d0;
-    border-color: var(--primary-color);
-  }
-  &.p-invalid.p-component {
-    border-color: #e24c4c;
-  }
-  &.p-inputtext-sm {
-    font-size: 0.875rem;
-    padding: 0.65625rem 0.65625rem;
-  }
-  &.p-inputtext-lg {
-    font-size: 1.25rem;
-    padding: 0.9375rem 0.9375rem;
-  }
-}
-
-// TabView
-.p-tabview {  
-  .p-tabview-nav {
-    li {
-      margin-right: 0;
-    
-      .p-tabview-nav-link {
-        border: solid transparent 1px;
-        border-top-right-radius: var(--border-radius);
-        border-top-left-radius: var(--border-radius);
-        padding: 10px 15px;
-        color: var(--link-color);
-        transition: box-shadow 0.2s;
-      }
-      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
-        color: var(--link-color);
-      }
-      &.p-highlight .p-tabview-nav-link {
-        background: var(--container-background);
-        border-color: var(--container-border-color);
-        color: var(--container-color);
-      }
-      &.p-disabled .p-tabview-nav-link {
-        color: var(--text-color-disabled);
-      }
-    }
-  }
-  .p-tabview-panels {
-    border: 1px solid var(--container-border-color);
-    border-radius: var(--border-radius);
-  }
 }

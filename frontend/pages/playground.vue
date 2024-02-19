@@ -40,16 +40,18 @@ onMounted(async () => {
       <TabPanel header="Conversion">
         <PlaygroundConversion />
       </TabPanel>
+      <TabPanel header="Styling">
+        <PlaygroundStyling />
+      </TabPanel>
       <TabPanel header="Ads">
         <PlaygroundAds />
       </TabPanel>
       <TabPanel header="Slot Viz">
         <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
       </TabPanel>
-      <TabPanel header="Sumary">
+      <TabPanel header="Summary">
         <PlaygroundDashboardValidatorSummary />
       </TabPanel>
-      <TabPanel :disabled="true" header="Disabled" />
     </TabView>
 
     <BcFooterMainFooter />

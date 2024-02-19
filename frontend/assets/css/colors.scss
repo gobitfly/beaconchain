@@ -1,17 +1,18 @@
 :root {
+  --grey: #a5a5a5;
   --grey-1: #e9e9e9;
   --grey-4: #f4f4f4;
   --light-grey: #f0f0f0;
   --light-grey-2: #DFDFDF;
   --light-grey-3: #d3d3d3;
   --dark-grey: #5c4e4e;
+  --very-dark-grey: #362f32;
   --asphalt: #484f56;
   --graphite: #343a40;
   --almost-black: #232024;
   --light-black: #2a262c;
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
-  --primary-color: #f89811;
   --blue: #2e82ae;
   --light-blue: #66bce9;
   --flashy-green: #90ed7d;
@@ -20,17 +21,32 @@
   --flashy-red: #f3454a;
   --light-red: #d42127;
   --yellow: #ffd600;
+  --primary-color: #f89811;
+  --primary-orange: #ffaa31;  
+  --primary-orange-hover: #ff951a;  
+  --primary-orange-pressed: #ffb346;  
 
   --primary-contrast-color: var(--grey-4);
 
   --background-color: var(--grey-1);
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
-  --text-color-disabled: #a5a5a5; // TODO: Should this be a color variable?
+  --text-color-disabled: var(--grey);
+
+  --button-color-active: var(--primary-orange);
+  --button-color-hover: var(--primary-orange-hover);
+  --button-color-pressed: var(--primary-orange-pressed);
+  --button-color-disabled: var(--grey);
+  --button-text-color-disabled: var(--grey-4);
 
   --container-background: var(--grey-4);
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
+
+  --input-background: var(--grey-4);
+  --input-border-color: var(--light-grey-3);
+  --input-active-text-color: var(--light-black);
+  --input-placeholder-text-color: var(--grey);
 
   --link-color: var(--blue);
 
@@ -38,18 +54,29 @@
   --positive-color: var(--light-green);
 
   &.dark-mode {
-    --primary-color: #ffaa31;
+    --primary-color: -var(--primary-orange);
     --primary-contrast-color: var(--light-black);
 
     --background-color: var(--almost-black);
 
     --text-color: var(--light-grey);
     --text-color-inverted: var(--light-black);
-    --text-color-disabled: #a5a5a5;
+    --text-color-disabled: var(--grey);
+
+    --button-color-active: var(--primary-orange);
+    --button-color-hover: var(--primary-orange-hover);
+    --button-color-pressed: var(--primary-orange-pressed);
+    --button-color-disabled: var(--grey);
+    --button-text-color-disabled: var(--light-grey);
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
     --container-border-color: var(--dark-grey);
+
+    --input-background: var(--very-dark-grey);
+    --input-border-color: var(--dark-grey);
+    --input-active-text-color: var(--light-grey);
+    --input-placeholder-text-color: var(--grey);
 
     --link-color: var(--light-blue);
 
