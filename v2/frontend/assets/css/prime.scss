@@ -40,7 +40,7 @@
 // https://primevue.org/inputtext/
 .p-inputtext {
   @include fonts.standard_text;
-  color: var(--grey);
+  color: var(--input-active-text-color);
   background: var(--input-background);
   padding: 4px 7px;
   border: 1px solid var(--input-border-color);
@@ -48,8 +48,11 @@
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   appearance: none;
 
+  ::placeholder {
+    color: var(--input-placeholder-text-color);
+  }
+
   &:enabled:focus {
-    color: var(--input-active-text-color);
     outline: 0 none;
     outline-offset: 0;
   }
