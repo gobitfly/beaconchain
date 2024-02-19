@@ -4,7 +4,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const visible = defineModel<boolean>()
+const visible = defineModel<boolean>() // requires two way binding as both the parent (only the parent can open the modal) and the component itself (clicking outside the modal closes it) need to update the visibility
 </script>
 
 <template>
