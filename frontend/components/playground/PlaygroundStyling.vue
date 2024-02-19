@@ -1,11 +1,43 @@
+<script setup lang="ts">
+const emptyModalVisibility = ref(false)
+const headerPropModalVisibility = ref(false)
+const slotModalVisibility = ref(false)
+</script>
+
 <template>
+  <BcDialog v-model="emptyModalVisibility">
+    <div class="element_container">
+      <Button label="Close" @click="emptyModalVisibility = false" />
+    </div>
+  </BcDialog>
+  <BcDialog v-model="headerPropModalVisibility" header="Text via Header Prop">
+    <div class="element_container">
+      <Button label="Close" @click="headerPropModalVisibility = false" />
+    </div>
+  </BcDialog>
+  <BcDialog v-model="slotModalVisibility" header="HeaderProp - Ignored as header slot wins">
+    <template #header>
+      Utilizing the header slot for custom content
+    </template>
+    <div>
+      Utilizing the default slot for custom content
+      <br>
+      <Button label="Close" @click="slotModalVisibility = false" />
+    </div>
+    <template #footer>
+      Utilizing the footer slot for custom content
+    </template>
+  </BcDialog>
+
   <TabView>
     <TabPanel header="Buttons">
       <div class="element_container">
         <Button>
-          Simple Text Button
+          Text Button
         </Button>
-        <Button label="Labeled" />
+        <Button label="Empty Modal" @click="emptyModalVisibility = true" />
+        <Button label="Header Prop Modal" @click="headerPropModalVisibility = true" />
+        <Button label="Slots Modal" @click="slotModalVisibility = true" />
         <Button>
           <NuxtLink to="/dashboard">
             Dashboard Link

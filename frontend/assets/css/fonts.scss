@@ -122,10 +122,14 @@ h1 {
   font-weight: var(--header1_font_weight);
 }
 
-.big_text{
+@mixin big_text(){
   font-family: var(--big_text_font_family);
   font-size: var(--big_text_font_size);
   font-weight: var(--big_text_font_weight);
+}
+
+.big_text{
+  @include big_text
 }
 
 .big_text_label{
