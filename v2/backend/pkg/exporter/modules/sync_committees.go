@@ -36,7 +36,7 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 	for _, p := range dbPeriods {
 		dbPeriodsMap[p] = true
 	}
-	currEpoch := cache.LatestFinalizedEpoch()
+	currEpoch := cache.LatestFinalizedEpoch.Get()
 	if currEpoch > 0 { // guard against underflows
 		currEpoch = currEpoch - 1
 	}
