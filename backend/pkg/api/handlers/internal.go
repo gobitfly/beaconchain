@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	apitypes "github.com/gobitfly/beaconchain/pkg/types/api"
-	"github.com/invopop/jsonschema"
 
 	"github.com/gorilla/mux"
 )
@@ -122,7 +121,7 @@ func InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 		Name    string `json:"name"`
 		Network string `json:"network"`
 	}{}
-	if err := CheckAndGetJson(jsonschema.Reflect(req), r.Body, &req); err != nil {
+	if err := CheckAndGetJson(r.Body, &req); err != nil {
 		handleJsonError(w, err)
 		return
 	}
@@ -181,7 +180,7 @@ func InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if err := CheckAndGetJson(jsonschema.Reflect(req), r.Body, &req); err != nil {
+	if err := CheckAndGetJson(r.Body, &req); err != nil {
 		handleJsonError(w, err)
 		return
 	}
@@ -224,11 +223,12 @@ func InternalPostValidatorDashboardvalidators(w http.ResponseWriter, r *http.Req
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
 	}{}
-	if err := CheckAndGetJson(jsonschema.Reflect(req), r.Body, &req); err != nil {
+	if err := CheckAndGetJson(r.Body, &req); err != nil {
 		handleJsonError(w, err)
 		return
 	}
-	if err := errors.Join(CheckId(dashboardId),
+	if err := errors.Join(
+		CheckId(dashboardId),
 		CheckValidatorList(req.Validators),
 		CheckId(req.GroupId),
 	); err != nil {
@@ -273,7 +273,7 @@ func InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Requ
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if err := CheckAndGetJson(jsonschema.Reflect(req), r.Body, &req); err != nil {
+	if err := CheckAndGetJson(r.Body, &req); err != nil {
 		handleJsonError(w, err)
 		return
 	}
@@ -311,7 +311,7 @@ func InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Reques
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if err := CheckAndGetJson(jsonschema.Reflect(req), r.Body, &req); err != nil {
+	if err := CheckAndGetJson(r.Body, &req); err != nil {
 		handleJsonError(w, err)
 		return
 	}
