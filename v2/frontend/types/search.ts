@@ -1,38 +1,49 @@
 import { ChainIDs } from '~/types/networks'
 
 export enum Categories {
-    Everything = '',
-    Tokens = 'tokens',
-    NFTs = 'NFTs',
-    Protocol = 'protocol',
-    Addresses = 'addresses',
-    Validators = 'validators'
+  Tokens = 'tokens',
+  NFTs = 'nfts',
+  Protocol = 'protocol',
+  Addresses = 'addresses',
+  Validators = 'validators'
 }
 
-export const enum ResultTypes {
-    Tokens = 'tokens',
-    NFTs = 'nfts',
-    Epochs = 'epochs',
-    Slots = 'slots',
-    Blocks = 'blocks',
-    BlockRoots = 'block_roots',
-    StateRoots = 'state_roots',
-    Transactions = 'transactions',
-    TransactionBatches = 'transaction_batches',
-    StateBatches = 'state_batches',
-    Addresses = 'addresses',
-    Ens = 'ens_names',
-    EnsOverview = 'ens_overview',
-    Graffiti = 'graffiti',
-    ValidatorsByIndex = 'validators_by_index',
-    ValidatorsByPubkey = 'validators_by_pubkey',
-    ValidatorsByDepositAddress = 'count_validators_by_deposit_address',
-    ValidatorsByDepositEnsName = 'count_validators_by_deposit_ens_name',
-    ValidatorsByWithdrawalCredential = 'count_validators_by_withdrawal_credential',
-    ValidatorsByWithdrawalAddress = 'count_validators_by_withdrawal_address',
-    ValidatorsByWithdrawalEnsName = 'count_validators_by_withdrawal_ens_name',
-    ValidatorsByGraffiti = 'validators_by_graffiti',
-    ValidatorsByName = 'validators_by_name'
+export enum ResultTypes {
+  Tokens = 'tokens',
+  NFTs = 'nfts',
+  Epochs = 'epochs',
+  Slots = 'slots',
+  Blocks = 'blocks',
+  BlockRoots = 'block_roots',
+  StateRoots = 'state_roots',
+  Transactions = 'transactions',
+  TransactionBatches = 'transaction_batches',
+  StateBatches = 'state_batches',
+  Addresses = 'addresses',
+  Ens = 'ens_names',
+  EnsOverview = 'ens_overview',
+  Graffiti = 'graffiti',
+  ValidatorsByIndex = 'validators_by_index',
+  ValidatorsByPubkey = 'validators_by_pubkey',
+  ValidatorsByDepositAddress = 'count_validators_by_deposit_address',
+  ValidatorsByDepositEnsName = 'count_validators_by_deposit_ens_name',
+  ValidatorsByWithdrawalCredential = 'count_validators_by_withdrawal_credential',
+  ValidatorsByWithdrawalAddress = 'count_validators_by_withdrawal_address',
+  ValidatorsByWithdrawalEnsName = 'count_validators_by_withdrawal_ens_name',
+  ValidatorsByGraffiti = 'validators_by_graffiti',
+  ValidatorsByName = 'validators_by_name'
+}
+
+interface CategoryInfoFields {
+  filterLabel : string
+}
+
+export const CategoryInfo: Record<Categories, CategoryInfoFields> = {
+  [Categories.Tokens]: { filterLabel: 'Tokens' },
+  [Categories.NFTs]: { filterLabel: 'NFTs' },
+  [Categories.Protocol]: { filterLabel: 'Protocol' },
+  [Categories.Addresses]: { filterLabel: 'Addresses' },
+  [Categories.Validators]: { filterLabel: 'Validators' }
 }
 
 interface TypeInfoFields {
@@ -296,12 +307,18 @@ export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) :
 
 export function getListOfCategories () : Categories[] {
   const list : Categories[] = []
-  const stop = Object.keys(Categories).length
-  const start = stop / 2
 
-  for (let i = start; i < stop; i++) {
-    list.push(Object.values(Categories)[i] as Categories)
+  for (const cat in Categories) {
+    list.push(Categories[cat as keyof typeof Categories])
   }
+  return list
+}
 
+export function getListOfResultTypes () : ResultTypes[] {
+  const list : ResultTypes[] = []
+
+  for (const type in ResultTypes) {
+    list.push(ResultTypes[type as keyof typeof ResultTypes])
+  }
   return list
 }

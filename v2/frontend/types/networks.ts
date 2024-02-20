@@ -43,6 +43,10 @@ export enum ChainIDs {
   Chiado = 10200
 }
 
+export function getListOfImplementedChainIDs () : ChainIDs[] {
+  return [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
+}
+
 interface ChainInfoFields {
   name: string,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
@@ -165,12 +169,11 @@ export function isL1 (network: ChainIDs) : boolean {
 
 export function getListOfChainIDs () : ChainIDs[] {
   const list : ChainIDs[] = []
-  const stop = Object.keys(ChainIDs).length
-  const start = stop / 2
 
-  for (let i = start; i < stop; i++) {
-    list.push(Object.values(ChainIDs)[i] as ChainIDs)
+  for (const id in ChainIDs) {
+    if (isNaN(Number(id))) {
+      list.push(ChainIDs[id as keyof typeof ChainIDs])
+    }
   }
-
   return list
 }
