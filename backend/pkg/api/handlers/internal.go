@@ -2,6 +2,7 @@ package apihandlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -28,95 +29,95 @@ func handleJsonError(w http.ResponseWriter, err error) {
 	}
 }
 
-func InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostOauthToken(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
 }
 
-func InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalGetDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
 }
 
-func InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
 }
 
-func InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
 }
 
-func InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
 }
 
-func InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	req := struct {
 		Name    string `json:"name"`
 		Network string `json:"network"`
@@ -149,7 +150,7 @@ func InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	err := CheckId(dashboardId)
@@ -164,7 +165,7 @@ func InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, response)
 }
 
-func InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	if err := CheckId(dashboardId); err != nil {
@@ -174,7 +175,7 @@ func InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w)
 }
 
-func InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	req := struct {
@@ -202,7 +203,7 @@ func InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request
 	ReturnCreated(w, response)
 }
 
-func InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	groupId := vars["group_id"]
@@ -216,7 +217,7 @@ func InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Reque
 	ReturnNoContent(w)
 }
 
-func InternalPostValidatorDashboardvalidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	req := struct {
@@ -249,7 +250,7 @@ func InternalPostValidatorDashboardvalidators(w http.ResponseWriter, r *http.Req
 	ReturnCreated(w, response)
 }
 
-func InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	q := r.URL.Query()
@@ -264,7 +265,7 @@ func InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.R
 	ReturnNoContent(w)
 }
 
-func InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	req := struct {
@@ -301,7 +302,7 @@ func InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Requ
 	ReturnCreated(w, response)
 }
 
-func InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	publicDashboardId := vars["public_dashboard_id"]
@@ -335,7 +336,7 @@ func InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Reques
 	ReturnOk(w, response)
 }
 
-func InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	publicDashboardId := vars["public_dashboard_id"]
@@ -350,7 +351,7 @@ func InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Req
 	ReturnNoContent(w)
 }
 
-func InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 
@@ -365,7 +366,7 @@ func InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	paging, paging_error := CheckAndGetPaging(r)
@@ -376,6 +377,8 @@ func InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request
 		ReturnBadRequest(w, err)
 		return
 	}
+	//TODO remove line
+	fmt.Println(paging)
 
 	response := apitypes.ApiResponse{
 		Data: apitypes.VDBSummaryTableResponse{},
@@ -383,7 +386,7 @@ func InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	groupId := vars["group_id"]
@@ -400,7 +403,7 @@ func InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Re
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	if err := CheckId(dashboardId); err != nil {
@@ -413,7 +416,7 @@ func InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Re
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	paging, paging_error := CheckAndGetPaging(r)
@@ -424,6 +427,8 @@ func InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request
 		ReturnBadRequest(w, err)
 		return
 	}
+	//TODO remove line
+	fmt.Println(paging)
 
 	response := apitypes.ApiResponse{
 		Data: apitypes.VDBRewardsTableResponse{},
@@ -431,7 +436,7 @@ func InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
 	groupId := vars["group_id"]
@@ -449,34 +454,34 @@ func InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Re
 	ReturnOk(w, response)
 }
 
-func InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
 
-func InternalValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
