@@ -267,11 +267,11 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 		s := strings.Split(pair, ":")
 
 		if len(s) != 3 {
-			logrus.Fatalf("%v has an invalid format", pair)
+			utils.LogFatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
 		}
 
 		if s[0] != "B" {
-			logrus.Fatalf("%v has invalid balance update prefix", pair)
+			utils.LogFatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
 		}
 
 		address := s[1]

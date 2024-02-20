@@ -35,7 +35,7 @@ func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 
 	err := saveBlocks(blocksMap, tx, forceSlotUpdate)
 	if err != nil {
-		logger.Fatalf("error saving blocks to db: %v", err)
+		utils.LogFatal(err, "error saving blocks to db", 0)
 		return fmt.Errorf("error saving blocks to db: %w", err)
 	}
 

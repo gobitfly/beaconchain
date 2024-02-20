@@ -91,10 +91,10 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 	defer cancel()
 	clientChainId, err := eClient.ChainID(ctx)
 	if err != nil {
-		logger.WithError(err).Fatalf("failed getting chainID")
+		utils.LogFatal(err, "failed getting chainID", 0)
 	}
 	if chainId != clientChainId.Uint64() {
-		logger.WithError(err).Fatalf("chainId does not match chainId from client (%v != %v)", chainId, clientChainId.Uint64())
+		utils.LogFatal(err, "chainId does not match chainId from client", 0, map[string]interface{}{"chainId": chainId, "clientChainId": clientChainId})
 	}
 
 	feedAddrs := map[string]string{}
@@ -140,7 +140,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 
 		availableCurrencies = []string{"GNO", "mGNO", "DAI", "ETH", "USD", "EUR", "JPY"}
 	default:
-		logger.Fatalf("unsupported chainId %v", chainId)
+		utils.LogFatal(fmt.Errorf("unsupported chainId %v", chainId), "", 0)
 	}
 
 	for pair, addrHex := range feedAddrs {
@@ -181,12 +181,12 @@ func updatePrices() {
 	}
 	err := g.Wait()
 	if err != nil {
-		logger.WithError(err).Errorf("error upating prices")
+		utils.LogError(err, "error upating prices", 0)
 		return
 	}
 	for p := range calcPairs {
 		if err = calcPricePairs(p); err != nil {
-			logger.WithError(err).Errorf("error calculating price pairs for %v", p)
+			utils.LogError(err, "error calculating price pairs", 0, map[string]interface{}{"pair": p})
 			return
 		}
 	}
@@ -223,7 +223,7 @@ func setPrice(a, b string, v float64) {
 
 func GetPrice(a, b string) float64 {
 	if didInit < 1 {
-		logger.Fatal("using GetPrice without calling price.Init once")
+		utils.LogFatal(fmt.Errorf("using GetPrice without calling price.Init once"), "", 0)
 	}
 	runOnceWg.Wait()
 	pricesMu.Lock()

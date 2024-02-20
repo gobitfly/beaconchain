@@ -224,7 +224,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 
 	// we check for machine chain id just for safety
 	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
-		logrus.Fatalf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID)
+		LogFatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
 	}
 
 	cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
