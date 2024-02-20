@@ -283,18 +283,19 @@ func mustParseInt64(s string) int64 {
 	}
 	return r
 }
-func mustParseInt(s string) int {
-	if s == "" {
-		return 0
-	}
 
-	r, err := strconv.ParseInt(s, 10, 32)
+// func mustParseInt(s string) int {
+// 	if s == "" {
+// 		return 0
+// 	}
 
-	if err != nil {
-		panic(err)
-	}
-	return int(r)
-}
+// 	r, err := strconv.ParseInt(s, 10, 32)
+
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return int(r)
+// }
 
 type validatorDashboardDataRow struct {
 	Index uint64

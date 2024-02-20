@@ -152,7 +152,6 @@ func main() {
 		for _, e := range notExportedEpochs {
 			e := e
 			g.Go(func() error {
-
 				var err error
 				for i := 0; i < 10; i++ {
 					err = export(e, bt, client, enAddress)
@@ -178,7 +177,10 @@ func main() {
 				return nil
 			})
 		}
-		g.Wait()
+		err = g.Wait()
+		if err != nil {
+			utils.LogError(err, "error during epoch rewards export", 0)
+		}
 		return
 	}
 
@@ -213,7 +215,6 @@ func main() {
 
 			services.ReportStatus("rewardsExporter", "Running", nil)
 			time.Sleep(*sleepDuration)
-
 		}
 	}
 

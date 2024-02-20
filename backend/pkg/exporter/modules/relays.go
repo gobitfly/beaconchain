@@ -52,7 +52,6 @@ func mevBoostRelaysExporter() {
 		wg.Wait()
 		time.Sleep(time.Minute)
 	}
-
 }
 
 func singleRelayExport(r types.Relay, wg *sync.WaitGroup, mux *sync.Mutex) {
@@ -176,7 +175,12 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 		}).WithError(err).Error("failed to start db transaction")
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	var min_slot uint64
 	if low_bound > 10 {

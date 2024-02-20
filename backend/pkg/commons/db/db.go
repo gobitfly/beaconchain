@@ -555,7 +555,12 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	lastSlotNumber := uint64(0)
 	for _, block := range blocks {
@@ -590,7 +595,12 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	canonBlocks := make(pq.ByteaArray, 0)
 	orphanedBlocks := make(pq.ByteaArray, 0)
@@ -1652,7 +1662,12 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 	_, err = tx.Exec(`
 		UPDATE ad_configurations SET 
 			template_id = $2,
@@ -1685,7 +1700,12 @@ func DeleteAdConfiguration(id string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// delete ad configuration
 	_, err = WriterDb.Exec(`

@@ -77,7 +77,7 @@ func main() {
 	flag.Uint64Var(&opts.EndDay, "day-end", 0, "end day to debug")
 	flag.Uint64Var(&opts.Validator, "validator", 0, "validator to check for")
 	flag.Int64Var(&opts.TargetVersion, "target-version", -2, "Db migration target version, use -2 to apply up to the latest version, -1 to apply only the next version or the specific versions")
-	flag.StringVar(&opts.Table, "table", "", "big table table")
+	flag.StringVar(&opts.Table, "table", "", "bigtable table")
 	flag.StringVar(&opts.Family, "family", "", "big table family")
 	flag.StringVar(&opts.Key, "key", "", "big table key")
 	flag.Uint64Var(&opts.StartBlock, "blocks.start", 0, "Block to start indexing")
@@ -208,7 +208,7 @@ func main() {
 				err = modules.ExportSlot(rpcClient, slot, false, tx)
 
 				if err != nil {
-					tx.Rollback()
+					_ = tx.Rollback()
 					logrus.Fatalf("error exporting slot %v: %v", slot, err)
 				}
 				logrus.Printf("finished export for slot %v", slot)
@@ -257,7 +257,7 @@ func main() {
 				err = modules.ExportSlot(rpcClient, slot, false, tx)
 
 				if err != nil {
-					tx.Rollback()
+					_ = tx.Rollback()
 					logrus.Fatalf("error exporting slot %v: %v", slot, err)
 				}
 				logrus.Printf("finished export for slot %v", slot)
@@ -316,7 +316,12 @@ func main() {
 		if err != nil {
 			logrus.Fatalf("error starting tx: %v", err)
 		}
-		defer tx.Rollback()
+		defer func() {
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
+		}()
 
 		batchSize := 10000
 		for i := 0; i < len(validatorsArr); i += batchSize {
@@ -663,7 +668,12 @@ func migrateAppPurchases(appStoreSecret string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// Delete marked as duplicate, though the duplicate reject reason is not always set - mainly missing on historical data
 	_, err = tx.Exec("DELETE FROM users_app_subscriptions WHERE store = 'ios-appstore' AND reject_reason = 'duplicate';")
@@ -843,7 +853,12 @@ func fixExecTransactionsCount() error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	for b := 0; b < len(dbUpdates); b += int(batchSize) {
 		start := b
@@ -1096,7 +1111,12 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		defer tx.Rollback()
+		defer func() {
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
+		}()
 
 		for _, bm := range data.Blocks {
 			for _, b := range bm {
@@ -1221,7 +1241,6 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 
 						return nil
 					})
-
 				}
 			}
 		}
@@ -1267,7 +1286,12 @@ func updateAPIKey(user uint64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	_, err = tx.Exec(`UPDATE api_statistics set apikey = $1 where apikey = $2`, apiKey, u.OldKey)
 	if err != nil {
@@ -1298,7 +1322,6 @@ func updateAPIKey(user uint64) error {
 
 // Debugging function to compare Rewards from the Statistic Table with the onces from the Big Table
 func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Bigtable) {
-
 	for day := dayStart; day <= dayEnd; day++ {
 		startEpoch := day * utils.EpochsPerDay()
 		endEpoch := startEpoch + utils.EpochsPerDay() - 1
@@ -1324,11 +1347,9 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 			logrus.Errorf("Rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards)
 		}
 	}
-
 }
 
 func clearBigtable(table string, family string, columns string, key string, dryRun bool, bt *db.Bigtable) {
-
 	if !dryRun {
 		confirmation := utils.CmdPrompt(fmt.Sprintf("Are you sure you want to delete all big table entries starting with [%v] for family [%v] and columns [%v]?", key, family, columns))
 		if confirmation != "yes" {
@@ -1519,7 +1540,6 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 			utils.LogError(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
-
 	}
 
 	if importENSChanges {
@@ -1690,7 +1710,7 @@ Instead of deleting entries from the sync_committee table in a prod environment 
 this method will replace each sync committee period one by one with the new one. Which is much nicer for a prod environment.
 */
 func exportSyncCommitteePeriods(rpcClient rpc.Client, startDay, endDay uint64, dryRun bool) {
-	var lastEpoch = uint64(0)
+	var lastEpoch uint64
 
 	firstPeriod := utils.SyncPeriodOfEpoch(utils.Config.Chain.ClConfig.AltairForkEpoch)
 	if startDay > 0 {
@@ -1833,7 +1853,6 @@ func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun boo
 
 	onlySyncCommitteeValidatorData := make([]*types.ValidatorStatsTableDbRow, 0, len(validatorData))
 	for index := range validatorData {
-
 		if validatorData[index].ParticipatedSync > 0 || validatorData[index].MissedSync > 0 || validatorData[index].OrphanedSync > 0 {
 			onlySyncCommitteeValidatorData = append(onlySyncCommitteeValidatorData, validatorData[index])
 		}
@@ -1858,7 +1877,12 @@ func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun boo
 	if err != nil {
 		return fmt.Errorf("error retrieving raw sql connection: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	logrus.Infof("updating statistics data into the validator_stats table %v | %v", len(onlySyncCommitteeValidatorData), len(validatorData))
 
@@ -1870,7 +1894,7 @@ func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun boo
 				data.OrphanedSync,
 			)
 		} else {
-			tx.Exec(`
+			_, err := tx.Exec(`
 				UPDATE validator_stats set
 				participated_sync = $1,
 				missed_sync = $2,
@@ -1880,6 +1904,9 @@ func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun boo
 				data.MissedSync,
 				data.OrphanedSync,
 				data.Day, data.ValidatorIndex)
+			if err != nil {
+				logrus.Errorf("error updating validator stats: %v", err)
+			}
 		}
 	}
 
@@ -1928,7 +1955,12 @@ func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
 			return errors.Wrap(err, "tx")
 		}
 
-		defer tx.Rollback()
+		defer func() {
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
+		}()
 		_, err = tx.Exec(`DELETE FROM sync_committees WHERE period = $1`, p)
 		if err != nil {
 			return errors.Wrap(err, "delete old entries")

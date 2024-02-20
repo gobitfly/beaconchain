@@ -32,7 +32,7 @@ func UpdatePubkeyTag() {
 		if err != nil {
 			logger.WithError(err).Error("Error committing transaction")
 		}
-		tx.Rollback()
+		_ = tx.Rollback()
 
 		logger.Infof("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
 		metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(start).Seconds())

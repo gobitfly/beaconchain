@@ -1277,7 +1277,10 @@ func (s *bytesHexStr) UnmarshalText(b []byte) error {
 		b = b[2:]
 	}
 	out := make([]byte, len(b)/2)
-	hex.Decode(out, b)
+	_, err := hex.Decode(out, b)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling text: %w", err)
+	}
 	*s = out
 	return nil
 }
