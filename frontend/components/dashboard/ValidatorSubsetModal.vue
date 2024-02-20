@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { warn } from 'vue'
+
 interface Props {
   caption?: string,
   validators: number[],
@@ -23,6 +25,24 @@ watch(filter, (newFilter) => {
     shownValidators.value = [index]
   }
 }, { immediate: true })
+
+function copyValidatorsToClipboard (): void {
+  if (shownValidators.value.length === 0) {
+    return
+  }
+
+  let text = ''
+  shownValidators.value.forEach((v, i) => {
+    text += v
+    if (i !== shownValidators.value.length - 1) {
+      text += ','
+    }
+  })
+  navigator.clipboard.writeText(text)
+    .catch((error) => {
+      warn('Error copying text to clipboard:', error)
+    })
+}
 </script>
 
 <template>
@@ -45,10 +65,10 @@ watch(filter, (newFilter) => {
         </NuxtLink>
         <span v-if="i !== shownValidators.length - 1">, </span>
       </span>
-      <Button class="p-button-icon-only copy_button">
-        <i class="fas fa-copy" />
-      </Button>
     </div>
+    <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
+      <i class="fas fa-copy" />
+    </Button>
   </BcDialog>
 </template>
 
@@ -61,6 +81,13 @@ watch(filter, (newFilter) => {
   :global(.validator_subset_modal_container .p-dialog-content) {
       display: flex;
       flex-direction: column;
+      flex-grow: 1;
+  }
+
+  :global(.validator_subset_modal_container .p-dialog-content .copy_button) {
+    position: absolute;
+    bottom: calc(var(--padding-large) + var(--padding));
+    right: calc(var(--padding-large) + var(--padding));
   }
 
   .top_line_container {
@@ -89,20 +116,13 @@ watch(filter, (newFilter) => {
 
   .text_container {
     position: relative;
+    flex-grow: 1;
     background-color: var(--subcontainer-background);
     padding: var(--padding) var(--padding) 7px var(--padding);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    min-height: 125px;
-    max-height: 453px;
+    height: 453px;
     overflow-y: auto;
     word-break: break-all;
-
-    .copy_button {
-      position: sticky;
-      bottom: 0px;
-      top: 77px;
-      left: 355px;
-    }
   }
 </style>
