@@ -66,6 +66,11 @@ const data = computed<SummaryRow[][]>(() => {
 <template>
   <div v-if="summary">
     <DataTable v-for="(table, index) in data" :key="index" class="no-header bc-compact-table summary-details-table" :value="table">
+      <Column field="expansion-spacer" class="expansion-spacer">
+        <template #body>
+          <span />
+        </template>
+      </Column>
       <Column field="title">
         <template #body="slotProps">
           <span :class="slotProps.data.className">

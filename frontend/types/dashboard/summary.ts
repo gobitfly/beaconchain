@@ -38,10 +38,13 @@ export interface Paging {
   last_cursor?: string;
   total_count?: number;
 }
-export interface VDBSummaryTableResponse {
+
+export interface TableResponse<T> {
   paging: Paging;
-  data: VDBSummaryTableRow[];
+  data: T[];
 }
+
+export interface VDBSummaryTableResponse extends TableResponse<VDBSummaryTableRow>{}
 
 export interface Luck {
   percent: number;

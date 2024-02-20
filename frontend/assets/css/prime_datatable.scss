@@ -6,28 +6,6 @@
 
 .p-datatable {
   --table-background-color: var(--background-color);
-  &.bc-compact-table {
-    --table-background-color: var(--container-background);
-    .p-datatable-tbody {
-      > tr {
-        @include standard_text;
-
-        &:not(.p-datatable-row-expansion){
-          > td {
-            text-align: left;
-            border-width: 0 0 0 0;
-            padding: 2px 7px;
-            &:first-child {
-              padding-left: 7px;
-            }
-            &:last-child {
-              padding-right: 7px;
-            }
-          }
-        }
-      }
-    }
-  }
 
   &.no-header {
     .p-datatable-thead {
@@ -42,23 +20,13 @@
     border-width: 0 0 1px 0;
     border-radius: 0;
   }
-  .p-datatable-header {
-    background: var(--table-background-color);
-    color: var(--text-color);
-    border: 1px solid var(--container-border-color);
-    border-width: 1px 0 1px 0;
-    padding: 1rem 1rem;
-    font-weight: 700;
-  }
   .p-datatable-thead {
     > tr {
       > th {
         text-align: left;
-        border: 1px solid var(--container-border-color);
-        border-width: 0 0 1px 0;
+        color: var(--container-color);
+        background-color: var(--container-background);
         font-weight: 700;
-        color: var(--text-color);
-        background: var(--table-background-color);
         transition: box-shadow 0.2s;
 
         padding: 14px 7px;
@@ -110,19 +78,43 @@
       &.p-highlight {
         color: var(--primary-color);
       }
+      &:not(.p-datatable-row-expansion) {
+        > td {
+          padding: 14px 7px;
+          &:first-child {
+            padding-left: 14px;
+          }
+          &:last-child {
+            padding-right: 14px;
+          }
+        }
+      }
+      &.p-datatable-row-expansion {
+        tbody > tr {
+          &:first-child{
+            > td {
+              padding-top: 14px;
+            }
+          }
+          &:last-child{
+            > td {
+              padding-bottom: 14px;
+            }
+          }
+          .expansion-spacer{
+            width: 35px;
+            max-width: 35px;
+            min-width: 35px;
+            padding: 0;
+          }
+        }
+      }
 
       > td {
         @include standard_text;
         text-align: left;
         border: 1px solid var(--container-border-color);
         border-width: 0 0 1px 0;
-        padding: 14px 7px;
-        &:first-child {
-          padding-left: 14px;
-        }
-        &:last-child {
-          padding-right: 14px;
-        }
         &.bold,
         .bold {
           font-weight: var(--standard_text_bold_font_weight);
@@ -136,6 +128,36 @@
 
         > .p-column-title {
           font-weight: 700;
+        }
+      }
+    }
+  }
+  &.bc-compact-table {
+    --table-background-color: var(--container-background);
+    &:not(:first-child){
+      background-color: pink;
+      .p-datatable-tbody {
+        > tr:first-child {  
+          > td {
+            border-width: 1px 0 0 0;
+          }
+        }
+      }
+    }
+    .p-datatable-tbody {
+      > tr {
+        @include standard_text;
+
+        > td {
+          text-align: left;
+          border-width: 0 0 0 0;
+          padding: 2px 7px;
+          &:first-child {
+            padding-left: 7px;
+          }
+          &:last-child {
+            padding-right: 7px;
+          }
         }
       }
     }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { type VDBSummaryTableRow, type VDBSummaryTableResponse } from '~/types/dashboard/summary'
+import type { DataTableSortEvent } from 'primevue/datatable'
+import { type VDBSummaryTableResponse } from '~/types/dashboard/summary'
+import type { Cursor } from '~/types/datatable'
 
 interface Props {
   dashboardId: number
 }
 const props = defineProps<Props>()
 
+const cursor = ref<Cursor>()
+const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
 const store = useValidatorDashboardSummaryStore()
@@ -22,10 +26,6 @@ const colsVisible = computed(() => {
   }
 })
 
-const cursor = ref<number | string | undefined>()
-
-const expandedRows = ref<VDBSummaryTableRow[]>([])
-
 const loadData = () => {
   getSummary(props.dashboardId, queryMap.value[props.dashboardId])
 }
@@ -36,10 +36,6 @@ watch(() => props.dashboardId, () => {
 
 const summary = computed<VDBSummaryTableResponse | undefined>(() => {
   return summaryMap.value?.[props.dashboardId]
-})
-
-const data = computed<VDBSummaryTableRow[]>(() => {
-  return summary.value?.data || []
 })
 
 const mapGroup = (groupId?: number) => {
@@ -56,48 +52,43 @@ const mapGroup = (groupId?: number) => {
   return `${group.name} (${$t('common.id')}: ${groupId})`
 }
 
-const setCursor = (value?: number | string) => {
-  cursor.value = value
+const onSort = (sort:DataTableSortEvent) => {
+  queryMap.value[props.dashboardId] = setQuerySort(sort, queryMap.value[props.dashboardId])
+  loadData()
 }
 
-const allExpanded = computed(() => {
-  return !!data.value?.every(item => expandedRows.value[item.group_id])
-})
+const setCursor = (value: Cursor) => {
+  cursor.value = value
+  queryMap.value[props.dashboardId] = setQueryCursor(value, queryMap.value[props.dashboardId])
+  loadData()
+}
 
-const toggleAll = () => {
-  const wasExpanded = allExpanded.value
-  const rows = { ...expandedRows.value }
-  data.value?.forEach((item) => {
-    if (wasExpanded) {
-      delete rows[item.group_id]
-    } else {
-      rows[item.group_id] = item
-    }
-  })
-  expandedRows.value = rows
+const setPageSize = (value: number) => {
+  pageSize.value = value
+  queryMap.value[props.dashboardId] = setQueryPageSize(value, queryMap.value[props.dashboardId])
+  loadData()
+}
+
+const setSearch = (value?: string) => {
+  queryMap.value[props.dashboardId] = setQuerySearch(value, queryMap.value[props.dashboardId])
+  loadData()
 }
 
 </script>
 <template>
-  <DataTable
-    v-model:expandedRows="expandedRows"
-    lazy
-    :total-records="1000"
-    :page-link-size="10"
-    :rows="5"
-    :value="data"
+  <BcTable
+    :data="summary"
     data-key="group_id"
+    :expandable="true"
     class="summary_table"
+    :cursor="cursor"
+    :page-size="pageSize"
+    @set-cursor="setCursor"
+    @sort="onSort"
+    @set-search="setSearch"
+    @set-page-size="setPageSize"
   >
-    <Column expander class="expander">
-      <template #header>
-        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click="toggleAll" />
-      </template>
-      <template #rowtogglericon="slotProps">
-        <IconChevron class="toggle" :direction="slotProps.rowExpanded ? 'bottom' : 'right'" />
-      </template>
-    </Column>
-    <Column field="group" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
+    <Column field="group_id" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
       <template #body="slotProps">
         {{ mapGroup(slotProps.data.group_id) }}
       </template>
@@ -152,29 +143,13 @@ const toggleAll = () => {
       </template>
     </Column>
     <template #expansion="slotProps">
-      <DashboardTableSummaryDetails class="details" :row="slotProps.data" :dashboard-id="props.dashboardId" />
+      <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-id="props.dashboardId" />
     </template>
-    <template #footer>
-      <BcTablePager :page-size="5" :paging="summary?.paging" :cursor="cursor" @set-cursor="setCursor" />
-    </template>
-  </DataTable>
+  </BcTable>
 </template>
 
 <style lang="scss" scoped>
-:deep(.expander) {
-  width: 32px;
-}
-
-.toggle {
-  cursor: pointer;
-}
-
 .summary_table {
-
-  .details {
-    margin-left: 21px;
-  }
-
   :deep(td:not(.expander)):not(:last-child),
   :deep(th:not(.expander)):not(:last-child) {
     width: 220px;

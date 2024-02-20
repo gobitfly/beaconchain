@@ -1,18 +1,15 @@
-import type { EmitFlags } from 'typescript';
-import type Column from 'primevue/column';
-
-import type { Column } from '#build/components';
 <script setup lang="ts">
 import type { Paging } from '~/types/dashboard/summary'
+import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor?: number |string
+  cursor: Cursor
   pageSize: number
   paging?: Paging
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{(e: 'setCursor', value: number | string | undefined): void }>()
+const emit = defineEmits<{(e: 'setCursor', value: Cursor): void }>()
 
 const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
 
@@ -55,8 +52,8 @@ const last = () => {
 }
 
 // in case the totalCount decreased
-watch(() => data.value.lastPage && data.value.lastPage < data.value.page, () => {
-  if (data.value.lastPage !== undefined) {
+watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match) => {
+  if (data.value.lastPage !== undefined && match) {
     last()
   }
 })
