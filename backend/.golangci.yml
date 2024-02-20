@@ -18,6 +18,8 @@ linters:
     - scopelint
     - structcheck
     - varcheck
+    - dupword
+    - gocognit
 
     # Disabled for now:
     - asasalint
@@ -87,6 +89,7 @@ linters-settings:
         files:
           - $all
           - "!$test"
+          - "!**/pkg/exporter/modules/eth1.go"
         allow:
           - $gostd
         deny:

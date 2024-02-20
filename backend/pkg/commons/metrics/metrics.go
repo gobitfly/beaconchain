@@ -145,13 +145,17 @@ func Serve(addr string) error {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
+		_, err := w.Write([]byte(`<html>
 <head><title>prometheus-metrics</title></head>
 <body>
 <h1>prometheus-metrics</h1>
 <p><a href='/metrics'>metrics</a></p>
 </body>
 </html>`))
+
+		if err != nil {
+			utils.LogError(err, "error writing to response buffer: %v", 0)
+		}
 	}))
 
 	if utils.Config.Metrics.Pprof {

@@ -98,7 +98,12 @@ func saveSSV(res *SSVExporterResponse) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// for now make sure to correct wrongly marked validators
 	for {
