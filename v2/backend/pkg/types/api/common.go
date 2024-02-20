@@ -90,3 +90,13 @@ type SearchResult struct {
 	NumValue  uint64 `json:"num_value,omitempty"`
 	StrValue  string `json:"str_value,omitempty"`
 }
+
+type DashboardData struct {
+	ValidatorDashboards []Dashboard `json:"validator_dashboards"`
+	AccountDashboards   []Dashboard `json:"account_dashboards"`
+}
+
+type Dashboard struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
