@@ -83,7 +83,12 @@ func (d *slotExporterData) Start(args []any) (err error) {
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	if d.FirstRun {
 		// get all slots we currently have in the database

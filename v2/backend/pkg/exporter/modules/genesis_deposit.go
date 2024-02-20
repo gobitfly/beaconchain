@@ -62,7 +62,10 @@ func genesisDepositsExporter(client rpc.Client) {
 				validator.Index, utils.MustParseHex(validator.Validator.Pubkey), utils.MustParseHex(validator.Validator.WithdrawalCredentials), validator.Balance, []byte{0x0},
 			)
 			if err != nil {
-				tx.Rollback()
+				err := tx.Rollback()
+				if err != nil {
+					utils.LogError(err, "error rolling back transaction", 0)
+				}
 				logger.Errorf("error exporting genesis-deposits: %v", err)
 				time.Sleep(time.Minute)
 				continue
@@ -79,7 +82,10 @@ func genesisDepositsExporter(client rpc.Client) {
 				WHERE valid_signature = true) AS a 
 			WHERE block_slot = 0 AND blocks_deposits.publickey = a.publickey AND blocks_deposits.signature = '\x'`)
 		if err != nil {
-			tx.Rollback()
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
 			logger.Errorf("error hydrating eth1 data into genesis-deposits: %v", err)
 			time.Sleep(time.Minute)
 			continue
@@ -88,7 +94,10 @@ func genesisDepositsExporter(client rpc.Client) {
 		// update deposits-count
 		_, err = tx.Exec("UPDATE blocks SET depositscount = $1 WHERE slot = 0", len(genesisValidators.Data))
 		if err != nil {
-			tx.Rollback()
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
 			logger.Errorf("error updating deposit count for the genesis slot: %v", err)
 			time.Sleep(time.Minute)
 			continue
@@ -96,7 +105,10 @@ func genesisDepositsExporter(client rpc.Client) {
 
 		err = tx.Commit()
 		if err != nil {
-			tx.Rollback()
+			err := tx.Rollback()
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
 			logger.Errorf("error committing db-tx when exporting genesis-deposits: %v", err)
 			time.Sleep(time.Minute)
 			continue

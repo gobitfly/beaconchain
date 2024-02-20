@@ -95,8 +95,12 @@ func (cache *RedisCache) Get(ctx context.Context, key string, returnValue interf
 
 	err = json.Unmarshal([]byte(value), returnValue)
 	if err != nil {
-		cache.redisRemoteCache.Del(ctx, key).Err()
 		utils.LogError(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
+		delErr := cache.redisRemoteCache.Del(ctx, key).Err()
+
+		if delErr != nil {
+			utils.LogError(delErr, "error deleting data for key", 0, map[string]interface{}{"key": key})
+		}
 		return nil, err
 	}
 

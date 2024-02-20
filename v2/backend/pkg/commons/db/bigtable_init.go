@@ -11,7 +11,6 @@ import (
 )
 
 func InitBigtableSchema() error {
-
 	tables := make(map[string]map[string]gcp_bigtable.GCPolicy)
 
 	tables["beaconchain_validators"] = map[string]gcp_bigtable.GCPolicy{

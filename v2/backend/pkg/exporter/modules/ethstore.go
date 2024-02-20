@@ -69,14 +69,18 @@ func (ese *EthStoreExporter) reexportDay(day string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-
-	ese.prepareClearDayTx(tx, day)
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
+	err = ese.prepareClearDayTx(tx, day)
 	if err != nil {
 		return err
 	}
 
-	ese.prepareExportDayTx(tx, day)
+	err = ese.prepareExportDayTx(tx, day)
 	if err != nil {
 		return err
 	}
@@ -89,7 +93,12 @@ func (ese *EthStoreExporter) exportDay(day string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	err = ese.prepareExportDayTx(tx, day)
 	if err != nil {

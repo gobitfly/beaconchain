@@ -1657,7 +1657,6 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, s
 
 					status := uint64(1) // 1: participated
 					if inclusionSlot == MAX_CL_BLOCK_NUMBER {
-						inclusionSlot = 0
 						status = 0 // 0: missed
 					}
 
@@ -1735,7 +1734,6 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 			status := uint64(1) // 1: participated
 			if inclusionSlot == max_block_number_v1 {
-				inclusionSlot = 0
 				status = 0 // 0: missed
 			}
 
@@ -2047,7 +2045,6 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, sta
 
 					status := uint64(1)
 					if inclusionSlot == MAX_CL_BLOCK_NUMBER {
-						inclusionSlot = 0
 						status = 2
 					}
 
@@ -2134,7 +2131,6 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV1(validators []uint64, sta
 
 			status := uint64(1)
 			if inclusionSlot == max_block_number_v1 {
-				inclusionSlot = 0
 				status = 2
 			}
 
