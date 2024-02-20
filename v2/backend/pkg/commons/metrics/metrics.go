@@ -68,8 +68,6 @@ var (
 	}, []string{"channel", "status"})
 )
 
-var logger = logrus.New().WithField("module", "metrics")
-
 func init() {
 	Version.WithLabelValues(version.Version).Set(1)
 }
