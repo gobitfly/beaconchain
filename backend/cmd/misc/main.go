@@ -366,7 +366,7 @@ func main() {
 				validator.Index, utils.MustParseHex(validator.Validator.Pubkey), utils.MustParseHex(validator.Validator.WithdrawalCredentials), validator.Balance, []byte{0x0},
 			)
 			if err != nil {
-				logrus.Errorf("error exporting genesis-deposits: %v", err)
+				utils.LogError(err, "error exporting genesis-deposits", 0)
 				time.Sleep(time.Minute)
 				continue
 			}
@@ -830,7 +830,7 @@ func fixExecTransactionsCount() error {
 
 			err := db.BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 			if err != nil {
-				logrus.Errorf("error getting blocks descending high: %v low: %v err: %v", high, low, err)
+				utils.LogError(err, "error getting blocks descending high: %v low: %v err: %v", 0, map[string]interface{}{"high": high, "low": low})
 			}
 			close(stream)
 		}(blocksChan)
@@ -1344,7 +1344,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 			return
 		}
 		if tot != *dbRewards {
-			logrus.Errorf("Rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards)
+			utils.LogError(fmt.Errorf("Rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards), "", 0)
 		}
 	}
 }
@@ -1387,7 +1387,7 @@ func indexMissingBlocks(start uint64, end uint64, bt *db.Bigtable, client *rpc.E
 	if end == math.MaxInt64 {
 		lastBlockFromBlocksTable, err := bt.GetLastBlockInBlocksTable()
 		if err != nil {
-			logrus.Errorf("error retrieving last blocks from blocks table: %v", err)
+			utils.LogError(err, "error retrieving last blocks from blocks table", 0)
 			return
 		}
 		end = uint64(lastBlockFromBlocksTable)
@@ -1905,7 +1905,7 @@ func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun boo
 				data.OrphanedSync,
 				data.Day, data.ValidatorIndex)
 			if err != nil {
-				logrus.Errorf("error updating validator stats: %v", err)
+				utils.LogError(err, "error updating validator stats", 0)
 			}
 		}
 	}
