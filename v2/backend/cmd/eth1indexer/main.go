@@ -146,7 +146,7 @@ func main() {
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainId, utils.Config.RedisCacheEndpoint)
 	if err != nil {
-		utils.LogFatal(err, "error connecting to bigtable: %v", 0)
+		utils.LogFatal(err, "error connecting to bigtable", 0)
 	}
 	defer bt.Close()
 
@@ -187,7 +187,7 @@ func main() {
 	if *block != 0 {
 		err = IndexFromNode(bt, client, *block, *block, *concurrencyBlocks, *traceMode)
 		if err != nil {
-			utils.LogFatal(err, "error indexing from node, start: %v end: %v concurrency: %v", 0, map[string]interface{}{"block": *block, "concurrency": *concurrencyBlocks})
+			utils.LogFatal(err, "error indexing from node", 0, map[string]interface{}{"block": *block, "concurrency": *concurrencyBlocks})
 		}
 		err = bt.IndexEventsWithTransformers(*block, *block, transforms, *concurrencyData, cache)
 		if err != nil {
