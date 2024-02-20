@@ -112,10 +112,12 @@ onUnmounted(() => {
       <div class="bc-tooltip-wrapper" :style="pos">
         <div class="bc-tooltip" :class="classList" @click="$event.stopImmediatePropagation()">
           <slot name="tooltip">
-            <b v-if="props.title">
-              {{ props.title }}
-            </b>
-            {{ text }}
+            <span>
+              <b v-if="props.title">
+                {{ props.title }}
+              </b>
+              {{ text }}
+            </span>
           </slot>
         </div>
       </div>
@@ -138,7 +140,6 @@ onUnmounted(() => {
   height: 1px;
   overflow: visible;
   z-index: 99999;
-
 }
 
 .bc-tooltip {
@@ -228,6 +229,10 @@ onUnmounted(() => {
 
   b {
     font-weight: var(--inter-medium);
+  }
+  &:has(b){
+    min-width: 200px;
+    text-align: left;
   }
 }
 </style>

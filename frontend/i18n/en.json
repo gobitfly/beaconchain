@@ -53,6 +53,8 @@
       },
       "summary": {
         "total_group_name": "Total Efficiency",
+        "title": "Summary",
+        "search_placeholder": "Index, Public Key, Group",
         "col":{
           "group": "Group",
           "efficiency_24h": "Efficiency (24h)",

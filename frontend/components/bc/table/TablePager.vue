@@ -9,7 +9,9 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{(e: 'setCursor', value: Cursor): void }>()
+const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
+
+const pageSizes = [5, 10, 15, 30, 50, 100]
 
 const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
 
@@ -58,6 +60,8 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   }
 })
 
+console.log('props.pageSize', props.pageSize)
+
 </script>
 <template>
   <div class="bc-pageinator">
@@ -78,6 +82,8 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         <div class="item button" :disabled="data.page! >= data.lastPage!" @click="last">
           {{ $t('table.last') }}
         </div>
+        <!--TODO: implement dropdown styles-->
+        <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => emit('setPageSize', event.value )" />
       </div>
       <div class="left-info">
         {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
@@ -96,6 +102,8 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       <div v-if="data.last_cursor" class="item button" @click="emit('setCursor', data.last_cursor)">
         {{ $t('table.first') }}
       </div>
+      <!--TODO: implement dropdown styles-->
+      <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => emit('setPageSize', event.value )" />
     </div>
   </div>
 </template>

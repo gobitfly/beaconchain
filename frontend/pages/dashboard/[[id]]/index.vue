@@ -19,7 +19,7 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
     </div>
     <TabView>
       <TabPanel header="Summary">
-        Summary coming soon!
+        <DashboardTableSummary :dashboard-id="1" />
       </TabPanel>
       <TabPanel header="Rewards">
         Rewards coming soon!

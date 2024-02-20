@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { type VDBSummaryTableResponse } from '~/types/dashboard/summary'
-import type { Cursor } from '~/types/datatable'
+import type { Cursor, TableQueryParams } from '~/types/datatable'
 
 interface Props {
   dashboardId: number
@@ -26,8 +26,11 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = () => {
-  getSummary(props.dashboardId, queryMap.value[props.dashboardId])
+const loadData = (query?: TableQueryParams) => {
+  if (!query) {
+    query = { limit: pageSize.value }
+  }
+  getSummary(props.dashboardId, query)
 }
 
 watch(() => props.dashboardId, () => {
@@ -52,26 +55,22 @@ const mapGroup = (groupId?: number) => {
   return `${group.name} (${$t('common.id')}: ${groupId})`
 }
 
-const onSort = (sort:DataTableSortEvent) => {
-  queryMap.value[props.dashboardId] = setQuerySort(sort, queryMap.value[props.dashboardId])
-  loadData()
+const onSort = (sort: DataTableSortEvent) => {
+  loadData(setQuerySort(sort, queryMap.value[props.dashboardId]))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  queryMap.value[props.dashboardId] = setQueryCursor(value, queryMap.value[props.dashboardId])
-  loadData()
+  loadData(setQueryCursor(value, queryMap.value[props.dashboardId]))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  queryMap.value[props.dashboardId] = setQueryPageSize(value, queryMap.value[props.dashboardId])
-  loadData()
+  loadData(setQueryPageSize(value, queryMap.value[props.dashboardId]))
 }
 
 const setSearch = (value?: string) => {
-  queryMap.value[props.dashboardId] = setQuerySearch(value, queryMap.value[props.dashboardId])
-  loadData()
+  loadData(setQuerySearch(value, queryMap.value[props.dashboardId]))
 }
 
 </script>
@@ -83,6 +82,8 @@ const setSearch = (value?: string) => {
     class="summary_table"
     :cursor="cursor"
     :page-size="pageSize"
+    :title="$t('dashboard.validator.summary.title')"
+    :search-placeholder="$t('dashboard.validator.summary.search_placeholder')"
     @set-cursor="setCursor"
     @sort="onSort"
     @set-search="setSearch"
@@ -150,6 +151,7 @@ const setSearch = (value?: string) => {
 
 <style lang="scss" scoped>
 .summary_table {
+
   :deep(td:not(.expander)):not(:last-child),
   :deep(th:not(.expander)):not(:last-child) {
     width: 220px;
