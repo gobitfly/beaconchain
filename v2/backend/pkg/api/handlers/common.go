@@ -30,22 +30,22 @@ type regexString string
 
 const (
 	// Subject to change, just examples
-	RE_NAME             = regexString(`^[a-zA-Z0-9_\-.\ ]{` + regexString(rune(MAX_NAME_LENGTH)) + `}$`)
-	RE_ID               = regexString(`^[a-zA-Z0-9_]+$`)
-	RE_NUMBER           = regexString(`^[0-9]+$`)
-	RE_VALIDATOR_PUBKEY = regexString(`^[0-9a-fA-F]{96}$`)
-	RE_CURSOR           = regexString(`^[0-9a-fA-F]*$`)
+	reName            = regexString(`^[a-zA-Z0-9_\-.\ ]{` + regexString(rune(maxNameLength)) + `}$`)
+	reId              = regexString(`^[a-zA-Z0-9_]+$`)
+	reNumber          = regexString(`^[0-9]+$`)
+	reValidatorPubkey = regexString(`^[0-9a-fA-F]{96}$`)
+	reCursor          = regexString(`^[0-9a-fA-F]*$`)
 )
 
 const (
-	MAX_NAME_LENGTH       = 50
-	MAX_QUERY_LIMIT       = 100
-	DEFAULT_RETURN_LIMIT  = 10
-	SORT_ORDER_ASCENDING  = "asc"
-	SORT_ORDER_DESCENDING = "desc"
-	DEFAULT_SORT_ORDER    = SORT_ORDER_ASCENDING
-	ETHEREUM              = "ethereum"
-	GNOSIS                = "gnosis"
+	maxNameLength       = 50
+	maxQueryLimit       = 100
+	defaultReturnLimit  = 10
+	sortOrderAscending  = "asc"
+	sortOrderDescending = "desc"
+	defaultSortOrder    = sortOrderAscending
+	ethereum            = "ethereum"
+	gnosis              = "gnosis"
 )
 
 type RequestError struct {
@@ -71,6 +71,10 @@ type Paging struct {
 // --------------------------------------
 //   Validation
 
+func joinErr(err *error, message string) {
+	*err = errors.Join(*err, errors.New(message))
+}
+
 func regexCheck(regex regexString, param string) error {
 	if !regexp.MustCompile(string(regex)).MatchString(param) {
 		return fmt.Errorf(`given value '%s' has incorrect format`, param)
@@ -82,9 +86,9 @@ func checkName(name string, minLength int) error {
 	if len(name) < minLength {
 		return fmt.Errorf(`given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength)
 	} else if len(name) > 50 {
-		return fmt.Errorf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, MAX_NAME_LENGTH)
+		return fmt.Errorf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, maxNameLength)
 	}
-	return regexCheck(RE_NAME, name)
+	return regexCheck(reName, name)
 }
 
 func regexCheckMultiple(regexes []regexString, params []string) error {
@@ -139,19 +143,19 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 }
 
 func CheckId(id string) error {
-	return regexCheck(RE_ID, id)
+	return regexCheck(reId, id)
 }
 
 func CheckIdList(ids []string) error {
-	return regexCheckMultiple([]regexString{RE_ID}, ids)
+	return regexCheckMultiple([]regexString{reId}, ids)
 }
 
 func CheckAndGetPaging(r *http.Request) (Paging, error) {
 	q := r.URL.Query()
 	paging := Paging{
 		cursor: q.Get("cursor"),
-		limit:  DEFAULT_RETURN_LIMIT,
-		order:  DEFAULT_SORT_ORDER,
+		limit:  defaultReturnLimit,
+		order:  defaultSortOrder,
 		sort:   q.Get("sort"),
 		search: q.Get("search"),
 	}
@@ -159,8 +163,8 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 	var paging_limit_error error
 	if limit_str := q.Get("limit"); limit_str != "" {
 		paging.limit, paging_limit_error = strconv.Atoi(limit_str)
-		if paging.limit > MAX_QUERY_LIMIT {
-			paging_limit_error = fmt.Errorf("Paging limit %d is too high, maximum value is %d", paging.limit, MAX_QUERY_LIMIT)
+		if paging.limit > maxQueryLimit {
+			paging_limit_error = fmt.Errorf("Paging limit %d is too high, maximum value is %d", paging.limit, maxQueryLimit)
 		}
 	}
 
@@ -168,12 +172,12 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 	if order := q.Get("order"); order != "" {
 		paging.order = order
 	}
-	if paging.order != SORT_ORDER_ASCENDING && paging.order == SORT_ORDER_DESCENDING {
+	if paging.order != sortOrderAscending && paging.order == sortOrderDescending {
 		paging_order_error = fmt.Errorf("invalid sorting order: %s", paging.order)
 	}
 	return paging,
 		errors.Join(
-			regexCheck(RE_CURSOR, paging.cursor),
+			regexCheck(reCursor, paging.cursor),
 			paging_order_error,
 			paging_limit_error,
 			checkName(paging.sort, 0),
@@ -182,12 +186,12 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 }
 
 func CheckValidatorList(validators []string) error {
-	return regexCheckMultiple([]regexString{RE_NUMBER, RE_VALIDATOR_PUBKEY}, validators)
+	return regexCheckMultiple([]regexString{reNumber, reValidatorPubkey}, validators)
 }
 
 func CheckNetwork(network string) error {
-	if network != ETHEREUM && network != GNOSIS {
-		return fmt.Errorf(`given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ETHEREUM, GNOSIS)
+	if network != ethereum && network != gnosis {
+		return fmt.Errorf(`given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ethereum, gnosis)
 	}
 	return nil
 }
