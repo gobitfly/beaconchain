@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { warn } from 'vue'
 import { Categories, ResultTypes } from '~/types/search'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
@@ -8,10 +7,9 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
   let q = ''
   const networkPath = '/networks' + ChainInfo[chain].path
 
-  warn('Search: ', searched, type, ChainInfo[chain].path)
-
   switch (type) {
     case ResultTypes.Tokens :
+    case ResultTypes.NFTs :
       path = '/token/' + searched
       break
     case ResultTypes.Epochs :
@@ -75,7 +73,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
 <template>
   <BcSearchEngine
     id="main-bar"
-    :searchable="Categories.Everything"
+    :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
     width="460"
     height="34"
     @enter="redirectToRelevantPage"

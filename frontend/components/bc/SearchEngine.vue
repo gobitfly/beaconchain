@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { Categories, ResultTypes, TypeInfo, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
-import { ChainIDs, ChainInfo, getListOfChainIDs } from '~/types/networks'
+import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
+import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 const { t: $t } = useI18n()
 
-const props = defineProps({ searchable: { type: String, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
-const searchable = props.searchable as Categories
+const props = defineProps({ searchable: { type: Array, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
 const emit = defineEmits(['enter', 'select'])
 
 const engineWidth = props.width + 'px'
 const inputWidth = String(Number(props.width) - 10) + 'px'
 const dropDownWidth = String(Number(props.width) - 10) + 'px'
 const inputHeight = props.height + 'px'
+
+const searchable = props.searchable as Categories[]
+let searchableTypes : ResultTypes[] = []
 
 const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
@@ -31,21 +33,14 @@ const results = {
 }
 
 interface UserFilters {
-  ['network']: string,
-  [Categories.Tokens]: 'y'|'n',
-  [Categories.NFTs]: 'y'|'n',
-  [Categories.Protocol]: 'y'|'n',
-  [Categories.Addresses]: 'y'|'n',
-  [Categories.Validators]: 'y'|'n'
+  network: string,
+  toggles : Record<string, string>
 }
 const userFilters = ref<UserFilters>({
   network: 'all',
-  [Categories.Tokens]: 'n',
-  [Categories.NFTs]: 'n',
-  [Categories.Protocol]: 'n',
-  [Categories.Addresses]: 'n',
-  [Categories.Validators]: 'n'
+  toggles: {}
 })
+
 const networkButtonColor = ref('var(--light-grey-3)')
 function setNetworkButtonColor () {
   networkButtonColor.value = (userFilters.value.network === 'all') ? 'var(--light-grey-3)' : 'var(--primary-color)'
@@ -59,8 +54,6 @@ function cleanUp () {
   populateDropDown.value = true
   isMouseOverEngine = false
   results.raw = { data: [] }
-  results.organized.in = { networks: [] }
-  results.organized.out = { networks: [] }
 }
 
 // In the V1, the server received a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
@@ -72,7 +65,7 @@ function cleanUp () {
 // - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
 setInterval(() => {
   if (waitingForSearchResults.value) {
-    if (searchAhead(inputField.value, searchable)) {
+    if (searchAhead()) {
       filterAndOrganizeResults()
       waitingForSearchResults.value = false
     }
@@ -80,6 +73,20 @@ setInterval(() => {
 },
 PeriodOfDropDownUpdates
 )
+
+onMounted(() => {
+  searchableTypes = []
+  // builds the list of search types from the list of searchable categories (obtained as a props)
+  for (const t of getListOfResultTypes()) {
+    if (searchable.includes(TypeInfo[t].category)) {
+      searchableTypes.push(t)
+    }
+  }
+  // creates the variables storing the state of the filter buttons and inactivates the filters
+  for (const s of searchable) {
+    userFilters.value.toggles[s] = 'n'
+  }
+})
 
 function inputMightHaveChanged () {
   if (inputField.value === lastKnownInput) {
@@ -99,30 +106,25 @@ function userPressedEnter () {
     return
   }
   if (waitingForSearchResults.value) {
-    if (!searchAhead(inputField.value, searchable)) {
+    if (!searchAhead()) {
       return
     }
   }
-  if (areResultsEmpty(false)) {
-    // false in the test means that we will pick a filtered-out result if the drop down does not show anything although there are results
+  filterAndOrganizeResults()
+  if (areOrganizedResultsEmpty('all')) {
     return
   }
-  // picks a relevant search-ahead result
-  // **** TO BE CHANGED ONCE THE NETWORK DROPDOWN IS IMPLEMENTED ****
-  const userPreferredNetwork = ChainIDs.Ethereum
-  // ****************************************************************
-  filterAndOrganizeResults()
-  let defaultNetwork = results.organized.in.networks[0]
-  for (const network of results.organized.in.networks) {
-    if (network.chainId === userPreferredNetwork) {
-      defaultNetwork = network
-      break
-    }
+  // picks a relevant search-ahead result, the priority is given to filtered in results
+  let toConsider : OrganizedResults
+  if (!areOrganizedResultsEmpty('in')) {
+    toConsider = results.organized.in
+  } else {
+    // by default, we pick a filtered-out result if there are results but the drop down does not show them
+    toConsider = results.organized.out
   }
-  const defaultType = defaultNetwork.types[0]
   // cleans up and calls back user's function with the first result
   cleanUp()
-  emit('enter', defaultType.found[0].main, defaultType.type, defaultNetwork.chainId)
+  emit('enter', toConsider.networks[0].types[0].found[0].main, toConsider.networks[0].types[0].type, toConsider.networks[0].chainId)
 }
 
 function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: string) {
@@ -133,17 +135,17 @@ function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: strin
 
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
-function searchAhead (input : string, searchable : Categories) : boolean {
+function searchAhead () : boolean {
   let error = false
 
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
-  if (searchable as string !== '-- to be removed --') {
-    results.raw = simulateAPIresponse(input)
+  if (searchableTypes[0] as string !== '-- to be removed --') {
+    results.raw = simulateAPIresponse(inputField.value)
   } else { // *** END OF STUFF TO REMOVE ***
     fetch('/api/2/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input, searchable }),
+      body: JSON.stringify({ input: inputField.value, searchable: searchableTypes }),
       signal: AbortSignal.timeout(APIcallTimeout)
     }).then((received) => {
       if (received.ok && received.status < 400) {
@@ -171,8 +173,8 @@ function searchAhead (input : string, searchable : Categories) : boolean {
 function filterAndOrganizeResults () {
   // determining whether any filter button is activated
   let areAllButtonsOff = true
-  for (const k of Object.keys(userFilters.value)) {
-    if (userFilters.value[k as keyof UserFilters] === 'y') {
+  for (const k of Object.keys(userFilters.value.toggles)) {
+    if (userFilters.value.toggles[k] === 'y') {
       areAllButtonsOff = false
       break
     }
@@ -193,10 +195,10 @@ function filterAndOrganizeResults () {
     if (toBeAdded.main === '') {
       continue
     }
-    // determining whether the finding is filtered in or out, pointing `place` to the corresponding object
+    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized storage
     let place : OrganizedResults
     if ((userFilters.value.network === String(chainId) || userFilters.value.network === 'all') &&
-        (userFilters.value[TypeInfo[type].category as keyof UserFilters] === 'y' || areAllButtonsOff /* if all filters are inactive, we default to showing everything */)) {
+        (userFilters.value.toggles[TypeInfo[type].category] === 'y' || areAllButtonsOff /* if all filters are inactive, we default to showing everything */)) {
       place = results.organized.in
     } else {
       place = results.organized.out
@@ -228,8 +230,12 @@ function refreshDropDown () {
   populateDropDown.value = true // this triggers Vue to refresh the list of results
 }
 
-function areResultsEmpty (considerFilteredOutResults : boolean) : boolean {
-  return results.organized.in.networks.length === 0 && (!considerFilteredOutResults || results.organized.out.networks.length === 0)
+function areOrganizedResultsEmpty (what : 'in'|'out'|'all') : boolean {
+  switch (what) {
+    case 'in' : return (results.organized.in.networks.length === 0)
+    case 'out' : return (results.organized.out.networks.length === 0)
+    case 'all' : return areOrganizedResultsEmpty('in') && areOrganizedResultsEmpty('out')
+  }
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -389,22 +395,22 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   if (searchedIsPositiveInteger) {
     response.data.push(
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'epochs',
         num_value: Number(searched)
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'slots',
         num_value: Number(searched)
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'blocks',
         num_value: Number(searched)
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'validators_by_index',
         num_value: Number(searched)
       }
@@ -412,40 +418,40 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   } else {
     response.data.push(
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'tokens',
         str_value: searched + ' Coin'
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'ens_names',
         str_value: searched + 'hallo.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'ens_names',
         str_value: searched + '.bitfly.eth',
         hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'ens_overview',
         str_value: searched + 'hallo.eth'
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'ens_overview',
         str_value: searched + '.bitfly.eth'
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'count_validators_by_withdrawal_ens_name',
         str_value: searched + 'hallo.eth',
         num_value: 2
       },
       {
-        chain_id: 17000,
+        chain_id: 100,
         type: 'count_validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth',
         num_value: 150
@@ -476,26 +482,26 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
-      <div v-else-if="areResultsEmpty(true)">
+      <div v-else-if="areOrganizedResultsEmpty('all')">
         {{ $t('search_engine.no_result') }}
       </div>
       <div v-else>
         <div id="filter-bar">
           <label><select
             id="filter-list"
-            v-model="userFilters['network']"
+            v-model="userFilters.network"
             class="filter-button"
             @change="setNetworkButtonColor(); refreshDropDown()"
           >
             <option value="all">All networks</option>
-            <option v-for="chain in getListOfChainIDs()" :key="chain" :value="String(chain)">
+            <option v-for="chain in getListOfImplementedChainIDs()" :key="chain" :value="String(chain)">
               {{ ChainInfo[chain].name }}
             </option>
           </select>
           </label>
           <label>
             <input
-              v-model="userFilters[Categories.Protocol]"
+              v-model="userFilters.toggles[Categories.Protocol]"
               class="filter-cb"
               true-value="y"
               false-value="n"
@@ -506,7 +512,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           </label>
           <label>
             <input
-              v-model="userFilters[Categories.Addresses]"
+              v-model="userFilters.toggles[Categories.Addresses]"
               class="filter-cb"
               true-value="y"
               false-value="n"
@@ -517,7 +523,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           </label>
           <label>
             <input
-              v-model="userFilters[Categories.Tokens]"
+              v-model="userFilters.toggles[Categories.Tokens]"
               class="filter-cb"
               true-value="y"
               false-value="n"
@@ -528,7 +534,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           </label>
           <label>
             <input
-              v-model="userFilters[Categories.NFTs]"
+              v-model="userFilters.toggles[Categories.NFTs]"
               class="filter-cb"
               true-value="y"
               false-value="n"
@@ -539,7 +545,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           </label>
           <label>
             <input
-              v-model="userFilters[Categories.Validators]"
+              v-model="userFilters.toggles[Categories.Validators]"
               class="filter-cb"
               true-value="y"
               false-value="n"
