@@ -85,6 +85,19 @@ type VDBSummaryTableRow struct {
 	Validators []uint64 `json:"validators"`
 }
 
+type VDBSummaryTableColumn int
+
+const (
+	VDBSummaryGroup VDBSummaryTableColumn = iota
+	VDBSummaryEfficiencyDay
+	VDBSummaryEfficiencyWeek
+	VDBSummaryEfficiencyMonth
+	VDBSummaryEfficiencyTotal
+	VDBSummaryValidators // Sort by count, not by index
+)
+
+func (VDBSummaryTableColumn) Enum() {}
+
 type VDBGroupSummaryResponse struct {
 	Data VDBGroupSummary `json:"data"`
 }
@@ -129,10 +142,25 @@ type VDBRewardsTableResponse struct {
 }
 
 type VDBRewardsTableRow struct {
-	Epoch   uint64    `json:"epoch"`
-	GroupId uint64    `json:"group_id"`
-	Reward  ClElValue `json:"reward"`
+	Epoch   uint64               `json:"epoch"`
+	Duty    VDBRewardesTableDuty `json:"duty"`
+	GroupId uint64               `json:"group_id"`
+	Reward  ClElValue            `json:"reward"`
 }
+
+type VDBRewardesTableDuty struct {
+	Attestation float64 `json:"attestation"`
+	Proposal    float64 `json:"proposal"`
+	Sync        float64 `json:"sync"`
+	Slashing    uint64  `json:"slashing"`
+}
+
+type VDBRewardsTableColumn int
+
+const (
+	VDBRewardEpoch VDBRewardsTableColumn = iota
+	VDBRewardDuty                        // Sort by sum of percentages
+)
 
 type VDBGroupRewardsResponse struct {
 	Data VDBGroupRewards `json:"data"`
@@ -193,6 +221,16 @@ type VDBBlocksTableRow struct {
 	Status   string    `json:"status" ts_type:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
 	Reward   ClElValue `json:"reward"`
 }
+
+type VDBBlocksTableColumn int
+
+const (
+	VDBBlockProposer VDBBlocksTableColumn = iota
+	VDBBlockGroup
+	VDBBlockAge
+	VDBBlockStatus
+	VDBBlockReward
+)
 
 // ------------------------------------------------------------
 // Heatmap Tab
@@ -283,6 +321,16 @@ type VDBWithdrawalsTableRow struct {
 	Recipient Address         `json:"recipient"`
 	Amount    decimal.Decimal `json:"amount"`
 }
+
+type VDBWithdrawalsTableColumn int
+
+const (
+	VDBWithdrawalAge VDBWithdrawalsTableColumn = iota
+	VDBWithdrawalIndex
+	VDBWithdrawalGroup
+	VDBWithdrawalRecipient
+	VDBWithdrawalAmount
+)
 
 // ------------------------------------------------------------
 // Manage Modal

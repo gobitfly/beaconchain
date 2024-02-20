@@ -12,13 +12,25 @@ import (
 	apitypes "github.com/gobitfly/beaconchain/pkg/types/api"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
+
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 )
+
+type HandlerService struct {
+	dai dataaccess.DataAccessInterface
+}
+
+func NewHandlerService(das dataaccess.DataAccessInterface) HandlerService {
+	return HandlerService{dai: das}
+}
+
+// --------------------------------------
 
 type regexString string
 
 const (
 	// Subject to change, just examples
-	RE_NAME             = regexString(`^[a-zA-Z0-9_\-.\ ]{` + regexString(MAX_NAME_LENGTH) + `}$`)
+	RE_NAME             = regexString(`^[a-zA-Z0-9_\-.\ ]{` + regexString(rune(MAX_NAME_LENGTH)) + `}$`)
 	RE_ID               = regexString(`^[a-zA-Z0-9_]+$`)
 	RE_NUMBER           = regexString(`^[0-9]+$`)
 	RE_VALIDATOR_PUBKEY = regexString(`^[0-9a-fA-F]{96}$`)
@@ -61,16 +73,16 @@ type Paging struct {
 
 func regexCheck(regex regexString, param string) error {
 	if !regexp.MustCompile(string(regex)).MatchString(param) {
-		return errors.New(fmt.Sprintf(`Given value '%s' has incorrect format`, param))
+		return fmt.Errorf(`given value '%s' has incorrect format`, param)
 	}
 	return nil
 }
 
 func checkName(name string, minLength int) error {
 	if len(name) < minLength {
-		return errors.New(fmt.Sprintf(`Given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength))
+		return fmt.Errorf(`given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength)
 	} else if len(name) > 50 {
-		return errors.New(fmt.Sprintf(`Given value '%s' for parameter "name" is too long, maximum length is %d`, name, MAX_NAME_LENGTH))
+		return fmt.Errorf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, MAX_NAME_LENGTH)
 	}
 	return regexCheck(RE_NAME, name)
 }
@@ -95,32 +107,32 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 	sc := jsonschema.Reflect(data)
 	var i interface{}
 	if json.NewDecoder(r).Decode(&i) != nil {
-		return RequestError{http.StatusBadRequest, errors.New("Request is not in JSON format")}
+		return RequestError{http.StatusBadRequest, errors.New("request is not in JSON format")}
 	}
 	b, err := json.Marshal(sc)
 	if err != nil {
-		fmt.Sprintf("error validating json: %s\n", err.Error())
-		return RequestError{http.StatusInternalServerError, errors.New("Can't validate expected format")}
+		fmt.Printf("error validating json: %s\n", err.Error())
+		return RequestError{http.StatusInternalServerError, errors.New("can't validate expected format")}
 	}
 	loader := gojsonschema.NewBytesLoader(b)
 	documentLoader, _ := gojsonschema.NewReaderLoader(r)
 	schema, err := gojsonschema.NewSchema(loader)
 	if err != nil {
-		fmt.Sprintf("error validating json: %s\n", err.Error())
-		return RequestError{http.StatusInternalServerError, errors.New("Can't create expected format")}
+		fmt.Printf("error validating json: %s\n", err.Error())
+		return RequestError{http.StatusInternalServerError, errors.New("can't create expected format")}
 	}
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
-		fmt.Sprintf("error validating json: %s\n", err.Error())
-		return RequestError{http.StatusInternalServerError, errors.New("Couldn't validate JSON request")}
+		fmt.Printf("error validating json: %s\n", err.Error())
+		return RequestError{http.StatusInternalServerError, errors.New("couldn't validate JSON request")}
 	}
 	if !result.Valid() {
-		return RequestError{http.StatusBadRequest, errors.New("Unexpected JSON format. Check the API documentation for parameter details")}
+		return RequestError{http.StatusBadRequest, errors.New("unexpected JSON format. Check the API documentation for parameter details")}
 	}
 	if err = json.NewDecoder(r).Decode(data); err != nil {
 		// error parsing json; shouldn't happen since we verified it's json in the correct format already
-		fmt.Sprintf("error validating json: %s\n", err.Error())
-		return RequestError{http.StatusInternalServerError, errors.New("Couldn't decode JSON request")}
+		fmt.Printf("error validating json: %s\n", err.Error())
+		return RequestError{http.StatusInternalServerError, errors.New("couldn't decode JSON request")}
 	}
 	// could perform data validation checks based on tags here, but might need validation lib for that
 	return nil
@@ -148,7 +160,7 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 	if limit_str := q.Get("limit"); limit_str != "" {
 		paging.limit, paging_limit_error = strconv.Atoi(limit_str)
 		if paging.limit > MAX_QUERY_LIMIT {
-			paging_limit_error = errors.New(fmt.Sprintf("Paging limit %d is too high, maximum value is %d", paging.limit, MAX_QUERY_LIMIT))
+			paging_limit_error = fmt.Errorf("Paging limit %d is too high, maximum value is %d", paging.limit, MAX_QUERY_LIMIT)
 		}
 	}
 
@@ -157,7 +169,7 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 		paging.order = order
 	}
 	if paging.order != SORT_ORDER_ASCENDING && paging.order == SORT_ORDER_DESCENDING {
-		paging_order_error = errors.New(fmt.Sprintf("Invalid sorting order: %s", paging.order))
+		paging_order_error = fmt.Errorf("invalid sorting order: %s", paging.order)
 	}
 	return paging,
 		errors.Join(
@@ -175,7 +187,7 @@ func CheckValidatorList(validators []string) error {
 
 func CheckNetwork(network string) error {
 	if network != ETHEREUM && network != GNOSIS {
-		return errors.New(fmt.Sprintf(`Given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ETHEREUM, GNOSIS))
+		return fmt.Errorf(`given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ETHEREUM, GNOSIS)
 	}
 	return nil
 }
