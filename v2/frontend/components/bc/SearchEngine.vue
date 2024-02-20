@@ -114,7 +114,7 @@ function userPressedEnter () {
   if (areOrganizedResultsEmpty('all')) {
     return
   }
-  // picks a relevant search-ahead result, the priority is given to filtered in results
+  // picks a relevant search-ahead result, the priority is given to filtered-in results
   let toConsider : OrganizedResults
   if (!areOrganizedResultsEmpty('in')) {
     toConsider = results.organized.in
@@ -169,7 +169,7 @@ function searchAhead () : boolean {
   return !error
 }
 
-// Fills `results.organized` by categorizing and filtering the disorganized data of the API.
+// Fills `results.organized` by categorizing, filtering and sorting the data of the API.
 function filterAndOrganizeResults () {
   // determining whether any filter button is activated
   let areAllButtonsOff = true
@@ -222,6 +222,17 @@ function filterAndOrganizeResults () {
     // now we can insert the finding at the right place in the organized results
     place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
   }
+
+  // Sorting. We could simply sort the long array of the API before filling our organized structures, thus not needing
+  // the following function, but it is faster to sort separate lists than their union (a.log(a)+b.log(b) < (a+b)log(a+b))
+  function sortResults (place : OrganizedResults) {
+    place.networks.sort((a, b) => { return ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority })
+    for (const network of place.networks) {
+      network.types.sort((a, b) => { return TypeInfo[a.type].priority - TypeInfo[b.type].priority })
+    }
+  }
+  sortResults(results.organized.in)
+  sortResults(results.organized.out)
 }
 
 function refreshDropDown () {
@@ -499,60 +510,16 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
             </option>
           </select>
           </label>
-          <label>
+          <label v-for="filter in searchable" :key="filter">
             <input
-              v-model="userFilters.toggles[Categories.Protocol]"
+              v-model="userFilters.toggles[filter]"
               class="filter-cb"
               true-value="y"
               false-value="n"
               type="checkbox"
               @change="refreshDropDown()"
             >
-            <span class="filter-button">Protocol</span>
-          </label>
-          <label>
-            <input
-              v-model="userFilters.toggles[Categories.Addresses]"
-              class="filter-cb"
-              true-value="y"
-              false-value="n"
-              type="checkbox"
-              @change="refreshDropDown()"
-            >
-            <span class="filter-button">Addresses</span>
-          </label>
-          <label>
-            <input
-              v-model="userFilters.toggles[Categories.Tokens]"
-              class="filter-cb"
-              true-value="y"
-              false-value="n"
-              type="checkbox"
-              @change="refreshDropDown()"
-            >
-            <span class="filter-button">Tokens</span>
-          </label>
-          <label>
-            <input
-              v-model="userFilters.toggles[Categories.NFTs]"
-              class="filter-cb"
-              true-value="y"
-              false-value="n"
-              type="checkbox"
-              @change="refreshDropDown()"
-            >
-            <span class="filter-button">NFTs</span>
-          </label>
-          <label>
-            <input
-              v-model="userFilters.toggles[Categories.Validators]"
-              class="filter-cb"
-              true-value="y"
-              false-value="n"
-              type="checkbox"
-              @change="refreshDropDown()"
-            >
-            <span class="filter-button">Validators</span>
+            <span class="filter-button">{{ CategoryInfo[filter].filterLabel }}</span>
           </label>
         </div>
         <span v-if="populateDropDown">

@@ -51,7 +51,8 @@ interface TypeInfoFields {
   preLabels: string, // to be displayed before the ahead-result returned by the API,
   midLabels: string, // between the two values in the result...
   postLabels: string, // and after. These labels can be text, or HTML code for icons
-  category: Categories
+  category: Categories,
+  priority: number
 }
 
 export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
@@ -60,161 +61,184 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Tokens
+    category: Categories.Tokens,
+    priority: 3
   },
   [ResultTypes.NFTs]: {
     title: 'NFTs',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.NFTs
+    category: Categories.NFTs,
+    priority: 4
   },
   [ResultTypes.Epochs]: {
     title: 'Epochs',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 12
   },
   [ResultTypes.Slots]: {
     title: 'Slots',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 11
   },
   [ResultTypes.Blocks]: {
     title: 'Blocks',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 10
   },
   [ResultTypes.BlockRoots]: {
     title: 'Block roots',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 18
   },
   [ResultTypes.StateRoots]: {
     title: 'State roots',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 19
   },
   [ResultTypes.Transactions]: {
     title: 'Transactions',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 17
   },
   [ResultTypes.TransactionBatches]: {
     title: 'Transaction batches',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 14
   },
   [ResultTypes.StateBatches]: {
     title: 'State batches',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 13
   },
   [ResultTypes.Addresses]: {
     title: 'Addresses',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Addresses
+    category: Categories.Addresses,
+    priority: 2
   },
   [ResultTypes.Ens]: {
     title: 'ENS addresses',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Addresses
+    category: Categories.Addresses,
+    priority: 1
   },
   [ResultTypes.EnsOverview]: {
     title: 'Overview of an ENS domain',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Addresses
+    category: Categories.Addresses,
+    priority: 15
   },
   [ResultTypes.Graffiti]: {
     title: 'Graffiti',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Protocol
+    category: Categories.Protocol,
+    priority: 16
   },
   [ResultTypes.ValidatorsByIndex]: {
     title: 'Validators by index',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 9
   },
   [ResultTypes.ValidatorsByPubkey]: {
     title: 'Validators by public key',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 9
   },
   [ResultTypes.ValidatorsByDepositAddress]: {
     title: 'Validators by deposit address',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 6
   },
   [ResultTypes.ValidatorsByDepositEnsName]: {
     title: 'Validators by ENS of the deposit address',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 5
   },
   [ResultTypes.ValidatorsByWithdrawalCredential]: {
     title: 'Validators by withdrawal credential',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 8
   },
   [ResultTypes.ValidatorsByWithdrawalAddress]: {
     title: 'Validators by withdrawal address',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 8
   },
   [ResultTypes.ValidatorsByWithdrawalEnsName]: {
     title: 'Validators by ENS of the withdrawal address',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 7
   },
   [ResultTypes.ValidatorsByGraffiti]: {
     title: 'Validators by graffiti',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 9999
   },
   [ResultTypes.ValidatorsByName]: {
     title: 'Validators by name',
     preLabels: '',
     midLabels: '',
     postLabels: '',
-    category: Categories.Validators
+    category: Categories.Validators,
+    priority: 9999
   }
 }
 
