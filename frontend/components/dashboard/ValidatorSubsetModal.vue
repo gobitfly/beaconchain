@@ -26,13 +26,13 @@ watch(filter, (newFilter) => {
 </script>
 
 <template>
-  <BcDialog v-model="visible" :header="header" class="modal_container">
+  <BcDialog v-model="visible" :header="header" class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
         {{ props.caption }}
       </span>
       <span class="search_elements_container">
-        <InputText v-model="filter" placeholder="Index" class="remove_right_border_radius" />
+        <InputText v-model="filter" placeholder="Index" class="input_height remove_right_border_radius" />
         <Button class="p-button-icon-only remove_left_border_radius">
           <i class="fas fa-magnifying-glass" />
         </Button>
@@ -40,7 +40,7 @@ watch(filter, (newFilter) => {
     </div>
     <div class="text_container">
       <span v-for="(v, i) in shownValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" class="link">
+        <NuxtLink :to="`/validator/${v}`" class="link breaking_link">
           {{ v }}
         </NuxtLink>
         <span v-if="i !== shownValidators.length - 1">, </span>
@@ -53,7 +53,7 @@ watch(filter, (newFilter) => {
 </template>
 
 <style lang="scss" scoped>
- :global(.modal_container) {
+ :global(.validator_subset_modal_container) {
     width: 450px;
     height: 569px;
   }
@@ -62,7 +62,7 @@ watch(filter, (newFilter) => {
     padding: 10px 0px 14px 0px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
   }
 
   .search_elements_container {
@@ -75,16 +75,27 @@ watch(filter, (newFilter) => {
     border-bottom-right-radius: 0px;
   }
 
+  .input_height{
+    height: var(--default-button-height);
+  }
+
   .remove_left_border_radius{
     border-top-left-radius: 0px;
     border-bottom-left-radius: 0px;
   }
 
   .text_container {
+    background-color: var(--subcontainer-background);
     padding: 10px 10px 7px 10px;
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    height: 453px;
+    min-height: 125px;
+    max-height: 453px;
+    overflow-y: auto;
+  }
+
+  .breaking_link {
+    word-break: break-all;
   }
 
   .copy_button_position {
