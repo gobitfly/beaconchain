@@ -154,7 +154,7 @@ func Serve(addr string) error {
 </html>`))
 
 		if err != nil {
-			logger.Errorf("error writing to response buffer: %v", err)
+			utils.LogError(err, "error writing to response buffer: %v", 0)
 		}
 	}))
 

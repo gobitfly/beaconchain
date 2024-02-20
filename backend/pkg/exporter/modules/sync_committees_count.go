@@ -29,7 +29,7 @@ func exportSyncCommitteesCount() error {
 
 	latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
 	if err != nil {
-		logger.Errorf("error retrieving latest exported finalized epoch from the database: %v", err)
+		utils.LogError(err, "error retrieving latest exported finalized epoch from the database", 0)
 	}
 
 	currentPeriod := utils.SyncPeriodOfEpoch(latestFinalizedEpoch)

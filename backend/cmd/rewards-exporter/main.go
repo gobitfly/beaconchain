@@ -114,7 +114,7 @@ func main() {
 	if *epochEnd != 0 {
 		latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
 		if *epochEnd > latestFinalizedEpoch {
-			logrus.Errorf("error epochEnd [%v] is greater then latestFinalizedEpoch [%v]", epochEnd, latestFinalizedEpoch)
+			utils.LogError(fmt.Errorf("error epochEnd [%v] is greater then latestFinalizedEpoch [%v]", epochEnd, latestFinalizedEpoch), "", 0)
 			return
 		}
 		g := errgroup.Group{}
@@ -157,20 +157,20 @@ func main() {
 					err = export(e, bt, client, enAddress)
 
 					if err != nil {
-						logrus.Error(err)
+						utils.LogError(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
 					} else {
 						break
 					}
 				}
 				if err != nil {
-					logrus.Error(err)
+					utils.LogError(err, "error exporting rewards for epoch", 0, map[string]interface{}{"epoch": e})
 					return nil
 				}
 
 				_, err = db.WriterDb.Exec("UPDATE epochs SET rewards_exported = true WHERE epoch = $1", e)
 
 				if err != nil {
-					logrus.Errorf("error marking rewards_exported as true for epoch %v: %v", e, err)
+					utils.LogError(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
 				}
 
 				atomic.AddInt64(&epochsCompleted, 1)
@@ -197,14 +197,14 @@ func main() {
 				err := export(e, bt, client, enAddress)
 
 				if err != nil {
-					logrus.Error(err)
+					utils.LogError(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
 					continue
 				}
 
 				_, err = db.WriterDb.Exec("UPDATE epochs SET rewards_exported = true WHERE epoch = $1", e)
 
 				if err != nil {
-					logrus.Errorf("error marking rewards_exported as true for epoch %v: %v", e, err)
+					utils.LogError(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
 				}
 				services.ReportStatus("rewardsExporter", "Running", nil)
 
@@ -220,7 +220,7 @@ func main() {
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
 	if *epoch > int64(latestFinalizedEpoch) {
-		logrus.Errorf("error epoch [%v] is greater then latestFinalizedEpoch [%v]", epoch, latestFinalizedEpoch)
+		utils.LogError(fmt.Errorf("error epoch [%v] is greater then latestFinalizedEpoch [%v]", epoch, latestFinalizedEpoch), "", 0)
 		return
 	}
 	err = export(uint64(*epoch), bt, client, enAddress)

@@ -158,7 +158,7 @@ func (bigtable *Bigtable) commitQueuedMachineMetricWrites() {
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					logger.Errorf("error writing queued machine metrics to bigtable: %v", err)
+					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 
@@ -176,7 +176,7 @@ func (bigtable *Bigtable) commitQueuedMachineMetricWrites() {
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					logger.Errorf("error writing queued machine metrics to bigtable: %v", err)
+					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 		}

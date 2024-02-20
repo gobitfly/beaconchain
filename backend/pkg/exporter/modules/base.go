@@ -55,7 +55,7 @@ func StartAll(context ModuleContext) {
 			logger.Infof("beacon node is available with head slot: %v", head.HeadSlot)
 			break
 		}
-		logger.Errorf("beacon-node seems to be unavailable: %v", err)
+		utils.LogError(err, "beacon-node seems to be unavailable", 0)
 		time.Sleep(time.Second * 10)
 	}
 
@@ -68,7 +68,7 @@ func StartAll(context ModuleContext) {
 		start := time.Now()
 		err := slotExporter.Start(nil)
 		if err != nil {
-			logrus.Errorf("error during slot export run: %v", err)
+			utils.LogError(err, "error during slot export run", 0)
 		} else if err == nil && firstRun {
 			firstRun = false
 		}
