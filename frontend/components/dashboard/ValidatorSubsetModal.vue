@@ -45,7 +45,7 @@ watch(filter, (newFilter) => {
         </NuxtLink>
         <span v-if="i !== shownValidators.length - 1">, </span>
       </span>
-      <Button class="p-button-icon-only copy_button_position">
+      <Button class="p-button-icon-only copy_button">
         <i class="fas fa-copy" />
       </Button>
     </div>
@@ -56,6 +56,11 @@ watch(filter, (newFilter) => {
  :global(.validator_subset_modal_container) {
     width: 450px;
     height: 569px;
+  }
+
+  :global(.validator_subset_modal_container .p-dialog-content) {
+      display: flex;
+      flex-direction: column;
   }
 
   .top_line_container {
@@ -83,6 +88,7 @@ watch(filter, (newFilter) => {
   }
 
   .text_container {
+    position: relative;
     background-color: var(--subcontainer-background);
     padding: 10px 10px 7px 10px;
     border: 1px solid var(--container-border-color);
@@ -91,11 +97,12 @@ watch(filter, (newFilter) => {
     max-height: 453px;
     overflow-y: auto;
     word-break: break-all;
-  }
 
-  .copy_button_position {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
+    .copy_button {
+      position: sticky;
+      bottom: 0px;
+      top: 77px;
+      left: 355px;
+    }
   }
 </style>
