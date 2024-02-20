@@ -724,7 +724,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			FROM validators 
 			WHERE activationepoch=9223372036854775807 and status='pending')`)
 	if err != nil {
-		logger.Errorf("error removing queued publickeys from validator_queue_deposits: %v", err)
+		utils.LogError(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
 	}
 
@@ -734,7 +734,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
-		logger.Errorf("error adding queued publickeys to validator_queue_deposits: %v", err)
+		utils.LogError(err, "error adding queued publickeys to validator_queue_deposits", 0)
 		return err
 	}
 
@@ -749,7 +749,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			validator_queue_deposits.validatorindex = validators.validatorindex
 	`)
 	if err != nil {
-		logger.Errorf("error updating activationeligibilityepoch on validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
 		return err
 	}
 
@@ -786,7 +786,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
-		logger.Errorf("error updating validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
 	return nil

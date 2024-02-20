@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -215,7 +216,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			}, domain)
 
 			if err != nil {
-				logrus.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature)
+				utils.LogError(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
 				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {

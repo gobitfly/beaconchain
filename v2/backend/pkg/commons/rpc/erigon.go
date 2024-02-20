@@ -182,7 +182,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			logrus.Errorf("error converting tx %v to msg: %v", tx.Hash(), err)
+			utils.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}

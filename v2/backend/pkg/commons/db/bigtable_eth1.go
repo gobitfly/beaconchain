@@ -185,7 +185,7 @@ func (bigtable *Bigtable) CheckForGapsInBlocksTable(lookback int) (gapFound bool
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -263,7 +263,7 @@ func (bigtable *Bigtable) CheckForGapsInDataTable(lookback int) error {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -332,7 +332,7 @@ func (bigtable *Bigtable) getLastBlockInDataTableFromBigtable() (int, error) {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -358,7 +358,7 @@ func (bigtable *Bigtable) getLastBlockInBlocksTableFromBigtable() (int, error) {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -399,7 +399,7 @@ func (bigtable *Bigtable) GetMostRecentBlockFromDataTable() (*types.Eth1BlockInd
 	rowHandler := func(row gcp_bigtable.Row) bool {
 		c, err := strconv.Atoi(strings.Replace(row.Key(), prefix, "", 1))
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", row.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": row.Key()})
 			return false
 		}
 
@@ -407,7 +407,7 @@ func (bigtable *Bigtable) GetMostRecentBlockFromDataTable() (*types.Eth1BlockInd
 
 		err = proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, &block)
 		if err != nil {
-			logger.Errorf("error could not unmarschal proto object, err: %v", err)
+			utils.LogError(err, "error could not unmarschal proto object", 0)
 		}
 
 		return c == 0
@@ -434,7 +434,7 @@ func getBlockHandler(blocks *[]*types.Eth1BlockIndexed) func(gcp_bigtable.Row) b
 		block := types.Eth1BlockIndexed{}
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, &block)
 		if err != nil {
-			logger.Errorf("error could not unmarschal proto object, err: %v", err)
+			utils.LogError(err, "error could not unmarschal proto object", 0)
 			return false
 		}
 
@@ -484,7 +484,7 @@ func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block
 			block := types.Eth1Block{}
 			err := proto.Unmarshal(row[DEFAULT_FAMILY_BLOCKS][0].Value, &block)
 			if err != nil {
-				logger.Errorf("error could not unmarschal proto object, err: %v", err)
+				utils.LogError(err, "error could not unmarschal proto object", 0)
 				return false
 			}
 			stream <- &block
@@ -657,7 +657,7 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 
 				err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 				if err != nil {
-					logger.Errorf("error getting blocks descending high: %v low: %v err: %v", high, low, err)
+					utils.LogError(err, "error getting blocks descending", 0, map[string]interface{}{"high": high, "low": low})
 				}
 				close(stream)
 			}(blocksChan)
@@ -824,7 +824,7 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 			if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
 				txFee = new(big.Int).Mul(proposerGasPricePart, big.NewInt(int64(t.GasUsed)))
 			} else {
-				logger.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart)
+				utils.LogError(fmt.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart), "", 0)
 				txFee = big.NewInt(0)
 			}
 		}
@@ -924,7 +924,7 @@ func CalculateTxFeeFromTransaction(tx *types.Eth1Transaction, blockBaseFee *big.
 			txFee.Mul(txFee, maxGasPrice)
 		}
 	default:
-		logger.Errorf("unknown tx type %v", tx.Type)
+		utils.LogError(fmt.Errorf("unknown tx type %v", tx.Type), "", 0)
 	}
 	return txFee
 }
@@ -1707,7 +1707,7 @@ func (bigtable *Bigtable) TransformERC1155(blk *types.Eth1Block, cache *freecach
 				}
 
 				if len(ids) != len(values) {
-					logrus.Errorf("error parsing erc1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(ids), len(values))
+					utils.LogError(fmt.Errorf("error parsing erc1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(ids), len(values)), "", 0)
 					continue
 				}
 				for ti := range ids {
@@ -3381,7 +3381,7 @@ func (bigtable *Bigtable) GetContractMetadata(address []byte) (*types.ContractMe
 
 		err = bigtable.SaveContractMetadata(address, ret)
 		if err != nil {
-			logger.Errorf("error saving contract metadata to bigtable: %v", err)
+			utils.LogError(err, "error saving contract metadata to bigtable", 0)
 		}
 		return ret, nil
 	}
@@ -3395,7 +3395,7 @@ func (bigtable *Bigtable) GetContractMetadata(address []byte) (*types.ContractMe
 				val, err := abi.JSON(bytes.NewReader(ret.ABIJson))
 
 				if err != nil {
-					logrus.Fatalf("error decoding abi for address 0x%x: %v", address, err)
+					utils.LogFatal(err, "error decoding abi for address", 0, map[string]interface{}{"address": address})
 				}
 				ret.ABI = &val
 			}
@@ -3745,7 +3745,7 @@ func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*typ
 	key := fmt.Sprintf("1:%v_SIGNATURE_IMPORT_STATUS", getSignaturePrefix(st))
 	row, err := bigtable.tableData.ReadRow(ctx, key)
 	if err != nil {
-		logrus.Errorf("error reading signature imoprt status row %v: %v", row.Key(), err)
+		utils.LogError(err, "error reading signature imoprt status row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 	s := &types.SignatureImportStatus{}
@@ -3755,7 +3755,7 @@ func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*typ
 	row_ := row[DEFAULT_FAMILY][0]
 	err = json.Unmarshal(row_.Value, s)
 	if err != nil {
-		logrus.Errorf("error unmarshalling signature import status for row %v: %v", row.Key(), err)
+		utils.LogError(err, "error unmarshalling signature import status for row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 
@@ -3832,7 +3832,7 @@ func (bigtable *Bigtable) GetSignature(hex string, st types.SignatureType) (*str
 	key := fmt.Sprintf("1:%v_SIGNATURE:%v", getSignaturePrefix(st), hex)
 	row, err := bigtable.tableData.ReadRow(ctx, key)
 	if err != nil {
-		logrus.Errorf("error reading signature imoprt status row %v: %v", row.Key(), err)
+		utils.LogError(err, "error reading signature imoprt status row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 	if row == nil {
@@ -3995,7 +3995,7 @@ func (bigtable *Bigtable) GetGasNowHistory(ts, pastTs time.Time) ([]types.GasNow
 
 	scanner := func(row gcp_bigtable.Row) bool {
 		if len(row[SERIES_FAMILY]) < 4 {
-			logrus.Errorf("error reading row: %+v", row)
+			utils.LogError(fmt.Errorf("error reading row: %+v", row), "", 0)
 			return false
 		}
 		// Columns are returned alphabetically so fast, rapid, slow, standard should be the order

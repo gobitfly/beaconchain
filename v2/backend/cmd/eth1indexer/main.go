@@ -237,25 +237,25 @@ func main() {
 	for ; ; time.Sleep(time.Second * 14) {
 		err := HandleChainReorgs(bt, client, *reorgDepth)
 		if err != nil {
-			logrus.Errorf("error handling chain reorgs: %v", err)
+			utils.LogError(err, "error handling chain reorg", 0)
 			continue
 		}
 
 		lastBlockFromNode, err := client.GetLatestEth1BlockNumber()
 		if err != nil {
-			logrus.Errorf("error retrieving latest eth block number: %v", err)
+			utils.LogError(err, "error retrieving latest eth block number", 0)
 			continue
 		}
 
 		lastBlockFromBlocksTable, err := bt.GetLastBlockInBlocksTable()
 		if err != nil {
-			logrus.Errorf("error retrieving last blocks from blocks table: %v", err)
+			utils.LogError(err, "error retrieving last blocks from blocks table", 0)
 			continue
 		}
 
 		lastBlockFromDataTable, err := bt.GetLastBlockInDataTable()
 		if err != nil {
-			logrus.Errorf("error retrieving last blocks from data table: %v", err)
+			utils.LogError(err, "error retrieving last blocks from data table", 0)
 			continue
 		}
 
@@ -534,7 +534,7 @@ func ProcessMetadataUpdates(bt *db.Bigtable, client *rpc.ErigonClient, prefix st
 		start := time.Now()
 		keys, pairs, err := bt.GetMetadataUpdates(prefix, lastKey, batchSize)
 		if err != nil {
-			logrus.Errorf("error retrieving metadata updates from bigtable: %v", err)
+			utils.LogError(err, "error retrieving metadata updates from bigtable", 0)
 			return
 		}
 
@@ -555,7 +555,7 @@ func ProcessMetadataUpdates(bt *db.Bigtable, client *rpc.ErigonClient, prefix st
 			b, err := client.GetBalances(pairs[start:end], 2, 4)
 
 			if err != nil {
-				logrus.Errorf("error retrieving balances from node: %v", err)
+				utils.LogError(err, "error retrieving balances from node", 0)
 				return
 			}
 			balances = append(balances, b...)
@@ -563,7 +563,7 @@ func ProcessMetadataUpdates(bt *db.Bigtable, client *rpc.ErigonClient, prefix st
 
 		err = bt.SaveBalances(balances, keys)
 		if err != nil {
-			logrus.Errorf("error saving balances to bigtable: %v", err)
+			utils.LogError(err, "error saving balances to bigtable", 0)
 			return
 		}
 
