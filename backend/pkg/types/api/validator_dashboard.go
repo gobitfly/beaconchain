@@ -1,13 +1,15 @@
 package apitypes
 
 import (
+	"time"
+
 	"github.com/shopspring/decimal"
 )
 
 // ------------------------------------------------------------
 // Overview
 
-type VDBOverviewResponse struct {
+type VDBOverviewData struct {
 	Groups     []VDBOverviewGroup      `json:"groups"`
 	Validators VDBOverviewValidators   `json:"validators"`
 	Efficiency VDBOverviewEfficiency   `json:"efficiency"`
@@ -251,7 +253,7 @@ type VDBHeatmapCell struct {
 	Value float64 `json:"value" ts_doc:"Attestaton Rewards"`
 }
 
-type VDBHeatmapTooltipResponse struct {
+type VDBHeatmapTooltipData struct {
 	Epoch uint64 `json:"epoch"`
 
 	Proposers []VDBHeatmapTooltipDuty `json:"proposers"`
@@ -347,4 +349,15 @@ type VDBManageValidatorsTableRow struct {
 	Balance              decimal.Decimal `json:"balance"`
 	Status               string          `json:"status"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
+}
+
+// ------------------------------------------------------------
+// Misc. Responses
+
+type VDBPostData struct {
+	Id        uint64    `json:"id"`
+	UserID    uint64    `json:"user_id"`
+	Name      string    `json:"name"`
+	Network   Network   `json:"network"`
+	CreatedAt time.Time `json:"created_at"`
 }

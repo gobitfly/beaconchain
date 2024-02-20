@@ -24,10 +24,12 @@ func handleJsonError(w http.ResponseWriter, err error) {
 		default:
 			ReturnInternalServerError(w, err.Err)
 		}
-	} else {
-		ReturnInternalServerError(w, err)
 	}
+	ReturnInternalServerError(w, err)
 }
+
+// --------------------------------------
+// Authenication
 
 func (h HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
@@ -40,6 +42,9 @@ func (h HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.Re
 func (h HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
+
+// --------------------------------------
+// Ad Configurations
 
 func (h HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
@@ -57,9 +62,15 @@ func (h HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *
 	ReturnNoContent(w)
 }
 
+// --------------------------------------
+// Dashboards
+
 func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, nil)
 }
+
+// --------------------------------------
+// Account Dashboards
 
 func (h HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, nil)
@@ -117,7 +128,15 @@ func (h HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.R
 	ReturnOk(w, nil)
 }
 
+// --------------------------------------
+// Validator Dashboards
+
 func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
+	userId, err := getUser(r)
+	if err != nil {
+		ReturnUnauthorized(w, err)
+		return
+	}
 	req := struct {
 		Name    string `json:"name"`
 		Network string `json:"network"`
@@ -133,21 +152,16 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 		ReturnBadRequest(w, err)
 		return
 	}
-	// get data from backend
-	success := false
-	if success {
-		response := apitypes.ApiResponse{
-			Data: struct {
-				Id      string `json:"id"`
-				Network uint64 `json:"network"`
-				Name    string `json:"name"`
-				// CreatedAt time.Time `json:created_at`
-			}{"01_981723", 1, req.Name /*, time.Now()*/},
-		}
-		ReturnCreated(w, response)
-	} else {
-		ReturnInternalServerError(w, errors.New("General error"))
+
+	data, err := h.dai.CreateValidatorDashboard(userId, req.Name, apitypes.Network(1))
+	if err != nil {
+		ReturnInternalServerError(w, err)
+		return
 	}
+	response := apitypes.ApiResponse{
+		Data: data,
+	}
+	ReturnCreated(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
@@ -158,9 +172,13 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		ReturnBadRequest(w, err)
 		return
 	}
-	// get data from backend
+	data, err := h.dai.GetValidatorDashboardOverview(1, dashboardId)
+	if err != nil {
+		ReturnInternalServerError(w, err)
+		return
+	}
 	response := apitypes.ApiResponse{
-		Data: apitypes.VDBOverviewResponse{},
+		Data: data,
 	}
 	ReturnOk(w, response)
 }
@@ -194,7 +212,7 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 	}
 
 	if false {
-		ReturnConflict(w, errors.New("Group limit reached"))
+		ReturnConflict(w, errors.New("group limit reached"))
 		return
 	}
 	response := apitypes.ApiResponse{
@@ -238,7 +256,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	}
 
 	if false {
-		ReturnConflict(w, errors.New("Dashboard validator limit reached"))
+		ReturnConflict(w, errors.New("dashboard validator limit reached"))
 		return
 	}
 	response := apitypes.ApiResponse{
@@ -287,7 +305,7 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 	}
 
 	if false {
-		ReturnConflict(w, errors.New("Public ID limit reached"))
+		ReturnConflict(w, errors.New("public ID limit reached"))
 		return
 	}
 	response := apitypes.ApiResponse{
@@ -380,8 +398,16 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	//TODO remove line
 	fmt.Println(paging)
 
+	var limit uint64
+	var cursor, search string
+	var sort []apitypes.Sort[apitypes.VDBSummaryTableColumn]
+	data, err := h.dai.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
+	if err != nil {
+		ReturnInternalServerError(w, err)
+		return
+	}
 	response := apitypes.ApiResponse{
-		Data: apitypes.VDBSummaryTableResponse{},
+		Data: data,
 	}
 	ReturnOk(w, response)
 }
@@ -389,16 +415,23 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
-	groupId := vars["group_id"]
+	groupIdParam := vars["group_id"]
 	if err := errors.Join(
 		CheckId(dashboardId),
-		CheckId(groupId),
+		CheckId(groupIdParam),
 	); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
+
+	var groupId uint64
+	data, err := h.dai.GetValidatorDashboardGroupSummary(dashboardId, groupId)
+	if err != nil {
+		ReturnInternalServerError(w, err)
+		return
+	}
 	response := apitypes.ApiResponse{
-		Data: apitypes.VDBGroupSummaryResponse{},
+		Data: data,
 	}
 	ReturnOk(w, response)
 }
@@ -463,7 +496,18 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 }
 
 func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
-	ReturnOk(w, nil)
+	var limit uint64
+	var dashboardId, cursor, search string
+	var sort []apitypes.Sort[apitypes.VDBBlocksTableColumn]
+	data, err := h.dai.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+	if err != nil {
+		ReturnInternalServerError(w, err)
+		return
+	}
+	response := apitypes.ApiResponse{
+		Data: data,
+	}
+	ReturnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {

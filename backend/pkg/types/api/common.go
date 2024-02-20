@@ -6,18 +6,19 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type Paging struct {
-	PrevCursor string `json:"prev_cursor"`
-	NextCursor string `json:"next_cursor"`
-}
-
 type ApiResponse struct {
-	Paging Paging      `json:"paging,omitempty"`
+	Paging *Paging     `json:"paging,omitempty"`
 	Data   interface{} `json:"data"`
 }
 
 type ApiErrorResponse struct {
 	Error string `json:"error"`
+}
+
+type Paging struct {
+	PrevCursor string `json:"prev_cursor,omitempty"`
+	NextCursor string `json:"next_cursor,omitempty"`
+	TotalCount uint64 `json:"total_count,omitempty"`
 }
 
 type PubKey string
