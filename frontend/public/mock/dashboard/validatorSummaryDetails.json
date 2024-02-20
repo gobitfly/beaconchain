@@ -20,7 +20,7 @@
     },
     "attestation_target": {
       "count": {
-        "success": 123,
+        "success": 0,
         "failed": 32
       },
       "earned": "11300000000000000",
@@ -32,7 +32,7 @@
     "sync": {
       "count": {
         "success": 123,
-        "failed": 32
+        "failed": 0
       },
       "earned": "11200000000000000",
       "penalty": "3200000000000000",
@@ -40,8 +40,8 @@
     },
     "proposals": {
       "count": {
-        "success": 123,
-        "failed": 32
+        "success": 0,
+        "failed": 0
       },
       "earned": "11200000000000000",
       "penalty": "3200000000000000",

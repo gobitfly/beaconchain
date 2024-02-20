@@ -3,6 +3,7 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
   text?: string,
+  title?: string,
   layout?: 'dark' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean
@@ -111,6 +112,9 @@ onUnmounted(() => {
       <div class="bc-tooltip-wrapper" :style="pos">
         <div class="bc-tooltip" :class="classList" @click="$event.stopImmediatePropagation()">
           <slot name="tooltip">
+            <b v-if="props.title">
+              {{ props.title }}
+            </b>
             {{ text }}
           </slot>
         </div>

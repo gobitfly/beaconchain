@@ -20,6 +20,8 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const { tm: $tm } = useI18n()
+
 const data = computed(() => {
   const col = props.data?.[props.detail]
   if (!col) {
@@ -35,8 +37,10 @@ const data = computed(() => {
       }
     }
   } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
+    const tooltip: {title: string, text: string} | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
     return {
-      efficiency: col[props.property as SummaryDetailsEfficiencyProp]
+      efficiency: col[props.property as SummaryDetailsEfficiencyProp],
+      tooltip
     }
   } else if (SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
     let validators: number[] = []
@@ -58,8 +62,10 @@ const data = computed(() => {
       context
     }
   } else if (props.property === 'attestation_efficiency') {
+    const tooltip: {title: string, text: string} | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
     return {
-      attestationEfficiency: col.attestation_efficiency
+      attestationEfficiency: col.attestation_efficiency,
+      tooltip
     }
   } else if (props.property === 'apr') {
     return {
@@ -103,26 +109,35 @@ const data = computed(() => {
   }
 })
 
+// TODO: find better matching icon for fa-info-circle, once new fontawesome files are merged
 </script>
 <template>
-  <DashboardTableEfficiency v-if="data?.efficiency" :success="data.efficiency.count.success" :failed="data.efficiency.count.failed" />
+  <BcTooltip v-if="data?.efficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
+    <div class="info_row">
+      <DashboardTableEfficiency
+        :success="data.efficiency.count.success"
+        :failed="data.efficiency.count.failed"
+      />
+      <i v-if="data.tooltip?.title" class="fas fa-info-circle link" />
+    </div>
+  </BcTooltip>
   <DashboardTableValidators
     v-else-if="data?.validators"
     :validators="data.validators"
     :context="data.context"
     :group-id="props.row.group_id"
   />
-  <BcTooltip v-else-if="data?.attestationEfficiency" position="top">
-    <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
-    <template #tooltip>
-      <b>
-        {{ $t('dashboard.validator.tooltip.attestaion_efficiency.title') }}
-      </b>
-      {{ $t('dashboard.validator.tooltip.attestaion_efficiency.text') }}
-    </template>
+  <BcTooltip v-else-if="data?.attestationEfficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
+    <div class="info_row">
+      <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
+      <i class="fas fa-info-circle link" />
+    </div>
   </BcTooltip>
   <BcTooltip v-else-if="data?.apr" position="top">
-    <BcFormatPercent :percent="data.apr.total" />
+    <div class="info_row">
+      <BcFormatPercent :percent="data.apr.total" />
+      <i class="fas fa-info-circle link" />
+    </div>
     <template #tooltip>
       <div class="row">
         <b>{{ $t('common.execution_layer') }}:</b>
@@ -137,10 +152,13 @@ const data = computed(() => {
     </template>
   </BcTooltip>
   <BcTooltip v-else-if="data?.luck" position="top">
-    <span><i class="fas fa-cube" />
-      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" />
-      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
-    </span>
+    <div class="info_row">
+      <span><i class="fas fa-cube" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      </span>
+      <i class="fas fa-info-circle link" />
+    </div>
     <template #tooltip>
       <div class="row">
         <b>
@@ -207,9 +225,19 @@ const data = computed(() => {
     margin-top: var(--padding);
   }
 }
-.space_before{
-  &::before{
+
+.space_before {
+  &::before {
     content: " ";
   }
+}
+.info_row{
+  display: flex;
+  justify-content: space-between;
+  .fa-info {
+  height: 14px;
+  width: 14px;
+
+}
 }
 </style>

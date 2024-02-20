@@ -80,12 +80,16 @@
         }
       },
       "tooltip": {
-        "attestaion_efficiency": {
+        "attestation_efficiency": {
           "title": "Attestation Efficiency: ",
           "text": "Indicates the percentage of rewards in relation to the theoretical maximum value"
         },
         "block_proposal": "Block Proposal",
-        "sync_committee": "Sync Committee"
+        "sync_committee": "Sync Committee",
+        "sync": {
+          "title": "ASync Committee Efficiency: ",
+          "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
+        }
       }
     }
   },
