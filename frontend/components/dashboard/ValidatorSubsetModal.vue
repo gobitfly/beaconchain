@@ -60,7 +60,7 @@ function copyValidatorsToClipboard (): void {
     </div>
     <div class="text_container">
       <span v-for="(v, i) in shownValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" class="link">
+        <NuxtLink :to="`/validator/${v}`" target="blank" class="link">
           {{ v }}
         </NuxtLink>
         <span v-if="i !== shownValidators.length - 1">, </span>
