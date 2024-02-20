@@ -32,15 +32,15 @@ watch(filter, (newFilter) => {
         {{ props.caption }}
       </span>
       <span class="search_elements_container">
-        <InputText v-model="filter" placeholder="Index" class="input_height remove_right_border_radius" />
-        <Button class="p-button-icon-only remove_left_border_radius">
+        <InputText v-model="filter" placeholder="Index" />
+        <Button class="p-button-icon-only">
           <i class="fas fa-magnifying-glass" />
         </Button>
       </span>
     </div>
     <div class="text_container">
       <span v-for="(v, i) in shownValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" class="link breaking_link">
+        <NuxtLink :to="`/validator/${v}`" class="link">
           {{ v }}
         </NuxtLink>
         <span v-if="i !== shownValidators.length - 1">, </span>
@@ -65,23 +65,21 @@ watch(filter, (newFilter) => {
     align-items: center;
   }
 
+  // TODO: This will become its own component in the near future
   .search_elements_container {
     display: flex;
     align-items: center;
-  }
 
-  .remove_right_border_radius{
-    border-top-right-radius: 0px;
-    border-bottom-right-radius: 0px;
-  }
+    :first-child{
+      border-top-right-radius: 0px;
+      border-bottom-right-radius: 0px;
+      height: var(--default-button-height);
+    }
 
-  .input_height{
-    height: var(--default-button-height);
-  }
-
-  .remove_left_border_radius{
-    border-top-left-radius: 0px;
-    border-bottom-left-radius: 0px;
+    :last-child{
+      border-top-left-radius: 0px;
+      border-bottom-left-radius: 0px;
+    }
   }
 
   .text_container {
@@ -92,9 +90,6 @@ watch(filter, (newFilter) => {
     min-height: 125px;
     max-height: 453px;
     overflow-y: auto;
-  }
-
-  .breaking_link {
     word-break: break-all;
   }
 
