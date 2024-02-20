@@ -33,8 +33,10 @@ export interface VDBSummaryTableRow {
   validators: number[];
 }
 export interface Paging {
-  prev_cursor: string;
-  next_cursor: string;
+  prev_cursor?: string;
+  next_cursor?: string;
+  last_cursor?: string;
+  total_count?: number;
 }
 export interface VDBSummaryTableResponse {
   paging: Paging;

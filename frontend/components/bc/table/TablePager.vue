@@ -1,0 +1,178 @@
+import type { EmitFlags } from 'typescript';
+import type Column from 'primevue/column';
+
+import type { Column } from '#build/components';
+<script setup lang="ts">
+import type { Paging } from '~/types/dashboard/summary'
+
+interface Props {
+  cursor?: number |string
+  pageSize: number
+  paging?: Paging
+}
+const props = defineProps<Props>()
+
+const emit = defineEmits<{(e: 'setCursor', value: number | string | undefined): void }>()
+
+const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
+
+const data = computed(() => {
+  if (!props.paging) {
+    return {
+      mode: 'waiting'
+    }
+  }
+  if (!props.paging.total_count) {
+    return {
+      mode: 'cursor',
+      prev_cursor: props.paging.prev_cursor,
+      next_cursor: props.paging.next_cursor,
+      last_cursor: props.paging.last_cursor
+    }
+  }
+  const page = 1 + Math.floor(currentOffset.value / props.pageSize)
+  const from = currentOffset.value
+  const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
+  const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
+
+  return { mode: 'offset', page, from, to, lastPage }
+})
+
+const next = () => {
+  emit('setCursor', currentOffset.value + props.pageSize)
+}
+
+const prev = () => {
+  emit('setCursor', Math.max(0, currentOffset.value - props.pageSize))
+}
+
+const first = () => {
+  emit('setCursor', undefined)
+}
+
+const last = () => {
+  emit('setCursor', (data.value.lastPage! - 1) * props.pageSize)
+}
+
+// in case the totalCount decreased
+watch(() => data.value.lastPage && data.value.lastPage < data.value.page, () => {
+  if (data.value.lastPage !== undefined) {
+    last()
+  }
+})
+
+</script>
+<template>
+  <div class="bc-pageinator">
+    <template v-if="data.mode === 'offset'">
+      <div class="pager">
+        <div class="item button" :disabled="!currentOffset" @click="first">
+          {{ $t('table.first') }}
+        </div>
+        <div class="item button" :disabled="!currentOffset" @click="prev">
+          <IconChevron class="toggle" direction="left" />
+        </div>
+        <div class="item">
+          {{ data.page }} {{ $t('table.of') }} {{ data.lastPage }}
+        </div>
+        <div class="item button" :disabled="data.page! >= data.lastPage!" @click="next">
+          <IconChevron class="toggle" direction="right" />
+        </div>
+        <div class="item button" :disabled="data.page! >= data.lastPage!" @click="last">
+          {{ $t('table.last') }}
+        </div>
+      </div>
+      <div class="left-info">
+        {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
+      </div>
+    </template>
+    <div v-else-if="data.mode === 'cursor'" class="pager">
+      <div class="item button" :disabled="!data.prev_cursor" @click="first">
+        {{ $t('table.first') }}
+      </div>
+      <div class="item button" :disabled="!data.prev_cursor" @click="emit('setCursor', data.prev_cursor)">
+        <IconChevron class="toggle" direction="left" />
+      </div>
+      <div class="item button" :disabled="data.next_cursor" @click="emit('setCursor', data.next_cursor)">
+        <IconChevron class="toggle" direction="right" />
+      </div>
+      <div v-if="data.last_cursor" class="item button" @click="emit('setCursor', data.last_cursor)">
+        {{ $t('table.first') }}
+      </div>
+    </div>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+@use '~/assets/css/main.scss';
+
+.bc-pageinator {
+  position: relative;
+  width: 100%;
+  height: 78px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: var(--standard_text_bold_font_weight);
+  padding: var(--padding);
+
+  .left-info {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding-left: var(--padding);
+  }
+
+  .pager {
+    display: flex;
+    gap: 3px;
+
+    .item {
+      @include main.container;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 30px;
+      padding: 0 15px;
+      border-radius: 0;
+
+      &.button {
+        &:not([disabled="true"]) {
+          cursor: pointer;
+        }
+
+        &[disabled="true"] {
+          pointer-events: none;
+        }
+
+        &[disabled="true"] {
+          color: var(--text-color-disabled);
+        }
+      }
+
+      &:first-child {
+        border-top-left-radius: var(--border-radius);
+        border-bottom-left-radius: var(--border-radius);
+      }
+
+      &:last-child {
+        border-top-right-radius: var(--border-radius);
+        border-bottom-right-radius: var(--border-radius);
+      }
+    }
+  }
+
+  @media screen and (max-width: 1399px) {
+    flex-direction: column;
+    gap: var(--padding);
+
+    .left-info {
+      position: relative;
+      height: unset;
+    }
+  }
+}
+</style>
