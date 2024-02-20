@@ -256,7 +256,12 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (

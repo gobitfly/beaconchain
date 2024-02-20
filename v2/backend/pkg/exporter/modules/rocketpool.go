@@ -76,7 +76,10 @@ func rocketpoolExporter() {
 	if err != nil {
 		utils.LogFatal(err, "new rocketpool exporter error", 0)
 	}
-	rpExporter.Run()
+	err = rpExporter.Run()
+	if err != nil {
+		utils.LogError(err, "rocketpool exporter run error", 0)
+	}
 }
 
 func initRPConfig() *smartnodeCfg.SmartnodeConfig {
@@ -310,7 +313,6 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		} else {
 			rp.LastRewardTree = interval + 1
 		}
-
 	}
 
 	logger.Infof("downloading %v reward trees", len(missingIntervals))
@@ -729,8 +731,12 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 	nArgs := 14
 	valueStringsArr := make([]string, nArgs)
 	for i := range valueStringsArr {
@@ -818,7 +824,12 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	nArgs := 13
 
@@ -914,8 +925,12 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 	logger.Infof("saving %v rocketpool reward trees", len(rp.RocketpoolRewardTreesDownloadQueue))
 
 	for _, rewardTree := range rp.RocketpoolRewardTreesDownloadQueue {
@@ -963,7 +978,12 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	nArgs := 18
 	valueStringsArr := make([]string, nArgs)
@@ -1036,7 +1056,12 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	nArgs := 5
 	valueStringsArr := make([]string, nArgs)
@@ -1104,7 +1129,12 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	nArgs := 8
 	valueStringsArr := make([]string, nArgs)
@@ -1190,7 +1220,12 @@ func (rp *RocketpoolExporter) TagValidators() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	data := make([]*RocketpoolMinipool, len(rp.MinipoolsByAddress))
 	i := 0
@@ -1484,7 +1519,6 @@ func (r *RocketpoolNode) Update(rp *rocketpool.RocketPool, rewardTrees map[uint6
 		}
 
 		if includeCumulativeRpl {
-
 			var claimedSum RocketpoolRewards = RocketpoolRewards{
 				SmoothingPoolEth: big.NewInt(0),
 				OdaoRpl:          big.NewInt(0),
@@ -1573,7 +1607,6 @@ func getRewardsData(jsonData []byte) (RewardsFile, error) {
 }
 
 func CalculateLifetimeNodeRewardsAllLegacy(rp *rocketpool.RocketPool, intervalSize *big.Int, legacyRocketRewardsPoolAddress *common.Address, legacyRocketClaimNodeAddress *common.Address) (map[string]*big.Int, error) {
-
 	// Get contracts
 	rocketRewardsPool, err := getRocketRewardsPoolLegacy(rp, legacyRocketRewardsPoolAddress)
 	if err != nil {
@@ -1590,7 +1623,7 @@ func CalculateLifetimeNodeRewardsAllLegacy(rp *rocketpool.RocketPool, intervalSi
 
 	sumMap := make(map[string]*big.Int)
 	prerecordedIntervals, exists := firstBlockOfRedstone[utils.Config.Chain.Name]
-	var maxBlockNumber *big.Int = nil
+	var maxBlockNumber *big.Int
 	if prerecordedIntervals == 0 || !exists {
 		return sumMap, nil
 	}
@@ -1618,7 +1651,6 @@ func CalculateLifetimeNodeRewardsAllLegacy(rp *rocketpool.RocketPool, intervalSi
 			sum = big.NewInt(0)
 		}
 		sumMap[claimAddress.Hex()] = sum.Add(sum, amount)
-
 	}
 	// Return the result
 	return sumMap, nil
@@ -1925,7 +1957,6 @@ func DownloadRewardsFile(fileName string, interval uint64, cid string, isDaemon 
 	}
 
 	return nil, fmt.Errorf(errBuilder.String())
-
 }
 
 // Decompresses a rewards file

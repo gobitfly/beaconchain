@@ -76,8 +76,11 @@ func ReadConfig(cfg *types.Config, path string) error {
 		}
 	}
 
-	readConfigEnv(cfg)
-	err := readConfigSecrets(cfg)
+	err := readConfigEnv(cfg)
+	if err != nil {
+		return err
+	}
+	err = readConfigSecrets(cfg)
 	if err != nil {
 		return err
 	}

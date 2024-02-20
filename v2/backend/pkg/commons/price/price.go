@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/chainlink_feed"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -82,7 +83,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 
 	eClient, err := ethclient.Dial(eth1Endpoint)
 	if err != nil {
-		logger.Errorf("error dialing pricing eth1 endpoint: %v", err)
+		utils.LogError(err, "error dialing pricing eth1 endpoint", 0)
 		return
 	}
 
@@ -145,7 +146,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 	for pair, addrHex := range feedAddrs {
 		feed, err := chainlink_feed.NewFeed(common.HexToAddress(addrHex), eClient)
 		if err != nil {
-			logger.Errorf("failed to initialized chainlink feed for %v (addr: %v): %v", pair, addrHex, err)
+			utils.LogError(err, "failed to initialized chainlink feed", 0, map[string]interface{}{"pair": pair, "addrHex": addrHex})
 			return
 		}
 		feeds[pair] = feed

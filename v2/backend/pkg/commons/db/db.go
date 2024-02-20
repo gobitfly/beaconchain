@@ -23,6 +23,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,6 +35,8 @@ var DBPGX *pgxpool.Conn
 // DB is a pointer to the explorer-database
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
+
+var PersistentRedisDbClient *redis.Client
 
 var logger = logrus.StandardLogger().WithField("module", "db")
 
@@ -552,7 +555,12 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	lastSlotNumber := uint64(0)
 	for _, block := range blocks {
@@ -587,7 +595,12 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	canonBlocks := make(pq.ByteaArray, 0)
 	orphanedBlocks := make(pq.ByteaArray, 0)
@@ -711,7 +724,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			FROM validators 
 			WHERE activationepoch=9223372036854775807 and status='pending')`)
 	if err != nil {
-		logger.Errorf("error removing queued publickeys from validator_queue_deposits: %v", err)
+		utils.LogError(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
 	}
 
@@ -721,7 +734,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
-		logger.Errorf("error adding queued publickeys to validator_queue_deposits: %v", err)
+		utils.LogError(err, "error adding queued publickeys to validator_queue_deposits", 0)
 		return err
 	}
 
@@ -736,7 +749,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			validator_queue_deposits.validatorindex = validators.validatorindex
 	`)
 	if err != nil {
-		logger.Errorf("error updating activationeligibilityepoch on validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
 		return err
 	}
 
@@ -773,7 +786,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
-		logger.Errorf("error updating validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
 	return nil
@@ -1649,7 +1662,12 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 	_, err = tx.Exec(`
 		UPDATE ad_configurations SET 
 			template_id = $2,
@@ -1682,7 +1700,12 @@ func DeleteAdConfiguration(id string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// delete ad configuration
 	_, err = WriterDb.Exec(`

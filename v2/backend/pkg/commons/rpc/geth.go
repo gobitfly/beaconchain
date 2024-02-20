@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 
@@ -159,7 +160,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			logrus.Errorf("error converting tx %v to msg: %v", tx.Hash(), err)
+			utils.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}

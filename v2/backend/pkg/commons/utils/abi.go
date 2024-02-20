@@ -58,7 +58,7 @@ func getABIFromEtherscan(address []byte) (*types.ContractMetadata, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("StatusCode: '%d', Status: '%s'", resp.StatusCode, resp.Status)
 	}
 

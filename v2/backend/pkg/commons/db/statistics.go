@@ -100,7 +100,6 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	g.Go(func() error {
 		if err := gatherValidatorMissedAttestationsStatisticsForDay(validators, day, validatorData, validatorDataMux); err != nil {
-			logger.Error(err)
 			return fmt.Errorf("error in GatherValidatorFailedAttestationsStatisticsForDay: %w", err)
 		}
 		return nil
@@ -182,7 +181,6 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	// calculate cl income data & update totals
 	for index, data := range validatorData {
-
 		previousDayData := &types.ValidatorStatsTableDbRow{
 			ValidatorIndex: uint64(data.ValidatorIndex),
 		}
@@ -275,7 +273,12 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 			return err
 		}
 
-		defer tx.Rollback(context.Background())
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil {
+				utils.LogError(err, "error rolling back transaction", 0)
+			}
+		}()
 
 		logger.Infof("bulk inserting statistics data into the validator_stats table")
 		_, err = tx.Exec(context.Background(), "DELETE FROM validator_stats WHERE day = $1", day)
@@ -480,7 +483,6 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 }
 
 func WriteValidatorStatsExported(day uint64, tx pgx.Tx) error {
-
 	start := time.Now()
 
 	logger.Infof("marking day export as completed in the validator_stats_status table for day %v", day)
@@ -967,7 +969,6 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 		mux.Lock()
 		bits := proposedSlots[types.Slot(slot)]
 		for i := 0; i < len(committee); i++ {
-
 			validator := committee[types.CommitteeIndex(i)]
 
 			if len(bits) == 0 { // slot is empty
@@ -1041,7 +1042,6 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 
 		err := rows.Scan(&slot, &attestingValidators)
 		if err != nil {
-			logger.Error(err)
 			return fmt.Errorf("error scanning attestation data: %w", err)
 		}
 
@@ -1117,7 +1117,6 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 }
 
 func GatherStatisticsForDay(day int64) ([]*types.ValidatorStatsTableDbRow, error) {
-
 	if day < 0 {
 		return nil, nil
 	}
@@ -1270,7 +1269,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 		g.Go(func() error {
 			latestBalances, err := BigtableClient.GetValidatorBalanceHistory(validatorIndices, lastFinalizedEpoch, lastFinalizedEpoch)
 			if err != nil {
-				logger.Errorf("error in GetValidatorIncomeHistory calling BigtableClient.GetValidatorBalanceHistory: %v", err)
+				utils.LogError(err, "error in GetValidatorIncomeHistory calling BigtableClient.GetValidatorBalanceHistory", 0)
 				return err
 			}
 
@@ -1286,7 +1285,6 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 
 		var lastBalance uint64
 		g.Go(func() error {
-
 			if lastDay < 0 {
 				return GetValidatorActivationBalance(validatorIndices, &lastBalance)
 			} else {
@@ -1530,9 +1528,8 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 			err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 			if err != nil {
-				logger.Errorf("error getting blocks descending high: %v low: %v err: %v", high, low, err)
+				utils.LogError(err, "error getting blocks descending high: %v low: %v err: %v", 0, map[string]interface{}{"high": high, "low": low})
 			}
-
 		}
 		close(stream)
 	}(blocksChan)
@@ -1823,7 +1820,12 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	if err != nil {
 		return fmt.Errorf("error starting db tx in WriteGraffitiStatisticsForDay: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// \x are missed blocks
 	// \x0000000000000000000000000000000000000000000000000000000000000000 are empty graffities

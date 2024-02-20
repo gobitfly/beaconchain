@@ -158,7 +158,7 @@ func (bigtable *Bigtable) commitQueuedMachineMetricWrites() {
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					logger.Errorf("error writing queued machine metrics to bigtable: %v", err)
+					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 
@@ -176,7 +176,7 @@ func (bigtable *Bigtable) commitQueuedMachineMetricWrites() {
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					logger.Errorf("error writing queued machine metrics to bigtable: %v", err)
+					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 		}
@@ -501,7 +501,7 @@ func machineMetricRowParts(r string) (bool, uint64, string, string) {
 
 	userID, err := strconv.ParseUint(keySplit[1], 10, 64)
 	if err != nil {
-		logger.Errorf("error parsing slot from row key %v: %v", r, err)
+		utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 		return false, 0, "", ""
 	}
 	userID = ^uint64(0) - userID
@@ -828,13 +828,13 @@ func (bigtable *Bigtable) getValidatorBalanceHistoryV2(validators []uint64, star
 
 				epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 				if err != nil {
-					logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					logger.Errorf("error parsing validator index from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing validator index from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 				resMux.Lock()
@@ -923,14 +923,14 @@ func (bigtable *Bigtable) getValidatorBalanceHistoryV1(validators []uint64, star
 
 		epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
 		for _, ri := range r[VALIDATOR_BALANCES_FAMILY] {
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, VALIDATOR_BALANCES_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1027,7 +1027,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV2(validators []uint64, 
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					logger.Errorf("error parsing validator from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
@@ -1035,7 +1035,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV2(validators []uint64, 
 					attesterSlotString := strings.Replace(ri.Column, ATTESTATIONS_FAMILY+":", "", 1)
 					attesterSlot, err := strconv.ParseUint(attesterSlotString, 10, 64)
 					if err != nil {
-						logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 					inclusionSlot := MAX_CL_BLOCK_NUMBER - uint64(ri.Timestamp)/1000
@@ -1189,7 +1189,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV1(validators []uint64, 
 
 		attesterSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 			return false
 		}
 		attesterSlot = max_block_number_v1 - attesterSlot
@@ -1208,7 +1208,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV1(validators []uint64, 
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, ATTESTATIONS_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1433,7 +1433,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV2(validators []ui
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					logger.Errorf("error parsing validator from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
@@ -1441,7 +1441,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV2(validators []ui
 					attesterSlotString := strings.Replace(ri.Column, ATTESTATIONS_FAMILY+":", "", 1)
 					attesterSlot, err := strconv.ParseUint(attesterSlotString, 10, 64)
 					if err != nil {
-						logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 
@@ -1533,7 +1533,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV1(validators []ui
 
 		attesterSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 			return false
 		}
 		attesterSlot = max_block_number_v1 - attesterSlot
@@ -1548,7 +1548,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV1(validators []ui
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, ATTESTATIONS_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1642,12 +1642,12 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, s
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					logger.Errorf("error parsing validator from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 				slot, err := strconv.ParseUint(keySplit[4], 10, 64)
 				if err != nil {
-					logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 					return false
 				}
 				slot = MAX_CL_BLOCK_NUMBER - slot
@@ -1657,7 +1657,6 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, s
 
 					status := uint64(1) // 1: participated
 					if inclusionSlot == MAX_CL_BLOCK_NUMBER {
-						inclusionSlot = 0
 						status = 0 // 0: missed
 					}
 
@@ -1727,7 +1726,7 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 			slot, err := strconv.ParseUint(keySplit[4], 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+				utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 				return false
 			}
 			slot = max_block_number_v1 - slot
@@ -1735,13 +1734,12 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 			status := uint64(1) // 1: participated
 			if inclusionSlot == max_block_number_v1 {
-				inclusionSlot = 0
 				status = 0 // 0: missed
 			}
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, SYNC_COMMITTEES_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -2039,7 +2037,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, sta
 
 					proposalSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 					if err != nil {
-						logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 					proposalSlot = MAX_CL_BLOCK_NUMBER - proposalSlot
@@ -2047,13 +2045,12 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, sta
 
 					status := uint64(1)
 					if inclusionSlot == MAX_CL_BLOCK_NUMBER {
-						inclusionSlot = 0
 						status = 2
 					}
 
 					validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 					if err != nil {
-						logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+						utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 						return false
 					}
 
@@ -2126,7 +2123,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV1(validators []uint64, sta
 
 			proposalSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing slot from row key %v: %v", r.Key(), err)
+				utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 				return false
 			}
 			proposalSlot = max_block_number_v1 - proposalSlot
@@ -2134,13 +2131,12 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV1(validators []uint64, sta
 
 			status := uint64(1)
 			if inclusionSlot == max_block_number_v1 {
-				inclusionSlot = 0
 				status = 2
 			}
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, PROPOSALS_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -2286,13 +2282,13 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV2(validators []uint64
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					logger.Errorf("error parsing validator from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
 				epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 				if err != nil {
-					logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+					utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 
@@ -2300,7 +2296,7 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV2(validators []uint64
 					incomeDetails := &itypes.ValidatorEpochIncome{}
 					err = proto.Unmarshal(ri.Value, incomeDetails)
 					if err != nil {
-						logger.Errorf("error decoding validator income data for row %v: %v", r.Key(), err)
+						utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 						return false
 					}
 
@@ -2373,7 +2369,7 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV1(validators []uint64
 
 		epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
@@ -2381,14 +2377,14 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV1(validators []uint64
 		for _, ri := range r[INCOME_DETAILS_COLUMN_FAMILY] {
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, INCOME_DETAILS_COLUMN_FAMILY+":"), 10, 64)
 			if err != nil {
-				logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
 			incomeDetails := &itypes.ValidatorEpochIncome{}
 			err = proto.Unmarshal(ri.Value, incomeDetails)
 			if err != nil {
-				logger.Errorf("error decoding validator income data for row %v: %v", r.Key(), err)
+				utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 				return false
 			}
 
@@ -2494,7 +2490,7 @@ func (bigtable *Bigtable) GetTotalValidatorIncomeDetailsHistory(startEpoch uint6
 
 		epoch, err := strconv.ParseUint(keySplit[2], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
@@ -2502,7 +2498,7 @@ func (bigtable *Bigtable) GetTotalValidatorIncomeDetailsHistory(startEpoch uint6
 			incomeDetails := &itypes.ValidatorEpochIncome{}
 			err = proto.Unmarshal(ri.Value, incomeDetails)
 			if err != nil {
-				logger.Errorf("error decoding validator income data for row %v: %v", r.Key(), err)
+				utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 				return false
 			}
 
@@ -2675,14 +2671,14 @@ func (bigtable *Bigtable) MigrateIncomeDataV1V2Schema(epoch uint64) error {
 
 		rowKeyEpoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			logger.Errorf("error parsing epoch from row key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
 		rowKeyEpoch = MAX_EPOCH - rowKeyEpoch
 
 		if epoch != rowKeyEpoch {
-			logger.Errorf("retrieved different epoch than requested, requested: %d, retrieved: %d", epoch, rowKeyEpoch)
+			utils.LogError(fmt.Errorf("retrieved different epoch than requested, requested: %d, retrieved: %d", epoch, rowKeyEpoch), "", 0)
 		}
 
 		// logger.Infof("epoch is %d", rowKeyEpoch)
@@ -2695,7 +2691,7 @@ func (bigtable *Bigtable) MigrateIncomeDataV1V2Schema(epoch uint64) error {
 
 				validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, columnFamily+":"), 10, 64)
 				if err != nil {
-					logger.Errorf("error parsing validator from column key %v: %v", ri.Column, err)
+					utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 					return false
 				}
 
@@ -2710,13 +2706,13 @@ func (bigtable *Bigtable) MigrateIncomeDataV1V2Schema(epoch uint64) error {
 					incomeDetails := &itypes.ValidatorEpochIncome{}
 					err = proto.Unmarshal(ri.Value, incomeDetails)
 					if err != nil {
-						logger.Errorf("error decoding validator income data for row %v: %v", r.Key(), err)
+						utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 						return false
 					}
 
 					epochData[validator].IncomeDetails = incomeDetails
 				} else {
-					logger.Errorf("retrieved unexpected column family %s", columnFamily)
+					utils.LogError(fmt.Errorf("retrieved unexpected column family %s", columnFamily), "", 0)
 				}
 			}
 		}

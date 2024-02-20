@@ -175,7 +175,6 @@ func (bigtable *Bigtable) GetBlockFromBlocksTable(number uint64) (*types.Eth1Blo
 }
 
 func (bigtable *Bigtable) CheckForGapsInBlocksTable(lookback int) (gapFound bool, start int, end int, err error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -186,7 +185,7 @@ func (bigtable *Bigtable) CheckForGapsInBlocksTable(lookback int) (gapFound bool
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -234,7 +233,6 @@ func (bigtable *Bigtable) GetLastBlockInBlocksTable() (int, error) {
 			}
 
 			return lastBlock, bigtable.SetLastBlockInBlocksTable(int64(lastBlock))
-
 		}
 		return 0, err
 	}
@@ -255,7 +253,6 @@ func (bigtable *Bigtable) SetLastBlockInBlocksTable(lastBlock int64) error {
 }
 
 func (bigtable *Bigtable) CheckForGapsInDataTable(lookback int) error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -266,7 +263,7 @@ func (bigtable *Bigtable) CheckForGapsInDataTable(lookback int) error {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -326,7 +323,6 @@ func (bigtable *Bigtable) GetLastBlockInDataTable() (int, error) {
 }
 
 func (bigtable *Bigtable) getLastBlockInDataTableFromBigtable() (int, error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -336,7 +332,7 @@ func (bigtable *Bigtable) getLastBlockInDataTableFromBigtable() (int, error) {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -353,7 +349,6 @@ func (bigtable *Bigtable) getLastBlockInDataTableFromBigtable() (int, error) {
 }
 
 func (bigtable *Bigtable) getLastBlockInBlocksTableFromBigtable() (int, error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
@@ -363,7 +358,7 @@ func (bigtable *Bigtable) getLastBlockInBlocksTableFromBigtable() (int, error) {
 		c, err := strconv.Atoi(strings.Replace(r.Key(), prefix, "", 1))
 
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", r.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": r.Key()})
 			return false
 		}
 		c = MAX_EL_BLOCK_NUMBER - c
@@ -404,7 +399,7 @@ func (bigtable *Bigtable) GetMostRecentBlockFromDataTable() (*types.Eth1BlockInd
 	rowHandler := func(row gcp_bigtable.Row) bool {
 		c, err := strconv.Atoi(strings.Replace(row.Key(), prefix, "", 1))
 		if err != nil {
-			logger.Errorf("error parsing block number from key %v: %v", row.Key(), err)
+			utils.LogError(err, "error parsing block number from key", 0, map[string]interface{}{"key": row.Key()})
 			return false
 		}
 
@@ -412,7 +407,7 @@ func (bigtable *Bigtable) GetMostRecentBlockFromDataTable() (*types.Eth1BlockInd
 
 		err = proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, &block)
 		if err != nil {
-			logger.Errorf("error could not unmarschal proto object, err: %v", err)
+			utils.LogError(err, "error could not unmarschal proto object", 0)
 		}
 
 		return c == 0
@@ -439,7 +434,7 @@ func getBlockHandler(blocks *[]*types.Eth1BlockIndexed) func(gcp_bigtable.Row) b
 		block := types.Eth1BlockIndexed{}
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, &block)
 		if err != nil {
-			logger.Errorf("error could not unmarschal proto object, err: %v", err)
+			utils.LogError(err, "error could not unmarschal proto object", 0)
 			return false
 		}
 
@@ -456,7 +451,6 @@ func getBlockHandler(blocks *[]*types.Eth1BlockIndexed) func(gcp_bigtable.Row) b
 //   - high: highest (max) block number
 //   - low: lowest (min) block number
 func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block, high, low uint64) error {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"high": high,
@@ -490,7 +484,7 @@ func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block
 			block := types.Eth1Block{}
 			err := proto.Unmarshal(row[DEFAULT_FAMILY_BLOCKS][0].Value, &block)
 			if err != nil {
-				logger.Errorf("error could not unmarschal proto object, err: %v", err)
+				utils.LogError(err, "error could not unmarschal proto object", 0)
 				return false
 			}
 			stream <- &block
@@ -507,7 +501,7 @@ func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block
 		// special handling for block 0 which is padded incorrectly
 		b, err := BigtableClient.GetBlockFromBlocksTable(0)
 		if err != nil {
-			return fmt.Errorf("could not retreive block 0:  %v", err)
+			return fmt.Errorf("could not retrieve block 0:  %v", err)
 		}
 		stream <- b
 	}
@@ -516,7 +510,6 @@ func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block
 }
 
 func (bigtable *Bigtable) GetBlocksIndexedMultiple(blockNumbers []uint64, limit uint64) ([]*types.Eth1BlockIndexed, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"blockNumbers": blockNumbers,
@@ -555,7 +548,6 @@ func (bigtable *Bigtable) GetBlocksIndexedMultiple(blockNumbers []uint64, limit 
 //		- if limit = start + 1, block 0 will be included as last block (special handling for broken padding is implemented)
 //		- if limit = start, block 0 will of course not be included
 func (bigtable *Bigtable) GetBlocksDescending(start, limit uint64) ([]*types.Eth1BlockIndexed, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"start": start,
@@ -665,7 +657,7 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 
 				err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 				if err != nil {
-					logger.Errorf("error getting blocks descending high: %v low: %v err: %v", high, low, err)
+					utils.LogError(err, "error getting blocks descending", 0, map[string]interface{}{"high": high, "low": low})
 				}
 				close(stream)
 			}(blocksChan)
@@ -715,7 +707,6 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 			}
 			return subG.Wait()
 		})
-
 	}
 
 	if err := g.Wait(); err == nil {
@@ -760,7 +751,6 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 // Column: <chainID>:B:<reversePaddedBlockNumber>
 // Cell:   nil
 func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecache.Cache) (bulkData *types.BulkMutations, bulkMetadataUpdates *types.BulkMutations, err error) {
-
 	bulkData = &types.BulkMutations{}
 	bulkMetadataUpdates = &types.BulkMutations{}
 
@@ -788,7 +778,6 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 	r := new(big.Int)
 
 	for _, uncle := range block.Uncles {
-
 		if len(block.Difficulty) == 0 { // no uncle rewards in PoS
 			continue
 		}
@@ -835,10 +824,9 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 			if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
 				txFee = new(big.Int).Mul(proposerGasPricePart, big.NewInt(int64(t.GasUsed)))
 			} else {
-				logger.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart)
+				utils.LogError(fmt.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart), "", 0)
 				txFee = big.NewInt(0)
 			}
-
 		}
 
 		txReward.Add(txReward, txFee)
@@ -853,7 +841,6 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 		if t.GetType() == 3 {
 			idx.BlobTransactionCount++
 		}
-
 	}
 
 	idx.TxReward = txReward.Bytes()
@@ -862,7 +849,6 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 
 	if maxGasPrice != nil {
 		idx.LowestGasPrice = minGasPrice.Bytes()
-
 	}
 	if minGasPrice != nil {
 		idx.HighestGasPrice = maxGasPrice.Bytes()
@@ -912,7 +898,6 @@ func CalculateMevFromBlock(block *types.Eth1Block) *big.Int {
 				mevReward = new(big.Int).Add(mevReward, new(big.Int).SetBytes(itx.GetValue()))
 			}
 		}
-
 	}
 	return mevReward
 }
@@ -939,7 +924,7 @@ func CalculateTxFeeFromTransaction(tx *types.Eth1Transaction, blockBaseFee *big.
 			txFee.Mul(txFee, maxGasPrice)
 		}
 	default:
-		logger.Errorf("unknown tx type %v", tx.Type)
+		utils.LogError(fmt.Errorf("unknown tx type %v", tx.Type), "", 0)
 	}
 	return txFee
 }
@@ -1032,7 +1017,6 @@ func (bigtable *Bigtable) TransformTx(blk *types.Eth1Block, cache *freecache.Cac
 			bulkData.Keys = append(bulkData.Keys, idx)
 			bulkData.Muts = append(bulkData.Muts, mut)
 		}
-
 	}
 
 	return bulkData, bulkMetadataUpdates, nil
@@ -1114,7 +1098,6 @@ func (bigtable *Bigtable) TransformBlobTx(blk *types.Eth1Block, cache *freecache
 			bulkData.Keys = append(bulkData.Keys, idx)
 			bulkData.Muts = append(bulkData.Muts, mut)
 		}
-
 	}
 
 	return bulkData, bulkMetadataUpdates, nil
@@ -1724,7 +1707,7 @@ func (bigtable *Bigtable) TransformERC1155(blk *types.Eth1Block, cache *freecach
 				}
 
 				if len(ids) != len(values) {
-					logrus.Errorf("error parsing erc1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(ids), len(values))
+					utils.LogError(fmt.Errorf("error parsing erc1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(ids), len(values)), "", 0)
 					continue
 				}
 				for ti := range ids {
@@ -2075,7 +2058,6 @@ func skipBlockIfLastTxIndex(key string) string {
 }
 
 func (bigtable *Bigtable) GetEth1TxsForAddress(prefix string, limit int64) ([]*types.Eth1TransactionIndexed, []string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2135,7 +2117,6 @@ func (bigtable *Bigtable) GetEth1TxsForAddress(prefix string, limit int64) ([]*t
 }
 
 func (bigtable *Bigtable) GetAddressesNamesArMetadata(names *map[string]string, inputMetadata *map[string]*types.ERC20Metadata) (map[string]string, map[string]*types.ERC20Metadata, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"names":         names,
@@ -2185,7 +2166,6 @@ func (bigtable *Bigtable) GetAddressesNamesArMetadata(names *map[string]string, 
 }
 
 func (bigtable *Bigtable) GetIndexedEth1Transaction(txHash []byte) (*types.Eth1TransactionIndexed, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"txHash": txHash,
@@ -2215,7 +2195,6 @@ func (bigtable *Bigtable) GetIndexedEth1Transaction(txHash []byte) (*types.Eth1T
 }
 
 func (bigtable *Bigtable) GetEth1BlocksForAddress(prefix string, limit int64) ([]*types.Eth1BlockIndexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2273,7 +2252,6 @@ func (bigtable *Bigtable) GetEth1BlocksForAddress(prefix string, limit int64) ([
 }
 
 func (bigtable *Bigtable) GetAddressBlocksMinedTableData(address string, pageToken string) (*types.DataTableResponse, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address":   address,
@@ -2312,7 +2290,6 @@ func (bigtable *Bigtable) GetAddressBlocksMinedTableData(address string, pageTok
 }
 
 func (bigtable *Bigtable) GetEth1UnclesForAddress(prefix string, limit int64) ([]*types.Eth1UncleIndexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2370,7 +2347,6 @@ func (bigtable *Bigtable) GetEth1UnclesForAddress(prefix string, limit int64) ([
 }
 
 func (bigtable *Bigtable) GetEth1BtxForAddress(prefix string, limit int64) ([]*types.Eth1BlobTransactionIndexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2427,7 +2403,6 @@ func (bigtable *Bigtable) GetEth1BtxForAddress(prefix string, limit int64) ([]*t
 }
 
 func (bigtable *Bigtable) GetEth1ItxsForAddress(prefix string, limit int64) ([]*types.Eth1InternalTransactionIndexed, []string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2490,7 +2465,6 @@ func (bigtable *Bigtable) GetEth1ItxsForAddress(prefix string, limit int64) ([]*
 }
 
 func (bigtable *Bigtable) GetEth1ERC20ForAddress(prefix string, limit int64) ([]*types.Eth1ERC20Indexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2548,7 +2522,6 @@ func (bigtable *Bigtable) GetEth1ERC20ForAddress(prefix string, limit int64) ([]
 }
 
 func (bigtable *Bigtable) GetEth1ERC721ForAddress(prefix string, limit int64) ([]*types.Eth1ERC721Indexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2610,7 +2583,6 @@ func (bigtable *Bigtable) GetEth1ERC721ForAddress(prefix string, limit int64) ([
 }
 
 func (bigtable *Bigtable) GetEth1ERC1155ForAddress(prefix string, limit int64) ([]*types.ETh1ERC1155Indexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -2669,7 +2641,6 @@ func (bigtable *Bigtable) GetEth1ERC1155ForAddress(prefix string, limit int64) (
 }
 
 func (bigtable *Bigtable) GetMetadataUpdates(prefix string, startToken string, limit int) ([]string, []*types.Eth1AddressBalance, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix":     prefix,
@@ -2705,7 +2676,6 @@ func (bigtable *Bigtable) GetMetadataUpdates(prefix string, startToken string, l
 }
 
 func (bigtable *Bigtable) GetMetadata(startToken string, limit int) ([]string, []*types.Eth1AddressBalance, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"startToken": startToken,
@@ -2743,7 +2713,6 @@ func (bigtable *Bigtable) GetMetadata(startToken string, limit int) ([]string, [
 }
 
 func (bigtable *Bigtable) GetMetadataForAddress(address []byte, offset uint64, limit uint64) (*types.Eth1AddressMetadata, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address": address,
@@ -2859,7 +2828,6 @@ func (bigtable *Bigtable) GetMetadataForAddress(address []byte, offset uint64, l
 }
 
 func (bigtable *Bigtable) GetBalanceForAddress(address []byte, token []byte) (*types.Eth1AddressBalance, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address": address,
@@ -2905,7 +2873,6 @@ func (bigtable *Bigtable) GetBalanceForAddress(address []byte, token []byte) (*t
 }
 
 func (bigtable *Bigtable) GetERC20MetadataForAddress(address []byte) (*types.ERC20Metadata, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address": address,
@@ -3042,7 +3009,6 @@ func (bigtable *Bigtable) SaveERC20Metadata(address []byte, metadata *types.ERC2
 }
 
 func (bigtable *Bigtable) GetAddressName(address []byte) (string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address": address,
@@ -3083,7 +3049,6 @@ func (bigtable *Bigtable) GetAddressName(address []byte) (string, error) {
 }
 
 func (bigtable *Bigtable) GetAddressNames(addresses map[string]string) error {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"addresses": addresses,
@@ -3355,7 +3320,6 @@ func (bigtable *Bigtable) SaveAddressName(address []byte, name string) error {
 }
 
 func (bigtable *Bigtable) GetContractMetadata(address []byte) (*types.ContractMetadata, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"address": address,
@@ -3417,7 +3381,7 @@ func (bigtable *Bigtable) GetContractMetadata(address []byte) (*types.ContractMe
 
 		err = bigtable.SaveContractMetadata(address, ret)
 		if err != nil {
-			logger.Errorf("error saving contract metadata to bigtable: %v", err)
+			utils.LogError(err, "error saving contract metadata to bigtable", 0)
 		}
 		return ret, nil
 	}
@@ -3431,7 +3395,7 @@ func (bigtable *Bigtable) GetContractMetadata(address []byte) (*types.ContractMe
 				val, err := abi.JSON(bytes.NewReader(ret.ABIJson))
 
 				if err != nil {
-					logrus.Fatalf("error decoding abi for address 0x%x: %v", address, err)
+					utils.LogFatal(err, "error decoding abi for address", 0, map[string]interface{}{"address": address})
 				}
 				ret.ABI = &val
 			}
@@ -3542,7 +3506,6 @@ func (bigtable *Bigtable) SaveBlockKeys(blockNumber uint64, blockHash []byte, ke
 }
 
 func (bigtable *Bigtable) GetBlockKeys(blockNumber uint64, blockHash []byte) ([]string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"blockNumber": blockNumber,
@@ -3571,7 +3534,6 @@ func (bigtable *Bigtable) GetBlockKeys(blockNumber uint64, blockHash []byte) ([]
 
 // Deletes all block data from bigtable
 func (bigtable *Bigtable) DeleteBlock(blockNumber uint64, blockHash []byte) error {
-
 	// handle contract state updates
 	starttime, err := encodeIsContractUpdateTs(blockNumber, 0, 0)
 	if err != nil {
@@ -3662,7 +3624,6 @@ func (bigtable *Bigtable) DeleteBlock(blockNumber uint64, blockHash []byte) erro
 }
 
 func (bigtable *Bigtable) GetEth1TxForToken(prefix string, limit int64) ([]*types.Eth1ERC20Indexed, string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"prefix": prefix,
@@ -3720,7 +3681,6 @@ func (bigtable *Bigtable) GetEth1TxForToken(prefix string, limit int64) ([]*type
 }
 
 func (bigtable *Bigtable) SearchForAddress(addressPrefix []byte, limit int) ([]*types.Eth1AddressSearchItem, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"addressPrefix": addressPrefix,
@@ -3773,7 +3733,6 @@ func getSignaturePrefix(st types.SignatureType) string {
 
 // Get the status of the last signature import run
 func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*types.SignatureImportStatus, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"st": st,
@@ -3786,7 +3745,7 @@ func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*typ
 	key := fmt.Sprintf("1:%v_SIGNATURE_IMPORT_STATUS", getSignaturePrefix(st))
 	row, err := bigtable.tableData.ReadRow(ctx, key)
 	if err != nil {
-		logrus.Errorf("error reading signature imoprt status row %v: %v", row.Key(), err)
+		utils.LogError(err, "error reading signature imoprt status row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 	s := &types.SignatureImportStatus{}
@@ -3796,7 +3755,7 @@ func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*typ
 	row_ := row[DEFAULT_FAMILY][0]
 	err = json.Unmarshal(row_.Value, s)
 	if err != nil {
-		logrus.Errorf("error unmarshalling signature import status for row %v: %v", row.Key(), err)
+		utils.LogError(err, "error unmarshalling signature import status for row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 
@@ -3805,7 +3764,6 @@ func (bigtable *Bigtable) GetSignatureImportStatus(st types.SignatureType) (*typ
 
 // Save the status of the last signature import run
 func (bigtable *Bigtable) SaveSignatureImportStatus(status types.SignatureImportStatus, st types.SignatureType) error {
-
 	mutsWrite := &types.BulkMutations{
 		Keys: make([]string, 0, 1),
 		Muts: make([]*gcp_bigtable.Mutation, 0, 1),
@@ -3835,7 +3793,6 @@ func (bigtable *Bigtable) SaveSignatureImportStatus(status types.SignatureImport
 
 // Save a list of signatures
 func (bigtable *Bigtable) SaveSignatures(signatures []types.Signature, st types.SignatureType) error {
-
 	mutsWrite := &types.BulkMutations{
 		Keys: make([]string, 0, 1),
 		Muts: make([]*gcp_bigtable.Mutation, 0, 1),
@@ -3862,7 +3819,6 @@ func (bigtable *Bigtable) SaveSignatures(signatures []types.Signature, st types.
 
 // get a signature by it's hex representation
 func (bigtable *Bigtable) GetSignature(hex string, st types.SignatureType) (*string, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"hex": hex,
@@ -3876,7 +3832,7 @@ func (bigtable *Bigtable) GetSignature(hex string, st types.SignatureType) (*str
 	key := fmt.Sprintf("1:%v_SIGNATURE:%v", getSignaturePrefix(st), hex)
 	row, err := bigtable.tableData.ReadRow(ctx, key)
 	if err != nil {
-		logrus.Errorf("error reading signature imoprt status row %v: %v", row.Key(), err)
+		utils.LogError(err, "error reading signature imoprt status row", 0, map[string]interface{}{"row": row.Key()})
 		return nil, err
 	}
 	if row == nil {
@@ -3910,7 +3866,10 @@ func (bigtable *Bigtable) GetMethodLabel(data []byte, interaction types.Contract
 					if sig != nil {
 						method = utils.RemoveRoundBracketsIncludingContent(*sig)
 					}
-					cache.TieredCache.Set(cacheKey, method, time.Hour)
+					err := cache.TieredCache.Set(cacheKey, method, time.Hour)
+					if err != nil {
+						utils.LogError(err, "error setting cache key", 0)
+					}
 				}
 			}
 		}
@@ -3944,7 +3903,7 @@ func (bigtable *Bigtable) GetEventLabel(id []byte) string {
 				if sig != nil {
 					label = *sig
 				}
-				cache.TieredCache.Set(cacheKey, label, time.Hour)
+				_ = cache.TieredCache.Set(cacheKey, label, time.Hour)
 			}
 		}
 	}
@@ -3980,7 +3939,7 @@ func (bigtable *Bigtable) markBalanceUpdate(address []byte, token []byte, mutati
 		mutations.Keys = append(mutations.Keys, balanceUpdateKey)
 		mutations.Muts = append(mutations.Muts, mut)
 
-		cache.Set(balanceUpdateCacheKey, []byte{0x1}, int((utils.Day * 2).Seconds()))
+		_ = cache.Set(balanceUpdateCacheKey, []byte{0x1}, int((utils.Day * 2).Seconds()))
 	}
 }
 
@@ -4014,7 +3973,6 @@ func (bigtable *Bigtable) SaveGasNowHistory(slow, standard, rapid, fast *big.Int
 }
 
 func (bigtable *Bigtable) GetGasNowHistory(ts, pastTs time.Time) ([]types.GasNowHistory, error) {
-
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		logger.WithFields(logrus.Fields{
 			"ts":     ts,
@@ -4037,7 +3995,7 @@ func (bigtable *Bigtable) GetGasNowHistory(ts, pastTs time.Time) ([]types.GasNow
 
 	scanner := func(row gcp_bigtable.Row) bool {
 		if len(row[SERIES_FAMILY]) < 4 {
-			logrus.Errorf("error reading row: %+v", row)
+			utils.LogError(fmt.Errorf("error reading row: %+v", row), "", 0)
 			return false
 		}
 		// Columns are returned alphabetically so fast, rapid, slow, standard should be the order

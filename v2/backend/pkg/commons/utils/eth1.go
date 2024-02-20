@@ -13,7 +13,6 @@ var Erc20TransferEventHash = common.HexToHash("0xddf252ad1be2c89b69c2b068fc378da
 var Erc1155TransferSingleEventHash = common.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
 
 func Eth1BlockReward(blockNumber uint64, difficulty []byte) *big.Int {
-
 	// no block rewards for PoS blocks
 	// holesky genesis block has difficulty 1 and zero block reward (launched with pos)
 	if len(difficulty) == 0 || (len(difficulty) == 1 && difficulty[0] == 1) {
