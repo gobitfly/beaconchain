@@ -486,6 +486,7 @@ func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName 
 			}
 			day++
 			offset = 0
+			//nolint:ineffassign
 			firstTryOnNewDay = true
 
 			// update max day after each migrated day
