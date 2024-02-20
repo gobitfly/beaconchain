@@ -64,7 +64,7 @@ watch(filter, (newFilter) => {
   }
 
   .top_line_container {
-    padding: 10px 0px 14px 0px;
+    padding: var(--padding) 0px 14px 0px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -90,7 +90,7 @@ watch(filter, (newFilter) => {
   .text_container {
     position: relative;
     background-color: var(--subcontainer-background);
-    padding: 10px 10px 7px 10px;
+    padding: var(--padding) var(--padding) 7px var(--padding);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
     min-height: 125px;
