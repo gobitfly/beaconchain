@@ -6,465 +6,465 @@ import "net/http"
 // Public handlers may only be authenticated by an API key
 // Public handlers must never call internal handlers
 
-func PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	ReturnNoContent(w, r)
 }
 
-func PublicGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidator(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidator(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorDuties(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorDuties(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressValidators(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkWithdrawalCredentialValidators(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkWithdrawalCredentialValidators(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorStatuses(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorStatuses(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorLeaderboard(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorLeaderboard(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorQueue(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorQueue(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEpochs(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEpochs(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEpoch(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEpoch(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlock(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlock(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlots(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlots(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlot(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlot(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressPriorityFeeBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressPriorityFeeBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressProposerRewardBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressProposerRewardBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkForkedBlocks(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkForkedBlocks(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkForkedBlock(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkForkedBlock(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkForkedSlot(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkForkedSlot(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockSizes(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockSizes(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorAttestations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorAttestations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEpochAttestations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEpochAttestations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlotAttestations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlotAttestations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockAttestations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAggregatedAttestations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAggregatedAttestations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEthStore(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEthStore(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorRewardHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorRewardHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorBalanceHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorBalanceHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorPerformanceHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorPerformanceHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlashings(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlashings(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorSlashings(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorSlashings(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkTransactionDeposits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkTransactionDeposits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlotWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlotWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
-func PublicGetNetworkBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkWithdrawalCredentialWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkWithdrawalCredentialWithdrawals(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEpochVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEpochVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlotVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlotVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressBalanceHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressBalanceHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressTokenSupplyHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressTokenSupplyHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressEventLogs(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressEventLogs(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkTransaction(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkTransaction(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlotTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlotTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockBlobs(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockBlobs(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlsChanges(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlsChanges(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEpochBlsChanges(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEpochBlsChanges(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSlotBlsChanges(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSlotBlsChanges(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkValidatorBlsChanges(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkValidatorBlsChanges(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAddressEns(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAddressEns(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkEns(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkEns(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkBatches(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkBatches(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkLayer2ToLayer1Transactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkLayer2ToLayer1Transactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkLayer1ToLayer2Transactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkLayer1ToLayer2Transactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicPostNetworkBroadcasts(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicPostNetworkBroadcasts(w http.ResponseWriter, r *http.Request) {
 	ReturnCreated(w, r)
 }
 
-func PublicGetEthPriceHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetEthPriceHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkGasNow(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkGasNow(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkAverageGasLimitHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkAverageGasLimitHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkGasUsedHistory(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkGasUsedHistory(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetRocketPoolNodes(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetRocketPoolNodes(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetNetworkSyncCommittee(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetNetworkSyncCommittee(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetMultisigSafe(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetMultisigSafe(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetMultisigSafeTransactions(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetMultisigSafeTransactions(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
 
-func PublicGetMultisigTransactionConfirmations(w http.ResponseWriter, r *http.Request) {
+func (h HandlerService) PublicGetMultisigTransactionConfirmations(w http.ResponseWriter, r *http.Request) {
 	ReturnOk(w, r)
 }
