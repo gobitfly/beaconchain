@@ -23,6 +23,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,6 +35,8 @@ var DBPGX *pgxpool.Conn
 // DB is a pointer to the explorer-database
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
+
+var PersistentRedisDbClient *redis.Client
 
 var logger = logrus.StandardLogger().WithField("module", "db")
 
