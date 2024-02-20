@@ -3,7 +3,7 @@ package dataaccess
 import t "github.com/gobitfly/beaconchain/pkg/types/api"
 
 type DataAccessInterface interface {
-	GetUserDashboards(userId uint64) ([]t.DashboardData, error)
+	GetUserDashboards(userId uint64) (t.DashboardData, error)
 
 	CreateValidatorDashboard(userId uint64, name string, network t.Network) (t.VDBPostData, error)
 	GetValidatorDashboardOverview(userId uint64, dashboardId string) (t.VDBOverviewData, error)
@@ -25,7 +25,7 @@ func NewDataAccessService() DataAccessService {
 	return DataAccessService{dummy: NewDummyService()}
 }
 
-func (d DataAccessService) GetUserDashboards(userId uint64) ([]t.DashboardData, error) {
+func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, error) {
 	// TODO @recy21
 	return d.dummy.GetUserDashboards(userId)
 }

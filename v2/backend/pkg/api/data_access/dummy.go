@@ -19,8 +19,8 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
-func (d DummyService) GetUserDashboards(userId uint64) ([]t.DashboardData, error) {
-	r := []t.DashboardData{}
+func (d DummyService) GetUserDashboards(userId uint64) (t.DashboardData, error) {
+	r := t.DashboardData{}
 	err := commonFakeData(&r)
 	return r, err
 }
