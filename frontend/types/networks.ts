@@ -22,6 +22,11 @@
    or simply isL1(myNetwork) whose implementation does the same test (first, add the function to your import list)
 */
 
+/* **** TO DO ****
+   Get informations from the endpoint GET /api/i/networks that returns a list of all network configs
+   ***************
+*/
+
 import type { CryptoCurrency } from '~/types/currencies'
 
 export enum ChainIDs {
@@ -53,7 +58,8 @@ interface ChainInfoFields {
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
-  path: string
+  path: string,
+  priority: number // preference order when displaying data for several networks and no order is requested (ex: search bar)
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
@@ -63,7 +69,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/ethereum'
+    path: '/ethereum',
+    priority: 1
   },
   [ChainIDs.Holesky]: {
     name: 'Holesky Testnet',
@@ -71,7 +78,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/holesky'
+    path: '/holesky',
+    priority: 2
   },
   [ChainIDs.Sepolia]: {
     name: 'Sepolia Testnet',
@@ -79,7 +87,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/sepolia'
+    path: '/sepolia',
+    priority: 3
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
@@ -88,7 +97,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-one-ethereum'
+    path: '/arbitrum-one-ethereum',
+    priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
     name: 'Arbitrum Nova L2',
@@ -96,7 +106,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-nova-ethereum'
+    path: '/arbitrum-nova-ethereum',
+    priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
     name: 'Arbitrum One Sepolia Testnet',
@@ -104,7 +115,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-one-sepolia'
+    path: '/arbitrum-one-sepolia',
+    priority: 12
   },
 
   [ChainIDs.OptimismEthereum]: {
@@ -113,7 +125,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/optimism-ethereum'
+    path: '/optimism-ethereum',
+    priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
     name: 'Optimism Sepolia Testnet',
@@ -121,7 +134,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/optimism-sepolia'
+    path: '/optimism-sepolia',
+    priority: 21
   },
 
   [ChainIDs.BaseEthereum]: {
@@ -130,7 +144,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/base-ethereum'
+    path: '/base-ethereum',
+    priority: 30
   },
   [ChainIDs.BaseSepolia]: {
     name: 'Base Sepolia Testnet',
@@ -138,7 +153,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/base-sepolia'
+    path: '/base-sepolia',
+    priority: 31
   },
 
   [ChainIDs.Gnosis]: {
@@ -147,7 +163,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
-    path: '/gnosis'
+    path: '/gnosis',
+    priority: 40
   },
   [ChainIDs.Chiado]: {
     name: 'Gnosis Chiado Testnet',
@@ -155,7 +172,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
-    path: '/chiado'
+    path: '/chiado',
+    priority: 41
   }
 }
 
