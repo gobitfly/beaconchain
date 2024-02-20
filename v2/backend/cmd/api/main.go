@@ -19,8 +19,6 @@ const (
 func main() {
 	// TODO load config
 
-	// TODO init db/cache
-
 	var dai dataaccess.DataAccessInterface
 	if dummyApi {
 		dai = dataaccess.NewDummyService()

@@ -197,18 +197,32 @@ func CheckNetwork(network string) error {
 }
 
 // --------------------------------------
+// Authorization
+
+func getUser(r *http.Request) (uint64, error) {
+	// TODO @LuccaBitfly add real user auth
+	userId := r.Header.Get("X-User-Id")
+	if userId == "" {
+		return 0, errors.New("missing user id")
+	}
+	id, err := strconv.ParseUint(userId, 10, 64)
+	if err != nil {
+		return 0, errors.New("invalid user id")
+	}
+	return id, nil
+}
+
+// --------------------------------------
 //   Response handling
 
 func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
+	if response == nil {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-
-	if response != nil {
-		w.Header().Set("Content-Type", "application/json")
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("error encoding json data"))
-		}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		// TODO log error
 	}
 }
 
@@ -235,6 +249,10 @@ func ReturnNoContent(w http.ResponseWriter) {
 
 func ReturnBadRequest(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusBadRequest, err)
+}
+
+func ReturnUnauthorized(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusUnauthorized, err)
 }
 
 func ReturnNotFound(w http.ResponseWriter, err error) {
