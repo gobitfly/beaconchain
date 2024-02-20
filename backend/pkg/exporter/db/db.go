@@ -570,7 +570,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			)
 
 			if err != nil {
-				logger.Errorf("error saving new validator %v: %v", v.Index, err)
+				utils.LogError(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
 			}
 		} else {
 			// status                     =

@@ -100,7 +100,6 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	g.Go(func() error {
 		if err := gatherValidatorMissedAttestationsStatisticsForDay(validators, day, validatorData, validatorDataMux); err != nil {
-			logger.Error(err)
 			return fmt.Errorf("error in GatherValidatorFailedAttestationsStatisticsForDay: %w", err)
 		}
 		return nil
@@ -1043,7 +1042,6 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 
 		err := rows.Scan(&slot, &attestingValidators)
 		if err != nil {
-			logger.Error(err)
 			return fmt.Errorf("error scanning attestation data: %w", err)
 		}
 
@@ -1530,7 +1528,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 			err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 			if err != nil {
-				logger.Errorf("error getting blocks descending high: %v low: %v err: %v", high, low, err)
+				utils.LogError(err, "error getting blocks descending high: %v low: %v err: %v", 0, map[string]interface{}{"high": high, "low": low})
 			}
 		}
 		close(stream)

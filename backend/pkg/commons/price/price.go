@@ -146,7 +146,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 	for pair, addrHex := range feedAddrs {
 		feed, err := chainlink_feed.NewFeed(common.HexToAddress(addrHex), eClient)
 		if err != nil {
-			logger.Errorf("failed to initialized chainlink feed for %v (addr: %v): %v", pair, addrHex, err)
+			utils.LogError(err, "failed to initialized chainlink feed", 0, map[string]interface{}{"pair": pair, "addrHex": addrHex})
 			return
 		}
 		feeds[pair] = feed

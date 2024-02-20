@@ -610,7 +610,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 	var parsedResponse StandardV2BlockResponse
 	err = json.Unmarshal(resp, &parsedResponse)
 	if err != nil {
-		logger.Errorf("error parsing block data at slot %v: %v", parsedHeaders.Data.Header.Message.Slot, err)
+		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error parsing block-response at slot %v: %w", slot, err)
 	}
 
@@ -797,7 +797,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	var parsedResponse StandardV2BlockResponse
 	err = json.Unmarshal(resp, &parsedResponse)
 	if err != nil {
-		logger.Errorf("error parsing block data at slot %v: %v", slot, err)
+		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error parsing block-response at slot %v: %w", slot, err)
 	}
 
@@ -1100,7 +1100,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *StandardBeaconHeade
 				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, a.Data.CommitteeIndex, i)]
 				if !found { // This should never happen!
 					validator = 0
-					logger.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i)
+					utils.LogFatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
 				}
 				a.Attesters = append(a.Attesters, validator)
 
