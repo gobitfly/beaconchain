@@ -18,7 +18,7 @@ await useAsyncData('test_slot_viz_data', async () => {
 const modalVisibility = ref(false)
 const modalHeader = ref('Dashboard "Hetzner"')
 const modalCaption = ref('Validators')
-const modalValidators = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+const modalValidators = ref([...Array(1000).fill(0).map((_, i) => i)])
 
 onMounted(async () => {
   const res = await $fetch<SlotVizData>('./mock/dashboard/slotViz.json')
