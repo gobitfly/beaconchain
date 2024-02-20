@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -115,6 +116,21 @@ func main() {
 			logrus.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
 		}()
 	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Initialize the persistent redis client
+		rdc := redis.NewClient(&redis.Options{
+			Addr:        utils.Config.RedisSessionStoreEndpoint,
+			ReadTimeout: time.Second * 20,
+		})
+
+		if err := rdc.Ping(context.Background()).Err(); err != nil {
+			logrus.Fatalf("error connecting to persistent redis store: %v", err)
+		}
+		db.PersistentRedisDbClient = rdc
+	}()
 
 	wg.Wait()
 
