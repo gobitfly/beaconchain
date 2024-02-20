@@ -198,7 +198,7 @@ func (bigtable *Bigtable) CheckForGapsInBlocksTable(lookback int) (gapFound bool
 			gapFound = true
 			start = c
 			end = previous
-			logger.Fatalf("found gap between block %v and block %v in blocks table", previous, c)
+			utils.LogFatal(fmt.Errorf("found gap between block %v and block %v in blocks table", previous, c), "", 0)
 			return false
 		}
 		previous = c
@@ -273,7 +273,7 @@ func (bigtable *Bigtable) CheckForGapsInDataTable(lookback int) error {
 		}
 
 		if previous != 0 && previous != c+1 {
-			logger.Fatalf("found gap between block %v and block %v in data table", previous, c)
+			utils.LogFatal(fmt.Errorf("found gap between block %v and block %v in data table", previous, c), "", 0)
 		}
 		previous = c
 
@@ -613,14 +613,14 @@ func reversedPaddedBlockNumber(blockNumber uint64) string {
 
 func reversePaddedBigtableTimestamp(timestamp *timestamppb.Timestamp) string {
 	if timestamp == nil {
-		log.Fatalf("unknown timestamp: %v", timestamp)
+		utils.LogFatal(fmt.Errorf("unknown timestamp: %v", timestamp), "", 0)
 	}
 	return fmt.Sprintf("%019d", MAX_INT-timestamp.Seconds)
 }
 
 func reversePaddedIndex(i int, maxValue int) string {
 	if i > maxValue {
-		logrus.Fatalf("padded index %v is greater than the max index of %v", i, maxValue)
+		utils.LogFatal(fmt.Errorf("padded index %v is greater than the max index of %v", i, maxValue), "", 0)
 	}
 	length := fmt.Sprintf("%d", len(fmt.Sprintf("%d", maxValue))-1)
 	fmtStr := "%0" + length + "d"
@@ -671,7 +671,7 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 					for _, transform := range transforms {
 						mutsData, mutsMetadataUpdate, err := transform(block, cache)
 						if err != nil {
-							logrus.WithError(err).Errorf("error transforming block [%v]", block.Number)
+							utils.LogError(err, "error transforming block", 0, map[string]interface{}{"block": block.Number})
 						}
 						bulkMutsData.Keys = append(bulkMutsData.Keys, mutsData.Keys...)
 						bulkMutsData.Muts = append(bulkMutsData.Muts, mutsData.Muts...)
@@ -975,7 +975,7 @@ func (bigtable *Bigtable) TransformTx(blk *types.Eth1Block, cache *freecache.Cac
 		bigtable.markBalanceUpdate(indexedTx.To, []byte{0x0}, bulkMetadataUpdates, cache)
 
 		if len(indexedTx.Hash) != 32 {
-			logger.Fatalf("retrieved hash of length %v for a tx in block %v", len(indexedTx.Hash), blk.GetNumber())
+			utils.LogFatal(fmt.Errorf("retrieved hash of length %v for a tx in block %v", len(indexedTx.Hash), blk.GetNumber()), "", 0)
 		}
 
 		b, err := proto.Marshal(indexedTx)
@@ -1063,7 +1063,7 @@ func (bigtable *Bigtable) TransformBlobTx(blk *types.Eth1Block, cache *freecache
 		bigtable.markBalanceUpdate(indexedTx.To, []byte{0x0}, bulkMetadataUpdates, cache)
 
 		if len(indexedTx.Hash) != 32 {
-			logger.Fatalf("retrieved hash of length %v for a tx in block %v", len(indexedTx.Hash), blk.GetNumber())
+			utils.LogFatal(fmt.Errorf("retrieved hash of length %v for a tx in block %v", len(indexedTx.Hash), blk.GetNumber()), "", 0)
 		}
 
 		b, err := proto.Marshal(indexedTx)
@@ -2096,14 +2096,14 @@ func (bigtable *Bigtable) GetEth1TxsForAddress(prefix string, limit int64) ([]*t
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1TransactionIndexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1TransactionIndexed data", 0)
 		}
 		keysMap[row.Key()] = b
 
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1TxsForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1TxsForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, nil, err
 	}
 
@@ -2231,14 +2231,14 @@ func (bigtable *Bigtable) GetEth1BlocksForAddress(prefix string, limit int64) ([
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1BlockIndexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1BlockIndexed data", 0)
 		}
 		keysMap[row.Key()] = b
 
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1BlocksForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1BlocksForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -2326,14 +2326,14 @@ func (bigtable *Bigtable) GetEth1UnclesForAddress(prefix string, limit int64) ([
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1UncleIndexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1UncleIndexed data", 0)
 		}
 		keysMap[row.Key()] = b
 
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1UnclesForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1UnclesForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -2383,13 +2383,13 @@ func (bigtable *Bigtable) GetEth1BtxForAddress(prefix string, limit int64) ([]*t
 		b := &types.Eth1BlobTransactionIndexed{}
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1BlobTransactionIndexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1BlobTransactionIndexed data", 0)
 		}
 		keysMap[row.Key()] = b
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1BtxForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1BtxForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -2440,7 +2440,7 @@ func (bigtable *Bigtable) GetEth1ItxsForAddress(prefix string, limit int64) ([]*
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1InternalTransactionIndexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1InternalTransactionIndexed data", 0)
 		}
 
 		// geth traces include zero-value staticalls
@@ -2451,7 +2451,7 @@ func (bigtable *Bigtable) GetEth1ItxsForAddress(prefix string, limit int64) ([]*
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1ItxForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1ItxForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, nil, err
 	}
 
@@ -2502,13 +2502,13 @@ func (bigtable *Bigtable) GetEth1ERC20ForAddress(prefix string, limit int64) ([]
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1ERC20Indexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1ERC20Indexed data", 0)
 		}
 		keysMap[row.Key()] = b
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1ERC20ForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1ERC20ForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -2564,13 +2564,13 @@ func (bigtable *Bigtable) GetEth1ERC721ForAddress(prefix string, limit int64) ([
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1ERC721Indexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1ERC721Indexed data", 0)
 		}
 		keysMap[row.Key()] = b
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1ERC721ForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1ERC721ForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -2622,13 +2622,13 @@ func (bigtable *Bigtable) GetEth1ERC1155ForAddress(prefix string, limit int64) (
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing ETh1ERC1155Indexed data: %v", err)
+			utils.LogFatal(err, "error parsing ETh1ERC1155Indexed data", 0)
 		}
 		keysMap[row.Key()] = b
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1ERC1155ForAddress")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1ERC1155ForAddress", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 
@@ -3660,14 +3660,14 @@ func (bigtable *Bigtable) GetEth1TxForToken(prefix string, limit int64) ([]*type
 		err := proto.Unmarshal(row[DEFAULT_FAMILY][0].Value, b)
 
 		if err != nil {
-			logrus.Fatalf("error parsing Eth1ERC20Indexed data: %v", err)
+			utils.LogFatal(err, "error parsing Eth1ERC20Indexed data", 0)
 		}
 		keysMap[row.Key()] = b
 
 		return true
 	})
 	if err != nil {
-		logger.WithError(err).WithField("prefix", prefix).WithField("limit", limit).Errorf("error reading rows in bigtable_eth1 / GetEth1TxForToken")
+		utils.LogError(err, "error reading rows in bigtable_eth1 / GetEth1TxForToken", 0, map[string]interface{}{"prefix": prefix, "limit": limit})
 		return nil, "", err
 	}
 

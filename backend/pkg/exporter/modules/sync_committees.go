@@ -20,7 +20,7 @@ func syncCommitteesExporter(rpcClient rpc.Client) {
 		t0 := time.Now()
 		err := exportSyncCommittees(rpcClient)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"error": err, "duration": time.Since(t0)}).Errorf("error exporting sync_committees")
+			utils.LogError(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(t0)})
 		}
 		time.Sleep(time.Second * 12)
 	}

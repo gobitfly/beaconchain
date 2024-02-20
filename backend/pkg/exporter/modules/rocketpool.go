@@ -227,14 +227,14 @@ func (rp *RocketpoolExporter) Run() error {
 
 	isMergeUpdateDeployed, err := IsMergeUpdateDeployed(rp.API)
 	if err != nil {
-		logger.WithError(err).Errorf("error retrieving rocketpool redstone deploy status")
+		utils.LogError(err, "error retrieving rocketpool redstone deploy status", 0)
 		return err
 	}
 
 	if isMergeUpdateDeployed {
 		rp.RocketpoolRewardTreeData, err = rp.getRocketpoolRewardTrees()
 		if err != nil {
-			logger.WithError(err).Errorf("error retrieving known rocketpool reward tree data from db")
+			utils.LogError(err, "error retrieving known rocketpool reward tree data from db", 0)
 			return err
 		}
 
@@ -252,13 +252,13 @@ func (rp *RocketpoolExporter) Run() error {
 		var err error
 		err = rp.Update(count)
 		if err != nil {
-			logger.WithError(err).Errorf("error updating rocketpool-data")
+			utils.LogError(err, "error updating rocketpool-data", 0)
 			time.Sleep(errorInterval)
 			continue
 		}
 		err = rp.Save(count)
 		if err != nil {
-			logger.WithError(err).Errorf("error saving rocketpool-data")
+			utils.LogError(err, "error saving rocketpool-data", 0)
 			time.Sleep(errorInterval)
 			continue
 		}
@@ -302,7 +302,7 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 				logger.Infof("retrieving reward tree not found %v", interval)
 				break
 			} else {
-				logger.WithError(err).Errorf("retrieving reward tree not found %v", interval)
+				utils.LogError(err, "retrieving reward tree not found", 0, map[string]interface{}{"interval": interval})
 				return err
 			}
 		}

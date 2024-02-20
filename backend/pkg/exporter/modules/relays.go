@@ -166,13 +166,7 @@ func exportRelayBlocks(r types.Relay) error {
 func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bound uint64) error {
 	tx, err := db.WriterDb.Begin()
 	if err != nil {
-		r.Logger.WithFields(logrus.Fields{
-			"file":       "relays.go",
-			"function":   "retrieveAndInsertPayloadsFromRelay",
-			"Relay ID":   r.ID,
-			"low_bound":  low_bound,
-			"high_bound": high_bound,
-		}).WithError(err).Error("failed to start db transaction")
+		utils.LogError(err, "failed to start db transaction", 0)
 		return err
 	}
 	defer func() {

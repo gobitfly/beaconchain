@@ -87,7 +87,7 @@ func InitBigtable(project, instance, chainId, redisAddress string) (*Bigtable, e
 		err := os.Setenv("BIGTABLE_EMULATOR_HOST", fmt.Sprintf("%s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort))
 
 		if err != nil {
-			logger.Fatalf("unable to set bigtable emulator environment variable: %v", err)
+			utils.LogFatal(err, "unable to set bigtable emulator environment variable", 0)
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)

@@ -82,7 +82,7 @@ func main() {
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		logrus.Fatalf("error reading config file: %v", err)
+		utils.LogFatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
@@ -141,12 +141,12 @@ func main() {
 	}
 
 	if nodeChainId.String() != chainId {
-		logrus.Fatalf("node chain id mismatch, wanted %v got %v", chainId, nodeChainId.String())
+		utils.LogFatal(fmt.Errorf("node chain id mismatch, wanted %v got %v", chainId, nodeChainId.String()), "", 0)
 	}
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainId, utils.Config.RedisCacheEndpoint)
 	if err != nil {
-		logrus.Fatalf("error connecting to bigtable: %v", err)
+		utils.LogFatal(err, "error connecting to bigtable: %v", 0)
 	}
 	defer bt.Close()
 
@@ -187,11 +187,11 @@ func main() {
 	if *block != 0 {
 		err = IndexFromNode(bt, client, *block, *block, *concurrencyBlocks, *traceMode)
 		if err != nil {
-			logrus.WithError(err).Fatalf("error indexing from node, start: %v end: %v concurrency: %v", *block, *block, *concurrencyBlocks)
+			utils.LogFatal(err, "error indexing from node, start: %v end: %v concurrency: %v", 0, map[string]interface{}{"block": *block, "concurrency": *concurrencyBlocks})
 		}
 		err = bt.IndexEventsWithTransformers(*block, *block, transforms, *concurrencyData, cache)
 		if err != nil {
-			logrus.WithError(err).Fatalf("error indexing from bigtable")
+			utils.LogFatal(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
 
@@ -203,7 +203,7 @@ func main() {
 		_, _, _, err := bt.CheckForGapsInBlocksTable(*checkBlocksGapsLookback)
 
 		if err != nil {
-			logrus.WithError(err).Fatalf("error checking for gaps in blocks table")
+			utils.LogFatal(err, "error checking for gaps in blocks table", 0)
 		}
 		return
 	}
@@ -211,7 +211,7 @@ func main() {
 	if *checkDataGaps {
 		err := bt.CheckForGapsInDataTable(*checkDataGapsLookback)
 		if err != nil {
-			logrus.WithError(err).Fatalf("error checking for gapis in data table")
+			utils.LogFatal(err, "error checking for gapis in data table", 0)
 		}
 		return
 	}
@@ -219,7 +219,7 @@ func main() {
 	if *endBlocks != 0 && *startBlocks < *endBlocks {
 		err = IndexFromNode(bt, client, *startBlocks, *endBlocks, *concurrencyBlocks, *traceMode)
 		if err != nil {
-			logrus.WithError(err).Fatalf("error indexing from node, start: %v end: %v concurrency: %v", *startBlocks, *endBlocks, *concurrencyBlocks)
+			utils.LogFatal(err, "error indexing from node", 0, map[string]interface{}{"start": *startBlocks, "end": *endBlocks, "concurrency": *concurrencyBlocks})
 		}
 		return
 	}
@@ -227,7 +227,7 @@ func main() {
 	if *endData != 0 && *startData < *endData {
 		err = bt.IndexEventsWithTransformers(int64(*startData), int64(*endData), transforms, *concurrencyData, cache)
 		if err != nil {
-			logrus.WithError(err).Fatalf("error indexing from bigtable")
+			utils.LogFatal(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
 		return
