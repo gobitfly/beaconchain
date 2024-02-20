@@ -86,7 +86,7 @@ func MonitorDB(db *sqlx.DB) {
 		}{}
 		err := db.Select(&longRunningQueries, `select datname, extract(epoch from clock_timestamp()) - extract(epoch from query_start) as duration, query from pg_stat_activity where query != '<IDLE>' and query not ilike '%pg_stat_activity%' and query_start is not null and state = 'active' and age(clock_timestamp(), query_start) >= interval '1 minutes'`)
 		if err != nil {
-			logger.WithError(err).Errorf("error when monitoring db")
+			utils.LogError(err, "error when monitoring db", 0)
 			continue
 		}
 		for _, q := range longRunningQueries {

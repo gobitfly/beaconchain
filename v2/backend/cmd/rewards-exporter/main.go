@@ -45,7 +45,7 @@ func main() {
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		logrus.Fatalf("error reading config file: %v", err)
+		utils.LogFatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 	logrus.WithField("config", *configPath).WithField("version", version.Version).WithField("chainName", utils.Config.Chain.ClConfig.ConfigName).Printf("starting")
@@ -92,7 +92,7 @@ func main() {
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 	if err != nil {
-		logrus.Fatalf("error connecting to bigtable: %v", err)
+		utils.LogFatal(err, "error connecting to bigtable", 0)
 	}
 	defer bt.Close()
 
@@ -106,7 +106,7 @@ func main() {
 	})
 
 	if err := rdc.Ping(context.Background()).Err(); err != nil {
-		logrus.Fatalf("error connecting to persistent redis store: %v", err)
+		utils.LogFatal(err, "error connecting to persistent redis store", 0)
 	}
 
 	db.PersistentRedisDbClient = rdc
@@ -125,7 +125,7 @@ func main() {
 		notExportedEpochs := []uint64{}
 		err = db.WriterDb.Select(&notExportedEpochs, "SELECT epoch FROM epochs WHERE NOT rewards_exported AND epoch >= $1 AND epoch <= $2 ORDER BY epoch DESC", *epochStart, *epochEnd)
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error retrieving not exported epochs from db", 0)
 		}
 		epochsToExport := int64(len(notExportedEpochs))
 
@@ -225,7 +225,7 @@ func main() {
 	}
 	err = export(uint64(*epoch), bt, client, enAddress)
 	if err != nil {
-		logrus.Fatal(err)
+		utils.LogFatal(err, "error during epoch export", 0, map[string]interface{}{"epoch": *epoch})
 	}
 }
 

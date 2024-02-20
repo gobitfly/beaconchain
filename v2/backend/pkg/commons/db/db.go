@@ -58,12 +58,12 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 
 	go func() {
 		<-dbConnectionTimeout.C
-		logger.Fatalf("timeout while connecting to %s", dataBaseName)
+		utils.LogFatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		logger.Fatalf("unable to Ping %s: %s", dataBaseName, err)
+		utils.LogFatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
 	}
 
 	dbConnectionTimeout.Stop()

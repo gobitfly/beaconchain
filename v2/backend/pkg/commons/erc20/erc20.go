@@ -31,7 +31,7 @@ func InitTokenList(path string) {
 
 	err = json.Unmarshal(body, TokenList)
 	if err != nil {
-		logger.Fatalf("unable to parse erc20 token list: %v", err)
+		utils.LogFatal(err, "unable to parse erc20 token list", 0)
 	}
 
 	for _, token := range TokenList.Tokens {

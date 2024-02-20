@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"math/big"
 	"os"
 	"os/signal"
@@ -15,8 +14,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-
-	"github.com/sirupsen/logrus"
 )
 
 func mustParseUint(str string) uint64 {
@@ -26,7 +23,7 @@ func mustParseUint(str string) uint64 {
 
 	nbr, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		logrus.Fatalf("fatal error parsing uint %s: %v", str, err)
+		LogFatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
 	}
 
 	return nbr
@@ -35,7 +32,7 @@ func mustParseUint(str string) uint64 {
 func MustParseHex(hexString string) []byte {
 	data, err := hex.DecodeString(strings.Replace(hexString, "0x", "", -1))
 	if err != nil {
-		log.Fatal(err)
+		LogFatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
 	}
 	return data
 }
