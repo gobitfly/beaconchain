@@ -5,8 +5,24 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const header = ref('Validator Subset Modal')
 const visible = defineModel<boolean>()
+const header = ref<string>('Validator Subset Modal')
+const filter = ref<string>('')
+const shownValidators = ref<number[]>([])
+
+watch(filter, (newFilter) => {
+  if (newFilter === '') {
+    shownValidators.value = props.validators
+    return
+  }
+
+  shownValidators.value = []
+
+  const index = parseInt(newFilter)
+  if (props.validators.includes(index)) {
+    shownValidators.value = [index]
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -16,18 +32,18 @@ const visible = defineModel<boolean>()
         {{ props.caption }}
       </span>
       <span class="search_elements_container">
-        <InputText placeholder="Index" class="remove_right_border_radius" />
+        <InputText v-model="filter" placeholder="Index" class="remove_right_border_radius" />
         <Button class="p-button-icon-only remove_left_border_radius">
           <i class="fas fa-magnifying-glass" />
         </Button>
       </span>
     </div>
     <div class="text_container">
-      <span v-for="(v, i) in props.validators" :key="v">
+      <span v-for="(v, i) in shownValidators" :key="v">
         <NuxtLink :to="`/validator/${v}`" class="link">
           {{ v }}
         </NuxtLink>
-        <span v-if="i !== props.validators.length - 1">, </span>
+        <span v-if="i !== shownValidators.length - 1">, </span>
       </span>
       <Button class="p-button-icon-only copy_button_position">
         <i class="fas fa-copy" />
