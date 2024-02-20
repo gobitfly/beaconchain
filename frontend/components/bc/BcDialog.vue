@@ -1,10 +1,14 @@
 <script lang="ts" setup>
+const { width } = useWindowSize()
+
 interface Props {
   header?: string,
 }
 const props = defineProps<Props>()
 
 const visible = defineModel<boolean>() // requires two way binding as both the parent (only the parent can open the modal) and the component itself (clicking outside the modal closes it) need to update the visibility
+
+const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
 </script>
 
 <template>
@@ -16,6 +20,7 @@ const visible = defineModel<boolean>() // requires two way binding as both the p
     :closable="false"
     :draggable="false"
     :class="{'p-dialog-header-hidden':!props.header && !$slots.header}"
+    :position="position"
   >
     <template #header>
       <slot name="header" />
