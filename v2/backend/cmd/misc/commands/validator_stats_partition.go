@@ -492,7 +492,8 @@ func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName 
 			}
 			day++
 			offset = 0
-			firstTryOnNewDay = true // TODO: check if that is a bug (ineffassign)
+			//nolint:ineffassign
+			firstTryOnNewDay = true
 
 			// update max day after each migrated day
 			err = db.WriterDb.Get(&maxDay, fmt.Sprintf("SELECT max(day) FROM %s", sourceTableName))
