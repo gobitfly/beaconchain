@@ -87,7 +87,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
 
   const url = useRequestURL()
   const { public: { apiClient }, private: pConfig } = useRuntimeConfig()
-  const path = map.mock ? `${pathName}.json` : addQueryParams(map.getPath?.(pathValues) || map.path, query)
+  const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
   let baseURL = map.mock ? './mock' : apiClient
 
   if (process.server) {

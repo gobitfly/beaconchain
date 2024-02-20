@@ -1,8 +1,9 @@
+export type Cursor = number | string | undefined
 export type ColumnOrder = 'asc' | 'desc'
 
-export type TableQUeryParams = {
+export type TableQueryParams = {
   limit?: number,
-  cursor?: string,
+  cursor?: Cursor,
   order?: ColumnOrder
   sort?: string,
   search?: string
