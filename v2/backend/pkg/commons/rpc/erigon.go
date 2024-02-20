@@ -280,7 +280,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 						tracePb.Value = common.FromHex(trace.Action.Value)
 					} else {
 						spew.Dump(trace)
-						logrus.Fatalf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash)
+						utils.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
 					}
 
 					c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
@@ -322,12 +322,12 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				} else if trace.Type == "SUICIDE" {
 				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" {
 				} else if trace.Type == "" {
-					logrus.WithFields(logrus.Fields{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()}).Errorf("geth style trace without type")
+					utils.LogError(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
 					spew.Dump(trace)
 					continue
 				} else {
 					spew.Dump(trace)
-					logrus.Fatalf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition)
+					utils.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
 				}
 
 				logger.Tracef("appending trace %v to tx %x from %v to %v value %v", trace.TransactionPosition, c.Transactions[trace.TransactionPosition].Hash, trace.From, trace.To, trace.Value)
@@ -547,10 +547,6 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 	ret := make([]*types.Eth1AddressBalance, len(pairs))
 
 	for i, pair := range pairs {
-		// if s[1] != "B" {
-		// 	logrus.Fatalf("%v has invalid balance update prefix", pair)
-		// }
-
 		result := ""
 
 		ret[i] = &types.Eth1AddressBalance{

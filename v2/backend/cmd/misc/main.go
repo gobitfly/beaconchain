@@ -106,7 +106,7 @@ func main() {
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		logrus.Fatalf("error reading config file: %v", err)
+		utils.LogFatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
@@ -130,7 +130,7 @@ func main() {
 
 	erigonClient, err := rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
 	if err != nil {
-		logrus.Fatalf("error initializing erigon client: %v", err)
+		utils.LogFatal(err, "error initializing erigon client", 0)
 	}
 
 	db.MustInitDB(&types.DatabaseConfig{
@@ -176,25 +176,25 @@ func main() {
 	case "nameValidatorsByRanges":
 		err := nameValidatorsByRanges(opts.ValidatorNameRanges)
 		if err != nil {
-			logrus.WithError(err).Fatal("error naming validators by ranges")
+			utils.LogFatal(err, "error naming validators by ranges", 0)
 		}
 	case "updateAPIKey":
 		err := updateAPIKey(opts.User)
 		if err != nil {
-			logrus.WithError(err).Fatal("error updating API key")
+			utils.LogFatal(err, "error updating API key", 0)
 		}
 	case "applyDbSchema":
 		logrus.Infof("applying db schema")
 		err := db.ApplyEmbeddedDbSchema(opts.TargetVersion)
 		if err != nil {
-			logrus.WithError(err).Fatal("error applying db schema")
+			utils.LogFatal(err, "error applying db schema", 0)
 		}
 		logrus.Infof("db schema applied successfully")
 	case "initBigtableSchema":
 		logrus.Infof("initializing bigtable schema")
 		err := db.InitBigtableSchema()
 		if err != nil {
-			logrus.WithError(err).Fatal("error initializing bigtable schema")
+			utils.LogFatal(err, "error initializing bigtable schema", 0)
 		}
 		logrus.Infof("bigtable schema initialization completed")
 	case "epoch-export":
@@ -202,20 +202,20 @@ func main() {
 		for epoch := opts.StartEpoch; epoch <= opts.EndEpoch; epoch++ {
 			tx, err := db.WriterDb.Beginx()
 			if err != nil {
-				logrus.Fatalf("error starting tx: %v", err)
+				utils.LogFatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				err = modules.ExportSlot(rpcClient, slot, false, tx)
 
 				if err != nil {
 					_ = tx.Rollback()
-					logrus.Fatalf("error exporting slot %v: %v", slot, err)
+					utils.LogFatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})
 				}
 				logrus.Printf("finished export for slot %v", slot)
 			}
 			err = tx.Commit()
 			if err != nil {
-				logrus.Fatalf("error committing tx: %v", err)
+				utils.LogFatal(err, "error committing tx", 0)
 			}
 		}
 	case "export-epoch-missed-slots":
@@ -251,20 +251,20 @@ func main() {
 		for _, epoch := range epochs {
 			tx, err := db.WriterDb.Beginx()
 			if err != nil {
-				logrus.Fatalf("error starting tx: %v", err)
+				utils.LogFatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				err = modules.ExportSlot(rpcClient, slot, false, tx)
 
 				if err != nil {
 					_ = tx.Rollback()
-					logrus.Fatalf("error exporting slot %v: %v", slot, err)
+					utils.LogFatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})
 				}
 				logrus.Printf("finished export for slot %v", slot)
 			}
 			err = tx.Commit()
 			if err != nil {
-				logrus.Fatalf("error committing tx: %v", err)
+				utils.LogFatal(err, "error committing tx", 0)
 			}
 		}
 	case "debug-rewards":
@@ -291,7 +291,7 @@ func main() {
 		logrus.Infof("retrieving genesis validator state")
 		validators, err := rpcClient.GetValidatorState(0)
 		if err != nil {
-			logrus.Fatalf("error retrieving genesis validator state")
+			utils.LogFatal(fmt.Errorf("error retrieving genesis validator state"), "", 0)
 		}
 
 		validatorsArr := make([]*types.Validator, 0, len(validators.Data))
@@ -314,7 +314,7 @@ func main() {
 
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
-			logrus.Fatalf("error starting tx: %v", err)
+			utils.LogFatal(err, "error starting tx", 0)
 		}
 		defer func() {
 			err := tx.Rollback()
@@ -352,7 +352,7 @@ func main() {
 
 			err = edb.SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
 			if err != nil {
-				logrus.Fatal(err)
+				utils.LogFatal(err, "error saving validators", 0)
 			}
 		}
 
@@ -377,17 +377,17 @@ func main() {
 		VALUES (0, 0, '\x'::bytea, '\x'::bytea, '\x'::bytea, '\x'::bytea, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 		ON CONFLICT (slot, blockroot) DO NOTHING`)
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error saving block to db", 0)
 		}
 
 		err = db.BigtableClient.SaveValidatorBalances(0, validatorsArr)
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error saving validator balances", 0)
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error committing tx", 0)
 		}
 
 	case "export-stats-totals":
@@ -1109,7 +1109,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error starting tx", 0)
 		}
 		defer func() {
 			err := tx.Rollback()
@@ -1327,7 +1327,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 		endEpoch := startEpoch + utils.EpochsPerDay() - 1
 		hist, err := bt.GetValidatorIncomeDetailsHistory([]uint64{validator}, startEpoch, endEpoch)
 		if err != nil {
-			logrus.Fatal(err)
+			utils.LogFatal(err, "error retrieving validator income details history", 0, map[string]interface{}{"startEpoch": startEpoch, "endEpoch": endEpoch})
 		}
 		var tot int64
 		for _, rew := range hist[validator] {
@@ -1340,7 +1340,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 		COALESCE(cl_rewards_gwei, 0) AS cl_rewards_gwei
 		FROM validator_stats WHERE validatorindex = $2 AND day = $1`, day, validator)
 		if err != nil {
-			logrus.Fatalf("error getting cl_rewards_gwei from db: %v", err)
+			utils.LogFatal(err, "error getting cl_rewards_gwei from db", 0)
 			return
 		}
 		if tot != *dbRewards {
@@ -1359,22 +1359,13 @@ func clearBigtable(table string, family string, columns string, key string, dryR
 	}
 
 	if !strings.Contains(key, ":") {
-		logrus.Fatalf("provided invalid prefix: %s", key)
+		utils.LogFatal(fmt.Errorf("provided invalid prefix: %s", key), "", 0)
 	}
 
-	// admin, err := gcp_bigtable.NewAdminClient(context.Background(), utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
-	// if err != nil {
-	// 	logrus.Fatal(err)
-	// }
-
-	// err = admin.DropRowRange(context.Background(), table, key)
-	// if err != nil {
-	// 	logrus.Fatal(err)
-	// }
 	err := bt.ClearByPrefix(table, family, columns, key, dryRun)
 
 	if err != nil {
-		logrus.Fatalf("error deleting from bigtable: %v", err)
+		utils.LogFatal(err, "error deleting from bigtable", 0)
 	}
 	logrus.Info("delete completed")
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 func UpdatePubkeyTag() {
@@ -14,7 +15,7 @@ func UpdatePubkeyTag() {
 
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
-			logger.WithError(err).Error("Error connecting to DB")
+			utils.LogError(err, "Error connecting to DB", 0)
 			// return err
 		}
 		_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
@@ -24,13 +25,13 @@ func UpdatePubkeyTag() {
 		WHERE sps.name NOT LIKE '%Rocketpool -%'
 		ON CONFLICT (publickey, tag) DO NOTHING;`)
 		if err != nil {
-			logger.WithError(err).Error("Error updating validator_tags")
+			utils.LogError(err, "error updating validator_tags", 0)
 			// return err
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			logger.WithError(err).Error("Error committing transaction")
+			utils.LogError(err, "error committing transaction", 0)
 		}
 		_ = tx.Rollback()
 

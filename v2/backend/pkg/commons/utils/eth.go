@@ -10,14 +10,13 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/sirupsen/logrus"
 	e2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
 func init() {
 	err := e2types.InitBLS()
 	if err != nil {
-		logrus.Fatalf("error in e2types.InitBLS(): %v", err)
+		LogFatal(err, "error in e2types.InitBLS()", 0)
 	}
 }
 

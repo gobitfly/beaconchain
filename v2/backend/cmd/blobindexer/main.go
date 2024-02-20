@@ -9,8 +9,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 
 	"github.com/gobitfly/beaconchain/pkg/blobindexer"
-
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -24,11 +22,11 @@ func main() {
 	utils.Config = &types.Config{}
 	err := utils.ReadConfig(utils.Config, *configFlag)
 	if err != nil {
-		logrus.Fatal(err)
+		utils.LogFatal(err, "error reading config file", 0)
 	}
 	blobIndexer, err := blobindexer.NewBlobIndexer()
 	if err != nil {
-		logrus.Fatal(err)
+		utils.LogFatal(err, "error initializing blob indexer", 0)
 	}
 	go blobIndexer.Start()
 	utils.WaitForCtrlC()

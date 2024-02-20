@@ -34,7 +34,7 @@ func main() {
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		logrus.Fatalf("error reading config file: %v", err)
+		utils.LogFatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
@@ -75,26 +75,26 @@ func main() {
 
 		rpc.CurrentErigonClient, err = rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
 		if err != nil {
-			logrus.Fatalf("error initializing erigon client: %v", err)
+			utils.LogFatal(err, "error initializing erigon client", 0)
 		}
 
 		erigonChainId, err := rpc.CurrentErigonClient.GetNativeClient().ChainID(ctx)
 		if err != nil {
-			logrus.Fatalf("error retrieving erigon chain id: %v", err)
+			utils.LogFatal(err, "error retrieving erigon chain id", 0)
 		}
 
 		rpc.CurrentGethClient, err = rpc.NewGethClient(utils.Config.Eth1GethEndpoint)
 		if err != nil {
-			logrus.Fatalf("error initializing geth client: %v", err)
+			utils.LogFatal(err, "error initializing geth client", 0)
 		}
 
 		gethChainId, err := rpc.CurrentGethClient.GetNativeClient().ChainID(ctx)
 		if err != nil {
-			logrus.Fatalf("error retrieving geth chain id: %v", err)
+			utils.LogFatal(err, "error retrieving geth chain id", 0)
 		}
 
 		if !(erigonChainId.String() == gethChainId.String() && erigonChainId.String() == fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)) {
-			logrus.Fatalf("chain id mismatch: erigon chain id %v, geth chain id %v, requested chain id %v", erigonChainId.String(), gethChainId.String(), fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID))
+			utils.LogFatal(fmt.Errorf("chain id mismatch: erigon chain id %v, geth chain id %v, requested chain id %v", erigonChainId.String(), gethChainId.String(), fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)), "", 0)
 		}
 	}()
 
@@ -103,7 +103,7 @@ func main() {
 		defer wg.Done()
 		bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 		if err != nil {
-			logrus.Fatalf("error connecting to bigtable: %v", err)
+			utils.LogFatal(err, "error connecting to bigtable", 0)
 		}
 		db.BigtableClient = bt
 	}()
@@ -127,7 +127,7 @@ func main() {
 		})
 
 		if err := rdc.Ping(context.Background()).Err(); err != nil {
-			logrus.Fatalf("error connecting to persistent redis store: %v", err)
+			utils.LogFatal(err, "error connecting to persistent redis store", 0)
 		}
 		db.PersistentRedisDbClient = rdc
 	}()
@@ -135,7 +135,7 @@ func main() {
 	wg.Wait()
 
 	if utils.Config.TieredCacheProvider != "redis" {
-		logrus.Fatalf("no cache provider set, please set TierdCacheProvider (example redis)")
+		utils.LogFatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)
 	}
 
 	defer db.ReaderDb.Close()
