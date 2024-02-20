@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
-import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { ChainIDs, ChainInfo, getListOfImplementedChainIDs, isMainNet } from '~/types/networks'
 const { t: $t } = useI18n()
 
 const props = defineProps({ searchable: { type: Array, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
@@ -192,7 +192,7 @@ function filterAndOrganizeResults () {
 
     // getting organized information from the finding
     const toBeAdded = organizeAPIinfo(finding)
-    if (toBeAdded.main === '') {
+    if (toBeAdded.main === '' || !isMainNet(chainId)) {
       continue
     }
     // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized storage
