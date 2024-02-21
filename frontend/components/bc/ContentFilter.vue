@@ -19,7 +19,7 @@ const filter = ref<string>('')
     display: flex;
     justify-content: flex-end;
 
-    :first-child{
+    > :first-child{
       border-top-right-radius: 0;
       border-bottom-right-radius: 0;
       height: var(--default-button-height);
@@ -43,7 +43,8 @@ const filter = ref<string>('')
       }
     }
 
-    :last-child{
+    > :last-child{
+      flex-shrink: 0;
       border-top-left-radius: var(--border-radius);
       border-bottom-left-radius: var(--border-radius);
       transition: all 0.2s ease-in-out;
