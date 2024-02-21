@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 type RedisCache struct {
@@ -95,11 +95,11 @@ func (cache *RedisCache) Get(ctx context.Context, key string, returnValue interf
 
 	err = json.Unmarshal([]byte(value), returnValue)
 	if err != nil {
-		utils.LogError(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
+		log.Error(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
 		delErr := cache.redisRemoteCache.Del(ctx, key).Err()
 
 		if delErr != nil {
-			utils.LogError(delErr, "error deleting data for key", 0, map[string]interface{}{"key": key})
+			log.Error(delErr, "error deleting data for key", 0, map[string]interface{}{"key": key})
 		}
 		return nil, err
 	}
