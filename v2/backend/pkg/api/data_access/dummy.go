@@ -37,6 +37,12 @@ func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId u
 	return r, err
 }
 
+func (d DummyService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error) {
+	r := []t.VDBSlotVizEpoch{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d DummyService) GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
