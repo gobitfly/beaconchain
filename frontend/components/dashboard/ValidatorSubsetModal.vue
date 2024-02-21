@@ -98,7 +98,7 @@ function copyValidatorsToClipboard (): void {
       <span class="subtitle_text">
         {{ caption }}
       </span>
-      <BcContentFilter @filter-changed="handleEvent" />
+      <BcContentFilter class="content_filter" @filter-changed="handleEvent" />
     </div>
     <div class="text_container">
       <span v-for="(v, i) in shownValidators" :key="v">
@@ -137,6 +137,10 @@ function copyValidatorsToClipboard (): void {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .content_filter {
+    width: 169px;
   }
 
   .text_container {
