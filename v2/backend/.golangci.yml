@@ -109,6 +109,21 @@ linters-settings:
         deny:
           - pkg: github.com/prysmaticlabs/prysm/v3
             desc: "Depending on your needs you might find something here https://github.com/wealdtech"
+      main-logging:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - $all
+          - "!$test"
+          - "!**/pkg/commons/log/log.go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/sirupsen/logrus
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
+          - pkg: log
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
+          - pkg: log/slog
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
       consapi:
         list-mode: lax # allow unless explicitely denied
         files:

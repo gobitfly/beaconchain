@@ -151,7 +151,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 
 	for _, slot := range slots {
 		for _, b := range blocks[slot] {
-
 			if !forceSlotUpdate {
 				var dbBlockRootHash []byte
 				err := tx.Get(&dbBlockRootHash, "SELECT blockroot FROM blocks WHERE slot = $1 and blockroot = $2", b.Slot, b.BlockRoot)
