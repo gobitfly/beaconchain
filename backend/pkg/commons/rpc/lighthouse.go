@@ -18,6 +18,7 @@ import (
 
 	"github.com/donovanhide/eventsource"
 	gtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
@@ -63,7 +64,7 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 		stream, err := eventsource.Subscribe(fmt.Sprintf("%s/eth/v1/events?topics=head", lc.cl.Endpoint), "")
 
 		if err != nil {
-			utils.LogFatal(err, "getting eventsource stream error", 0)
+			log.Fatal(err, "getting eventsource stream error", 0)
 		}
 		defer stream.Close()
 
@@ -71,24 +72,24 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 			select {
 			// It is important to register to Errors, otherwise the stream does not reconnect if the connection was lost
 			case err := <-stream.Errors:
-				utils.LogError(err, "Lighthouse connection error (will automatically retry to connect)", 0)
+				log.Error(err, "Lighthouse connection error (will automatically retry to connect)", 0)
 			case e := <-stream.Events:
-				// logger.Infof("retrieved %v via event stream", e.Data())
+				// log.LogInfo("retrieved %v via event stream", e.Data())
 				var parsed StreamedBlockEventData
 				err = json.Unmarshal([]byte(e.Data()), &parsed)
 				if err != nil {
-					logger.Warnf("failed to decode block event: %v", err)
+					log.Warnf("failed to decode block event: %v", err)
 					continue
 				}
 
-				logger.Infof("retrieving data for slot %v", parsed.Slot)
+				log.Infof("retrieving data for slot %v", parsed.Slot)
 				block, err := lc.GetBlockBySlot(uint64(parsed.Slot))
 				if err != nil {
-					logger.Warnf("failed to fetch block for slot %d: %v", uint64(parsed.Slot), err)
+					log.Warnf("failed to fetch block for slot %d: %v", uint64(parsed.Slot), err)
 					continue
 				}
-				logger.Infof("retrieved block for slot %v", parsed.Slot)
-				// logger.Infof("pushing block %v", blk.Slot)
+				log.Infof("retrieved block for slot %v", parsed.Slot)
+				// log.LogInfo("pushing block %v", blk.Slot)
 				blkCh <- block
 			}
 		}
@@ -343,7 +344,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 		})
 	}
 
-	logger.Printf("retrieved data for %v validators for epoch %v", len(data.Validators), epoch)
+	log.Infof("retrieved data for %v validators for epoch %v", len(data.Validators), epoch)
 
 	wg.Go(func() error {
 		var err error
@@ -375,7 +376,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 			data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
 		}
-		logger.Printf("retrieved validator assignment data for epoch %v", epoch)
+		log.Infof("retrieved validator assignment data for epoch %v", epoch)
 		return nil
 	})
 
@@ -385,7 +386,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			data.EpochParticipationStats, err = lc.GetValidatorParticipation(epoch)
 			if err != nil {
 				if strings.HasSuffix(err.Error(), "can't be retrieved as it hasn't finished yet") { // should no longer happen
-					logger.Warnf("error retrieving epoch participation statistics for epoch %v: %v", epoch, err)
+					log.Warnf("error retrieving epoch participation statistics for epoch %v: %v", epoch, err)
 				} else {
 					return fmt.Errorf("error retrieving epoch participation statistics for epoch %v: %w", epoch, err)
 				}
@@ -448,7 +449,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 				}
 			}
 			mux.Unlock()
-			logger.Infof("processed data for current epoch slot %v in %v", slot, time.Since(start))
+			log.Infof("processed data for current epoch slot %v in %v", slot, time.Since(start))
 		}
 		return nil
 	})
@@ -482,7 +483,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 				}
 			}
 			mux.Unlock()
-			logger.Infof("processed data for next epoch slot %v in %v", slot, time.Since(start))
+			log.Infof("processed data for next epoch slot %v in %v", slot, time.Since(start))
 		}
 		return nil
 	})
@@ -492,7 +493,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 		return nil, err
 	}
 
-	logger.Printf("retrieved %v blocks for epoch %v", len(data.Blocks), epoch)
+	log.Infof("retrieved %v blocks for epoch %v", len(data.Blocks), epoch)
 
 	if data.ValidatorAssignmentes == nil {
 		return data, fmt.Errorf("no assignments for epoch %v", epoch)
@@ -538,7 +539,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 	// for validator, duty := range data.AttestationDuties {
 	// 	for slot, inclusions := range duty {
-	// 		logger.Infof("validator %v has attested for slot %v in slots %v", validator, slot, inclusions)
+	// 		log.LogInfo("validator %v has attested for slot %v in slots %v", validator, slot, inclusions)
 	// 	}
 	// }
 
@@ -610,7 +611,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 	var parsedResponse StandardV2BlockResponse
 	err = json.Unmarshal(resp, &parsedResponse)
 	if err != nil {
-		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
+		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error parsing block-response at slot %v: %w", slot, err)
 	}
 
@@ -781,10 +782,10 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 		block, ok := cachedBlock.(*types.Block)
 
 		if ok {
-			logger.Infof("retrieved slot %v (0x%x) from in memory cache", block.Slot, block.BlockRoot)
+			log.Infof("retrieved slot %v (0x%x) from in memory cache", block.Slot, block.BlockRoot)
 			return block, nil
 		} else {
-			utils.LogError(fmt.Errorf("unable to convert cached block to block type"), "", 0)
+			log.Error(fmt.Errorf("unable to convert cached block to block type"), "", 0)
 		}
 	}
 	lc.slotsCacheMux.Unlock()
@@ -797,7 +798,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	var parsedResponse StandardV2BlockResponse
 	err = json.Unmarshal(resp, &parsedResponse)
 	if err != nil {
-		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
+		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error parsing block-response at slot %v: %w", slot, err)
 	}
 
@@ -1100,7 +1101,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *StandardBeaconHeade
 				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, a.Data.CommitteeIndex, i)]
 				if !found { // This should never happen!
 					validator = 0
-					utils.LogFatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
+					log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
 				}
 				a.Attesters = append(a.Attesters, validator)
 
@@ -1181,7 +1182,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 		request_epoch += 1
 	}
 
-	logger.Infof("requesting validator inclusion data for epoch %v", request_epoch)
+	log.Infof("requesting validator inclusion data for epoch %v", request_epoch)
 
 	resp, err := lc.get(fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.Endpoint, request_epoch))
 	if err != nil {
