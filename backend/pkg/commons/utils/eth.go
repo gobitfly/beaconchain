@@ -9,6 +9,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/prysmaticlabs/go-ssz"
 	e2types "github.com/wealdtech/go-eth2-types/v2"
 )
@@ -16,7 +17,7 @@ import (
 func init() {
 	err := e2types.InitBLS()
 	if err != nil {
-		LogFatal(err, "error in e2types.InitBLS()", 0)
+		log.LogFatal(err, "error in e2types.InitBLS()", 0)
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
@@ -23,7 +24,7 @@ func mustParseUint(str string) uint64 {
 
 	nbr, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		LogFatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
+		log.LogFatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
 	}
 
 	return nbr
@@ -32,7 +33,7 @@ func mustParseUint(str string) uint64 {
 func MustParseHex(hexString string) []byte {
 	data, err := hex.DecodeString(strings.Replace(hexString, "0x", "", -1))
 	if err != nil {
-		LogFatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
+		log.LogFatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
 	}
 	return data
 }

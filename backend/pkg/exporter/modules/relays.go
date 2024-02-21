@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-
-	"github.com/sirupsen/logrus"
 )
 
 type BidTrace struct {
@@ -40,14 +39,12 @@ func mevBoostRelaysExporter() {
 			for _, relay := range relays {
 				if shouldTryToExportRelay(relay) {
 					// create relay logger
-					relay.Logger = *logrus.New().WithFields(
-						logrus.Fields{"module": "exporter", "relay": relay.ID})
 					wg.Add(1)
 					go singleRelayExport(relay, wg, mux)
 				}
 			}
 		} else if err != sql.ErrNoRows {
-			utils.LogError(err, "failed to retrieve relays from db", 0)
+			log.LogError(err, "failed to retrieve relays from db", 0)
 		}
 		wg.Wait()
 		time.Sleep(time.Minute)
@@ -61,9 +58,9 @@ func singleRelayExport(r types.Relay, wg *sync.WaitGroup, mux *sync.Mutex) {
 	if err != nil {
 		errMsg := fmt.Errorf("failed to export blocks for relay: %v", err)
 		if shouldLogExportAsError(r) {
-			utils.LogError(err, "", 0, map[string]interface{}{"relay": r.ID})
+			log.LogError(err, "", 0, map[string]interface{}{"relay": r.ID})
 		} else {
-			r.Logger.Warn(errMsg)
+			log.LogWarnWithFields(log.Fields{"relay": r.ID}, errMsg.Error())
 		}
 
 		// Only increase the export_failure_count if we haven't already reached the maximum wait time
@@ -83,7 +80,7 @@ func singleRelayExport(r types.Relay, wg *sync.WaitGroup, mux *sync.Mutex) {
 		}
 		mux.Unlock()
 		if err != nil {
-			utils.LogError(err, "could not update failed relay export", 0, map[string]interface{}{"relay": r.ID})
+			log.LogError(err, "could not update failed relay export", 0, map[string]interface{}{"relay": r.ID})
 		}
 
 		return
@@ -98,10 +95,10 @@ func singleRelayExport(r types.Relay, wg *sync.WaitGroup, mux *sync.Mutex) {
 			WHERE tag_id = $1 AND endpoint = $2`, r.ID, r.Endpoint)
 	mux.Unlock()
 	if err != nil {
-		utils.LogError(err, "could not update successful relay eport", 0, map[string]interface{}{"relay": r.ID})
+		log.LogError(err, "could not update successful relay eport", 0, map[string]interface{}{"relay": r.ID})
 	}
 
-	r.Logger.Infof("finished syncing payloads from relay")
+	log.LogInfo("finished syncing payloads from relay")
 }
 
 func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
@@ -110,12 +107,11 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 	if offset != 0 {
 		url += fmt.Sprintf("&cursor=%v", offset)
 	}
-	r.Logger.Debugf("calling %v", url)
 
 	resp, err := http.Get(url)
 
 	if err != nil {
-		utils.LogError(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID})
+		log.LogError(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID})
 		return nil, err
 	}
 
@@ -124,7 +120,6 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 	err = json.NewDecoder(resp.Body).Decode(&payloads)
 
 	if err != nil {
-		r.Logger.Tracef("error decoding delivered payloads: %v", err)
 		return nil, err
 	}
 
@@ -136,12 +131,11 @@ func exportRelayBlocks(r types.Relay) error {
 	var lastUsage types.RelayBlock
 	err := db.ReaderDb.Get(&lastUsage, `SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient FROM relays_blocks WHERE tag_id=$1 ORDER BY block_slot DESC LIMIT 1`, r.ID)
 	if err != nil {
-		utils.LogError(err, "failed to retrieve last relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
+		log.LogError(err, "failed to retrieve last relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
 	}
 
 	err = retrieveAndInsertPayloadsFromRelay(r, lastUsage.BlockSlot, 0)
 	if err != nil {
-		r.Logger.Tracef("failed to retrieve and insert new payloads: %v", err)
 		return err
 	}
 
@@ -149,14 +143,14 @@ func exportRelayBlocks(r types.Relay) error {
 	var firstUsage types.RelayBlock
 	err = db.ReaderDb.Get(&firstUsage, `SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient FROM relays_blocks WHERE tag_id=$1 ORDER BY block_slot ASC LIMIT 1`, r.ID)
 	if err != nil {
-		utils.LogError(err, "failed to retrieve first relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
+		log.LogError(err, "failed to retrieve first relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
 	}
 	if firstUsage.BlockSlot == 0 {
 		return nil
 	}
 	err = retrieveAndInsertPayloadsFromRelay(r, 0, firstUsage.BlockSlot)
 	if err != nil {
-		utils.LogError(err, "failed to retrieve and insert possibly missing payloads", 0, map[string]interface{}{"relay": r.ID})
+		log.LogError(err, "failed to retrieve and insert possibly missing payloads", 0, map[string]interface{}{"relay": r.ID})
 		return err
 	}
 
@@ -166,13 +160,13 @@ func exportRelayBlocks(r types.Relay) error {
 func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bound uint64) error {
 	tx, err := db.WriterDb.Begin()
 	if err != nil {
-		utils.LogError(err, "failed to start db transaction", 0)
+		log.LogError(err, "failed to start db transaction", 0)
 		return err
 	}
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.LogError(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -181,24 +175,15 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 		min_slot = low_bound - 10
 	}
 
-	if high_bound == 0 {
-		r.Logger.Debugf("loading payloads from head till %v", min_slot)
-	} else if low_bound == 0 {
-		r.Logger.Debugf("loading payloads from %v till genesis", high_bound)
-	}
-
 	offset := high_bound
 	for {
-		r.Logger.Debugf("fetching payloads with offset %v", offset)
-
 		resp, err := fetchDeliveredPayloads(r, offset)
 		if err != nil {
-			r.Logger.Tracef("failed to fetch payloads: %v", err)
 			return err
 		}
 
 		if resp == nil {
-			utils.LogError(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
+			log.LogError(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
 			break
 		}
 
@@ -213,7 +198,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 					blocks.exec_block_hash = $3
 				ON CONFLICT DO NOTHING`, r.ID, payload.Slot, utils.MustParseHex(payload.BlockHash))
 			if err != nil {
-				utils.LogError(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": r.ID})
+				log.LogError(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": r.ID})
 				return err
 			}
 			_, err = tx.Exec(`
@@ -240,21 +225,18 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 				utils.MustParseHex(payload.ProposerPubkey),
 				utils.MustParseHex(payload.ProposerFeeRecipient))
 			if err != nil {
-				utils.LogError(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
+				log.LogError(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
 				return err
 			}
 		}
 
 		if len(resp) == 0 || resp[len(resp)-1].Slot < min_slot {
 			// last payload we received is bellow than our calculated min_slot
-			r.Logger.Debugf("retrieved all payloads above slot %v", min_slot)
 			break
 		}
 
 		if len(resp) < 100 {
 			// if the response is less than 100 payloads, we assume that we have reached the end and break
-			r.Logger.Debugf("got %v, expected 100 payloads", len(resp))
-			r.Logger.Debugf("no more payloads available")
 			break
 		}
 		if resp[len(resp)-1].Slot == offset {
@@ -262,7 +244,6 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 		}
 
 		// sleep for a bit to not kill the relay
-		r.Logger.Debugf("sleeping 2 seconds before next request")
 		offset = resp[len(resp)-1].Slot
 		time.Sleep(time.Second * 1)
 	}

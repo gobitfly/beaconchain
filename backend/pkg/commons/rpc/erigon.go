@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 
@@ -22,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	geth_rpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -40,7 +39,7 @@ type ErigonClient struct {
 var CurrentErigonClient *ErigonClient
 
 func NewErigonClient(endpoint string) (*ErigonClient, error) {
-	logger.Infof("initializing erigon client at %v", endpoint)
+	log.LogInfo("initializing erigon client at %v", endpoint)
 	client := &ErigonClient{
 		endpoint: endpoint,
 	}
@@ -182,7 +181,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			utils.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+			log.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}
@@ -233,7 +232,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				if traceMode == "parity" {
 					return fmt.Errorf("error tracing block via parity style traces (%v), %v: %w", block.Number(), block.Hash(), err)
 				} else {
-					utils.LogError(err, "error tracing block via parity style traces", 0, map[string]interface{}{"blockNumber": block.Number(), "blockHash": block.Hash()})
+					log.LogError(err, "error tracing block via parity style traces", 0, map[string]interface{}{"blockNumber": block.Number(), "blockHash": block.Hash()})
 				}
 				traceError = err
 			} else {
@@ -280,7 +279,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 						tracePb.Value = common.FromHex(trace.Action.Value)
 					} else {
 						spew.Dump(trace)
-						utils.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
+						log.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
 					}
 
 					c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
@@ -295,7 +294,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				return fmt.Errorf("error tracing block via geth style traces (%v), %v: %w", block.Number(), block.Hash(), err)
 			}
 
-			// logger.Infof("retrieved %v calls via geth", len(gethTraceData))
+			// log.LogInfo("retrieved %v calls via geth", len(gethTraceData))
 
 			for _, trace := range gethTraceData {
 				if trace.Error == "" {
@@ -322,23 +321,20 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				} else if trace.Type == "SUICIDE" {
 				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" {
 				} else if trace.Type == "" {
-					utils.LogError(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
+					log.LogError(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
 					spew.Dump(trace)
 					continue
 				} else {
 					spew.Dump(trace)
-					utils.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
+					log.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
 				}
-
-				logger.Tracef("appending trace %v to tx %x from %v to %v value %v", trace.TransactionPosition, c.Transactions[trace.TransactionPosition].Hash, trace.From, trace.To, trace.Value)
-
 				c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
 			}
 		}
 
 		timings.Traces = time.Since(start)
 
-		// logrus.Infof("retrieved %v traces for %v txs", len(traces), len(c.Transactions))
+		// log.LogInfo("retrieved %v traces for %v txs", len(traces), len(c.Transactions))
 
 		return nil
 	})
@@ -514,7 +510,7 @@ func (trace *ParityTraceResult) ConvertFields() ([]byte, []byte, []byte, string)
 		tx_type = trace.Action.CallType
 	default:
 		spew.Dump(trace)
-		utils.LogFatal(nil, "unknown trace type", 0, map[string]interface{}{"trace type": trace.Type, "tx hash": trace.TransactionHash})
+		log.LogFatal(nil, "unknown trace type", 0, map[string]interface{}{"trace type": trace.Type, "tx hash": trace.TransactionHash})
 	}
 	return from, to, value, tx_type
 }
@@ -554,7 +550,7 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 			Token:   pair.Token,
 		}
 
-		// logger.Infof("retrieving balance for %x / %x", ret[i].Address, ret[i].Token)
+		// log.LogInfo("retrieving balance for %x / %x", ret[i].Address, ret[i].Token)
 
 		if len(pair.Token) < 20 {
 			batchElements = append(batchElements, geth_rpc.BatchElem{
@@ -585,13 +581,13 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 
 	for i, el := range batchElements {
 		if el.Error != nil {
-			logrus.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
+			log.LogWarn("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
 		}
 
 		res := strings.TrimPrefix(*el.Result.(*string), "0x")
 		ret[i].Balance = new(big.Int).SetBytes(common.FromHex(res)).Bytes()
 
-		// logger.Infof("retrieved balance %x / %x: %x (%v)", ret[i].Address, ret[i].Token, ret[i].Balance, *el.Result.(*string))
+		// log.LogInfo("retrieved balance %x / %x: %x (%v)", ret[i].Address, ret[i].Token, ret[i].Balance, *el.Result.(*string))
 	}
 
 	return ret, nil
@@ -654,7 +650,7 @@ func (client *ErigonClient) GetERC20TokenBalance(address string, token string) (
 }
 
 func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
-	logger.Infof("retrieving metadata for token %x", token)
+	log.LogInfo("retrieving metadata for token %x", token)
 
 	oracle, err := oneinchoracle.NewOneInchOracleByChainID(client.GetChainID(), client.ethClient)
 	if err != nil {

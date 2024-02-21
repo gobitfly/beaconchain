@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 )
@@ -31,6 +32,6 @@ func ReportStatus(name, status string, metadata *json.RawMessage) {
 	`, name, execName, version, pid, status, metadata)
 
 	if err != nil {
-		utils.LogError(err, "error reporting service status", 0, map[string]interface{}{"name": name, "status": status})
+		log.LogError(err, "error reporting service status", 0, map[string]interface{}{"name": name, "status": status})
 	}
 }

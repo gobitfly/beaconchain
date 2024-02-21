@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 var rowMissmatchErr = errors.New("number of rows in current table and destination table do not match, aborting renaming")
@@ -64,9 +63,9 @@ func (s *StatsMigratorCommand) StartStatsPartitionCommand() error {
 }
 
 func showHelp() {
-	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64\n", "validator_stats_partition")
-	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing\n", "validator_stats_partition")
-	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing --batch-size=20000 --sleep-between-batches=1s --rename-destination-on-complete=true\n", "validator_stats_partition")
+	log.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64\n", "validator_stats_partition")
+	log.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing\n", "validator_stats_partition")
+	log.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing --batch-size=20000 --sleep-between-batches=1s --rename-destination-on-complete=true\n", "validator_stats_partition")
 }
 
 func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationTableName string, numberOfPartitions int) error {
@@ -76,7 +75,7 @@ func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationT
 	}
 
 	if !tableDefFuncExists {
-		logrus.Infof("pg_get_tabledef function does not exist, installing it now")
+		log.LogInfo("pg_get_tabledef function does not exist, installing it now")
 		err = installPGGetTableDef(db.WriterDb)
 		if err != nil {
 			return errors.Wrap(err, "error installing pg_get_tabledef function")
@@ -112,13 +111,13 @@ func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationT
 		}
 	}
 
-	logrus.Infof("Part 1: Creating schemas")
+	log.LogInfo("Part 1: Creating schemas")
 	err = s.createValidatorStatsPartionedTableSchemav1(currentTableName, destinationTableName, numberOfPartitions)
 	if err != nil {
 		return errors.Wrap(err, "error while creating a partitioned table")
 	}
 
-	logrus.Infof("Part 2: Schema creation completed, moving data now")
+	log.LogInfo("Part 2: Schema creation completed, moving data now")
 
 	// Data moving
 	err = s.copyValidatorStats(currentTableName, destinationTableName, 0)
@@ -128,12 +127,12 @@ func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationT
 
 	// Renaming
 	if s.RenameDestinationOnComplete && !s.DryRun {
-		logrus.Infof("Part 3: Renaming destination table to current table name")
+		log.LogInfo("Part 3: Renaming destination table to current table name")
 		err = tableRenaming(currentTableName, destinationTableName, numberOfPartitions)
 		if err != nil {
 			if err == rowMissmatchErr {
 				// This should handle the case when we switch days after data has been copied and before renaming. Remember that only completed days are exported by the statistics exporter.
-				logrus.Infof("Missmatch between current table and destination table row amount for the last exported day. Retrying to export last days.")
+				log.LogInfo("Missmatch between current table and destination table row amount for the last exported day. Retrying to export last days.")
 				maxDay := int64(0)
 				err = db.WriterDb.Get(&maxDay, fmt.Sprintf("SELECT max(day) FROM %s", destinationTableName))
 				if err != nil {
@@ -198,7 +197,7 @@ func tableRenaming(currentTableName, destinationTableName string, numberOfPartit
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.LogError(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -431,7 +430,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 	dayIndex := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_day ON %[1]s (DAY)", tempPartitionedName)
 
 	if s.DryRun {
-		utils.LogInfo("%s\n\n%s\n\n", partitionedCreate, dayIndex)
+		log.LogInfo("%s\n\n%s\n\n", partitionedCreate, dayIndex)
 	} else {
 		_, err = db.WriterDb.Exec(partitionedCreate)
 		if err != nil {
@@ -451,7 +450,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 		`, tempPartitionedName, i, numberOfPartitions)
 
 		if s.DryRun {
-			utils.LogInfo("%s\n", partitionCreate)
+			log.LogInfo("%s\n", partitionCreate)
 		} else {
 			_, err = db.WriterDb.Exec(partitionCreate)
 			if err != nil {
@@ -465,7 +464,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 
 func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName string, startDay int64) error {
 	if s.DryRun {
-		utils.LogInfo("No data transfer in dry-run\n")
+		log.LogInfo("No data transfer in dry-run\n")
 		return nil
 	}
 
@@ -505,16 +504,16 @@ func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName 
 				break
 			}
 
-			logrus.Infof("Finished copying data for day %d/%d", day, maxDay)
+			log.LogInfo("Finished copying data for day %d/%d", day, maxDay)
 		} else {
-			logrus.Infof("Copied validator index [%d - %d) rows for day %d", offset, offset+s.BatchSize, day)
+			log.LogInfo("Copied validator index [%d - %d) rows for day %d", offset, offset+s.BatchSize, day)
 		}
 
 		firstTryOnNewDay = false
 		time.Sleep(s.SleepInBetween)
 	}
 
-	logrus.Infof("transfer done")
+	log.LogInfo("transfer done")
 
 	return nil
 }

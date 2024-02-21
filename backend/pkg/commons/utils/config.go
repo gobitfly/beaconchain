@@ -11,9 +11,9 @@ import (
 	"github.com/carlmjohnson/requests"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -48,7 +48,7 @@ func readConfigSecrets(cfg *types.Config) error {
 
 func confSanityCheck(cfg *types.Config) {
 	if cfg.Chain.ClConfig.SlotsPerEpoch == 0 || cfg.Chain.ClConfig.SecondsPerSlot == 0 {
-		LogFatal(nil, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
+		log.LogFatal(nil, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
 	}
 }
 
@@ -68,7 +68,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 			return fmt.Errorf("error decoding config file %v: %v", path, err)
 		}
 
-		logrus.Infof("seeded config file from secret store")
+		log.LogInfo("seeded config file from secret store")
 	} else {
 		err := readConfigFile(cfg, path)
 		if err != nil {
@@ -224,19 +224,19 @@ func ReadConfig(cfg *types.Config, path string) error {
 
 	// we check for machine chain id just for safety
 	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
-		LogFatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
+		log.LogFatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
 	}
 
 	cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
 
 	if cfg.RedisSessionStoreEndpoint == "" && cfg.RedisCacheEndpoint != "" {
-		logrus.Infof("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
+		log.LogInfo("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
 
 	confSanityCheck(cfg)
 
-	logrus.WithFields(logrus.Fields{
+	log.LogInfoWithFields(log.Fields{
 		"genesisTimestamp":       cfg.Chain.GenesisTimestamp,
 		"genesisValidatorsRoot":  cfg.Chain.GenesisValidatorsRoot,
 		"configName":             cfg.Chain.ClConfig.ConfigName,
@@ -246,7 +246,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 		"clCurrency":             cfg.Frontend.ClCurrency,
 		"elCurrency":             cfg.Frontend.ElCurrency,
 		"mainCurrency":           cfg.Frontend.MainCurrency,
-	}).Infof("did init config")
+	}, "did init config")
 
 	return nil
 }
@@ -466,7 +466,7 @@ func setCLConfig(cfg *types.Config) error {
 		cfg.Chain.GenesisTimestamp = mustParseUint(gtr.Data.GenesisTime)
 		cfg.Chain.GenesisValidatorsRoot = gtr.Data.GenesisValidatorsRoot
 
-		logrus.Infof("loaded chain config from node with genesis time %s", gtr.Data.GenesisTime)
+		log.LogInfo("loaded chain config from node with genesis time %s", gtr.Data.GenesisTime)
 	} else {
 		f, err := os.Open(cfg.Chain.ClConfigPath)
 		if err != nil {

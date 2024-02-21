@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gorilla/mux"
@@ -17,7 +18,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -84,7 +84,7 @@ func MonitorDB(db *sqlx.DB) {
 		}{}
 		err := db.Select(&longRunningQueries, `select datname, extract(epoch from clock_timestamp()) - extract(epoch from query_start) as duration, query from pg_stat_activity where query != '<IDLE>' and query not ilike '%pg_stat_activity%' and query_start is not null and state = 'active' and age(clock_timestamp(), query_start) >= interval '1 minutes'`)
 		if err != nil {
-			utils.LogError(err, "error when monitoring db", 0)
+			log.LogError(err, "error when monitoring db", 0)
 			continue
 		}
 		for _, q := range longRunningQueries {
@@ -152,12 +152,12 @@ func Serve(addr string) error {
 </html>`))
 
 		if err != nil {
-			utils.LogError(err, "error writing to response buffer: %v", 0)
+			log.LogError(err, "error writing to response buffer: %v", 0)
 		}
 	}))
 
 	if utils.Config.Metrics.Pprof {
-		logrus.WithFields(logrus.Fields{"addr": addr}).Infof("serving pprof")
+		log.LogInfoWithFields(log.Fields{"addr": addr}, "serving pprof")
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)

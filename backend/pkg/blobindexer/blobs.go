@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -21,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/coocood/freecache"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -71,11 +71,11 @@ func (bi *BlobIndexer) Start() {
 	bi.running = true
 	bi.runningMu.Unlock()
 
-	logrus.WithFields(logrus.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint}).Infof("starting blobindexer")
+	log.LogInfoWithFields(log.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint}, "starting blobindexer")
 	for {
 		err := bi.Index()
 		if err != nil {
-			utils.LogError(err, "failed indexing blobs", 0)
+			log.LogError(err, "failed indexing blobs", 0)
 		}
 		time.Sleep(time.Second * 10)
 	}
@@ -141,13 +141,13 @@ func (bi *BlobIndexer) Index() error {
 	}
 
 	start := time.Now()
-	logrus.WithFields(logrus.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "headSlot": headHeader.Data.Header.Message.Slot}).Infof("indexing blobs")
+	log.LogInfoWithFields(log.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "headSlot": headHeader.Data.Header.Message.Slot}, "indexing blobs")
 	defer func() {
-		logrus.WithFields(logrus.Fields{
+		log.LogInfoWithFields(log.Fields{
 			"startSlot": startSlot,
 			"endSlot":   headHeader.Data.Header.Message.Slot,
 			"duration":  time.Since(start),
-		}).Infof("finished indexing blobs")
+		}, "finished indexing blobs")
 	}()
 
 	batchSize := uint64(100)
@@ -184,7 +184,7 @@ func (bi *BlobIndexer) Index() error {
 			if err != nil {
 				return fmt.Errorf("error updating indexer status at slot %v: %w", batchEnd, err)
 			}
-			logrus.WithFields(logrus.Fields{"lastIndexedFinalizedSlot": batchEnd}).Infof("updated indexer status")
+			log.LogInfoWithFields(log.Fields{"lastIndexedFinalizedSlot": batchEnd}, "updated indexer status")
 		}
 	}
 	return nil
@@ -246,7 +246,6 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 				// Only put the object if it does not exist yet
 				var httpResponseErr *awshttp.ResponseError
 				if errors.As(err, &httpResponseErr) && (httpResponseErr.HTTPStatusCode() == 404 || httpResponseErr.HTTPStatusCode() == 403) {
-					//logrus.WithFields(logrus.Fields{"slot": d.Slot, "index": d.Index, "key": key}).Infof("putting blob")
 					tS3PutObj := time.Now()
 					_, putErr := bi.S3Client.PutObject(gCtx, &s3.PutObjectInput{
 						Bucket: &utils.Config.BlobIndexer.S3.Bucket,
