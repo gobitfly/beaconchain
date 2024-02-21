@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	eth_rewards_types "github.com/gobitfly/eth-rewards/types"
 	"github.com/jackc/pgtype"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -675,4 +676,14 @@ type ValidatorStatsTableDbRow struct {
 	MEVPerformance7d   decimal.Decimal `db:"-"`
 	MEVPerformance31d  decimal.Decimal `db:"-"`
 	MEVPerformance365d decimal.Decimal `db:"-"`
+}
+
+type RedisCachedEpochAssignments struct {
+	Epoch       Epoch
+	Assignments *EpochAssignments
+}
+
+type RedisCachedEpochRewards struct {
+	Epoch   Epoch
+	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }

@@ -14,7 +14,7 @@ func syncCommitteesCountExporter() {
 	for {
 		err := exportSyncCommitteesCount()
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"error": err}).Errorf("error exporting sync_committees_count_per_validator")
+			utils.LogError(err, "error exporting sync_committees_count_per_validator", 0)
 		}
 		time.Sleep(time.Second * 12)
 	}
@@ -29,7 +29,7 @@ func exportSyncCommitteesCount() error {
 
 	latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
 	if err != nil {
-		logger.Errorf("error retrieving latest exported finalized epoch from the database: %v", err)
+		utils.LogError(err, "error retrieving latest exported finalized epoch from the database", 0)
 	}
 
 	currentPeriod := utils.SyncPeriodOfEpoch(latestFinalizedEpoch)
@@ -87,7 +87,12 @@ func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	_, err = tx.Exec(
 		fmt.Sprintf(`
