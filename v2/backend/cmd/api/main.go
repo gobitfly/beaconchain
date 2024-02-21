@@ -6,7 +6,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
-	"github.com/sirupsen/logrus"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 // TODO load these from config
@@ -33,6 +33,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	logrus.Infof("Serving on %s:%s", host, port)
-	logrus.Fatal(srv.ListenAndServe())
+	log.Infof("Serving on %s:%s", host, port)
+	log.Fatal(srv.ListenAndServe(), "Error while serving", 0)
 }

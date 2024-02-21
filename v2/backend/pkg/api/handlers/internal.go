@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -191,8 +190,8 @@ func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, 
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId)
+
+	TODO_RemoveThisLine(dashboardId)
 
 	returnNoContent(w)
 }
@@ -213,8 +212,8 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, name)
+
+	TODO_RemoveThisLine(dashboardId, name)
 
 	// TODO check group limit reached
 
@@ -234,8 +233,8 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, groupId)
+
+	TODO_RemoveThisLine(dashboardId, groupId)
 
 	returnNoContent(w)
 }
@@ -258,8 +257,8 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, groupId, validators)
+
+	TODO_RemoveThisLine(dashboardId, groupId, validators)
 
 	// TODO check validator limit reached
 
@@ -281,8 +280,8 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, validators)
+
+	TODO_RemoveThisLine(dashboardId, validators)
 
 	returnNoContent(w)
 }
@@ -306,8 +305,8 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, name)
+
+	TODO_RemoveThisLine(dashboardId, name)
 
 	//TODO check public id limit reached
 
@@ -343,8 +342,8 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, publicDashboardId, name)
+
+	TODO_RemoveThisLine(dashboardId, publicDashboardId, name)
 
 	response := types.ApiResponse{
 		Data: struct {
@@ -366,8 +365,8 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, publicDashboardId)
+
+	TODO_RemoveThisLine(dashboardId, publicDashboardId)
 
 	returnNoContent(w)
 }
@@ -380,8 +379,8 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId)
+
+	TODO_RemoveThisLine(dashboardId)
 
 	data, err := h.dai.GetValidatorDashboardSlotViz(dashboardId)
 	if err != nil {
@@ -445,8 +444,8 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId)
+
+	TODO_RemoveThisLine(dashboardId)
 
 	response := types.ApiResponse{
 		Data: nil, // apitypes.VDBSummaryChartResponse{},
@@ -463,8 +462,8 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, paging)
+
+	TODO_RemoveThisLine(dashboardId, paging)
 
 	response := types.ApiResponse{
 		Data: types.VDBRewardsTableResponse{},
@@ -481,8 +480,8 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO remove, variables are not yet used
-	fmt.Println(dashboardId, groupId)
+
+	TODO_RemoveThisLine(dashboardId, groupId)
 
 	response := types.ApiResponse{
 		Data: types.VDBGroupRewardsResponse{},
@@ -532,4 +531,9 @@ func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w ht
 
 func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
+}
+
+func TODO_RemoveThisLine(args ...interface{}) {
+	// This function is used to prevent the "declared and not used" error
+	// Temporary solution until the code is complete
 }
