@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	apitypes "github.com/gobitfly/beaconchain/pkg/types/api"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
@@ -38,14 +39,14 @@ const (
 )
 
 const (
-	maxNameLength       = 50
-	maxQueryLimit       = 100
-	defaultReturnLimit  = 10
-	sortOrderAscending  = "asc"
-	sortOrderDescending = "desc"
-	defaultSortOrder    = sortOrderAscending
-	ethereum            = "ethereum"
-	gnosis              = "gnosis"
+	maxNameLength       uint64 = 50
+	maxQueryLimit       uint64 = 100
+	defaultReturnLimit  uint64 = 10
+	sortOrderAscending         = "asc"
+	sortOrderDescending        = "desc"
+	defaultSortOrder           = sortOrderAscending
+	ethereum                   = "ethereum"
+	gnosis                     = "gnosis"
 )
 
 type RequestError struct {
@@ -60,7 +61,7 @@ func (r RequestError) Error() string {
 
 type Paging struct {
 	cursor string
-	limit  int
+	limit  uint64
 	order  string
 	sort   string
 	search string
@@ -72,38 +73,41 @@ type Paging struct {
 //   Validation
 
 func joinErr(err *error, message string) {
-	*err = errors.Join(*err, errors.New(message))
+	if len(message) > 0 {
+		*err = errors.Join(*err, errors.New(message))
+	}
 }
 
-func regexCheck(regex regexString, param string) error {
+func regexCheck(handlerErr *error, regex regexString, param string) string {
 	if !regexp.MustCompile(string(regex)).MatchString(param) {
-		return fmt.Errorf(`given value '%s' has incorrect format`, param)
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' has incorrect format`, param))
 	}
-	return nil
+	return param
 }
 
-func checkName(name string, minLength int) error {
+func checkName(handlerErr *error, name string, minLength int) string {
 	if len(name) < minLength {
-		return fmt.Errorf(`given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength)
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength))
 	} else if len(name) > 50 {
-		return fmt.Errorf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, maxNameLength)
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, maxNameLength))
 	}
-	return regexCheck(reName, name)
+	return regexCheck(handlerErr, reName, name)
 }
 
-func regexCheckMultiple(regexes []regexString, params []string) error {
-	var err error
-	for _, param := range params {
+func regexCheckMultiple(handlerErr *error, regexes []regexString, params []string) []string {
+	results := make([]string, len(params))
+	for i, param := range params {
 		for _, regex := range regexes {
-			err = errors.Join(err, regexCheck(regex, param))
+			regexCheck(handlerErr, regex, param)
 		}
+		// might want to change this later
+		results[i] = params[i]
 	}
-	return err
+	return results
 }
 
-func CheckNameNotEmpty(name string) error {
-	return checkName(name, 1)
-	// return name
+func checkNameNotEmpty(handlerErr *error, name string) string {
+	return checkName(handlerErr, name, 1)
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -115,19 +119,19 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 	}
 	b, err := json.Marshal(sc)
 	if err != nil {
-		fmt.Printf("error validating json: %s\n", err.Error())
+		utils.LogError(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("can't validate expected format")}
 	}
 	loader := gojsonschema.NewBytesLoader(b)
 	documentLoader, _ := gojsonschema.NewReaderLoader(r)
 	schema, err := gojsonschema.NewSchema(loader)
 	if err != nil {
-		fmt.Printf("error validating json: %s\n", err.Error())
+		utils.LogError(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("can't create expected format")}
 	}
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
-		fmt.Printf("error validating json: %s\n", err.Error())
+		utils.LogError(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("couldn't validate JSON request")}
 	}
 	if !result.Valid() {
@@ -135,22 +139,28 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 	}
 	if err = json.NewDecoder(r).Decode(data); err != nil {
 		// error parsing json; shouldn't happen since we verified it's json in the correct format already
-		fmt.Printf("error validating json: %s\n", err.Error())
+		utils.LogError(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("couldn't decode JSON request")}
 	}
 	// could perform data validation checks based on tags here, but might need validation lib for that
 	return nil
 }
 
-func CheckId(id string) error {
-	return regexCheck(reId, id)
+func checkId(handlerErr *error, id string) string {
+	return regexCheck(handlerErr, reId, id)
 }
 
-func CheckIdList(ids []string) error {
-	return regexCheckMultiple([]regexString{reId}, ids)
+func checkUint(handlerErr *error, id string) uint64 {
+	id64, err := strconv.ParseUint(id, 10, 64)
+	joinErr(handlerErr, err.Error())
+	return id64
 }
 
-func CheckAndGetPaging(r *http.Request) (Paging, error) {
+func CheckIdList(handlerErr *error, ids []string) []string {
+	return regexCheckMultiple(handlerErr, []regexString{reId}, ids)
+}
+
+func checkAndGetPaging(handlerErr *error, r *http.Request) Paging {
 	q := r.URL.Query()
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -160,40 +170,40 @@ func CheckAndGetPaging(r *http.Request) (Paging, error) {
 		search: q.Get("search"),
 	}
 
-	var paging_limit_error error
-	if limit_str := q.Get("limit"); limit_str != "" {
-		paging.limit, paging_limit_error = strconv.Atoi(limit_str)
-		if paging.limit > maxQueryLimit {
-			paging_limit_error = fmt.Errorf("Paging limit %d is too high, maximum value is %d", paging.limit, maxQueryLimit)
+	if limitStr := q.Get("limit"); limitStr != "" {
+		limit, err := strconv.ParseUint(limitStr, 10, 64)
+		joinErr(handlerErr, err.Error())
+		paging.limit = limit
+		if limit > maxQueryLimit {
+			joinErr(handlerErr, fmt.Sprintf("Paging limit %d is too high, maximum value is %d", paging.limit, maxQueryLimit))
 		}
 	}
 
-	var paging_order_error error
 	if order := q.Get("order"); order != "" {
 		paging.order = order
 	}
 	if paging.order != sortOrderAscending && paging.order == sortOrderDescending {
-		paging_order_error = fmt.Errorf("invalid sorting order: %s", paging.order)
+		joinErr(handlerErr, fmt.Sprintf("invalid sorting order: %s", paging.order))
 	}
-	return paging,
-		errors.Join(
-			regexCheck(reCursor, paging.cursor),
-			paging_order_error,
-			paging_limit_error,
-			checkName(paging.sort, 0),
-			checkName(paging.search, 0),
-		)
+	paging.cursor = regexCheck(handlerErr, reCursor, paging.cursor)
+	paging.sort = checkName(handlerErr, paging.sort, 0)
+	paging.search = checkName(handlerErr, paging.search, 0)
+
+	return paging
 }
 
-func CheckValidatorList(validators []string) error {
-	return regexCheckMultiple([]regexString{reNumber, reValidatorPubkey}, validators)
+func CheckValidatorList(handlerErr *error, validators []string) []string {
+	return regexCheckMultiple(handlerErr, []regexString{reNumber, reValidatorPubkey}, validators)
 }
 
-func CheckNetwork(network string) error {
-	if network != ethereum && network != gnosis {
-		return fmt.Errorf(`given parameter '%s' for "network" isn't valid, allowed values are: %s, %s`, network, ethereum, gnosis)
+func checkNetwork(handlerErr *error, network string) uint64 {
+	// try parsing as uint64
+	networkId, err := strconv.ParseUint(network, 10, 64)
+	if err != nil {
+		// TODO string try to match network name
+		joinErr(handlerErr, fmt.Sprintf("invalid network id: %s", network))
 	}
-	return nil
+	return networkId
 }
 
 // --------------------------------------
@@ -233,7 +243,7 @@ func returnError(w http.ResponseWriter, code int, err error) {
 	writeResponse(w, code, response)
 }
 
-func ReturnOk(w http.ResponseWriter, data interface{}) {
+func returnOk(w http.ResponseWriter, data interface{}) {
 	writeResponse(w, http.StatusOK, data)
 }
 
@@ -241,28 +251,28 @@ func ReturnCreated(w http.ResponseWriter, data interface{}) {
 	writeResponse(w, http.StatusCreated, data)
 }
 
-func ReturnNoContent(w http.ResponseWriter) {
+func returnNoContent(w http.ResponseWriter) {
 	writeResponse(w, http.StatusNoContent, nil)
 }
 
 // Errors
 
-func ReturnBadRequest(w http.ResponseWriter, err error) {
+func returnBadRequest(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusBadRequest, err)
 }
 
-func ReturnUnauthorized(w http.ResponseWriter, err error) {
+func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
 }
 
-func ReturnNotFound(w http.ResponseWriter, err error) {
+func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-func ReturnConflict(w http.ResponseWriter, err error) {
+func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }
 
-func ReturnInternalServerError(w http.ResponseWriter, err error) {
+func returnInternalServerError(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusInternalServerError, err)
 }

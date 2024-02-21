@@ -25,19 +25,19 @@ func (d DummyService) GetUserDashboards(userId uint64) (t.DashboardData, error) 
 	return r, err
 }
 
-func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network t.Network) (t.VDBPostData, error) {
+func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostData, error) {
 	r := t.VDBPostData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId string) (t.VDBOverviewData, error) {
+func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error) {
 	r := t.VDBOverviewData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
+func (d DummyService) GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
 	commonFakeData(&r)
@@ -45,13 +45,13 @@ func (d DummyService) GetValidatorDashboardSummary(dashboardId string, cursor st
 	return r, p, err
 }
 
-func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId string, groupId uint64) (t.VDBGroupSummary, error) {
+func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummary, error) {
 	r := t.VDBGroupSummary{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
+func (d DummyService) GetValidatorDashboardBlocks(dashboardId uint64, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
 	p := t.Paging{}
 	commonFakeData(&r)
