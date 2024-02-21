@@ -2,6 +2,7 @@ package consapi_test
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestGetBlockHeader(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting block header: %v", err)
 	}
-	fmt.Printf("Block header: %v\n", res)
+	log.Printf("Block header: %v\n", res)
 }
 
 func TestGetSlot(t *testing.T) {
@@ -35,7 +36,7 @@ func TestGetSlot(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting slot: %v", err)
 	}
-	fmt.Printf("Slot: %v\n", res)
+	log.Printf("Slot: %v\n", res)
 }
 
 func TestGetValidators(t *testing.T) {
@@ -43,7 +44,7 @@ func TestGetValidators(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting validators: %v", err)
 	}
-	fmt.Printf("Validators: %v\n", res)
+	log.Printf("Validators: %v\n", res)
 }
 
 func TestGetValidatorsFilter(t *testing.T) {
@@ -91,7 +92,7 @@ func TestGetPropoalAssignments(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting proposal assignments: %v", err)
 	}
-	fmt.Printf("Proposal assignments: %v\n", res)
+	log.Printf("Proposal assignments: %v\n", res)
 }
 
 func TestGetPropoalRewards(t *testing.T) {
@@ -99,7 +100,7 @@ func TestGetPropoalRewards(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting proposal rewards: %v", err)
 	}
-	fmt.Printf("Proposal rewards: %v\n", res)
+	log.Printf("Proposal rewards: %v\n", res)
 }
 
 func TestGetSyncRewards(t *testing.T) {
@@ -107,7 +108,7 @@ func TestGetSyncRewards(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting sync rewards: %v", err)
 	}
-	fmt.Printf("Sync rewards: %v\n", res)
+	log.Printf("Sync rewards: %v\n", res)
 }
 
 func TestGetAttestationRewards(t *testing.T) {
@@ -115,7 +116,7 @@ func TestGetAttestationRewards(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting attestation rewards: %v", err)
 	}
-	fmt.Printf("Attestation rewards: %v\n", res)
+	log.Printf("Attestation rewards: %v\n", res)
 }
 
 func TestGetSyncCommitteesAssignments(t *testing.T) {
@@ -123,7 +124,7 @@ func TestGetSyncCommitteesAssignments(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting sync committees assignments: %v", err)
 	}
-	fmt.Printf("Sync committees assignments: %v\n", res)
+	log.Printf("Sync committees assignments: %v\n", res)
 }
 
 func TestGetSpec(t *testing.T) {
@@ -138,7 +139,7 @@ func TestGetSpec(t *testing.T) {
 		t.Errorf("Error getting spec: %v", err)
 	}
 
-	fmt.Printf("Spec: %v\n", res)
+	log.Printf("Spec: %v\n", res)
 }
 
 func TestGetBlockHeaders(t *testing.T) {
@@ -146,7 +147,7 @@ func TestGetBlockHeaders(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting block headers: %v", err)
 	}
-	fmt.Printf("Block headers: %v\n", res)
+	log.Printf("Block headers: %v\n", res)
 }
 
 func TestGetBlockHeadersSlot(t *testing.T) {
@@ -155,7 +156,7 @@ func TestGetBlockHeadersSlot(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting block headers: %v", err)
 	}
-	fmt.Printf("Block headers: %v\n", res)
+	log.Printf("Block headers: %v\n", res)
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
@@ -163,7 +164,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting finality checkpoints: %v", err)
 	}
-	fmt.Printf("Finality checkpoints: %v\n", res)
+	log.Printf("Finality checkpoints: %v\n", res)
 }
 
 func TestGetValidatorBalances(t *testing.T) {
@@ -171,7 +172,7 @@ func TestGetValidatorBalances(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting validator balances: %v", err)
 	}
-	fmt.Printf("Validator balances: %v\n", res)
+	log.Printf("Validator balances: %v\n", res)
 }
 
 func TestGetBlobSidecars(t *testing.T) {
@@ -179,7 +180,7 @@ func TestGetBlobSidecars(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting blob sidecars: %v", err)
 	}
-	fmt.Printf("Blob sidecars: %v\n", res)
+	log.Printf("Blob sidecars: %v\n", res)
 }
 
 func TestGetCommittees(t *testing.T) {
@@ -187,7 +188,7 @@ func TestGetCommittees(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting committees: %v", err)
 	}
-	fmt.Printf("Committees: %v\n", res)
+	log.Printf("Committees: %v\n", res)
 }
 
 func TestGetGenesis(t *testing.T) {
@@ -195,7 +196,7 @@ func TestGetGenesis(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting genesis: %v", err)
 	}
-	fmt.Printf("Genesis: %v\n", res)
+	log.Printf("Genesis: %v\n", res)
 }
 
 func TestGetEvents(t *testing.T) {
@@ -211,7 +212,7 @@ func TestGetEvents(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error getting head event: %v", err)
 			}
-			fmt.Printf("Head: %v\n", response)
+			log.Printf("Head: %v\n", response)
 		}
 
 		if event.Event == types.EventBlock {
@@ -219,7 +220,7 @@ func TestGetEvents(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error getting block event: %v", err)
 			}
-			fmt.Printf("Block: %v\n", response)
+			log.Printf("Block: %v\n", response)
 		}
 
 		if event.Event == types.EventChainReorg {
@@ -227,7 +228,7 @@ func TestGetEvents(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error getting chain reorg event: %v", err)
 			}
-			fmt.Printf("Chain reorg: %v\n", response)
+			log.Printf("Chain reorg: %v\n", response)
 		}
 
 		if event.Event == types.EventFinalizedCheckpoint {
@@ -235,7 +236,7 @@ func TestGetEvents(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error getting finalized checkpoint event: %v", err)
 			}
-			fmt.Printf("Finalized checkpoint: %v\n", response)
+			log.Printf("Finalized checkpoint: %v\n", response)
 		}
 	}
 }
