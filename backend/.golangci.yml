@@ -94,6 +94,10 @@ linters-settings:
         msg: Use utils.LogError instead
       - p: ^log\.Errorf.*$
         msg: Use utils.LogError instead
+      - p: ^fmt\.Print.*$
+        msg: Use utils.LogInfo instead
+      - p: ^fmt\.Printf.*$
+        msg: Use utils.LogInfo instead
   gocognit:
     min-complexity: 65
   depguard:
