@@ -8,7 +8,6 @@ import (
 
 // ------------------------------------------------------------
 // Overview
-
 type VDBOverviewResponse ApiDataResponse[VDBOverviewData]
 
 type VDBOverviewData struct {
@@ -42,7 +41,6 @@ type VDBOverviewGroup struct {
 
 // ------------------------------------------------------------
 // Slot Viz
-
 type VDBSlotVizResponse ApiDataResponse[VDBSlotVizEpoch]
 
 type VDBSlotVizEpoch struct {
@@ -70,7 +68,6 @@ type VDBSlotVizDuty struct {
 
 // ------------------------------------------------------------
 // Summary Tab
-
 type VDBSummaryTableResponse ApiPagingResponse[VDBSummaryTableRow]
 
 type VDBSummaryTableRow struct {
@@ -121,7 +118,6 @@ type VDBSummaryChartResponse ApiDataResponse[[]HighchartsSeries]
 
 // ------------------------------------------------------------
 // Rewards Tab
-
 type VDBRewardsTableResponse ApiPagingResponse[VDBRewardsTableRow]
 
 type VDBRewardsTableRow struct {
@@ -158,7 +154,6 @@ type VDBGroupRewardsDetails struct {
 type VDBRewardsChartResponse ApiDataResponse[[]HighchartsSeries]
 
 // Duties Modal
-
 type VDBEpochDutiesTableResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
 type VDBEpochDutiesTableRow struct {
@@ -179,7 +174,6 @@ type VDBEpochDutiesItem struct {
 
 // ------------------------------------------------------------
 // Blocks Tab
-
 type VDBBlocksTableResponse ApiPagingResponse[VDBBlocksTableRow]
 
 type VDBBlocksTableRow struct {
@@ -194,7 +188,6 @@ type VDBBlocksTableRow struct {
 
 // ------------------------------------------------------------
 // Heatmap Tab
-
 type VDBHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmap struct {
@@ -231,7 +224,6 @@ type VDBHeatmapTooltipDuty struct {
 
 // ------------------------------------------------------------
 // Deposits Tab
-
 type VDBExecutionDepositsTableResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
 type VDBExecutionDepositsTableRow struct {
@@ -262,7 +254,6 @@ type VDBConsensusDepositsTableRow struct {
 
 // ------------------------------------------------------------
 // Withdrawals Tab
-
 type VDBWithdrawalsTableResponse ApiPagingResponse[VDBWithdrawalsTableRow]
 
 type VDBWithdrawalsTableRow struct {
@@ -275,7 +266,6 @@ type VDBWithdrawalsTableRow struct {
 
 // ------------------------------------------------------------
 // Manage Modal
-
 type VDBManageValidatorsTableResponse ApiPagingResponse[VDBManageValidatorsTableRow]
 
 type VDBManageValidatorsTableRow struct {
@@ -289,7 +279,6 @@ type VDBManageValidatorsTableRow struct {
 
 // ------------------------------------------------------------
 // Misc. Responses
-
 type VDBPostData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`

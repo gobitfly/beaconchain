@@ -5,12 +5,16 @@ import { ApiDataResponse, PeriodicClElValues, Luck, ApiPagingResponse, ClElValue
 //////////
 // source: validator_dashboard.go
 
+/**
+ * ------------------------------------------------------------
+ * Overview
+ */
 export type VDBOverviewResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBOverviewData {
     groups: VDBOverviewGroup[];
     validators: VDBOverviewValidators;
     efficiency: VDBOverviewEfficiency;
-    rewards: PeriodicClElValues<string>;
+    rewards: PeriodicClElValues<string /* decimal.Decimal */>;
     luck: Luck;
     apr: PeriodicClElValues<number /* float64 */>;
 }
@@ -31,6 +35,10 @@ export interface VDBOverviewGroup {
     id: number /* uint64 */;
     name: string;
 }
+/**
+ * ------------------------------------------------------------
+ * Slot Viz
+ */
 export type VDBSlotVizResponse = ApiDataResponse<VDBSlotVizEpoch>;
 export interface VDBSlotVizEpoch {
     epoch: number /* uint64 */;
@@ -46,12 +54,16 @@ export interface VDBSlotVizDuty {
     type: 'proposal' | 'attestation' | 'sync' | 'slashing';
     pending_count: number /* uint64 */;
     success_count: number /* uint64 */;
-    success_earnings: string;
+    success_earnings: string /* decimal.Decimal */;
     failed_count: number /* uint64 */;
-    failed_earnings: string;
+    failed_earnings: string /* decimal.Decimal */;
     block?: number /* uint64 */;
     validator?: number /* uint64 */;
 }
+/**
+ * ------------------------------------------------------------
+ * Summary Tab
+ */
 export type VDBSummaryTableResponse = ApiPagingResponse<VDBSummaryTableRow>;
 export interface VDBSummaryTableRow {
     group_id: number /* uint64 */;
@@ -78,22 +90,26 @@ export interface VDBGroupSummaryColumn {
     proposals: VDBGroupSummaryColumnItem;
     slashed: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
     apr: ClElValue<number /* float64 */>;
-    income: ClElValue<string>;
+    income: ClElValue<string /* decimal.Decimal */>;
     luck: Luck;
 }
 export interface VDBGroupSummaryColumnItem {
     status_count: StatusCount;
-    earned: string;
-    penalty: string;
+    earned: string /* decimal.Decimal */;
+    penalty: string /* decimal.Decimal */;
     validators?: number /* uint64 */[];
 }
 export type VDBSummaryChartResponse = ApiDataResponse<HighchartsSeries[]>;
+/**
+ * ------------------------------------------------------------
+ * Rewards Tab
+ */
 export type VDBRewardsTableResponse = ApiPagingResponse<VDBRewardsTableRow>;
 export interface VDBRewardsTableRow {
     epoch: number /* uint64 */;
     duty: VDBRewardesTableDuty;
     group_id: number /* uint64 */;
-    reward: ClElValue<string>;
+    reward: ClElValue<string /* decimal.Decimal */>;
 }
 export interface VDBRewardesTableDuty {
     attestation: number /* float64 */;
@@ -109,13 +125,16 @@ export interface VDBGroupRewardsData {
     sync: VDBGroupRewardsDetails;
     slashing: VDBGroupRewardsDetails;
     proposal: VDBGroupRewardsDetails;
-    proposal_el_reward: string;
+    proposal_el_reward: string /* decimal.Decimal */;
 }
 export interface VDBGroupRewardsDetails {
     status_count: StatusCount;
-    income: string;
+    income: string /* decimal.Decimal */;
 }
 export type VDBRewardsChartResponse = ApiDataResponse<HighchartsSeries[]>;
+/**
+ * Duties Modal
+ */
 export type VDBEpochDutiesTableResponse = ApiPagingResponse<VDBEpochDutiesTableRow>;
 export interface VDBEpochDutiesTableRow {
     validator: number /* uint64 */;
@@ -128,8 +147,12 @@ export interface VDBEpochDutiesTableRow {
 }
 export interface VDBEpochDutiesItem {
     status: 'success' | 'partial' | 'failed' | 'orphaned';
-    reward: string;
+    reward: string /* decimal.Decimal */;
 }
+/**
+ * ------------------------------------------------------------
+ * Blocks Tab
+ */
 export type VDBBlocksTableResponse = ApiPagingResponse<VDBBlocksTableRow>;
 export interface VDBBlocksTableRow {
     proposer: number /* uint64 */;
@@ -138,8 +161,12 @@ export interface VDBBlocksTableRow {
     slot: number /* uint64 */;
     block: number /* uint64 */;
     status: 'success' | 'missed' | 'orphaned' | 'scheduled';
-    reward: ClElValue<string>;
+    reward: ClElValue<string /* decimal.Decimal */>;
 }
+/**
+ * ------------------------------------------------------------
+ * Heatmap Tab
+ */
 export type VDBHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmap {
     epochs: number /* uint64 */[]; // X-Axis Categories
@@ -160,12 +187,16 @@ export interface VDBHeatmapTooltipData {
     attestation_head: StatusCount;
     attestation_source: StatusCount;
     attestation_target: StatusCount;
-    attestation_income: string;
+    attestation_income: string /* decimal.Decimal */;
 }
 export interface VDBHeatmapTooltipDuty {
     validator: number /* uint64 */;
     status: 'success' | 'failed' | 'orphaned';
 }
+/**
+ * ------------------------------------------------------------
+ * Deposits Tab
+ */
 export type VDBExecutionDepositsTableResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
 export interface VDBExecutionDepositsTableRow {
     public_key: PubKey;
@@ -176,7 +207,7 @@ export interface VDBExecutionDepositsTableRow {
     depositor: Address;
     tx_hash: Hash;
     withdrawal_credentials: Hash;
-    amount: string;
+    amount: string /* decimal.Decimal */;
     valid: boolean;
 }
 export type VDBConsensusDepositsTableResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
@@ -187,30 +218,42 @@ export interface VDBConsensusDepositsTableRow {
     epoch: number /* uint64 */;
     slot: number /* uint64 */;
     withdrawal_credential: Hash;
-    amount: string;
+    amount: string /* decimal.Decimal */;
     signature: Hash;
 }
+/**
+ * ------------------------------------------------------------
+ * Withdrawals Tab
+ */
 export type VDBWithdrawalsTableResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
 export interface VDBWithdrawalsTableRow {
     epoch: number /* uint64 */;
     index: number /* uint64 */;
     group_id: number /* uint64 */;
     recipient: Address;
-    amount: string;
+    amount: string /* decimal.Decimal */;
 }
+/**
+ * ------------------------------------------------------------
+ * Manage Modal
+ */
 export type VDBManageValidatorsTableResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
 export interface VDBManageValidatorsTableRow {
     index: number /* uint64 */;
     public_key: PubKey;
     group_id: number /* uint64 */;
-    balance: string;
+    balance: string /* decimal.Decimal */;
     status: string;
     withdrawal_credential: Hash;
 }
+/**
+ * ------------------------------------------------------------
+ * Misc. Responses
+ */
 export interface VDBPostData {
     id: number /* uint64 */;
     user_id: number /* uint64 */;
     name: string;
     network: number /* uint64 */;
-    created_at: any /* time.Time */;
+    created_at: string /* time.Time */;
 }
