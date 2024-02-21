@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// frontend can ignore this, it's just for the backend
+// frontend can ignore ApiResponse type, it's just for the backend
 type ApiResponse struct {
 	Paging *Paging     `json:"paging,omitempty"`
 	Data   interface{} `json:"data"`

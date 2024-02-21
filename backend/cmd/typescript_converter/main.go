@@ -1,209 +1,144 @@
 package main
 
 import (
-	"bytes"
 	"flag"
-	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/token"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
+	"slices"
 	"strings"
 
-	_ "github.com/tkrajina/typescriptify-golang-structs/typescriptify"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gzuidhof/tygo/tygo"
+	"golang.org/x/tools/go/packages"
 )
 
-type FileStructs struct {
-	FileName    string
-	StructNames []string
+const (
+	packagePath    = "github.com/gobitfly/beaconchain/pkg/api/types"
+	fallbackType   = "any"
+	commonFileName = "common"
+	indent         = "    "
+)
+
+var typeMappings = map[string]string{
+	"decimal.Decimal": "string",
 }
 
 // Expects the following flags:
-// -in: Path to the Go package containing the API types
 // -out: Output folder for the generated TypeScript file
 
-// This script scans a Go package for struct definitions, generates a temporary Go program to convert these structs into TypeScript interfaces,
-// and then replaces shared interfaces in the generated TypeScript files with imports from a common.ts file.
-
-// Example usage (execute in backend folder): go run main.go -in /pkg/types/api -out ../frontend/types/api
+// Standard usage (execute in backend folder): go run cmd/typescript-converter/main.go -out ../frontend/types/api
 
 func main() {
-	// Defining flags for the API types package path and the output folder
-	var inputPath, outputPath string
-	flag.StringVar(&inputPath, "in", "", "Path to the Go package containing the API types")
-	flag.StringVar(&outputPath, "out", ".", "Output folder for the generated TypeScript file")
+	var out string
+	flag.StringVar(&out, "out", "", "Output folder for the generated TypeScript file")
 	flag.Parse()
 
-	// Ensure the package path is provided
-	if inputPath == "" {
-		fmt.Println("You must specify a package path using the -in flag.")
-		return
+	if out == "" {
+		utils.LogFatal(nil, "Output folder not provided", 0)
 	}
 
-	if outputPath == "" {
-		fmt.Println("You must specify a destination path using the -in flag.")
-		return
+	if !strings.HasSuffix(out, "/") {
+		out += "/"
 	}
 
-	// Step 1: Scan the input package for struct definitions
-	structs, err := scanPackageForStructs(inputPath)
+	// Load package
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedTypes | packages.NeedSyntax,
+	}, packagePath)
+
 	if err != nil {
-		panic(err)
+		utils.LogFatal(err, "Failed to load package", 0)
+	}
+	if packages.PrintErrors(pkgs) > 0 {
+		utils.LogFatal(nil, "Failed to load package", 0)
 	}
 
-	// Step 2: Generate the Go program for typescriptify conversion
-	programFileName := "temp.go"
-	programSource := generateProgram(structs, outputPath)
+	// Find all common types and their usages
+	commonTypes := getCommonTypes(pkgs)
+	// Find all usages of common types
+	usage := getCommonUsages(pkgs, commonTypes)
 
-	// Step 3: Write the program to a .go file
-	if err := os.WriteFile(programFileName, []byte(programSource), 0644); err != nil {
-		panic(err)
+	tygos := []*tygo.Tygo{}
+	// Generate Tygo for common.go
+	tygos = append(tygos, tygo.New(getTygoConfig(out, commonFileName, "")))
+	// Generate Tygo for each file
+	for file, typesUsed := range usage {
+		importStr := "import { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + ".ts';\n\n"
+		tygos = append(tygos, tygo.New(getTygoConfig(out, file, importStr)))
 	}
 
-	// Step 4: Execute the generated Go program
-	cmd := exec.Command("go", "run", programFileName)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		panic(err)
-	}
-	fmt.Println("Output:", out.String())
-
-	// Step 5: Delete the generated Go program file
-	if err := os.Remove(programFileName); err != nil {
-		panic(err)
-	}
-
-	// Step 6: Replace common interfaces with imports
-	var commonInterfaces FileStructs
-	for _, file := range structs {
-		if file.FileName == "common" {
-			commonInterfaces = file
-		}
-	}
-
-	files, err := os.ReadDir(outputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, file := range files {
-		if strings.Contains(file.Name(), "common") || !strings.HasSuffix(file.Name(), ".ts") {
-			continue
-		}
-
-		filePath := filepath.Join(outputPath, file.Name())
-		err := replaceCommonWithImport(filePath, commonInterfaces.StructNames)
+	// Generate TypeScript
+	for _, tygo := range tygos {
+		err := tygo.Generate()
 		if err != nil {
-			fmt.Printf("Error processing %s: %v\n", filePath, err)
+			utils.LogFatal(err, "Failed to generate TypeScript", 0)
 		}
 	}
 }
 
-func replaceCommonWithImport(filePath string, commonInterfaces []string) error {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
+func getTygoConfig(out, file, frontmatter string) *tygo.Config {
+	return &tygo.Config{
+		Packages: []*tygo.PackageConfig{
+			{
+				Path:         packagePath,
+				TypeMappings: typeMappings,
+				FallbackType: fallbackType,
+				IncludeFiles: []string{file + ".go"},
+				OutputPath:   out + file + ".ts",
+				Frontmatter:  frontmatter,
+				Indent:       indent,
+			},
+		},
 	}
-	modifiedContent := string(content)
-	var toImport []string
-
-	for _, interfaceName := range commonInterfaces {
-		regex, err := regexp.Compile(`(?ms)` + `^export interface ` + interfaceName + ` \{.*?\}$`)
-		if err != nil {
-			return err
-		}
-		if regex.MatchString(modifiedContent) {
-			toImport = append(toImport, interfaceName)
-			modifiedContent = regex.ReplaceAllString(modifiedContent, "")
-		}
-	}
-
-	if len(toImport) > 0 {
-		imports := "import { " + strings.Join(toImport, ", ") + " } from './common.ts';\n\n"
-		modifiedContent = imports + modifiedContent
-	}
-
-	// Write the modified content back to the file
-	return os.WriteFile(filePath, []byte(modifiedContent), 0644)
 }
 
-func scanPackageForStructs(inputPath string) ([]FileStructs, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, inputPath, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-
-	var filesStructs []FileStructs
+// Parse common.go to find all common types
+func getCommonTypes(pkgs []*packages.Package) map[string]bool {
+	commonTypes := make(map[string]bool)
 	for _, pkg := range pkgs {
-		for filePath, file := range pkg.Files {
-			var structNames []string
-			for _, decl := range file.Decls {
-				genDecl, ok := decl.(*ast.GenDecl)
-				if !ok || genDecl.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range genDecl.Specs {
-					typeSpec, ok := spec.(*ast.TypeSpec)
-					if !ok {
-						continue
-					}
-					if _, ok := typeSpec.Type.(*ast.StructType); ok {
-						structNames = append(structNames, typeSpec.Name.Name)
-					}
-				}
+		for _, file := range pkg.Syntax {
+			filename := strings.TrimSuffix(filepath.Base(pkg.Fset.File(file.Pos()).Name()), ".go")
+			if filepath.Base(filename) != commonFileName {
+				continue
 			}
-			if len(structNames) > 0 {
-				filename := filepath.Base(filePath)
-				filesStructs = append(filesStructs, FileStructs{
-					// Remove the .go extension
-					FileName:    filename[:len(filename)-3],
-					StructNames: structNames,
-				})
-			}
+			ast.Inspect(file, func(n ast.Node) bool {
+				if typeSpec, ok := n.(*ast.TypeSpec); ok {
+					commonTypes[typeSpec.Name.Name] = true
+				}
+				return true
+			})
+			return commonTypes
 		}
 	}
-	return filesStructs, nil
+	return nil
 }
 
-func generateProgram(structs []FileStructs, outputPath string) string {
-	var imports strings.Builder
-	imports.WriteString(`import (
-	"time"
-
-	"github.com/shopspring/decimal"
-	"github.com/tkrajina/typescriptify-golang-structs/typescriptify"
-`)
-	imports.WriteString(fmt.Sprintf("\tapitypes \"%s\"\n", "github.com/gobitfly/beaconchain/pkg/types/api"))
-	imports.WriteString(")\n\n")
-
-	var body strings.Builder
-	body.WriteString(`func main() {
-	var converter *typescriptify.TypeScriptify
-	var err error` + "\n\n")
-
-	for _, structs := range structs {
-		body.WriteString(`
-			converter = typescriptify.New()
-			converter = converter.WithBackupDir("")
-			converter.ManageType(time.Time{}, typescriptify.TypeOptions{TSType: "number"})
-			converter.ManageType(decimal.Decimal{}, typescriptify.TypeOptions{TSType: "string"})
-			converter.WithInterface(true)` + "\n")
-
-		for _, structName := range structs.StructNames {
-			body.WriteString(fmt.Sprintf("\tconverter = converter.Add(apitypes.%s{})\n", structName))
+// Parse all files to find which common types are for each file
+func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[string][]string {
+	usage := make(map[string][]string) // Map from file to list of commonTypes used
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			filename := strings.TrimSuffix(filepath.Base(pkg.Fset.File(file.Pos()).Name()), ".go")
+			if filepath.Base(filename) == commonFileName {
+				continue
+			}
+			ast.Inspect(file, func(n ast.Node) bool {
+				ident, ok := n.(*ast.Ident)
+				if !ok {
+					return true
+				}
+				if !commonTypes[ident.Name] {
+					return true
+				}
+				if _, exists := usage[filename]; !exists {
+					usage[filename] = make([]string, 0)
+				}
+				if !slices.Contains[[]string](usage[filename], ident.Name) {
+					usage[filename] = append(usage[filename], ident.Name)
+				}
+				return true
+			})
 		}
-
-		body.WriteString(fmt.Sprintf("\terr = converter.ConvertToFile(\"%s\")\n", outputPath+structs.FileName+".ts"))
-		body.WriteString(`	if err != nil {
-			panic(err.Error())
-		}` + "\n\n")
 	}
-	body.WriteString("}\n")
-
-	return fmt.Sprintf("package main\n\n%s%s", imports.String(), body.String())
+	return usage
 }
