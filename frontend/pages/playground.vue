@@ -14,6 +14,10 @@ await useAsyncData('test_slot_viz_data', async () => {
   slotVizData.value = res
 })
 
+// Validator Subset Modal
+const modalVisibility = ref(false)
+const modalValidators = ref([...Array(1000).fill(0).map((_, i) => i)])
+
 onMounted(async () => {
   const res = await $fetch<SlotVizData>('./mock/dashboard/slotViz.json')
   slotVizData.value = res
@@ -23,6 +27,15 @@ onMounted(async () => {
 
 <template>
   <div class="content">
+    <DashboardValidatorSubsetModal
+      v-model="modalVisibility"
+      context="sync"
+      time-frame="details_all"
+      dashboard-name="Old Validators"
+      group-name="Hetzner"
+      :validators="modalValidators"
+    />
+
     <h1>Playground for testing UI components</h1>
     <NuxtLink to="/" class="row">
       <Button class="row">
@@ -34,6 +47,9 @@ onMounted(async () => {
     </div>
 
     <TabView :lazy="true">
+      <TabPanel header="Validator Subset Modal">
+        <Button label="Open Modal" @click="modalVisibility = true" />
+      </TabPanel>
       <TabPanel header="Icons">
         <PlaygroundIcons />
       </TabPanel>

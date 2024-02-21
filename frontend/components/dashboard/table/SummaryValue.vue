@@ -49,7 +49,7 @@ const data = computed(() => {
       validators = union(col.attestation_head.validators, col.attestation_source.validators, col.attestation_target.validators)
     } else if (props.property === 'validators_proposal') {
       validators = col.proposals.validators ?? []
-      context = 'propsoal'
+      context = 'proposal'
     } else if (props.property === 'validators_sync') {
       validators = col.sync.validators ?? []
       context = 'sync'

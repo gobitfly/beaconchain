@@ -42,9 +42,10 @@
   background: var(--container-background);
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
+  padding: var(--padding-large);
+  
   .p-dialog-header {
     color: var(--text-color);
-    padding: var(--padding-large);
     .p-dialog-title {
       @include fonts.big_text;
     }

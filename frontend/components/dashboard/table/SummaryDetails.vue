@@ -42,7 +42,7 @@ const data = computed<SummaryRow[][]>(() => {
     if (!row) {
       let title = $t(`dashboard.validator.summary.row.${prop}`)
       if (prop === 'efficiency_total') {
-        title = `${title} ${$t(`statistics.${detail.split('_')[1]}`)}`
+        title = `${title} (${$t(`statistics.${detail.split('_')[1]}`)})`
       }
       row = { title, prop, details: [], className: bold[prop] ? 'bold' : '' }
       list[tableIndex].push(row)
