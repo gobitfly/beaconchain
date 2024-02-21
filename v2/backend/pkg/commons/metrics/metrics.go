@@ -68,8 +68,6 @@ var (
 	}, []string{"channel", "status"})
 )
 
-var logger = logrus.New().WithField("module", "metrics")
-
 func init() {
 	Version.WithLabelValues(version.Version).Set(1)
 }
@@ -86,7 +84,7 @@ func MonitorDB(db *sqlx.DB) {
 		}{}
 		err := db.Select(&longRunningQueries, `select datname, extract(epoch from clock_timestamp()) - extract(epoch from query_start) as duration, query from pg_stat_activity where query != '<IDLE>' and query not ilike '%pg_stat_activity%' and query_start is not null and state = 'active' and age(clock_timestamp(), query_start) >= interval '1 minutes'`)
 		if err != nil {
-			logger.WithError(err).Errorf("error when monitoring db")
+			utils.LogError(err, "error when monitoring db", 0)
 			continue
 		}
 		for _, q := range longRunningQueries {
@@ -145,13 +143,17 @@ func Serve(addr string) error {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
+		_, err := w.Write([]byte(`<html>
 <head><title>prometheus-metrics</title></head>
 <body>
 <h1>prometheus-metrics</h1>
 <p><a href='/metrics'>metrics</a></p>
 </body>
 </html>`))
+
+		if err != nil {
+			utils.LogError(err, "error writing to response buffer: %v", 0)
+		}
 	}))
 
 	if utils.Config.Metrics.Pprof {

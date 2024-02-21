@@ -2,19 +2,18 @@ package utils
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"math/big"
 	"os"
 	"os/signal"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-
-	"github.com/sirupsen/logrus"
 )
 
 func mustParseUint(str string) uint64 {
@@ -24,7 +23,7 @@ func mustParseUint(str string) uint64 {
 
 	nbr, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		logrus.Fatalf("fatal error parsing uint %s: %v", str, err)
+		LogFatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
 	}
 
 	return nbr
@@ -33,7 +32,7 @@ func mustParseUint(str string) uint64 {
 func MustParseHex(hexString string) []byte {
 	data, err := hex.DecodeString(strings.Replace(hexString, "0x", "", -1))
 	if err != nil {
-		log.Fatal(err)
+		LogFatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
 	}
 	return data
 }
@@ -149,4 +148,63 @@ func WaitForCtrlC() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
+}
+
+// To remove all round brackets (including its content) from a string
+func RemoveRoundBracketsIncludingContent(input string) string {
+	openCount := 0
+	result := ""
+	for {
+		if len(input) == 0 {
+			break
+		}
+		openIndex := strings.Index(input, "(")
+		closeIndex := strings.Index(input, ")")
+		if openIndex == -1 && closeIndex == -1 {
+			if openCount == 0 {
+				result += input
+			}
+			break
+		} else if openIndex != -1 && (openIndex < closeIndex || closeIndex == -1) {
+			openCount++
+			if openCount == 1 {
+				result += input[:openIndex]
+			}
+			input = input[openIndex+1:]
+		} else {
+			if openCount > 0 {
+				openCount--
+			} else if openIndex == -1 && len(result) == 0 {
+				result += input[:closeIndex]
+			}
+			input = input[closeIndex+1:]
+		}
+	}
+	return result
+}
+
+// HashAndEncode digests the input with sha256 and returns it as hex string
+func HashAndEncode(input string) string {
+	codeHashedBytes := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(codeHashedBytes[:])
+}
+
+func SortedUniqueUint64(arr []uint64) []uint64 {
+	if len(arr) <= 1 {
+		return arr
+	}
+
+	sort.Slice(arr, func(i, j int) bool {
+		return arr[i] < arr[j]
+	})
+
+	result := make([]uint64, 1, len(arr))
+	result[0] = arr[0]
+	for i := 1; i < len(arr); i++ {
+		if arr[i-1] != arr[i] {
+			result = append(result, arr[i])
+		}
+	}
+
+	return result
 }

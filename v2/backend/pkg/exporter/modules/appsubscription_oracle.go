@@ -266,7 +266,6 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 
 	for _, val := range res.Data {
 		for _, last := range val.LastTransactions {
-
 			if last.Status == api.SubscriptionActive || last.Status == api.SubscriptionGracePeriod {
 				token := jwt.Token{}
 

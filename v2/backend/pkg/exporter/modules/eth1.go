@@ -60,7 +60,7 @@ func eth1DepositsExporter() {
 		var lastDepositBlock uint64
 		err = db.WriterDb.Get(&lastDepositBlock, "select coalesce(max(block_number),0) from eth1_deposits")
 		if err != nil {
-			logger.WithError(err).Errorf("error retrieving highest block_number of eth1-deposits from db")
+			utils.LogError(err, "error retrieving highest block_number of eth1-deposits from db", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -68,7 +68,7 @@ func eth1DepositsExporter() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		header, err := eth1Client.HeaderByNumber(ctx, nil)
 		if err != nil {
-			logger.WithError(err).Errorf("error getting header from eth1-client")
+			utils.LogError(err, "error getting header from eth1-client", 0)
 			cancel()
 			time.Sleep(time.Second * 5)
 			continue
@@ -115,7 +115,7 @@ func eth1DepositsExporter() {
 				depositsToSave, err = fetchEth1Deposits(fromBlock, toBlock)
 			}
 			if err != nil {
-				logger.WithError(err).WithField("fromBlock", fromBlock).WithField("toBlock", toBlock).Errorf("error fetching eth1-deposits")
+				utils.LogError(err, "error fetching eth1-deposits", 0, map[string]interface{}{"fromBlock": fromBlock, "toBlock": toBlock})
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -123,7 +123,7 @@ func eth1DepositsExporter() {
 
 		err = saveEth1Deposits(depositsToSave)
 		if err != nil {
-			logger.WithError(err).Errorf("error saving eth1-deposits")
+			utils.LogError(err, "error saving eth1-deposits", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -131,7 +131,7 @@ func eth1DepositsExporter() {
 		if len(depositsToSave) > 0 {
 			err = aggregateDeposits()
 			if err != nil {
-				logger.WithError(err).Errorf("error saving eth1-deposits-leaderboard")
+				utils.LogError(err, "error saving eth1-deposits-leaderboard", 0)
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -256,7 +256,12 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (

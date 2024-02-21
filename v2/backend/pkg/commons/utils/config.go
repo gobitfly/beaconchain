@@ -46,6 +46,12 @@ func readConfigSecrets(cfg *types.Config) error {
 	return ProcessSecrets(cfg)
 }
 
+func confSanityCheck(cfg *types.Config) {
+	if cfg.Chain.ClConfig.SlotsPerEpoch == 0 || cfg.Chain.ClConfig.SecondsPerSlot == 0 {
+		LogFatal(nil, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
+	}
+}
+
 func ReadConfig(cfg *types.Config, path string) error {
 	configPathFromEnv := os.Getenv("BEACONCHAIN_CONFIG")
 
@@ -70,8 +76,11 @@ func ReadConfig(cfg *types.Config, path string) error {
 		}
 	}
 
-	readConfigEnv(cfg)
-	err := readConfigSecrets(cfg)
+	err := readConfigEnv(cfg)
+	if err != nil {
+		return err
+	}
+	err = readConfigSecrets(cfg)
 	if err != nil {
 		return err
 	}
@@ -215,7 +224,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 
 	// we check for machine chain id just for safety
 	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
-		logrus.Fatalf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID)
+		LogFatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
 	}
 
 	cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
@@ -224,6 +233,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 		logrus.Infof("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
+
+	confSanityCheck(cfg)
 
 	logrus.WithFields(logrus.Fields{
 		"genesisTimestamp":       cfg.Chain.GenesisTimestamp,

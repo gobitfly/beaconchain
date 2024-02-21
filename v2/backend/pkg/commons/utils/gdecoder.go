@@ -13,7 +13,6 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrInvalidSpecification indicates that a specification is of the wrong type.
@@ -45,7 +44,7 @@ type Setter interface {
 func ProcessSecrets(cfg interface{}) error {
 	infos, err := gatherInfo("", cfg)
 	if err != nil {
-		logrus.WithError(err).Error("error getting config infos")
+		LogError(err, "error getting config infos", 0)
 	}
 
 	for _, info := range infos {
@@ -55,7 +54,7 @@ func ProcessSecrets(cfg interface{}) error {
 		}
 		x, err := AccessSecretVersion(info.Field.String())
 		if err != nil {
-			logrus.WithError(err).Error("error getting secret")
+			LogError(err, "error getting secret", 0)
 			continue
 		}
 		if x == nil {

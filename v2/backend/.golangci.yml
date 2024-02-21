@@ -8,6 +8,7 @@ linters:
     - errcheck
     - gosimple
     - ineffassign
+    - forbidigo
   disable:
     - exhaustivestruct
     - golint
@@ -18,6 +19,8 @@ linters:
     - scopelint
     - structcheck
     - varcheck
+    - dupword
+    - gocognit
 
     # Disabled for now:
     - asasalint
@@ -31,7 +34,6 @@ linters:
     - errorlint
     - exhaustive
     - exhaustruct
-    - forbidigo
     - forcetypeassert
     - funlen
     - gci
@@ -78,6 +80,20 @@ linters:
   fast: true
 
 linters-settings:
+  forbidigo:
+    forbid:
+      - p: ^logrus\.Fatalf.*$
+        msg: Use utils.LogFatal instead
+      - p: ^log\.Fatalf.*$
+        msg: Use utils.LogFatal instead
+      - p: ^logger\.Fatalf.*$
+        msg: Use utils.LogFatal instead      
+      - p: ^logrus\.Errorf.*$
+        msg: Use utils.LogError instead
+      - p: ^logger\.Errorf.*$
+        msg: Use utils.LogError instead
+      - p: ^log\.Errorf.*$
+        msg: Use utils.LogError instead
   gocognit:
     min-complexity: 65
   depguard:
@@ -87,6 +103,7 @@ linters-settings:
         files:
           - $all
           - "!$test"
+          - "!**/pkg/exporter/modules/eth1.go"
         allow:
           - $gostd
         deny:
