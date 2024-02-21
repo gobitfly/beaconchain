@@ -8,8 +8,7 @@ const props = defineProps<Props>()
 
 const visible = defineModel<boolean>() // requires two way binding as both the parent (only the parent can open the modal) and the component itself (clicking outside the modal closes it) need to update the visibility
 
-const isMobile = computed(() => width.value <= 430)
-const position = computed(() => isMobile.value ? 'bottom' : 'center')
+const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
 </script>
 
 <template>
@@ -20,11 +19,9 @@ const position = computed(() => isMobile.value ? 'bottom' : 'center')
     :dismissable-mask="true"
     :closable="false"
     :draggable="false"
-    :class="{
-      'modal_container': true,
-      'mobile_modal_container': isMobile,
-      'p-dialog-header-hidden':!props.header && !$slots.header}"
     :position="position"
+    class="modal_container"
+    :class="{'p-dialog-header-hidden':!props.header && !$slots.header}"
   >
     <template #header>
       <slot name="header" />
@@ -41,7 +38,9 @@ const position = computed(() => isMobile.value ? 'bottom' : 'center')
     min-width: 375px;
   }
 
-  :global(.mobile_modal_container) {
-    margin-bottom: 0px;
+  @media (max-width: 430px) {
+    :global(.modal_container) {
+      margin-bottom: 0;
+    }
   }
 </style>
