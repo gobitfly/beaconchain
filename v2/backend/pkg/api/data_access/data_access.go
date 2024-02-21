@@ -8,10 +8,10 @@ type DataAccessInterface interface {
 	CreateValidatorDashboard(userId uint64, name string, network t.Network) (t.VDBPostData, error)
 	GetValidatorDashboardOverview(userId uint64, dashboardId string) (t.VDBOverviewData, error)
 
-	GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, error)
+	GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId string, groupId uint64) (t.VDBGroupSummary, error)
 
-	GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, error)
+	GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
 }
 
 type DataAccessService struct {
@@ -40,7 +40,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(userId uint64, dashboar
 	return d.dummy.GetValidatorDashboardOverview(userId, dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, error) {
+func (d DataAccessService) GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
 }
@@ -50,7 +50,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId string,
 	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 }
 
-func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, error) {
+func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 }

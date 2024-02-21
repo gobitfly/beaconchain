@@ -20,8 +20,8 @@ type HandlerService struct {
 	dai dataaccess.DataAccessInterface
 }
 
-func NewHandlerService(das dataaccess.DataAccessInterface) HandlerService {
-	return HandlerService{dai: das}
+func NewHandlerService(dataAccessInterface dataaccess.DataAccessInterface) HandlerService {
+	return HandlerService{dai: dataAccessInterface}
 }
 
 // --------------------------------------

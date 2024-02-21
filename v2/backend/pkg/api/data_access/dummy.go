@@ -37,10 +37,12 @@ func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId s
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, error) {
+func (d DummyService) GetValidatorDashboardSummary(dashboardId string, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	p := t.Paging{}
+	commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, p, err
 }
 
 func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId string, groupId uint64) (t.VDBGroupSummary, error) {
@@ -49,8 +51,10 @@ func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId string, grou
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, error) {
+func (d DummyService) GetValidatorDashboardBlocks(dashboardId string, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	p := t.Paging{}
+	commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, p, err
 }
