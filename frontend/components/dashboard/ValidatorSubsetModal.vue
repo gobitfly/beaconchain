@@ -9,22 +9,27 @@ const props = defineProps<Props>()
 
 const visible = defineModel<boolean>()
 const header = ref<string>('Validator Subset Modal')
-const filter = ref<string>('')
-const shownValidators = ref<number[]>([])
+const shownValidators = ref<number[]>(props.validators)
 
-watch(filter, (newFilter) => {
-  if (newFilter === '') {
+const handleEvent = (filter: string) => {
+  if (filter === '') {
     shownValidators.value = props.validators
     return
   }
 
   shownValidators.value = []
 
-  const index = parseInt(newFilter)
+  const index = parseInt(filter)
   if (props.validators.includes(index)) {
     shownValidators.value = [index]
   }
-}, { immediate: true })
+}
+
+watch(visible, (value) => {
+  if (!value) {
+    shownValidators.value = props.validators
+  }
+})
 
 function copyValidatorsToClipboard (): void {
   if (shownValidators.value.length === 0) {
@@ -51,12 +56,7 @@ function copyValidatorsToClipboard (): void {
       <span class="subtitle_text">
         {{ props.caption }}
       </span>
-      <span class="search_elements_container">
-        <InputText v-model="filter" placeholder="Index" />
-        <Button class="p-button-icon-only">
-          <i class="fas fa-magnifying-glass" />
-        </Button>
-      </span>
+      <BcContentFilter @filter-changed="handleEvent" />
     </div>
     <div class="text_container">
       <span v-for="(v, i) in shownValidators" :key="v">
@@ -91,27 +91,10 @@ function copyValidatorsToClipboard (): void {
   }
 
   .top_line_container {
-    padding: var(--padding) 0px 14px 0px;
+    padding: var(--padding) 0 14px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  // TODO: This will become its own component in the near future
-  .search_elements_container {
-    display: flex;
-    align-items: center;
-
-    :first-child{
-      border-top-right-radius: 0px;
-      border-bottom-right-radius: 0px;
-      height: var(--default-button-height);
-    }
-
-    :last-child{
-      border-top-left-radius: 0px;
-      border-bottom-left-radius: 0px;
-    }
   }
 
   .text_container {
