@@ -11,7 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
-var client consapi.Client
+var cl consapi.Client
 
 func TestMain(m *testing.M) {
 	setup()
@@ -20,11 +20,11 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	client = consapi.NewNodeDataRetriever("http://localhost:32787")
+	cl = consapi.NewNodeDataRetriever("http://localhost:32787")
 }
 
 func TestGetBlockHeader(t *testing.T) {
-	res, err := client.GetBlockHeader("head")
+	res, err := cl.GetBlockHeader("head")
 	if err != nil {
 		t.Errorf("Error getting block header: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestGetBlockHeader(t *testing.T) {
 }
 
 func TestGetSlot(t *testing.T) {
-	res, err := client.GetSlot(0)
+	res, err := cl.GetSlot(0)
 	if err != nil {
 		t.Errorf("Error getting slot: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestGetSlot(t *testing.T) {
 }
 
 func TestGetValidators(t *testing.T) {
-	res, err := client.GetValidators("head", nil, nil)
+	res, err := cl.GetValidators("head", nil, nil)
 	if err != nil {
 		t.Errorf("Error getting validators: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestGetValidators(t *testing.T) {
 
 func TestGetValidatorsFilter(t *testing.T) {
 	filter := types.ActiveSlashed
-	res, err := client.GetValidators("head", nil, []types.ValidatorStatus{filter})
+	res, err := cl.GetValidators("head", nil, []types.ValidatorStatus{filter})
 	if err != nil {
 		t.Errorf("Error getting validators: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestGetValidatorsFilter(t *testing.T) {
 
 func TestGetValidatorsFilterIndex(t *testing.T) {
 	filter := []string{"4", "5", "6"}
-	res, err := client.GetValidators("head", filter, nil)
+	res, err := cl.GetValidators("head", filter, nil)
 	if err != nil {
 		t.Errorf("Error getting validators: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestGetValidatorsFilterIndex(t *testing.T) {
 func TestGetValidatorsFilterBoth(t *testing.T) {
 	filter := []string{"4", "5", "6"}
 	filterStatus := types.ActiveOngoing
-	res, err := client.GetValidators("head", filter, []types.ValidatorStatus{filterStatus})
+	res, err := cl.GetValidators("head", filter, []types.ValidatorStatus{filterStatus})
 	if err != nil {
 		t.Errorf("Error getting validators: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestGetValidatorsFilterBoth(t *testing.T) {
 }
 
 func TestGetPropoalAssignments(t *testing.T) {
-	res, err := client.GetPropoalAssignments(0)
+	res, err := cl.GetPropoalAssignments(0)
 	if err != nil {
 		t.Errorf("Error getting proposal assignments: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestGetPropoalAssignments(t *testing.T) {
 }
 
 func TestGetPropoalRewards(t *testing.T) {
-	res, err := client.GetPropoalRewards("head")
+	res, err := cl.GetPropoalRewards("head")
 	if err != nil {
 		t.Errorf("Error getting proposal rewards: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestGetPropoalRewards(t *testing.T) {
 }
 
 func TestGetSyncRewards(t *testing.T) {
-	res, err := client.GetSyncRewards("head")
+	res, err := cl.GetSyncRewards("head")
 	if err != nil {
 		t.Errorf("Error getting sync rewards: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestGetSyncRewards(t *testing.T) {
 }
 
 func TestGetAttestationRewards(t *testing.T) {
-	res, err := client.GetAttestationRewards(0)
+	res, err := cl.GetAttestationRewards(0)
 	if err != nil {
 		t.Errorf("Error getting attestation rewards: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestGetAttestationRewards(t *testing.T) {
 }
 
 func TestGetSyncCommitteesAssignments(t *testing.T) {
-	res, err := client.GetSyncCommitteesAssignments(0, "head")
+	res, err := cl.GetSyncCommitteesAssignments(0, "head")
 	if err != nil {
 		t.Errorf("Error getting sync committees assignments: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestGetSyncCommitteesAssignments(t *testing.T) {
 }
 
 func TestGetSpec(t *testing.T) {
-	res, err := client.GetSpec()
+	res, err := cl.GetSpec()
 	if err != nil {
 		httpErr, rpcErr := network.SpecificError(err)
 		if httpErr != nil {
@@ -143,7 +143,7 @@ func TestGetSpec(t *testing.T) {
 }
 
 func TestGetBlockHeaders(t *testing.T) {
-	res, err := client.GetBlockHeaders(nil, nil)
+	res, err := cl.GetBlockHeaders(nil, nil)
 	if err != nil {
 		t.Errorf("Error getting block headers: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 func TestGetBlockHeadersSlot(t *testing.T) {
 	slot := uint64(3)
-	res, err := client.GetBlockHeaders(&slot, nil)
+	res, err := cl.GetBlockHeaders(&slot, nil)
 	if err != nil {
 		t.Errorf("Error getting block headers: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestGetBlockHeadersSlot(t *testing.T) {
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
-	res, err := client.GetFinalityCheckpoints("head")
+	res, err := cl.GetFinalityCheckpoints("head")
 	if err != nil {
 		t.Errorf("Error getting finality checkpoints: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 }
 
 func TestGetValidatorBalances(t *testing.T) {
-	res, err := client.GetValidatorBalances("head")
+	res, err := cl.GetValidatorBalances("head")
 	if err != nil {
 		t.Errorf("Error getting validator balances: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestGetValidatorBalances(t *testing.T) {
 }
 
 func TestGetBlobSidecars(t *testing.T) {
-	res, err := client.GetBlobSidecars("head")
+	res, err := cl.GetBlobSidecars("head")
 	if err != nil {
 		t.Errorf("Error getting blob sidecars: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestGetBlobSidecars(t *testing.T) {
 }
 
 func TestGetCommittees(t *testing.T) {
-	res, err := client.GetCommittees("head", nil, nil, nil)
+	res, err := cl.GetCommittees("head", nil, nil, nil)
 	if err != nil {
 		t.Errorf("Error getting committees: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestGetCommittees(t *testing.T) {
 }
 
 func TestGetGenesis(t *testing.T) {
-	res, err := client.GetGenesis()
+	res, err := cl.GetGenesis()
 	if err != nil {
 		t.Errorf("Error getting genesis: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestGetGenesis(t *testing.T) {
 }
 
 func TestGetEvents(t *testing.T) {
-	res := client.GetEvents([]types.EventTopic{types.EventHead, types.EventBlock, types.EventChainReorg, types.EventFinalizedCheckpoint})
+	res := cl.GetEvents([]types.EventTopic{types.EventHead, types.EventBlock, types.EventChainReorg, types.EventFinalizedCheckpoint})
 
 	for event := range res {
 		if event.Error != nil {
