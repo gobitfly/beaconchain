@@ -29,8 +29,8 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Println(version.Version)
-		fmt.Println(version.GoVersion)
+		utils.LogInfo(version.Version)
+		utils.LogInfo(version.GoVersion)
 		return
 	}
 

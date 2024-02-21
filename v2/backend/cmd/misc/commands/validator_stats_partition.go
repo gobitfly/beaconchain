@@ -64,9 +64,9 @@ func (s *StatsMigratorCommand) StartStatsPartitionCommand() error {
 }
 
 func showHelp() {
-	fmt.Printf("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64\n", "validator_stats_partition")
-	fmt.Printf("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing\n", "validator_stats_partition")
-	fmt.Printf("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing --batch-size=20000 --sleep-between-batches=1s --rename-destination-on-complete=true\n", "validator_stats_partition")
+	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64\n", "validator_stats_partition")
+	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing\n", "validator_stats_partition")
+	utils.LogInfo("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing --batch-size=20000 --sleep-between-batches=1s --rename-destination-on-complete=true\n", "validator_stats_partition")
 }
 
 func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationTableName string, numberOfPartitions int) error {
@@ -431,7 +431,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 	dayIndex := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_day ON %[1]s (DAY)", tempPartitionedName)
 
 	if s.DryRun {
-		fmt.Printf("%s\n\n%s\n\n", partitionedCreate, dayIndex)
+		utils.LogInfo("%s\n\n%s\n\n", partitionedCreate, dayIndex)
 	} else {
 		_, err = db.WriterDb.Exec(partitionedCreate)
 		if err != nil {
@@ -451,7 +451,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 		`, tempPartitionedName, i, numberOfPartitions)
 
 		if s.DryRun {
-			fmt.Printf("%s\n", partitionCreate)
+			utils.LogInfo("%s\n", partitionCreate)
 		} else {
 			_, err = db.WriterDb.Exec(partitionCreate)
 			if err != nil {
@@ -465,7 +465,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 
 func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName string, startDay int64) error {
 	if s.DryRun {
-		fmt.Printf("No data transfer in dry-run\n")
+		utils.LogInfo("No data transfer in dry-run\n")
 		return nil
 	}
 

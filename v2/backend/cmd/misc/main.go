@@ -95,8 +95,8 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Println(version.Version)
-		fmt.Println(version.GoVersion)
+		utils.LogInfo(version.Version)
+		utils.LogInfo(version.GoVersion)
 		return
 	}
 
@@ -1060,7 +1060,6 @@ func nameValidatorsByRanges(rangesUrl string) error {
 			return fmt.Errorf("invalid format, range must be X-Y where X <= Y")
 		}
 
-		fmt.Printf("insert into validator_names(publickey, name) select pubkey as publickey, %v as name from validators where validatorindex >= %v and validatorindex <= %v on conflict(publickey) do update set name = excluded.name;\n", n, rFrom, rTo)
 		_, err = db.WriterDb.Exec("insert into validator_names(publickey, name) select pubkey as publickey, $1 as name from validators where validatorindex >= $2 and validatorindex <= $3 on conflict(publickey) do update set name = excluded.name;", n, rFrom, rTo)
 		if err != nil {
 			return err

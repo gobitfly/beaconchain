@@ -22,6 +22,18 @@ func LogError(err error, errorMsg interface{}, callerSkip int, additionalInfos .
 	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
 }
 
+func LogInfo(msg string, args ...interface{}) {
+	logrus.Infof(msg, args...)
+}
+
+func LogWarn(msg string, args ...interface{}) {
+	logrus.Warnf(msg, args...)
+}
+
+func LogTrace(msg string, args ...interface{}) {
+	logrus.Tracef(msg, args...)
+}
+
 func logErrorInfo(err error, callerSkip int, additionalInfos ...map[string]interface{}) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
 
