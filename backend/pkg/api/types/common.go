@@ -1,4 +1,4 @@
-package apitypes
+package types
 
 import (
 	"time"
@@ -6,6 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// frontend can ignore this, it's just for the backend
 type ApiResponse struct {
 	Paging *Paging     `json:"paging,omitempty"`
 	Data   interface{} `json:"data"`
@@ -13,6 +14,14 @@ type ApiResponse struct {
 
 type ApiErrorResponse struct {
 	Error string `json:"error"`
+}
+
+type ApiDataResponse[T any] struct {
+	Data T `json:"data"`
+}
+type ApiPagingResponse[T any] struct {
+	Paging Paging `json:"paging"`
+	Data   []T    `json:"data"`
 }
 
 type Paging struct {
@@ -44,32 +53,22 @@ type StatusCount struct {
 	Failed  uint64 `json:"failed"`
 }
 
-type ClElValue struct {
-	El decimal.Decimal `json:"el"`
-	Cl decimal.Decimal `json:"cl"`
+type ClElUnion interface {
+	float64 | decimal.Decimal
 }
 
-type ClElValueFloat struct {
-	El float64 `json:"el"`
-	Cl float64 `json:"cl"`
+type ClElValue[T ClElUnion] struct {
+	El T `json:"el"`
+	Cl T `json:"cl"`
 }
 
-type PeriodicClElValues struct {
-	Total ClElValue `json:"total"`
-	Day   ClElValue `json:"day"`
-	Week  ClElValue `json:"week"`
-	Month ClElValue `json:"month"`
-	Year  ClElValue `json:"year"`
+type PeriodicClElValues[T ClElUnion] struct {
+	Total ClElValue[T] `json:"total"`
+	Day   ClElValue[T] `json:"day"`
+	Week  ClElValue[T] `json:"week"`
+	Month ClElValue[T] `json:"month"`
+	Year  ClElValue[T] `json:"year"`
 }
-
-type PeriodicClElValuesFloat struct {
-	Total ClElValueFloat `json:"total"`
-	Day   ClElValueFloat `json:"day"`
-	Week  ClElValueFloat `json:"week"`
-	Month ClElValueFloat `json:"month"`
-	Year  ClElValueFloat `json:"year"`
-}
-
 type HighchartsSeries struct {
 	Name string                `json:"name"`
 	Data []HighchartsDataPoint `json:"data"`
