@@ -52,6 +52,10 @@
   --negtive-color: var(--light-red);
   --positive-color: var(--light-green);
 
+  --megamenu-panel-color: var(--light-grey);
+  --megamenu-text-color: var(--grey);
+  --megamenu-hover-color: var(--light-grey-3);
+
   &.dark-mode {
     --primary-color: -var(--primary-orange);
     --primary-contrast-color: var(--light-black);
@@ -81,5 +85,9 @@
 
     --negtive-color: var(--flashy-red);
     --positive-color: var(--flashy-green);
+
+    --megamenu-panel-color: var(--graphite);
+    --megamenu-text-color: var(--grey);
+    --megamenu-hover-color: var(--asphalt);
   }
 }
