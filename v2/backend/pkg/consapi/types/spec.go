@@ -1,150 +1,5 @@
 package types
 
-import "github.com/shopspring/decimal"
-
-// /eth/v2/beacon/blocks/{block_id}
-type StandardBeaconSlotResponse struct {
-	Version             string `json:"version"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-	Finalized           bool   `json:"finalized"`
-	Data                struct {
-		Message struct {
-			Slot          int64  `json:"slot,string"`
-			ProposerIndex Index  `json:"proposer_index,string"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			Body          struct {
-				RandaoReveal string `json:"randao_reveal"`
-				Eth1Data     struct {
-					DepositRoot  string `json:"deposit_root"`
-					DepositCount int    `json:"deposit_count,string"`
-					BlockHash    string `json:"block_hash"`
-				} `json:"eth1_data"`
-				Graffiti          string `json:"graffiti"`
-				ProposerSlashings []struct {
-					SignedHeader1 struct {
-						Message struct {
-							Slot          int64  `json:"slot,string"`
-							ProposerIndex Index  `json:"proposer_index,string"`
-							ParentRoot    string `json:"parent_root"`
-							StateRoot     string `json:"state_root"`
-							BodyRoot      string `json:"body_root"`
-						} `json:"message"`
-						Signature string `json:"signature"`
-					} `json:"signed_header_1"`
-					SignedHeader2 struct {
-						Message struct {
-							Slot          int64  `json:"slot,string"`
-							ProposerIndex Index  `json:"proposer_index,string"`
-							ParentRoot    string `json:"parent_root"`
-							StateRoot     string `json:"state_root"`
-							BodyRoot      string `json:"body_root"`
-						} `json:"message"`
-						Signature string `json:"signature"`
-					} `json:"signed_header_2"`
-				} `json:"proposer_slashings"`
-				AttesterSlashings []struct {
-					Attestation1 struct {
-						AttestingIndices []string `json:"attesting_indices"`
-						Signature        string   `json:"signature"`
-						Data             struct {
-							Slot            int64  `json:"slot,string"`
-							Index           Index  `json:"index,string"`
-							BeaconBlockRoot string `json:"beacon_block_root"`
-							Source          struct {
-								Epoch string `json:"epoch"`
-								Root  string `json:"root"`
-							} `json:"source"`
-							Target struct {
-								Epoch string `json:"epoch"`
-								Root  string `json:"root"`
-							} `json:"target"`
-						} `json:"data"`
-					} `json:"attestation_1"`
-					Attestation2 struct {
-						AttestingIndices []string `json:"attesting_indices"`
-						Signature        string   `json:"signature"`
-						Data             struct {
-							Slot            int64  `json:"slot,string"`
-							Index           Index  `json:"index,string"`
-							BeaconBlockRoot string `json:"beacon_block_root"`
-							Source          struct {
-								Epoch string `json:"epoch"`
-								Root  string `json:"root"`
-							} `json:"source"`
-							Target struct {
-								Epoch string `json:"epoch"`
-								Root  string `json:"root"`
-							} `json:"target"`
-						} `json:"data"`
-					} `json:"attestation_2"`
-				} `json:"attester_slashings"`
-				Attestations []struct {
-					AggregationBits string `json:"aggregation_bits"`
-					Signature       string `json:"signature"`
-					Data            struct {
-						Slot            int64  `json:"slot,string"`
-						Index           Index  `json:"index,string"`
-						BeaconBlockRoot string `json:"beacon_block_root"`
-						Source          struct {
-							Epoch string `json:"epoch"`
-							Root  string `json:"root"`
-						} `json:"source"`
-						Target struct {
-							Epoch string `json:"epoch"`
-							Root  string `json:"root"`
-						} `json:"target"`
-					} `json:"data"`
-				} `json:"attestations"`
-				Deposits []struct {
-					Proof []string `json:"proof"`
-					Data  struct {
-						Pubkey                string `json:"pubkey"`
-						WithdrawalCredentials string `json:"withdrawal_credentials"`
-						Amount                int64  `json:"amount,string"`
-						Signature             string `json:"signature"`
-					} `json:"data"`
-				} `json:"deposits"`
-				VoluntaryExits []struct {
-					Message struct {
-						Epoch          int64 `json:"epoch,string"`
-						ValidatorIndex Index `json:"validator_index,string"`
-					} `json:"message"`
-					Signature string `json:"signature"`
-				} `json:"voluntary_exits"`
-				SyncAggregate struct {
-					SyncCommitteeBits      string `json:"sync_committee_bits"`
-					SyncCommitteeSignature string `json:"sync_committee_signature"`
-				} `json:"sync_aggregate"`
-				ExecutionPayload struct {
-					ParentHash    string   `json:"parent_hash"`
-					FeeRecipient  string   `json:"fee_recipient"`
-					StateRoot     string   `json:"state_root"`
-					ReceiptsRoot  string   `json:"receipts_root"`
-					LogsBloom     string   `json:"logs_bloom"`
-					PrevRandao    string   `json:"prev_randao"`
-					BlockNumber   int64    `json:"block_number,string"`
-					GasLimit      int64    `json:"gas_limit,string"`
-					GasUsed       int64    `json:"gas_used,string"`
-					Timestamp     string   `json:"timestamp"`
-					ExtraData     string   `json:"extra_data"`
-					BaseFeePerGas string   `json:"base_fee_per_gas"`
-					BlockHash     string   `json:"block_hash"`
-					Transactions  []string `json:"transactions"`
-					Withdrawals   []struct {
-						Index          Index           `json:"index,string"`
-						ValidatorIndex Index           `json:"validator_index,string"`
-						Address        string          `json:"address"`
-						Amount         decimal.Decimal `json:"amount"`
-					} `json:"withdrawals"`
-				} `json:"execution_payload"`
-				BlsToExecutionChanges []any `json:"bls_to_execution_changes"`
-			} `json:"body"`
-		} `json:"message"`
-		Signature string `json:"signature"`
-	} `json:"data"`
-}
-
 type StandardSpecResponse struct {
 	Data StandardSpec `json:"data"`
 }
@@ -154,7 +9,7 @@ type StandardSpec struct {
 	PresetBase                              string   `json:"PRESET_BASE"`
 	TerminalTotalDifficulty                 string   `json:"TERMINAL_TOTAL_DIFFICULTY"`
 	TerminalBlockHash                       string   `json:"TERMINAL_BLOCK_HASH"`
-	TerminalBlockHashActivationEpoch        string   `json:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH"`
+	TerminalBlockHashActivationEpoch        uint64   `json:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH,string"`
 	SafeSlotsToImportOptimistically         int64    `json:"SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,string"`
 	MinGenesisActiveValidatorCount          int64    `json:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT,string"`
 	MinGenesisTime                          int64    `json:"MIN_GENESIS_TIME,string"`
@@ -166,6 +21,8 @@ type StandardSpec struct {
 	BellatrixForkEpoch                      int64    `json:"BELLATRIX_FORK_EPOCH,string"`
 	CapellaForkVersion                      string   `json:"CAPELLA_FORK_VERSION"`
 	CapellaForkEpoch                        int64    `json:"CAPELLA_FORK_EPOCH,string"`
+	DenebForkVersion                        string   `json:"DENEB_FORK_VERSION"`
+	DenebForkEpoch                          int64    `json:"DENEB_FORK_EPOCH,string"`
 	SecondsPerSlot                          int64    `json:"SECONDS_PER_SLOT,string"`
 	SecondsPerEth1Block                     int64    `json:"SECONDS_PER_ETH1_BLOCK,string"`
 	MinValidatorWithdrawabilityDelay        int64    `json:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY,string"`
@@ -255,51 +112,4 @@ type StandardSpec struct {
 	DomainSyncCommittee                     string   `json:"DOMAIN_SYNC_COMMITTEE"`
 	BlsWithdrawalPrefix                     string   `json:"BLS_WITHDRAWAL_PREFIX"`
 	ZeroHash                                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
-}
-
-type StandardBeaconHeaderResponse struct {
-	Data struct {
-		Root   string `json:"root"`
-		Header struct {
-			Message struct {
-				Slot          uint64 `json:"slot,string"`
-				ProposerIndex Index  `json:"proposer_index,string"`
-				ParentRoot    string `json:"parent_root"`
-				StateRoot     string `json:"state_root"`
-				BodyRoot      string `json:"body_root"`
-			} `json:"message"`
-			Signature string `json:"signature"`
-		} `json:"header"`
-	} `json:"data"`
-	Finalized bool `json:"finalized"`
-}
-
-// /eth/v1/beacon/states/{state_id}/finality_checkpoints
-type StandardFinalityCheckpointsResponse struct {
-	Data struct {
-		PreviousJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"previous_justified"`
-		CurrentJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"current_justified"`
-		Finalized struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"finalized"`
-	} `json:"data"`
-}
-
-type StandardSyncCommittee struct {
-	Validators          []string   `json:"validators"`
-	ValidatorAggregates [][]string `json:"validator_aggregates"`
-}
-
-// /eth/v1/beacon/states/{state_id}/sync_committees
-type StandardSyncCommitteesResponse struct {
-	Data                StandardSyncCommittee `json:"data"`
-	ExecutionOptimistic bool                  `json:"execution_optimistic"`
-	Finalized           bool                  `json:"finalized"`
 }

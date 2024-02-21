@@ -50,11 +50,11 @@ func (d *dashboardData) Start(args []any) error {
 }
 
 type Data struct {
-	startBalances            ctypes.StandardValidatorsResponse
-	endBalances              ctypes.StandardValidatorsResponse
-	proposerAssignments      ctypes.StandardProposerAssignmentsResponse
-	syncCommitteeAssignments ctypes.StandardSyncCommitteesResponse
-	attestationRewards       ctypes.StandardAttestationRewardsResponse
+	startBalances            *ctypes.StandardValidatorsResponse
+	endBalances              *ctypes.StandardValidatorsResponse
+	proposerAssignments      *ctypes.StandardProposerAssignmentsResponse
+	syncCommitteeAssignments *ctypes.StandardSyncCommitteesResponse
+	attestationRewards       *ctypes.StandardAttestationRewardsResponse
 	beaconBlockData          map[int]*ctypes.StandardBeaconSlotResponse
 	beaconBlockRewardData    map[int]*ctypes.StandardBlockRewardsResponse
 	syncCommitteeRewardData  map[int]*ctypes.StandardSyncCommitteeRewardsResponse
@@ -74,7 +74,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// retrieve the validator balances at the start of the epoch
 	logrus.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
-	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch)
+	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
 	if err != nil {
 		utils.LogError(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 		return nil
@@ -98,7 +98,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// attestation rewards
 	logrus.Infof("retrieving attestation rewards data")
-	result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
+	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
 	if err != nil {
 		utils.LogError(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 		return nil
@@ -117,26 +117,26 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 			utils.LogError(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.beaconBlockData[slot] = &block
+		result.beaconBlockData[slot] = block
 
 		blockReward, err := d.CL.GetPropoalRewards(slot)
 		if err != nil {
 			utils.LogError(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.beaconBlockRewardData[slot] = &blockReward
+		result.beaconBlockRewardData[slot] = blockReward
 
 		syncRewards, err := d.CL.GetSyncRewards(slot)
 		if err != nil {
 			utils.LogError(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.syncCommitteeRewardData[slot] = &syncRewards
+		result.syncCommitteeRewardData[slot] = syncRewards
 	}
 
 	// retrieve the validator balances at the end of the epoch
 	logrus.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
-	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch)
+	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
 	if err != nil {
 		utils.LogError(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 		return nil
@@ -210,9 +210,9 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 			err := utils.VerifyDepositSignature(&phase0.DepositData{
 				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
-				WithdrawalCredentials: utils.MustParseHex(depositData.Data.WithdrawalCredentials),
-				Amount:                phase0.Gwei(uint64(depositData.Data.Amount)),
-				Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
+				WithdrawalCredentials: depositData.Data.WithdrawalCredentials,
+				Amount:                phase0.Gwei(uint64(depositData.Data.Amount.IntPart())),
+				Signature:             phase0.BLSSignature(depositData.Data.Signature),
 			}, domain)
 
 			if err != nil {
@@ -231,7 +231,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 			validatorIndex := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
 
-			validatorsData[validatorIndex].DepositsAmount += depositData.Data.Amount
+			validatorsData[validatorIndex].DepositsAmount = validatorsData[validatorIndex].DepositsAmount.Add(depositData.Data.Amount)
 			validatorsData[validatorIndex].DepositsCount++
 		}
 
@@ -329,8 +329,8 @@ type validatorDashboardDataRow struct {
 	BalanceStart decimal.Decimal // done
 	BalanceEnd   decimal.Decimal // done
 
-	DepositsCount  int   // done
-	DepositsAmount int64 // done
+	DepositsCount  int             // done
+	DepositsAmount decimal.Decimal // done
 
 	WithdrawalsCount  int             // done
 	WithdrawalsAmount decimal.Decimal // done
