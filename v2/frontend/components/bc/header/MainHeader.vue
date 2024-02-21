@@ -17,7 +17,7 @@ const { latest } = storeToRefs(useLatestStateStore())
   </div>
   <div class="header bottom">
     <div class="content">
-      <NuxtLink to="/" class="">
+      <NuxtLink to="/" class="logo">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </NuxtLink>
 
@@ -53,6 +53,12 @@ const { latest } = storeToRefs(useLatestStateStore())
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+  }
+
+  .logo {
+    height: var(--navbar2-height);
+    display: flex;
+    align-items: center;
   }
 }
 
