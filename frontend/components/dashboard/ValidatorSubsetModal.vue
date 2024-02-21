@@ -8,7 +8,7 @@ interface Props {
   context: DashboardValidatorContext;
   timeFrame: SummaryDetail;
   dashboardName: string,
-  groupName?: string,
+  groupName?: string, // overruled by dashboardName
   validators: number[],
 }
 const props = defineProps<Props>()
