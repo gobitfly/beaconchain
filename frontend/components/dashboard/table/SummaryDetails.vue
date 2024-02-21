@@ -69,7 +69,7 @@ const data = computed<SummaryRow[][]>(() => {
       v-for="(table, index) in data"
       :key="index"
       class="no-header bc-compact-table summary-details-table"
-      :class="{small:!isWideEnough}"
+      :class="{ small: !isWideEnough }"
       :value="table"
     >
       <Column field="expansion-spacer" class="expansion-spacer">
@@ -144,6 +144,10 @@ const data = computed<SummaryRow[][]>(() => {
 .table-container {
   display: flex;
   flex-wrap: wrap;
+
+  @media (max-width: 1180px) {
+    flex-direction: column;
+  }
 }
 
 :deep(.summary-details-table) {
@@ -152,23 +156,27 @@ const data = computed<SummaryRow[][]>(() => {
   &.small {
     width: 50%;
 
-    &:nth-child(even) {
-      .p-datatable-tbody {
-        >tr {
-          >td:first-child {
-            border-width: 0 0 0 1px;
+    @media (min-width: 1181px) {
+      &:nth-child(even) {
+        .p-datatable-tbody {
+          >tr {
+            >td:first-child {
+              border-width: 0 0 0 1px;
+            }
           }
         }
       }
     }
-  }
 
-  @media (max-width: 1180px) {
-    &:not(:first-child) {
+    @media (max-width: 1180px) {
+      width: unset;
+
       .p-datatable-tbody {
-        >tr:first-child {
-          >td {
-            border-width: 1px 0 0 0;
+        >tr {
+          &:first-child {
+            >td {
+              border-width: 1px 0 0 0;
+            }
           }
         }
       }
