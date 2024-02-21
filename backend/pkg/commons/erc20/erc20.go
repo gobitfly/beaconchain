@@ -9,9 +9,8 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 )
 
 var ERC20Abi, _ = abi.JSON(strings.NewReader(Erc20ABI))
@@ -20,18 +19,16 @@ var TransferTopic []byte = []byte{0xdd, 0xf2, 0x52, 0xad, 0x1b, 0xe2, 0xc8, 0x9b
 
 var tokenMap = make(map[string]*ERC20TokenDetail)
 
-var logger = logrus.StandardLogger().WithField("module", "erc20")
-
 func InitTokenList(path string) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		utils.LogFatal(err, "unable to retrieve erc20 token list", 0)
+		log.Fatal(err, "unable to retrieve erc20 token list", 0)
 	}
 	TokenList := &ERC20TokenList{}
 
 	err = json.Unmarshal(body, TokenList)
 	if err != nil {
-		logger.Fatalf("unable to parse erc20 token list: %v", err)
+		log.Fatal(err, "unable to parse erc20 token list", 0)
 	}
 
 	for _, token := range TokenList.Tokens {

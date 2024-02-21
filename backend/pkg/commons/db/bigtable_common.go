@@ -2,15 +2,16 @@ package db
 
 import (
 	"context"
+	"strings"
 
 	"fmt"
 	"sort"
 	"time"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/sirupsen/logrus"
 )
 
 func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_bigtable.Table, batchSize int) error {
@@ -30,7 +31,7 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 
 	length := batchSize
 	if length > MAX_BATCH_MUTATIONS {
-		logger.Infof("WriteBulk: capping provided batchSize %v to %v", length, MAX_BATCH_MUTATIONS)
+		log.Infof("WriteBulk: capping provided batchSize %v to %v", length, MAX_BATCH_MUTATIONS)
 		length = MAX_BATCH_MUTATIONS
 	}
 
@@ -50,7 +51,7 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 		if err != nil {
 			return err
 		}
-		logger.Infof("%s: wrote from %v to %v rows to bigtable in %.1f s", callingFunctionName, start, end, time.Since(startTime).Seconds())
+		log.Infof("%s: wrote from %v to %v rows to bigtable in %.1f s", callingFunctionName, start, end, time.Since(startTime).Seconds())
 	}
 
 	if (iterations * length) < numKeys {
@@ -65,7 +66,7 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 				return e
 			}
 		}
-		logger.Infof("%s: wrote from %v to %v rows to bigtable in %.1fs", callingFunctionName, start, numKeys, time.Since(startTime).Seconds())
+		log.Infof("%s: wrote from %v to %v rows to bigtable in %.1fs", callingFunctionName, start, numKeys, time.Since(startTime).Seconds())
 
 		return nil
 	}
@@ -73,9 +74,9 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 	return nil
 }
 
-func (bigtable *Bigtable) ClearByPrefix(table string, family, prefix string, dryRun bool) error {
-	if family == "" || prefix == "" {
-		return fmt.Errorf("please provide family [%v] and prefix [%v]", family, prefix)
+func (bigtable *Bigtable) ClearByPrefix(table string, family, columns, prefix string, dryRun bool) error {
+	if family == "" || prefix == "" || columns == "" {
+		return fmt.Errorf("please provide family [%v], columns [%v] and prefix [%v]", family, columns, prefix)
 	}
 
 	rowRange := gcp_bigtable.PrefixRange(prefix)
@@ -105,52 +106,71 @@ func (bigtable *Bigtable) ClearByPrefix(table string, family, prefix string, dry
 
 	mutsDelete := types.NewBulkMutations(MAX_BATCH_MUTATIONS)
 
-	keysCount := 0
-	err := btTable.ReadRows(context.Background(), rowRange, func(row gcp_bigtable.Row) bool {
-		if family == "*" {
-			if dryRun {
-				logger.Infof("would delete key %v", row.Key())
-			}
-
-			mutDelete := gcp_bigtable.NewMutation()
-			mutDelete.DeleteRow()
-			mutsDelete.Keys = append(mutsDelete.Keys, row.Key())
-			mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-			keysCount++
-		} else {
-			row_ := row[family][0]
-			if dryRun {
-				logger.Infof("would delete key %v", row_.Row)
-			}
-
-			mutDelete := gcp_bigtable.NewMutation()
-			mutDelete.DeleteRow()
-			mutsDelete.Keys = append(mutsDelete.Keys, row_.Row)
-			mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-			keysCount++
+	var filter gcp_bigtable.Filter
+	columnsSlice := strings.Split(columns, ",")
+	if len(columnsSlice) > 1 {
+		columnNames := make([]gcp_bigtable.Filter, len(columnsSlice))
+		for i, f := range columnsSlice {
+			columnNames[i] = gcp_bigtable.ColumnFilter(f)
 		}
+		filter = gcp_bigtable.InterleaveFilters(columnNames...)
+	} else {
+		filter = gcp_bigtable.ColumnFilter(columnsSlice[0])
+	}
+
+	keysCount := 0
+	deleteFunc := func(row gcp_bigtable.Row) bool {
+		var row_ string
+
+		if family == "*" {
+			row_ = row.Key()
+		} else {
+			row_ = row[family][0].Row
+		}
+		if dryRun {
+			log.Infof("would delete key %v", row_)
+		}
+
+		mutDelete := gcp_bigtable.NewMutation()
+		if columns == "*" {
+			mutDelete.DeleteRow()
+		} else {
+			for _, column := range columnsSlice {
+				mutDelete.DeleteCellsInColumn(family, column)
+			}
+		}
+
+		mutsDelete.Keys = append(mutsDelete.Keys, row_)
+		mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
+		keysCount++
 
 		// we still need to commit in batches here (instead of just calling WriteBulk only once) as loading all keys to be deleted in memory first is not feasible as the delete function could be used to delete millions of rows
 		if mutsDelete.Len() == MAX_BATCH_MUTATIONS {
-			logrus.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
+			log.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
 			if !dryRun {
 				err := bigtable.WriteBulk(mutsDelete, btTable, DEFAULT_BATCH_INSERTS)
 
 				if err != nil {
-					logger.Errorf("error writing bulk mutations: %v", err)
+					log.Error(err, "error writing bulk mutations", 0)
 					return false
 				}
 			}
 			mutsDelete = types.NewBulkMutations(MAX_BATCH_MUTATIONS)
 		}
 		return true
-	})
+	}
+	var err error
+	if columns == "*" {
+		err = btTable.ReadRows(context.Background(), rowRange, deleteFunc)
+	} else {
+		err = btTable.ReadRows(context.Background(), rowRange, deleteFunc, gcp_bigtable.RowFilter(filter))
+	}
 	if err != nil {
 		return err
 	}
 
 	if !dryRun && mutsDelete.Len() > 0 {
-		logger.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
+		log.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
 
 		err := bigtable.WriteBulk(mutsDelete, btTable, DEFAULT_BATCH_INSERTS)
 
@@ -159,7 +179,7 @@ func (bigtable *Bigtable) ClearByPrefix(table string, family, prefix string, dry
 		}
 	}
 
-	logger.Infof("deleted %v keys", keysCount)
+	log.Infof("deleted %v keys", keysCount)
 
 	return nil
 }

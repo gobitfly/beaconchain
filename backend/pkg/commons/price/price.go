@@ -9,16 +9,14 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/chainlink_feed"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
-
-var logger = logrus.New().WithField("module", "price")
 
 var availableCurrencies = []string{}
 
@@ -57,7 +55,7 @@ func init() {
 
 func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string) {
 	if atomic.AddUint64(&didInit, 1) > 1 {
-		logrus.Warnf("price.Init called multiple times")
+		log.Warnf("price.Init called multiple times")
 		return
 	}
 
@@ -67,7 +65,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 		setPrice(elCurrency, elCurrency, 1)
 		setPrice(clCurrency, clCurrency, 1)
 		availableCurrencies = []string{clCurrency, elCurrency}
-		logger.Warnf("chainId not supported for fetching prices: %v", chainId)
+		log.Warnf("chainId not supported for fetching prices: %v", chainId)
 		runOnce.Do(func() { runOnceWg.Done() })
 		return
 	}
@@ -82,7 +80,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 
 	eClient, err := ethclient.Dial(eth1Endpoint)
 	if err != nil {
-		logger.Errorf("error dialing pricing eth1 endpoint: %v", err)
+		log.Error(err, "error dialing pricing eth1 endpoint", 0)
 		return
 	}
 
@@ -90,10 +88,10 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 	defer cancel()
 	clientChainId, err := eClient.ChainID(ctx)
 	if err != nil {
-		logger.WithError(err).Fatalf("failed getting chainID")
+		log.Fatal(err, "failed getting chainID", 0)
 	}
 	if chainId != clientChainId.Uint64() {
-		logger.WithError(err).Fatalf("chainId does not match chainId from client (%v != %v)", chainId, clientChainId.Uint64())
+		log.Fatal(err, "chainId does not match chainId from client", 0, map[string]interface{}{"chainId": chainId, "clientChainId": clientChainId})
 	}
 
 	feedAddrs := map[string]string{}
@@ -139,13 +137,13 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 
 		availableCurrencies = []string{"GNO", "mGNO", "DAI", "ETH", "USD", "EUR", "JPY"}
 	default:
-		logger.Fatalf("unsupported chainId %v", chainId)
+		log.Fatal(fmt.Errorf("unsupported chainId %v", chainId), "", 0)
 	}
 
 	for pair, addrHex := range feedAddrs {
 		feed, err := chainlink_feed.NewFeed(common.HexToAddress(addrHex), eClient)
 		if err != nil {
-			logger.Errorf("failed to initialized chainlink feed for %v (addr: %v): %v", pair, addrHex, err)
+			log.Error(err, "failed to initialized chainlink feed", 0, map[string]interface{}{"pair": pair, "addrHex": addrHex})
 			return
 		}
 		feeds[pair] = feed
@@ -180,12 +178,12 @@ func updatePrices() {
 	}
 	err := g.Wait()
 	if err != nil {
-		logger.WithError(err).Errorf("error upating prices")
+		log.Error(err, "error upating prices", 0)
 		return
 	}
 	for p := range calcPairs {
 		if err = calcPricePairs(p); err != nil {
-			logger.WithError(err).Errorf("error calculating price pairs for %v", p)
+			log.Error(err, "error calculating price pairs", 0, map[string]interface{}{"pair": p})
 			return
 		}
 	}
@@ -222,7 +220,7 @@ func setPrice(a, b string, v float64) {
 
 func GetPrice(a, b string) float64 {
 	if didInit < 1 {
-		logger.Fatal("using GetPrice without calling price.Init once")
+		log.Fatal(fmt.Errorf("using GetPrice without calling price.Init once"), "", 0)
 	}
 	runOnceWg.Wait()
 	pricesMu.Lock()
@@ -235,7 +233,7 @@ func GetPrice(a, b string) float64 {
 	}
 	price, exists := prices[a+"/"+b]
 	if !exists {
-		logrus.WithFields(logrus.Fields{"pair": a + "/" + b}).Warnf("price pair not found")
+		log.WarnWithFields(log.Fields{"pair": a + "/" + b}, "price pair not found")
 		return 1
 	}
 	return price

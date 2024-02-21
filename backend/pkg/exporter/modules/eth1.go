@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
 )
 
 var eth1LookBack = uint64(100)
@@ -46,7 +46,7 @@ func eth1DepositsExporter() {
 
 	rpcClient, err := gethRPC.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
-		utils.LogFatal(err, "new exporter geth client error", 0)
+		log.Fatal(err, "new exporter geth client error", 0)
 	}
 	eth1RPCClient = rpcClient
 	client := ethclient.NewClient(rpcClient)
@@ -60,7 +60,7 @@ func eth1DepositsExporter() {
 		var lastDepositBlock uint64
 		err = db.WriterDb.Get(&lastDepositBlock, "select coalesce(max(block_number),0) from eth1_deposits")
 		if err != nil {
-			logger.WithError(err).Errorf("error retrieving highest block_number of eth1-deposits from db")
+			log.Error(err, "error retrieving highest block_number of eth1-deposits from db", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -68,7 +68,7 @@ func eth1DepositsExporter() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		header, err := eth1Client.HeaderByNumber(ctx, nil)
 		if err != nil {
-			logger.WithError(err).Errorf("error getting header from eth1-client")
+			log.Error(err, "error getting header from eth1-client", 0)
 			cancel()
 			time.Sleep(time.Second * 5)
 			continue
@@ -111,11 +111,11 @@ func eth1DepositsExporter() {
 				if toBlock > blockHeight {
 					toBlock = blockHeight
 				}
-				logger.Infof("limiting block-range to %v-%v when fetching eth1-deposits due to too much results", fromBlock, toBlock)
+				log.Infof("limiting block-range to %v-%v when fetching eth1-deposits due to too much results", fromBlock, toBlock)
 				depositsToSave, err = fetchEth1Deposits(fromBlock, toBlock)
 			}
 			if err != nil {
-				logger.WithError(err).WithField("fromBlock", fromBlock).WithField("toBlock", toBlock).Errorf("error fetching eth1-deposits")
+				log.Error(err, "error fetching eth1-deposits", 0, map[string]interface{}{"fromBlock": fromBlock, "toBlock": toBlock})
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -123,7 +123,7 @@ func eth1DepositsExporter() {
 
 		err = saveEth1Deposits(depositsToSave)
 		if err != nil {
-			logger.WithError(err).Errorf("error saving eth1-deposits")
+			log.Error(err, "error saving eth1-deposits", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -131,7 +131,7 @@ func eth1DepositsExporter() {
 		if len(depositsToSave) > 0 {
 			err = aggregateDeposits()
 			if err != nil {
-				logger.WithError(err).Errorf("error saving eth1-deposits-leaderboard")
+				log.Error(err, "error saving eth1-deposits-leaderboard", 0)
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -141,13 +141,13 @@ func eth1DepositsExporter() {
 		lastFetchedBlock = toBlock
 
 		if len(depositsToSave) > 0 {
-			logger.WithFields(logrus.Fields{
+			log.InfoWithFields(log.Fields{
 				"duration":      time.Since(t0),
 				"blockHeight":   blockHeight,
 				"fromBlock":     fromBlock,
 				"toBlock":       toBlock,
 				"depositsSaved": len(depositsToSave),
-			}).Info("exported eth1-deposits")
+			}, "exported eth1-deposits")
 		}
 
 		// progress faster if we are not synced to head yet
@@ -256,7 +256,12 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			log.Error(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (

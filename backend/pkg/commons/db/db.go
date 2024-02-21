@@ -6,24 +6,24 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pressly/goose/v3"
-	"github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,7 +36,7 @@ var DBPGX *pgxpool.Conn
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
 
-var logger = logrus.StandardLogger().WithField("module", "db")
+var PersistentRedisDbClient *redis.Client
 
 var FarFutureEpoch = uint64(18446744073709551615)
 var MaxSqlNumber = uint64(9223372036854775807)
@@ -56,12 +56,12 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 
 	go func() {
 		<-dbConnectionTimeout.C
-		logger.Fatalf("timeout while connecting to %s", dataBaseName)
+		log.Fatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		logger.Fatalf("unable to Ping %s: %s", dataBaseName, err)
+		log.Fatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
 	}
 
 	dbConnectionTimeout.Stop()
@@ -88,10 +88,10 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	logger.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
+	log.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", writer.Username, writer.Password, writer.Host, writer.Port, writer.Name))
 	if err != nil {
-		utils.LogFatal(err, "error getting Connection Writer database", 0)
+		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
 
 	dbTestConnection(dbConnWriter, "database")
@@ -104,10 +104,10 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		return dbConnWriter, dbConnWriter
 	}
 
-	logger.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
+	log.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
 	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", reader.Username, reader.Password, reader.Host, reader.Port, reader.Name))
 	if err != nil {
-		utils.LogFatal(err, "error getting Connection Reader database", 0)
+		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
 	dbTestConnection(dbConnReader, "read replica database")
@@ -516,7 +516,7 @@ func GetLatestFinalizedEpoch() (uint64, error) {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
-		utils.LogError(err, "error retrieving latest exported finalized epoch from the database", 0)
+		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
 		return 0, err
 	}
 
@@ -553,7 +553,12 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			log.Error(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	lastSlotNumber := uint64(0)
 	for _, block := range blocks {
@@ -569,7 +574,7 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 
 	for _, block := range blocks {
 		if block.Canonical {
-			logger.Printf("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
 			_, err = tx.Exec("UPDATE blocks SET status = '1' WHERE blockroot = $1", block.BlockRoot)
 			if err != nil {
 				return err
@@ -588,16 +593,21 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			log.Error(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	canonBlocks := make(pq.ByteaArray, 0)
 	orphanedBlocks := make(pq.ByteaArray, 0)
 	for _, block := range blocks {
 		if !block.Canonical {
-			logger.Printf("marking block %x at slot %v as orphaned", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as orphaned", block.BlockRoot, block.Slot)
 			orphanedBlocks = append(orphanedBlocks, block.BlockRoot)
 		} else {
-			logger.Printf("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
 			canonBlocks = append(canonBlocks, block.BlockRoot)
 		}
 	}
@@ -627,145 +637,6 @@ func SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
 	return err
 }
 
-// SaveEpoch will save the epoch data into the database
-func SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
-		logger.WithFields(logrus.Fields{"epoch": epoch, "duration": time.Since(start)}).Info("completed saving epoch")
-	}()
-
-	logger.WithFields(logrus.Fields{"chainEpoch": utils.TimeToEpoch(time.Now()), "exportEpoch": epoch}).Infof("starting export of epoch %v", epoch)
-
-	logger.Infof("exporting epoch statistics data")
-	proposerSlashingsCount := 0
-	attesterSlashingsCount := 0
-	attestationsCount := 0
-	depositCount := 0
-	voluntaryExitCount := 0
-	withdrawalCount := 0
-
-	// for _, slot := range data.Blocks {
-	// 	for _, b := range slot {
-	// 		proposerSlashingsCount += len(b.ProposerSlashings)
-	// 		attesterSlashingsCount += len(b.AttesterSlashings)
-	// 		attestationsCount += len(b.Attestations)
-	// 		depositCount += len(b.Deposits)
-	// 		voluntaryExitCount += len(b.VoluntaryExits)
-	// 		if b.ExecutionPayload != nil {
-	// 			withdrawalCount += len(b.ExecutionPayload.Withdrawals)
-	// 		}
-	// 	}
-	// }
-
-	validatorBalanceSum := new(big.Int)
-	validatorEffectiveBalanceSum := new(big.Int)
-	validatorsCount := 0
-	for _, v := range validators {
-		if v.ExitEpoch > epoch && v.ActivationEpoch <= epoch {
-			validatorsCount++
-			validatorBalanceSum = new(big.Int).Add(validatorBalanceSum, new(big.Int).SetUint64(v.Balance))
-			validatorEffectiveBalanceSum = new(big.Int).Add(validatorEffectiveBalanceSum, new(big.Int).SetUint64(v.EffectiveBalance))
-		}
-	}
-
-	validatorBalanceAverage := new(big.Int).Div(validatorBalanceSum, new(big.Int).SetInt64(int64(validatorsCount)))
-
-	_, err := tx.Exec(`
-		INSERT INTO epochs (
-			epoch, 
-			blockscount, 
-			proposerslashingscount, 
-			attesterslashingscount, 
-			attestationscount, 
-			depositscount,
-			withdrawalcount,
-			voluntaryexitscount, 
-			validatorscount, 
-			averagevalidatorbalance, 
-			totalvalidatorbalance,
-			eligibleether, 
-			globalparticipationrate, 
-			votedether,
-			finalized
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
-		ON CONFLICT (epoch) DO UPDATE SET 
-			blockscount             = excluded.blockscount, 
-			proposerslashingscount  = excluded.proposerslashingscount,
-			attesterslashingscount  = excluded.attesterslashingscount,
-			attestationscount       = excluded.attestationscount,
-			depositscount           = excluded.depositscount,
-			withdrawalcount         = excluded.withdrawalcount,
-			voluntaryexitscount     = excluded.voluntaryexitscount,
-			validatorscount         = excluded.validatorscount,
-			averagevalidatorbalance = excluded.averagevalidatorbalance,
-			totalvalidatorbalance   = excluded.totalvalidatorbalance,
-			eligibleether           = excluded.eligibleether,
-			globalparticipationrate = excluded.globalparticipationrate,
-			votedether              = excluded.votedether,
-			finalized               = excluded.finalized`,
-		epoch,
-		0,
-		proposerSlashingsCount,
-		attesterSlashingsCount,
-		attestationsCount,
-		depositCount,
-		withdrawalCount,
-		voluntaryExitCount,
-		validatorsCount,
-		validatorBalanceAverage.Uint64(),
-		validatorBalanceSum.Uint64(),
-		validatorEffectiveBalanceSum.Uint64(),
-		0,
-		0,
-		false)
-
-	if err != nil {
-		return fmt.Errorf("error executing save epoch statement: %w", err)
-	}
-
-	lookback := uint64(0)
-	if epoch > 3 {
-		lookback = epoch - 3
-	}
-	// delete duplicate scheduled slots
-	_, err = tx.Exec("delete from blocks where slot in (select slot from blocks where epoch >= $1 group by slot having count(*) > 1) and blockroot = $2;", lookback, []byte{0x0})
-	if err != nil {
-		return fmt.Errorf("error cleaning up blocks table: %w", err)
-	}
-
-	// delete duplicate missed blocks
-	_, err = tx.Exec("delete from blocks where slot in (select slot from blocks where epoch >= $1 group by slot having count(*) > 1) and blockroot = $2;", lookback, []byte{0x1})
-	if err != nil {
-		return fmt.Errorf("error cleaning up blocks table: %w", err)
-	}
-	return nil
-}
-
-func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.Hash]types.RelaysData, error) {
-	var execBlockHashes [][]byte
-	var relaysData []types.RelaysData
-
-	for _, block := range blocks {
-		execBlockHashes = append(execBlockHashes, block.Hash)
-	}
-	// try to get mev rewards from relys_blocks table
-	err := ReaderDb.Select(&relaysData,
-		`SELECT proposer_fee_recipient, value, exec_block_hash, tag_id, builder_pubkey FROM relays_blocks WHERE relays_blocks.exec_block_hash = ANY($1)`,
-		pq.ByteaArray(execBlockHashes),
-	)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	var relaysDataMap = make(map[common.Hash]types.RelaysData)
-	for _, relayData := range relaysData {
-		relaysDataMap[common.BytesToHash(relayData.ExecBlockHash)] = relayData
-	}
-
-	return relaysDataMap, nil
-}
-
 // UpdateEpochStatus will update the epoch status in the database
 func UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 	start := time.Now()
@@ -792,6 +663,29 @@ func UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 	return err
 }
 
+func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.Hash]types.RelaysData, error) {
+	var execBlockHashes [][]byte
+	var relaysData []types.RelaysData
+
+	for _, block := range blocks {
+		execBlockHashes = append(execBlockHashes, block.Hash)
+	}
+	// try to get mev rewards from relys_blocks table
+	err := ReaderDb.Select(&relaysData,
+		`SELECT proposer_fee_recipient, value, exec_block_hash, tag_id, builder_pubkey FROM relays_blocks WHERE relays_blocks.exec_block_hash = ANY($1)`,
+		pq.ByteaArray(execBlockHashes),
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	var relaysDataMap = make(map[common.Hash]types.RelaysData)
+	for _, relayData := range relaysData {
+		relaysDataMap[common.BytesToHash(relayData.ExecBlockHash)] = relayData
+	}
+
+	return relaysDataMap, nil
+}
+
 // GetValidatorIndices will return the total-validator-indices
 func GetValidatorIndices() ([]uint64, error) {
 	indices := []uint64{}
@@ -816,7 +710,7 @@ func GetActiveValidatorCount() (uint64, error) {
 func UpdateQueueDeposits(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		logger.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
+		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
 		metrics.TaskDuration.WithLabelValues("update_queue_deposits").Observe(time.Since(start).Seconds())
 	}()
 
@@ -828,7 +722,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			FROM validators 
 			WHERE activationepoch=9223372036854775807 and status='pending')`)
 	if err != nil {
-		logger.Errorf("error removing queued publickeys from validator_queue_deposits: %v", err)
+		log.Error(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
 	}
 
@@ -838,7 +732,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
-		logger.Errorf("error adding queued publickeys to validator_queue_deposits: %v", err)
+		log.Error(err, "error adding queued publickeys to validator_queue_deposits", 0)
 		return err
 	}
 
@@ -853,7 +747,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			validator_queue_deposits.validatorindex = validators.validatorindex
 	`)
 	if err != nil {
-		logger.Errorf("error updating activationeligibilityepoch on validator_queue_deposits: %v", err)
+		log.Error(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
 		return err
 	}
 
@@ -890,7 +784,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
-		logger.Errorf("error updating validator_queue_deposits: %v", err)
+		log.Error(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
 	return nil
@@ -1120,7 +1014,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 		slotIndex := b.Slot - (b.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch)
 
 		// if epochMap[b.Epoch].Slots[slotIndex] != nil && len(b.BlockRoot) > len(epochMap[b.Epoch].Slots[slotIndex].BlockRoot) {
-		// 	logger.Infof("CONFLICTING block found for slotindex %v", slotIndex)
+		// 	log.LogInfo("CONFLICTING block found for slotindex %v", slotIndex)
 		// }
 
 		if epochMap[b.Epoch].Slots[slotIndex] == nil || len(b.BlockRoot) > len(epochMap[b.Epoch].Slots[slotIndex].BlockRoot) {
@@ -1142,7 +1036,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 				if slot < currentSlot {
 					status = "scheduled-missed"
 				}
-				// logger.Infof("FILLING MISSING SLOT: %v", slot)
+				// log.LogInfo("FILLING MISSING SLOT: %v", slot)
 				epoch.Slots[i] = &types.SlotVizSlots{
 					Epoch:  epoch.Epoch,
 					Slot:   slot,
@@ -1242,7 +1136,7 @@ func GetTotalWithdrawals() (total uint64, err error) {
 func GetWithdrawalsCountForQuery(query string) (uint64, error) {
 	t0 := time.Now()
 	defer func() {
-		logger.WithFields(logrus.Fields{"duration": time.Since(t0)}).Infof("finished GetWithdrawalsCountForQuery")
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "finished GetWithdrawalsCountForQuery")
 	}()
 	count := uint64(0)
 
@@ -1286,7 +1180,7 @@ func GetWithdrawalsCountForQuery(query string) (uint64, error) {
 func GetWithdrawals(query string, length, start uint64, orderBy, orderDir string) ([]*types.Withdrawals, error) {
 	t0 := time.Now()
 	defer func() {
-		logger.WithFields(logrus.Fields{"duration": time.Since(t0)}).Infof("finished GetWithdrawals")
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "finished GetWithdrawals")
 	}()
 	withdrawals := []*types.Withdrawals{}
 
@@ -1766,7 +1660,12 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			log.Error(err, "error rolling back transaction", 0)
+		}
+	}()
 	_, err = tx.Exec(`
 		UPDATE ad_configurations SET 
 			template_id = $2,
@@ -1799,7 +1698,12 @@ func DeleteAdConfiguration(id string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			log.Error(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// delete ad configuration
 	_, err = WriterDb.Exec(`
@@ -2330,7 +2234,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 		return nil, fmt.Errorf("error retrieving activation & exit epoch for validators: %w", err)
 	}
 
-	logger.Info("retrieved activation & exit epochs")
+	log.Infof("retrieved activation & exit epochs")
 
 	// next retrieve all attestation data from the db (need to retrieve data for the endEpoch+1 epoch as that could still contain attestations for the endEpoch)
 	firstSlot := startEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
@@ -2348,7 +2252,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	}
 	defer rows.Close()
 
-	logger.Info("retrieved attestation raw data")
+	log.Infof("retrieved attestation raw data")
 
 	// next process the data and fill up the epoch participation
 	// validators that participated in an epoch will have the flag set to true
@@ -2374,7 +2278,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 		if participation == nil {
 			epochParticipation[epoch] = make(map[types.ValidatorIndex]bool)
 
-			// logger.Infof("seeding validator duties for epoch %v", epoch)
+			// log.LogInfo("seeding validator duties for epoch %v", epoch)
 			for _, data := range activityData {
 				if data.ActivationEpoch <= epoch && epoch < data.ExitEpoch {
 					epochParticipation[epoch][types.ValidatorIndex(data.ValidatorIndex)] = false

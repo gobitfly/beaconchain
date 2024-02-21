@@ -8,11 +8,11 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 )
 
 func syncCommitteesExporter(rpcClient rpc.Client) {
@@ -20,7 +20,7 @@ func syncCommitteesExporter(rpcClient rpc.Client) {
 		t0 := time.Now()
 		err := exportSyncCommittees(rpcClient)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"error": err, "duration": time.Since(t0)}).Errorf("error exporting sync_committees")
+			log.Error(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(t0)})
 		}
 		time.Sleep(time.Second * 12)
 	}
@@ -36,7 +36,7 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 	for _, p := range dbPeriods {
 		dbPeriodsMap[p] = true
 	}
-	currEpoch := cache.LatestFinalizedEpoch()
+	currEpoch := cache.LatestFinalizedEpoch.Get()
 	if currEpoch > 0 { // guard against underflows
 		currEpoch = currEpoch - 1
 	}
@@ -50,18 +50,17 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 			if err != nil {
 				return fmt.Errorf("error exporting sync-committee at period %v: %w", p, err)
 			}
-			logrus.WithFields(logrus.Fields{
+			log.InfoWithFields(log.Fields{
 				"period":   p,
 				"epoch":    utils.FirstEpochOfSyncPeriod(p),
 				"duration": time.Since(t0),
-			}).Infof("exported sync_committee")
+			}, "exported sync_committee")
 		}
 	}
 	return nil
 }
 
 func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sqlx.Tx) error {
-
 	data, err := GetSyncCommitteAtPeriod(rpcClient, p)
 	if err != nil {
 		return err
@@ -73,7 +72,12 @@ func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sql
 		if err != nil {
 			return err
 		}
-		defer tx.Rollback()
+		defer func() {
+			err := tx.Rollback()
+			if err != nil {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
 	}
 
 	nArgs := 3
@@ -102,7 +106,6 @@ func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sql
 }
 
 func GetSyncCommitteAtPeriod(rpcClient rpc.Client, p uint64) ([]SyncCommittee, error) {
-
 	stateID := uint64(0)
 	if p > 0 {
 		stateID = utils.FirstEpochOfSyncPeriod(p-1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
@@ -116,7 +119,7 @@ func GetSyncCommitteAtPeriod(rpcClient rpc.Client, p uint64) ([]SyncCommittee, e
 	firstEpoch := utils.FirstEpochOfSyncPeriod(p)
 	lastEpoch := firstEpoch + utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod - 1
 
-	logrus.Infof("exporting sync committee assignments for period %v (epoch %v to %v)", p, firstEpoch, lastEpoch)
+	log.Infof("exporting sync committee assignments for period %v (epoch %v to %v)", p, firstEpoch, lastEpoch)
 
 	// Note that the order we receive the validators from the node in is crucial
 	// and determines which bit reflects them in the block sync aggregate bits

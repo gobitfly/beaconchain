@@ -2,19 +2,19 @@ package utils
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"math/big"
 	"os"
 	"os/signal"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-
-	"github.com/sirupsen/logrus"
 )
 
 func mustParseUint(str string) uint64 {
@@ -24,7 +24,7 @@ func mustParseUint(str string) uint64 {
 
 	nbr, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		logrus.Fatalf("fatal error parsing uint %s: %v", str, err)
+		log.Fatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
 	}
 
 	return nbr
@@ -33,7 +33,7 @@ func mustParseUint(str string) uint64 {
 func MustParseHex(hexString string) []byte {
 	data, err := hex.DecodeString(strings.Replace(hexString, "0x", "", -1))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
 	}
 	return data
 }
@@ -181,5 +181,31 @@ func RemoveRoundBracketsIncludingContent(input string) string {
 			input = input[closeIndex+1:]
 		}
 	}
+	return result
+}
+
+// HashAndEncode digests the input with sha256 and returns it as hex string
+func HashAndEncode(input string) string {
+	codeHashedBytes := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(codeHashedBytes[:])
+}
+
+func SortedUniqueUint64(arr []uint64) []uint64 {
+	if len(arr) <= 1 {
+		return arr
+	}
+
+	sort.Slice(arr, func(i, j int) bool {
+		return arr[i] < arr[j]
+	})
+
+	result := make([]uint64, 1, len(arr))
+	result[0] = arr[0]
+	for i := 1; i < len(arr); i++ {
+		if arr[i-1] != arr[i] {
+			result = append(result, arr[i])
+		}
+	}
+
 	return result
 }

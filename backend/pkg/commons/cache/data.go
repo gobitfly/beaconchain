@@ -4,83 +4,68 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 // LatestEpoch will return the latest epoch
-func LatestEpoch() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
-
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
-		return wanted
-	} else {
-		utils.LogError(err, "error retrieving latestEpoch from cache", 0, nil)
-	}
-
-	return 0
+var LatestEpoch UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+	},
 }
 
-func LatestNodeEpoch() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:latestNodeEpoch", utils.Config.Chain.ClConfig.DepositChainID)
-
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
-		return wanted
-	} else {
-		utils.LogError(err, "error retrieving latestNodeEpoch from cache: %v", 0, nil)
-	}
-
-	return 0
+var LatestNodeEpoch UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestNodeEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+	},
 }
 
-func LatestNodeFinalizedEpoch() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)
-
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
-		return wanted
-	} else {
-		utils.LogError(err, "error retrieving latestNodeFinalizedEpoch from cache: %v", 0, nil)
-	}
-
-	return 0
+var LatestNodeFinalizedEpoch UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+	},
 }
 
 // LatestFinalizedEpoch will return the most recent epoch that has been finalized.
-func LatestFinalizedEpoch() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
-
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
-		return wanted
-	} else {
-		utils.LogError(err, "error retrieving latestFinalized for key: %v from cache: %v", 0, map[string]interface{}{"cacheKey": cacheKey, "err": err})
-	}
-	return 0
+var LatestFinalizedEpoch UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+	},
 }
 
 // LatestSlot will return the latest slot
-func LatestSlot() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
+var LatestSlot UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
+	},
+}
 
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
-		return wanted
-	} else {
-		utils.LogError(err, "error retrieving latest slot from cache: %v", 0, nil)
-	}
-	return 0
+// LatestProposedSlot will return the latest proposed slot
+var LatestProposedSlot UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
+	},
 }
 
 // FinalizationDelay will return the current Finalization Delay
 func FinalizationDelay() uint64 {
-	return LatestNodeEpoch() - LatestNodeFinalizedEpoch()
+	return LatestNodeEpoch.Get() - LatestNodeFinalizedEpoch.Get()
 }
 
-// LatestProposedSlot will return the latest proposed slot
-func LatestProposedSlot() uint64 {
-	cacheKey := fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
+type UInt64Cached struct {
+	cacheKey func() string
+}
 
-	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cacheKey, time.Second*5); err == nil {
+func (cfg UInt64Cached) Get() uint64 {
+	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cfg.cacheKey(), time.Second*5); err == nil {
 		return wanted
 	} else {
-		utils.LogError(err, "error retrieving latestProposedSlot from cache: %v", 0, nil)
+		log.Error(err, "error retrieving uint64 for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
 	}
 	return 0
+}
+
+func (cfg UInt64Cached) Set(epoch uint64) error {
+	return TieredCache.SetUint64(cfg.cacheKey(), epoch, utils.Day)
 }

@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -29,18 +29,19 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Println(version.Version)
-		fmt.Println(version.GoVersion)
+		log.Infof(version.Version)
+		log.Infof(version.GoVersion)
 		return
 	}
 
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		logrus.Fatalf("error reading config file: %v", err)
+		log.Fatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
-	logrus.WithField("config", *configPath).WithField("version", version.Version).WithField("chainName", utils.Config.Chain.ClConfig.ConfigName).Printf("starting")
+
+	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
@@ -68,15 +69,15 @@ func main() {
 	if *daysToReexport != "" {
 		s := strings.Split(*daysToReexport, "-")
 		if len(s) < 2 {
-			utils.LogFatal(nil, fmt.Sprintf("invalid 'days' flag: %s, expected something of the form 'startDay-endDay'", *daysToReexport), 0)
+			log.Fatal(nil, fmt.Sprintf("invalid 'days' flag: %s, expected something of the form 'startDay-endDay'", *daysToReexport), 0)
 		}
 		startDayReexport, err = strconv.ParseInt(s[0], 10, 64)
 		if err != nil {
-			utils.LogFatal(err, "error parsing first day of daysToExport flag to int", 0)
+			log.Fatal(err, "error parsing first day of daysToExport flag to int", 0)
 		}
 		endDayReexport, err = strconv.ParseInt(s[1], 10, 64)
 		if err != nil {
-			utils.LogFatal(err, "error parsing last day of daysToExport flag to int", 0)
+			log.Fatal(err, "error parsing last day of daysToExport flag to int", 0)
 		}
 	} else if *dayToReexport >= 0 {
 		startDayReexport = *dayToReexport
@@ -84,5 +85,5 @@ func main() {
 	}
 
 	modules.StartEthStoreExporter(*bnAddress, *enAddress, *updateInterval, *errorInterval, *sleepInterval, startDayReexport, endDayReexport)
-	logrus.Println("exiting...")
+	log.Infof("exiting...")
 }

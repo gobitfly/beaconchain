@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"time"
 
+	eth_rewards_types "github.com/gobitfly/eth-rewards/types"
 	"github.com/jackc/pgtype"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 )
 
 // ChainHead is a struct to hold chain head data
@@ -522,7 +522,6 @@ type Relay struct {
 	ExportFailureCount  uint64         `db:"export_failure_count"`
 	LastExportTryTs     time.Time      `db:"last_export_try_ts"`
 	LastExportSuccessTs time.Time      `db:"last_export_success_ts"`
-	Logger              logrus.Entry
 }
 
 type RelayBlock struct {
@@ -675,4 +674,14 @@ type ValidatorStatsTableDbRow struct {
 	MEVPerformance7d   decimal.Decimal `db:"-"`
 	MEVPerformance31d  decimal.Decimal `db:"-"`
 	MEVPerformance365d decimal.Decimal `db:"-"`
+}
+
+type RedisCachedEpochAssignments struct {
+	Epoch       Epoch
+	Assignments *EpochAssignments
+}
+
+type RedisCachedEpochRewards struct {
+	Epoch   Epoch
+	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }

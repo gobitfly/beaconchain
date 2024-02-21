@@ -5,15 +5,13 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
-
-var logger = logrus.New().WithField("module", "exporter")
 
 type ModuleInterface interface {
 	Start(args []any) error
@@ -52,10 +50,10 @@ func StartAll(context ModuleContext) {
 	for {
 		head, err := context.ConsClient.GetChainHead()
 		if err == nil {
-			logger.Infof("beacon node is available with head slot: %v", head.HeadSlot)
+			log.Infof("beacon node is available with head slot: %v", head.HeadSlot)
 			break
 		}
-		logger.Errorf("beacon-node seems to be unavailable: %v", err)
+		log.Error(err, "beacon-node seems to be unavailable", 0)
 		time.Sleep(time.Second * 10)
 	}
 
@@ -68,12 +66,12 @@ func StartAll(context ModuleContext) {
 		start := time.Now()
 		err := slotExporter.Start(nil)
 		if err != nil {
-			logrus.Errorf("error during slot export run: %v", err)
+			log.Error(err, "error during slot export run", 0)
 		} else if err == nil && firstRun {
 			firstRun = false
 		}
 
-		logrus.Info("update run completed")
+		log.Infof("update run completed")
 		elapsed := time.Since(start)
 		if elapsed < minWaitTimeBetweenRuns {
 			time.Sleep(minWaitTimeBetweenRuns - elapsed)
@@ -84,11 +82,11 @@ func StartAll(context ModuleContext) {
 }
 
 func GetModuleContext() (ModuleContext, error) {
-	cl := consapi.NewNodeDataRetriever(utils.Config.NodeJobsProcessor.ClEndpoint)
+	cl := consapi.NewNodeDataRetriever("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
 	spec, err := cl.GetSpec()
 	if err != nil {
-		utils.LogFatal(err, "error getting spec", 0)
+		log.Fatal(err, "error getting spec", 0)
 	}
 
 	config.ClConfig = &spec.Data
@@ -102,7 +100,7 @@ func GetModuleContext() (ModuleContext, error) {
 
 	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
 	if err != nil {
-		utils.LogFatal(err, "error creating lighthouse client", 0)
+		log.Fatal(err, "error creating lighthouse client", 0)
 	}
 
 	moduleContext := ModuleContext{

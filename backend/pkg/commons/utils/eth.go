@@ -9,15 +9,15 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/sirupsen/logrus"
 	e2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
 func init() {
 	err := e2types.InitBLS()
 	if err != nil {
-		logrus.Fatalf("error in e2types.InitBLS(): %v", err)
+		log.Fatal(err, "error in e2types.InitBLS()", 0)
 	}
 }
 
