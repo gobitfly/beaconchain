@@ -30,7 +30,7 @@ type EthStoreExporter struct {
 
 // start exporting of eth.store into db
 func StartEthStoreExporter(bnAddress string, enAddress string, updateInterval, errorInterval, sleepInterval time.Duration, startDayReexport, endDayReexport int64) {
-	log.LogInfo("starting eth.store exporter")
+	log.Infof("starting eth.store exporter")
 	ese := &EthStoreExporter{
 		DB:             db.WriterDb,
 		BNAddress:      bnAddress,
@@ -55,7 +55,7 @@ func StartEthStoreExporter(bnAddress string, enAddress string, updateInterval, e
 		for day := startDayReexport; day <= endDayReexport; day++ {
 			err := ese.reexportDay(strconv.FormatInt(day, 10))
 			if err != nil {
-				log.LogError(err, fmt.Sprintf("error reexporting eth.store day %d in database", day), 0)
+				log.Error(err, fmt.Sprintf("error reexporting eth.store day %d in database", day), 0)
 				return
 			}
 		}
@@ -73,7 +73,7 @@ func (ese *EthStoreExporter) reexportDay(day string) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			log.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 	err = ese.prepareClearDayTx(tx, day)
@@ -97,7 +97,7 @@ func (ese *EthStoreExporter) exportDay(day string) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			log.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -220,7 +220,7 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string) error {
 }
 
 func (ese *EthStoreExporter) getStoreDay(day string) (*ethstore.Day, map[uint64]*ethstore.Day, error) {
-	log.LogInfo("retrieving eth.store for day %v", day)
+	log.Infof("retrieving eth.store for day %v", day)
 	return ethstore.Calculate(context.Background(), ese.BNAddress, ese.ENAddress, day, 1, ethstore.RECEIPTS_MODE_SINGLE)
 }
 
@@ -232,31 +232,31 @@ DBCHECK:
 		// get latest eth.store day
 		latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
 		if err != nil {
-			log.LogError(err, "error retrieving latest finalized epoch from db", 0)
+			log.Error(err, "error retrieving latest finalized epoch from db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 
 		if latestFinalizedEpoch == 0 {
-			log.LogError(err, "error retrieved 0 as latest finalized epoch from the db", 0)
+			log.Error(err, "error retrieved 0 as latest finalized epoch from the db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 		latestDay := utils.DayOfSlot(latestFinalizedEpoch*utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
 
-		log.LogInfo("latest day is %v", latestDay)
+		log.Infof("latest day is %v", latestDay)
 		// count rows of eth.store days in db
 		var ethStoreDayCount uint64
 		err = ese.DB.Get(&ethStoreDayCount, `
 				SELECT COUNT(*)
 				FROM eth_store_stats WHERE validator = -1`)
 		if err != nil {
-			log.LogError(err, "error retrieving eth.store days count from db", 0)
+			log.Error(err, "error retrieving eth.store days count from db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 
-		log.LogInfo("ethStoreDayCount is %v", ethStoreDayCount)
+		log.Infof("ethStoreDayCount is %v", ethStoreDayCount)
 
 		if ethStoreDayCount <= latestDay {
 			// db is incomplete
@@ -273,7 +273,7 @@ DBCHECK:
 						SELECT day 
 						FROM eth_store_stats WHERE validator = -1`)
 				if err != nil {
-					log.LogError(err, "error retrieving eth.store days from db", 0)
+					log.Error(err, "error retrieving eth.store days from db", 0)
 					time.Sleep(ese.ErrorInterval)
 					continue
 				}
@@ -295,11 +295,11 @@ DBCHECK:
 			for _, dayToExport := range daysToExportArray {
 				err = ese.exportDay(strconv.FormatUint(dayToExport, 10))
 				if err != nil {
-					log.LogError(err, fmt.Sprintf("error exporting eth.store day %d into database", dayToExport), 0)
+					log.Error(err, fmt.Sprintf("error exporting eth.store day %d into database", dayToExport), 0)
 					time.Sleep(ese.ErrorInterval)
 					continue DBCHECK
 				}
-				log.LogInfo("exported eth.store day %d into db", dayToExport)
+				log.Infof("exported eth.store day %d into db", dayToExport)
 				if ethStoreDayCount < latestDay {
 					// more than 1 day is being exported, sleep for duration specified in config
 					time.Sleep(ese.Sleep)

@@ -20,7 +20,7 @@ func syncCommitteesExporter(rpcClient rpc.Client) {
 		t0 := time.Now()
 		err := exportSyncCommittees(rpcClient)
 		if err != nil {
-			log.LogError(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(t0)})
+			log.Error(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(t0)})
 		}
 		time.Sleep(time.Second * 12)
 	}
@@ -50,7 +50,7 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 			if err != nil {
 				return fmt.Errorf("error exporting sync-committee at period %v: %w", p, err)
 			}
-			log.LogInfoWithFields(log.Fields{
+			log.InfoWithFields(log.Fields{
 				"period":   p,
 				"epoch":    utils.FirstEpochOfSyncPeriod(p),
 				"duration": time.Since(t0),
@@ -75,7 +75,7 @@ func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sql
 		defer func() {
 			err := tx.Rollback()
 			if err != nil {
-				log.LogError(err, "error rolling back transaction", 0)
+				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
 	}
@@ -119,7 +119,7 @@ func GetSyncCommitteAtPeriod(rpcClient rpc.Client, p uint64) ([]SyncCommittee, e
 	firstEpoch := utils.FirstEpochOfSyncPeriod(p)
 	lastEpoch := firstEpoch + utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod - 1
 
-	log.LogInfo("exporting sync committee assignments for period %v (epoch %v to %v)", p, firstEpoch, lastEpoch)
+	log.Infof("exporting sync committee assignments for period %v (epoch %v to %v)", p, firstEpoch, lastEpoch)
 
 	// Note that the order we receive the validators from the node in is crucial
 	// and determines which bit reflects them in the block sync aggregate bits

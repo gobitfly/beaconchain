@@ -37,7 +37,7 @@ type GethClient struct {
 var CurrentGethClient *GethClient
 
 func NewGethClient(endpoint string) (*GethClient, error) {
-	log.LogInfo("initializing geth client at %v", endpoint)
+	log.Infof("initializing geth client at %v", endpoint)
 	client := &GethClient{
 		endpoint: endpoint,
 	}
@@ -159,7 +159,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			log.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}
@@ -266,11 +266,11 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 		s := strings.Split(pair, ":")
 
 		if len(s) != 3 {
-			log.LogFatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
+			log.Fatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
 		}
 
 		if s[0] != "B" {
-			log.LogFatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
+			log.Fatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
 		}
 
 		address := s[1]
@@ -311,7 +311,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 
 	for i, el := range batchElements {
 		if el.Error != nil {
-			log.LogWarn("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
+			log.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
 		}
 
 		res := strings.TrimPrefix(*el.Result.(*string), "0x")
@@ -378,7 +378,7 @@ func (client *GethClient) GetERC20TokenBalance(address string, token string) ([]
 }
 
 func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
-	log.LogInfo("retrieving metadata for token %x", token)
+	log.Infof("retrieving metadata for token %x", token)
 
 	contract, err := erc20.NewErc20(common.BytesToAddress(token), client.ethClient)
 	if err != nil {

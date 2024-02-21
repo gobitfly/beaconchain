@@ -14,7 +14,7 @@ func networkLivenessUpdater(client rpc.Client) {
 	var prevHeadEpoch uint64
 	err := db.WriterDb.Get(&prevHeadEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
 	if err != nil {
-		log.LogFatal(err, "getting previous head epoch from db error", 0)
+		log.Fatal(err, "getting previous head epoch from db error", 0)
 	}
 
 	epochDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot*utils.Config.Chain.ClConfig.SlotsPerEpoch)
@@ -23,7 +23,7 @@ func networkLivenessUpdater(client rpc.Client) {
 	for {
 		head, err := client.GetChainHead()
 		if err != nil {
-			log.LogError(err, "error getting chainhead when exporting networkliveness", 0)
+			log.Error(err, "error getting chainhead when exporting networkliveness", 0)
 			time.Sleep(slotDuration)
 			continue
 		}
@@ -44,20 +44,20 @@ func networkLivenessUpdater(client rpc.Client) {
 			VALUES (NOW(), $1, $2, $3, $4)`,
 			head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
 		if err != nil {
-			log.LogError(err, "error saving networkliveness", 0)
+			log.Error(err, "error saving networkliveness", 0)
 		} else {
-			log.LogInfo("updated networkliveness for epoch %v", head.HeadEpoch)
+			log.Infof("updated networkliveness for epoch %v", head.HeadEpoch)
 			prevHeadEpoch = head.HeadEpoch
 		}
 
 		err = cache.LatestNodeEpoch.Set(head.HeadEpoch)
 		if err != nil {
-			log.LogError(err, "error setting latestNodeEpoch in cache", 0)
+			log.Error(err, "error setting latestNodeEpoch in cache", 0)
 		}
 
 		err = cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch)
 		if err != nil {
-			log.LogError(err, "error setting latestNodeFinalizedEpoch in cache", 0)
+			log.Error(err, "error setting latestNodeFinalizedEpoch in cache", 0)
 		}
 
 		time.Sleep(slotDuration)

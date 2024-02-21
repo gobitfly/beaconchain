@@ -45,7 +45,7 @@ type Setter interface {
 func ProcessSecrets(cfg interface{}) error {
 	infos, err := gatherInfo("", cfg)
 	if err != nil {
-		log.LogError(err, "error getting config infos", 0)
+		log.Error(err, "error getting config infos", 0)
 	}
 
 	for _, info := range infos {
@@ -55,7 +55,7 @@ func ProcessSecrets(cfg interface{}) error {
 		}
 		x, err := AccessSecretVersion(info.Field.String())
 		if err != nil {
-			log.LogError(err, "error getting secret", 0)
+			log.Error(err, "error getting secret", 0)
 			continue
 		}
 		if x == nil {

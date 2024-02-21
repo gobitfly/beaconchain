@@ -39,7 +39,7 @@ type ErigonClient struct {
 var CurrentErigonClient *ErigonClient
 
 func NewErigonClient(endpoint string) (*ErigonClient, error) {
-	log.LogInfo("initializing erigon client at %v", endpoint)
+	log.Infof("initializing erigon client at %v", endpoint)
 	client := &ErigonClient{
 		endpoint: endpoint,
 	}
@@ -181,7 +181,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			log.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}
@@ -232,7 +232,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				if traceMode == "parity" {
 					return fmt.Errorf("error tracing block via parity style traces (%v), %v: %w", block.Number(), block.Hash(), err)
 				} else {
-					log.LogError(err, "error tracing block via parity style traces", 0, map[string]interface{}{"blockNumber": block.Number(), "blockHash": block.Hash()})
+					log.Error(err, "error tracing block via parity style traces", 0, map[string]interface{}{"blockNumber": block.Number(), "blockHash": block.Hash()})
 				}
 				traceError = err
 			} else {
@@ -279,7 +279,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 						tracePb.Value = common.FromHex(trace.Action.Value)
 					} else {
 						spew.Dump(trace)
-						log.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
+						log.Fatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
 					}
 
 					c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
@@ -321,12 +321,12 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				} else if trace.Type == "SUICIDE" {
 				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" {
 				} else if trace.Type == "" {
-					log.LogError(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
+					log.Error(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
 					spew.Dump(trace)
 					continue
 				} else {
 					spew.Dump(trace)
-					log.LogFatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
+					log.Fatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
 				}
 				c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
 			}
@@ -510,7 +510,7 @@ func (trace *ParityTraceResult) ConvertFields() ([]byte, []byte, []byte, string)
 		tx_type = trace.Action.CallType
 	default:
 		spew.Dump(trace)
-		log.LogFatal(nil, "unknown trace type", 0, map[string]interface{}{"trace type": trace.Type, "tx hash": trace.TransactionHash})
+		log.Fatal(nil, "unknown trace type", 0, map[string]interface{}{"trace type": trace.Type, "tx hash": trace.TransactionHash})
 	}
 	return from, to, value, tx_type
 }
@@ -581,7 +581,7 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 
 	for i, el := range batchElements {
 		if el.Error != nil {
-			log.LogWarn("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
+			log.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
 		}
 
 		res := strings.TrimPrefix(*el.Result.(*string), "0x")
@@ -650,7 +650,7 @@ func (client *ErigonClient) GetERC20TokenBalance(address string, token string) (
 }
 
 func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
-	log.LogInfo("retrieving metadata for token %x", token)
+	log.Infof("retrieving metadata for token %x", token)
 
 	oracle, err := oneinchoracle.NewOneInchOracleByChainID(client.GetChainID(), client.ethClient)
 	if err != nil {

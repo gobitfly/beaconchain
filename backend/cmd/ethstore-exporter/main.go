@@ -29,19 +29,19 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.LogInfo(version.Version)
-		log.LogInfo(version.GoVersion)
+		log.Infof(version.Version)
+		log.Infof(version.GoVersion)
 		return
 	}
 
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		log.LogFatal(err, "error reading config file", 0)
+		log.Fatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
-	log.LogInfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
@@ -69,15 +69,15 @@ func main() {
 	if *daysToReexport != "" {
 		s := strings.Split(*daysToReexport, "-")
 		if len(s) < 2 {
-			log.LogFatal(nil, fmt.Sprintf("invalid 'days' flag: %s, expected something of the form 'startDay-endDay'", *daysToReexport), 0)
+			log.Fatal(nil, fmt.Sprintf("invalid 'days' flag: %s, expected something of the form 'startDay-endDay'", *daysToReexport), 0)
 		}
 		startDayReexport, err = strconv.ParseInt(s[0], 10, 64)
 		if err != nil {
-			log.LogFatal(err, "error parsing first day of daysToExport flag to int", 0)
+			log.Fatal(err, "error parsing first day of daysToExport flag to int", 0)
 		}
 		endDayReexport, err = strconv.ParseInt(s[1], 10, 64)
 		if err != nil {
-			log.LogFatal(err, "error parsing last day of daysToExport flag to int", 0)
+			log.Fatal(err, "error parsing last day of daysToExport flag to int", 0)
 		}
 	} else if *dayToReexport >= 0 {
 		startDayReexport = *dayToReexport
@@ -85,5 +85,5 @@ func main() {
 	}
 
 	modules.StartEthStoreExporter(*bnAddress, *enAddress, *updateInterval, *errorInterval, *sleepInterval, startDayReexport, endDayReexport)
-	log.LogInfo("exiting...")
+	log.Infof("exiting...")
 }

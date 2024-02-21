@@ -16,17 +16,17 @@ func main() {
 	versionFlag := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 	if *versionFlag {
-		log.LogInfo(version.Version)
+		log.Infof(version.Version)
 		return
 	}
 	utils.Config = &types.Config{}
 	err := utils.ReadConfig(utils.Config, *configFlag)
 	if err != nil {
-		log.LogFatal(err, "error reading config file", 0)
+		log.Fatal(err, "error reading config file", 0)
 	}
 	blobIndexer, err := blobindexer.NewBlobIndexer()
 	if err != nil {
-		log.LogFatal(err, "error initializing blob indexer", 0)
+		log.Fatal(err, "error initializing blob indexer", 0)
 	}
 	go blobIndexer.Start()
 	utils.WaitForCtrlC()

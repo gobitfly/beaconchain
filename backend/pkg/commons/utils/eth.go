@@ -17,7 +17,7 @@ import (
 func init() {
 	err := e2types.InitBLS()
 	if err != nil {
-		log.LogFatal(err, "error in e2types.InitBLS()", 0)
+		log.Fatal(err, "error in e2types.InitBLS()", 0)
 	}
 }
 

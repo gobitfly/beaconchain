@@ -22,13 +22,13 @@ var tokenMap = make(map[string]*ERC20TokenDetail)
 func InitTokenList(path string) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		log.LogFatal(err, "unable to retrieve erc20 token list", 0)
+		log.Fatal(err, "unable to retrieve erc20 token list", 0)
 	}
 	TokenList := &ERC20TokenList{}
 
 	err = json.Unmarshal(body, TokenList)
 	if err != nil {
-		log.LogFatal(err, "unable to parse erc20 token list", 0)
+		log.Fatal(err, "unable to parse erc20 token list", 0)
 	}
 
 	for _, token := range TokenList.Tokens {

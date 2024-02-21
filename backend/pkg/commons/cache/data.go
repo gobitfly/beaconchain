@@ -61,7 +61,7 @@ func (cfg UInt64Cached) Get() uint64 {
 	if wanted, err := TieredCache.GetUint64WithLocalTimeout(cfg.cacheKey(), time.Second*5); err == nil {
 		return wanted
 	} else {
-		log.LogError(err, "error retrieving uint64 for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
+		log.Error(err, "error retrieving uint64 for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
 	}
 	return 0
 }

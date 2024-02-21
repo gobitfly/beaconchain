@@ -9,13 +9,13 @@ import (
 )
 
 func UpdatePubkeyTag() {
-	log.LogInfo("Started Pubkey Tags Updater")
+	log.Infof("Started Pubkey Tags Updater")
 	for {
 		start := time.Now()
 
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
-			log.LogError(err, "Error connecting to DB", 0)
+			log.Error(err, "Error connecting to DB", 0)
 			// return err
 		}
 		_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
@@ -25,17 +25,17 @@ func UpdatePubkeyTag() {
 		WHERE sps.name NOT LIKE '%Rocketpool -%'
 		ON CONFLICT (publickey, tag) DO NOTHING;`)
 		if err != nil {
-			log.LogError(err, "error updating validator_tags", 0)
+			log.Error(err, "error updating validator_tags", 0)
 			// return err
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			log.LogError(err, "error committing transaction", 0)
+			log.Error(err, "error committing transaction", 0)
 		}
 		_ = tx.Rollback()
 
-		log.LogInfo("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
+		log.Infof("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
 		metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(start).Seconds())
 
 		time.Sleep(time.Minute * 10)
