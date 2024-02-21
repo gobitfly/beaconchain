@@ -387,27 +387,28 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dashboardId := vars["dashboard_id"]
-	paging, paging_error := CheckAndGetPaging(r)
+	pagingParams, pagingErr := CheckAndGetPaging(r)
 	if err := errors.Join(
 		CheckId(dashboardId),
-		paging_error,
+		pagingErr,
 	); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
 	//TODO remove line
-	fmt.Println(paging)
+	fmt.Println(pagingParams)
 
 	var limit uint64
 	var cursor, search string
 	var sort []apitypes.Sort[apitypes.VDBSummaryTableColumn]
-	data, err := h.dai.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
+	data, paging, err := h.dai.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
 	if err != nil {
 		ReturnInternalServerError(w, err)
 		return
 	}
 	response := apitypes.ApiResponse{
-		Data: data,
+		Data:   data,
+		Paging: &paging,
 	}
 	ReturnOk(w, response)
 }
@@ -499,13 +500,14 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	var limit uint64
 	var dashboardId, cursor, search string
 	var sort []apitypes.Sort[apitypes.VDBBlocksTableColumn]
-	data, err := h.dai.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+	data, paging, err := h.dai.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 	if err != nil {
 		ReturnInternalServerError(w, err)
 		return
 	}
 	response := apitypes.ApiResponse{
-		Data: data,
+		Data:   data,
+		Paging: &paging,
 	}
 	ReturnOk(w, response)
 }
