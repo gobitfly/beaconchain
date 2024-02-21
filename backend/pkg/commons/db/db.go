@@ -6,24 +6,24 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 	"github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,6 +35,8 @@ var DBPGX *pgxpool.Conn
 // DB is a pointer to the explorer-database
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
+
+var PersistentRedisDbClient *redis.Client
 
 var logger = logrus.StandardLogger().WithField("module", "db")
 
@@ -56,12 +58,12 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 
 	go func() {
 		<-dbConnectionTimeout.C
-		logger.Fatalf("timeout while connecting to %s", dataBaseName)
+		utils.LogFatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		logger.Fatalf("unable to Ping %s: %s", dataBaseName, err)
+		utils.LogFatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
 	}
 
 	dbConnectionTimeout.Stop()
@@ -553,7 +555,12 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	lastSlotNumber := uint64(0)
 	for _, block := range blocks {
@@ -588,7 +595,12 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	canonBlocks := make(pq.ByteaArray, 0)
 	orphanedBlocks := make(pq.ByteaArray, 0)
@@ -627,145 +639,6 @@ func SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
 	return err
 }
 
-// SaveEpoch will save the epoch data into the database
-func SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
-		logger.WithFields(logrus.Fields{"epoch": epoch, "duration": time.Since(start)}).Info("completed saving epoch")
-	}()
-
-	logger.WithFields(logrus.Fields{"chainEpoch": utils.TimeToEpoch(time.Now()), "exportEpoch": epoch}).Infof("starting export of epoch %v", epoch)
-
-	logger.Infof("exporting epoch statistics data")
-	proposerSlashingsCount := 0
-	attesterSlashingsCount := 0
-	attestationsCount := 0
-	depositCount := 0
-	voluntaryExitCount := 0
-	withdrawalCount := 0
-
-	// for _, slot := range data.Blocks {
-	// 	for _, b := range slot {
-	// 		proposerSlashingsCount += len(b.ProposerSlashings)
-	// 		attesterSlashingsCount += len(b.AttesterSlashings)
-	// 		attestationsCount += len(b.Attestations)
-	// 		depositCount += len(b.Deposits)
-	// 		voluntaryExitCount += len(b.VoluntaryExits)
-	// 		if b.ExecutionPayload != nil {
-	// 			withdrawalCount += len(b.ExecutionPayload.Withdrawals)
-	// 		}
-	// 	}
-	// }
-
-	validatorBalanceSum := new(big.Int)
-	validatorEffectiveBalanceSum := new(big.Int)
-	validatorsCount := 0
-	for _, v := range validators {
-		if v.ExitEpoch > epoch && v.ActivationEpoch <= epoch {
-			validatorsCount++
-			validatorBalanceSum = new(big.Int).Add(validatorBalanceSum, new(big.Int).SetUint64(v.Balance))
-			validatorEffectiveBalanceSum = new(big.Int).Add(validatorEffectiveBalanceSum, new(big.Int).SetUint64(v.EffectiveBalance))
-		}
-	}
-
-	validatorBalanceAverage := new(big.Int).Div(validatorBalanceSum, new(big.Int).SetInt64(int64(validatorsCount)))
-
-	_, err := tx.Exec(`
-		INSERT INTO epochs (
-			epoch, 
-			blockscount, 
-			proposerslashingscount, 
-			attesterslashingscount, 
-			attestationscount, 
-			depositscount,
-			withdrawalcount,
-			voluntaryexitscount, 
-			validatorscount, 
-			averagevalidatorbalance, 
-			totalvalidatorbalance,
-			eligibleether, 
-			globalparticipationrate, 
-			votedether,
-			finalized
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
-		ON CONFLICT (epoch) DO UPDATE SET 
-			blockscount             = excluded.blockscount, 
-			proposerslashingscount  = excluded.proposerslashingscount,
-			attesterslashingscount  = excluded.attesterslashingscount,
-			attestationscount       = excluded.attestationscount,
-			depositscount           = excluded.depositscount,
-			withdrawalcount         = excluded.withdrawalcount,
-			voluntaryexitscount     = excluded.voluntaryexitscount,
-			validatorscount         = excluded.validatorscount,
-			averagevalidatorbalance = excluded.averagevalidatorbalance,
-			totalvalidatorbalance   = excluded.totalvalidatorbalance,
-			eligibleether           = excluded.eligibleether,
-			globalparticipationrate = excluded.globalparticipationrate,
-			votedether              = excluded.votedether,
-			finalized               = excluded.finalized`,
-		epoch,
-		0,
-		proposerSlashingsCount,
-		attesterSlashingsCount,
-		attestationsCount,
-		depositCount,
-		withdrawalCount,
-		voluntaryExitCount,
-		validatorsCount,
-		validatorBalanceAverage.Uint64(),
-		validatorBalanceSum.Uint64(),
-		validatorEffectiveBalanceSum.Uint64(),
-		0,
-		0,
-		false)
-
-	if err != nil {
-		return fmt.Errorf("error executing save epoch statement: %w", err)
-	}
-
-	lookback := uint64(0)
-	if epoch > 3 {
-		lookback = epoch - 3
-	}
-	// delete duplicate scheduled slots
-	_, err = tx.Exec("delete from blocks where slot in (select slot from blocks where epoch >= $1 group by slot having count(*) > 1) and blockroot = $2;", lookback, []byte{0x0})
-	if err != nil {
-		return fmt.Errorf("error cleaning up blocks table: %w", err)
-	}
-
-	// delete duplicate missed blocks
-	_, err = tx.Exec("delete from blocks where slot in (select slot from blocks where epoch >= $1 group by slot having count(*) > 1) and blockroot = $2;", lookback, []byte{0x1})
-	if err != nil {
-		return fmt.Errorf("error cleaning up blocks table: %w", err)
-	}
-	return nil
-}
-
-func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.Hash]types.RelaysData, error) {
-	var execBlockHashes [][]byte
-	var relaysData []types.RelaysData
-
-	for _, block := range blocks {
-		execBlockHashes = append(execBlockHashes, block.Hash)
-	}
-	// try to get mev rewards from relys_blocks table
-	err := ReaderDb.Select(&relaysData,
-		`SELECT proposer_fee_recipient, value, exec_block_hash, tag_id, builder_pubkey FROM relays_blocks WHERE relays_blocks.exec_block_hash = ANY($1)`,
-		pq.ByteaArray(execBlockHashes),
-	)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	var relaysDataMap = make(map[common.Hash]types.RelaysData)
-	for _, relayData := range relaysData {
-		relaysDataMap[common.BytesToHash(relayData.ExecBlockHash)] = relayData
-	}
-
-	return relaysDataMap, nil
-}
-
 // UpdateEpochStatus will update the epoch status in the database
 func UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 	start := time.Now()
@@ -790,6 +663,29 @@ func UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 		stats.EligibleEther, stats.GlobalParticipationRate, stats.VotedEther, stats.Finalized, stats.Epoch)
 
 	return err
+}
+
+func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.Hash]types.RelaysData, error) {
+	var execBlockHashes [][]byte
+	var relaysData []types.RelaysData
+
+	for _, block := range blocks {
+		execBlockHashes = append(execBlockHashes, block.Hash)
+	}
+	// try to get mev rewards from relys_blocks table
+	err := ReaderDb.Select(&relaysData,
+		`SELECT proposer_fee_recipient, value, exec_block_hash, tag_id, builder_pubkey FROM relays_blocks WHERE relays_blocks.exec_block_hash = ANY($1)`,
+		pq.ByteaArray(execBlockHashes),
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	var relaysDataMap = make(map[common.Hash]types.RelaysData)
+	for _, relayData := range relaysData {
+		relaysDataMap[common.BytesToHash(relayData.ExecBlockHash)] = relayData
+	}
+
+	return relaysDataMap, nil
 }
 
 // GetValidatorIndices will return the total-validator-indices
@@ -828,7 +724,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			FROM validators 
 			WHERE activationepoch=9223372036854775807 and status='pending')`)
 	if err != nil {
-		logger.Errorf("error removing queued publickeys from validator_queue_deposits: %v", err)
+		utils.LogError(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
 	}
 
@@ -838,7 +734,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
-		logger.Errorf("error adding queued publickeys to validator_queue_deposits: %v", err)
+		utils.LogError(err, "error adding queued publickeys to validator_queue_deposits", 0)
 		return err
 	}
 
@@ -853,7 +749,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			validator_queue_deposits.validatorindex = validators.validatorindex
 	`)
 	if err != nil {
-		logger.Errorf("error updating activationeligibilityepoch on validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
 		return err
 	}
 
@@ -890,7 +786,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
-		logger.Errorf("error updating validator_queue_deposits: %v", err)
+		utils.LogError(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
 	return nil
@@ -1766,7 +1662,12 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 	_, err = tx.Exec(`
 		UPDATE ad_configurations SET 
 			template_id = $2,
@@ -1799,7 +1700,12 @@ func DeleteAdConfiguration(id string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err := tx.Rollback()
+		if err != nil {
+			utils.LogError(err, "error rolling back transaction", 0)
+		}
+	}()
 
 	// delete ad configuration
 	_, err = WriterDb.Exec(`

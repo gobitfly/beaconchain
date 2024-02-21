@@ -3,6 +3,7 @@ package modules
 import (
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -21,7 +22,7 @@ func networkLivenessUpdater(client rpc.Client) {
 	for {
 		head, err := client.GetChainHead()
 		if err != nil {
-			logger.Errorf("error getting chainhead when exporting networkliveness: %v", err)
+			utils.LogError(err, "error getting chainhead when exporting networkliveness", 0)
 			time.Sleep(slotDuration)
 			continue
 		}
@@ -42,10 +43,20 @@ func networkLivenessUpdater(client rpc.Client) {
 			VALUES (NOW(), $1, $2, $3, $4)`,
 			head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
 		if err != nil {
-			logger.Errorf("error saving networkliveness: %v", err)
+			utils.LogError(err, "error saving networkliveness", 0)
 		} else {
 			logger.Printf("updated networkliveness for epoch %v", head.HeadEpoch)
 			prevHeadEpoch = head.HeadEpoch
+		}
+
+		err = cache.LatestNodeEpoch.Set(head.HeadEpoch)
+		if err != nil {
+			utils.LogError(err, "error setting latestNodeEpoch in cache", 0)
+		}
+
+		err = cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch)
+		if err != nil {
+			utils.LogError(err, "error setting latestNodeFinalizedEpoch in cache", 0)
 		}
 
 		time.Sleep(slotDuration)
