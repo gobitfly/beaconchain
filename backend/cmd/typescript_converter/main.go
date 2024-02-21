@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gzuidhof/tygo/tygo"
 	"golang.org/x/tools/go/packages"
 )
@@ -34,7 +34,7 @@ func main() {
 	flag.Parse()
 
 	if out == "" {
-		utils.LogFatal(nil, "Output folder not provided", 0)
+		log.Fatal(nil, "Output folder not provided", 0)
 	}
 
 	if !strings.HasSuffix(out, "/") {
@@ -47,10 +47,10 @@ func main() {
 	}, packagePath)
 
 	if err != nil {
-		utils.LogFatal(err, "Failed to load package", 0)
+		log.Fatal(err, "Failed to load package", 0)
 	}
 	if packages.PrintErrors(pkgs) > 0 {
-		utils.LogFatal(nil, "Failed to load package", 0)
+		log.Fatal(nil, "Failed to load package", 0)
 	}
 
 	// Find all common types and their usages
@@ -71,9 +71,11 @@ func main() {
 	for _, tygo := range tygos {
 		err := tygo.Generate()
 		if err != nil {
-			utils.LogFatal(err, "Failed to generate TypeScript", 0)
+			log.Fatal(err, "Failed to generate TypeScript", 0)
 		}
 	}
+
+	log.Infof("Juhu!")
 }
 
 func getTygoConfig(out, file, frontmatter string) *tygo.Config {

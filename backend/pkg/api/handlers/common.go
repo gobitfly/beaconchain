@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -119,19 +119,19 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 	}
 	b, err := json.Marshal(sc)
 	if err != nil {
-		utils.LogError(err, "error validating json", 0, nil)
+		log.Error(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("can't validate expected format")}
 	}
 	loader := gojsonschema.NewBytesLoader(b)
 	documentLoader, _ := gojsonschema.NewReaderLoader(r)
 	schema, err := gojsonschema.NewSchema(loader)
 	if err != nil {
-		utils.LogError(err, "error validating json", 0, nil)
+		log.Error(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("can't create expected format")}
 	}
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
-		utils.LogError(err, "error validating json", 0, nil)
+		log.Error(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("couldn't validate JSON request")}
 	}
 	if !result.Valid() {
@@ -139,7 +139,7 @@ func CheckAndGetJson(r io.Reader, data interface{}) error {
 	}
 	if err = json.NewDecoder(r).Decode(data); err != nil {
 		// error parsing json; shouldn't happen since we verified it's json in the correct format already
-		utils.LogError(err, "error validating json", 0, nil)
+		log.Error(err, "error validating json", 0, nil)
 		return RequestError{http.StatusInternalServerError, errors.New("couldn't decode JSON request")}
 	}
 	// could perform data validation checks based on tags here, but might need validation lib for that
