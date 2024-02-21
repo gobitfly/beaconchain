@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -34,19 +35,19 @@ func checkSubscriptions() {
 		receipts, err := db.GetAllAppSubscriptions()
 
 		if err != nil {
-			utils.LogError(err, "error retrieving subscription data from db: %v", 0, nil)
+			log.Error(err, "error retrieving subscription data from db: %v", 0, nil)
 			return
 		}
 
 		googleClient, err := initGoogle()
 		if googleClient == nil {
-			utils.LogError(err, "error initializing google client: %v", 0, nil)
+			log.Error(err, "error initializing google client: %v", 0, nil)
 			return
 		}
 
 		appleClient, err := initApple()
 		if err != nil {
-			utils.LogError(err, "error initializing apple client: %v", 0, nil)
+			log.Error(err, "error initializing apple client: %v", 0, nil)
 			return
 		}
 
@@ -68,11 +69,11 @@ func checkSubscriptions() {
 				if strings.Contains(err.Error(), "expired") {
 					err = db.SetSubscriptionToExpired(nil, receipt.ID)
 					if err != nil {
-						utils.LogError(err, "subscription set expired failed", 0, map[string]interface{}{"receiptID": receipt.ID})
+						log.Error(err, "subscription set expired failed", 0, map[string]interface{}{"receiptID": receipt.ID})
 					}
 					continue
 				}
-				logger.Warnf("subscription verification failed in service for [%v]: %v", receipt.ID, err)
+				log.Warnf("subscription verification failed in service for [%v]: %v", receipt.ID, err)
 				continue
 			}
 
@@ -83,7 +84,7 @@ func checkSubscriptions() {
 			updateValidationState(receipt, valid)
 		}
 
-		logger.WithField("subscriptions", len(receipts)).WithField("duration", time.Since(start)).Info("subscription update completed")
+		log.InfoWithFields(log.Fields{"subscriptions": len(receipts), "duration": time.Since(start)}, "subscription update completed")
 		time.Sleep(time.Hour * 4)
 	}
 }
@@ -243,7 +244,7 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 	if len(receipt.Receipt) > 100 {
 		transactionID, err := getLegacyAppstoreTransactionIDByReceipt(receipt.Receipt, receipt.ProductID)
 		if err != nil {
-			utils.LogError(err, "error resolving legacy appstore receipt", 0, nil)
+			log.Error(err, "error resolving legacy appstore receipt", 0, nil)
 			response.RejectReason = "exception_legresolve"
 			return response, err
 		}
@@ -358,7 +359,7 @@ func updateValidationState(receipt *types.PremiumData, validation *VerifyRespons
 		validation.RejectReason,
 	)
 	if err != nil {
-		fmt.Printf("error updating subscription state %v", err)
+		log.Error(err, "error updating subscription state", 0)
 	}
 
 	// in case user upgrades downgrades package (fe on iOS) we can automatically update the product here too
@@ -368,7 +369,7 @@ func updateValidationState(receipt *types.PremiumData, validation *VerifyRespons
 		receipt.ProductID,
 	)
 	if err != nil {
-		fmt.Printf("error updating subscription product id %v", err)
+		log.Error(err, "error updating subscription product id", 0)
 	}
 }
 

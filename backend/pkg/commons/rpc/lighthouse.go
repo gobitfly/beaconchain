@@ -14,6 +14,7 @@ import (
 	"time"
 
 	gtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
@@ -62,7 +63,7 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 
 		for event := range res {
 			if event.Error != nil {
-				utils.LogError(event.Error, "Lighthouse connection error (will automatically retry to connect)", 0)
+				log.Fatal(event.Error, "Lighthouse connection error (will automatically retry to connect)", 0)
 			}
 
 			if event.Event != constypes.EventHead {
@@ -71,16 +72,16 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 
 			head, err := event.Head()
 			if err != nil {
-				utils.LogError(err, "error parsing head event", 0)
+				log.Error(err, "error parsing head event", 0)
 				continue
 			}
 
 			block, err := lc.GetBlockBySlot(uint64(head.Slot))
 			if err != nil {
-				logger.Warnf("failed to fetch block for slot %d: %v", uint64(head.Slot), err)
+				log.Warnf("failed to fetch block for slot %d: %v", uint64(head.Slot), err)
 				continue
 			}
-			logger.Infof("retrieved block for slot %v", head.Slot)
+			log.Infof("retrieved block for slot %v", head.Slot)
 			// logger.Infof("pushing block %v", blk.Slot)
 			blkCh <- block
 		}
@@ -295,7 +296,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 		})
 	}
 
-	logger.Printf("retrieved data for %v validators for epoch %v", len(data.Validators), epoch)
+	log.Infof("retrieved data for %v validators for epoch %v", len(data.Validators), epoch)
 
 	wg.Go(func() error {
 		var err error
@@ -327,7 +328,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 			data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
 		}
-		logger.Printf("retrieved validator assignment data for epoch %v", epoch)
+		log.Infof("retrieved validator assignment data for epoch %v", epoch)
 		return nil
 	})
 
@@ -337,7 +338,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			data.EpochParticipationStats, err = lc.GetValidatorParticipation(epoch)
 			if err != nil {
 				if strings.HasSuffix(err.Error(), "can't be retrieved as it hasn't finished yet") { // should no longer happen
-					logger.Warnf("error retrieving epoch participation statistics for epoch %v: %v", epoch, err)
+					log.Warnf("error retrieving epoch participation statistics for epoch %v: %v", epoch, err)
 				} else {
 					return fmt.Errorf("error retrieving epoch participation statistics for epoch %v: %w", epoch, err)
 				}
@@ -400,7 +401,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 				}
 			}
 			mux.Unlock()
-			logger.Infof("processed data for current epoch slot %v in %v", slot, time.Since(start))
+			log.Infof("processed data for current epoch slot %v in %v", slot, time.Since(start))
 		}
 		return nil
 	})
@@ -434,7 +435,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 				}
 			}
 			mux.Unlock()
-			logger.Infof("processed data for next epoch slot %v in %v", slot, time.Since(start))
+			log.Infof("processed data for next epoch slot %v in %v", slot, time.Since(start))
 		}
 		return nil
 	})
@@ -444,7 +445,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 		return nil, err
 	}
 
-	logger.Printf("retrieved %v blocks for epoch %v", len(data.Blocks), epoch)
+	log.Infof("retrieved %v blocks for epoch %v", len(data.Blocks), epoch)
 
 	if data.ValidatorAssignmentes == nil {
 		return data, fmt.Errorf("no assignments for epoch %v", epoch)
@@ -490,7 +491,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 	// for validator, duty := range data.AttestationDuties {
 	// 	for slot, inclusions := range duty {
-	// 		logger.Infof("validator %v has attested for slot %v in slots %v", validator, slot, inclusions)
+	// 		log.LogInfo("validator %v has attested for slot %v in slots %v", validator, slot, inclusions)
 	// 	}
 	// }
 
@@ -546,7 +547,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 
 	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root)
 	if err != nil {
-		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
+		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error retrieving block data at slot %v: %w", slot, err)
 	}
 
@@ -671,17 +672,17 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 		block, ok := cachedBlock.(*types.Block)
 
 		if ok {
-			logger.Infof("retrieved slot %v (0x%x) from in memory cache", block.Slot, block.BlockRoot)
+			log.Infof("retrieved slot %v (0x%x) from in memory cache", block.Slot, block.BlockRoot)
 			return block, nil
 		} else {
-			utils.LogError(fmt.Errorf("unable to convert cached block to block type"), "", 0)
+			log.Error(fmt.Errorf("unable to convert cached block to block type"), "", 0)
 		}
 	}
 	lc.slotsCacheMux.Unlock()
 
 	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root)
 	if err != nil && slot == 0 {
-		utils.LogError(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
+		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 
 		return nil, fmt.Errorf("error retrieving block data at slot %v: %w", slot, err)
 	}
@@ -979,7 +980,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, a.Data.CommitteeIndex, i)]
 				if !found { // This should never happen!
 					validator = 0
-					utils.LogFatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
+					log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
 				}
 				a.Attesters = append(a.Attesters, validator)
 
@@ -1060,7 +1061,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 		request_epoch += 1
 	}
 
-	logger.Infof("requesting validator inclusion data for epoch %v", request_epoch)
+	log.Infof("requesting validator inclusion data for epoch %v", request_epoch)
 
 	parsedResponse, err := network.Get[LighthouseValidatorParticipationResponse](nil, fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.Endpoint, request_epoch))
 	if err != nil {
