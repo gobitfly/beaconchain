@@ -7,6 +7,7 @@ type DataAccessInterface interface {
 
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostData, error)
 	GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error)
+	GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error)
 
 	GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummary, error)
@@ -38,6 +39,11 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 func (d DataAccessService) GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardOverview(userId, dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardSlotViz(dashboardId)
 }
 
 func (d DataAccessService) GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {

@@ -383,9 +383,15 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 	// TODO remove, variables are not yet used
 	fmt.Println(dashboardId)
 
-	response := apitypes.ApiResponse{
-		Data: apitypes.VDBSlotVizResponse{},
+	data, err := h.dai.GetValidatorDashboardSlotViz(dashboardId)
+	if err != nil {
+		returnInternalServerError(w, err)
+		return
 	}
+	response := apitypes.ApiResponse{
+		Data: data,
+	}
+
 	returnOk(w, response)
 }
 
