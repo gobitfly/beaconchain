@@ -24,7 +24,7 @@ func mustParseUint(str string) uint64 {
 
 	nbr, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		log.LogFatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
+		log.Fatal(err, "fatal error parsing uint", 0, map[string]interface{}{"str": str})
 	}
 
 	return nbr
@@ -33,7 +33,7 @@ func mustParseUint(str string) uint64 {
 func MustParseHex(hexString string) []byte {
 	data, err := hex.DecodeString(strings.Replace(hexString, "0x", "", -1))
 	if err != nil {
-		log.LogFatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
+		log.Fatal(err, "error parsing hex string", 0, map[string]interface{}{"str": hexString})
 	}
 	return data
 }

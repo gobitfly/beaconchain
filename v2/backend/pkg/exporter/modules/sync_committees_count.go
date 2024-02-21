@@ -13,7 +13,7 @@ func syncCommitteesCountExporter() {
 	for {
 		err := exportSyncCommitteesCount()
 		if err != nil {
-			log.LogError(err, "error exporting sync_committees_count_per_validator", 0)
+			log.Error(err, "error exporting sync_committees_count_per_validator", 0)
 		}
 		time.Sleep(time.Second * 12)
 	}
@@ -28,7 +28,7 @@ func exportSyncCommitteesCount() error {
 
 	latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
 	if err != nil {
-		log.LogError(err, "error retrieving latest exported finalized epoch from the database", 0)
+		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
 	}
 
 	currentPeriod := utils.SyncPeriodOfEpoch(latestFinalizedEpoch)
@@ -59,7 +59,7 @@ func exportSyncCommitteesCount() error {
 		if err != nil {
 			return fmt.Errorf("error exporting sync-committee count at period %v: %w", period, err)
 		}
-		log.LogInfoWithFields(log.Fields{
+		log.InfoWithFields(log.Fields{
 			"period":   period,
 			"duration": time.Since(t),
 		}, "exported sync_committees_count_per_validator")
@@ -69,7 +69,7 @@ func exportSyncCommitteesCount() error {
 }
 
 func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float64, error) {
-	log.LogInfo("exporting sync committee count for period %v", period)
+	log.Infof("exporting sync committee count for period %v", period)
 
 	count := 0.0
 	if period > 0 {
@@ -89,7 +89,7 @@ func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			log.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 

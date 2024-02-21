@@ -37,19 +37,19 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.LogInfo(version.Version)
-		log.LogInfo(version.GoVersion)
+		log.Infof(version.Version)
+		log.Infof(version.GoVersion)
 		return
 	}
 
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		log.LogFatal(err, "error reading config file", 0)
+		log.Fatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
-	log.LogInfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
@@ -73,18 +73,18 @@ func main() {
 
 	if bnAddress == nil || *bnAddress == "" {
 		if utils.Config.Indexer.Node.Host == "" {
-			log.LogFatal(nil, "no beacon node url provided", 0)
+			log.Fatal(nil, "no beacon node url provided", 0)
 		} else {
-			log.LogInfo("applying becon node endpoint from config")
+			log.Infof("applying becon node endpoint from config")
 			*bnAddress = fmt.Sprintf("http://%s:%s", utils.Config.Indexer.Node.Host, utils.Config.Indexer.Node.Port)
 		}
 	}
 
 	if enAddress == nil || *enAddress == "" {
 		if utils.Config.Eth1ErigonEndpoint == "" {
-			log.LogFatal(nil, "no execution node url provided", 0)
+			log.Fatal(nil, "no execution node url provided", 0)
 		} else {
-			log.LogInfo("applying execution node endpoint from config")
+			log.Infof("applying execution node endpoint from config")
 			*enAddress = utils.Config.Eth1ErigonEndpoint
 		}
 	}
@@ -93,12 +93,12 @@ func main() {
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 	if err != nil {
-		log.LogFatal(err, "error connecting to bigtable", 0)
+		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 	defer bt.Close()
 
 	cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
-	log.LogInfo("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+	log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
 
 	// Initialize the persistent redis client
 	rdc := redis.NewClient(&redis.Options{
@@ -107,7 +107,7 @@ func main() {
 	})
 
 	if err := rdc.Ping(context.Background()).Err(); err != nil {
-		log.LogFatal(err, "error connecting to persistent redis store", 0)
+		log.Fatal(err, "error connecting to persistent redis store", 0)
 	}
 
 	db.PersistentRedisDbClient = rdc
@@ -115,7 +115,7 @@ func main() {
 	if *epochEnd != 0 {
 		latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
 		if *epochEnd > latestFinalizedEpoch {
-			log.LogError(fmt.Errorf("error epochEnd [%v] is greater then latestFinalizedEpoch [%v]", epochEnd, latestFinalizedEpoch), "", 0)
+			log.Error(fmt.Errorf("error epochEnd [%v] is greater then latestFinalizedEpoch [%v]", epochEnd, latestFinalizedEpoch), "", 0)
 			return
 		}
 		g := errgroup.Group{}
@@ -126,7 +126,7 @@ func main() {
 		notExportedEpochs := []uint64{}
 		err = db.WriterDb.Select(&notExportedEpochs, "SELECT epoch FROM epochs WHERE NOT rewards_exported AND epoch >= $1 AND epoch <= $2 ORDER BY epoch DESC", *epochStart, *epochEnd)
 		if err != nil {
-			log.LogFatal(err, "error retrieving not exported epochs from db", 0)
+			log.Fatal(err, "error retrieving not exported epochs from db", 0)
 		}
 		epochsToExport := int64(len(notExportedEpochs))
 
@@ -145,7 +145,7 @@ func main() {
 				remaining := time.Duration(epochsRemaining * int64(time.Since(start).Nanoseconds()) / c)
 				epochDuration := time.Duration(elapsed.Nanoseconds() / c)
 
-				log.LogInfo("exported %v of %v epochs in %v (%v/epoch), estimated time remaining: %vs", c, epochsToExport, elapsed, epochDuration, remaining)
+				log.Infof("exported %v of %v epochs in %v (%v/epoch), estimated time remaining: %vs", c, epochsToExport, elapsed, epochDuration, remaining)
 				time.Sleep(time.Second * 10)
 			}
 		}()
@@ -158,20 +158,20 @@ func main() {
 					err = export(e, bt, client, enAddress)
 
 					if err != nil {
-						log.LogError(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
+						log.Error(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
 					} else {
 						break
 					}
 				}
 				if err != nil {
-					log.LogError(err, "error exporting rewards for epoch", 0, map[string]interface{}{"epoch": e})
+					log.Error(err, "error exporting rewards for epoch", 0, map[string]interface{}{"epoch": e})
 					return nil
 				}
 
 				_, err = db.WriterDb.Exec("UPDATE epochs SET rewards_exported = true WHERE epoch = $1", e)
 
 				if err != nil {
-					log.LogError(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
+					log.Error(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
 				}
 
 				atomic.AddInt64(&epochsCompleted, 1)
@@ -180,7 +180,7 @@ func main() {
 		}
 		err = g.Wait()
 		if err != nil {
-			log.LogError(err, "error during epoch rewards export", 0)
+			log.Error(err, "error during epoch rewards export", 0)
 		}
 		return
 	}
@@ -192,20 +192,20 @@ func main() {
 			notExportedEpochs := []uint64{}
 			err = db.WriterDb.Select(&notExportedEpochs, "SELECT epoch FROM epochs WHERE NOT rewards_exported AND epoch > $1 AND epoch <= $2 ORDER BY epoch desc LIMIT 10", lastExportedEpoch, latestFinalizedEpoch)
 			if err != nil {
-				log.LogFatal(err, "getting chain head from lighthouse error", 0)
+				log.Fatal(err, "getting chain head from lighthouse error", 0)
 			}
 			for _, e := range notExportedEpochs {
 				err := export(e, bt, client, enAddress)
 
 				if err != nil {
-					log.LogError(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
+					log.Error(err, "error exporting rewards for epoch, retrying", 0, map[string]interface{}{"epoch": e})
 					continue
 				}
 
 				_, err = db.WriterDb.Exec("UPDATE epochs SET rewards_exported = true WHERE epoch = $1", e)
 
 				if err != nil {
-					log.LogError(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
+					log.Error(err, "error rewards_exported as true for epoch", 0, map[string]interface{}{"epoch": e})
 				}
 				services.ReportStatus("rewardsExporter", "Running", nil)
 
@@ -221,25 +221,25 @@ func main() {
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
 	if *epoch > int64(latestFinalizedEpoch) {
-		log.LogError(fmt.Errorf("error epoch [%v] is greater then latestFinalizedEpoch [%v]", epoch, latestFinalizedEpoch), "", 0)
+		log.Error(fmt.Errorf("error epoch [%v] is greater then latestFinalizedEpoch [%v]", epoch, latestFinalizedEpoch), "", 0)
 		return
 	}
 	err = export(uint64(*epoch), bt, client, enAddress)
 	if err != nil {
-		log.LogFatal(err, "error during epoch export", 0, map[string]interface{}{"epoch": *epoch})
+		log.Fatal(err, "error during epoch export", 0, map[string]interface{}{"epoch": *epoch})
 	}
 }
 
 func export(epoch uint64, bt *db.Bigtable, client *beacon.Client, elClient *string) error {
 	start := time.Now()
-	log.LogInfo("retrieving rewards details for epoch %v", epoch)
+	log.Infof("retrieving rewards details for epoch %v", epoch)
 
 	rewards, err := eth_rewards.GetRewardsForEpoch(epoch, client, *elClient)
 
 	if err != nil {
 		return fmt.Errorf("error retrieving reward details for epoch %v: %v", epoch, err)
 	} else {
-		log.LogInfo("retrieved %v reward details for epoch %v in %v", len(rewards), epoch, time.Since(start))
+		log.Infof("retrieved %v reward details for epoch %v in %v", len(rewards), epoch, time.Since(start))
 	}
 
 	redisCachedEpochRewards := &types.RedisCachedEpochRewards{
@@ -258,14 +258,14 @@ func export(epoch uint64, bt *db.Bigtable, client *beacon.Client, elClient *stri
 
 	expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
 	expirationDuration := time.Until(expirationTime)
-	log.LogInfo("writing rewards data to redis with a TTL of %v", expirationDuration)
+	log.Infof("writing rewards data to redis with a TTL of %v", expirationDuration)
 	err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedRewardsData.Bytes(), expirationDuration).Err()
 	if err != nil {
 		return fmt.Errorf("error writing rewards data to redis for epoch %v: %w", epoch, err)
 	}
-	log.LogInfo("writing epoch rewards to redis completed")
+	log.Infof("writing epoch rewards to redis completed")
 
-	log.LogInfo("exporting duties & balances for epoch %v", epoch)
+	log.Infof("exporting duties & balances for epoch %v", epoch)
 
 	err = bt.SaveValidatorIncomeDetails(uint64(epoch), rewards)
 	if err != nil {

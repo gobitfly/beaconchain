@@ -34,9 +34,9 @@ func ssvExporter() {
 	for {
 		err := exportSSV()
 		if err != nil {
-			log.LogError(err, "error exporting ssv validators", 0)
+			log.Error(err, "error exporting ssv validators", 0)
 		}
-		log.LogWarn("connection to ssv-exporter closed, reconnecting")
+		log.Warnf("connection to ssv-exporter closed, reconnecting")
 		time.Sleep(time.Second * 10)
 	}
 }
@@ -55,7 +55,7 @@ func exportSSV() error {
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				log.LogError(err, "error reading message from ssv-exporter", 0)
+				log.Error(err, "error reading message from ssv-exporter", 0)
 				return
 			}
 
@@ -63,16 +63,16 @@ func exportSSV() error {
 			res := SSVExporterResponse{}
 			err = json.Unmarshal(message, &res)
 			if err != nil {
-				log.LogError(err, "error unmarshaling json from ssv-exporter", 0)
+				log.Error(err, "error unmarshaling json from ssv-exporter", 0)
 				continue
 			}
-			log.LogInfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
+			log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
 			err = saveSSV(&res)
 			if err != nil {
-				log.LogError(err, "error tagging ssv validators", 0)
+				log.Error(err, "error tagging ssv validators", 0)
 				continue
 			}
-			log.LogInfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(t0)}, "tagged ssv validators")
+			log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(t0)}, "tagged ssv validators")
 		}
 	}()
 
@@ -101,7 +101,7 @@ func saveSSV(res *SSVExporterResponse) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			log.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 

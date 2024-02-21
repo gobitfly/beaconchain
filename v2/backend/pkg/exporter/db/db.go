@@ -33,7 +33,7 @@ func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 
 	err := saveBlocks(blocksMap, tx, forceSlotUpdate)
 	if err != nil {
-		log.LogFatal(err, "error saving blocks to db", 0)
+		log.Fatal(err, "error saving blocks to db", 0)
 		return fmt.Errorf("error saving blocks to db: %w", err)
 	}
 
@@ -155,7 +155,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				var dbBlockRootHash []byte
 				err := tx.Get(&dbBlockRootHash, "SELECT blockroot FROM blocks WHERE slot = $1 and blockroot = $2", b.Slot, b.BlockRoot)
 				if err == nil && bytes.Equal(dbBlockRootHash, b.BlockRoot) {
-					log.LogInfoWithFields(log.Fields{"slot": b.Slot, "blockRoot": fmt.Sprintf("%x", b.BlockRoot)}, "skipping export of block as it is already present in the db")
+					log.InfoWithFields(log.Fields{"slot": b.Slot, "blockRoot": fmt.Sprintf("%x", b.BlockRoot)}, "skipping export of block as it is already present in the db")
 					continue
 				} else if err != nil && err != sql.ErrNoRows {
 					return fmt.Errorf("error checking for block in db: %w", err)
@@ -168,7 +168,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			}
 			ra, err := res.RowsAffected()
 			if err != nil && ra > 0 {
-				log.LogInfoWithFields(log.Fields{"slot": b.Slot, "blockRoot": fmt.Sprintf("%x", b.BlockRoot)}, "deleted placeholder block")
+				log.InfoWithFields(log.Fields{"slot": b.Slot, "blockRoot": fmt.Sprintf("%x", b.BlockRoot)}, "deleted placeholder block")
 			}
 
 			// Set proposer to MAX_SQL_INTEGER if it is the genesis-block (since we are using integers for validator-indices right now)
@@ -398,7 +398,7 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 		}
 		color := matches[3]
 
-		log.LogInfo("set graffiti at %v - %v with color %v for slot %v by validator %v", x, y, color, block.Slot, block.Proposer)
+		log.Infof("set graffiti at %v - %v with color %v for slot %v by validator %v", x, y, color, block.Slot, block.Proposer)
 		_, err = stmtGraffitiwall.Exec(x, y, color, block.Slot, block.Proposer)
 
 		if err != nil {
@@ -453,7 +453,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			break
 		}
 		db.BigtableClient.LastAttestationCacheMux.Unlock()
-		log.LogInfo("waiting until LastAttestation in memory cache is available")
+		log.Infof("waiting until LastAttestation in memory cache is available")
 	}
 
 	currentStateMap := make(map[uint64]*types.Validator, len(currentState))
@@ -515,7 +515,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 
 		if c == nil {
 			if v.Index%1000 == 0 {
-				log.LogInfo("validator %v is new", v.Index)
+				log.Infof("validator %v is new", v.Index)
 			}
 
 			_, err = insertStmt.Exec(
@@ -534,7 +534,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			)
 
 			if err != nil {
-				log.LogError(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
+				log.Error(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
 			}
 		} else {
 			// status                     =
@@ -577,7 +577,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			}
 
 			if c.Status != v.Status {
-				log.LogTrace("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Tracef("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
 				// logger.Tracef("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v", v.ActivationEpoch, latestEpoch, lastAttestationSlots[v.Index], thresholdSlot)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
 				updates++
@@ -593,32 +593,32 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			// 	updates++
 			// }
 			if c.Slashed != v.Slashed {
-				log.LogInfo("Slashed changed for validator %v from %v to %v", v.Index, c.Slashed, v.Slashed)
+				log.Infof("Slashed changed for validator %v from %v to %v", v.Index, c.Slashed, v.Slashed)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET slashed = %v WHERE validatorindex = %d;\n", v.Slashed, c.Index))
 				updates++
 			}
 			if c.ActivationEligibilityEpoch != v.ActivationEligibilityEpoch {
-				log.LogInfo("ActivationEligibilityEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEligibilityEpoch, v.ActivationEligibilityEpoch)
+				log.Infof("ActivationEligibilityEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEligibilityEpoch, v.ActivationEligibilityEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET activationeligibilityepoch = %d WHERE validatorindex = %d;\n", v.ActivationEligibilityEpoch, c.Index))
 				updates++
 			}
 			if c.ActivationEpoch != v.ActivationEpoch {
-				log.LogInfo("ActivationEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEpoch, v.ActivationEpoch)
+				log.Infof("ActivationEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEpoch, v.ActivationEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET activationepoch = %d WHERE validatorindex = %d;\n", v.ActivationEpoch, c.Index))
 				updates++
 			}
 			if c.ExitEpoch != v.ExitEpoch {
-				log.LogInfo("ExitEpoch changed for validator %v from %v to %v", v.Index, c.ExitEpoch, v.ExitEpoch)
+				log.Infof("ExitEpoch changed for validator %v from %v to %v", v.Index, c.ExitEpoch, v.ExitEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET exitepoch = %d WHERE validatorindex = %d;\n", v.ExitEpoch, c.Index))
 				updates++
 			}
 			if c.WithdrawableEpoch != v.WithdrawableEpoch {
-				log.LogInfo("WithdrawableEpoch changed for validator %v from %v to %v", v.Index, c.WithdrawableEpoch, v.WithdrawableEpoch)
+				log.Infof("WithdrawableEpoch changed for validator %v from %v to %v", v.Index, c.WithdrawableEpoch, v.WithdrawableEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawableepoch = %d WHERE validatorindex = %d;\n", v.WithdrawableEpoch, c.Index))
 				updates++
 			}
 			if !bytes.Equal(c.WithdrawalCredentials, v.WithdrawalCredentials) {
-				log.LogInfo("WithdrawalCredentials changed for validator %v from %x to %x", v.Index, c.WithdrawalCredentials, v.WithdrawalCredentials)
+				log.Infof("WithdrawalCredentials changed for validator %v from %x to %x", v.Index, c.WithdrawalCredentials, v.WithdrawalCredentials)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawalcredentials = '\\x%x' WHERE validatorindex = %d;\n", v.WithdrawalCredentials, c.Index))
 				updates++
 			}
@@ -632,13 +632,13 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 
 	if updates > 0 {
 		updateStart := time.Now()
-		log.LogInfo("applying %v validator table update queries", updates)
+		log.Infof("applying %v validator table update queries", updates)
 		_, err = tx.Exec(queries.String())
 		if err != nil {
-			log.LogError(err, "error executing validator update query", 0)
+			log.Error(err, "error executing validator update query", 0)
 			return err
 		}
-		log.LogInfo("validator table update completed, took %v", time.Since(updateStart))
+		log.Infof("validator table update completed, took %v", time.Since(updateStart))
 	}
 
 	s := time.Now()
@@ -663,7 +663,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		}
 
 		if newValidator.ActivationEpoch != currentActivationEpoch {
-			log.LogInfo("removing epoch %v from the activation epoch balance cache", currentActivationEpoch)
+			log.Infof("removing epoch %v from the activation epoch balance cache", currentActivationEpoch)
 			delete(balanceCache, currentActivationEpoch) // remove old items from the map
 			currentActivationEpoch = newValidator.ActivationEpoch
 		}
@@ -680,7 +680,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 
 		foundBalance := uint64(0)
 		if balance[newValidator.Validatorindex] == nil || len(balance[newValidator.Validatorindex]) == 0 {
-			log.LogWarn("no activation epoch balance found for validator %v for epoch %v in bigtable, trying node", newValidator.Validatorindex, newValidator.ActivationEpoch)
+			log.Warnf("no activation epoch balance found for validator %v for epoch %v in bigtable, trying node", newValidator.Validatorindex, newValidator.ActivationEpoch)
 
 			if balanceCache[newValidator.ActivationEpoch] == nil {
 				balances, err := client.GetBalancesForEpoch(int64(newValidator.ActivationEpoch))
@@ -694,7 +694,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			foundBalance = balance[newValidator.Validatorindex][0].Balance
 		}
 
-		log.LogInfo("retrieved activation epoch balance of %v for validator %v", foundBalance, newValidator.Validatorindex)
+		log.Infof("retrieved activation epoch balance of %v for validator %v", foundBalance, newValidator.Validatorindex)
 
 		_, err = tx.Exec("update validators set balanceactivation = $1 WHERE validatorindex = $2 AND balanceactivation IS NULL;", foundBalance, newValidator.Validatorindex)
 		if err != nil {
@@ -702,14 +702,14 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		}
 	}
 
-	log.LogInfo("updating validator activation epoch balance completed, took %v", time.Since(s))
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(s))
 
 	s = time.Now()
 	_, err = tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
 	if err != nil {
 		return fmt.Errorf("analyzing validators table: %w", err)
 	}
-	log.LogInfo("analyze of validators table completed, took %v", time.Since(s))
+	log.Infof("analyze of validators table completed, took %v", time.Since(s))
 
 	return nil
 }
@@ -719,12 +719,12 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
-		log.LogInfoWithFields(log.Fields{"epoch": epoch, "duration": time.Since(start)}, "completed saving epoch")
+		log.InfoWithFields(log.Fields{"epoch": epoch, "duration": time.Since(start)}, "completed saving epoch")
 	}()
 
-	log.LogInfoWithFields(log.Fields{"chainEpoch": utils.TimeToEpoch(time.Now()), "exportEpoch": epoch}, "starting export of epoch")
+	log.InfoWithFields(log.Fields{"chainEpoch": utils.TimeToEpoch(time.Now()), "exportEpoch": epoch}, "starting export of epoch")
 
-	log.LogInfo("exporting epoch statistics data")
+	log.Infof("exporting epoch statistics data")
 	proposerSlashingsCount := 0
 	attesterSlashingsCount := 0
 	attestationsCount := 0

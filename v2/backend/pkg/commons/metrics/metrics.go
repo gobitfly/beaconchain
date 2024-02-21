@@ -84,7 +84,7 @@ func MonitorDB(db *sqlx.DB) {
 		}{}
 		err := db.Select(&longRunningQueries, `select datname, extract(epoch from clock_timestamp()) - extract(epoch from query_start) as duration, query from pg_stat_activity where query != '<IDLE>' and query not ilike '%pg_stat_activity%' and query_start is not null and state = 'active' and age(clock_timestamp(), query_start) >= interval '1 minutes'`)
 		if err != nil {
-			log.LogError(err, "error when monitoring db", 0)
+			log.Error(err, "error when monitoring db", 0)
 			continue
 		}
 		for _, q := range longRunningQueries {
@@ -152,12 +152,12 @@ func Serve(addr string) error {
 </html>`))
 
 		if err != nil {
-			log.LogError(err, "error writing to response buffer: %v", 0)
+			log.Error(err, "error writing to response buffer: %v", 0)
 		}
 	}))
 
 	if utils.Config.Metrics.Pprof {
-		log.LogInfoWithFields(log.Fields{"addr": addr}, "serving pprof")
+		log.InfoWithFields(log.Fields{"addr": addr}, "serving pprof")
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)

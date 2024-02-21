@@ -38,7 +38,7 @@ func MustInitTieredCache(redisAddress string) {
 
 	remoteCache, err := InitRedisCache(ctx, redisAddress)
 	if err != nil {
-		log.LogFatal(err, "error initializing remote redis cache", 0, map[string]interface{}{"address": redisAddress})
+		log.Fatal(err, "error initializing remote redis cache", 0, map[string]interface{}{"address": redisAddress})
 	}
 
 	TieredCache = &tieredCache{
@@ -178,7 +178,7 @@ func (cache *tieredCache) GetWithLocalTimeout(key string, localExpiration time.D
 	if err == nil {
 		err = json.Unmarshal([]byte(wanted), returnValue)
 		if err != nil {
-			log.LogError(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
+			log.Error(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
 			return nil, err
 		}
 		return returnValue, nil

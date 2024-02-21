@@ -71,11 +71,11 @@ func (bi *BlobIndexer) Start() {
 	bi.running = true
 	bi.runningMu.Unlock()
 
-	log.LogInfoWithFields(log.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint}, "starting blobindexer")
+	log.InfoWithFields(log.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint}, "starting blobindexer")
 	for {
 		err := bi.Index()
 		if err != nil {
-			log.LogError(err, "failed indexing blobs", 0)
+			log.Error(err, "failed indexing blobs", 0)
 		}
 		time.Sleep(time.Second * 10)
 	}
@@ -141,9 +141,9 @@ func (bi *BlobIndexer) Index() error {
 	}
 
 	start := time.Now()
-	log.LogInfoWithFields(log.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "headSlot": headHeader.Data.Header.Message.Slot}, "indexing blobs")
+	log.InfoWithFields(log.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "headSlot": headHeader.Data.Header.Message.Slot}, "indexing blobs")
 	defer func() {
-		log.LogInfoWithFields(log.Fields{
+		log.InfoWithFields(log.Fields{
 			"startSlot": startSlot,
 			"endSlot":   headHeader.Data.Header.Message.Slot,
 			"duration":  time.Since(start),
@@ -184,7 +184,7 @@ func (bi *BlobIndexer) Index() error {
 			if err != nil {
 				return fmt.Errorf("error updating indexer status at slot %v: %w", batchEnd, err)
 			}
-			log.LogInfoWithFields(log.Fields{"lastIndexedFinalizedSlot": batchEnd}, "updated indexer status")
+			log.InfoWithFields(log.Fields{"lastIndexedFinalizedSlot": batchEnd}, "updated indexer status")
 		}
 	}
 	return nil
