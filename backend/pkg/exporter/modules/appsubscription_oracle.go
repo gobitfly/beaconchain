@@ -358,7 +358,7 @@ func updateValidationState(receipt *types.PremiumData, validation *VerifyRespons
 		validation.RejectReason,
 	)
 	if err != nil {
-		fmt.Printf("error updating subscription state %v", err)
+		utils.LogError(err, "error updating subscription state", 0)
 	}
 
 	// in case user upgrades downgrades package (fe on iOS) we can automatically update the product here too
@@ -368,7 +368,7 @@ func updateValidationState(receipt *types.PremiumData, validation *VerifyRespons
 		receipt.ProductID,
 	)
 	if err != nil {
-		fmt.Printf("error updating subscription product id %v", err)
+		utils.LogError(err, "error updating subscription product id", 0)
 	}
 }
 
