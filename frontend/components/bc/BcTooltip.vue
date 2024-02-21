@@ -3,6 +3,7 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
   text?: string,
+  title?: string,
   layout?: 'dark' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean
@@ -111,7 +112,12 @@ onUnmounted(() => {
       <div class="bc-tooltip-wrapper" :style="pos">
         <div class="bc-tooltip" :class="classList" @click="$event.stopImmediatePropagation()">
           <slot name="tooltip">
-            {{ text }}
+            <span>
+              <b v-if="props.title">
+                {{ props.title }}
+              </b>
+              {{ text }}
+            </span>
           </slot>
         </div>
       </div>
@@ -134,7 +140,6 @@ onUnmounted(() => {
   height: 1px;
   overflow: visible;
   z-index: 99999;
-
 }
 
 .bc-tooltip {
@@ -224,6 +229,10 @@ onUnmounted(() => {
 
   b {
     font-weight: var(--inter-medium);
+  }
+  &:has(b){
+    min-width: 200px;
+    text-align: left;
   }
 }
 </style>

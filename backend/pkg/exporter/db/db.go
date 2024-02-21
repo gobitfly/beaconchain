@@ -35,7 +35,7 @@ func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 
 	err := saveBlocks(blocksMap, tx, forceSlotUpdate)
 	if err != nil {
-		logger.Fatalf("error saving blocks to db: %v", err)
+		utils.LogFatal(err, "error saving blocks to db", 0)
 		return fmt.Errorf("error saving blocks to db: %w", err)
 	}
 
@@ -570,7 +570,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			)
 
 			if err != nil {
-				logger.Errorf("error saving new validator %v: %v", v.Index, err)
+				utils.LogError(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
 			}
 		} else {
 			// status                     =
@@ -671,7 +671,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		logger.Infof("applying %v validator table update queries", updates)
 		_, err = tx.Exec(queries.String())
 		if err != nil {
-			logger.Errorf("error executing validator update query: %v", err)
+			utils.LogError(err, "error executing validator update query", 0)
 			return err
 		}
 		logger.Infof("validator table update completed, took %v", time.Since(updateStart))

@@ -133,17 +133,7 @@
     }
   }
   &.bc-compact-table {
-    --table-background-color: var(--container-background);
-    &:not(:first-child){
-      background-color: pink;
-      .p-datatable-tbody {
-        > tr:first-child {  
-          > td {
-            border-width: 1px 0 0 0;
-          }
-        }
-      }
-    }
+    --table-background-color: var(--container-background);   
     .p-datatable-tbody {
       > tr {
         @include standard_text;

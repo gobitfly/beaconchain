@@ -19,7 +19,7 @@ watch(key, () => {
   getDetails(props.dashboardId, props.row.group_id)
 }, { immediate: true })
 
-const isWideEnough = computed(() => width.value >= 1180)
+const isWideEnough = computed(() => width.value >= 1400)
 const summary = computed(() => detailsMap.value[key.value])
 
 const data = computed<SummaryRow[][]>(() => {
@@ -64,8 +64,14 @@ const data = computed<SummaryRow[][]>(() => {
 
 </script>
 <template>
-  <div v-if="summary">
-    <DataTable v-for="(table, index) in data" :key="index" class="no-header bc-compact-table summary-details-table" :value="table">
+  <div v-if="summary" class="table-container">
+    <DataTable
+      v-for="(table, index) in data"
+      :key="index"
+      class="no-header bc-compact-table summary-details-table"
+      :class="{small:!isWideEnough}"
+      :value="table"
+    >
       <Column field="expansion-spacer" class="expansion-spacer">
         <template #body>
           <span />
@@ -130,9 +136,43 @@ const data = computed<SummaryRow[][]>(() => {
     </DataTable>
   </div>
   <div v-else>
-    ... todo loading ...
+    ... TODO: loading ...
   </div>
 </template>
 
 <style lang="scss" scoped>
+.table-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+:deep(.summary-details-table) {
+  width: 100%;
+
+  &.small {
+    width: 50%;
+
+    &:nth-child(even) {
+      .p-datatable-tbody {
+        >tr {
+          >td:first-child {
+            border-width: 0 0 0 1px;
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 1180px) {
+    &:not(:first-child) {
+      .p-datatable-tbody {
+        >tr:first-child {
+          >td {
+            border-width: 1px 0 0 0;
+          }
+        }
+      }
+    }
+  }
+}
 </style>

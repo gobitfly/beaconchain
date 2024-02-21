@@ -2,6 +2,9 @@
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
+const isCube = ref<boolean>(true)
+const isAttestation = ref<boolean>(true)
+
 </script>
 
 <template>
@@ -29,7 +32,7 @@ const slotModalVisibility = ref(false)
     </template>
   </BcDialog>
 
-  <TabView>
+  <TabView lazy>
     <TabPanel header="Buttons">
       <div class="element_container">
         <Button>
@@ -55,6 +58,23 @@ const slotModalVisibility = ref(false)
       <div class="element_container">
         <InputText placeholder="Input" />
         <InputText placeholder="Disabled Input" disabled />
+      </div>
+    </TabPanel>
+    <TabPanel header="Toggle">
+      <div class="element_container">
+        <div>isCube: {{ isCube }} <BcIconToggle v-model="isCube" true-icon="fas fa-cube" false-icon="fas fa-info-circle" /></div>
+
+        <div>
+          isCube: {{ isAttestation }}
+          <BcIconToggle v-model="isAttestation">
+            <template #trueIcon>
+              <IconSlotAttestation />
+            </template>
+            <template #falseIcon>
+              <IconSlotBlockProposal />
+            </template>
+          </BcIconToggle>
+        </div>
       </div>
     </TabPanel>
     <TabPanel :disabled="true" header="Disabled Tab" />

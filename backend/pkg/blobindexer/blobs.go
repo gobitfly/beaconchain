@@ -75,7 +75,7 @@ func (bi *BlobIndexer) Start() {
 	for {
 		err := bi.Index()
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"error": err}).Errorf("failed indexing blobs")
+			utils.LogError(err, "failed indexing blobs", 0)
 		}
 		time.Sleep(time.Second * 10)
 	}
