@@ -1,15 +1,57 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
+import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
+
+const { t: $t } = useI18n()
 
 interface Props {
-  caption?: string,
+  context: DashboardValidatorContext;
+  timeFrame: SummaryDetail;
+  dashboardName: string,
+  groupName?: string,
   validators: number[],
 }
 const props = defineProps<Props>()
 
 const visible = defineModel<boolean>()
-const header = ref<string>('Validator Subset Modal')
 const shownValidators = ref<number[]>(props.validators)
+
+const header = computed(() => {
+  if (props.groupName) {
+    return $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
+  }
+
+  return $t('dashboard.title') + (props.dashboardName ? ` "${props.dashboardName}"` : '')
+})
+
+const caption = computed(() => {
+  let text = 'Validators'
+  switch (props.context) {
+    case 'attestation':
+      text = $t('dashboard.validator.summary.row.attestations')
+      break
+    case 'sync':
+      text = $t('dashboard.validator.summary.row.sync')
+      break
+    case 'slashings':
+      text = $t('dashboard.validator.summary.row.slashings')
+      break
+    case 'proposal':
+      text = $t('dashboard.validator.summary.row.proposals')
+      break
+  }
+
+  switch (props.timeFrame) {
+    case 'details_24h':
+      return text + ' ' + $t('statistics.24h')
+    case 'details_7d':
+      return text + ' ' + $t('statistics.7d')
+    case 'details_31d':
+      return text + ' ' + $t('statistics.31d')
+    case 'details_all':
+      return text + ' ' + $t('statistics.all')
+  }
+})
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
@@ -54,7 +96,7 @@ function copyValidatorsToClipboard (): void {
   <BcDialog v-model="visible" :header="header" class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
-        {{ props.caption }}
+        {{ caption }}
       </span>
       <BcContentFilter @filter-changed="handleEvent" />
     </div>

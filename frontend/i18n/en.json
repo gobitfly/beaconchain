@@ -31,11 +31,11 @@
     "scheduled": "Scheduled"
   },
   "statistics": {
-    "24h": "(24h)",
-    "7d": "(7d)",
-    "31d": "(31d)",
-    "365d": "(365d)",
-    "all": "(All Time)"
+    "24h": "24h",
+    "7d": "7d",
+    "31d": "31d",
+    "365d": "365d",
+    "all": "All Time"
   },
   "slotViz": {
     "head": "Head"
@@ -65,6 +65,7 @@
         },
         "row": {
           "efficiency_total": "Efficiency",
+          "attestations": "Attestations",
           "attestation_total": "Total Attestations",
           "attestation_head": "Head",
           "attestation_source": "Source",

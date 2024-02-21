@@ -18,7 +18,7 @@ export type SummaryDetailsEfficiencySpecialProp = typeof SummaryDetailsEfficienc
 
 export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpecialProp | SummaryDetailsEfficiencyProp | SummaryDetailsEfficiencyCustomProp | SummaryDetailsEfficiencyLuckProp | SummaryDetailsEfficiencyValidatorProp
 
-export type DashboardValidatorContext = 'group' | 'attestation' | 'sync' | 'slashings' | 'propsoal'
+export type DashboardValidatorContext = 'dashboard' | 'group' | 'attestation' | 'sync' | 'slashings' | 'proposal'
 
 export type SummaryRow = { details: SummaryDetail[], prop: SummaryDetailsEfficiencyCombinedProp, title: string, className: string }
 

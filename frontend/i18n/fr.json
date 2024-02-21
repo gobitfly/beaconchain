@@ -9,7 +9,8 @@
       "24h": "sur 24h",
       "7d": "sur 7d",
       "31d": "sur 31d",
-      "365d": "sur 365j"
+      "365d": "sur 365j",
+      "all": "depuis toujours"
     },
     "dashboard": {
       "title": "Tableau de bord",

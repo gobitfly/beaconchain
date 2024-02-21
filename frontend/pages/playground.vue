@@ -16,8 +16,6 @@ await useAsyncData('test_slot_viz_data', async () => {
 
 // Validator Subset Modal
 const modalVisibility = ref(false)
-const modalHeader = ref('Dashboard "Hetzner"')
-const modalCaption = ref('Validators')
 const modalValidators = ref([...Array(1000).fill(0).map((_, i) => i)])
 
 onMounted(async () => {
@@ -29,7 +27,14 @@ onMounted(async () => {
 
 <template>
   <div class="content">
-    <DashboardValidatorSubsetModal v-model="modalVisibility" :header="modalHeader" :caption="modalCaption" :validators="modalValidators" />
+    <DashboardValidatorSubsetModal
+      v-model="modalVisibility"
+      context="sync"
+      time-frame="details_all"
+      dashboard-name="Old Validators"
+      group-name="Hetzner"
+      :validators="modalValidators"
+    />
 
     <h1>Playground for testing UI components</h1>
     <NuxtLink to="/" class="row">

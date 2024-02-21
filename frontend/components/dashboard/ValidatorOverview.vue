@@ -52,10 +52,10 @@ const dataList = computed(() => {
 
   rewards.value = converter.value.weiToValue(v.rewards.total, { addPlus: true })
   const statsLabels = [
-    { label: $t('statistics.24h') },
-    { label: $t('statistics.7d') },
-    { label: $t('statistics.31d') },
-    { label: $t('statistics.365d') }
+    { label: `(${$t('statistics.24h')})` },
+    { label: `(${$t('statistics.7d')})` },
+    { label: `(${$t('statistics.31d')})` },
+    { label: `(${$t('statistics.365d')})` }
   ]
   rewards.additonalValues = [
     [
