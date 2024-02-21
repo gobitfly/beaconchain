@@ -60,8 +60,6 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   }
 })
 
-console.log('props.pageSize', props.pageSize)
-
 </script>
 <template>
   <div class="bc-pageinator">

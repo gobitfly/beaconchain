@@ -54,7 +54,7 @@
   --positive-color: var(--light-green);
 
   &.dark-mode {
-    --primary-color: -var(--primary-orange);
+    --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
 
     --background-color: var(--almost-black);

@@ -1,0 +1,108 @@
+<script setup lang="ts">
+
+interface Props {
+  trueIcon?: string,
+  falseIcon?: string,
+}
+
+const props = defineProps<Props>()
+
+const selected = defineModel<boolean>({ required: true })
+
+const toggle = () => {
+  if (selected.value === undefined) {
+    return
+  }
+  selected.value = !selected.value
+}
+
+</script>
+
+<template>
+  <div class="bc-toggle" :class="{ selected }" @click="toggle">
+    <div class="icon true-icon">
+      <slot name="trueIcon">
+        <i :class="props.trueIcon" />
+      </slot>
+    </div>
+    <div class="icon false-icon">
+      <slot name="falseIcon">
+        <i :class="props.falseIcon" />
+      </slot>
+    </div>
+    <span class="slider" />
+    <div class="bg" />
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.bc-toggle {
+  position: relative;
+  width: 54px;
+  height: 23px;
+  cursor: pointer;
+
+  .bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius);
+    background-color: var(--light-grey-2);
+    border: 1px solid var(--light-grey-3);
+    z-index: 1;
+  }
+
+  .slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 50%;
+    transform: translateX(100%);
+    transition: 0.2s transform;
+    background-color: var(--primary-color);
+    border-radius: var(--border-radius);
+    z-index: 2;
+  }
+
+  .icon {
+    width: 50%;
+    height: 100%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-color);
+    transition: 0.2s color;
+    position: relative;
+    z-index: 3;
+
+    :deep(svg) {
+      max-width: 18px;
+      max-height: 18px;
+    }
+  }
+
+  &.selected {
+    .slider {
+      transform: translateX(0);
+    }
+
+    .icon.true-icon {
+      color: var(--text-color-inverted);
+    }
+  }
+
+  &:not(.selected) {
+    .icon.false-icon {
+      color: var(--text-color-inverted);
+    }
+  }
+}
+
+.dark-mode .bc-toggle .bg {
+  background-color: var(--graphite);
+  border-color: var(--graphite);
+}
+</style>
