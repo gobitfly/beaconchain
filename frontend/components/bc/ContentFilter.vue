@@ -7,7 +7,7 @@ const filter = ref<string>('')
 
 <template>
   <span class="filter_elements_container">
-    <InputText v-model="filter" placeholder="Index" :class="{visible:filterVisible}" @input="$emit('filter-changed', filter)" />
+    <InputText v-model="filter" placeholder="Index" :class="{visible:filterVisible}" :disabled="!filterVisible" @input="$emit('filter-changed', filter)" />
     <Button class="p-button-icon-only" :class="{filter_visible:filterVisible}" @click="filterVisible=!filterVisible">
       <i class="fas fa-magnifying-glass" />
     </Button>
