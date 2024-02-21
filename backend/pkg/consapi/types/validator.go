@@ -2,10 +2,6 @@ package types
 
 import "github.com/shopspring/decimal"
 
-type ValidatorStatus string
-
-type Index uint64
-
 const (
 	PendingInitialized ValidatorStatus = "pending_initialized"
 	PendingQueued      ValidatorStatus = "pending_queued"
@@ -37,7 +33,7 @@ type StandardSingleValidatorsResponse struct {
 }
 
 type StandardValidator struct {
-	Index     Index           `json:"index,string"`
+	Index     uint64          `json:"index,string"`
 	Balance   decimal.Decimal `json:"balance"`
 	Status    ValidatorStatus `json:"status"`
 	Validator struct {
@@ -58,7 +54,15 @@ type StandardProposerAssignmentsResponse struct {
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 	Data                []struct {
 		Pubkey         string `json:"pubkey"`
-		ValidatorIndex Index  `json:"validator_index,string"`
+		ValidatorIndex uint64 `json:"validator_index,string"`
 		Slot           int64  `json:"slot,string"`
+	} `json:"data"`
+}
+
+// /eth/v1/beacon/states/{state_id}/validator_balances
+type StandardValidatorBalancesResponse struct {
+	Data []struct {
+		Index   uint64 `json:"index,string"`
+		Balance uint64 `json:"balance,string"`
 	} `json:"data"`
 }

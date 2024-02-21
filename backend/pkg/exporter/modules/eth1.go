@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -258,7 +259,7 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "already been committed or rolled back") {
 			utils.LogError(err, "error rolling back transaction", 0)
 		}
 	}()

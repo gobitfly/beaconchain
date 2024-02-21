@@ -202,7 +202,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 		data.OrphanedSyncTotal = previousDayData.OrphanedSyncTotal + data.OrphanedSync
 
 		// calculate cl reward & update totals
-		data.ClRewardsGWei = data.EndBalance - previousDayData.EndBalance + data.WithdrawalsAmount - data.DepositsAmount
+		data.ClRewardsGWei = data.EndBalance.Sub(previousDayData.EndBalance).IntPart() + data.WithdrawalsAmount - data.DepositsAmount
 		data.ClRewardsGWeiTotal = previousDayData.ClRewardsGWeiTotal + data.ClRewardsGWei
 
 		// update el reward total
@@ -805,12 +805,12 @@ func gatherValidatorBalances(client rpc.Client, day uint64, data []*types.Valida
 
 	mux.Lock()
 	for _, stat := range firstEpochBalances.Data {
-		data[stat.Index].StartBalance = int64(stat.Balance)
-		data[stat.Index].StartEffectiveBalance = int64(stat.Validator.EffectiveBalance)
+		data[stat.Index].StartBalance = stat.Balance
+		data[stat.Index].StartEffectiveBalance = stat.Validator.EffectiveBalance
 	}
 	for _, stat := range lastEpochBalances.Data {
-		data[stat.Index].EndBalance = int64(stat.Balance)
-		data[stat.Index].EndEffectiveBalance = int64(stat.Validator.EffectiveBalance)
+		data[stat.Index].EndBalance = stat.Balance
+		data[stat.Index].EndEffectiveBalance = stat.Validator.EffectiveBalance
 	}
 	mux.Unlock()
 

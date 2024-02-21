@@ -118,7 +118,7 @@ func main() {
 	}
 
 	cl := consapi.NewNodeDataRetriever("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-	nodeImpl, ok := cl.RetrieverInt.(*consapi.NodeImplRetriever)
+	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 	if !ok {
 		utils.LogFatal(nil, "lighthouse client can only be used with real node impl", 0)
 	}
@@ -301,8 +301,8 @@ func main() {
 				Index:                      uint64(validator.Index),
 				PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 				WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
-				Balance:                    uint64(validator.Balance),
-				EffectiveBalance:           uint64(validator.Validator.EffectiveBalance),
+				Balance:                    validator.Balance,
+				EffectiveBalance:           validator.Validator.EffectiveBalance,
 				Slashed:                    validator.Validator.Slashed,
 				ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
 				ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
