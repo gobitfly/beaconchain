@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/sirupsen/logrus"
 )
 
 // Client provides an interface for RPC clients
@@ -28,5 +27,3 @@ type Eth1Client interface {
 	GetChainID() *big.Int
 	Close()
 }
-
-var logger = logrus.New().WithField("module", "rpc")

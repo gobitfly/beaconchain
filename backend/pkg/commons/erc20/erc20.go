@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/shopspring/decimal"
 )
 
@@ -22,13 +22,13 @@ var tokenMap = make(map[string]*ERC20TokenDetail)
 func InitTokenList(path string) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		utils.LogFatal(err, "unable to retrieve erc20 token list", 0)
+		log.Fatal(err, "unable to retrieve erc20 token list", 0)
 	}
 	TokenList := &ERC20TokenList{}
 
 	err = json.Unmarshal(body, TokenList)
 	if err != nil {
-		utils.LogFatal(err, "unable to parse erc20 token list", 0)
+		log.Fatal(err, "unable to parse erc20 token list", 0)
 	}
 
 	for _, token := range TokenList.Tokens {
