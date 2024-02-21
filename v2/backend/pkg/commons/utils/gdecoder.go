@@ -13,6 +13,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 // ErrInvalidSpecification indicates that a specification is of the wrong type.
@@ -44,7 +45,7 @@ type Setter interface {
 func ProcessSecrets(cfg interface{}) error {
 	infos, err := gatherInfo("", cfg)
 	if err != nil {
-		LogError(err, "error getting config infos", 0)
+		log.LogError(err, "error getting config infos", 0)
 	}
 
 	for _, info := range infos {
@@ -54,7 +55,7 @@ func ProcessSecrets(cfg interface{}) error {
 		}
 		x, err := AccessSecretVersion(info.Field.String())
 		if err != nil {
-			LogError(err, "error getting secret", 0)
+			log.LogError(err, "error getting secret", 0)
 			continue
 		}
 		if x == nil {

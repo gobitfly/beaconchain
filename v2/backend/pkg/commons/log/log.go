@@ -1,4 +1,4 @@
-package utils
+package log
 
 import (
 	"errors"
@@ -12,13 +12,13 @@ import (
 
 // LogFatal logs a fatal error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where LogFatal is called.
-func LogFatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...map[string]interface{}) {
+func LogFatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
 	logErrorInfo(err, callerSkip, additionalInfos...).Fatal(errorMsg)
 }
 
 // LogError logs an error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where LogError is called.
-func LogError(err error, errorMsg interface{}, callerSkip int, additionalInfos ...map[string]interface{}) {
+func LogError(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
 	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
 }
 
@@ -26,15 +26,55 @@ func LogInfo(msg string, args ...interface{}) {
 	logrus.Infof(msg, args...)
 }
 
+func LogInfoWithFields(additionalInfos Fields, msg string) {
+	logFields := logrus.NewEntry(logrus.New())
+	for name, info := range additionalInfos {
+		logFields = logFields.WithField(name, info)
+	}
+
+	logFields.Infof(msg)
+}
+
 func LogWarn(msg string, args ...interface{}) {
 	logrus.Warnf(msg, args...)
+}
+
+func LogWarnWithFields(additionalInfos Fields, msg string) {
+	logFields := logrus.NewEntry(logrus.New())
+	for name, info := range additionalInfos {
+		logFields = logFields.WithField(name, info)
+	}
+
+	logFields.Warnf(msg)
 }
 
 func LogTrace(msg string, args ...interface{}) {
 	logrus.Tracef(msg, args...)
 }
 
-func logErrorInfo(err error, callerSkip int, additionalInfos ...map[string]interface{}) *logrus.Entry {
+func LogTraceWithFields(additionalInfos Fields, msg string) {
+	logFields := logrus.NewEntry(logrus.New())
+	for name, info := range additionalInfos {
+		logFields = logFields.WithField(name, info)
+	}
+
+	logFields.Tracef(msg)
+}
+
+func LogDebugWithFields(additionalInfos Fields, msg string) {
+	logFields := logrus.NewEntry(logrus.New())
+	for name, info := range additionalInfos {
+		logFields = logFields.WithField(name, info)
+	}
+
+	logFields.Debugf(msg)
+}
+
+func LogDebug(msg string, args ...interface{}) {
+	logrus.Debugf(msg, args...)
+}
+
+func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
 
 	pc, fullFilePath, line, ok := runtime.Caller(callerSkip + 2)
@@ -89,3 +129,5 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...map[string]inter
 
 	return logFields
 }
+
+type Fields map[string]interface{}

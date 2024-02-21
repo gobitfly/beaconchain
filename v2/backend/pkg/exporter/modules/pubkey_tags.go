@@ -4,18 +4,18 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 func UpdatePubkeyTag() {
-	logger.Infoln("Started Pubkey Tags Updater")
+	log.LogInfo("Started Pubkey Tags Updater")
 	for {
 		start := time.Now()
 
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
-			utils.LogError(err, "Error connecting to DB", 0)
+			log.LogError(err, "Error connecting to DB", 0)
 			// return err
 		}
 		_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
@@ -25,17 +25,17 @@ func UpdatePubkeyTag() {
 		WHERE sps.name NOT LIKE '%Rocketpool -%'
 		ON CONFLICT (publickey, tag) DO NOTHING;`)
 		if err != nil {
-			utils.LogError(err, "error updating validator_tags", 0)
+			log.LogError(err, "error updating validator_tags", 0)
 			// return err
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			utils.LogError(err, "error committing transaction", 0)
+			log.LogError(err, "error committing transaction", 0)
 		}
 		_ = tx.Rollback()
 
-		logger.Infof("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
+		log.LogInfo("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
 		metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(start).Seconds())
 
 		time.Sleep(time.Minute * 10)

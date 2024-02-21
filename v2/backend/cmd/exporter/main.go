@@ -10,13 +10,13 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -25,24 +25,19 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		utils.LogInfo(version.Version)
-		utils.LogInfo(version.GoVersion)
+		log.LogInfo(version.Version)
+		log.LogInfo(version.GoVersion)
 		return
 	}
 
-	logrus.WithField("config", *configPath).WithField("version", version.Version).Printf("starting")
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
 	if err != nil {
-		utils.LogFatal(err, "error reading config file", 0)
+		log.LogFatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
 
-	logrus.WithFields(logrus.Fields{
-		"config":    *configPath,
-		"version":   version.Version,
-		"commit":    version.GitCommit,
-		"chainName": utils.Config.Chain.ClConfig.ConfigName}).Printf("starting")
+	log.LogInfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -75,26 +70,26 @@ func main() {
 
 		rpc.CurrentErigonClient, err = rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
 		if err != nil {
-			utils.LogFatal(err, "error initializing erigon client", 0)
+			log.LogFatal(err, "error initializing erigon client", 0)
 		}
 
 		erigonChainId, err := rpc.CurrentErigonClient.GetNativeClient().ChainID(ctx)
 		if err != nil {
-			utils.LogFatal(err, "error retrieving erigon chain id", 0)
+			log.LogFatal(err, "error retrieving erigon chain id", 0)
 		}
 
 		rpc.CurrentGethClient, err = rpc.NewGethClient(utils.Config.Eth1GethEndpoint)
 		if err != nil {
-			utils.LogFatal(err, "error initializing geth client", 0)
+			log.LogFatal(err, "error initializing geth client", 0)
 		}
 
 		gethChainId, err := rpc.CurrentGethClient.GetNativeClient().ChainID(ctx)
 		if err != nil {
-			utils.LogFatal(err, "error retrieving geth chain id", 0)
+			log.LogFatal(err, "error retrieving geth chain id", 0)
 		}
 
 		if !(erigonChainId.String() == gethChainId.String() && erigonChainId.String() == fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)) {
-			utils.LogFatal(fmt.Errorf("chain id mismatch: erigon chain id %v, geth chain id %v, requested chain id %v", erigonChainId.String(), gethChainId.String(), fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)), "", 0)
+			log.LogFatal(fmt.Errorf("chain id mismatch: erigon chain id %v, geth chain id %v, requested chain id %v", erigonChainId.String(), gethChainId.String(), fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)), "", 0)
 		}
 	}()
 
@@ -103,7 +98,7 @@ func main() {
 		defer wg.Done()
 		bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 		if err != nil {
-			utils.LogFatal(err, "error connecting to bigtable", 0)
+			log.LogFatal(err, "error connecting to bigtable", 0)
 		}
 		db.BigtableClient = bt
 	}()
@@ -113,7 +108,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
-			logrus.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+			log.LogInfo("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
 		}()
 	}
 
@@ -127,7 +122,7 @@ func main() {
 		})
 
 		if err := rdc.Ping(context.Background()).Err(); err != nil {
-			utils.LogFatal(err, "error connecting to persistent redis store", 0)
+			log.LogFatal(err, "error connecting to persistent redis store", 0)
 		}
 		db.PersistentRedisDbClient = rdc
 	}()
@@ -135,7 +130,7 @@ func main() {
 	wg.Wait()
 
 	if utils.Config.TieredCacheProvider != "redis" {
-		utils.LogFatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)
+		log.LogFatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)
 	}
 
 	defer db.ReaderDb.Close()
@@ -144,7 +139,7 @@ func main() {
 
 	context, err := modules.GetModuleContext()
 	if err != nil {
-		utils.LogFatal(err, "error getting module context", 0)
+		log.LogFatal(err, "error getting module context", 0)
 	}
 
 	go services.StartHistoricPriceService()
