@@ -10,6 +10,7 @@ interface Props {
   expandable?: boolean,
   title?: string,
   searchPlaceholder?:string,
+  tableClass?: string
 }
 const props = defineProps<Props>()
 
@@ -66,6 +67,7 @@ const onInput = (event: Event) => {
   <DataTable
     v-if="tableIsShown"
     v-model:expandedRows="expandedRows"
+    :class="props.tableClass"
     lazy
     :total-records="props.data?.paging.total_count"
     :rows="pageSize"
