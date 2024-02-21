@@ -1,6 +1,6 @@
 package dataaccess
 
-import t "github.com/gobitfly/beaconchain/pkg/types/api"
+import t "github.com/gobitfly/beaconchain/pkg/api/types"
 
 type DataAccessInterface interface {
 	GetUserDashboards(userId uint64) (t.DashboardData, error)
@@ -10,7 +10,7 @@ type DataAccessInterface interface {
 	GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error)
 
 	GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
-	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummary, error)
+	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error)
 
 	GetValidatorDashboardBlocks(dashboardId uint64, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
 }
@@ -51,7 +51,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId uint64, curs
 	return d.dummy.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummary, error) {
+func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 }

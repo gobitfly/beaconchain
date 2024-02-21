@@ -1,11 +1,11 @@
-package apihandlers
+package handlers
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
 
-	apitypes "github.com/gobitfly/beaconchain/pkg/types/api"
+	types "github.com/gobitfly/beaconchain/pkg/api/types"
 
 	"github.com/gorilla/mux"
 )
@@ -157,7 +157,7 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: data,
 	}
 	ReturnCreated(w, response)
@@ -176,7 +176,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: data,
 	}
 
@@ -218,8 +218,8 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 
 	// TODO check group limit reached
 
-	response := apitypes.ApiResponse{
-		Data: apitypes.VDBOverviewGroup{},
+	response := types.ApiResponse{
+		Data: types.VDBOverviewGroup{},
 	}
 
 	ReturnCreated(w, response)
@@ -263,7 +263,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 
 	// TODO check validator limit reached
 
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: []struct {
 			PubKey  []string `json:"public_key"`
 			GroupId string   `json:"group_id"`
@@ -311,7 +311,7 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 
 	//TODO check public id limit reached
 
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: struct {
 			AccessToken   string `json:"access_token"`
 			Name          string `json:"name"`
@@ -346,7 +346,7 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 	// TODO remove, variables are not yet used
 	fmt.Println(dashboardId, publicDashboardId, name)
 
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: struct {
 			AccessToken   string `json:"access_token"`
 			ShareSettings struct {
@@ -388,7 +388,7 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: data,
 	}
 
@@ -404,13 +404,13 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 		returnBadRequest(w, err)
 		return
 	}
-	var sort []apitypes.Sort[apitypes.VDBSummaryTableColumn]
+	var sort []types.Sort[types.VDBSummaryTableColumn]
 	data, paging, err := h.dai.GetValidatorDashboardSummary(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data:   data,
 		Paging: &paging,
 	}
@@ -431,7 +431,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: data,
 	}
 	returnOk(w, response)
@@ -448,7 +448,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 	// TODO remove, variables are not yet used
 	fmt.Println(dashboardId)
 
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data: nil, // apitypes.VDBSummaryChartResponse{},
 	}
 	returnOk(w, response)
@@ -466,8 +466,8 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	// TODO remove, variables are not yet used
 	fmt.Println(dashboardId, paging)
 
-	response := apitypes.ApiResponse{
-		Data: apitypes.VDBRewardsTableResponse{},
+	response := types.ApiResponse{
+		Data: types.VDBRewardsTableResponse{},
 	}
 	returnOk(w, response)
 }
@@ -484,8 +484,8 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 	// TODO remove, variables are not yet used
 	fmt.Println(dashboardId, groupId)
 
-	response := apitypes.ApiResponse{
-		Data: apitypes.VDBGroupRewardsResponse{},
+	response := types.ApiResponse{
+		Data: types.VDBGroupRewardsResponse{},
 	}
 	returnOk(w, response)
 }
@@ -501,13 +501,13 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var dashboardId, limit uint64
 	var cursor, search string
-	var sort []apitypes.Sort[apitypes.VDBBlocksTableColumn]
+	var sort []types.Sort[types.VDBBlocksTableColumn]
 	data, paging, err := h.dai.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
 	}
-	response := apitypes.ApiResponse{
+	response := types.ApiResponse{
 		Data:   data,
 		Paging: &paging,
 	}

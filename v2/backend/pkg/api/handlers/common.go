@@ -1,4 +1,4 @@
-package apihandlers
+package handlers
 
 import (
 	"encoding/json"
@@ -10,11 +10,11 @@ import (
 	"strconv"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	apitypes "github.com/gobitfly/beaconchain/pkg/types/api"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
 type HandlerService struct {
@@ -237,7 +237,7 @@ func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) 
 }
 
 func returnError(w http.ResponseWriter, code int, err error) {
-	response := apitypes.ApiErrorResponse{
+	response := types.ApiErrorResponse{
 		Error: err.Error(),
 	}
 	writeResponse(w, code, response)

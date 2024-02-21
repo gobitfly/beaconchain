@@ -1,4 +1,4 @@
-package apitypes
+package types
 
 import (
 	"time"
@@ -9,13 +9,15 @@ import (
 // ------------------------------------------------------------
 // Overview
 
+type VDBOverviewResponse ApiDataResponse[VDBOverviewData]
+
 type VDBOverviewData struct {
-	Groups     []VDBOverviewGroup      `json:"groups"`
-	Validators VDBOverviewValidators   `json:"validators"`
-	Efficiency VDBOverviewEfficiency   `json:"efficiency"`
-	Rewards    PeriodicClElValues      `json:"rewards"`
-	Luck       Luck                    `json:"luck"`
-	Apr        PeriodicClElValuesFloat `json:"apr"`
+	Groups     []VDBOverviewGroup                  `json:"groups"`
+	Validators VDBOverviewValidators               `json:"validators"`
+	Efficiency VDBOverviewEfficiency               `json:"efficiency"`
+	Rewards    PeriodicClElValues[decimal.Decimal] `json:"rewards"`
+	Luck       Luck                                `json:"luck"`
+	Apr        PeriodicClElValues[float64]         `json:"apr"`
 }
 
 type VDBOverviewValidators struct {
@@ -41,24 +43,22 @@ type VDBOverviewGroup struct {
 // ------------------------------------------------------------
 // Slot Viz
 
-type VDBSlotVizResponse struct {
-	Data []VDBSlotVizEpoch `json:"data"`
-}
+type VDBSlotVizResponse ApiDataResponse[VDBSlotVizEpoch]
 
 type VDBSlotVizEpoch struct {
 	Epoch uint64           `json:"epoch"`
-	State string           `json:"state" ts_type:"'head' | 'finalized' | 'scheduled'"`
+	State string           `json:"state" tstype:"'head' | 'finalized' | 'scheduled'"`
 	Slots []VDBSlotVizSlot `json:"slots"`
 }
 
 type VDBSlotVizSlot struct {
 	Slot   uint64           `json:"slot"`
-	Status string           `json:"status" ts_type:"'proposed' | 'missed' | 'scheduled' | 'orphaned'"`
+	Status string           `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'"`
 	Duties []VDBSlotVizDuty `json:"duties"`
 }
 
 type VDBSlotVizDuty struct {
-	Type            string          `json:"type" ts_type:"'proposal' | 'attestation' | 'sync' | 'slashing'"`
+	Type            string          `json:"type" tstype:"'proposal' | 'attestation' | 'sync' | 'slashing'"`
 	PendingCount    uint64          `json:"pending_count"`
 	SuccessCount    uint64          `json:"success_count"`
 	SuccessEarnings decimal.Decimal `json:"success_earnings"`
@@ -71,10 +71,7 @@ type VDBSlotVizDuty struct {
 // ------------------------------------------------------------
 // Summary Tab
 
-type VDBSummaryTableResponse struct {
-	Paging Paging               `json:"paging"`
-	Data   []VDBSummaryTableRow `json:"data"`
-}
+type VDBSummaryTableResponse ApiPagingResponse[VDBSummaryTableRow]
 
 type VDBSummaryTableRow struct {
 	GroupId uint64 `json:"group_id"`
@@ -87,24 +84,9 @@ type VDBSummaryTableRow struct {
 	Validators []uint64 `json:"validators"`
 }
 
-type VDBSummaryTableColumn int
+type VDBGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-const (
-	VDBSummaryGroup VDBSummaryTableColumn = iota
-	VDBSummaryEfficiencyDay
-	VDBSummaryEfficiencyWeek
-	VDBSummaryEfficiencyMonth
-	VDBSummaryEfficiencyTotal
-	VDBSummaryValidators // Sort by count, not by index
-)
-
-func (VDBSummaryTableColumn) Enum() {}
-
-type VDBGroupSummaryResponse struct {
-	Data VDBGroupSummary `json:"data"`
-}
-
-type VDBGroupSummary struct {
+type VDBGroupSummaryData struct {
 	DetailsDay   VDBGroupSummaryColumn `json:"details_day"`
 	DetailsWeek  VDBGroupSummaryColumn `json:"details_week"`
 	DetailsMonth VDBGroupSummaryColumn `json:"details_month"`
@@ -122,8 +104,8 @@ type VDBGroupSummaryColumn struct {
 	Proposals     VDBGroupSummaryColumnItem `json:"proposals"`
 	Slashed       VDBGroupSummaryColumnItem `json:"slashed"` // Failed slashings are count of validators in the group that were slashed
 
-	Apr    ClElValueFloat `json:"apr"`
-	Income ClElValue      `json:"income"`
+	Apr    ClElValue[float64]         `json:"apr"`
+	Income ClElValue[decimal.Decimal] `json:"income"`
 
 	Luck Luck `json:"luck"`
 }
@@ -135,19 +117,18 @@ type VDBGroupSummaryColumnItem struct {
 	Validators  []uint64        `json:"validators,omitempty"`
 }
 
+type VDBSummaryChartResponse ApiDataResponse[[]HighchartsSeries]
+
 // ------------------------------------------------------------
 // Rewards Tab
 
-type VDBRewardsTableResponse struct {
-	Paging Paging               `json:"paging"`
-	Data   []VDBRewardsTableRow `json:"data"`
-}
+type VDBRewardsTableResponse ApiPagingResponse[VDBRewardsTableRow]
 
 type VDBRewardsTableRow struct {
-	Epoch   uint64               `json:"epoch"`
-	Duty    VDBRewardesTableDuty `json:"duty"`
-	GroupId uint64               `json:"group_id"`
-	Reward  ClElValue            `json:"reward"`
+	Epoch   uint64                     `json:"epoch"`
+	Duty    VDBRewardesTableDuty       `json:"duty"`
+	GroupId uint64                     `json:"group_id"`
+	Reward  ClElValue[decimal.Decimal] `json:"reward"`
 }
 
 type VDBRewardesTableDuty struct {
@@ -157,18 +138,9 @@ type VDBRewardesTableDuty struct {
 	Slashing    uint64  `json:"slashing"`
 }
 
-type VDBRewardsTableColumn int
+type VDBGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
-const (
-	VDBRewardEpoch VDBRewardsTableColumn = iota
-	VDBRewardDuty                        // Sort by sum of percentages
-)
-
-type VDBGroupRewardsResponse struct {
-	Data VDBGroupRewards `json:"data"`
-}
-
-type VDBGroupRewards struct {
+type VDBGroupRewardsData struct {
 	AttestationSource VDBGroupRewardsDetails `json:"attestation_source"`
 	AttestationTarget VDBGroupRewardsDetails `json:"attestation_target"`
 	AttestationHead   VDBGroupRewardsDetails `json:"attestation_head"`
@@ -183,12 +155,11 @@ type VDBGroupRewardsDetails struct {
 	Income      decimal.Decimal `json:"income"`
 }
 
+type VDBRewardsChartResponse ApiDataResponse[[]HighchartsSeries]
+
 // Duties Modal
 
-type VDBEpochDutiesTableResponse struct {
-	Paging Paging                   `json:"paging"`
-	Data   []VDBEpochDutiesTableRow `json:"data"`
-}
+type VDBEpochDutiesTableResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
 type VDBEpochDutiesTableRow struct {
 	Validator uint64 `json:"validator"`
@@ -202,56 +173,43 @@ type VDBEpochDutiesTableRow struct {
 }
 
 type VDBEpochDutiesItem struct {
-	Status string          `json:"status" ts_type:"'success' | 'partial' | 'failed' | 'orphaned'"`
+	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
 	Reward decimal.Decimal `json:"reward"`
 }
 
 // ------------------------------------------------------------
 // Blocks Tab
 
-type VDBBlocksTableResponse struct {
-	Paging Paging              `json:"paging"`
-	Data   []VDBBlocksTableRow `json:"data"`
-}
+type VDBBlocksTableResponse ApiPagingResponse[VDBBlocksTableRow]
 
 type VDBBlocksTableRow struct {
-	Proposer uint64    `json:"proposer"`
-	GroupId  uint64    `json:"group_id"`
-	Epoch    uint64    `json:"epoch"`
-	Slot     uint64    `json:"slot"`
-	Block    uint64    `json:"block"`
-	Status   string    `json:"status" ts_type:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
-	Reward   ClElValue `json:"reward"`
+	Proposer uint64                     `json:"proposer"`
+	GroupId  uint64                     `json:"group_id"`
+	Epoch    uint64                     `json:"epoch"`
+	Slot     uint64                     `json:"slot"`
+	Block    uint64                     `json:"block"`
+	Status   string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
+	Reward   ClElValue[decimal.Decimal] `json:"reward"`
 }
-
-type VDBBlocksTableColumn int
-
-const (
-	VDBBlockProposer VDBBlocksTableColumn = iota
-	VDBBlockGroup
-	VDBBlockAge
-	VDBBlockStatus
-	VDBBlockReward
-)
 
 // ------------------------------------------------------------
 // Heatmap Tab
 
-type VDBHeatmapResponse struct {
-	Data VDBHeatmap `json:"data"`
-}
+type VDBHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmap struct {
-	Epochs   []uint64         `json:"epochs" ts_doc:"X-Axis Categories"`
-	GroupIds []uint64         `json:"group_ids" ts_doc:"Y-Axis Categories"`
+	Epochs   []uint64         `json:"epochs"`    // X-Axis Categories
+	GroupIds []uint64         `json:"group_ids"` // Y-Axis Categories
 	Data     []VDBHeatmapCell `json:"data"`
 }
 
 type VDBHeatmapCell struct {
 	X     uint64  `json:"x" ts_doc:"Epoch"`
 	Y     uint64  `json:"y" ts_doc:"Group ID"`
-	Value float64 `json:"value" ts_doc:"Attestaton Rewards"`
+	Value float64 `json:"value"` // Attestaton Rewards
 }
+
+type VDBHeatmapTooltipResponse ApiDataResponse[VDBHeatmapTooltipData]
 
 type VDBHeatmapTooltipData struct {
 	Epoch uint64 `json:"epoch"`
@@ -268,16 +226,13 @@ type VDBHeatmapTooltipData struct {
 
 type VDBHeatmapTooltipDuty struct {
 	Validator uint64 `json:"validator"`
-	Status    string `json:"status" ts_type:"'success' | 'failed' | 'orphaned'"`
+	Status    string `json:"status" tstype:"'success' | 'failed' | 'orphaned'"`
 }
 
 // ------------------------------------------------------------
 // Deposits Tab
 
-type VDBExecutionDepositsTableResponse struct {
-	Paging Paging                         `json:"paging"`
-	Data   []VDBExecutionDepositsTableRow `json:"data"`
-}
+type VDBExecutionDepositsTableResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
 type VDBExecutionDepositsTableRow struct {
 	PublicKey             PubKey          `json:"public_key"`
@@ -292,10 +247,7 @@ type VDBExecutionDepositsTableRow struct {
 	Valid                 bool            `json:"valid"`
 }
 
-type VDBConsensusDepositsTableResponse struct {
-	Paging Paging                         `json:"paging"`
-	Data   []VDBConsensusDepositsTableRow `json:"data"`
-}
+type VDBConsensusDepositsTableResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
 type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
@@ -311,10 +263,7 @@ type VDBConsensusDepositsTableRow struct {
 // ------------------------------------------------------------
 // Withdrawals Tab
 
-type VDBWithdrawalsTableResponse struct {
-	Paging Paging                   `json:"paging"`
-	Data   []VDBWithdrawalsTableRow `json:"data"`
-}
+type VDBWithdrawalsTableResponse ApiPagingResponse[VDBWithdrawalsTableRow]
 
 type VDBWithdrawalsTableRow struct {
 	Epoch     uint64          `json:"epoch"`
@@ -324,23 +273,10 @@ type VDBWithdrawalsTableRow struct {
 	Amount    decimal.Decimal `json:"amount"`
 }
 
-type VDBWithdrawalsTableColumn int
-
-const (
-	VDBWithdrawalAge VDBWithdrawalsTableColumn = iota
-	VDBWithdrawalIndex
-	VDBWithdrawalGroup
-	VDBWithdrawalRecipient
-	VDBWithdrawalAmount
-)
-
 // ------------------------------------------------------------
 // Manage Modal
 
-type VDBManageValidatorsTableResponse struct {
-	Paging Paging                        `json:"paging"`
-	Data   []VDBManageValidatorsTableRow `json:"data"`
-}
+type VDBManageValidatorsTableResponse ApiPagingResponse[VDBManageValidatorsTableRow]
 
 type VDBManageValidatorsTableRow struct {
 	Index                uint64          `json:"index"`
@@ -358,6 +294,6 @@ type VDBPostData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`
 	Name      string    `json:"name"`
-	Network   Network   `json:"network"`
+	Network   uint64    `json:"network"`
 	CreatedAt time.Time `json:"created_at"`
 }

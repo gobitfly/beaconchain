@@ -3,7 +3,7 @@ package dataaccess
 import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
-	t "github.com/gobitfly/beaconchain/pkg/types/api"
+	t "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
 type DummyService struct {
@@ -51,8 +51,8 @@ func (d DummyService) GetValidatorDashboardSummary(dashboardId uint64, cursor st
 	return r, p, err
 }
 
-func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummary, error) {
-	r := t.VDBGroupSummary{}
+func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error) {
+	r := t.VDBGroupSummaryData{}
 	err := commonFakeData(&r)
 	return r, err
 }
