@@ -109,7 +109,7 @@ const data = computed(() => {
   }
 })
 
-// TODO: find better matching icon for fa-info-circle, once new fontawesome files are merged
+// TODO: find better matching icon for fa-circle-info, once new fontawesome files are merged
 </script>
 <template>
   <BcTooltip v-if="data?.efficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
@@ -118,7 +118,7 @@ const data = computed(() => {
         :success="data.efficiency.count.success"
         :failed="data.efficiency.count.failed"
       />
-      <i v-if="data.tooltip?.title" class="fas fa-info-circle link" />
+      <i v-if="data.tooltip?.title" class="far fa-circle-info link" />
     </div>
   </BcTooltip>
   <DashboardTableValidators
@@ -130,13 +130,13 @@ const data = computed(() => {
   <BcTooltip v-else-if="data?.attestationEfficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
     <div class="info_row">
       <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
-      <i class="fas fa-info-circle link" />
+      <i class="far fa-circle-info link" />
     </div>
   </BcTooltip>
   <BcTooltip v-else-if="data?.apr" position="top">
     <div class="info_row">
       <BcFormatPercent :percent="data.apr.total" />
-      <i class="fas fa-info-circle link" />
+      <i class="far fa-circle-info link" />
     </div>
     <template #tooltip>
       <div class="row">
@@ -157,7 +157,7 @@ const data = computed(() => {
         <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" />
         <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
       </span>
-      <i class="fas fa-info-circle link" />
+      <i class="far fa-circle-info link" />
     </div>
     <template #tooltip>
       <div class="row">

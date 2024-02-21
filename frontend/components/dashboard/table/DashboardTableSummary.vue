@@ -146,6 +146,9 @@ const setSearch = (value?: string) => {
     <template #expansion="slotProps">
       <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-id="props.dashboardId" />
     </template>
+    <template #chart>
+      TODO: Chart
+    </template>
   </BcTable>
 </template>
 

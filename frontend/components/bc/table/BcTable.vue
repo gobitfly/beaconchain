@@ -13,6 +13,8 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const tableIsShown = ref(true)
+
 // TODO: implement page size selection and search input
 const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void, (e: 'setSearch', value?: string): void }>()
 
@@ -45,7 +47,24 @@ const onInput = (event: Event) => {
 
 </script>
 <template>
+  <slot name="header">
+    <div class="bc-table-header">
+      <div class="side">
+        <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" true-icon="fas fa-table" false-icon="far fa-chart-column" />
+        <slot id="header-left" />
+      </div>
+      <div v-if="props.title" class="h1">
+        {{ props.title }}
+      </div>
+      <div class="side right">
+        <slot id="header-right" />
+        <!--TODO: replace input with styled input-->
+        <input v-if="props.searchPlaceholder && tableIsShown" type="text" :placeholder="props.searchPlaceholder" @input="onInput">
+      </div>
+    </div>
+  </slot>
   <DataTable
+    v-if="tableIsShown"
     v-model:expandedRows="expandedRows"
     lazy
     :total-records="props.data?.paging.total_count"
@@ -53,23 +72,6 @@ const onInput = (event: Event) => {
     :value="props.data?.data"
     :data-key="dataKey"
   >
-    <template #header>
-      <slot name="header">
-        <div class="bc-table-header">
-          <div>
-            <slot id="header-left" />
-          </div>
-          <div v-if="props.title" class="h1">
-            {{ props.title }}
-          </div>
-          <div>
-            <slot id="header-right" />
-            <!--TODO: replace input with styled input-->
-            <input v-if="props.searchPlaceholder" type="text" :placeholder="props.searchPlaceholder" @input="onInput">
-          </div>
-        </div>
-      </slot>
-    </template>
     <Column v-if="props.expandable" expander class="expander">
       <template #header>
         <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click="toggleAll" />
@@ -86,6 +88,7 @@ const onInput = (event: Event) => {
       <BcTablePager :page-size="pageSize" :paging="props.data?.paging" :cursor="cursor" @set-cursor="(cursor)=>emit('setCursor', cursor)" @set-page-size="(size) => emit('setPageSize', size)" />
     </template>
   </DataTable>
+  <slot v-else name="chart" />
 </template>
 
 <style lang="scss" scoped>
@@ -96,6 +99,13 @@ const onInput = (event: Event) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  .side{
+    width: 180px;
+    &.right{
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
 }
 :deep(.expander) {
   width: 32px;
