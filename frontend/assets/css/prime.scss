@@ -175,3 +175,151 @@
     padding: 0.9375rem 0.9375rem;
   }
 }
+
+
+
+.p-multiselect {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  border-radius: 6px;
+}
+.p-multiselect:not(.p-disabled):hover {
+  border-color: #10b981;
+}
+.p-multiselect:not(.p-disabled).p-focus {
+  outline: 0 none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 0.2rem #a7f3d0;
+  border-color: #10b981;
+}
+.p-multiselect .p-multiselect-label {
+  padding: 0.75rem 0.75rem;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.p-multiselect .p-multiselect-label.p-placeholder {
+  color: #6b7280;
+}
+.p-multiselect.p-multiselect-chip .p-multiselect-token {
+  padding: 0.375rem 0.75rem;
+  margin-right: 0.5rem;
+  background: #e5e7eb;
+  color: #4b5563;
+  border-radius: 16px;
+}
+.p-multiselect.p-multiselect-chip .p-multiselect-token .p-multiselect-token-icon {
+  margin-left: 0.5rem;
+}
+.p-multiselect .p-multiselect-trigger {
+  background: transparent;
+  color: #6b7280;
+  width: 3rem;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+.p-multiselect.p-invalid.p-component {
+  border-color: #e24c4c;
+}
+
+.p-inputwrapper-filled.p-multiselect.p-multiselect-chip .p-multiselect-label {
+  padding: 0.375rem 0.75rem;
+}
+
+.p-multiselect-panel {
+  background: #ffffff;
+  color: #4b5563;
+  border: 0 none;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+.p-multiselect-panel .p-multiselect-header {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  background: #f9fafb;
+  margin: 0;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 6px;
+}
+.p-multiselect-panel .p-multiselect-header .p-multiselect-filter-container .p-inputtext {
+  padding-right: 1.75rem;
+}
+.p-multiselect-panel .p-multiselect-header .p-multiselect-filter-container .p-multiselect-filter-icon {
+  right: 0.75rem;
+  color: #6b7280;
+}
+.p-multiselect-panel .p-multiselect-header .p-checkbox {
+  margin-right: 0.5rem;
+}
+.p-multiselect-panel .p-multiselect-header .p-multiselect-close {
+  margin-left: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  color: #6b7280;
+  border: 0 none;
+  background: transparent;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.p-multiselect-panel .p-multiselect-header .p-multiselect-close:enabled:hover {
+  color: #374151;
+  border-color: transparent;
+  background: #f3f4f6;
+}
+.p-multiselect-panel .p-multiselect-header .p-multiselect-close:focus-visible {
+  outline: 0 none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 0.2rem #a7f3d0;
+}
+.p-multiselect-panel .p-multiselect-items {
+  padding: 0.75rem 0;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  border: 0 none;
+  color: #4b5563;
+  background: transparent;
+  transition: box-shadow 0.2s;
+  border-radius: 0;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight {
+  color: #047857;
+  background: #F0FDFA;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight.p-focus {
+  background: rgba(16, 185, 129, 0.24);
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item:not(.p-highlight):not(.p-disabled).p-focus {
+  color: #4b5563;
+  background: #e5e7eb;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item:not(.p-highlight):not(.p-disabled):hover {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item .p-checkbox {
+  margin-right: 0.5rem;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item-group {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  color: #374151;
+  background: #ffffff;
+  font-weight: 700;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-empty-message {
+  padding: 0.75rem 1.25rem;
+  color: #4b5563;
+  background: transparent;
+}
+
+.p-input-filled .p-multiselect {
+  background: #f3f4f6;
+}
+.p-input-filled .p-multiselect:not(.p-disabled):hover {
+  background-color: #f3f4f6;
+}
+.p-input-filled .p-multiselect:not(.p-disabled).p-focus {
+  background-color: #ffffff;
+}

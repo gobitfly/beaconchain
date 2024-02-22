@@ -52,7 +52,8 @@ interface TypeInfoFields {
   midLabels: string, // between the two values in the result...
   postLabels: string, // and after. These labels can be text, or HTML code for icons
   category: Categories,
-  priority: number
+  priority: number,
+  belongsToAllNetworks: boolean
 }
 
 export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
@@ -62,7 +63,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Tokens,
-    priority: 3
+    priority: 3,
+    belongsToAllNetworks: true
   },
   [ResultTypes.NFTs]: {
     title: 'NFTs',
@@ -70,7 +72,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.NFTs,
-    priority: 4
+    priority: 4,
+    belongsToAllNetworks: true
   },
   [ResultTypes.Epochs]: {
     title: 'Epochs',
@@ -78,7 +81,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 12
+    priority: 12,
+    belongsToAllNetworks: false
   },
   [ResultTypes.Slots]: {
     title: 'Slots',
@@ -86,7 +90,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 11
+    priority: 11,
+    belongsToAllNetworks: false
   },
   [ResultTypes.Blocks]: {
     title: 'Blocks',
@@ -94,7 +99,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 10
+    priority: 10,
+    belongsToAllNetworks: false
   },
   [ResultTypes.BlockRoots]: {
     title: 'Block roots',
@@ -102,7 +108,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 18
+    priority: 18,
+    belongsToAllNetworks: false
   },
   [ResultTypes.StateRoots]: {
     title: 'State roots',
@@ -110,7 +117,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 19
+    priority: 19,
+    belongsToAllNetworks: false
   },
   [ResultTypes.Transactions]: {
     title: 'Transactions',
@@ -118,7 +126,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 17
+    priority: 17,
+    belongsToAllNetworks: false
   },
   [ResultTypes.TransactionBatches]: {
     title: 'Transaction batches',
@@ -126,7 +135,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 14
+    priority: 14,
+    belongsToAllNetworks: false
   },
   [ResultTypes.StateBatches]: {
     title: 'State batches',
@@ -134,7 +144,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 13
+    priority: 13,
+    belongsToAllNetworks: false
   },
   [ResultTypes.Addresses]: {
     title: 'Addresses',
@@ -142,7 +153,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Addresses,
-    priority: 2
+    priority: 2,
+    belongsToAllNetworks: true
   },
   [ResultTypes.Ens]: {
     title: 'ENS addresses',
@@ -150,7 +162,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Addresses,
-    priority: 1
+    priority: 1,
+    belongsToAllNetworks: true
   },
   [ResultTypes.EnsOverview]: {
     title: 'Overview of an ENS domain',
@@ -158,7 +171,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Addresses,
-    priority: 15
+    priority: 15,
+    belongsToAllNetworks: true
   },
   [ResultTypes.Graffiti]: {
     title: 'Graffiti',
@@ -166,7 +180,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Protocol,
-    priority: 16
+    priority: 16,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByIndex]: {
     title: 'Validators by index',
@@ -174,7 +189,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 9
+    priority: 9,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByPubkey]: {
     title: 'Validators by public key',
@@ -182,7 +198,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 9
+    priority: 9,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByDepositAddress]: {
     title: 'Validators by deposit address',
@@ -190,7 +207,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 6
+    priority: 6,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByDepositEnsName]: {
     title: 'Validators by ENS of the deposit address',
@@ -198,7 +216,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 5
+    priority: 5,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalCredential]: {
     title: 'Validators by withdrawal credential',
@@ -206,7 +225,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 8
+    priority: 8,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalAddress]: {
     title: 'Validators by withdrawal address',
@@ -214,7 +234,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 8
+    priority: 8,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalEnsName]: {
     title: 'Validators by ENS of the withdrawal address',
@@ -222,7 +243,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 7
+    priority: 7,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByGraffiti]: {
     title: 'Validators by graffiti',
@@ -230,7 +252,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 9999
+    priority: 9999,
+    belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByName]: {
     title: 'Validators by name',
@@ -238,7 +261,8 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     midLabels: '',
     postLabels: '',
     category: Categories.Validators,
-    priority: 9999
+    priority: 9999,
+    belongsToAllNetworks: false
   }
 }
 
@@ -338,11 +362,14 @@ export function getListOfCategories () : Categories[] {
   return list
 }
 
-export function getListOfResultTypes () : ResultTypes[] {
+export function getListOfResultTypes (sortByPriority : boolean) : ResultTypes[] {
   const list : ResultTypes[] = []
 
   for (const type in ResultTypes) {
     list.push(ResultTypes[type as keyof typeof ResultTypes])
+  }
+  if (sortByPriority) {
+    list.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
   }
   return list
 }

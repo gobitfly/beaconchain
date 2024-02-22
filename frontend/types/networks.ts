@@ -22,14 +22,11 @@
    or simply isL1(myNetwork) whose implementation does the same test (first, add the function to your import list)
 */
 
-/* **** TO DO ****
-   Get informations from the endpoint GET /api/i/networks that returns a list of all network configs
-   ***************
-*/
-
 import type { CryptoCurrency } from '~/types/currencies'
 
 export enum ChainIDs {
+  Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
+
   Ethereum = 1,
   Holesky = 17000,
   Sepolia = 11155111,
@@ -48,8 +45,12 @@ export enum ChainIDs {
   Chiado = 10200
 }
 
-export function getListOfImplementedChainIDs () : ChainIDs[] {
-  return [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
+export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
+  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
+  if (sortByPriority) {
+    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+  }
+  return list
 }
 
 interface ChainInfoFields {
@@ -59,10 +60,20 @@ interface ChainInfoFields {
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
   path: string,
-  priority: number // preference order when displaying data for several networks and no order is requested (ex: search bar)
+  priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
+  [ChainIDs.Any]: {
+    name: 'Any',
+    mainNet: ChainIDs.Any,
+    L1: ChainIDs.Any,
+    clCurrency: 'ETH',
+    elCurrency: 'ETH',
+    path: '/undefined',
+    priority: 0 // data belonging to all networks is displayed first by default
+  },
+
   [ChainIDs.Ethereum]: {
     name: 'Ethereum Mainnet',
     mainNet: ChainIDs.Ethereum,
@@ -185,13 +196,16 @@ export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
 }
 
-export function getListOfChainIDs () : ChainIDs[] {
+export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list : ChainIDs[] = []
 
   for (const id in ChainIDs) {
     if (isNaN(Number(id))) {
       list.push(ChainIDs[id as keyof typeof ChainIDs])
     }
+  }
+  if (sortByPriority) {
+    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
   }
   return list
 }
