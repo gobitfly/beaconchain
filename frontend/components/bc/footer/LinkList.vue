@@ -4,9 +4,6 @@ import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-ico
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import {
   faNewspaper,
-  faBuilding,
-  faFileContract,
-  faUserSecret,
   faLaptopCode,
   faFileInvoiceDollar,
   faUserAstronaut,
@@ -14,6 +11,11 @@ import {
   faShoppingCart,
   faCheckCircle
 } from '@fortawesome/pro-regular-svg-icons'
+import {
+  faBuilding,
+  faFileContract,
+  faUserSecret
+} from '@fortawesome/pro-solid-svg-icons'
 const { t: $t } = useI18n()
 const enum Target {
   Internal = '_self',
