@@ -8,12 +8,12 @@ type StandardAttestationRewardsResponse struct {
 	Finalized           bool `json:"finalized"`
 	Data                struct {
 		IdealRewards []struct {
-			EffectiveBalance decimal.Decimal `json:"effective_balance"`
-			Head             int64           `json:"head,string"`
-			Target           int64           `json:"target,string"`
-			Source           int64           `json:"source,string"`
-			InclusionDelay   int64           `json:"inclusion_delay,string"`
-			Inactivity       int64           `json:"inactivity,string"`
+			EffectiveBalance int64 `json:"effective_balance,string"`
+			Head             int64 `json:"head,string"`
+			Target           int64 `json:"target,string"`
+			Source           int64 `json:"source,string"`
+			InclusionDelay   int64 `json:"inclusion_delay,string"`
+			Inactivity       int64 `json:"inactivity,string"`
 		} `json:"ideal_rewards"`
 		TotalRewards []struct {
 			ValidatorIndex uint64 `json:"validator_index,string"`

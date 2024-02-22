@@ -18,7 +18,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	itypes "github.com/gobitfly/eth-rewards/types"
-	"github.com/shopspring/decimal"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
@@ -542,15 +541,15 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 	epochKey := bigtable.reversedPaddedEpoch(epoch)
 
 	for _, validator := range validators {
-		if validator.Balance.GreaterThan(decimal.NewFromInt(0)) && validator.Index > highestActiveIndex {
+		if validator.Balance > 0 && validator.Index > highestActiveIndex {
 			highestActiveIndex = validator.Index
 		}
 
 		balanceEncoded := make([]byte, 8)
-		binary.LittleEndian.PutUint64(balanceEncoded, uint64(validator.Balance.IntPart()))
+		binary.LittleEndian.PutUint64(balanceEncoded, uint64(validator.Balance))
 
 		effectiveBalanceEncoded := make([]byte, 8)
-		binary.LittleEndian.PutUint64(effectiveBalanceEncoded, uint64(validator.EffectiveBalance.IntPart()))
+		binary.LittleEndian.PutUint64(effectiveBalanceEncoded, uint64(validator.EffectiveBalance))
 
 		combined := append(balanceEncoded, effectiveBalanceEncoded...)
 		mut := &gcp_bigtable.Mutation{}

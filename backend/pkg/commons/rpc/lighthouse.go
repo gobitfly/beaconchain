@@ -590,79 +590,73 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 
 	parsedHeaders, err := lc.GetBlockHeader(slot)
 	if err != nil {
-		httpErr, _ := network.SpecificError(err)
-		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
-			proposerAssignments, err := lc.GetEpochProposerAssignments(epoch)
+		return nil, fmt.Errorf("error retrieving headers at slot %v: %w", slot, err)
+	}
+
+	if err == nil && parsedHeaders == nil { // not found
+		proposerAssignments, err := lc.GetEpochProposerAssignments(epoch)
+		if err != nil {
+			return nil, err
+		}
+
+		proposer := uint64(math.MaxUint64)
+		for _, pa := range proposerAssignments.Data {
+			if uint64(pa.Slot) == slot {
+				proposer = pa.ValidatorIndex
+			}
+		}
+
+		block := &types.Block{
+			Status:            0,
+			Proposer:          proposer,
+			BlockRoot:         []byte{0x0},
+			Slot:              slot,
+			ParentRoot:        []byte{},
+			StateRoot:         []byte{},
+			Signature:         []byte{},
+			RandaoReveal:      []byte{},
+			Graffiti:          []byte{},
+			BodyRoot:          []byte{},
+			Eth1Data:          &types.Eth1Data{},
+			ProposerSlashings: make([]*types.ProposerSlashing, 0),
+			AttesterSlashings: make([]*types.AttesterSlashing, 0),
+			Attestations:      make([]*types.Attestation, 0),
+			Deposits:          make([]*types.Deposit, 0),
+			VoluntaryExits:    make([]*types.VoluntaryExit, 0),
+			SyncAggregate:     nil,
+		}
+
+		if isFirstSlotOfEpoch {
+			assignments, err := lc.GetEpochAssignments(epoch)
 			if err != nil {
 				return nil, err
 			}
 
-			proposer := uint64(math.MaxUint64)
-			for _, pa := range proposerAssignments.Data {
-				if uint64(pa.Slot) == slot {
-					proposer = pa.ValidatorIndex
-				}
+			block.EpochAssignments = assignments
+
+			parsedValidators, err := lc.GetValidatorState(epoch)
+			if err != nil {
+				return nil, fmt.Errorf("error retrieving validators for epoch %v: %w", epoch, err)
 			}
-
-			block := &types.Block{
-				Status:            0,
-				Proposer:          proposer,
-				BlockRoot:         []byte{0x0},
-				Slot:              slot,
-				ParentRoot:        []byte{},
-				StateRoot:         []byte{},
-				Signature:         []byte{},
-				RandaoReveal:      []byte{},
-				Graffiti:          []byte{},
-				BodyRoot:          []byte{},
-				Eth1Data:          &types.Eth1Data{},
-				ProposerSlashings: make([]*types.ProposerSlashing, 0),
-				AttesterSlashings: make([]*types.AttesterSlashing, 0),
-				Attestations:      make([]*types.Attestation, 0),
-				Deposits:          make([]*types.Deposit, 0),
-				VoluntaryExits:    make([]*types.VoluntaryExit, 0),
-				SyncAggregate:     nil,
+			block.Validators = make([]*types.Validator, 0, len(parsedValidators.Data))
+			for _, validator := range parsedValidators.Data {
+				block.Validators = append(block.Validators, &types.Validator{
+					Index:                      validator.Index,
+					PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
+					WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
+					Balance:                    validator.Balance,
+					EffectiveBalance:           validator.Validator.EffectiveBalance,
+					Slashed:                    validator.Validator.Slashed,
+					ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+					ActivationEpoch:            validator.Validator.ActivationEpoch,
+					ExitEpoch:                  validator.Validator.ExitEpoch,
+					WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
+					Status:                     string(validator.Status),
+				})
 			}
-
-			if isFirstSlotOfEpoch {
-				assignments, err := lc.GetEpochAssignments(epoch)
-				if err != nil {
-					return nil, err
-				}
-
-				block.EpochAssignments = assignments
-
-				parsedValidators, err := lc.cl.GetValidators(epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch, nil, nil)
-				if err != nil && epoch == 0 {
-					parsedValidators, err = lc.cl.GetValidators("genesis", nil, nil)
-					if err != nil {
-						return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
-					}
-				} else if err != nil {
-					return nil, fmt.Errorf("error retrieving validators for epoch %v: %w", epoch, err)
-				}
-
-				block.Validators = make([]*types.Validator, 0, len(parsedValidators.Data))
-				for _, validator := range parsedValidators.Data {
-					block.Validators = append(block.Validators, &types.Validator{
-						Index:                      validator.Index,
-						PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
-						WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
-						Balance:                    validator.Balance,
-						EffectiveBalance:           validator.Validator.EffectiveBalance,
-						Slashed:                    validator.Validator.Slashed,
-						ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
-						ActivationEpoch:            validator.Validator.ActivationEpoch,
-						ExitEpoch:                  validator.Validator.ExitEpoch,
-						WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-						Status:                     string(validator.Status),
-					})
-				}
-			}
-
-			return block, nil
 		}
-		return nil, fmt.Errorf("error retrieving headers at slot %v: %w", slot, err)
+
+		return block, nil
 	}
 
 	lc.slotsCacheMux.Lock()
@@ -700,13 +694,8 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 			return nil, err
 		}
 
-		parsedValidators, err := lc.cl.GetValidators(epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch, nil, nil)
-		if err != nil && epoch == 0 {
-			parsedValidators, err = lc.cl.GetValidators("genesis", nil, nil)
-			if err != nil {
-				return nil, fmt.Errorf("error retrieving validators for genesis: %w", err)
-			}
-		} else if err != nil {
+		parsedValidators, err := lc.GetValidatorState(epoch)
+		if err != nil {
 			return nil, fmt.Errorf("error retrieving validators for epoch %v: %w", epoch, err)
 		}
 
