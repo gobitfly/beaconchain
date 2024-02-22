@@ -1,18 +1,18 @@
 package utils
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"strings"
 
-	"github.com/carlmjohnson/requests"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/yaml.v2"
 )
@@ -333,15 +333,10 @@ func setCLConfig(cfg *types.Config) error {
 		// 	return fmt.Errorf("error setting chainConfig (%v) for prysmParams: %w", cfg.Chain.Name, err)
 		// }
 	} else if cfg.Chain.ClConfigPath == "node" {
-		nodeEndpoint := fmt.Sprintf("http://%s:%s", cfg.Indexer.Node.Host, cfg.Indexer.Node.Port)
+		nodeEndpoint := fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node.Host, cfg.Indexer.Node.Port))
+		client := consapi.NewNodeDataRetriever(nodeEndpoint)
 
-		jr := &types.ConfigJsonResponse{}
-
-		err := requests.
-			URL(nodeEndpoint + "/eth/v1/config/spec").
-			ToJSON(jr).
-			Fetch(context.Background())
-
+		jr, err := client.GetSpec()
 		if err != nil {
 			return err
 		}
@@ -351,114 +346,100 @@ func setCLConfig(cfg *types.Config) error {
 			ConfigName:                              jr.Data.ConfigName,
 			TerminalTotalDifficulty:                 jr.Data.TerminalTotalDifficulty,
 			TerminalBlockHash:                       jr.Data.TerminalBlockHash,
-			TerminalBlockHashActivationEpoch:        mustParseUint(jr.Data.TerminalBlockHashActivationEpoch),
-			MinGenesisActiveValidatorCount:          mustParseUint(jr.Data.MinGenesisActiveValidatorCount),
-			MinGenesisTime:                          int64(mustParseUint(jr.Data.MinGenesisTime)),
+			TerminalBlockHashActivationEpoch:        jr.Data.TerminalBlockHashActivationEpoch,
+			MinGenesisActiveValidatorCount:          uint64(jr.Data.MinGenesisActiveValidatorCount),
+			MinGenesisTime:                          jr.Data.MinGenesisTime,
 			GenesisForkVersion:                      jr.Data.GenesisForkVersion,
-			GenesisDelay:                            mustParseUint(jr.Data.GenesisDelay),
+			GenesisDelay:                            uint64(jr.Data.GenesisDelay),
 			AltairForkVersion:                       jr.Data.AltairForkVersion,
-			AltairForkEpoch:                         mustParseUint(jr.Data.AltairForkEpoch),
+			AltairForkEpoch:                         uint64(jr.Data.AltairForkEpoch),
 			BellatrixForkVersion:                    jr.Data.BellatrixForkVersion,
-			BellatrixForkEpoch:                      mustParseUint(jr.Data.BellatrixForkEpoch),
+			BellatrixForkEpoch:                      uint64(jr.Data.BellatrixForkEpoch),
 			CappellaForkVersion:                     jr.Data.CapellaForkVersion,
-			CappellaForkEpoch:                       mustParseUint(jr.Data.CapellaForkEpoch),
+			CappellaForkEpoch:                       uint64(jr.Data.CapellaForkEpoch),
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
-			DenebForkEpoch:                          mustParseUint(jr.Data.DenebForkEpoch),
-			SecondsPerSlot:                          mustParseUint(jr.Data.SecondsPerSlot),
-			SecondsPerEth1Block:                     mustParseUint(jr.Data.SecondsPerEth1Block),
-			MinValidatorWithdrawabilityDelay:        mustParseUint(jr.Data.MinValidatorWithdrawabilityDelay),
-			ShardCommitteePeriod:                    mustParseUint(jr.Data.ShardCommitteePeriod),
-			Eth1FollowDistance:                      mustParseUint(jr.Data.Eth1FollowDistance),
-			InactivityScoreBias:                     mustParseUint(jr.Data.InactivityScoreBias),
-			InactivityScoreRecoveryRate:             mustParseUint(jr.Data.InactivityScoreRecoveryRate),
-			EjectionBalance:                         mustParseUint(jr.Data.EjectionBalance),
-			MinPerEpochChurnLimit:                   mustParseUint(jr.Data.MinPerEpochChurnLimit),
-			ChurnLimitQuotient:                      mustParseUint(jr.Data.ChurnLimitQuotient),
-			ProposerScoreBoost:                      mustParseUint(jr.Data.ProposerScoreBoost),
-			DepositChainID:                          mustParseUint(jr.Data.DepositChainID),
-			DepositNetworkID:                        mustParseUint(jr.Data.DepositNetworkID),
+			DenebForkEpoch:                          uint64(jr.Data.DenebForkEpoch),
+			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),
+			SecondsPerEth1Block:                     uint64(jr.Data.SecondsPerEth1Block),
+			MinValidatorWithdrawabilityDelay:        uint64(jr.Data.MinValidatorWithdrawabilityDelay),
+			ShardCommitteePeriod:                    uint64(jr.Data.ShardCommitteePeriod),
+			Eth1FollowDistance:                      uint64(jr.Data.Eth1FollowDistance),
+			InactivityScoreBias:                     uint64(jr.Data.InactivityScoreBias),
+			InactivityScoreRecoveryRate:             uint64(jr.Data.InactivityScoreRecoveryRate),
+			EjectionBalance:                         uint64(jr.Data.EjectionBalance),
+			MinPerEpochChurnLimit:                   uint64(jr.Data.MinPerEpochChurnLimit),
+			ChurnLimitQuotient:                      uint64(jr.Data.ChurnLimitQuotient),
+			ProposerScoreBoost:                      uint64(jr.Data.ProposerScoreBoost),
+			DepositChainID:                          uint64(jr.Data.DepositChainID),
+			DepositNetworkID:                        uint64(jr.Data.DepositNetworkID),
 			DepositContractAddress:                  jr.Data.DepositContractAddress,
-			MaxCommitteesPerSlot:                    mustParseUint(jr.Data.MaxCommitteesPerSlot),
-			TargetCommitteeSize:                     mustParseUint(jr.Data.TargetCommitteeSize),
-			MaxValidatorsPerCommittee:               mustParseUint(jr.Data.TargetCommitteeSize),
-			ShuffleRoundCount:                       mustParseUint(jr.Data.ShuffleRoundCount),
-			HysteresisQuotient:                      mustParseUint(jr.Data.HysteresisQuotient),
-			HysteresisDownwardMultiplier:            mustParseUint(jr.Data.HysteresisDownwardMultiplier),
-			HysteresisUpwardMultiplier:              mustParseUint(jr.Data.HysteresisUpwardMultiplier),
-			SafeSlotsToUpdateJustified:              mustParseUint(jr.Data.SafeSlotsToUpdateJustified),
-			MinDepositAmount:                        mustParseUint(jr.Data.MinDepositAmount),
-			MaxEffectiveBalance:                     mustParseUint(jr.Data.MaxEffectiveBalance),
-			EffectiveBalanceIncrement:               mustParseUint(jr.Data.EffectiveBalanceIncrement),
-			MinAttestationInclusionDelay:            mustParseUint(jr.Data.MinAttestationInclusionDelay),
-			SlotsPerEpoch:                           mustParseUint(jr.Data.SlotsPerEpoch),
-			MinSeedLookahead:                        mustParseUint(jr.Data.MinSeedLookahead),
-			MaxSeedLookahead:                        mustParseUint(jr.Data.MaxSeedLookahead),
-			EpochsPerEth1VotingPeriod:               mustParseUint(jr.Data.EpochsPerEth1VotingPeriod),
-			SlotsPerHistoricalRoot:                  mustParseUint(jr.Data.SlotsPerHistoricalRoot),
-			MinEpochsToInactivityPenalty:            mustParseUint(jr.Data.MinEpochsToInactivityPenalty),
-			EpochsPerHistoricalVector:               mustParseUint(jr.Data.EpochsPerHistoricalVector),
-			EpochsPerSlashingsVector:                mustParseUint(jr.Data.EpochsPerSlashingsVector),
-			HistoricalRootsLimit:                    mustParseUint(jr.Data.HistoricalRootsLimit),
-			ValidatorRegistryLimit:                  mustParseUint(jr.Data.ValidatorRegistryLimit),
-			BaseRewardFactor:                        mustParseUint(jr.Data.BaseRewardFactor),
-			WhistleblowerRewardQuotient:             mustParseUint(jr.Data.WhistleblowerRewardQuotient),
-			ProposerRewardQuotient:                  mustParseUint(jr.Data.ProposerRewardQuotient),
-			InactivityPenaltyQuotient:               mustParseUint(jr.Data.InactivityPenaltyQuotient),
-			MinSlashingPenaltyQuotient:              mustParseUint(jr.Data.MinSlashingPenaltyQuotient),
-			ProportionalSlashingMultiplier:          mustParseUint(jr.Data.ProportionalSlashingMultiplier),
-			MaxProposerSlashings:                    mustParseUint(jr.Data.MaxProposerSlashings),
-			MaxAttesterSlashings:                    mustParseUint(jr.Data.MaxAttesterSlashings),
-			MaxAttestations:                         mustParseUint(jr.Data.MaxAttestations),
-			MaxDeposits:                             mustParseUint(jr.Data.MaxDeposits),
-			MaxVoluntaryExits:                       mustParseUint(jr.Data.MaxVoluntaryExits),
-			InvactivityPenaltyQuotientAltair:        mustParseUint(jr.Data.InactivityPenaltyQuotientAltair),
-			MinSlashingPenaltyQuotientAltair:        mustParseUint(jr.Data.MinSlashingPenaltyQuotientAltair),
-			ProportionalSlashingMultiplierAltair:    mustParseUint(jr.Data.ProportionalSlashingMultiplierAltair),
-			SyncCommitteeSize:                       mustParseUint(jr.Data.SyncCommitteeSize),
-			EpochsPerSyncCommitteePeriod:            mustParseUint(jr.Data.EpochsPerSyncCommitteePeriod),
-			MinSyncCommitteeParticipants:            mustParseUint(jr.Data.MinSyncCommitteeParticipants),
-			InvactivityPenaltyQuotientBellatrix:     mustParseUint(jr.Data.InactivityPenaltyQuotientBellatrix),
-			MinSlashingPenaltyQuotientBellatrix:     mustParseUint(jr.Data.MinSlashingPenaltyQuotientBellatrix),
-			ProportionalSlashingMultiplierBellatrix: mustParseUint(jr.Data.ProportionalSlashingMultiplierBellatrix),
-			MaxBytesPerTransaction:                  mustParseUint(jr.Data.MaxBytesPerTransaction),
-			MaxTransactionsPerPayload:               mustParseUint(jr.Data.MaxTransactionsPerPayload),
-			BytesPerLogsBloom:                       mustParseUint(jr.Data.BytesPerLogsBloom),
-			MaxExtraDataBytes:                       mustParseUint(jr.Data.MaxExtraDataBytes),
-			MaxWithdrawalsPerPayload:                mustParseUint(jr.Data.MaxWithdrawalsPerPayload),
-			MaxValidatorsPerWithdrawalSweep:         mustParseUint(jr.Data.MaxValidatorsPerWithdrawalsSweep),
-			MaxBlsToExecutionChange:                 mustParseUint(jr.Data.MaxBlsToExecutionChanges),
+			MaxCommitteesPerSlot:                    uint64(jr.Data.MaxCommitteesPerSlot),
+			TargetCommitteeSize:                     uint64(jr.Data.TargetCommitteeSize),
+			MaxValidatorsPerCommittee:               uint64(jr.Data.TargetCommitteeSize),
+			ShuffleRoundCount:                       uint64(jr.Data.ShuffleRoundCount),
+			HysteresisQuotient:                      uint64(jr.Data.HysteresisQuotient),
+			HysteresisDownwardMultiplier:            uint64(jr.Data.HysteresisDownwardMultiplier),
+			HysteresisUpwardMultiplier:              uint64(jr.Data.HysteresisUpwardMultiplier),
+			SafeSlotsToUpdateJustified:              uint64(jr.Data.SafeSlotsToUpdateJustified),
+			MinDepositAmount:                        uint64(jr.Data.MinDepositAmount),
+			MaxEffectiveBalance:                     uint64(jr.Data.MaxEffectiveBalance),
+			EffectiveBalanceIncrement:               uint64(jr.Data.EffectiveBalanceIncrement),
+			MinAttestationInclusionDelay:            uint64(jr.Data.MinAttestationInclusionDelay),
+			SlotsPerEpoch:                           uint64(jr.Data.SlotsPerEpoch),
+			MinSeedLookahead:                        uint64(jr.Data.MinSeedLookahead),
+			MaxSeedLookahead:                        uint64(jr.Data.MaxSeedLookahead),
+			EpochsPerEth1VotingPeriod:               uint64(jr.Data.EpochsPerEth1VotingPeriod),
+			SlotsPerHistoricalRoot:                  uint64(jr.Data.SlotsPerHistoricalRoot),
+			MinEpochsToInactivityPenalty:            uint64(jr.Data.MinEpochsToInactivityPenalty),
+			EpochsPerHistoricalVector:               uint64(jr.Data.EpochsPerHistoricalVector),
+			EpochsPerSlashingsVector:                uint64(jr.Data.EpochsPerSlashingsVector),
+			HistoricalRootsLimit:                    uint64(jr.Data.HistoricalRootsLimit),
+			ValidatorRegistryLimit:                  uint64(jr.Data.ValidatorRegistryLimit),
+			BaseRewardFactor:                        uint64(jr.Data.BaseRewardFactor),
+			WhistleblowerRewardQuotient:             uint64(jr.Data.WhistleblowerRewardQuotient),
+			ProposerRewardQuotient:                  uint64(jr.Data.ProposerRewardQuotient),
+			InactivityPenaltyQuotient:               uint64(jr.Data.InactivityPenaltyQuotient),
+			MinSlashingPenaltyQuotient:              uint64(jr.Data.MinSlashingPenaltyQuotient),
+			ProportionalSlashingMultiplier:          uint64(jr.Data.ProportionalSlashingMultiplier),
+			MaxProposerSlashings:                    uint64(jr.Data.MaxProposerSlashings),
+			MaxAttesterSlashings:                    uint64(jr.Data.MaxAttesterSlashings),
+			MaxAttestations:                         uint64(jr.Data.MaxAttestations),
+			MaxDeposits:                             uint64(jr.Data.MaxDeposits),
+			MaxVoluntaryExits:                       uint64(jr.Data.MaxVoluntaryExits),
+			InvactivityPenaltyQuotientAltair:        uint64(jr.Data.InactivityPenaltyQuotientAltair),
+			MinSlashingPenaltyQuotientAltair:        uint64(jr.Data.MinSlashingPenaltyQuotientAltair),
+			ProportionalSlashingMultiplierAltair:    uint64(jr.Data.ProportionalSlashingMultiplierAltair),
+			SyncCommitteeSize:                       uint64(jr.Data.SyncCommitteeSize),
+			EpochsPerSyncCommitteePeriod:            uint64(jr.Data.EpochsPerSyncCommitteePeriod),
+			MinSyncCommitteeParticipants:            uint64(jr.Data.MinSyncCommitteeParticipants),
+			InvactivityPenaltyQuotientBellatrix:     uint64(jr.Data.InactivityPenaltyQuotientBellatrix),
+			MinSlashingPenaltyQuotientBellatrix:     uint64(jr.Data.MinSlashingPenaltyQuotientBellatrix),
+			ProportionalSlashingMultiplierBellatrix: uint64(jr.Data.ProportionalSlashingMultiplierBellatrix),
+			MaxBytesPerTransaction:                  uint64(jr.Data.MaxBytesPerTransaction),
+			MaxTransactionsPerPayload:               uint64(jr.Data.MaxTransactionsPerPayload),
+			BytesPerLogsBloom:                       uint64(jr.Data.BytesPerLogsBloom),
+			MaxExtraDataBytes:                       uint64(jr.Data.MaxExtraDataBytes),
+			MaxWithdrawalsPerPayload:                uint64(jr.Data.MaxWithdrawalsPerPayload),
+			MaxValidatorsPerWithdrawalSweep:         uint64(jr.Data.MaxValidatorsPerWithdrawalsSweep),
+			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
 		}
 
-		if jr.Data.AltairForkEpoch == "" {
+		if jr.Data.AltairForkEpoch == 0 {
 			chainCfg.AltairForkEpoch = 18446744073709551615
 		}
-		if jr.Data.BellatrixForkEpoch == "" {
+		if jr.Data.BellatrixForkEpoch == 0 {
 			chainCfg.BellatrixForkEpoch = 18446744073709551615
 		}
-		if jr.Data.CapellaForkEpoch == "" {
+		if jr.Data.CapellaForkEpoch == 0 {
 			chainCfg.CappellaForkEpoch = 18446744073709551615
 		}
-		if jr.Data.DenebForkEpoch == "" {
+		if jr.Data.DenebForkEpoch == 0 {
 			chainCfg.DenebForkEpoch = 18446744073709551615
 		}
 
 		cfg.Chain.ClConfig = chainCfg
 
-		type GenesisResponse struct {
-			Data struct {
-				GenesisTime           string `json:"genesis_time"`
-				GenesisValidatorsRoot string `json:"genesis_validators_root"`
-				GenesisForkVersion    string `json:"genesis_fork_version"`
-			} `json:"data"`
-		}
-
-		gtr := &GenesisResponse{}
-
-		err = requests.
-			URL(nodeEndpoint + "/eth/v1/beacon/genesis").
-			ToJSON(gtr).
-			Fetch(context.Background())
-
+		gtr, err := client.GetGenesis()
 		if err != nil {
 			return err
 		}
