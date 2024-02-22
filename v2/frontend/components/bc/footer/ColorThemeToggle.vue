@@ -54,7 +54,7 @@ input {
   left: 1.5px;
   bottom: 1.5px;
   border-radius: 50%;
-  background-color: var(--primary-color);
+  background-color: var(--primary-orange);  // do not use --primary-color otherwise the switch becomes invisible in dark mode
   -webkit-transition: 0.2s;
   transition: 0.2s;
 }

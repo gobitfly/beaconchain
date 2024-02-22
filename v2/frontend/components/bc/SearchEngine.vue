@@ -10,7 +10,6 @@ const engineWidth = props.width + 'px'
 const inputWidth = String(Number(props.width) - 10) + 'px'
 const dropDownWidth = String(Number(props.width) - 10) + 'px'
 const inputHeight = props.height + 'px'
-const networkButtonColor = ref('var(--light-grey-3)')
 
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
@@ -37,13 +36,15 @@ const results = {
 
 interface UserFilters {
   networks: Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
-  noNetworkIsSelected : boolean
-  categories : Record<string, 'y'|'n'> // each field will have a Categories as key and the state of the button as value
+  noNetworkIsSelected : boolean,
+  everyNetworkIsSelected : boolean,
+  categories : Record<string, 'y'|'n'>, // each field will have a Categories as key and the state of the button as value
   noCategoryIsSelected : boolean
 }
 const userFilters = ref<UserFilters>({
   networks: {},
   noNetworkIsSelected: true,
+  everyNetworkIsSelected: false,
   categories: {},
   noCategoryIsSelected: true
 })
@@ -148,13 +149,11 @@ function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: strin
 
 function networkFilterHasChanged () {
   userFilters.value.noNetworkIsSelected = (networkDropdownUserSelection.value.length === 0)
+  userFilters.value.everyNetworkIsSelected = (networkDropdownUserSelection.value.length === networkDropdownOptions.length)
 
   for (const nw in userFilters.value.networks) {
     userFilters.value.networks[nw] = networkDropdownUserSelection.value.includes(nw)
   }
-
-  // making the network button orange if networks are selected, gray if the filter is inactive
-  networkButtonColor.value = userFilters.value.noNetworkIsSelected ? 'var(--button-color-disabled)' : 'var(--button-color-active)'
 }
 
 function categoryFilterHasChanged () {
@@ -236,7 +235,7 @@ function filterAndOrganizeResults () {
       chainId = finding.chain_id as ChainIDs
     }
     // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized object
-    // note that when the user did not select any network or any category, we show all of them by default
+    // note that when the user did not select any network or any category, we default to showing all of them
     let place : OrganizedResults
     if ((userFilters.value.networks[String(chainId)] || userFilters.value.noNetworkIsSelected || chainId === ChainIDs.Any) &&
         (userFilters.value.categories[TypeInfo[type].category] === 'y' || userFilters.value.noCategoryIsSelected)) {
@@ -531,32 +530,33 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       </div>
       <div v-else>
         <div id="filter-bar">
+          <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
           <MultiSelect
+            id="filter-networks"
             v-model="networkDropdownUserSelection"
             :options="networkDropdownOptions"
             option-value="name"
             option-label="label"
-            placeholder="Networks"
+            placeholder="Networks:&nbsp;all"
             :variant="'outlined'"
             display="comma"
             :show-toggle-all="false"
             :max-selected-labels="1"
-            selected-items-label="{0} networks"
-            class="filter-networks"
+            :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
             append-to="self"
             @change="networkFilterHasChanged(); refreshDropDown()"
             @click="(e : Event) => e.stopPropagation()"
           />
-          <label v-for="filter of Object.keys(userFilters.categories)" :key="filter">
+          <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
             <input
               v-model="userFilters.categories[filter]"
-              class="hiddencheckbox-filter"
+              class="hiddencheckbox"
               true-value="y"
               false-value="n"
               type="checkbox"
               @change="categoryFilterHasChanged(); refreshDropDown()"
             >
-            <span class="filter-button">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
+            <span class="face">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
           </label>
         </div>
         <span v-if="populateDropDown">
@@ -587,6 +587,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
+@use "~/assets/css/fonts.scss";
 
 #whole-engine {
   width: v-bind(engineWidth);
@@ -603,69 +604,81 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   position: absolute;
   z-index: 256;
   overflow: auto;
+  min-height: 200px;
   max-height: 66vh;
   width: v-bind(dropDownWidth);
   padding: 4px;
-}
 
-.network-container {
-  margin-bottom: 24px;
-}
+  h2 {
+    margin: 0;
+  }
+  h3 {
+    margin: 0;
+  }
+  .network-container {
+    margin-bottom: 24px;
+    .network-title {
+      background-color: #b0b0b0;
+      padding-left: 4px;
+    }
+    .type-container {
+      border-bottom: 0.5px dashed var(--light-grey-3);
+      padding: 4px;
+      .type-title {
 
-.network-title {
-  background-color: #b0b0b0;
-  padding-left: 4px;
-}
-
-.type-title {
-
-}
-.type-container {
-  border-bottom: 0.5px dashed var(--light-grey-3);
-  padding: 4px;
-}
-
-.single-result {
-  cursor: pointer;
-}
-
-h2 {
-  margin: 0;
-}
-
-h3 {
-  margin: 0;
+      }
+      .single-result {
+        cursor: pointer;
+      }
+    }
+  }
 }
 
 #filter-bar {
   padding-top: 4px;
   padding-bottom: 8px;
-}
 
-#filter-networks {
-  background: #AAAAAA;
-  width: w-20rem;
-  @include main.button_text;
+  #filter-networks {
+    @include fonts.small_text_bold;
+    width: 160px;
+    &.p-multiselect {
+      height: 20px;
+      border-radius: 10px;
+      .p-multiselect-label {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+        &.p-placeholder {
+          border-top-left-radius: 10px;
+          border-bottom-left-radius: 10px;
+        }
+      }
+    }
+  }
+  .filter-button {
+    @include fonts.small_text_bold;
+    .face{
+      color: var(--primary-contrast-color);
+      display: inline-block;
+      border-radius: 10px;
+      background-color: var(--button-color-disabled);
+      width: 80px;
+      height: 17px;
+      padding-top: 3px;
+      text-align: center;
+      margin-right: 6px;
+      transition: 0.2s;
+    }
+    .hiddencheckbox {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+    .hiddencheckbox:checked + .face {
+      background-color: var(--button-color-pressed);
+    }
+  }
 }
-
-.hiddencheckbox-filter {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.filter-button {
-  @include main.button_text;
-  display: inline-block;
-  border-radius: 6px;
-  background-color: var(--button-color-disabled);
-  padding: 2px;
-  width: 80px;
-  text-align: center;
-  margin-right: 6px;
-  transition: 0.2s;
-}
-.hiddencheckbox-filter:checked + .filter-button {
-  background-color: var(--button-color-active);
+.p-multiselect .p-multiselect-label.p-placeholder {
+  border-radius: 10px;
 }
 </style>
