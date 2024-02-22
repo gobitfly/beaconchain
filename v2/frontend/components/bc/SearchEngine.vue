@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/search'
-import { ChainIDs, ChainInfo, getListOfImplementedChainIDs, isMainNet } from '~/types/networks'
+import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/searchengine'
+import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 const { t: $t } = useI18n()
 
 const props = defineProps({ searchable: { type: Array, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
@@ -10,6 +10,7 @@ const engineWidth = props.width + 'px'
 const inputWidth = String(Number(props.width) - 10) + 'px'
 const dropDownWidth = String(Number(props.width) - 10) + 'px'
 const inputHeight = props.height + 'px'
+const networkButtonColor = ref('var(--light-grey-3)')
 
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
@@ -23,6 +24,8 @@ const populateDropDown = ref(true)
 const inputField = ref('')
 let lastKnownInput = ''
 let isMouseOverEngine = false
+const networkDropdownOptions : {name: string, label: string}[] = []
+const networkDropdownUserSelection = ref<string[]>([])
 
 const results = {
   raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
@@ -33,18 +36,42 @@ const results = {
 }
 
 interface UserFilters {
-  network: string,
-  toggles : Record<string, string>
+  networks: Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
+  noNetworkIsSelected : boolean
+  categories : Record<string, 'y'|'n'> // each field will have a Categories as key and the state of the button as value
+  noCategoryIsSelected : boolean
 }
 const userFilters = ref<UserFilters>({
-  network: 'all',
-  toggles: {}
+  networks: {},
+  noNetworkIsSelected: true,
+  categories: {},
+  noCategoryIsSelected: true
 })
 
-const networkButtonColor = ref('var(--light-grey-3)')
-function setNetworkButtonColor () {
-  networkButtonColor.value = (userFilters.value.network === 'all') ? 'var(--light-grey-3)' : 'var(--primary-color)'
-}
+onMounted(() => {
+  searchableTypes = []
+  // builds the list of search types from the list of searchable categories (obtained as a props)
+  for (const t of getListOfResultTypes(false)) {
+    if (searchable.includes(TypeInfo[t].category)) {
+      searchableTypes.push(t)
+    }
+  }
+
+  // creates the fields storing the state of the filter buttons, and deselect them
+  for (const s of searchable) {
+    userFilters.value.categories[s] = 'n'
+  }
+  userFilters.value.noCategoryIsSelected = true
+
+  for (const nw of getListOfImplementedChainIDs(true)) {
+    // creates the field telling us whether this network is selected
+    userFilters.value.networks[String(nw)] = false
+    // populates the network-drop-down
+    networkDropdownOptions.push({ name: String(nw), label: ChainInfo[nw].name })
+  }
+  networkDropdownUserSelection.value = [] // deselects all options
+  networkFilterHasChanged()
+})
 
 function cleanUp () {
   lastKnownInput = ''
@@ -61,7 +88,7 @@ function cleanUp () {
 // was only for entries of size 1.
 // This less-than-2.5s-on-average delay arised from a Timeout Timer.
 // For the V2, I propose to work with a 2-second Interval Timer because:
-// - it makes sure that the server does not receive a request more often than every 2 s (equivalent to V1),
+// - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
 // - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
 setInterval(() => {
   if (waitingForSearchResults.value) {
@@ -73,20 +100,6 @@ setInterval(() => {
 },
 PeriodOfDropDownUpdates
 )
-
-onMounted(() => {
-  searchableTypes = []
-  // builds the list of search types from the list of searchable categories (obtained as a props)
-  for (const t of getListOfResultTypes()) {
-    if (searchable.includes(TypeInfo[t].category)) {
-      searchableTypes.push(t)
-    }
-  }
-  // creates the variables storing the state of the filter buttons and inactivates the filters
-  for (const s of searchable) {
-    userFilters.value.toggles[s] = 'n'
-  }
-})
 
 function inputMightHaveChanged () {
   if (inputField.value === lastKnownInput) {
@@ -133,6 +146,35 @@ function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: strin
   emit('select', found, type, chain)
 }
 
+function networkFilterHasChanged () {
+  userFilters.value.noNetworkIsSelected = (networkDropdownUserSelection.value.length === 0)
+
+  for (const nw in userFilters.value.networks) {
+    userFilters.value.networks[nw] = networkDropdownUserSelection.value.includes(nw)
+  }
+
+  // making the network button orange if networks are selected, gray if the filter is inactive
+  networkButtonColor.value = userFilters.value.noNetworkIsSelected ? 'var(--light-grey-3)' : 'var(--primary-color)'
+}
+
+function categoryFilterHasChanged () {
+  // determining whether any filter button is activated
+  let allButtonsOff = true
+  for (const cat in userFilters.value.categories) {
+    if (userFilters.value.categories[cat] === 'y') {
+      allButtonsOff = false
+      break
+    }
+  }
+  userFilters.value.noCategoryIsSelected = allButtonsOff
+}
+
+function refreshDropDown () {
+  populateDropDown.value = false
+  filterAndOrganizeResults()
+  populateDropDown.value = true // this triggers Vue to refresh the list of results
+}
+
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
 function searchAhead () : boolean {
@@ -171,34 +213,33 @@ function searchAhead () : boolean {
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
 function filterAndOrganizeResults () {
-  // determining whether any filter button is activated
-  let areAllButtonsOff = true
-  for (const k of Object.keys(userFilters.value.toggles)) {
-    if (userFilters.value.toggles[k] === 'y') {
-      areAllButtonsOff = false
-      break
-    }
-  }
-
   results.organized.in = { networks: [] }
   results.organized.out = { networks: [] }
 
   if (results.raw.data === undefined) {
     return
   }
+
   for (const finding of results.raw.data) {
-    const chainId = finding.chain_id as ChainIDs
     const type = finding.type as ResultTypes
 
     // getting organized information from the finding
     const toBeAdded = organizeAPIinfo(finding)
-    if (toBeAdded.main === '' || !isMainNet(chainId)) {
+    if (toBeAdded.main === '') {
       continue
     }
-    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized storage
+    // determining the network that the finding belongs to
+    let chainId : ChainIDs
+    if (TypeInfo[type].belongsToAllNetworks) {
+      chainId = ChainIDs.Any
+    } else {
+      chainId = finding.chain_id as ChainIDs
+    }
+    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized object
+    // note that when the user did not select any network or any category, we show all of them by default
     let place : OrganizedResults
-    if ((userFilters.value.network === String(chainId) || userFilters.value.network === 'all') &&
-        (userFilters.value.toggles[TypeInfo[type].category] === 'y' || areAllButtonsOff /* if all filters are inactive, we default to showing everything */)) {
+    if ((userFilters.value.networks[String(chainId)] || userFilters.value.noNetworkIsSelected || chainId === ChainIDs.Any) &&
+        (userFilters.value.categories[TypeInfo[type].category] === 'y' || userFilters.value.noCategoryIsSelected)) {
       place = results.organized.in
     } else {
       place = results.organized.out
@@ -223,8 +264,6 @@ function filterAndOrganizeResults () {
     place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
   }
 
-  // Sorting. We could simply sort the long array of the API before filling our organized structures, thus not needing
-  // the following function, but it is faster to sort separate lists than their union (a.log(a)+b.log(b) < (a+b)log(a+b))
   function sortResults (place : OrganizedResults) {
     place.networks.sort((a, b) => { return ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority })
     for (const network of place.networks) {
@@ -233,12 +272,6 @@ function filterAndOrganizeResults () {
   }
   sortResults(results.organized.in)
   sortResults(results.organized.out)
-}
-
-function refreshDropDown () {
-  populateDropDown.value = false
-  filterAndOrganizeResults()
-  populateDropDown.value = true // this triggers Vue to refresh the list of results
 }
 
 function areOrganizedResultsEmpty (what : 'in'|'out'|'all') : boolean {
@@ -476,20 +509,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 </script>
 
 <template>
-  <label id="whole-engine">
+  <label
+    id="whole-engine"
+    @mouseover="isMouseOverEngine = true"
+    @mouseleave="isMouseOverEngine = false"
+  >
     <input
       id="input-field"
       v-model="inputField"
       type="text"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
       @blur="showDropDown = isMouseOverEngine"
+      @focus="showDropDown = inputField.length > 0"
     >
-    <div
-      v-if="showDropDown"
-      id="drop-down"
-      @mouseenter="isMouseOverEngine = true"
-      @mouseleave="isMouseOverEngine = false"
-    >
+    <div v-if="showDropDown" id="drop-down">
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
@@ -498,40 +531,44 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       </div>
       <div v-else>
         <div id="filter-bar">
-          <label><select
-            id="filter-list"
-            v-model="userFilters.network"
-            class="filter-button"
-            @change="setNetworkButtonColor(); refreshDropDown()"
-          >
-            <option value="all">All networks</option>
-            <option v-for="chain in getListOfImplementedChainIDs()" :key="chain" :value="String(chain)">
-              {{ ChainInfo[chain].name }}
-            </option>
-          </select>
-          </label>
-          <label v-for="filter in searchable" :key="filter">
+          <MultiSelect
+            v-model="networkDropdownUserSelection"
+            :options="networkDropdownOptions"
+            option-value="name"
+            option-label="label"
+            placeholder="Networks"
+            :variant="'outlined'"
+            display="comma"
+            :show-toggle-all="false"
+            :max-selected-labels="1"
+            selected-items-label="{0} networks"
+            class="filter-networks"
+            append-to="self"
+            @change="networkFilterHasChanged(); refreshDropDown()"
+            @click="(e : Event) => e.stopPropagation()"
+          />
+          <label v-for="filter of Object.keys(userFilters.categories)" :key="filter">
             <input
-              v-model="userFilters.toggles[filter]"
-              class="filter-cb"
+              v-model="userFilters.categories[filter]"
+              class="hiddencheckbox-filter"
               true-value="y"
               false-value="n"
               type="checkbox"
-              @change="refreshDropDown()"
+              @change="categoryFilterHasChanged(); refreshDropDown()"
             >
-            <span class="filter-button">{{ CategoryInfo[filter].filterLabel }}</span>
+            <span class="filter-button">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
           </label>
         </div>
         <span v-if="populateDropDown">
-          <div v-for="network in results.organized.in.networks" :key="network.chainId" class="network-container">
+          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
             <div class="network-title">
               <h2>{{ ChainInfo[network.chainId].name }}</h2>
             </div>
-            <div v-for="types in network.types" :key="types.type" class="type-container">
+            <div v-for="types of network.types" :key="types.type" class="type-container">
               <div class="type-title">
                 <h3>{{ TypeInfo[types.type].title }}</h3>
               </div>
-              <div v-for="(found, i) in types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
+              <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
                 {{ TypeInfo[types.type].preLabels }}
                 {{ found.main }}
                 <span v-if="found.complement !== ''">
@@ -605,11 +642,12 @@ h3 {
   padding-bottom: 8px;
 }
 
-#filter-list {
-  background: v-bind(networkButtonColor);
+#filter-networks {
+  background: #AAAAAA;
+  width: w-20rem;
 }
 
-.filter-cb {
+.hiddencheckbox-filter {
   display: none;
   width: 0;
   height: 0;
@@ -625,7 +663,7 @@ h3 {
   margin-right: 6px;
   transition: 0.2s;
 }
-.filter-cb:checked + .filter-button {
+.hiddencheckbox-filter:checked + .filter-button {
   background-color: var(--primary-color);
 }
 </style>
