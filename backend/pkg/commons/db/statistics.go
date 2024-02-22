@@ -182,7 +182,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 	// calculate cl income data & update totals
 	for index, data := range validatorData {
 		previousDayData := &types.ValidatorStatsTableDbRow{
-			ValidatorIndex: uint64(data.ValidatorIndex),
+			ValidatorIndex: data.ValidatorIndex,
 		}
 
 		if index < len(statisticsData1d) && day > 0 {
@@ -915,7 +915,7 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 	rows.Close()
 
 	for slot := firstEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= ((lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch)-1; slot++ {
-		period := utils.SyncPeriodOfEpoch(utils.EpochOfSlot(uint64(slot)))
+		period := utils.SyncPeriodOfEpoch(utils.EpochOfSlot(slot))
 
 		committee := syncCommittees[types.SyncCommitteePeriod(period)]
 		if committee == nil {
@@ -1207,7 +1207,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 	if upperBoundDay == 65536 {
 		lastDay := int64(0)
 		if len(result) > 0 {
-			lastDay = int64(result[len(result)-1].Day)
+			lastDay = result[len(result)-1].Day
 		} else {
 			lastDayDb, err := GetLastExportedStatisticDay()
 			if err == nil {
@@ -1271,7 +1271,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 		}
 
 		result = append(result, types.ValidatorIncomeHistory{
-			Day:        int64(currentDay),
+			Day:        currentDay,
 			ClRewards:  int64(totalBalance - lastBalance - lastDeposits + lastWithdrawals),
 			EndBalance: sql.NullInt64{Int64: int64(totalBalance), Valid: true}, // show the latest balance for todays income
 		})
@@ -1463,7 +1463,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 		return fmt.Errorf("delaying chart series export as not all epochs for day %v finalized. last epoch of the day [%v] last finalized epoch [%v]", day, lastEpoch, latestFinalizedEpoch)
 	}
 
-	firstBlock, err := GetBlockNumber(uint64(firstSlot))
+	firstBlock, err := GetBlockNumber(firstSlot)
 	if err != nil {
 		return fmt.Errorf("error getting block number for slot: %v err: %w", firstSlot, err)
 	}

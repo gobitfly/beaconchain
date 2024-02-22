@@ -445,19 +445,19 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
 	for validator, duty := range block.SyncDuties {
-		syncDuties[types.Slot(block.Slot)][types.ValidatorIndex(validator)] = duty
+		syncDuties[types.Slot(block.Slot)][validator] = duty
 	}
 
 	attDuties := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
 	for validator, attestedSlots := range block.AttestationDuties {
 		for _, attestedSlot := range attestedSlots {
-			if attDuties[types.Slot(attestedSlot)] == nil {
-				attDuties[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
+			if attDuties[attestedSlot] == nil {
+				attDuties[attestedSlot] = make(map[types.ValidatorIndex][]types.Slot)
 			}
-			if attDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] == nil {
-				attDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] = make([]types.Slot, 0, 10)
+			if attDuties[attestedSlot][validator] == nil {
+				attDuties[attestedSlot][validator] = make([]types.Slot, 0, 10)
 			}
-			attDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] = append(attDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)], types.Slot(block.Slot))
+			attDuties[attestedSlot][validator] = append(attDuties[attestedSlot][validator], types.Slot(block.Slot))
 		}
 	}
 

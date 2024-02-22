@@ -470,7 +470,7 @@ func (s *statsMigratorConfig) copyValidatorStats(sourceTableName, destTableName 
 
 	var maxDay int64 = math.MaxInt64
 	var offset int64 = 0
-	var day = int64(startDay)
+	var day = startDay
 	firstTryOnNewDay := true
 
 	for {

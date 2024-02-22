@@ -345,7 +345,7 @@ func setCLConfig(cfg *types.Config) error {
 			ConfigName:                              jr.Data.ConfigName,
 			TerminalTotalDifficulty:                 jr.Data.TerminalTotalDifficulty,
 			TerminalBlockHash:                       jr.Data.TerminalBlockHash,
-			TerminalBlockHashActivationEpoch:        uint64(jr.Data.TerminalBlockHashActivationEpoch),
+			TerminalBlockHashActivationEpoch:        jr.Data.TerminalBlockHashActivationEpoch,
 			MinGenesisActiveValidatorCount:          uint64(jr.Data.MinGenesisActiveValidatorCount),
 			MinGenesisTime:                          jr.Data.MinGenesisTime,
 			GenesisForkVersion:                      jr.Data.GenesisForkVersion,
