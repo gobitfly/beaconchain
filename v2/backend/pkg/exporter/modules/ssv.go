@@ -42,11 +42,12 @@ func ssvExporter() {
 }
 
 func exportSSV() error {
-	c, _, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
+	c, r, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
+	defer r.Body.Close()
 
 	done := make(chan struct{})
 

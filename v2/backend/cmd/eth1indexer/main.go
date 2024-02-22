@@ -403,6 +403,7 @@ func UpdateTokenPrices(bt *db.Bigtable, client *rpc.ErigonClient, tokenListPath 
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error querying defillama api: %v", resp.Status)
@@ -656,6 +657,7 @@ func ImportMainnetERC20TokenMetadataFromTokenDirectory(bt *db.Bigtable) {
 	if err != nil {
 		log.Fatal(err, "getting client error", 0)
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 
@@ -714,6 +716,8 @@ func ImportMainnetERC20TokenMetadataFromTokenDirectory(bt *db.Bigtable) {
 				if err != nil {
 					log.Fatal(err, "reading body for ERC20 token logo URI error", 0)
 				}
+
+				resp.Body.Close()
 
 				meta.Logo = body
 				meta.LogoFormat = token.LogoURI
