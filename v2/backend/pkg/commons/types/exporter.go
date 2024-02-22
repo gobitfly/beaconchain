@@ -74,17 +74,17 @@ type ValidatorParticipation struct {
 
 // Validator is a struct to hold validator data
 type Validator struct {
-	Index                      uint64          `db:"validatorindex"`
-	PublicKey                  []byte          `db:"pubkey"`
-	PublicKeyHex               string          `db:"pubkeyhex"`
-	Balance                    decimal.Decimal `db:"balance"`
-	EffectiveBalance           decimal.Decimal `db:"effectivebalance"`
-	Slashed                    bool            `db:"slashed"`
-	ActivationEligibilityEpoch uint64          `db:"activationeligibilityepoch"`
-	ActivationEpoch            uint64          `db:"activationepoch"`
-	ExitEpoch                  uint64          `db:"exitepoch"`
-	WithdrawableEpoch          uint64          `db:"withdrawableepoch"`
-	WithdrawalCredentials      []byte          `db:"withdrawalcredentials"`
+	Index                      uint64 `db:"validatorindex"`
+	PublicKey                  []byte `db:"pubkey"`
+	PublicKeyHex               string `db:"pubkeyhex"`
+	Balance                    uint64 `db:"balance"`
+	EffectiveBalance           uint64 `db:"effectivebalance"`
+	Slashed                    bool   `db:"slashed"`
+	ActivationEligibilityEpoch uint64 `db:"activationeligibilityepoch"`
+	ActivationEpoch            uint64 `db:"activationepoch"`
+	ExitEpoch                  uint64 `db:"exitepoch"`
+	WithdrawableEpoch          uint64 `db:"withdrawableepoch"`
+	WithdrawalCredentials      []byte `db:"withdrawalcredentials"`
 
 	BalanceActivation sql.NullInt64 `db:"balanceactivation"`
 	Status            string        `db:"status"`
@@ -190,12 +190,12 @@ type ExecutionPayload struct {
 }
 
 type Withdrawals struct {
-	Slot           uint64          `json:"slot,omitempty"`
-	BlockRoot      []byte          `json:"blockroot,omitempty"`
-	Index          uint64          `json:"index"`
-	ValidatorIndex uint64          `json:"validatorindex"`
-	Address        []byte          `json:"address"`
-	Amount         decimal.Decimal `json:"amount"`
+	Slot           uint64 `json:"slot,omitempty"`
+	BlockRoot      []byte `json:"blockroot,omitempty"`
+	Index          uint64 `json:"index"`
+	ValidatorIndex uint64 `json:"validatorindex"`
+	Address        []byte `json:"address"`
+	Amount         uint64 `json:"amount"`
 }
 
 type WithdrawalsByEpoch struct {
@@ -268,7 +268,7 @@ type Deposit struct {
 	Proof                 [][]byte
 	PublicKey             []byte
 	WithdrawalCredentials []byte
-	Amount                decimal.Decimal
+	Amount                uint64
 	Signature             []byte
 }
 
@@ -614,14 +614,14 @@ type ValidatorStatsTableDbRow struct {
 	ValidatorIndex uint64 `db:"validatorindex"`
 	Day            int64  `db:"day"`
 
-	StartBalance          decimal.Decimal `db:"start_balance"`
-	EndBalance            decimal.Decimal `db:"end_balance"`
-	MinBalance            int64           `db:"min_balance"`
-	MaxBalance            int64           `db:"max_balance"`
-	StartEffectiveBalance decimal.Decimal `db:"start_effective_balance"`
-	EndEffectiveBalance   decimal.Decimal `db:"end_effective_balance"`
-	MinEffectiveBalance   int64           `db:"min_effective_balance"`
-	MaxEffectiveBalance   int64           `db:"max_effective_balance"`
+	StartBalance          int64 `db:"start_balance"`
+	EndBalance            int64 `db:"end_balance"`
+	MinBalance            int64 `db:"min_balance"`
+	MaxBalance            int64 `db:"max_balance"`
+	StartEffectiveBalance int64 `db:"start_effective_balance"`
+	EndEffectiveBalance   int64 `db:"end_effective_balance"`
+	MinEffectiveBalance   int64 `db:"min_effective_balance"`
+	MaxEffectiveBalance   int64 `db:"max_effective_balance"`
 
 	MissedAttestations      int64 `db:"missed_attestations"`
 	MissedAttestationsTotal int64 `db:"missed_attestations_total"`

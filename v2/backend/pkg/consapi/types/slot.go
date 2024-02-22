@@ -1,7 +1,5 @@
 package types
 
-import "github.com/shopspring/decimal"
-
 // /eth/v2/beacon/blocks/{block_id}
 type StandardBeaconSlotResponse struct {
 	Version             string         `json:"version"`
@@ -123,10 +121,10 @@ type Attestation struct {
 type Deposit struct {
 	Proof []string `json:"proof"`
 	Data  struct {
-		Pubkey                string          `json:"pubkey"`
-		WithdrawalCredentials bytesHexStr     `json:"withdrawal_credentials"`
-		Amount                decimal.Decimal `json:"amount"`
-		Signature             bytesHexStr     `json:"signature"`
+		Pubkey                string      `json:"pubkey"`
+		WithdrawalCredentials bytesHexStr `json:"withdrawal_credentials"`
+		Amount                uint64      `json:"amount,string"`
+		Signature             bytesHexStr `json:"signature"`
 	} `json:"data"`
 }
 
@@ -174,10 +172,10 @@ type ExecutionPayload struct {
 }
 
 type WithdrawalPayload struct {
-	Index          uint64          `json:"index,string"`
-	ValidatorIndex uint64          `json:"validator_index,string"`
-	Address        bytesHexStr     `json:"address"`
-	Amount         decimal.Decimal `json:"amount"`
+	Index          uint64      `json:"index,string"`
+	ValidatorIndex uint64      `json:"validator_index,string"`
+	Address        bytesHexStr `json:"address"`
+	Amount         uint64      `json:"amount,string"`
 }
 
 type SignedBLSToExecutionChange struct {

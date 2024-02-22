@@ -1,7 +1,5 @@
 package types
 
-import "github.com/shopspring/decimal"
-
 const (
 	PendingInitialized ValidatorStatus = "pending_initialized"
 	PendingQueued      ValidatorStatus = "pending_queued"
@@ -34,17 +32,17 @@ type StandardSingleValidatorsResponse struct {
 
 type StandardValidator struct {
 	Index     uint64          `json:"index,string"`
-	Balance   decimal.Decimal `json:"balance"`
+	Balance   uint64          `json:"balance,string"`
 	Status    ValidatorStatus `json:"status"`
 	Validator struct {
-		Pubkey                     string          `json:"pubkey"`
-		WithdrawalCredentials      string          `json:"withdrawal_credentials"`
-		EffectiveBalance           decimal.Decimal `json:"effective_balance"`
-		Slashed                    bool            `json:"slashed"`
-		ActivationEligibilityEpoch uint64          `json:"activation_eligibility_epoch,string"`
-		ActivationEpoch            uint64          `json:"activation_epoch,string"`
-		ExitEpoch                  uint64          `json:"exit_epoch,string"`
-		WithdrawableEpoch          uint64          `json:"withdrawable_epoch,string"`
+		Pubkey                     string `json:"pubkey"`
+		WithdrawalCredentials      string `json:"withdrawal_credentials"`
+		EffectiveBalance           uint64 `json:"effective_balance,string"`
+		Slashed                    bool   `json:"slashed"`
+		ActivationEligibilityEpoch uint64 `json:"activation_eligibility_epoch,string"`
+		ActivationEpoch            uint64 `json:"activation_epoch,string"`
+		ExitEpoch                  uint64 `json:"exit_epoch,string"`
+		WithdrawableEpoch          uint64 `json:"withdrawable_epoch,string"`
 	} `json:"validator"`
 }
 

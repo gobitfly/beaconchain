@@ -85,7 +85,7 @@ func (d *slotExporterData) Start(args []any) (err error) {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil && !strings.Contains(err.Error(), "already been committed or rolled back") {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

@@ -9,7 +9,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	ctypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
 )
 
 type dashboardData struct {
@@ -151,7 +150,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
-	idealAttestationRewards := make(map[decimal.Decimal]int)
+	idealAttestationRewards := make(map[int64]int)
 	for i, idealReward := range data.attestationRewards.Data.IdealRewards {
 		idealAttestationRewards[idealReward.EffectiveBalance] = i
 	}
@@ -214,7 +213,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			err := utils.VerifyDepositSignature(&phase0.DepositData{
 				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
 				WithdrawalCredentials: depositData.Data.WithdrawalCredentials,
-				Amount:                phase0.Gwei(uint64(depositData.Data.Amount.IntPart())),
+				Amount:                phase0.Gwei(depositData.Data.Amount),
 				Signature:             phase0.BLSSignature(depositData.Data.Signature),
 			}, domain)
 
@@ -234,13 +233,13 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 			validatorIndex := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
 
-			validatorsData[validatorIndex].DepositsAmount = validatorsData[validatorIndex].DepositsAmount.Add(depositData.Data.Amount)
+			validatorsData[validatorIndex].DepositsAmount += depositData.Data.Amount
 			validatorsData[validatorIndex].DepositsCount++
 		}
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
 			validatorIndex := withdrawal.ValidatorIndex
-			validatorsData[validatorIndex].WithdrawalsAmount = validatorsData[validatorIndex].WithdrawalsAmount.Add(withdrawal.Amount)
+			validatorsData[validatorIndex].WithdrawalsAmount += withdrawal.Amount
 			validatorsData[validatorIndex].WithdrawalsCount++
 		}
 	}
@@ -259,7 +258,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			validatorsData[validatorIndex].AttestationsTargetReward +
 			validatorsData[validatorIndex].AttestationsInactivityReward +
 			validatorsData[validatorIndex].AttestationsInclusionsReward
-		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[data.startBalances.Data[validatorIndex].Validator.EffectiveBalance]]
+		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validatorIndex].Validator.EffectiveBalance)]]
 		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
 		validatorsData[validatorIndex].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
 		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
@@ -329,12 +328,12 @@ type validatorDashboardDataRow struct {
 
 	Slashed bool // done
 
-	BalanceStart decimal.Decimal // done
-	BalanceEnd   decimal.Decimal // done
+	BalanceStart uint64 // done
+	BalanceEnd   uint64 // done
 
-	DepositsCount  int             // done
-	DepositsAmount decimal.Decimal // done
+	DepositsCount  int    // done
+	DepositsAmount uint64 // done
 
-	WithdrawalsCount  int             // done
-	WithdrawalsAmount decimal.Decimal // done
+	WithdrawalsCount  int    // done
+	WithdrawalsAmount uint64 // done
 }

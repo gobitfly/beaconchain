@@ -313,7 +313,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				err := utils.VerifyDepositSignature(&phase0.DepositData{
 					PublicKey:             phase0.BLSPubKey(d.PublicKey),
 					WithdrawalCredentials: d.WithdrawalCredentials,
-					Amount:                phase0.Gwei(d.Amount.IntPart()),
+					Amount:                phase0.Gwei(d.Amount),
 					Signature:             phase0.BLSSignature(d.Signature),
 				}, domain)
 
@@ -751,8 +751,8 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	for _, v := range validators {
 		if v.ExitEpoch > epoch && v.ActivationEpoch <= epoch {
 			validatorsCount++
-			validatorBalanceSum = validatorBalanceSum.Add(v.Balance)
-			validatorEffectiveBalanceSum = validatorEffectiveBalanceSum.Add(v.EffectiveBalance)
+			validatorBalanceSum = validatorBalanceSum.Add(decimal.NewFromInt(int64(v.Balance)))
+			validatorEffectiveBalanceSum = validatorEffectiveBalanceSum.Add(decimal.NewFromInt(int64(v.EffectiveBalance)))
 		}
 	}
 
