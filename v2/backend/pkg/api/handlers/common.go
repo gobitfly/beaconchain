@@ -29,15 +29,13 @@ func NewHandlerService(dataAccessInterface dataaccess.DataAccessInterface) Handl
 
 // --------------------------------------
 
-type regexString string
-
-const (
+var (
 	// Subject to change, just examples
-	reName            = regexString(`^[a-zA-Z0-9_\-.\ ]+$`)
-	reId              = regexString(`^[a-zA-Z0-9_]+$`)
-	reNumber          = regexString(`^[0-9]+$`)
-	reValidatorPubkey = regexString(`^[0-9a-fA-F]{96}$`)
-	reCursor          = regexString(`^[0-9a-fA-F]*$`)
+	reName            = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
+	reId              = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	reNumber          = regexp.MustCompile(`^[0-9]+$`)
+	reValidatorPubkey = regexp.MustCompile(`^[0-9a-fA-F]{96}$`)
+	reCursor          = regexp.MustCompile(`^[0-9a-fA-F]*$`)
 )
 
 const (
@@ -70,8 +68,8 @@ func joinErr(err *error, message string) {
 	}
 }
 
-func checkRegex(handlerErr *error, regex regexString, param, paramName string) string {
-	if !regexp.MustCompile(string(regex)).MatchString(param) {
+func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string) string {
+	if !regex.MatchString(param) {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter ' `+paramName+` has incorrect format`, param))
 	}
 	return param
@@ -86,7 +84,7 @@ func checkName(handlerErr *error, name string, minLength int) string {
 	return checkRegex(handlerErr, reName, name, "name")
 }
 
-func checkMultipleRegex(handlerErr *error, regexes []regexString, params []string, paramName string) []string {
+func checkMultipleRegex(handlerErr *error, regexes []*regexp.Regexp, params []string, paramName string) []string {
 	results := make([]string, len(params))
 	for i, param := range params {
 		for _, regex := range regexes {
@@ -224,7 +222,7 @@ func checkValidatorList(handlerErr *error, validators string) []string {
 }
 
 func checkValidatorArray(handlerErr *error, validators []string) []string {
-	return checkMultipleRegex(handlerErr, []regexString{reNumber, reValidatorPubkey}, validators, "validators")
+	return checkMultipleRegex(handlerErr, []*regexp.Regexp{reNumber, reValidatorPubkey}, validators, "validators")
 }
 
 func checkNetwork(handlerErr *error, network string) uint64 {
