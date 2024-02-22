@@ -1,38 +1,53 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import {
+  faNewspaper,
+  faBuilding,
+  faFileContract,
+  faUserSecret,
+  faLaptopCode,
+  faFileInvoiceDollar,
+  faUserAstronaut,
+  faAd,
+  faShoppingCart,
+  faCheckCircle
+} from '@fortawesome/pro-regular-svg-icons'
 const { t: $t } = useI18n()
 const enum Target {
   Internal = '_self',
   External = '_blank'
 }
 
-const columns = [
+const columns: { title: string, links: [string, IconDefinition, string, Target][] }[] = [
   {
     title: $t('footer.legal_notices'),
     links: [
-      [$t('footer.imprint'), 'fas fa-building', '/imprint', Target.Internal],
-      [$t('footer.terms'), 'fas fa-file-contract', 'https://storage.googleapis.com/legal.beaconcha.in/tos.pdf', Target.External],
-      [$t('footer.privacy'), 'fas fa-user-secret', 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', Target.External]
+      [$t('footer.imprint'), faBuilding, '/imprint', Target.Internal],
+      [$t('footer.terms'), faFileContract, 'https://storage.googleapis.com/legal.beaconcha.in/tos.pdf', Target.External],
+      [$t('footer.privacy'), faUserSecret, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', Target.External]
     ]
   },
   {
     title: $t('footer.resources'),
     links: [
-      [$t('footer.api_docs'), 'fas fa-laptop-code', '/api/v2/docs/index.html', Target.Internal],
-      [$t('footer.api_pricing'), 'fas fa-file-invoice-dollar', '/pricing', Target.Internal],
-      [$t('footer.premium'), 'fas fa-user-astronaut', '/premium', Target.Internal],
-      [$t('footer.advertise'), 'fas fa-ad', '/advertisewithus', Target.Internal],
-      [$t('footer.shop'), 'fas fa-shopping-cart', 'https://shop.beaconcha.in', Target.External],
-      [$t('footer.status'), 'fas fa-check-circle', 'https://status.beaconcha.in/', Target.External]
+      [$t('footer.api_docs'), faLaptopCode, '/api/v2/docs/index.html', Target.Internal],
+      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
+      [$t('footer.premium'), faUserAstronaut, '/premium', Target.Internal],
+      [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal],
+      [$t('footer.shop'), faShoppingCart, 'https://shop.beaconcha.in', Target.External],
+      [$t('footer.status'), faCheckCircle, 'https://status.beaconcha.in/', Target.External]
     ]
   },
   {
     title: $t('footer.links'),
     links: [
-      ['Discord', 'fab fa-discord', 'https://dsc.gg/beaconchain', Target.External],
-      ['Twitter', 'fab fa-twitter', 'https://twitter.com/beaconcha_in', Target.External],
-      ['Github', 'fab fa-github', 'https://github.com/gobitfly/beaconchain', Target.External],
-      ['Github Mobile App', 'fab fa-github', 'https://github.com/gobitfly/eth2-beaconchain-explorer-app', Target.External],
-      [$t('footer.press_kit'), 'fas fa-newspaper', '/presskit', Target.Internal]
+      ['Discord', faDiscord, 'https://dsc.gg/beaconchain', Target.External],
+      ['Twitter', faTwitter, 'https://twitter.com/beaconcha_in', Target.External],
+      ['Github', faGithub, 'https://github.com/gobitfly/beaconchain', Target.External],
+      ['Github Mobile App', faGithub, 'https://github.com/gobitfly/eth2-beaconchain-explorer-app', Target.External],
+      [$t('footer.press_kit'), faNewspaper, '/presskit', Target.Internal]
     ]
   }
 ]
@@ -45,7 +60,7 @@ const columns = [
     </div>
     <div v-for="line in column.links" :key="line[0]" class="link-line">
       <NuxtLink :to="line[2]" :target="line[3]" class="link">
-        <span class="icon"><span :class="line[1]" /></span>
+        <FontAwesomeIcon class="icon" :icon="line[1]" />
         {{ line[0] }}
       </NuxtLink>
     </div>
@@ -58,10 +73,14 @@ const columns = [
   font-size: 20px;
   font-weight: bold;
   line-height: 33px;
-  @media (min-width: 600px) { // large screen
+
+  @media (min-width: 600px) {
+    // large screen
     margin-bottom: 10px;
   }
-  @media (max-width: 600px) { // mobile
+
+  @media (max-width: 600px) {
+    // mobile
     margin-top: 10px;
   }
 }
@@ -70,9 +89,8 @@ const columns = [
   line-height: 27px;
 }
 
-.icon{
+.icon {
   display: inline-block;
   width: 20px;
   text-align: center;
-}
-</style>
+}</style>
