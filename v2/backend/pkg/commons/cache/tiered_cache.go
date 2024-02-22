@@ -176,7 +176,7 @@ func (cache *tieredCache) GetWithLocalTimeout(key string, localExpiration time.D
 	// try to retrieve the key from the local cache
 	wanted, err := cache.localGoCache.Get([]byte(key))
 	if err == nil {
-		err = json.Unmarshal([]byte(wanted), returnValue)
+		err = json.Unmarshal(wanted, returnValue)
 		if err != nil {
 			log.Error(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
 			return nil, err

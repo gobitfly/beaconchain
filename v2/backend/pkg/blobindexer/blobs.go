@@ -3,12 +3,10 @@ package blobindexer
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +14,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
+
+	"github.com/gobitfly/beaconchain/pkg/consapi/network"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -31,6 +33,7 @@ type BlobIndexer struct {
 	runningMu  *sync.Mutex
 	clEndpoint string
 	cache      *freecache.Cache
+	cl         consapi.Client
 }
 
 func NewBlobIndexer() (*BlobIndexer, error) {
@@ -58,6 +61,7 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 		runningMu:  &sync.Mutex{},
 		clEndpoint: "http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port,
 		cache:      freecache.NewCache(1024 * 1024),
+		cl:         consapi.NewNodeDataRetriever("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
 	}
 	return bi, nil
 }
@@ -85,28 +89,31 @@ func (bi *BlobIndexer) Index() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	headHeader := &BeaconBlockHeaderResponse{}
-	finalizedHeader := &BeaconBlockHeaderResponse{}
-	spec := &BeaconSpecResponse{}
+	headHeader := &constypes.StandardBeaconHeaderResponse{}
+	finalizedHeader := &constypes.StandardBeaconHeaderResponse{}
+	spec := &constypes.StandardSpecResponse{}
 
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(3)
 	g.Go(func() error {
-		err := utils.HttpReq(gCtx, http.MethodGet, fmt.Sprintf("%s/eth/v1/config/spec", bi.clEndpoint), nil, spec)
+		var err error
+		spec, err = bi.cl.GetSpec()
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 	g.Go(func() error {
-		err := utils.HttpReq(gCtx, http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/head", bi.clEndpoint), nil, headHeader)
+		var err error
+		headHeader, err = bi.cl.GetBlockHeader("head")
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 	g.Go(func() error {
-		err := utils.HttpReq(gCtx, http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/finalized", bi.clEndpoint), nil, finalizedHeader)
+		var err error
+		finalizedHeader, err = bi.cl.GetBlockHeader("finalized")
 		if err != nil {
 			return err
 		}
@@ -117,11 +124,8 @@ func (bi *BlobIndexer) Index() error {
 		return err
 	}
 
-	nodeDepositNetworkId, ok := spec.Data["DEPOSIT_NETWORK_ID"]
-	if !ok {
-		return fmt.Errorf("missing DEPOSIT_NETWORK_ID in spec from node")
-	}
-	if fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositNetworkID) != nodeDepositNetworkId {
+	nodeDepositNetworkId := uint64(spec.Data.DepositNetworkID)
+	if utils.Config.Chain.ClConfig.DepositNetworkID != nodeDepositNetworkId {
 		return fmt.Errorf("config.DepositNetworkId != node.DepositNetworkId: %v != %v", utils.Config.Chain.ClConfig.DepositNetworkID, nodeDepositNetworkId)
 	}
 
@@ -194,12 +198,12 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	blobSidecar := &BeaconBlobSidecarsResponse{}
 	tGetBlobSidcar := time.Now()
-	err := utils.HttpReq(context.Background(), http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blob_sidecars/%d", bi.clEndpoint, slot), nil, blobSidecar)
+
+	blobSidecar, err := bi.cl.GetBlobSidecars(slot)
 	if err != nil {
-		var httpErr *utils.HttpReqHttpError
-		if errors.As(err, &httpErr) && httpErr.StatusCode == 404 {
+		httpErr, _ := network.SpecificError(err)
+		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no sidecar for this slot
 			return nil
 		}
@@ -213,8 +217,7 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(4)
-	for i, d := range blobSidecar.Data {
-		i := i
+	for _, d := range blobSidecar.Data {
 		d := d
 		g.Go(func() error {
 			select {
@@ -223,17 +226,7 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 			default:
 			}
 
-			kzgCommitment, err := hex.DecodeString(strings.Replace(d.KzgCommitment, "0x", "", -1))
-			if err != nil {
-				return fmt.Errorf("error decoding kzgCommitment at index %v: %s: %w", i, d.KzgCommitment, err)
-			}
-
-			blob, err := hex.DecodeString(strings.Replace(d.Blob, "0x", "", -1))
-			if err != nil {
-				return fmt.Errorf("error decoding blob at index %v: %w", i, err)
-			}
-
-			versionedBlobHash := fmt.Sprintf("%#x", utils.VersionedBlobHash(kzgCommitment).Bytes())
+			versionedBlobHash := fmt.Sprintf("%#x", utils.VersionedBlobHash(d.KzgCommitment).Bytes())
 			key := fmt.Sprintf("blobs/%s", versionedBlobHash)
 
 			tS3HeadObj := time.Now()
@@ -250,15 +243,15 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 					_, putErr := bi.S3Client.PutObject(gCtx, &s3.PutObjectInput{
 						Bucket: &utils.Config.BlobIndexer.S3.Bucket,
 						Key:    &key,
-						Body:   bytes.NewReader(blob),
+						Body:   bytes.NewReader(d.Blob),
 						Metadata: map[string]string{
 							"slot":              fmt.Sprintf("%d", d.Slot),
 							"index":             fmt.Sprintf("%d", d.Index),
-							"block_root":        d.BlockRoot,
-							"block_parent_root": d.BlockParentRoot,
+							"block_root":        d.BlockRoot.String(),
+							"block_parent_root": d.BlockParentRoot.String(),
 							"proposer_index":    fmt.Sprintf("%d", d.ProposerIndex),
-							"kzg_commitment":    d.KzgCommitment,
-							"kzg_proof":         d.KzgProof,
+							"kzg_commitment":    d.KzgCommitment.String(),
+							"kzg_proof":         d.KzgProof.String(),
 						},
 					})
 					metrics.TaskDuration.WithLabelValues("blobindexer_put_blob").Observe(time.Since(tS3PutObj).Seconds())
@@ -333,72 +326,8 @@ func (bi *BlobIndexer) PutIndexerStatus(status BlobIndexerStatus) error {
 	return nil
 }
 
-type BeaconSpecResponse struct {
-	Data map[string]string `json:"data"`
-}
-
 type BlobIndexerStatus struct {
 	LastIndexedFinalizedSlot uint64 `json:"last_indexed_finalized_slot"`
 	// LastIndexedFinalizedRoot string `json:"last_indexed_finalized_root"`
 	// IndexedUnfinalized       map[string]uint64 `json:"indexed_unfinalized"`
-}
-
-type BeaconForkScheduleResponse struct {
-	Data []struct {
-		PreviousVersion string `json:"previous_version"`
-		CurrentVersion  string `json:"current_version"`
-		Epoch           uint64 `json:"epoch,string"`
-	} `json:"data"`
-}
-
-type BeaconBlobSidecarsResponse struct {
-	Data []BeaconBlobSidecarsResponseBlob `json:"data"`
-}
-type BeaconBlobSidecarsResponseBlob struct {
-	BlockRoot       string `json:"block_root"`
-	Index           uint64 `json:"index,string"`
-	Slot            uint64 `json:"slot,string"`
-	BlockParentRoot string `json:"block_parent_root"`
-	ProposerIndex   uint64 `json:"proposer_index,string"`
-	Blob            string `json:"blob"`
-	KzgCommitment   string `json:"kzg_commitment"`
-	KzgProof        string `json:"kzg_proof"`
-}
-
-type BeaconFinalityCheckpointsResponse struct {
-	ExecutionOptimistic bool `json:"execution_optimistic"`
-	Finalized           bool `json:"finalized"`
-	Data                struct {
-		PreviousJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"previous_justified"`
-		CurrentJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"current_justified"`
-		Finalized struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
-		} `json:"finalized"`
-	} `json:"data"`
-}
-
-type BeaconBlockHeaderResponse struct {
-	ExecutionOptimistic bool `json:"execution_optimistic"`
-	Finalized           bool `json:"finalized"`
-	Data                struct {
-		Root      string `json:"root"`
-		Canonical bool   `json:"canonical"`
-		Header    struct {
-			Message struct {
-				Slot          uint64 `json:"slot,string"`
-				ProposerIndex string `json:"proposer_index"`
-				ParentRoot    string `json:"parent_root"`
-				StateRoot     string `json:"state_root"`
-				BodyRoot      string `json:"body_root"`
-			} `json:"message"`
-			Signature string `json:"signature"`
-		} `json:"header"`
-	} `json:"data"`
 }

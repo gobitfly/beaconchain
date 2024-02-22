@@ -10,6 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
+	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
 )
 
@@ -18,7 +19,7 @@ type ModuleInterface interface {
 }
 
 type ModuleContext struct {
-	CL         consapi.Retriever
+	CL         consapi.Client
 	ConsClient *rpc.LighthouseClient
 }
 
@@ -61,23 +62,24 @@ func StartAll(context ModuleContext) {
 
 	slotExporter := NewSlotExporter(context)
 
-	minWaitTimeBetweenRuns := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
-	for {
-		start := time.Now()
-		err := slotExporter.Start(nil)
-		if err != nil {
-			log.Error(err, "error during slot export run", 0)
-		} else if err == nil && firstRun {
-			firstRun = false
+	res := context.CL.GetEvents([]types.EventTopic{types.EventHead})
+
+	for event := range res {
+		if event.Error != nil {
+			log.Error(event.Error, "error getting event", 0)
 		}
 
-		log.Infof("update run completed")
-		elapsed := time.Since(start)
-		if elapsed < minWaitTimeBetweenRuns {
-			time.Sleep(minWaitTimeBetweenRuns - elapsed)
-		}
+		if event.Event == types.EventHead {
+			err := slotExporter.Start(nil)
+			if err != nil {
+				log.Error(err, "error during slot export run", 0)
+			} else if err == nil && firstRun {
+				firstRun = false
+			}
 
-		services.ReportStatus("slotExporter", "Running", nil)
+			log.Infof("update run completed")
+			services.ReportStatus("slotExporter", "Running", nil)
+		}
 	}
 }
 
@@ -91,7 +93,7 @@ func GetModuleContext() (ModuleContext, error) {
 
 	config.ClConfig = &spec.Data
 
-	nodeImpl, ok := cl.RetrieverInt.(*consapi.NodeImplRetriever)
+	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 	if !ok {
 		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
 	}
