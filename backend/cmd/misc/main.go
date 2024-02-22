@@ -1341,7 +1341,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 			return
 		}
 		if tot != *dbRewards {
-			log.Error(fmt.Errorf("Rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards), "", 0)
+			log.Error(fmt.Errorf("rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards), "", 0)
 		}
 	}
 }

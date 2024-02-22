@@ -81,6 +81,8 @@ linters:
   fast: true
 
 linters-settings:
+  unused:
+    exported-is-used: true
   forbidigo:
     forbid:
       - p: ^logrus\.Fatalf.*$

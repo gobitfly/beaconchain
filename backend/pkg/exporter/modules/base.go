@@ -11,7 +11,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +62,7 @@ func StartAll(context ModuleContext) {
 
 	slotExporter := NewSlotExporter(context)
 
-	res := context.CL.GetEvents([]constypes.EventTopic{constypes.EventHead})
+	res := context.CL.GetEvents([]types.EventTopic{types.EventHead})
 
 	for event := range res {
 		if event.Error != nil {
