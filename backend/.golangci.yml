@@ -11,6 +11,9 @@ linters:
     - forbidigo
     - unconvert
     - bodyclose
+    - durationcheck
+    - errchkjson
+    - errname
   disable:
     - exhaustivestruct
     - golint
@@ -31,7 +34,6 @@ linters:
     - cyclop
     - dogsled
     - dupl
-    - durationcheck
     - errorlint
     - exhaustive
     - exhaustruct
