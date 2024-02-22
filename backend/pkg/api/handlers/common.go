@@ -123,7 +123,10 @@ func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
 	}
 
 	// Reset the reader for the next use
-	bodyReader.Seek(0, io.SeekStart)
+	_, err = bodyReader.Seek(0, io.SeekStart)
+	if err != nil {
+		return errors.New("couldn't seek to start of the body")
+	}
 
 	// Second check: Validate against the expected schema
 	sc := jsonschema.Reflect(data)
@@ -151,7 +154,10 @@ func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
 
 	// Decode into the target data structure
 	// Reset the reader again for the final decode
-	bodyReader.Seek(0, io.SeekStart)
+	_, err = bodyReader.Seek(0, io.SeekStart)
+	if err != nil {
+		return errors.New("couldn't seek to start of the body")
+	}
 	if err := json.NewDecoder(bodyReader).Decode(data); err != nil {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
@@ -290,10 +296,12 @@ func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
 }
 
+// nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
+// nolint:unused
 func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }

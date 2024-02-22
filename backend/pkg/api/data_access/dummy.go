@@ -46,7 +46,7 @@ func (d DummyService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBS
 func (d DummyService) GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
-	commonFakeData(&r)
+	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, p, err
 }
@@ -60,7 +60,7 @@ func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId uint64, grou
 func (d DummyService) GetValidatorDashboardBlocks(dashboardId uint64, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
 	p := t.Paging{}
-	commonFakeData(&r)
+	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, p, err
 }

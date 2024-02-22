@@ -17,12 +17,12 @@ type DataAccessInterface interface {
 
 type DataAccessService struct {
 	dummy DummyService
-	// TODO @recy21 add persistance, e.g. DB, cache, bigtable, etc.
+	// TODO @recy21 add persistence, e.g. DB, cache, bigtable, etc.
 }
 
-// TODO @recy21 add persistance params, e.g. DB host, port, user, password, etc.
+// TODO @recy21 add persistence params, e.g. DB host, port, user, password, etc.
 func NewDataAccessService() DataAccessService {
-	// TODO @recy21 probably init persistance here
+	// TODO @recy21 probably init persistence here
 	return DataAccessService{dummy: NewDummyService()}
 }
 
