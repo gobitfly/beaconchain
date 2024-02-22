@@ -116,7 +116,7 @@ func getCommonTypes(pkgs []*packages.Package) map[string]bool {
 	return nil
 }
 
-// Parse all files to find which common types are for each file
+// Parse all files to find used common types for each file
 func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[string][]string {
 	usage := make(map[string][]string) // Map from file to list of commonTypes used
 	for _, pkg := range pkgs {

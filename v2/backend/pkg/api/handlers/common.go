@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
@@ -31,7 +33,7 @@ type regexString string
 
 const (
 	// Subject to change, just examples
-	reName            = regexString(`^[a-zA-Z0-9_\-.\ ]{` + regexString(rune(maxNameLength)) + `}$`)
+	reName            = regexString(`^[a-zA-Z0-9_\-.\ ]+$`)
 	reId              = regexString(`^[a-zA-Z0-9_]+$`)
 	reNumber          = regexString(`^[0-9]+$`)
 	reValidatorPubkey = regexString(`^[0-9a-fA-F]{96}$`)
@@ -48,16 +50,6 @@ const (
 	ethereum                   = "ethereum"
 	gnosis                     = "gnosis"
 )
-
-type RequestError struct {
-	StatusCode int
-
-	Err error
-}
-
-func (r RequestError) Error() string {
-	return fmt.Sprintf("status %d: err %v", r.StatusCode, r.Err)
-}
 
 type Paging struct {
 	cursor string
@@ -78,27 +70,27 @@ func joinErr(err *error, message string) {
 	}
 }
 
-func regexCheck(handlerErr *error, regex regexString, param string) string {
+func checkRegex(handlerErr *error, regex regexString, param, paramName string) string {
 	if !regexp.MustCompile(string(regex)).MatchString(param) {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' has incorrect format`, param))
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter ' `+paramName+` has incorrect format`, param))
 	}
 	return param
 }
 
 func checkName(handlerErr *error, name string, minLength int) string {
 	if len(name) < minLength {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter "name" is too short, minimum length is %d`, name, minLength))
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too short, minimum length is %d`, name, minLength))
 	} else if len(name) > 50 {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter "name" is too long, maximum length is %d`, name, maxNameLength))
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too long, maximum length is %d`, name, maxNameLength))
 	}
-	return regexCheck(handlerErr, reName, name)
+	return checkRegex(handlerErr, reName, name, "name")
 }
 
-func regexCheckMultiple(handlerErr *error, regexes []regexString, params []string) []string {
+func checkMultipleRegex(handlerErr *error, regexes []regexString, params []string, paramName string) []string {
 	results := make([]string, len(params))
 	for i, param := range params {
 		for _, regex := range regexes {
-			regexCheck(handlerErr, regex, param)
+			checkRegex(handlerErr, regex, param, paramName)
 		}
 		// might want to change this later
 		results[i] = params[i]
@@ -111,56 +103,85 @@ func checkNameNotEmpty(handlerErr *error, name string) string {
 }
 
 // check request structure (body contains valid json and all required parameters are present)
-func CheckAndGetJson(r io.Reader, data interface{}) error {
-	sc := jsonschema.Reflect(data)
-	var i interface{}
-	if json.NewDecoder(r).Decode(&i) != nil {
-		return RequestError{http.StatusBadRequest, errors.New("request is not in JSON format")}
+// return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
+func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
+	// Read the entire request body (this consumes the request body)
+	bodyBytes, err := io.ReadAll(r)
+	if err != nil {
+		log.Error(err, "error reading request body", 0, nil)
+		return errors.New("can't read request body")
 	}
+
+	// Use bytes.NewReader to create an io.Reader for the body bytes, so it can be reused
+	bodyReader := bytes.NewReader(bodyBytes)
+
+	// First check: Decode into an empty interface to check JSON format
+	var i interface{}
+	if err := json.NewDecoder(bodyReader).Decode(&i); err != nil {
+		joinErr(handlerErr, "request body is not in JSON format")
+		return nil
+	}
+
+	// Reset the reader for the next use
+	bodyReader.Seek(0, io.SeekStart)
+
+	// Second check: Validate against the expected schema
+	sc := jsonschema.Reflect(data)
 	b, err := json.Marshal(sc)
 	if err != nil {
-		log.Error(err, "error validating json", 0, nil)
-		return RequestError{http.StatusInternalServerError, errors.New("can't validate expected format")}
+		log.Error(err, "error marshalling schema", 0, nil)
+		return errors.New("can't marshal schema for validation")
 	}
 	loader := gojsonschema.NewBytesLoader(b)
-	documentLoader, _ := gojsonschema.NewReaderLoader(r)
+	documentLoader := gojsonschema.NewBytesLoader(bodyBytes)
 	schema, err := gojsonschema.NewSchema(loader)
 	if err != nil {
-		log.Error(err, "error validating json", 0, nil)
-		return RequestError{http.StatusInternalServerError, errors.New("can't create expected format")}
+		log.Error(err, "error creating schema", 0, nil)
+		return errors.New("can't create expected format")
 	}
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
 		log.Error(err, "error validating json", 0, nil)
-		return RequestError{http.StatusInternalServerError, errors.New("couldn't validate JSON request")}
+		return errors.New("couldn't validate JSON request")
 	}
 	if !result.Valid() {
-		return RequestError{http.StatusBadRequest, errors.New("unexpected JSON format. Check the API documentation for parameter details")}
+		joinErr(handlerErr, "error reading request body due to invalid schema, check the API documentation for the expected format")
+		return nil
 	}
-	if err = json.NewDecoder(r).Decode(data); err != nil {
-		// error parsing json; shouldn't happen since we verified it's json in the correct format already
-		log.Error(err, "error validating json", 0, nil)
-		return RequestError{http.StatusInternalServerError, errors.New("couldn't decode JSON request")}
+
+	// Decode into the target data structure
+	// Reset the reader again for the final decode
+	bodyReader.Seek(0, io.SeekStart)
+	if err := json.NewDecoder(bodyReader).Decode(data); err != nil {
+		log.Error(err, "error decoding json into target structure", 0, nil)
+		return errors.New("couldn't decode JSON request into target structure")
 	}
-	// could perform data validation checks based on tags here, but might need validation lib for that
+
+	// Proceed with additional validation or processing as necessary
 	return nil
 }
 
-func checkId(handlerErr *error, id string) string {
-	return regexCheck(handlerErr, reId, id)
-}
-
-func checkUint(handlerErr *error, id string) uint64 {
+func checkUint(handlerErr *error, id, paramName string) uint64 {
 	id64, err := strconv.ParseUint(id, 10, 64)
-	joinErr(handlerErr, err.Error())
+	if err != nil {
+		joinErr(handlerErr, fmt.Sprintf("given value '"+id+"' for parameter '"+paramName+"' is not a positive integer"))
+	}
 	return id64
 }
 
-func CheckIdList(handlerErr *error, ids []string) []string {
-	return regexCheckMultiple(handlerErr, []regexString{reId}, ids)
+func checkDashboardId(handlerErr *error, id string) uint64 {
+	return checkUint(handlerErr, id, "dashboardId")
 }
 
-func checkAndGetPaging(handlerErr *error, r *http.Request) Paging {
+func checkGroupId(handlerErr *error, id string) uint64 {
+	return checkUint(handlerErr, id, "groupId")
+}
+
+func checkPublicDashboardId(handlerErr *error, id string) string {
+	return checkRegex(handlerErr, reId, id, "public dashboard id")
+}
+
+func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 	q := r.URL.Query()
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -185,15 +206,19 @@ func checkAndGetPaging(handlerErr *error, r *http.Request) Paging {
 	if paging.order != sortOrderAscending && paging.order == sortOrderDescending {
 		joinErr(handlerErr, fmt.Sprintf("invalid sorting order: %s", paging.order))
 	}
-	paging.cursor = regexCheck(handlerErr, reCursor, paging.cursor)
+	paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
 	paging.sort = checkName(handlerErr, paging.sort, 0)
 	paging.search = checkName(handlerErr, paging.search, 0)
 
 	return paging
 }
 
-func CheckValidatorList(handlerErr *error, validators []string) []string {
-	return regexCheckMultiple(handlerErr, []regexString{reNumber, reValidatorPubkey}, validators)
+func checkValidatorList(handlerErr *error, validators string) []string {
+	return checkValidatorArray(handlerErr, strings.Split(validators, ","))
+}
+
+func checkValidatorArray(handlerErr *error, validators []string) []string {
+	return checkMultipleRegex(handlerErr, []regexString{reNumber, reValidatorPubkey}, validators, "validators")
 }
 
 func checkNetwork(handlerErr *error, network string) uint64 {
@@ -213,11 +238,11 @@ func getUser(r *http.Request) (uint64, error) {
 	// TODO @LuccaBitfly add real user auth
 	userId := r.Header.Get("X-User-Id")
 	if userId == "" {
-		return 0, errors.New("missing user id")
+		return 0, errors.New("missing user id, please set the X-User-Id header")
 	}
 	id, err := strconv.ParseUint(userId, 10, 64)
 	if err != nil {
-		return 0, errors.New("invalid user id")
+		return 0, errors.New("invalid user id, must be a positive integer")
 	}
 	return id, nil
 }
@@ -232,7 +257,7 @@ func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		// TODO log error
+		log.Error(err, "error writing response", 0, nil)
 	}
 }
 
@@ -247,7 +272,7 @@ func returnOk(w http.ResponseWriter, data interface{}) {
 	writeResponse(w, http.StatusOK, data)
 }
 
-func ReturnCreated(w http.ResponseWriter, data interface{}) {
+func returnCreated(w http.ResponseWriter, data interface{}) {
 	writeResponse(w, http.StatusCreated, data)
 }
 
