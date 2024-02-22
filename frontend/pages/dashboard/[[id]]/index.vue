@@ -17,10 +17,34 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
     <div>
       <DashboardValidatorSlotViz />
     </div>
+    <TabView>
+      <TabPanel header="Summary">
+        Summary coming soon!
+      </TabPanel>
+      <TabPanel header="Rewards">
+        Rewards coming soon!
+      </TabPanel>
+      <TabPanel header="Blocks">
+        Blocks coming soon!
+      </TabPanel>
+      <TabPanel header="Heatmap">
+        Heatmap coming soon!
+      </TabPanel>
+      <TabPanel header="Deposits">
+        Deposits coming soon!
+      </TabPanel>
+      <TabPanel header="Withdrawals">
+        Withdrawals coming soon!
+      </TabPanel>
+    </TabView>
   </BcPageWrapper>
 </template>
 
 <style lang="scss" scoped>
+
+.content {
+  margin-bottom: var(--padding-large);
+}
 
 .dashboard_title, .overview{
   margin-bottom: var(--padding-large);
