@@ -3,18 +3,16 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import {
-  faNewspaper,
+  faBuilding,
+  faFileContract,
+  faUserSecret,
   faLaptopCode,
   faFileInvoiceDollar,
   faUserAstronaut,
   faAd,
   faShoppingCart,
-  faCheckCircle
-} from '@fortawesome/pro-regular-svg-icons'
-import {
-  faBuilding,
-  faFileContract,
-  faUserSecret
+  faCheckCircle,
+  faNewspaper
 } from '@fortawesome/pro-solid-svg-icons'
 const { t: $t } = useI18n()
 const enum Target {
