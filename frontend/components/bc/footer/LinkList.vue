@@ -19,8 +19,8 @@ const enum Target {
   Internal = '_self',
   External = '_blank'
 }
-
-const columns: { title: string, links: [string, IconDefinition, string, Target][] }[] = [
+type Row = { title: string, links: [string, IconDefinition, string, Target][] }
+const columns: Row[] = [
   {
     title: $t('footer.legal_notices'),
     links: [
