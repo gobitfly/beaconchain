@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"time"
 
@@ -29,7 +30,7 @@ func main() {
 	router := api.NewApiRouter(dai)
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         host + ":" + port,
+		Addr:         net.JoinHostPort(host, port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
