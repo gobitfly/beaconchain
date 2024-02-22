@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"math/big"
 
 	"regexp"
 	"sort"
@@ -20,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 )
@@ -745,18 +745,18 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	// 	}
 	// }
 
-	validatorBalanceSum := new(big.Int)
-	validatorEffectiveBalanceSum := new(big.Int)
+	validatorBalanceSum := decimal.NewFromInt(0)
+	validatorEffectiveBalanceSum := decimal.NewFromInt(0)
 	validatorsCount := 0
 	for _, v := range validators {
 		if v.ExitEpoch > epoch && v.ActivationEpoch <= epoch {
 			validatorsCount++
-			validatorBalanceSum = new(big.Int).Add(validatorBalanceSum, new(big.Int).SetUint64(v.Balance))
-			validatorEffectiveBalanceSum = new(big.Int).Add(validatorEffectiveBalanceSum, new(big.Int).SetUint64(v.EffectiveBalance))
+			validatorBalanceSum = validatorBalanceSum.Add(decimal.NewFromInt(int64(v.Balance)))
+			validatorEffectiveBalanceSum = validatorEffectiveBalanceSum.Add(decimal.NewFromInt(int64(v.EffectiveBalance)))
 		}
 	}
 
-	validatorBalanceAverage := new(big.Int).Div(validatorBalanceSum, new(big.Int).SetInt64(int64(validatorsCount)))
+	validatorBalanceAverage := validatorBalanceSum.Div(decimal.NewFromInt(int64(validatorsCount)))
 
 	_, err := tx.Exec(`
 		INSERT INTO epochs (
@@ -801,9 +801,9 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 		withdrawalCount,
 		voluntaryExitCount,
 		validatorsCount,
-		validatorBalanceAverage.Uint64(),
-		validatorBalanceSum.Uint64(),
-		validatorEffectiveBalanceSum.Uint64(),
+		validatorBalanceAverage.BigInt().String(),
+		validatorBalanceSum.BigInt().String(),
+		validatorEffectiveBalanceSum.BigInt().String(),
 		0,
 		0,
 		false)

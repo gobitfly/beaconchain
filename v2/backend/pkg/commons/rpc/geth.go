@@ -95,7 +95,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	start := time.Now()
 	timings := &types.GetBlockTimings{}
 
-	block, err := client.ethClient.BlockByNumber(ctx, big.NewInt(int64(number)))
+	block, err := client.ethClient.BlockByNumber(ctx, big.NewInt(number))
 	if err != nil {
 		return nil, nil, err
 	}
