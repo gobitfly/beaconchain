@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Categories, ResultTypes } from '~/types/search'
+import { Categories, ResultTypes } from '~/types/searchengine'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
 function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
