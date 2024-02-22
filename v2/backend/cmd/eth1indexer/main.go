@@ -228,7 +228,7 @@ func main() {
 	}
 
 	if *endData != 0 && *startData < *endData {
-		err = bt.IndexEventsWithTransformers(int64(*startData), int64(*endData), transforms, *concurrencyData, cache)
+		err = bt.IndexEventsWithTransformers(*startData, *endData, transforms, *concurrencyData, cache)
 		if err != nil {
 			log.Fatal(err, "error indexing from bigtable", 0)
 		}

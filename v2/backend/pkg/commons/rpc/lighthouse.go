@@ -76,9 +76,9 @@ func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
 				continue
 			}
 
-			block, err := lc.GetBlockBySlot(uint64(head.Slot))
+			block, err := lc.GetBlockBySlot(head.Slot)
 			if err != nil {
-				log.Warnf("failed to fetch block for slot %d: %v", uint64(head.Slot), err)
+				log.Warnf("failed to fetch block for slot %d: %v", head.Slot, err)
 				continue
 			}
 			log.Infof("retrieved block for slot %v", head.Slot)
@@ -108,7 +108,7 @@ func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 	}
 
 	// The epoch in the Finalized Object is not the finalized epoch, but the epoch for the checkpoint - the 'real' finalized epoch is the one before
-	var finalizedEpoch = uint64(parsedFinality.Data.Finalized.Epoch)
+	var finalizedEpoch = parsedFinality.Data.Finalized.Epoch
 	if finalizedEpoch > 0 {
 		finalizedEpoch--
 	}
@@ -118,17 +118,17 @@ func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 		finalizedSlot = 0
 	}
 	return &types.ChainHead{
-		HeadSlot:                   uint64(parsedHead.Data.Header.Message.Slot),
-		HeadEpoch:                  uint64(parsedHead.Data.Header.Message.Slot) / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		HeadSlot:                   parsedHead.Data.Header.Message.Slot,
+		HeadEpoch:                  parsedHead.Data.Header.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 		HeadBlockRoot:              utils.MustParseHex(parsedHead.Data.Root),
 		FinalizedSlot:              finalizedSlot,
 		FinalizedEpoch:             finalizedEpoch,
 		FinalizedBlockRoot:         utils.MustParseHex(parsedFinality.Data.Finalized.Root),
-		JustifiedSlot:              uint64(parsedFinality.Data.CurrentJustified.Epoch) * utils.Config.Chain.ClConfig.SlotsPerEpoch,
-		JustifiedEpoch:             uint64(parsedFinality.Data.CurrentJustified.Epoch),
+		JustifiedSlot:              parsedFinality.Data.CurrentJustified.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		JustifiedEpoch:             parsedFinality.Data.CurrentJustified.Epoch,
 		JustifiedBlockRoot:         utils.MustParseHex(parsedFinality.Data.CurrentJustified.Root),
-		PreviousJustifiedSlot:      uint64(parsedFinality.Data.PreviousJustified.Epoch) * utils.Config.Chain.ClConfig.SlotsPerEpoch,
-		PreviousJustifiedEpoch:     uint64(parsedFinality.Data.PreviousJustified.Epoch),
+		PreviousJustifiedSlot:      parsedFinality.Data.PreviousJustified.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		PreviousJustifiedEpoch:     parsedFinality.Data.PreviousJustified.Epoch,
 		PreviousJustifiedBlockRoot: utils.MustParseHex(parsedFinality.Data.PreviousJustified.Root),
 	}, nil
 }
@@ -188,7 +188,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 
 	// propose
 	for _, duty := range parsedProposerResponse.Data {
-		assignments.ProposerAssignments[uint64(duty.Slot)] = uint64(duty.ValidatorIndex)
+		assignments.ProposerAssignments[uint64(duty.Slot)] = duty.ValidatorIndex
 	}
 
 	// attest
@@ -198,7 +198,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 			if err != nil {
 				return nil, fmt.Errorf("epoch %d committee %d index %d has bad validator index %q", epoch, committee.Index, i, valIndex)
 			}
-			k := utils.FormatAttestorAssignmentKey(uint64(committee.Slot), uint64(committee.Index), uint64(i))
+			k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
 			assignments.AttestorAssignments[k] = valIndexU64
 		}
 	}
@@ -282,16 +282,16 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 
 	for _, validator := range parsedValidators.Data {
 		data.Validators = append(data.Validators, &types.Validator{
-			Index:                      uint64(validator.Index),
+			Index:                      validator.Index,
 			PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 			WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
 			Balance:                    validator.Balance,
 			EffectiveBalance:           validator.Validator.EffectiveBalance,
 			Slashed:                    validator.Validator.Slashed,
-			ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
-			ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
-			ExitEpoch:                  uint64(validator.Validator.ExitEpoch),
-			WithdrawableEpoch:          uint64(validator.Validator.WithdrawableEpoch),
+			ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+			ActivationEpoch:            validator.Validator.ActivationEpoch,
+			ExitEpoch:                  validator.Validator.ExitEpoch,
+			WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
 			Status:                     string(validator.Status),
 		})
 	}
@@ -387,17 +387,17 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			data.Blocks[block.Slot][fmt.Sprintf("%x", block.BlockRoot)] = block
 
 			for validator, duty := range block.SyncDuties {
-				data.SyncDuties[types.Slot(block.Slot)][types.ValidatorIndex(validator)] = duty
+				data.SyncDuties[types.Slot(block.Slot)][validator] = duty
 			}
 			for validator, attestedSlots := range block.AttestationDuties {
 				for _, attestedSlot := range attestedSlots {
-					if data.AttestationDuties[types.Slot(attestedSlot)] == nil {
-						data.AttestationDuties[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
+					if data.AttestationDuties[attestedSlot] == nil {
+						data.AttestationDuties[attestedSlot] = make(map[types.ValidatorIndex][]types.Slot)
 					}
-					if data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] == nil {
-						data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] = make([]types.Slot, 0, 10)
+					if data.AttestationDuties[attestedSlot][validator] == nil {
+						data.AttestationDuties[attestedSlot][validator] = make([]types.Slot, 0, 10)
 					}
-					data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] = append(data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)], types.Slot(block.Slot))
+					data.AttestationDuties[attestedSlot][validator] = append(data.AttestationDuties[attestedSlot][validator], types.Slot(block.Slot))
 				}
 			}
 			mux.Unlock()
@@ -430,7 +430,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			for validator, attestedSlots := range block.AttestationDuties {
 				for _, attestedSlot := range attestedSlots {
 					if attestedSlot < types.Slot((epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch) {
-						data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)] = append(data.AttestationDuties[types.Slot(attestedSlot)][types.ValidatorIndex(validator)], types.Slot(block.Slot))
+						data.AttestationDuties[attestedSlot][validator] = append(data.AttestationDuties[attestedSlot][validator], types.Slot(block.Slot))
 					}
 				}
 			}
@@ -526,7 +526,7 @@ func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64,
 	}
 
 	for _, b := range parsedResponse.Data {
-		validatorBalances[uint64(b.Index)] = uint64(b.Balance)
+		validatorBalances[b.Index] = b.Balance
 	}
 
 	return validatorBalances, nil
@@ -543,7 +543,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 		return nil, fmt.Errorf("error retrieving headers for blockroot 0x%x: %w", blockroot, err)
 	}
 
-	slot := uint64(parsedHeaders.Data.Header.Message.Slot)
+	slot := parsedHeaders.Data.Header.Message.Slot
 
 	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root)
 	if err != nil {
@@ -600,7 +600,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 			proposer := uint64(math.MaxUint64)
 			for _, pa := range proposerAssignments.Data {
 				if uint64(pa.Slot) == slot {
-					proposer = uint64(pa.ValidatorIndex)
+					proposer = pa.ValidatorIndex
 				}
 			}
 
@@ -645,16 +645,16 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 				block.Validators = make([]*types.Validator, 0, len(parsedValidators.Data))
 				for _, validator := range parsedValidators.Data {
 					block.Validators = append(block.Validators, &types.Validator{
-						Index:                      uint64(validator.Index),
+						Index:                      validator.Index,
 						PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 						WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
 						Balance:                    validator.Balance,
 						EffectiveBalance:           validator.Validator.EffectiveBalance,
 						Slashed:                    validator.Validator.Slashed,
-						ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
-						ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
-						ExitEpoch:                  uint64(validator.Validator.ExitEpoch),
-						WithdrawableEpoch:          uint64(validator.Validator.WithdrawableEpoch),
+						ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+						ActivationEpoch:            validator.Validator.ActivationEpoch,
+						ExitEpoch:                  validator.Validator.ExitEpoch,
+						WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
 						Status:                     string(validator.Status),
 					})
 				}
@@ -713,16 +713,16 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 		block.Validators = make([]*types.Validator, 0, len(parsedValidators.Data))
 		for _, validator := range parsedValidators.Data {
 			block.Validators = append(block.Validators, &types.Validator{
-				Index:                      uint64(validator.Index),
+				Index:                      validator.Index,
 				PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 				WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
 				Balance:                    validator.Balance,
 				EffectiveBalance:           validator.Validator.EffectiveBalance,
 				Slashed:                    validator.Validator.Slashed,
-				ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
-				ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
-				ExitEpoch:                  uint64(validator.Validator.ExitEpoch),
-				WithdrawableEpoch:          uint64(validator.Validator.WithdrawableEpoch),
+				ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+				ActivationEpoch:            validator.Validator.ActivationEpoch,
+				ExitEpoch:                  validator.Validator.ExitEpoch,
+				WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
 				Status:                     string(validator.Status),
 			})
 		}
@@ -737,11 +737,11 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 
 func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardBeaconHeaderResponse, parsedResponse *constypes.StandardBeaconSlotResponse) (*types.Block, error) {
 	parsedBlock := parsedResponse.Data
-	slot := uint64(parsedHeaders.Data.Header.Message.Slot)
+	slot := parsedHeaders.Data.Header.Message.Slot
 	block := &types.Block{
 		Status:       1,
 		Finalized:    parsedHeaders.Finalized,
-		Proposer:     uint64(parsedBlock.Message.ProposerIndex),
+		Proposer:     parsedBlock.Message.ProposerIndex,
 		BlockRoot:    utils.MustParseHex(parsedHeaders.Data.Root),
 		Slot:         slot,
 		ParentRoot:   utils.MustParseHex(parsedBlock.Message.ParentRoot),
@@ -751,7 +751,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		Graffiti:     utils.MustParseHex(parsedBlock.Message.Body.Graffiti),
 		Eth1Data: &types.Eth1Data{
 			DepositRoot:  utils.MustParseHex(parsedBlock.Message.Body.Eth1Data.DepositRoot),
-			DepositCount: uint64(parsedBlock.Message.Body.Eth1Data.DepositCount),
+			DepositCount: parsedBlock.Message.Body.Eth1Data.DepositCount,
 			BlockHash:    utils.MustParseHex(parsedBlock.Message.Body.Eth1Data.BlockHash),
 		},
 		ProposerSlashings:          make([]*types.ProposerSlashing, len(parsedBlock.Message.Body.ProposerSlashings)),
@@ -857,8 +857,8 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		withdrawals := make([]*types.Withdrawals, 0, len(payload.Withdrawals))
 		for _, w := range payload.Withdrawals {
 			withdrawals = append(withdrawals, &types.Withdrawals{
-				Index:          uint64(w.Index),
-				ValidatorIndex: uint64(w.ValidatorIndex),
+				Index:          w.Index,
+				ValidatorIndex: w.ValidatorIndex,
 				Address:        w.Address,
 				Amount:         w.Amount,
 			})
@@ -871,17 +871,17 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 			ReceiptsRoot:  payload.ReceiptsRoot,
 			LogsBloom:     payload.LogsBloom,
 			Random:        payload.PrevRandao,
-			BlockNumber:   uint64(payload.BlockNumber),
-			GasLimit:      uint64(payload.GasLimit),
-			GasUsed:       uint64(payload.GasUsed),
-			Timestamp:     uint64(payload.Timestamp),
+			BlockNumber:   payload.BlockNumber,
+			GasLimit:      payload.GasLimit,
+			GasUsed:       payload.GasUsed,
+			Timestamp:     payload.Timestamp,
 			ExtraData:     payload.ExtraData,
-			BaseFeePerGas: uint64(payload.BaseFeePerGas),
+			BaseFeePerGas: payload.BaseFeePerGas,
 			BlockHash:     payload.BlockHash,
 			Transactions:  txs,
 			Withdrawals:   withdrawals,
-			BlobGasUsed:   uint64(payload.BlobGasUsed),
-			ExcessBlobGas: uint64(payload.ExcessBlobGas),
+			BlobGasUsed:   payload.BlobGasUsed,
+			ExcessBlobGas: payload.ExcessBlobGas,
 		}
 	}
 
@@ -892,16 +892,16 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 	for i, proposerSlashing := range parsedBlock.Message.Body.ProposerSlashings {
 		block.ProposerSlashings[i] = &types.ProposerSlashing{
-			ProposerIndex: uint64(proposerSlashing.SignedHeader1.Message.ProposerIndex),
+			ProposerIndex: proposerSlashing.SignedHeader1.Message.ProposerIndex,
 			Header1: &types.Block{
-				Slot:       uint64(proposerSlashing.SignedHeader1.Message.Slot),
+				Slot:       proposerSlashing.SignedHeader1.Message.Slot,
 				ParentRoot: utils.MustParseHex(proposerSlashing.SignedHeader1.Message.ParentRoot),
 				StateRoot:  utils.MustParseHex(proposerSlashing.SignedHeader1.Message.StateRoot),
 				Signature:  proposerSlashing.SignedHeader1.Signature,
 				BodyRoot:   utils.MustParseHex(proposerSlashing.SignedHeader1.Message.BodyRoot),
 			},
 			Header2: &types.Block{
-				Slot:       uint64(proposerSlashing.SignedHeader2.Message.Slot),
+				Slot:       proposerSlashing.SignedHeader2.Message.Slot,
 				ParentRoot: utils.MustParseHex(proposerSlashing.SignedHeader2.Message.ParentRoot),
 				StateRoot:  utils.MustParseHex(proposerSlashing.SignedHeader2.Message.StateRoot),
 				Signature:  proposerSlashing.SignedHeader2.Signature,
@@ -914,15 +914,15 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		block.AttesterSlashings[i] = &types.AttesterSlashing{
 			Attestation1: &types.IndexedAttestation{
 				Data: &types.AttestationData{
-					Slot:            uint64(attesterSlashing.Attestation1.Data.Slot),
-					CommitteeIndex:  uint64(attesterSlashing.Attestation1.Data.Index),
+					Slot:            attesterSlashing.Attestation1.Data.Slot,
+					CommitteeIndex:  attesterSlashing.Attestation1.Data.Index,
 					BeaconBlockRoot: utils.MustParseHex(attesterSlashing.Attestation1.Data.BeaconBlockRoot),
 					Source: &types.Checkpoint{
-						Epoch: uint64(attesterSlashing.Attestation1.Data.Source.Epoch),
+						Epoch: attesterSlashing.Attestation1.Data.Source.Epoch,
 						Root:  utils.MustParseHex(attesterSlashing.Attestation1.Data.Source.Root),
 					},
 					Target: &types.Checkpoint{
-						Epoch: uint64(attesterSlashing.Attestation1.Data.Target.Epoch),
+						Epoch: attesterSlashing.Attestation1.Data.Target.Epoch,
 						Root:  utils.MustParseHex(attesterSlashing.Attestation1.Data.Target.Root),
 					},
 				},
@@ -931,15 +931,15 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 			},
 			Attestation2: &types.IndexedAttestation{
 				Data: &types.AttestationData{
-					Slot:            uint64(attesterSlashing.Attestation2.Data.Slot),
-					CommitteeIndex:  uint64(attesterSlashing.Attestation2.Data.Index),
+					Slot:            attesterSlashing.Attestation2.Data.Slot,
+					CommitteeIndex:  attesterSlashing.Attestation2.Data.Index,
 					BeaconBlockRoot: utils.MustParseHex(attesterSlashing.Attestation2.Data.BeaconBlockRoot),
 					Source: &types.Checkpoint{
-						Epoch: uint64(attesterSlashing.Attestation2.Data.Source.Epoch),
+						Epoch: attesterSlashing.Attestation2.Data.Source.Epoch,
 						Root:  utils.MustParseHex(attesterSlashing.Attestation2.Data.Source.Root),
 					},
 					Target: &types.Checkpoint{
-						Epoch: uint64(attesterSlashing.Attestation2.Data.Target.Epoch),
+						Epoch: attesterSlashing.Attestation2.Data.Target.Epoch,
 						Root:  utils.MustParseHex(attesterSlashing.Attestation2.Data.Target.Root),
 					},
 				},
@@ -954,15 +954,15 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 			AggregationBits: utils.MustParseHex(attestation.AggregationBits),
 			Attesters:       []uint64{},
 			Data: &types.AttestationData{
-				Slot:            uint64(attestation.Data.Slot),
-				CommitteeIndex:  uint64(attestation.Data.Index),
+				Slot:            attestation.Data.Slot,
+				CommitteeIndex:  attestation.Data.Index,
 				BeaconBlockRoot: utils.MustParseHex(attestation.Data.BeaconBlockRoot),
 				Source: &types.Checkpoint{
-					Epoch: uint64(attestation.Data.Source.Epoch),
+					Epoch: attestation.Data.Source.Epoch,
 					Root:  utils.MustParseHex(attestation.Data.Source.Root),
 				},
 				Target: &types.Checkpoint{
-					Epoch: uint64(attestation.Data.Target.Epoch),
+					Epoch: attestation.Data.Target.Epoch,
 					Root:  utils.MustParseHex(attestation.Data.Target.Root),
 				},
 			},
@@ -1009,8 +1009,8 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 	for i, voluntaryExit := range parsedBlock.Message.Body.VoluntaryExits {
 		block.VoluntaryExits[i] = &types.VoluntaryExit{
-			Epoch:          uint64(voluntaryExit.Message.Epoch),
-			ValidatorIndex: uint64(voluntaryExit.Message.ValidatorIndex),
+			Epoch:          voluntaryExit.Message.Epoch,
+			ValidatorIndex: voluntaryExit.Message.ValidatorIndex,
 			Signature:      voluntaryExit.Signature,
 		}
 	}
@@ -1018,7 +1018,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 	for i, blsChange := range parsedBlock.Message.Body.SignedBLSToExecutionChange {
 		block.SignedBLSToExecutionChange[i] = &types.SignedBLSToExecutionChange{
 			Message: types.BLSToExecutionChange{
-				Validatorindex: uint64(blsChange.Message.ValidatorIndex),
+				Validatorindex: blsChange.Message.ValidatorIndex,
 				BlsPubkey:      blsChange.Message.FromBlsPubkey,
 				Address:        blsChange.Message.ToExecutionAddress,
 			},

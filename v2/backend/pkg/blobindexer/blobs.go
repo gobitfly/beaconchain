@@ -140,7 +140,7 @@ func (bi *BlobIndexer) Index() error {
 		startSlot = denebForkSlot
 	}
 
-	if uint64(headHeader.Data.Header.Message.Slot) <= startSlot {
+	if headHeader.Data.Header.Message.Slot <= startSlot {
 		return fmt.Errorf("headHeader.Data.Header.Message.Slot <= startSlot: %v < %v", headHeader.Data.Header.Message.Slot, startSlot)
 	}
 

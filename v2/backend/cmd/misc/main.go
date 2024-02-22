@@ -297,16 +297,16 @@ func main() {
 
 		for _, validator := range validators.Data {
 			validatorsArr = append(validatorsArr, &types.Validator{
-				Index:                      uint64(validator.Index),
+				Index:                      validator.Index,
 				PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 				WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
 				Balance:                    validator.Balance,
 				EffectiveBalance:           validator.Validator.EffectiveBalance,
 				Slashed:                    validator.Validator.Slashed,
-				ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
-				ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
-				ExitEpoch:                  uint64(validator.Validator.ExitEpoch),
-				WithdrawableEpoch:          uint64(validator.Validator.WithdrawableEpoch),
+				ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+				ActivationEpoch:            validator.Validator.ActivationEpoch,
+				ExitEpoch:                  validator.Validator.ExitEpoch,
+				WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
 				Status:                     "active_online",
 			})
 		}
@@ -801,8 +801,8 @@ func migrateAppPurchases(appStoreSecret string) error {
 }
 
 func fixExecTransactionsCount() error {
-	startBlockNumber := uint64(opts.StartBlock)
-	endBlockNumber := uint64(opts.EndBlock)
+	startBlockNumber := opts.StartBlock
+	endBlockNumber := opts.EndBlock
 
 	log.InfoWithFields(log.Fields{"startBlockNumber": startBlockNumber, "endBlockNumber": endBlockNumber}, "fixExecTransactionsCount")
 
@@ -823,7 +823,7 @@ func fixExecTransactionsCount() error {
 		go func(stream chan *types.Eth1Block) {
 			high := lastBlock
 			low := lastBlock - batchSize + 1
-			if int64(firstBlock) > low {
+			if firstBlock > low {
 				low = firstBlock
 			}
 
@@ -1720,7 +1720,7 @@ func exportSyncCommitteePeriods(rpcClient rpc.Client, startDay, endDay uint64, d
 		_, lastEpoch = utils.GetFirstAndLastEpochForDay(endDay)
 	}
 
-	lastPeriod := utils.SyncPeriodOfEpoch(uint64(lastEpoch)) + 1 // we can look into the future
+	lastPeriod := utils.SyncPeriodOfEpoch(lastEpoch) + 1 // we can look into the future
 
 	start := time.Now()
 	for p := firstPeriod; p <= lastPeriod; p++ {

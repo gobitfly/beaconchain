@@ -142,7 +142,7 @@ func main() {
 				epochsRemaining := epochsToExport - c
 
 				elapsed := time.Since(start)
-				remaining := time.Duration(epochsRemaining * int64(time.Since(start).Nanoseconds()) / c)
+				remaining := time.Duration(epochsRemaining * time.Since(start).Nanoseconds() / c)
 				epochDuration := time.Duration(elapsed.Nanoseconds() / c)
 
 				log.Infof("exported %v of %v epochs in %v (%v/epoch), estimated time remaining: %vs", c, epochsToExport, elapsed, epochDuration, remaining)
@@ -267,7 +267,7 @@ func export(epoch uint64, bt *db.Bigtable, client *beacon.Client, elClient *stri
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
 
-	err = bt.SaveValidatorIncomeDetails(uint64(epoch), rewards)
+	err = bt.SaveValidatorIncomeDetails(epoch, rewards)
 	if err != nil {
 		return fmt.Errorf("error saving reward details to bigtable: %v", err)
 	}

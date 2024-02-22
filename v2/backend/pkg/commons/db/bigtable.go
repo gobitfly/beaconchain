@@ -1920,7 +1920,7 @@ func (bigtable *Bigtable) GetValidatorEffectiveness(validators []uint64, epoch u
 	for validator, reading := range aggEffectiveness {
 		res = append(res, &types.ValidatorEffectiveness{
 			Validatorindex:        validator,
-			AttestationEfficiency: float64(reading.Sum) / float64(reading.Count) * 100,
+			AttestationEfficiency: reading.Sum / float64(reading.Count) * 100,
 		})
 	}
 
@@ -2654,7 +2654,7 @@ func GetCurrentDayClIncome(validator_indices []uint64) (map[uint64]int64, error)
 		return dayIncome, err
 	}
 
-	currentDay := uint64(lastDay + 1)
+	currentDay := lastDay + 1
 	startEpoch := currentDay * utils.EpochsPerDay()
 	endEpoch := startEpoch + utils.EpochsPerDay() - 1
 	income, err := BigtableClient.GetValidatorIncomeDetailsHistory(validator_indices, startEpoch, endEpoch)
