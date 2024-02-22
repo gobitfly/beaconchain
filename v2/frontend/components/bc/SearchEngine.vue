@@ -645,7 +645,7 @@ h3 {
 #filter-networks {
   background: #AAAAAA;
   width: w-20rem;
-  @include button_text;
+  @include main.button_text;
 }
 
 .hiddencheckbox-filter {
@@ -655,7 +655,7 @@ h3 {
 }
 
 .filter-button {
-  @include button_text;
+  @include main.button_text;
   display: inline-block;
   border-radius: 6px;
   background-color: var(--button-color-disabled);
