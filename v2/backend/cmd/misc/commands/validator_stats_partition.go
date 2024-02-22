@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var rowMissmatchErr = errors.New("number of rows in current table and destination table do not match, aborting renaming")
+var errRowMissmatch = errors.New("number of rows in current table and destination table do not match, aborting renaming")
 
 type StatsMigratorCommand struct {
 	Config                         statsMigratorConfig
@@ -130,7 +130,7 @@ func (s *statsMigratorConfig) partitionStatsTable(currentTableName, destinationT
 		log.Infof("Part 3: Renaming destination table to current table name")
 		err = tableRenaming(currentTableName, destinationTableName, numberOfPartitions)
 		if err != nil {
-			if err == rowMissmatchErr {
+			if err == errRowMissmatch {
 				// This should handle the case when we switch days after data has been copied and before renaming. Remember that only completed days are exported by the statistics exporter.
 				log.Infof("Missmatch between current table and destination table row amount for the last exported day. Retrying to export last days.")
 				maxDay := int64(0)
@@ -222,7 +222,7 @@ func tableRenaming(currentTableName, destinationTableName string, numberOfPartit
 	}
 
 	if numberOfRows != numberOfRowsDestination {
-		return rowMissmatchErr
+		return errRowMissmatch
 	}
 
 	// Rename old table to backuo
