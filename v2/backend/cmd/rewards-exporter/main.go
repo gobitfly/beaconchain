@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"net"
 	"sync/atomic"
 	"time"
 
@@ -76,7 +77,7 @@ func main() {
 			log.Fatal(nil, "no beacon node url provided", 0)
 		} else {
 			log.Infof("applying becon node endpoint from config")
-			*bnAddress = fmt.Sprintf("http://%s:%s", utils.Config.Indexer.Node.Host, utils.Config.Indexer.Node.Port)
+			*bnAddress = fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node.Host, cfg.Indexer.Node.Port))
 		}
 	}
 

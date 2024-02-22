@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"strings"
 
@@ -332,7 +333,7 @@ func setCLConfig(cfg *types.Config) error {
 		// 	return fmt.Errorf("error setting chainConfig (%v) for prysmParams: %w", cfg.Chain.Name, err)
 		// }
 	} else if cfg.Chain.ClConfigPath == "node" {
-		nodeEndpoint := fmt.Sprintf("http://%s:%s", cfg.Indexer.Node.Host, cfg.Indexer.Node.Port)
+		nodeEndpoint := fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node.Host, cfg.Indexer.Node.Port))
 		client := consapi.NewNodeDataRetriever(nodeEndpoint)
 
 		jr, err := client.GetSpec()

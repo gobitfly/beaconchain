@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -89,7 +90,7 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 	}
 
 	log.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
-	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", writer.Username, writer.Password, writer.Host, writer.Port, writer.Name))
+	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
@@ -105,7 +106,7 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 	}
 
 	log.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
-	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", reader.Username, reader.Password, reader.Host, reader.Port, reader.Name))
+	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
