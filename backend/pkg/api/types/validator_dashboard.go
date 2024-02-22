@@ -8,16 +8,6 @@ import (
 
 // ------------------------------------------------------------
 // Overview
-type VDBOverviewResponse ApiDataResponse[VDBOverviewData]
-
-type VDBOverviewData struct {
-	Groups     []VDBOverviewGroup                  `json:"groups"`
-	Validators VDBOverviewValidators               `json:"validators"`
-	Efficiency VDBOverviewEfficiency               `json:"efficiency"`
-	Rewards    PeriodicClElValues[decimal.Decimal] `json:"rewards"`
-	Luck       Luck                                `json:"luck"`
-	Apr        PeriodicClElValues[float64]         `json:"apr"`
-}
 
 type VDBOverviewValidators struct {
 	Total   uint64 `json:"total"`
@@ -39,20 +29,28 @@ type VDBOverviewGroup struct {
 	Name string `json:"name"`
 }
 
-// ------------------------------------------------------------
-// Slot Viz
-type VDBSlotVizResponse ApiDataResponse[VDBSlotVizEpoch]
-
-type VDBSlotVizEpoch struct {
-	Epoch uint64           `json:"epoch"`
-	State string           `json:"state" tstype:"'head' | 'finalized' | 'scheduled'"`
-	Slots []VDBSlotVizSlot `json:"slots"`
+type VDBOverviewData struct {
+	Groups     []VDBOverviewGroup                  `json:"groups"`
+	Validators VDBOverviewValidators               `json:"validators"`
+	Efficiency VDBOverviewEfficiency               `json:"efficiency"`
+	Rewards    PeriodicClElValues[decimal.Decimal] `json:"rewards"`
+	Luck       Luck                                `json:"luck"`
+	Apr        PeriodicClElValues[float64]         `json:"apr"`
 }
 
+type VDBOverviewResponse ApiDataResponse[VDBOverviewData]
+
+// ------------------------------------------------------------
+// Slot Viz
 type VDBSlotVizSlot struct {
 	Slot   uint64           `json:"slot"`
 	Status string           `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'"`
 	Duties []VDBSlotVizDuty `json:"duties"`
+}
+type VDBSlotVizEpoch struct {
+	Epoch uint64           `json:"epoch"`
+	State string           `json:"state" tstype:"'head' | 'finalized' | 'scheduled'"`
+	Slots []VDBSlotVizSlot `json:"slots"`
 }
 
 type VDBSlotVizDuty struct {
@@ -65,6 +63,8 @@ type VDBSlotVizDuty struct {
 	Block           uint64          `json:"block,omitempty"`
 	Validator       uint64          `json:"validator,omitempty"`
 }
+
+type VDBSlotVizResponse ApiDataResponse[VDBSlotVizEpoch]
 
 // ------------------------------------------------------------
 // Summary Tab
