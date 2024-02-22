@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strings"
 
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 
@@ -11,20 +10,6 @@ import (
 
 // All handler function names must include the HTTP method and the path they handle
 // Internal handlers may only be authenticated by an OAuth token
-
-func handleJsonError(w http.ResponseWriter, err error) {
-	if err, ok := err.(RequestError); ok {
-		switch err.StatusCode {
-		case http.StatusBadRequest:
-			returnBadRequest(w, err.Err)
-		case http.StatusInternalServerError:
-			fallthrough
-		default:
-			returnInternalServerError(w, err.Err)
-		}
-	}
-	returnInternalServerError(w, err)
-}
 
 // --------------------------------------
 // Authenication
@@ -45,7 +30,7 @@ func (h HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Reque
 // Ad Configurations
 
 func (h HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, nil)
+	returnCreated(w, nil)
 }
 
 func (h HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +56,7 @@ func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http
 // Account Dashboards
 
 func (h HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, nil)
+	returnCreated(w, nil)
 }
 
 func (h HandlerService) InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +68,7 @@ func (h HandlerService) InternalDeleteAccountDashboard(w http.ResponseWriter, r 
 }
 
 func (h HandlerService) InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, nil)
+	returnCreated(w, nil)
 }
 
 func (h HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +76,7 @@ func (h HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWrit
 }
 
 func (h HandlerService) InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, nil)
+	returnCreated(w, nil)
 }
 
 func (h HandlerService) InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +92,7 @@ func (h HandlerService) InternalPutAccountDashboardAccount(w http.ResponseWriter
 }
 
 func (h HandlerService) InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, nil)
+	returnCreated(w, nil)
 }
 
 func (h HandlerService) InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
@@ -140,8 +125,8 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 		Name    string `json:"name"`
 		Network string `json:"network"`
 	}{}
-	if err := CheckAndGetJson(r.Body, &req); err != nil {
-		handleJsonError(w, err)
+	if internalErr := checkBody(&err, &req, r.Body); internalErr != nil {
+		returnInternalServerError(w, internalErr)
 		return
 	}
 	name := checkNameNotEmpty(&err, req.Name)
@@ -159,13 +144,13 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 	response := types.ApiResponse{
 		Data: data,
 	}
-	ReturnCreated(w, response)
+	returnCreated(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
 	var err error
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -185,7 +170,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -201,12 +186,12 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if err := CheckAndGetJson(r.Body, &req); err != nil {
-		handleJsonError(w, err)
+	if internalErr := checkBody(&err, &req, r.Body); internalErr != nil {
+		returnInternalServerError(w, internalErr)
 		return
 	}
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	name := checkNameNotEmpty(&err, req.Name)
 	if err != nil {
 		returnBadRequest(w, err)
@@ -221,14 +206,14 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		Data: types.VDBOverviewGroup{},
 	}
 
-	ReturnCreated(w, response)
+	returnCreated(w, response)
 }
 
 func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
 	var err error
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	groupId := checkId(&err, vars["group_id"])
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	groupId := checkGroupId(&err, vars["group_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -245,14 +230,14 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
 	}{}
-	if err := CheckAndGetJson(r.Body, &req); err != nil {
-		handleJsonError(w, err)
+	if internalErr := checkBody(&err, &req, r.Body); internalErr != nil {
+		returnInternalServerError(w, internalErr)
 		return
 	}
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	groupId := checkId(&err, req.GroupId)
-	validators := CheckValidatorList(&err, req.Validators)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	groupId := checkGroupId(&err, req.GroupId)
+	validators := checkValidatorArray(&err, req.Validators)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -268,14 +253,16 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 			GroupId string   `json:"group_id"`
 		}{},
 	}
-	ReturnCreated(w, response)
+	returnCreated(w, response)
 }
 
 func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
 	var err error
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	validators := CheckValidatorList(&err, strings.Split(r.URL.Query().Get("validators"), ","))
+	// TODO check body for validators, ignore query param if body is present
+	vars := mux.Vars(r)
+	q := r.URL.Query()
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	validators := checkValidatorList(&err, q.Get("validators"))
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -294,12 +281,12 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if err := CheckAndGetJson(r.Body, &req); err != nil {
-		handleJsonError(w, err)
+	if internalErr := checkBody(&err, &req, r.Body); internalErr != nil {
+		returnInternalServerError(w, internalErr)
 		return
 	}
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	name := checkNameNotEmpty(&err, req.Name)
 	if err != nil {
 		returnBadRequest(w, err)
@@ -319,24 +306,24 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 			} `json:"share_settings"`
 		}{},
 	}
-	ReturnCreated(w, response)
+	returnCreated(w, response)
 }
 
 func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+	var err error
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if err := CheckAndGetJson(r.Body, &req); err != nil {
-		handleJsonError(w, err)
+	if internalErr := checkBody(&err, &req, r.Body); internalErr != nil {
+		returnInternalServerError(w, internalErr)
 		return
 	}
-	var err error
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	publicDashboardId := checkId(&err, vars["public_dashboard_id"])
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	publicDashboardId := checkPublicDashboardId(&err, vars["public_dashboard_id"])
 	name := checkNameNotEmpty(&err, req.Name)
 	if err != nil {
 		returnBadRequest(w, err)
@@ -359,8 +346,8 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	publicDashboardId := checkId(&err, vars["public_dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	publicDashboardId := checkPublicDashboardId(&err, vars["public_dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -374,7 +361,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -397,8 +384,8 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	pagingParams := checkAndGetPaging(&err, r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	pagingParams := checkPagingParams(&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -419,8 +406,8 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	groupId := checkUint(&err, vars["group_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	groupId := checkGroupId(&err, vars["group_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -439,7 +426,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -456,8 +443,8 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	paging := checkAndGetPaging(&err, r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	paging := checkPagingParams(&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -474,8 +461,8 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkUint(&err, vars["dashboard_id"])
-	groupId := checkId(&err, vars["group_id"])
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	groupId := checkGroupId(&err, vars["group_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return

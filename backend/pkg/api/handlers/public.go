@@ -23,7 +23,7 @@ func (h HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.R
 }
 
 func (h HandlerService) PublicPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +35,7 @@ func (h HandlerService) PublicDeleteAccountDashboard(w http.ResponseWriter, r *h
 }
 
 func (h HandlerService) PublicPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func (h HandlerService) PublicDeleteAccountDashboardGroups(w http.ResponseWriter
 }
 
 func (h HandlerService) PublicPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +59,7 @@ func (h HandlerService) PublicPutAccountDashboardAccount(w http.ResponseWriter, 
 }
 
 func (h HandlerService) PublicPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +79,7 @@ func (h HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Res
 }
 
 func (h HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +91,7 @@ func (h HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r 
 }
 
 func (h HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func (h HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWrit
 }
 
 func (h HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +107,7 @@ func (h HandlerService) PublicDeleteValidatorDashboardValidators(w http.Response
 }
 
 func (h HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
@@ -426,7 +426,7 @@ func (h HandlerService) PublicGetNetworkLayer1ToLayer2Transactions(w http.Respon
 }
 
 func (h HandlerService) PublicPostNetworkBroadcasts(w http.ResponseWriter, r *http.Request) {
-	ReturnCreated(w, r)
+	returnCreated(w, r)
 }
 
 func (h HandlerService) PublicGetEthPriceHistory(w http.ResponseWriter, r *http.Request) {
