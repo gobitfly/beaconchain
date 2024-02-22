@@ -30,7 +30,7 @@ export interface Address {
 }
 export interface LuckItem {
     percent: number /* float64 */;
-    expected: string /* time.Time */;
+    expected: string/* time.Time */;
     average: any /* time.Duration */;
 }
 export interface Luck {
@@ -42,7 +42,7 @@ export interface StatusCount {
     failed: number /* uint64 */;
 }
 export type ClElUnion = 
-        number /* float64 */ | string /* decimal.Decimal */;
+        number /* float64 */ | string/* decimal.Decimal */;
 export interface ClElValue<T extends ClElUnion> {
     el: T;
     cl: T;

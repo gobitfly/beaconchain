@@ -20,8 +20,8 @@ const (
 )
 
 var typeMappings = map[string]string{
-	"decimal.Decimal": "string /* decimal.Decimal */",
-	"time.Time":       "string /* time.Time */",
+	"decimal.Decimal": "string/* decimal.Decimal */",
+	"time.Time":       "string/* time.Time */",
 }
 
 // Expects the following flags:
