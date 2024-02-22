@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  trueIcon?: string,
-  falseIcon?: string,
+  trueIcon?: IconDefinition,
+  falseIcon?: IconDefinition,
 }
 
 const props = defineProps<Props>()
@@ -22,12 +24,12 @@ const toggle = () => {
   <div class="bc-toggle" :class="{ selected }" @click="toggle">
     <div class="icon true-icon">
       <slot name="trueIcon">
-        <i :class="props.trueIcon" />
+        <FontAwesomeIcon v-if="props.trueIcon" :icon="props.trueIcon" />
       </slot>
     </div>
     <div class="icon false-icon">
       <slot name="falseIcon">
-        <i :class="props.falseIcon" />
+        <FontAwesomeIcon v-if="props.falseIcon" :icon="props.falseIcon" />
       </slot>
     </div>
     <span class="slider" />

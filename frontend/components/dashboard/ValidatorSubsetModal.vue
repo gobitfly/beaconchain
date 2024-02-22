@@ -1,5 +1,9 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
+import {
+  faCopy
+} from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
 
 const { t: $t } = useI18n()
@@ -109,7 +113,7 @@ function copyValidatorsToClipboard (): void {
       </span>
     </div>
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
-      <i class="fas fa-copy" />
+      <FontAwesomeIcon :icon="faCopy" />
     </Button>
   </BcDialog>
 </template>

@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  faTable
+} from '@fortawesome/pro-solid-svg-icons'
+import {
+  faChartColumn
+} from '@fortawesome/pro-regular-svg-icons'
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
@@ -62,7 +68,7 @@ const isAttestation = ref<boolean>(true)
     </TabPanel>
     <TabPanel header="Toggle">
       <div class="element_container">
-        <div>isCube: {{ isCube }} <BcIconToggle v-model="isCube" true-icon="fas fa-cube" false-icon="fas fa-info-circle" /></div>
+        <div>isCube: {{ isCube }} <BcIconToggle v-model="isCube" :true-icon="faTable" :false-icon="faChartColumn" /></div>
 
         <div>
           isCube: {{ isAttestation }}

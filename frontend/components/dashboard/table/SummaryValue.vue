@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faInfoCircle
+} from '@fortawesome/pro-regular-svg-icons'
+import {
+  faCube,
+  faSync
+} from '@fortawesome/pro-solid-svg-icons'
+
 import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
@@ -37,7 +46,7 @@ const data = computed(() => {
       }
     }
   } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
-    const tooltip: {title: string, text: string} | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
+    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
     return {
       efficiency: col[props.property as SummaryDetailsEfficiencyProp],
       tooltip
@@ -62,7 +71,7 @@ const data = computed(() => {
       context
     }
   } else if (props.property === 'attestation_efficiency') {
-    const tooltip: {title: string, text: string} | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
+    const tooltip: { title: string, text: string } | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip
@@ -109,16 +118,12 @@ const data = computed(() => {
   }
 })
 
-// TODO: find better matching icon for fa-circle-info, once new fontawesome files are merged
 </script>
 <template>
   <BcTooltip v-if="data?.efficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
     <div class="info_row">
-      <DashboardTableEfficiency
-        :success="data.efficiency.count.success"
-        :failed="data.efficiency.count.failed"
-      />
-      <i v-if="data.tooltip?.title" class="far fa-circle-info link" />
+      <DashboardTableEfficiency :success="data.efficiency.count.success" :failed="data.efficiency.count.failed" />
+      <FontAwesomeIcon v-if="data.tooltip?.title" class="link" :icon="faInfoCircle" />
     </div>
   </BcTooltip>
   <DashboardTableValidators
@@ -127,16 +132,21 @@ const data = computed(() => {
     :context="data.context"
     :group-id="props.row.group_id"
   />
-  <BcTooltip v-else-if="data?.attestationEfficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
+  <BcTooltip
+    v-else-if="data?.attestationEfficiency"
+    position="top"
+    :text="data.tooltip?.text"
+    :title="data.tooltip?.title"
+  >
     <div class="info_row">
       <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
-      <i class="far fa-circle-info link" />
+      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
     </div>
   </BcTooltip>
   <BcTooltip v-else-if="data?.apr" position="top">
     <div class="info_row">
       <BcFormatPercent :percent="data.apr.total" />
-      <i class="far fa-circle-info link" />
+      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
     </div>
     <template #tooltip>
       <div class="row">
@@ -153,11 +163,12 @@ const data = computed(() => {
   </BcTooltip>
   <BcTooltip v-else-if="data?.luck" position="top">
     <div class="info_row">
-      <span><i class="fas fa-cube" />
-        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <i class="fas fa-sync" />
+      <span>
+        <FontAwesomeIcon :icon="faCube" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <FontAwesomeIcon :icon="faSync" />
         <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
       </span>
-      <i class="far fa-circle-info link" />
+      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
     </div>
     <template #tooltip>
       <div class="row">
@@ -231,13 +242,9 @@ const data = computed(() => {
     content: " ";
   }
 }
-.info_row{
+
+.info_row {
   display: flex;
   justify-content: space-between;
-  .fa-info {
-  height: 14px;
-  width: 14px;
-
-}
 }
 </style>

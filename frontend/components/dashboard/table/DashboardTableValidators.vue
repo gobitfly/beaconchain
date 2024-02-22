@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faArrowUpRightFromSquare
+} from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 
 interface Props {
@@ -22,7 +26,7 @@ const openValidatorModal = () => {
         {{ v }}
       </NuxtLink>
     </div>
-    <IconPopout v-if="validators?.length" class="link popout" @click="openValidatorModal" />
+    <FontAwesomeIcon v-if="validators?.length" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
   </div>
 </template>
 

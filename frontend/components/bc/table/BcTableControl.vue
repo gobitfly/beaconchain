@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  faTable
+} from '@fortawesome/pro-solid-svg-icons'
+import {
+  faChartColumn
+} from '@fortawesome/pro-regular-svg-icons'
 
 interface Props {
   title?: string,
@@ -21,7 +27,7 @@ const onInput = (event: Event) => {
   <slot name="bc-table-header">
     <div class="bc-table-header">
       <div class="side">
-        <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" true-icon="fas fa-table" false-icon="far fa-chart-column" />
+        <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" />
         <slot id="header-left" />
       </div>
       <div v-if="props.title" class="h1">

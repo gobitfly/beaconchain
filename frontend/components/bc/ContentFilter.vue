@@ -1,4 +1,9 @@
 <script lang="ts" setup>
+import {
+  faMagnifyingGlass
+} from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
 defineEmits<{(e: 'filter-changed', value: string): void }>()
 
 const filterVisible = ref(false)
@@ -9,7 +14,7 @@ const filter = ref<string>('')
   <span class="filter_elements_container">
     <InputText v-model="filter" placeholder="Index" :class="{visible:filterVisible}" :disabled="!filterVisible" @input="$emit('filter-changed', filter)" />
     <Button class="p-button-icon-only" :class="{filter_visible:filterVisible}" @click="filterVisible=!filterVisible">
-      <i class="fas fa-magnifying-glass" />
+      <FontAwesomeIcon :icon="faMagnifyingGlass" />
     </Button>
   </span>
 </template>
