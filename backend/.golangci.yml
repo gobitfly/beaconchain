@@ -10,6 +10,7 @@ linters:
     - ineffassign
     - forbidigo
     - unconvert
+    - bodyclose
   disable:
     - exhaustivestruct
     - golint
@@ -25,7 +26,6 @@ linters:
 
     # Disabled for now:
     - asasalint
-    - bodyclose
     - containedctx
     - contextcheck
     - cyclop
