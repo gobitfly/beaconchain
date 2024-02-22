@@ -10,7 +10,8 @@
     "expected": "Expected",
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
-    "id": "ID"
+    "id": "ID",
+    "average":"Average"
   },
   "table": {
     "first" : "First",
@@ -35,6 +36,9 @@
     "7d": "7d",
     "31d": "31d",
     "365d": "365d",
+    "day": "24h",
+    "week": "7d",
+    "total": "All Time",
     "all": "All Time"
   },
   "slotViz": {
@@ -57,10 +61,10 @@
         "search_placeholder": "Index, Public Key, Group",
         "col":{
           "group": "Group",
-          "efficiency_24h": "Efficiency (24h)",
-          "efficiency_7d": "Efficiency (7d)",
-          "efficiency_31d": "Efficiency (31d)",
-          "efficiency_all": "Efficiency (All Time)",
+          "efficiency_day": "Efficiency (24h)",
+          "efficiency_week": "Efficiency (7d)",
+          "efficiency_month": "Efficiency (31d)",
+          "efficiency_total": "Efficiency (All Time)",
           "validators": "Validators"
         },
         "row": {
@@ -76,7 +80,7 @@
           "validators_sync": "Validators",
           "proposals": "Proposals",
           "validators_proposal": "Validators",
-          "slashings": "Slashings",
+          "slashed": "Slashings",
           "validators_slashings": "Validators",
           "apr": "APR",
           "luck": "Luck"

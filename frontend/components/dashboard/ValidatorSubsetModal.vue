@@ -10,8 +10,8 @@ const { t: $t } = useI18n()
 
 interface Props {
   context: DashboardValidatorContext;
-  timeFrame: SummaryDetail;
-  dashboardName: string,
+  timeFrame?: SummaryDetail;
+  dashboardName?: string,
   groupName?: string, // overruled by dashboardName
   validators: number[],
 }
@@ -46,13 +46,13 @@ const caption = computed(() => {
   }
 
   switch (props.timeFrame) {
-    case 'details_24h':
+    case 'details_day':
       return text + ' ' + $t('statistics.24h')
-    case 'details_7d':
+    case 'details_week':
       return text + ' ' + $t('statistics.7d')
-    case 'details_31d':
+    case 'details_month':
       return text + ' ' + $t('statistics.31d')
-    case 'details_all':
+    case 'details_total':
       return text + ' ' + $t('statistics.all')
   }
 })

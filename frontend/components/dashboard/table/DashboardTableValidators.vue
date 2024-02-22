@@ -3,20 +3,35 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
 
 interface Props {
   validators: number[],
   groupId?: number,
+  timeFrame?: SummaryDetail
   context: DashboardValidatorContext
 }
 const props = defineProps<Props>()
 
+const modalVisibility = ref(false)
+
+const { t: $t } = useI18n()
+const { overview } = storeToRefs(useValidatorDashboardOverview())
+
 const openValidatorModal = () => {
-  // TODO: replace with real modal
-  // TODO: pass title and subtitle based on groupId (mapped with with group name, from dashboard overview store) and context
-  alert(`${props.validators?.join(', ')} - ${props.groupId} - ${props.context}`)
+  modalVisibility.value = true
 }
+
+const groupName = computed(() => {
+  if (props.groupId === undefined) {
+    return
+  }
+  if (props.groupId < 0) {
+    return $t('dashboard.validator.summary.total_group_name')
+  }
+  const group = overview.value?.groups?.find(g => g.id === props.groupId)
+  return group?.name || `${props.groupId}`
+})
 
 </script>
 <template>
@@ -26,8 +41,21 @@ const openValidatorModal = () => {
         {{ v }}
       </NuxtLink>
     </div>
-    <FontAwesomeIcon v-if="validators?.length" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
+    <FontAwesomeIcon
+      v-if="validators?.length"
+      class="link popout"
+      :icon="faArrowUpRightFromSquare"
+      @click="openValidatorModal"
+    />
   </div>
+
+  <DashboardValidatorSubsetModal
+    v-model="modalVisibility"
+    :context="props.context"
+    :time-frame="props.timeFrame"
+    :group-name="groupName"
+    :validators="props.validators"
+  />
 </template>
 
 <style lang="scss" scoped>
@@ -52,4 +80,5 @@ const openValidatorModal = () => {
     margin-left: var(--padding-small);
     flex-shrink: 0;
   }
-}</style>
+}
+</style>

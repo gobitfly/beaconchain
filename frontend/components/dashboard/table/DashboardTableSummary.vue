@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { type VDBSummaryTableResponse, type VDBSummaryTableRow } from '~/types/dashboard/summary'
+import type { VDBSummaryTableResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 
 interface Props {
@@ -105,39 +105,39 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               {{ mapGroup(slotProps.data.group_id) }}
             </template>
           </Column>
-          <Column field="efficiency_24h" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_24h')">
+          <Column field="efficiency_day" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_day')">
             <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_24h" :color-break-point="80" />
+              <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
             </template>
           </Column>
           <Column
             v-if="colsVisible.efficiency_plus"
-            field="efficiency_7d"
+            field="efficiency_week"
             :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_7d')"
+            :header="$t('dashboard.validator.summary.col.efficiency_week')"
           >
             <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_7d" :color-break-point="80" />
+              <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
             </template>
           </Column>
           <Column
             v-if="colsVisible.efficiency_plus"
-            field="efficiency_31d"
+            field="efficiency_month"
             :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_31d')"
+            :header="$t('dashboard.validator.summary.col.efficiency_month')"
           >
             <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_31d" :color-break-point="80" />
+              <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
             </template>
           </Column>
           <Column
             v-if="colsVisible.efficiency_plus"
-            field="efficiency_all"
+            field="efficiency_total"
             :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_all')"
+            :header="$t('dashboard.validator.summary.col.efficiency_total')"
           >
             <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_all" :color-break-point="80" />
+              <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
             </template>
           </Column>
           <Column

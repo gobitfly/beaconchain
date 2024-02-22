@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { useCustomFetch } from '~/composables/useCustomFetch'
-import type { VDBSummaryTableResponse } from '~/types/dashboard/summary'
+import type { VDBSummaryTableResponse } from '~/types/api/validator_dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 
 export const useValidatorDashboardSummaryStore = defineStore('validator_dashboard_sumary_store', () => {

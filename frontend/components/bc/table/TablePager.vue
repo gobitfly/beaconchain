@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Paging } from '~/types/dashboard/summary'
+import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
@@ -25,8 +25,7 @@ const data = computed(() => {
     return {
       mode: 'cursor',
       prev_cursor: props.paging.prev_cursor,
-      next_cursor: props.paging.next_cursor,
-      last_cursor: props.paging.last_cursor
+      next_cursor: props.paging.next_cursor
     }
   }
   const page = 1 + Math.floor(currentOffset.value / props.pageSize)
@@ -96,9 +95,6 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       </div>
       <div class="item button" :disabled="data.next_cursor" @click="emit('setCursor', data.next_cursor)">
         <IconChevron class="toggle" direction="right" />
-      </div>
-      <div v-if="data.last_cursor" class="item button" @click="emit('setCursor', data.last_cursor)">
-        {{ $t('table.first') }}
       </div>
       <!--TODO: implement dropdown styles-->
       <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => emit('setPageSize', event.value )" />

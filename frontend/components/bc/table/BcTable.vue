@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { type TableResponse } from '~/types/dashboard/summary'
+import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
   cursor: Cursor,
   dataKey: string, // Unique identifier for a data row
   pageSize: number,
-  data?: TableResponse<any>,
+  data?: ApiPagingResponse<any>,
   expandable?: boolean,
   tableClass?: string
 }
@@ -41,7 +41,7 @@ const toggleAll = () => {
     v-model:expandedRows="expandedRows"
     sort-mode="multiple"
     lazy
-    :total-records="props.data?.paging.total_count"
+    :total-records="props.data?.paging?.total_count"
     :rows="pageSize"
     :value="props.data?.data"
     :data-key="dataKey"

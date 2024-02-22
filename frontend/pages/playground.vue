@@ -30,7 +30,7 @@ onMounted(async () => {
     <DashboardValidatorSubsetModal
       v-model="modalVisibility"
       context="sync"
-      time-frame="details_all"
+      time-frame="details_total"
       dashboard-name="Old Validators"
       group-name="Hetzner"
       :validators="modalValidators"

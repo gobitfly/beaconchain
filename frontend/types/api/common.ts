@@ -14,7 +14,7 @@ export interface Paging {
 }
 export interface ApiResponse {
     paging?: Paging;
-    data: any;
+    data: any[];
 }
 export interface ApiErrorResponse {
     error: string;

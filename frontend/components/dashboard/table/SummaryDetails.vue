@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { SummaryDetails, type SummaryDetail, type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type VDBSummaryTableRow } from '~/types/dashboard/summary'
+import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import { SummaryDetails, type SummaryDetail, type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
 
 interface Props {
   dashboardId: number
@@ -30,7 +31,7 @@ const data = computed<SummaryRow[][]>(() => {
     attestation_total: true,
     sync: true,
     proposals: true,
-    slashings: true,
+    slashed: true,
     apr: true,
     luck: true
   }
@@ -50,7 +51,7 @@ const data = computed<SummaryRow[][]>(() => {
     row?.details.push(detail)
   }
 
-  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_total', 'attestation_total', 'attestation_head', 'attestation_source', 'attestation_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings', 'apr', 'luck']
+  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_total', 'attestation_total', 'attestation_head', 'attestation_source', 'attestation_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashed', 'validators_slashings', 'apr', 'luck']
   SummaryDetails.forEach((detail, index) => {
     props.forEach((prop, propIndex) => {
       if (!isWideEnough.value || propIndex) {

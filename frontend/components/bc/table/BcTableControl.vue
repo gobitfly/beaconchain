@@ -16,10 +16,8 @@ const emit = defineEmits<{(e: 'setSearch', value?: string): void }>()
 
 const tableIsShown = ref(true)
 
-const onInput = (event: Event) => {
-  if (event.target) {
-    emit('setSearch', (event.target as HTMLInputElement).value)
-  }
+const onInput = (value: string) => {
+  emit('setSearch', value)
 }
 
 </script>
@@ -36,7 +34,7 @@ const onInput = (event: Event) => {
       <div class="side right">
         <slot id="header-right" />
         <!--TODO: replace input with styled input-->
-        <input v-if="props.searchPlaceholder && tableIsShown" type="text" :placeholder="props.searchPlaceholder" @input="onInput">
+        <BcContentFilter v-if="props.searchPlaceholder && tableIsShown" @filter-changed="onInput" />
       </div>
     </div>
   </slot>
