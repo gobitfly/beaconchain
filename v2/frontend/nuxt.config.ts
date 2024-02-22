@@ -33,7 +33,7 @@ export default defineNuxtConfig({
       apiServer: process.env.API_SERVER
     }
   },
-  css: ['~/assets/css/main.scss', '~/assets/css/prime.scss'],
+  css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/eslint-module',
