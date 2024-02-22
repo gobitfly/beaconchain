@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -21,7 +23,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pressly/goose/v3"
-	"github.com/sirupsen/logrus"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,8 +38,6 @@ var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
 
 var PersistentRedisDbClient *redis.Client
-
-var logger = logrus.StandardLogger().WithField("module", "db")
 
 var FarFutureEpoch = uint64(18446744073709551615)
 var MaxSqlNumber = uint64(9223372036854775807)
@@ -58,12 +57,12 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 
 	go func() {
 		<-dbConnectionTimeout.C
-		utils.LogFatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
+		log.Fatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		utils.LogFatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
+		log.Fatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
 	}
 
 	dbConnectionTimeout.Stop()
@@ -90,10 +89,10 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	logger.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
-	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", writer.Username, writer.Password, writer.Host, writer.Port, writer.Name))
+	log.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
+	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name))
 	if err != nil {
-		utils.LogFatal(err, "error getting Connection Writer database", 0)
+		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
 
 	dbTestConnection(dbConnWriter, "database")
@@ -106,10 +105,10 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		return dbConnWriter, dbConnWriter
 	}
 
-	logger.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
-	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", reader.Username, reader.Password, reader.Host, reader.Port, reader.Name))
+	log.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
+	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name))
 	if err != nil {
-		utils.LogFatal(err, "error getting Connection Reader database", 0)
+		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
 	dbTestConnection(dbConnReader, "read replica database")
@@ -518,7 +517,7 @@ func GetLatestFinalizedEpoch() (uint64, error) {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
-		utils.LogError(err, "error retrieving latest exported finalized epoch from the database", 0)
+		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
 		return 0, err
 	}
 
@@ -558,7 +557,7 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -576,7 +575,7 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 
 	for _, block := range blocks {
 		if block.Canonical {
-			logger.Printf("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
 			_, err = tx.Exec("UPDATE blocks SET status = '1' WHERE blockroot = $1", block.BlockRoot)
 			if err != nil {
 				return err
@@ -598,7 +597,7 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -606,10 +605,10 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	orphanedBlocks := make(pq.ByteaArray, 0)
 	for _, block := range blocks {
 		if !block.Canonical {
-			logger.Printf("marking block %x at slot %v as orphaned", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as orphaned", block.BlockRoot, block.Slot)
 			orphanedBlocks = append(orphanedBlocks, block.BlockRoot)
 		} else {
-			logger.Printf("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
+			log.Infof("marking block %x at slot %v as canonical", block.BlockRoot, block.Slot)
 			canonBlocks = append(canonBlocks, block.BlockRoot)
 		}
 	}
@@ -712,7 +711,7 @@ func GetActiveValidatorCount() (uint64, error) {
 func UpdateQueueDeposits(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		logger.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
+		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
 		metrics.TaskDuration.WithLabelValues("update_queue_deposits").Observe(time.Since(start).Seconds())
 	}()
 
@@ -724,7 +723,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			FROM validators 
 			WHERE activationepoch=9223372036854775807 and status='pending')`)
 	if err != nil {
-		utils.LogError(err, "error removing queued publickeys from validator_queue_deposits", 0)
+		log.Error(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
 	}
 
@@ -734,7 +733,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
-		utils.LogError(err, "error adding queued publickeys to validator_queue_deposits", 0)
+		log.Error(err, "error adding queued publickeys to validator_queue_deposits", 0)
 		return err
 	}
 
@@ -749,7 +748,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 			validator_queue_deposits.validatorindex = validators.validatorindex
 	`)
 	if err != nil {
-		utils.LogError(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
+		log.Error(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
 		return err
 	}
 
@@ -786,7 +785,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
-		utils.LogError(err, "error updating validator_queue_deposits: %v", 0)
+		log.Error(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
 	return nil
@@ -1016,7 +1015,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 		slotIndex := b.Slot - (b.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch)
 
 		// if epochMap[b.Epoch].Slots[slotIndex] != nil && len(b.BlockRoot) > len(epochMap[b.Epoch].Slots[slotIndex].BlockRoot) {
-		// 	logger.Infof("CONFLICTING block found for slotindex %v", slotIndex)
+		// 	log.LogInfo("CONFLICTING block found for slotindex %v", slotIndex)
 		// }
 
 		if epochMap[b.Epoch].Slots[slotIndex] == nil || len(b.BlockRoot) > len(epochMap[b.Epoch].Slots[slotIndex].BlockRoot) {
@@ -1038,7 +1037,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 				if slot < currentSlot {
 					status = "scheduled-missed"
 				}
-				// logger.Infof("FILLING MISSING SLOT: %v", slot)
+				// log.LogInfo("FILLING MISSING SLOT: %v", slot)
 				epoch.Slots[i] = &types.SlotVizSlots{
 					Epoch:  epoch.Epoch,
 					Slot:   slot,
@@ -1138,7 +1137,7 @@ func GetTotalWithdrawals() (total uint64, err error) {
 func GetWithdrawalsCountForQuery(query string) (uint64, error) {
 	t0 := time.Now()
 	defer func() {
-		logger.WithFields(logrus.Fields{"duration": time.Since(t0)}).Infof("finished GetWithdrawalsCountForQuery")
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "finished GetWithdrawalsCountForQuery")
 	}()
 	count := uint64(0)
 
@@ -1182,7 +1181,7 @@ func GetWithdrawalsCountForQuery(query string) (uint64, error) {
 func GetWithdrawals(query string, length, start uint64, orderBy, orderDir string) ([]*types.Withdrawals, error) {
 	t0 := time.Now()
 	defer func() {
-		logger.WithFields(logrus.Fields{"duration": time.Since(t0)}).Infof("finished GetWithdrawals")
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "finished GetWithdrawals")
 	}()
 	withdrawals := []*types.Withdrawals{}
 
@@ -1665,7 +1664,7 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 	_, err = tx.Exec(`
@@ -1703,7 +1702,7 @@ func DeleteAdConfiguration(id string) error {
 	defer func() {
 		err := tx.Rollback()
 		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -2236,7 +2235,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 		return nil, fmt.Errorf("error retrieving activation & exit epoch for validators: %w", err)
 	}
 
-	logger.Info("retrieved activation & exit epochs")
+	log.Infof("retrieved activation & exit epochs")
 
 	// next retrieve all attestation data from the db (need to retrieve data for the endEpoch+1 epoch as that could still contain attestations for the endEpoch)
 	firstSlot := startEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
@@ -2254,7 +2253,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	}
 	defer rows.Close()
 
-	logger.Info("retrieved attestation raw data")
+	log.Infof("retrieved attestation raw data")
 
 	// next process the data and fill up the epoch participation
 	// validators that participated in an epoch will have the flag set to true
@@ -2280,10 +2279,10 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 		if participation == nil {
 			epochParticipation[epoch] = make(map[types.ValidatorIndex]bool)
 
-			// logger.Infof("seeding validator duties for epoch %v", epoch)
+			// log.LogInfo("seeding validator duties for epoch %v", epoch)
 			for _, data := range activityData {
 				if data.ActivationEpoch <= epoch && epoch < data.ExitEpoch {
-					epochParticipation[epoch][types.ValidatorIndex(data.ValidatorIndex)] = false
+					epochParticipation[epoch][data.ValidatorIndex] = false
 				}
 			}
 

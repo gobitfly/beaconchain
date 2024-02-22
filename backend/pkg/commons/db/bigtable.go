@@ -14,10 +14,11 @@ import (
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
 	"github.com/go-redis/redis/v8"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	itypes "github.com/gobitfly/eth-rewards/types"
-	"github.com/sirupsen/logrus"
+
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 	"google.golang.org/protobuf/proto"
@@ -83,11 +84,11 @@ func InitBigtable(project, instance, chainId, redisAddress string) (*Bigtable, e
 		if utils.Config.Bigtable.EmulatorHost == "" {
 			utils.Config.Bigtable.EmulatorHost = "127.0.0.1"
 		}
-		logger.Infof("using emulated local bigtable environment, setting BIGTABLE_EMULATOR_HOST env variable to %s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort)
+		log.Infof("using emulated local bigtable environment, setting BIGTABLE_EMULATOR_HOST env variable to %s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort)
 		err := os.Setenv("BIGTABLE_EMULATOR_HOST", fmt.Sprintf("%s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort))
 
 		if err != nil {
-			utils.LogFatal(err, "unable to set bigtable emulator environment variable", 0)
+			log.Fatal(err, "unable to set bigtable emulator environment variable", 0)
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -152,31 +153,31 @@ func (bigtable *Bigtable) commitQueuedMachineMetricWrites() {
 			}
 
 			if len(muts.Keys) >= batchSize || !ok && len(muts.Keys) > 0 { // commit when batch size is reached or on channel close
-				logger.Infof("committing %v queued machine metric inserts (trigger=batchSize, ok=%v)", len(muts.Keys), ok)
+				log.Infof("committing %v queued machine metric inserts (trigger=batchSize, ok=%v)", len(muts.Keys), ok)
 				err := bigtable.WriteBulk(muts, bigtable.tableMachineMetrics, batchSize)
 
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
+					log.Error(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 
 			if !ok { // insert chan is closed, stop the timer and exit
 				tmr.Stop()
-				logger.Infof("stopping batched machine metrics insert")
+				log.Infof("stopping batched machine metrics insert")
 				return
 			}
 
 		case <-tmr.C:
 			if len(muts.Keys) > 0 {
-				logger.Infof("committing %v queued machine metric inserts (trigger=timeout)", len(muts.Keys))
+				log.Infof("committing %v queued machine metric inserts (trigger=timeout)", len(muts.Keys))
 				err := bigtable.WriteBulk(muts, bigtable.tableMachineMetrics, DEFAULT_BATCH_INSERTS)
 
 				if err == nil {
 					muts = types.NewBulkMutations(batchSize)
 				} else {
-					utils.LogError(err, "error writing queued machine metrics to bigtable", 0)
+					log.Error(err, "error writing queued machine metrics to bigtable", 0)
 				}
 			}
 		}
@@ -266,9 +267,11 @@ func (bigtable Bigtable) getMachineMetricNamesMap(userID uint64, searchDepth int
 
 func (bigtable Bigtable) GetMachineMetricsMachineNames(userID uint64) ([]string, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"userId": userID,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"userId":   userID,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -287,9 +290,11 @@ func (bigtable Bigtable) GetMachineMetricsMachineNames(userID uint64) ([]string,
 
 func (bigtable Bigtable) GetMachineMetricsMachineCount(userID uint64) (uint64, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"userId": userID,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"userId":   userID,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -307,11 +312,13 @@ func (bigtable Bigtable) GetMachineMetricsMachineCount(userID uint64) (uint64, e
 
 func (bigtable Bigtable) GetMachineMetricsNode(userID uint64, limit, offset int) ([]*types.MachineMetricNode, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"userId": userID,
-			"limit":  limit,
-			"offset": offset,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"userId":   userID,
+			"limit":    limit,
+			"offset":   offset,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -330,11 +337,13 @@ func (bigtable Bigtable) GetMachineMetricsNode(userID uint64, limit, offset int)
 
 func (bigtable Bigtable) GetMachineMetricsValidator(userID uint64, limit, offset int) ([]*types.MachineMetricValidator, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"userId": userID,
-			"limit":  limit,
-			"offset": offset,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"userId":   userID,
+			"limit":    limit,
+			"offset":   offset,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -353,11 +362,13 @@ func (bigtable Bigtable) GetMachineMetricsValidator(userID uint64, limit, offset
 
 func (bigtable Bigtable) GetMachineMetricsSystem(userID uint64, limit, offset int) ([]*types.MachineMetricSystem, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"userId": userID,
-			"limit":  limit,
-			"offset": offset,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"userId":   userID,
+			"limit":    limit,
+			"offset":   offset,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -428,9 +439,10 @@ func (bigtable Bigtable) GetMachineRowKey(userID uint64, process string, machine
 // as well as the insert timestamps of both
 func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.RowList) (map[uint64]map[string]*types.MachineMetricSystemUser, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"rowKeys": rowKeys,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"rowKeys":  rowKeys,
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -501,7 +513,7 @@ func machineMetricRowParts(r string) (bool, uint64, string, string) {
 
 	userID, err := strconv.ParseUint(keySplit[1], 10, 64)
 	if err != nil {
-		utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+		log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 		return false, 0, "", ""
 	}
 	userID = ^uint64(0) - userID
@@ -587,7 +599,7 @@ func (bigtable *Bigtable) SaveProposalAssignments(epoch uint64, assignments map[
 		return err
 	}
 
-	logger.Infof("exported proposal assignments to bigtable in %v", time.Since(start))
+	log.Infof("exported proposal assignments to bigtable in %v", time.Since(start))
 	return nil
 }
 
@@ -603,7 +615,7 @@ func (bigtable *Bigtable) SaveAttestationDuties(duties map[types.Slot]map[types.
 			bigtable.LastAttestationCacheMux.Unlock()
 			return err
 		}
-		logger.Infof("initialized in memory last attestation slot cache with %v validators in %v", len(bigtable.LastAttestationCache), time.Since(t))
+		log.Infof("initialized in memory last attestation slot cache with %v validators in %v", len(bigtable.LastAttestationCache), time.Since(t))
 	}
 	bigtable.LastAttestationCacheMux.Unlock()
 
@@ -646,7 +658,7 @@ func (bigtable *Bigtable) SaveAttestationDuties(duties map[types.Slot]map[types.
 						}
 						mutLastAttestationSlot = gcp_bigtable.NewMutation()
 						mutLastAttestationSlotCount = 0
-						logger.Infof("applyied last attestation slot mutations in %v", time.Since(mutStart))
+						log.Infof("applyied last attestation slot mutations in %v", time.Since(mutStart))
 					}
 				}
 			}
@@ -667,7 +679,7 @@ func (bigtable *Bigtable) SaveAttestationDuties(duties map[types.Slot]map[types.
 		}
 	}
 
-	logger.Infof("exported %v attestations to bigtable in %v", mutsInclusionSlot.Len(), time.Since(start))
+	log.Infof("exported %v attestations to bigtable in %v", mutsInclusionSlot.Len(), time.Since(start))
 	return nil
 }
 
@@ -705,7 +717,7 @@ func (bigtable *Bigtable) SaveProposal(block *types.Block) error {
 		return err
 	}
 
-	logger.Infof("exported proposal to bigtable in %v", time.Since(start))
+	log.Infof("exported proposal to bigtable in %v", time.Since(start))
 	return nil
 }
 
@@ -713,7 +725,7 @@ func (bigtable *Bigtable) SaveSyncComitteeDuties(duties map[types.Slot]map[types
 	start := time.Now()
 
 	if len(duties) == 0 {
-		logger.Infof("no sync duties to export")
+		log.Infof("no sync duties to export")
 		return nil
 	}
 
@@ -738,7 +750,7 @@ func (bigtable *Bigtable) SaveSyncComitteeDuties(duties map[types.Slot]map[types
 		return err
 	}
 
-	logger.Infof("exported %v sync committee duties to bigtable in %v", muts.Len(), time.Since(start))
+	log.Infof("exported %v sync committee duties to bigtable in %v", muts.Len(), time.Since(start))
 	return nil
 }
 
@@ -749,9 +761,11 @@ func (bigtable *Bigtable) GetMaxValidatorindexForEpoch(epoch uint64) (uint64, er
 
 func (bigtable *Bigtable) getMaxValidatorindexForEpochV2(epoch uint64) (uint64, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"epoch": epoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"epoch":    epoch,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -782,11 +796,13 @@ func (bigtable *Bigtable) GetValidatorBalanceHistory(validators []uint64, startE
 
 func (bigtable *Bigtable) getValidatorBalanceHistoryV2(validators []uint64, startEpoch uint64, endEpoch uint64) (map[uint64][]*types.ValidatorBalance, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
+		log.WarnWithFields(log.Fields{
 			"validators_count": len(validators),
 			"startEpoch":       startEpoch,
 			"endEpoch":         endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -828,13 +844,13 @@ func (bigtable *Bigtable) getValidatorBalanceHistoryV2(validators []uint64, star
 
 				epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 				if err != nil {
-					utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+					log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					utils.LogError(err, "error parsing validator index from row key", 0, map[string]interface{}{"row": r.Key()})
+					log.Error(err, "error parsing validator index from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 				resMux.Lock()
@@ -869,7 +885,7 @@ func (bigtable *Bigtable) getValidatorBalanceHistoryV2(validators []uint64, star
 				return err
 			}
 
-			// logrus.Infof("retrieved data for validators %v - %v", vals[0], vals[len(vals)-1])
+			// log.LogInfo("retrieved data for validators %v - %v", vals[0], vals[len(vals)-1])
 			return nil
 		})
 	}
@@ -923,14 +939,14 @@ func (bigtable *Bigtable) getValidatorBalanceHistoryV1(validators []uint64, star
 
 		epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+			log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
 		for _, ri := range r[VALIDATOR_BALANCES_FAMILY] {
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, VALIDATOR_BALANCES_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -981,11 +997,13 @@ func (bigtable *Bigtable) GetValidatorAttestationHistory(validators []uint64, st
 
 func (bigtable *Bigtable) getValidatorAttestationHistoryV2(validators []uint64, startEpoch uint64, endEpoch uint64) (map[uint64][]*types.ValidatorAttestation, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      startEpoch,
-			"endEpoch":        endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       startEpoch,
+			"endEpoch":         endEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1027,7 +1045,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV2(validators []uint64, 
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
+					log.Error(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
@@ -1035,7 +1053,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV2(validators []uint64, 
 					attesterSlotString := strings.Replace(ri.Column, ATTESTATIONS_FAMILY+":", "", 1)
 					attesterSlot, err := strconv.ParseUint(attesterSlotString, 10, 64)
 					if err != nil {
-						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+						log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 					inclusionSlot := MAX_CL_BLOCK_NUMBER - uint64(ri.Timestamp)/1000
@@ -1189,7 +1207,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV1(validators []uint64, 
 
 		attesterSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+			log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 			return false
 		}
 		attesterSlot = max_block_number_v1 - attesterSlot
@@ -1208,7 +1226,7 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV1(validators []uint64, 
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, ATTESTATIONS_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1304,9 +1322,11 @@ func (bigtable *Bigtable) getValidatorAttestationHistoryV1(validators []uint64, 
 
 func (bigtable *Bigtable) GetLastAttestationSlots(validators []uint64) (map[uint64]uint64, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1375,11 +1395,13 @@ func (bigtable *Bigtable) GetValidatorMissedAttestationHistory(validators []uint
 
 func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV2(validators []uint64, startEpoch uint64, endEpoch uint64) (map[uint64]map[uint64]bool, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      startEpoch,
-			"endEpoch":        endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       startEpoch,
+			"endEpoch":         endEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1433,7 +1455,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV2(validators []ui
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
+					log.Error(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
@@ -1441,7 +1463,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV2(validators []ui
 					attesterSlotString := strings.Replace(ri.Column, ATTESTATIONS_FAMILY+":", "", 1)
 					attesterSlot, err := strconv.ParseUint(attesterSlotString, 10, 64)
 					if err != nil {
-						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+						log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 
@@ -1533,7 +1555,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV1(validators []ui
 
 		attesterSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+			log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 			return false
 		}
 		attesterSlot = max_block_number_v1 - attesterSlot
@@ -1548,7 +1570,7 @@ func (bigtable *Bigtable) getValidatorMissedAttestationHistoryV1(validators []ui
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, ATTESTATIONS_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1595,11 +1617,13 @@ func (bigtable *Bigtable) GetValidatorSyncDutiesHistory(validators []uint64, sta
 
 func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, startSlot uint64, endSlot uint64) (map[uint64]map[uint64]*types.ValidatorSyncParticipation, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startSlot":       startSlot,
-			"endSlot":         endSlot,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startSlot":        startSlot,
+			"endSlot":          endSlot,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1642,12 +1666,12 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, s
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
+					log.Error(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 				slot, err := strconv.ParseUint(keySplit[4], 10, 64)
 				if err != nil {
-					utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+					log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 					return false
 				}
 				slot = MAX_CL_BLOCK_NUMBER - slot
@@ -1726,7 +1750,7 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 			slot, err := strconv.ParseUint(keySplit[4], 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+				log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 				return false
 			}
 			slot = max_block_number_v1 - slot
@@ -1739,7 +1763,7 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, SYNC_COMMITTEES_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -1767,11 +1791,13 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV1(validators []uint64, s
 
 func (bigtable *Bigtable) GetValidatorMissedAttestationsCount(validators []uint64, firstEpoch uint64, lastEpoch uint64) (map[uint64]*types.ValidatorMissedAttestationsStatistic, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      firstEpoch,
-			"endEpoch":        lastEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       firstEpoch,
+			"endEpoch":         lastEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1787,7 +1813,7 @@ func (bigtable *Bigtable) GetValidatorMissedAttestationsCount(validators []uint6
 		return nil, err
 	}
 
-	// logger.Infof("retrieved missed attestation history for epochs %v - %v", firstEpoch, lastEpoch)
+	// log.LogInfo("retrieved missed attestation history for epochs %v - %v", firstEpoch, lastEpoch)
 
 	for validator, attestations := range data {
 		if len(attestations) == 0 {
@@ -1881,7 +1907,7 @@ func (bigtable *Bigtable) GetValidatorEffectiveness(validators []uint64, epoch u
 				aggEffectiveness[validator] = &readings{}
 			}
 			if attestation.InclusionSlot > 0 {
-				// logger.Infof("adding %v for epoch %v %.2f%%", attestation.InclusionSlot, attestation.AttesterSlot, 1.0/float64(attestation.InclusionSlot-attestation.AttesterSlot)*100)
+				// log.LogInfo("adding %v for epoch %v %.2f%%", attestation.InclusionSlot, attestation.AttesterSlot, 1.0/float64(attestation.InclusionSlot-attestation.AttesterSlot)*100)
 				aggEffectiveness[validator].Sum += 1.0 / float64(attestation.InclusionSlot-attestation.AttesterSlot)
 				aggEffectiveness[validator].Count++
 			} else {
@@ -1893,7 +1919,7 @@ func (bigtable *Bigtable) GetValidatorEffectiveness(validators []uint64, epoch u
 	for validator, reading := range aggEffectiveness {
 		res = append(res, &types.ValidatorEffectiveness{
 			Validatorindex:        validator,
-			AttestationEfficiency: float64(reading.Sum) / float64(reading.Count) * 100,
+			AttestationEfficiency: reading.Sum / float64(reading.Count) * 100,
 		})
 	}
 
@@ -1902,11 +1928,13 @@ func (bigtable *Bigtable) GetValidatorEffectiveness(validators []uint64, epoch u
 
 func (bigtable *Bigtable) GetValidatorBalanceStatistics(validators []uint64, startEpoch, endEpoch uint64) (map[uint64]*types.ValidatorBalanceStatistic, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      startEpoch,
-			"endEpoch":        endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       startEpoch,
+			"endEpoch":         endEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -1927,7 +1955,7 @@ func (bigtable *Bigtable) GetValidatorBalanceStatistics(validators []uint64, sta
 		}
 		vals := validators[i:upperBound]
 
-		// logrus.Infof("retrieving validator balance stats for validators %v - %v", vals[0], vals[len(vals)-1])
+		// log.LogInfo("retrieving validator balance stats for validators %v - %v", vals[0], vals[len(vals)-1])
 
 		res, err := bigtable.GetValidatorBalanceHistory(vals, startEpoch, endEpoch)
 		if err != nil {
@@ -1991,11 +2019,13 @@ func (bigtable *Bigtable) GetValidatorProposalHistory(validators []uint64, start
 
 func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, startEpoch uint64, endEpoch uint64) (map[uint64][]*types.ValidatorProposal, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      startEpoch,
-			"endEpoch":        endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       startEpoch,
+			"endEpoch":         endEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -2037,7 +2067,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, sta
 
 					proposalSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 					if err != nil {
-						utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+						log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 						return false
 					}
 					proposalSlot = MAX_CL_BLOCK_NUMBER - proposalSlot
@@ -2050,7 +2080,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV2(validators []uint64, sta
 
 					validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 					if err != nil {
-						utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+						log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 						return false
 					}
 
@@ -2123,7 +2153,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV1(validators []uint64, sta
 
 			proposalSlot, err := strconv.ParseUint(keySplit[4], 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
+				log.Error(err, "error parsing slot from row key", 0, map[string]interface{}{"row": r})
 				return false
 			}
 			proposalSlot = max_block_number_v1 - proposalSlot
@@ -2136,7 +2166,7 @@ func (bigtable *Bigtable) getValidatorProposalHistoryV1(validators []uint64, sta
 
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, PROPOSALS_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
@@ -2217,7 +2247,7 @@ func (bigtable *Bigtable) SaveValidatorIncomeDetails(epoch uint64, rewards map[u
 		return err
 	}
 
-	logger.Infof("exported validator income details for epoch %v to bigtable in %v", epoch, time.Since(start))
+	log.Infof("exported validator income details for epoch %v to bigtable in %v", epoch, time.Since(start))
 	return nil
 }
 
@@ -2233,11 +2263,13 @@ func (bigtable *Bigtable) GetValidatorIncomeDetailsHistory(validators []uint64, 
 
 func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV2(validators []uint64, startEpoch uint64, endEpoch uint64) (map[uint64]map[uint64]*itypes.ValidatorEpochIncome, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
-			"validatorsCount": len(validators),
-			"startEpoch":      startEpoch,
-			"endEpoch":        endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+		log.WarnWithFields(log.Fields{
+			"validators_count": len(validators),
+			"startEpoch":       startEpoch,
+			"endEpoch":         endEpoch,
+			"func":             utils.GetCurrentFuncName(),
+			"duration":         REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -2282,13 +2314,13 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV2(validators []uint64
 
 				validator, err := bigtable.validatorKeyToIndex(keySplit[1])
 				if err != nil {
-					utils.LogError(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
+					log.Error(err, "error parsing validator from row key", 0, map[string]interface{}{"row": r.Key})
 					return false
 				}
 
 				epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 				if err != nil {
-					utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+					log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 					return false
 				}
 
@@ -2296,7 +2328,7 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV2(validators []uint64
 					incomeDetails := &itypes.ValidatorEpochIncome{}
 					err = proto.Unmarshal(ri.Value, incomeDetails)
 					if err != nil {
-						utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
+						log.Error(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 						return false
 					}
 
@@ -2369,7 +2401,7 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV1(validators []uint64
 
 		epoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+			log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
@@ -2377,14 +2409,14 @@ func (bigtable *Bigtable) getValidatorIncomeDetailsHistoryV1(validators []uint64
 		for _, ri := range r[INCOME_DETAILS_COLUMN_FAMILY] {
 			validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, INCOME_DETAILS_COLUMN_FAMILY+":"), 10, 64)
 			if err != nil {
-				utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+				log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 				return false
 			}
 
 			incomeDetails := &itypes.ValidatorEpochIncome{}
 			err = proto.Unmarshal(ri.Value, incomeDetails)
 			if err != nil {
-				utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
+				log.Error(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 				return false
 			}
 
@@ -2425,7 +2457,7 @@ func (bigtable *Bigtable) GetAggregatedValidatorIncomeDetailsHistory(validators 
 		}
 		vals := validators[i:upperBound]
 
-		logrus.Infof("retrieving validator income stats for validators %v - %v", vals[0], vals[len(vals)-1])
+		log.Infof("retrieving validator income stats for validators %v - %v", vals[0], vals[len(vals)-1])
 
 		res, err := bigtable.GetValidatorIncomeDetailsHistory(vals, startEpoch, endEpoch)
 
@@ -2466,10 +2498,12 @@ func (bigtable *Bigtable) GetAggregatedValidatorIncomeDetailsHistory(validators 
 // startEpoch & endEpoch are inclusive
 func (bigtable *Bigtable) GetTotalValidatorIncomeDetailsHistory(startEpoch uint64, endEpoch uint64) (map[uint64]*itypes.ValidatorEpochIncome, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		logger.WithFields(logrus.Fields{
+		log.WarnWithFields(log.Fields{
 			"startEpoch": startEpoch,
 			"endEpoch":   endEpoch,
-		}).Warnf("%s call took longer than %v", utils.GetCurrentFuncName(), REPORT_TIMEOUT)
+			"func":       utils.GetCurrentFuncName(),
+			"duration":   REPORT_TIMEOUT,
+		}, "call took longer than expected")
 	})
 	defer tmr.Stop()
 
@@ -2490,7 +2524,7 @@ func (bigtable *Bigtable) GetTotalValidatorIncomeDetailsHistory(startEpoch uint6
 
 		epoch, err := strconv.ParseUint(keySplit[2], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+			log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
@@ -2498,7 +2532,7 @@ func (bigtable *Bigtable) GetTotalValidatorIncomeDetailsHistory(startEpoch uint6
 			incomeDetails := &itypes.ValidatorEpochIncome{}
 			err = proto.Unmarshal(ri.Value, incomeDetails)
 			if err != nil {
-				utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
+				log.Error(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 				return false
 			}
 
@@ -2619,7 +2653,7 @@ func GetCurrentDayClIncome(validator_indices []uint64) (map[uint64]int64, error)
 		return dayIncome, err
 	}
 
-	currentDay := uint64(lastDay + 1)
+	currentDay := lastDay + 1
 	startEpoch := currentDay * utils.EpochsPerDay()
 	endEpoch := startEpoch + utils.EpochsPerDay() - 1
 	income, err := BigtableClient.GetValidatorIncomeDetailsHistory(validator_indices, startEpoch, endEpoch)
@@ -2665,23 +2699,23 @@ func (bigtable *Bigtable) MigrateIncomeDataV1V2Schema(epoch uint64) error {
 	prefixEpochRange := gcp_bigtable.PrefixRange(fmt.Sprintf("%s:e:b:%s", bigtable.chainId, fmt.Sprintf("%09d", (MAX_EPOCH)-epoch)))
 
 	err := bigtable.tableBeaconchain.ReadRows(ctx, prefixEpochRange, func(r gcp_bigtable.Row) bool {
-		// logger.Infof("processing row %v", r.Key())
+		// log.LogInfo("processing row %v", r.Key())
 
 		keySplit := strings.Split(r.Key(), ":")
 
 		rowKeyEpoch, err := strconv.ParseUint(keySplit[3], 10, 64)
 		if err != nil {
-			utils.LogError(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
+			log.Error(err, "error parsing epoch from row key", 0, map[string]interface{}{"row": r.Key()})
 			return false
 		}
 
 		rowKeyEpoch = MAX_EPOCH - rowKeyEpoch
 
 		if epoch != rowKeyEpoch {
-			utils.LogError(fmt.Errorf("retrieved different epoch than requested, requested: %d, retrieved: %d", epoch, rowKeyEpoch), "", 0)
+			log.Error(fmt.Errorf("retrieved different epoch than requested, requested: %d, retrieved: %d", epoch, rowKeyEpoch), "", 0)
 		}
 
-		// logger.Infof("epoch is %d", rowKeyEpoch)
+		// log.LogInfo("epoch is %d", rowKeyEpoch)
 
 		for columnFamily, readItems := range r {
 			for _, ri := range readItems {
@@ -2691,28 +2725,28 @@ func (bigtable *Bigtable) MigrateIncomeDataV1V2Schema(epoch uint64) error {
 
 				validator, err := strconv.ParseUint(strings.TrimPrefix(ri.Column, columnFamily+":"), 10, 64)
 				if err != nil {
-					utils.LogError(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
+					log.Error(err, "error parsing validator from column key", 0, map[string]interface{}{"row": ri.Column})
 					return false
 				}
 
-				// logger.Infof("retrieved field %s from column family %s for validator %d", ri.Column, columnFamily, validator)
+				// log.LogInfo("retrieved field %s from column family %s for validator %d", ri.Column, columnFamily, validator)
 				if columnFamily == INCOME_DETAILS_COLUMN_FAMILY {
 					if epochData[validator] == nil {
 						epochData[validator] = &validatorEpochData{
 							ValidatorIndex: validator,
 						}
 					}
-					// logger.Infof("processing income details data for validator %d", validator)
+					// log.LogInfo("processing income details data for validator %d", validator)
 					incomeDetails := &itypes.ValidatorEpochIncome{}
 					err = proto.Unmarshal(ri.Value, incomeDetails)
 					if err != nil {
-						utils.LogError(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
+						log.Error(err, "error decoding validator income data for row", 0, map[string]interface{}{"row": r.Key})
 						return false
 					}
 
 					epochData[validator].IncomeDetails = incomeDetails
 				} else {
-					utils.LogError(fmt.Errorf("retrieved unexpected column family %s", columnFamily), "", 0)
+					log.Error(fmt.Errorf("retrieved unexpected column family %s", columnFamily), "", 0)
 				}
 			}
 		}
