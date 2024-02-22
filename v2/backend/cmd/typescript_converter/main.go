@@ -64,7 +64,7 @@ func main() {
 	tygos = append(tygos, tygo.New(getTygoConfig(out, commonFileName, "")))
 	// Generate Tygo for each file
 	for file, typesUsed := range usage {
-		importStr := "import { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + ".ts';\n\n"
+		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n\n"
 		tygos = append(tygos, tygo.New(getTygoConfig(out, file, importStr)))
 	}
 
