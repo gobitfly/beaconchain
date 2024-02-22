@@ -88,76 +88,78 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       @set-search="setSearch"
     >
       <template #table>
-        <BcTable
-          :data="summary"
-          data-key="group_id"
-          :expandable="true"
-          class="summary_table"
-          :cursor="cursor"
-          :page-size="pageSize"
-          :row-class="getRowClass"
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
-        >
-          <Column field="group_id" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
-            <template #body="slotProps">
-              {{ mapGroup(slotProps.data.group_id) }}
-            </template>
-          </Column>
-          <Column field="efficiency_day" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_day')">
-            <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
-            </template>
-          </Column>
-          <Column
-            v-if="colsVisible.efficiency_plus"
-            field="efficiency_week"
-            :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_week')"
+        <ClientOnly fallback-tag="span">
+          <BcTable
+            :data="summary"
+            data-key="group_id"
+            :expandable="true"
+            class="summary_table"
+            :cursor="cursor"
+            :page-size="pageSize"
+            :row-class="getRowClass"
+            @set-cursor="setCursor"
+            @sort="onSort"
+            @set-page-size="setPageSize"
           >
-            <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
+            <Column field="group_id" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
+              <template #body="slotProps">
+                {{ mapGroup(slotProps.data.group_id) }}
+              </template>
+            </Column>
+            <Column field="efficiency_day" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_day')">
+              <template #body="slotProps">
+                <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.efficiency_plus"
+              field="efficiency_week"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.efficiency_week')"
+            >
+              <template #body="slotProps">
+                <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.efficiency_plus"
+              field="efficiency_month"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.efficiency_month')"
+            >
+              <template #body="slotProps">
+                <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.efficiency_plus"
+              field="efficiency_total"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.efficiency_total')"
+            >
+              <template #body="slotProps">
+                <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.validator"
+              field="validators"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.validators')"
+            >
+              <template #body="slotProps">
+                <DashboardTableValidators
+                  :validators="slotProps.data.validators"
+                  :group-id="slotProps.data.group_id"
+                  context="group"
+                />
+              </template>
+            </Column>
+            <template #expansion="slotProps">
+              <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-id="props.dashboardId" />
             </template>
-          </Column>
-          <Column
-            v-if="colsVisible.efficiency_plus"
-            field="efficiency_month"
-            :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_month')"
-          >
-            <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
-            </template>
-          </Column>
-          <Column
-            v-if="colsVisible.efficiency_plus"
-            field="efficiency_total"
-            :sortable="true"
-            :header="$t('dashboard.validator.summary.col.efficiency_total')"
-          >
-            <template #body="slotProps">
-              <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
-            </template>
-          </Column>
-          <Column
-            v-if="colsVisible.validator"
-            field="validators"
-            :sortable="true"
-            :header="$t('dashboard.validator.summary.col.validators')"
-          >
-            <template #body="slotProps">
-              <DashboardTableValidators
-                :validators="slotProps.data.validators"
-                :group-id="slotProps.data.group_id"
-                context="group"
-              />
-            </template>
-          </Column>
-          <template #expansion="slotProps">
-            <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-id="props.dashboardId" />
-          </template>
-        </BcTable>
+          </BcTable>
+        </ClientOnly>
       </template>
       <template #chart>
         TODO: Chart

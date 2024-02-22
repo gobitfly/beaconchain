@@ -32,12 +32,10 @@
     "scheduled": "Scheduled"
   },
   "statistics": {
-    "24h": "24h",
-    "7d": "7d",
-    "31d": "31d",
-    "365d": "365d",
     "day": "24h",
     "week": "7d",
+    "month": "31d",
+    "year": "365d",
     "total": "All Time",
     "all": "All Time"
   },

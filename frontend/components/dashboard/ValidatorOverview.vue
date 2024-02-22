@@ -2,6 +2,7 @@
 
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { type OverviewTableData } from '~/types/dashboard/overview'
+import { totalElClNumbers } from '~/utils/bigMath'
 
 const { t: $t } = useI18n()
 const { converter } = useValue()
@@ -48,40 +49,40 @@ const dataList = computed(() => {
       { label: $t('validator_state.slashed') }
     ]
   ]
-  efficiency.value = { label: formatPercent(v.efficiency) }
+  efficiency.value = { label: formatPercent(v.efficiency.total) }
 
-  rewards.value = converter.value.weiToValue(v.rewards.total, { addPlus: true })
+  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.total), { addPlus: true })
   const statsLabels = [
-    { label: `(${$t('statistics.24h')})` },
-    { label: `(${$t('statistics.7d')})` },
-    { label: `(${$t('statistics.31d')})` },
-    { label: `(${$t('statistics.365d')})` }
+    { label: `(${$t('statistics.day')})` },
+    { label: `(${$t('statistics.week')})` },
+    { label: `(${$t('statistics.month')})` },
+    { label: `(${$t('statistics.year')})` }
   ]
   rewards.additonalValues = [
     [
-      converter.value.weiToValue(v.rewards['24h'], { addPlus: true }),
-      converter.value.weiToValue(v.rewards['7d'], { addPlus: true }),
-      converter.value.weiToValue(v.rewards['31d'], { addPlus: true }),
-      converter.value.weiToValue(v.rewards['365d'], { addPlus: true })
+      converter.value.weiToValue(totalElCl(v.rewards.day), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.week), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.month), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.year), { addPlus: true })
     ], statsLabels
   ]
 
-  luck.value = { label: formatPercent(v.luck.proposal) }
+  luck.value = { label: formatPercent(v.luck.proposal.percent) }
   luck.additonalValues = [
     [
-      { label: formatPercent(v.luck.sync) }
+      { label: formatPercent(v.luck.sync.percent) }
     ],
     [
       { label: $t(`${tPath}sync_committee_luck`) }
     ]
   ]
-  apr.value = { label: formatPercent(v.apr.total) }
+  apr.value = { label: formatPercent(totalElClNumbers(v.apr.total)) }
   apr.additonalValues = [
     [
-      { label: formatPercent(v.apr['24h']) },
-      { label: formatPercent(v.apr['7d']) },
-      { label: formatPercent(v.apr['31d']) },
-      { label: formatPercent(v.apr['365d']) }
+      { label: formatPercent(totalElClNumbers(v.apr.day)) },
+      { label: formatPercent(totalElClNumbers(v.apr.week)) },
+      { label: formatPercent(totalElClNumbers(v.apr.month)) },
+      { label: formatPercent(totalElClNumbers(v.apr.year)) }
     ], statsLabels
   ]
   return list
