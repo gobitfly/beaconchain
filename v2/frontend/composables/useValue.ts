@@ -3,7 +3,7 @@ import { formatEther, commify } from '@ethersproject/units'
 import type { Currency, CryptoCurrency } from '~/types/currencies'
 import type { ExtendedLabel, ValueConvertOptions } from '~/types/value'
 import { isNative, isFiat } from '~/utils/currency'
-import { OneEther, OneGwei, lessThenGwei, lessThenEth } from '~/utils/ether'
+import { OneEther, OneGwei, lessThanGwei, lessThanEth } from '~/utils/ether'
 import { commmifyLeft, trim, withCurrency } from '~/utils/format'
 
 export function useValue () {
@@ -47,11 +47,11 @@ export function useValue () {
         maxDecimalCount = Math.min(maxDecimalCount, 2)
       }
       if (useNative && (!options?.minUnit || options?.minUnit !== 'MAIN')) {
-        if (options?.fixedUnit === 'WEI' || ((!options?.minUnit || options?.minUnit === 'WEI') && lessThenGwei(value.abs(), maxDecimalCount))) {
+        if (options?.fixedUnit === 'WEI' || ((!options?.minUnit || options?.minUnit === 'WEI') && lessThanGwei(value.abs(), maxDecimalCount))) {
           value = value.mul(OneEther)
           maxDecimalCount = 0
           currencyLabel = 'WEI'
-        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThenEth(value.abs(), maxDecimalCount))) {
+        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThanEth(value.abs(), maxDecimalCount))) {
           value = value.mul(OneGwei)
           currencyLabel = 'GWEI'
         }

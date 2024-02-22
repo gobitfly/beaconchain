@@ -10,8 +10,9 @@ interface Props {
 
 const props = defineProps<Props>()
 const bcTooltip = ref<HTMLElement | null>(null)
-const { doSelect } = useTooltipStore()
-const { selected } = storeToRefs(useTooltipStore())
+const ttStore = useTooltipStore()
+const { doSelect } = ttStore
+const { selected } = storeToRefs(ttStore)
 
 // this const will be avaiable on template
 const slots = useSlots()
