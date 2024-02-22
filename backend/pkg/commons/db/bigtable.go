@@ -546,10 +546,10 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 		}
 
 		balanceEncoded := make([]byte, 8)
-		binary.LittleEndian.PutUint64(balanceEncoded, uint64(validator.Balance))
+		binary.LittleEndian.PutUint64(balanceEncoded, validator.Balance)
 
 		effectiveBalanceEncoded := make([]byte, 8)
-		binary.LittleEndian.PutUint64(effectiveBalanceEncoded, uint64(validator.EffectiveBalance))
+		binary.LittleEndian.PutUint64(effectiveBalanceEncoded, validator.EffectiveBalance)
 
 		combined := append(balanceEncoded, effectiveBalanceEncoded...)
 		mut := &gcp_bigtable.Mutation{}
