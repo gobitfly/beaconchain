@@ -154,7 +154,7 @@ function networkFilterHasChanged () {
   }
 
   // making the network button orange if networks are selected, gray if the filter is inactive
-  networkButtonColor.value = userFilters.value.noNetworkIsSelected ? 'var(--light-grey-3)' : 'var(--primary-color)'
+  networkButtonColor.value = userFilters.value.noNetworkIsSelected ? 'var(--button-color-disabled)' : 'var(--button-color-active)'
 }
 
 function categoryFilterHasChanged () {
@@ -645,6 +645,7 @@ h3 {
 #filter-networks {
   background: #AAAAAA;
   width: w-20rem;
+  @include button_text;
 }
 
 .hiddencheckbox-filter {
@@ -654,9 +655,10 @@ h3 {
 }
 
 .filter-button {
+  @include button_text;
   display: inline-block;
   border-radius: 6px;
-  background-color: var(--light-grey-3);
+  background-color: var(--button-color-disabled);
   padding: 2px;
   width: 80px;
   text-align: center;
@@ -664,6 +666,6 @@ h3 {
   transition: 0.2s;
 }
 .hiddencheckbox-filter:checked + .filter-button {
-  background-color: var(--primary-color);
+  background-color: var(--button-color-active);
 }
 </style>
