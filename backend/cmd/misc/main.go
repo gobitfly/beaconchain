@@ -117,7 +117,7 @@ func main() {
 	}
 
 	cl := consapi.NewNodeDataRetriever("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-	nodeImpl, ok := cl.RetrieverInt.(*consapi.NodeImplRetriever)
+	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 	if !ok {
 		log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
 	}
@@ -297,16 +297,16 @@ func main() {
 
 		for _, validator := range validators.Data {
 			validatorsArr = append(validatorsArr, &types.Validator{
-				Index:                      uint64(validator.Index),
+				Index:                      validator.Index,
 				PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
 				WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
-				Balance:                    uint64(validator.Balance),
-				EffectiveBalance:           uint64(validator.Validator.EffectiveBalance),
+				Balance:                    validator.Balance,
+				EffectiveBalance:           validator.Validator.EffectiveBalance,
 				Slashed:                    validator.Validator.Slashed,
-				ActivationEligibilityEpoch: uint64(validator.Validator.ActivationEligibilityEpoch),
-				ActivationEpoch:            uint64(validator.Validator.ActivationEpoch),
-				ExitEpoch:                  uint64(validator.Validator.ExitEpoch),
-				WithdrawableEpoch:          uint64(validator.Validator.WithdrawableEpoch),
+				ActivationEligibilityEpoch: validator.Validator.ActivationEligibilityEpoch,
+				ActivationEpoch:            validator.Validator.ActivationEpoch,
+				ExitEpoch:                  validator.Validator.ExitEpoch,
+				WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
 				Status:                     "active_online",
 			})
 		}
@@ -801,8 +801,8 @@ func migrateAppPurchases(appStoreSecret string) error {
 }
 
 func fixExecTransactionsCount() error {
-	startBlockNumber := uint64(opts.StartBlock)
-	endBlockNumber := uint64(opts.EndBlock)
+	startBlockNumber := opts.StartBlock
+	endBlockNumber := opts.EndBlock
 
 	log.InfoWithFields(log.Fields{"startBlockNumber": startBlockNumber, "endBlockNumber": endBlockNumber}, "fixExecTransactionsCount")
 
@@ -823,7 +823,7 @@ func fixExecTransactionsCount() error {
 		go func(stream chan *types.Eth1Block) {
 			high := lastBlock
 			low := lastBlock - batchSize + 1
-			if int64(firstBlock) > low {
+			if firstBlock > low {
 				low = firstBlock
 			}
 
@@ -1341,7 +1341,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 			return
 		}
 		if tot != *dbRewards {
-			log.Error(fmt.Errorf("Rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards), "", 0)
+			log.Error(fmt.Errorf("rewards are not the same on day %v-> big: %v, db: %v", day, tot, *dbRewards), "", 0)
 		}
 	}
 }
@@ -1720,7 +1720,7 @@ func exportSyncCommitteePeriods(rpcClient rpc.Client, startDay, endDay uint64, d
 		_, lastEpoch = utils.GetFirstAndLastEpochForDay(endDay)
 	}
 
-	lastPeriod := utils.SyncPeriodOfEpoch(uint64(lastEpoch)) + 1 // we can look into the future
+	lastPeriod := utils.SyncPeriodOfEpoch(lastEpoch) + 1 // we can look into the future
 
 	start := time.Now()
 	for p := firstPeriod; p <= lastPeriod; p++ {

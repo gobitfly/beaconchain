@@ -9,7 +9,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	ctypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
 )
 
 type dashboardData struct {
@@ -50,11 +49,11 @@ func (d *dashboardData) Start(args []any) error {
 }
 
 type Data struct {
-	startBalances            ctypes.StandardValidatorsResponse
-	endBalances              ctypes.StandardValidatorsResponse
-	proposerAssignments      ctypes.StandardProposerAssignmentsResponse
-	syncCommitteeAssignments ctypes.StandardSyncCommitteesResponse
-	attestationRewards       ctypes.StandardAttestationRewardsResponse
+	startBalances            *ctypes.StandardValidatorsResponse
+	endBalances              *ctypes.StandardValidatorsResponse
+	proposerAssignments      *ctypes.StandardProposerAssignmentsResponse
+	syncCommitteeAssignments *ctypes.StandardSyncCommitteesResponse
+	attestationRewards       *ctypes.StandardAttestationRewardsResponse
 	beaconBlockData          map[int]*ctypes.StandardBeaconSlotResponse
 	beaconBlockRewardData    map[int]*ctypes.StandardBlockRewardsResponse
 	syncCommitteeRewardData  map[int]*ctypes.StandardSyncCommitteeRewardsResponse
@@ -64,9 +63,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	var result Data
 	var err error
 
-	firstSlotOfEpoch := epoch * int(slotsPerEpoch)
+	firstSlotOfEpoch := epoch * slotsPerEpoch
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
-	lastSlotOfEpoch := firstSlotOfEpoch + int(slotsPerEpoch)
+	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
 
 	result.beaconBlockData = make(map[int]*ctypes.StandardBeaconSlotResponse)
 	result.beaconBlockRewardData = make(map[int]*ctypes.StandardBlockRewardsResponse)
@@ -74,7 +73,8 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// retrieve the validator balances at the start of the epoch
 	log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
-	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch)
+	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+
 	if err != nil {
 		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 		return nil
@@ -98,7 +98,8 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// attestation rewards
 	log.Infof("retrieving attestation rewards data")
-	result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
+	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
+
 	if err != nil {
 		log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 		return nil
@@ -117,26 +118,27 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 			log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.beaconBlockData[slot] = &block
+		result.beaconBlockData[slot] = block
 
 		blockReward, err := d.CL.GetPropoalRewards(slot)
 		if err != nil {
 			log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.beaconBlockRewardData[slot] = &blockReward
+		result.beaconBlockRewardData[slot] = blockReward
 
 		syncRewards, err := d.CL.GetSyncRewards(slot)
 		if err != nil {
 			log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
-		result.syncCommitteeRewardData[slot] = &syncRewards
+		result.syncCommitteeRewardData[slot] = syncRewards
 	}
 
 	// retrieve the validator balances at the end of the epoch
 	log.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
-	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch)
+	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
+
 	if err != nil {
 		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 		return nil
@@ -148,7 +150,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
-	idealAttestationRewards := make(map[decimal.Decimal]int)
+	idealAttestationRewards := make(map[int64]int)
 	for i, idealReward := range data.attestationRewards.Data.IdealRewards {
 		idealAttestationRewards[idealReward.EffectiveBalance] = i
 	}
@@ -210,9 +212,9 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 			err := utils.VerifyDepositSignature(&phase0.DepositData{
 				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
-				WithdrawalCredentials: utils.MustParseHex(depositData.Data.WithdrawalCredentials),
-				Amount:                phase0.Gwei(uint64(depositData.Data.Amount)),
-				Signature:             phase0.BLSSignature(utils.MustParseHex(depositData.Data.Signature)),
+				WithdrawalCredentials: depositData.Data.WithdrawalCredentials,
+				Amount:                phase0.Gwei(depositData.Data.Amount),
+				Signature:             phase0.BLSSignature(depositData.Data.Signature),
 			}, domain)
 
 			if err != nil {
@@ -237,7 +239,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
 			validatorIndex := withdrawal.ValidatorIndex
-			validatorsData[validatorIndex].WithdrawalsAmount = validatorsData[validatorIndex].WithdrawalsAmount.Add(withdrawal.Amount)
+			validatorsData[validatorIndex].WithdrawalsAmount += withdrawal.Amount
 			validatorsData[validatorIndex].WithdrawalsCount++
 		}
 	}
@@ -256,7 +258,7 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			validatorsData[validatorIndex].AttestationsTargetReward +
 			validatorsData[validatorIndex].AttestationsInactivityReward +
 			validatorsData[validatorIndex].AttestationsInclusionsReward
-		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[data.startBalances.Data[validatorIndex].Validator.EffectiveBalance]]
+		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validatorIndex].Validator.EffectiveBalance)]]
 		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
 		validatorsData[validatorIndex].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
 		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
@@ -326,12 +328,12 @@ type validatorDashboardDataRow struct {
 
 	Slashed bool // done
 
-	BalanceStart decimal.Decimal // done
-	BalanceEnd   decimal.Decimal // done
+	BalanceStart uint64 // done
+	BalanceEnd   uint64 // done
 
-	DepositsCount  int   // done
-	DepositsAmount int64 // done
+	DepositsCount  int    // done
+	DepositsAmount uint64 // done
 
-	WithdrawalsCount  int             // done
-	WithdrawalsAmount decimal.Decimal // done
+	WithdrawalsCount  int    // done
+	WithdrawalsAmount uint64 // done
 }

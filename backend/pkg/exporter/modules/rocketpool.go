@@ -643,7 +643,7 @@ func (rp *RocketpoolExporter) UpdateNetworkStats() error {
 
 		rewardsIntervalDays := claimIntervalTime.Seconds() / (60 * 60 * 24)
 		inflationPerDay := eth.WeiToEth(inflationInterval)
-		totalRplAtNextCheckpoint := (math.Pow(inflationPerDay, float64(rewardsIntervalDays)) - 1) * eth.WeiToEth(totalRplSupply)
+		totalRplAtNextCheckpoint := (math.Pow(inflationPerDay, rewardsIntervalDays) - 1) * eth.WeiToEth(totalRplSupply)
 		if totalRplAtNextCheckpoint < 0 {
 			totalRplAtNextCheckpoint = 0
 		}

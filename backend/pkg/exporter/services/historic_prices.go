@@ -118,10 +118,10 @@ func fetchHistoricPrice(ts time.Time) (*types.HistoricEthPrice, error) {
 		chain = "gnosis"
 	}
 	resp, err := client.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%s/history?date=%s", chain, ts.Truncate(utils.Day).Format("02-01-2006")))
-
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	priceData := &types.HistoricEthPrice{}
 	err = json.NewDecoder(resp.Body).Decode(&priceData)

@@ -4,6 +4,8 @@ import (
 	"math/big"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
 // Client provides an interface for RPC clients
@@ -15,10 +17,10 @@ type Client interface {
 	GetBlockBySlot(slot uint64) (*types.Block, error)
 	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
 	GetNewBlockChan() chan *types.Block
-	GetSyncCommittee(stateID string, epoch uint64) (*StandardSyncCommittee, error)
+	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
 	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
-	GetValidatorState(epoch uint64) (*StandardValidatorsResponse, error)
-	GetBlockHeader(slot uint64) (*StandardBeaconHeaderResponse, error)
+	GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error)
+	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
 }
 
 type Eth1Client interface {

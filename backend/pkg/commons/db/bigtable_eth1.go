@@ -654,7 +654,7 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 	log.Infof("indexing blocks from %d to %d", start, end)
 	batchSize := int64(1000)
 	for i := start; i <= end; i += batchSize {
-		firstBlock := int64(i)
+		firstBlock := i
 		lastBlock := firstBlock + batchSize - 1
 		if lastBlock > end {
 			lastBlock = end
@@ -667,7 +667,7 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 				log.Infof("querying blocks from %v to %v", firstBlock, lastBlock)
 				high := lastBlock
 				low := lastBlock - batchSize + 1
-				if int64(firstBlock) > low {
+				if firstBlock > low {
 					low = firstBlock
 				}
 
@@ -3048,7 +3048,7 @@ func (bigtable *Bigtable) SaveERC20Metadata(address []byte, metadata *types.ERC2
 	}
 
 	if len(metadata.Price) > 0 {
-		mut.Set(ERC20_METADATA_FAMILY, ERC20_COLUMN_PRICE, gcp_bigtable.Timestamp(0), []byte(metadata.Price))
+		mut.Set(ERC20_METADATA_FAMILY, ERC20_COLUMN_PRICE, gcp_bigtable.Timestamp(0), metadata.Price)
 	}
 
 	if len(metadata.Logo) > 0 && len(metadata.LogoFormat) > 0 {

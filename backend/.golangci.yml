@@ -9,6 +9,12 @@ linters:
     - gosimple
     - ineffassign
     - forbidigo
+    - unconvert
+    - bodyclose
+    - durationcheck
+    - errchkjson
+    - errname
+    - nosprintfhostport
   disable:
     - exhaustivestruct
     - golint
@@ -24,13 +30,11 @@ linters:
 
     # Disabled for now:
     - asasalint
-    - bodyclose
     - containedctx
     - contextcheck
     - cyclop
     - dogsled
     - dupl
-    - durationcheck
     - errorlint
     - exhaustive
     - exhaustruct
@@ -62,7 +66,6 @@ linters:
     - noctx
     - nolintlint
     - nonamedreturns
-    - nosprintfhostport
     - perfsprint
     - prealloc
     - predeclared
@@ -80,24 +83,26 @@ linters:
   fast: true
 
 linters-settings:
+  unused:
+    exported-is-used: true
   forbidigo:
     forbid:
       - p: ^logrus\.Fatalf.*$
-        msg: Use utils.LogFatal instead
+        msg: Use log.Fatal instead
       - p: ^log\.Fatalf.*$
-        msg: Use utils.LogFatal instead
+        msg: Use log.Fatal instead
       - p: ^logger\.Fatalf.*$
-        msg: Use utils.LogFatal instead      
+        msg: Use log.Fatal instead      
       - p: ^logrus\.Errorf.*$
-        msg: Use utils.LogError instead
+        msg: Use log.Error instead
       - p: ^logger\.Errorf.*$
-        msg: Use utils.LogError instead
+        msg: Use log.Error instead
       - p: ^log\.Errorf.*$
-        msg: Use utils.LogError instead
+        msg: Use log.Error instead
       - p: ^fmt\.Print.*$
-        msg: Use utils.LogInfo instead
+        msg: Use log.Infof instead
       - p: ^fmt\.Printf.*$
-        msg: Use utils.LogInfo instead
+        msg: Use log.Infof instead
   gocognit:
     min-complexity: 65
   depguard:
@@ -163,3 +168,5 @@ linters-settings:
         deny:
           - pkg: github.com/gobitfly/beaconchain/pkg/exporter
             desc: "DB must not import"
+issues:
+  max-same-issues: 0
