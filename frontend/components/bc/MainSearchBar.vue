@@ -1,6 +1,21 @@
 <script setup lang="ts">
 import { Categories, ResultTypes } from '~/types/searchengine'
 import { ChainIDs, ChainInfo } from '~/types/networks'
+const props = defineProps({ location: { type: String, required: true } })
+
+let width : number
+let height : number
+
+switch (props.location) {
+  case 'header' :
+    width = 460
+    height = 34
+    break
+  case 'page' :
+    width = 735
+    height = 40
+    break
+}
 
 function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
   let path : string
@@ -74,8 +89,8 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
   <BcSearchEngine
     id="main-bar"
     :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
-    width="460"
-    height="34"
+    :width="width"
+    :height="height"
     @enter="redirectToRelevantPage"
     @select="redirectToRelevantPage"
   />

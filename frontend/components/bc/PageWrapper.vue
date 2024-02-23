@@ -1,8 +1,11 @@
 <script setup lang="ts">
+const props = defineProps({ isHomePage: { type: Boolean } })
+
 </script>
+
 <template>
   <div class="page">
-    <BcMainHeader />
+    <BcMainHeader :is-home-page="props.isHomePage" />
     <div class="content">
       <slot name="top" />
       <BcAdControl />

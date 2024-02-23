@@ -3,18 +3,18 @@ import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, 
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 const { t: $t } = useI18n()
 
-const props = defineProps({ searchable: { type: Array, required: true }, width: { type: String, required: true }, height: { type: String, required: true } })
+const props = defineProps({ searchable: { type: Array, required: true }, width: { type: Number, required: true }, height: { type: Number, required: true } })
 const emit = defineEmits(['enter', 'select'])
 
-const engineWidth = props.width + 'px'
-const inputWidth = String(Number(props.width) - 10) + 'px'
-const dropDownWidth = String(Number(props.width) - 10) + 'px'
-const inputHeight = props.height + 'px'
+const engineWidth = String(props.width) + 'px'
+const dropDownWidth = String(props.width - 10) + 'px'
+const inputWidth = String(props.width - 10) + 'px'
+const inputHeight = String(props.height) + 'px'
 
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
 
-const PeriodOfDropDownUpdates = 500 /* CHANGE TO 2000 when the design of the bar is ready */
+const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
@@ -659,6 +659,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           border-bottom-left-radius: 10px;
         }
       }
+    }
+    .p-multiselect-panel {
+      width: 140px;
     }
   }
   .filter-button {
