@@ -49,10 +49,10 @@
       "searching": "Recherche en cours...",
       "no_result_matches": "Aucun résultat ne correspond à",
       "your_input": "votre entrée.",
-      "your_filters": "vos filtres.",
-      "result": "résultat",
-      "results": "résultats",
-      "hidden_by_filters": "cachés par vos filtres"
+      "your_filters": "vos filtres",
+      "result_hidden": "résultat caché",
+      "results_hidden": "résultats cachés",
+      "by_your_filters": "par vos filtres"
     }
   }
   

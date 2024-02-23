@@ -62,9 +62,9 @@
     "searching": "Searching...",
     "no_result_matches": "No result matches",
     "your_input": " your input.",
-    "your_filters": " your filters:",
-    "result": "result",
-    "results": "results",
-    "hidden_by_filters": "hidden by your filters"
+    "your_filters": " your filters",
+    "result_hidden": "result hidden",
+    "results_hidden": "results hidden",
+    "by_your_filters": "by your filters"
   }
 }
