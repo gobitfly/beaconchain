@@ -554,11 +554,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
-      <div v-else-if="populateDropDown">
-        <div v-if="results.organized.howManyResultsIn == 0">
-          {{ $t('search_engine.no_result_matches') }}
-          {{ (results.organized.howManyResultsOut > 0) ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
-        </div>
+      <div v-else-if="populateDropDown" id="panel-of-results">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
           <div class="network-title">
             <h2>{{ ChainInfo[network.chainId].name }}</h2>
@@ -578,11 +574,16 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
             </div>
           </div>
         </div>
-        <div v-if="results.organized.howManyResultsOut > 0" id="hidden-results-count">
-          {{ (results.organized.howManyResultsIn == 0) ? '' : '+' }}
-          {{ results.organized.howManyResultsOut }}
-          {{ (results.organized.howManyResultsOut == 1) ? $t('search_engine.result') : $t('search_engine.results') }}
-          {{ $t('search_engine.hidden_by_filters') }}
+        <div id="absent-results">
+          <span v-if="results.organized.howManyResultsIn == 0">
+            {{ $t('search_engine.no_result_matches') }}
+            {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
+          </span>
+          <span v-if="results.organized.howManyResultsOut > 0">
+            {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
+            {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
+              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
+          </span>
         </div>
       </div>
     </div>
@@ -607,38 +608,40 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   @include main.container;
   position: absolute;
   z-index: 256;
-  overflow: auto;
-  min-height: 200px;
-  max-height: 300px;
   width: v-bind(dropDownWidth);
   padding: 4px;
 
-  h2 {
-    margin: 0;
-  }
-  h3 {
-    margin: 0;
-  }
-  .network-container {
-    margin-bottom: 24px;
-    .network-title {
-      background-color: #b0b0b0;
-      padding-left: 4px;
+  #panel-of-results {
+    min-height: 200px;
+    max-height: 300px;
+    overflow: auto;
+    h2 {
+      margin: 0;
     }
-    .type-container {
-      border-bottom: 0.5px dashed var(--light-grey-3);
-      padding: 4px;
-      .type-title {
-
+    h3 {
+      margin: 0;
+    }
+    .network-container {
+      margin-bottom: 24px;
+      .network-title {
+        background-color: #b0b0b0;
+        padding-left: 4px;
       }
-      .single-result {
-        cursor: pointer;
+      .type-container {
+        border-bottom: 0.5px dashed var(--light-grey-3);
+        padding: 4px;
+        .type-title {
+
+        }
+        .single-result {
+          cursor: pointer;
+        }
       }
     }
   }
 }
 
-#filter-bar {
+#drop-down #filter-bar {
   padding-top: 4px;
   padding-bottom: 8px;
 
@@ -683,7 +686,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   }
 }
 
-#hidden-results-count {
+#absent-results {
   @include fonts.standard_text;
   color: var(--text-color-disabled);
   text-align: center;
