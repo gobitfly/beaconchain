@@ -92,7 +92,7 @@
         "block_proposal": "Block Proposal",
         "sync_committee": "Sync Committee",
         "sync": {
-          "title": "ASync Committee Efficiency: ",
+          "title": "Sync Committee Efficiency: ",
           "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
         }
       }
