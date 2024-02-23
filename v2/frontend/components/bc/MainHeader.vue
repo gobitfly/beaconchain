@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 
+const props = defineProps({ isHomePage: { type: Boolean } })
 const { latest } = storeToRefs(useLatestStateStore())
 
 </script>
@@ -9,7 +10,7 @@ const { latest } = storeToRefs(useLatestStateStore())
   <div class="header top">
     <div class="content">
       <div>Current Epoch: {{ latest?.currentEpoch }}</div>
-      <BcHeaderSearchBar />
+      <BcMainSearchBar v-if="!props.isHomePage" location="header" />
       <NuxtLink to="/login">
         Login
       </NuxtLink>
