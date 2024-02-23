@@ -108,6 +108,7 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 		url += fmt.Sprintf("&cursor=%v", offset)
 	}
 
+	//nolint:gosec
 	resp, err := http.Get(url)
 
 	if err != nil {
