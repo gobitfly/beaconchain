@@ -3,7 +3,11 @@
     "groups": [
       {
         "id": 1000,
-        "name": "Ny group"
+        "name": "My group"
+      },
+      {
+        "id": 0,
+        "name": "Default"
       },
       {
         "id": 1,
@@ -11,7 +15,23 @@
       },
       {
         "id": 2,
-        "name": "The second"
+        "name": "Important validators"
+      },
+      {
+        "id": 3,
+        "name": "Group 3"
+      },
+      {
+        "id": 4,
+        "name": "Cloud 1"
+      },
+      {
+        "id": 5,
+        "name": "Cloud 2"
+      },
+      {
+        "id": 6,
+        "name": "Rest"
       }
     ],
     "validators": {
