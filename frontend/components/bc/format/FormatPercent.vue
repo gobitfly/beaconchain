@@ -7,7 +7,7 @@ interface Props {
   precision?: number
   fixed?: number
   fullOnEmptyBase?: boolean
-  colorBreakPoint?: number // if set then the percenage will be colored accordingly
+  colorBreakPoint?: number // if set then the percentage will be colored accordingly
 }
 
 const props = defineProps<Props>()
