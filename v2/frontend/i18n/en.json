@@ -60,6 +60,9 @@
   },
   "search_engine": {
     "searching": "Searching...",
-    "no_result": "No result"
+    "no_result": "No result",
+    "result": "result",
+    "results": "results",
+    "hidden_by_filters": "hidden by your filters"
   }
 }

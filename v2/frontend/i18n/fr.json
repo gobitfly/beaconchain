@@ -44,6 +44,13 @@
       "shop": "Boutique fashion",
       "status": "Statut du site",
       "press_kit": "Dossier de presse"
+    },
+    "search_engine": {
+      "searching": "Recherche en cours...",
+      "no_result": "Aucun résultat",
+      "result": "résultat",
+      "results": "résultats",
+      "hidden_by_filters": "cachés par vos filtres"
     }
   }
   

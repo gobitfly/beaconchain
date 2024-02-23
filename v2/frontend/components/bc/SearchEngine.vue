@@ -30,7 +30,8 @@ const results = {
   raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered results, organized
-    out: { networks: [] } as OrganizedResults // filtered out results, organized
+    out: { networks: [] } as OrganizedResults, // filtered out results, organized
+    howManyResultsOut: 0
   }
 }
 
@@ -214,6 +215,7 @@ function searchAhead () : boolean {
 function filterAndOrganizeResults () {
   results.organized.in = { networks: [] }
   results.organized.out = { networks: [] }
+  results.organized.howManyResultsOut = 0
 
   if (results.raw.data === undefined) {
     return
@@ -242,6 +244,7 @@ function filterAndOrganizeResults () {
       place = results.organized.in
     } else {
       place = results.organized.out
+      results.organized.howManyResultsOut++
     }
     // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
     let existingNetwork = place.networks.findIndex(nwElem => nwElem.chainId === chainId)
@@ -517,6 +520,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       id="input-field"
       v-model="inputField"
       type="text"
+      placeholder="Search the blockchain"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
       @blur="showDropDown = isMouseOverEngine"
       @focus="showDropDown = inputField.length > 0"
@@ -578,6 +582,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
                 {{ TypeInfo[types.type].postLabels }}
               </div>
             </div>
+          </div>
+          <div v-if="results.organized.howManyResultsOut > 0" id="hidden-results-count">
+            +
+            {{ results.organized.howManyResultsOut }}
+            {{ (results.organized.howManyResultsOut == 1) ? $t('search_engine.result') : $t('search_engine.results') }}
+            {{ $t('search_engine.hidden_by_filters') }}
           </div>
         </span>
       </div>
@@ -678,7 +688,10 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     }
   }
 }
-.p-multiselect .p-multiselect-label.p-placeholder {
-  border-radius: 10px;
+
+#hidden-results-count {
+  @include fonts.standard_text;
+  color: var(--text-color-disabled);
+  text-align: center;
 }
 </style>
