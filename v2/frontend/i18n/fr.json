@@ -47,7 +47,9 @@
     },
     "search_engine": {
       "searching": "Recherche en cours...",
-      "no_result": "Aucun résultat",
+      "no_result_matches": "Aucun résultat ne correspond à",
+      "your_input": "votre entrée.",
+      "your_filters": "vos filtres.",
       "result": "résultat",
       "results": "résultats",
       "hidden_by_filters": "cachés par vos filtres"
