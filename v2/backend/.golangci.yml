@@ -15,6 +15,10 @@ linters:
     - errchkjson
     - errname
     - nosprintfhostport
+    - nolintlint
+    - gosec
+    - importas
+    - unparam
   disable:
     - exhaustivestruct
     - golint
@@ -27,6 +31,7 @@ linters:
     - varcheck
     - dupword
     - gocognit
+    - dupl
 
     # Disabled for now:
     - asasalint
@@ -34,7 +39,6 @@ linters:
     - contextcheck
     - cyclop
     - dogsled
-    - dupl
     - errorlint
     - exhaustive
     - exhaustruct
@@ -64,7 +68,6 @@ linters:
     - nilnil
     - nlreturn
     - noctx
-    - nolintlint
     - nonamedreturns
     - perfsprint
     - prealloc
@@ -76,13 +79,24 @@ linters:
     - tagalign
     - tagliatelle
     - thelper
-    - unparam
     - varnamelen
     - wrapcheck
     - wsl
   fast: true
 
 linters-settings:
+  importas:
+    alias:
+      - pkg: "github.com/gobitfly/beaconchain/pkg/consapi/types"
+        alias: constypes
+      - pkg: "github.com/ethereum/go-ethereum/core/types"
+        alias: gethtypes
+      - pkg: "github.com/ethereum/go-ethereum/rpc"
+        alias: gethrpc
+      - pkg: "github.com/ethereum/go-ethereum"
+        alias: ethereum
+      - pkg: "github.com/gobitfly/beaconchain/pkg/exporter/db"
+        alias: edb
   unused:
     exported-is-used: true
   forbidigo:

@@ -294,12 +294,12 @@ func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
 }
 
-// nolint:unused
+//nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-// nolint:unused
+//nolint:unused
 func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }
