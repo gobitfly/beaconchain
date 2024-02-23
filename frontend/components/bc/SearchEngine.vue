@@ -14,7 +14,7 @@ const inputHeight = props.height + 'px'
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
 
-const PeriodOfDropDownUpdates = 2000
+const PeriodOfDropDownUpdates = 500 /* CHANGE TO 2000 when the design of the bar is ready */
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
@@ -30,6 +30,7 @@ const results = {
   raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered results, organized
+    howManyResultsIn: 0,
     out: { networks: [] } as OrganizedResults, // filtered out results, organized
     howManyResultsOut: 0
   }
@@ -39,7 +40,7 @@ interface UserFilters {
   networks: Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
   noNetworkIsSelected : boolean,
   everyNetworkIsSelected : boolean,
-  categories : Record<string, 'y'|'n'>, // each field will have a Categories as key and the state of the button as value
+  categories : Record<string, boolean>, // each field will have a Categories as key and the state of the button as value
   noCategoryIsSelected : boolean
 }
 const userFilters = ref<UserFilters>({
@@ -61,7 +62,7 @@ onMounted(() => {
 
   // creates the fields storing the state of the filter buttons, and deselect them
   for (const s of searchable) {
-    userFilters.value.categories[s] = 'n'
+    userFilters.value.categories[s] = false
   }
   userFilters.value.noCategoryIsSelected = true
 
@@ -126,12 +127,12 @@ function userPressedEnter () {
     }
   }
   filterAndOrganizeResults()
-  if (areOrganizedResultsEmpty('all')) {
+  if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
     return
   }
   // picks a relevant search-ahead result, the priority is given to filtered-in results
   let toConsider : OrganizedResults
-  if (!areOrganizedResultsEmpty('in')) {
+  if (results.organized.howManyResultsIn > 0) {
     toConsider = results.organized.in
   } else {
     // by default, we pick a filtered-out result if there are results but the drop down does not show them
@@ -161,7 +162,7 @@ function categoryFilterHasChanged () {
   // determining whether any filter button is activated
   let allButtonsOff = true
   for (const cat in userFilters.value.categories) {
-    if (userFilters.value.categories[cat] === 'y') {
+    if (userFilters.value.categories[cat]) {
       allButtonsOff = false
       break
     }
@@ -215,6 +216,7 @@ function searchAhead () : boolean {
 function filterAndOrganizeResults () {
   results.organized.in = { networks: [] }
   results.organized.out = { networks: [] }
+  results.organized.howManyResultsIn = 0
   results.organized.howManyResultsOut = 0
 
   if (results.raw.data === undefined) {
@@ -240,8 +242,9 @@ function filterAndOrganizeResults () {
     // note that when the user did not select any network or any category, we default to showing all of them
     let place : OrganizedResults
     if ((userFilters.value.networks[String(chainId)] || userFilters.value.noNetworkIsSelected || chainId === ChainIDs.Any) &&
-        (userFilters.value.categories[TypeInfo[type].category] === 'y' || userFilters.value.noCategoryIsSelected)) {
+        (userFilters.value.categories[TypeInfo[type].category] || userFilters.value.noCategoryIsSelected)) {
       place = results.organized.in
+      results.organized.howManyResultsIn++
     } else {
       place = results.organized.out
       results.organized.howManyResultsOut++
@@ -274,14 +277,6 @@ function filterAndOrganizeResults () {
   }
   sortResults(results.organized.in)
   sortResults(results.organized.out)
-}
-
-function areOrganizedResultsEmpty (what : 'in'|'out'|'all') : boolean {
-  switch (what) {
-    case 'in' : return (results.organized.in.networks.length === 0)
-    case 'out' : return (results.organized.out.networks.length === 0)
-    case 'all' : return areOrganizedResultsEmpty('in') && areOrganizedResultsEmpty('out')
-  }
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -526,70 +521,69 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       @focus="showDropDown = inputField.length > 0"
     />
     <div v-if="showDropDown" id="drop-down">
+      <div id="filter-bar">
+        <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
+        <MultiSelect
+          id="filter-networks"
+          v-model="networkDropdownUserSelection"
+          :options="networkDropdownOptions"
+          option-value="name"
+          option-label="label"
+          placeholder="Networks:&nbsp;all"
+          :variant="'filled'"
+          display="comma"
+          :show-toggle-all="false"
+          :max-selected-labels="1"
+          :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
+          append-to="self"
+          @change="networkFilterHasChanged(); refreshDropDown()"
+          @click="(e : Event) => e.stopPropagation()"
+        />
+        <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
+          <input
+            v-model="userFilters.categories[filter]"
+            class="hiddencheckbox"
+            :true-value="true"
+            :false-value="false"
+            type="checkbox"
+            @change="categoryFilterHasChanged(); refreshDropDown()"
+          >
+          <span class="face">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
+        </label>
+      </div>
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
       </div>
-      <div v-else-if="areOrganizedResultsEmpty('all')">
-        {{ $t('search_engine.no_result') }}
-      </div>
-      <div v-else>
-        <div id="filter-bar">
-          <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
-          <MultiSelect
-            id="filter-networks"
-            v-model="networkDropdownUserSelection"
-            :options="networkDropdownOptions"
-            option-value="name"
-            option-label="label"
-            placeholder="Networks:&nbsp;all"
-            :variant="'outlined'"
-            display="comma"
-            :show-toggle-all="false"
-            :max-selected-labels="1"
-            :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
-            append-to="self"
-            @change="networkFilterHasChanged(); refreshDropDown()"
-            @click="(e : Event) => e.stopPropagation()"
-          />
-          <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
-            <input
-              v-model="userFilters.categories[filter]"
-              class="hiddencheckbox"
-              true-value="y"
-              false-value="n"
-              type="checkbox"
-              @change="categoryFilterHasChanged(); refreshDropDown()"
-            >
-            <span class="face">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
-          </label>
+      <div v-else-if="populateDropDown">
+        <div v-if="results.organized.howManyResultsIn == 0">
+          {{ $t('search_engine.no_result_matches') }}
+          {{ (results.organized.howManyResultsOut > 0) ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
         </div>
-        <span v-if="populateDropDown">
-          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
-            <div class="network-title">
-              <h2>{{ ChainInfo[network.chainId].name }}</h2>
+        <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
+          <div class="network-title">
+            <h2>{{ ChainInfo[network.chainId].name }}</h2>
+          </div>
+          <div v-for="types of network.types" :key="types.type" class="type-container">
+            <div class="type-title">
+              <h3>{{ TypeInfo[types.type].title }}</h3>
             </div>
-            <div v-for="types of network.types" :key="types.type" class="type-container">
-              <div class="type-title">
-                <h3>{{ TypeInfo[types.type].title }}</h3>
-              </div>
-              <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
-                {{ TypeInfo[types.type].preLabels }}
-                {{ found.main }}
-                <span v-if="found.complement !== ''">
-                  {{ TypeInfo[types.type].midLabels }}
-                  {{ found.complement }}
-                </span>
-                {{ TypeInfo[types.type].postLabels }}
-              </div>
+            <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
+              {{ TypeInfo[types.type].preLabels }}
+              {{ found.main }}
+              <span v-if="found.complement !== ''">
+                {{ TypeInfo[types.type].midLabels }}
+                {{ found.complement }}
+              </span>
+              {{ TypeInfo[types.type].postLabels }}
             </div>
           </div>
-          <div v-if="results.organized.howManyResultsOut > 0" id="hidden-results-count">
-            +
-            {{ results.organized.howManyResultsOut }}
-            {{ (results.organized.howManyResultsOut == 1) ? $t('search_engine.result') : $t('search_engine.results') }}
-            {{ $t('search_engine.hidden_by_filters') }}
-          </div>
-        </span>
+        </div>
+        <div v-if="results.organized.howManyResultsOut > 0" id="hidden-results-count">
+          {{ (results.organized.howManyResultsIn == 0) ? '' : '+' }}
+          {{ results.organized.howManyResultsOut }}
+          {{ (results.organized.howManyResultsOut == 1) ? $t('search_engine.result') : $t('search_engine.results') }}
+          {{ $t('search_engine.hidden_by_filters') }}
+        </div>
       </div>
     </div>
   </label>
