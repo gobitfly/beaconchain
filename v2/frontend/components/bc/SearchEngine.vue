@@ -513,14 +513,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     @mouseover="isMouseOverEngine = true"
     @mouseleave="isMouseOverEngine = false"
   >
-    <input
+    <InputText
       id="input-field"
       v-model="inputField"
       type="text"
       @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
       @blur="showDropDown = isMouseOverEngine"
       @focus="showDropDown = inputField.length > 0"
-    >
+    />
     <div v-if="showDropDown" id="drop-down">
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
@@ -605,7 +605,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   z-index: 256;
   overflow: auto;
   min-height: 200px;
-  max-height: 66vh;
+  max-height: 300px;
   width: v-bind(dropDownWidth);
   padding: 4px;
 
