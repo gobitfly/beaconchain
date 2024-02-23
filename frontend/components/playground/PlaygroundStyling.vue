@@ -8,7 +8,7 @@ import {
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
-const isCube = ref<boolean>(true)
+const isTable = ref<boolean>(true)
 const isAttestation = ref<boolean>(true)
 
 </script>
@@ -68,10 +68,10 @@ const isAttestation = ref<boolean>(true)
     </TabPanel>
     <TabPanel header="Toggle">
       <div class="element_container">
-        <div>isCube: {{ isCube }} <BcIconToggle v-model="isCube" :true-icon="faTable" :false-icon="faChartColumn" /></div>
+        <div>isTable: {{ isTable }} <BcIconToggle v-model="isTable" :true-icon="faTable" :false-icon="faChartColumn" /></div>
 
         <div>
-          isCube: {{ isAttestation }}
+          isAttestation: {{ isAttestation }}
           <BcIconToggle v-model="isAttestation">
             <template #trueIcon>
               <IconSlotAttestation />
