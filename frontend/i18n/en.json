@@ -11,11 +11,11 @@
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
     "id": "ID",
-    "average":"Average"
+    "average": "Average"
   },
   "table": {
-    "first" : "First",
-    "last": "Last", 
+    "first": "First",
+    "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}"
   },
@@ -57,7 +57,7 @@
         "total_group_name": "Total Efficiency",
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
-        "col":{
+        "col": {
           "group": "Group",
           "efficiency_day": "Efficiency (24h)",
           "efficiency_week": "Efficiency (7d)",
@@ -83,6 +83,14 @@
           "apr": "APR",
           "luck": "Luck"
         }
+      },
+      "tabs": {
+        "summary": "Summary",
+        "rewards": "Rewards",
+        "blocks": "Blocks",
+        "heatmap": "Heatmap",
+        "deposits": "Deposits",
+        "withdrawals": "Withdrawals"
       },
       "tooltip": {
         "attestation_efficiency": {
