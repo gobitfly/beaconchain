@@ -4,6 +4,11 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
+interface Props {
+  searchPlaceholder?:string,
+}
+const props = defineProps<Props>()
+
 defineEmits<{(e: 'filter-changed', value: string): void }>()
 
 const filterVisible = ref(false)
@@ -12,7 +17,7 @@ const filter = ref<string>('')
 
 <template>
   <span class="filter_elements_container">
-    <InputText v-model="filter" placeholder="Index" :class="{visible:filterVisible}" :disabled="!filterVisible" @input="$emit('filter-changed', filter)" />
+    <InputText v-model="filter" :placeholder="props.searchPlaceholder" :class="{visible:filterVisible}" :disabled="!filterVisible" @input="$emit('filter-changed', filter)" />
     <Button class="p-button-icon-only" :class="{filter_visible:filterVisible}" @click="filterVisible=!filterVisible">
       <FontAwesomeIcon :icon="faMagnifyingGlass" />
     </Button>

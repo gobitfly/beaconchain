@@ -26,15 +26,7 @@ const summary = computed(() => detailsMap.value[key.value])
 const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4
   const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
-  const bold: Partial<Record<SummaryDetailsEfficiencyCombinedProp, boolean>> = {
-    efficiency_total: true,
-    attestation_total: true,
-    sync: true,
-    proposals: true,
-    slashed: true,
-    apr: true,
-    luck: true
-  }
+
   const addToList = (detail: SummaryDetail, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
     let row: SummaryRow | undefined
     if (tableIndex && isWideEnough.value) {
@@ -45,7 +37,7 @@ const data = computed<SummaryRow[][]>(() => {
       if (prop === 'efficiency_total') {
         title = `${title} (${$t(`statistics.${detail.split('_')[1]}`)})`
       }
-      row = { title, prop, details: [], className: bold[prop] ? 'bold' : '' }
+      row = { title, prop, details: [] }
       list[tableIndex].push(row)
     }
     row?.details.push(detail)
@@ -63,12 +55,27 @@ const data = computed<SummaryRow[][]>(() => {
   return list
 })
 
+const rowClass = (data:SummaryRow) => {
+  const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
+    efficiency_total: 'bold',
+    attestation_total: 'bold',
+    sync: 'bold spacing-top',
+    proposals: 'bold spacing-top',
+    slashed: 'bold spacing-top',
+    apr: 'bold',
+    luck: 'bold spacing-top',
+    attestation_head: 'spacing-top'
+  }
+  return classNames[data.prop]
+}
+
 </script>
 <template>
   <div v-if="summary" class="table-container">
     <DataTable
       v-for="(table, index) in data"
       :key="index"
+      :row-class="rowClass"
       class="no-header bc-compact-table summary-details-table"
       :class="{ small: !isWideEnough }"
       :value="table"

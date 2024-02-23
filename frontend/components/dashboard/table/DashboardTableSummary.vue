@@ -101,12 +101,21 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="group_id" body-class="bold" :sortable="true" :header="$t('dashboard.validator.summary.col.group')">
+            <Column
+              field="group_id"
+              body-class="bold"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.group')"
+            >
               <template #body="slotProps">
                 {{ mapGroup(slotProps.data.group_id) }}
               </template>
             </Column>
-            <Column field="efficiency_day" :sortable="true" :header="$t('dashboard.validator.summary.col.efficiency_day')">
+            <Column
+              field="efficiency_day"
+              :sortable="true"
+              :header="$t('dashboard.validator.summary.col.efficiency_day')"
+            >
               <template #body="slotProps">
                 <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
               </template>
@@ -143,7 +152,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             </Column>
             <Column
               v-if="colsVisible.validator"
-              field="validators"
+              class="validator_column"
               :sortable="true"
               :header="$t('dashboard.validator.summary.col.validators')"
             >
@@ -170,17 +179,29 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
 <style lang="scss" scoped>
 :deep(.summary_table) {
+  --col-width: 220px;
+
+  td:has(.validator_column) {
+    width: var(--col-width);
+    max-width: var(--col-width);
+    min-width: var(--col-width);
+  }
 
   td,
   th {
     &:not(.expander):not(:last-child) {
-      width: 220px;
-      max-width: 220px;
-      min-width: 220px;
+      width: var(--col-width);
+      max-width: var(--col-width);
+      min-width: var(--col-width);
+
     }
   }
-  .total-row{
-    td{
+  @media (max-width: 600px) {
+    --col-width: 140px;
+  }
+
+  .total-row {
+    td {
       border-bottom-color: var(--primary-color);
     }
   }

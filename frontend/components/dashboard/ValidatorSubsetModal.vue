@@ -43,18 +43,22 @@ const caption = computed(() => {
     case 'proposal':
       text = $t('dashboard.validator.summary.row.proposals')
       break
+    case 'group':
+      text = $t('dashboard.validator.summary.col.validators')
+      break
   }
 
   switch (props.timeFrame) {
     case 'details_day':
-      return text + ' ' + $t('statistics.24h')
+      return text + ' ' + $t('statistics.day')
     case 'details_week':
-      return text + ' ' + $t('statistics.7d')
+      return text + ' ' + $t('statistics.week')
     case 'details_month':
-      return text + ' ' + $t('statistics.31d')
+      return text + ' ' + $t('statistics.month')
     case 'details_total':
       return text + ' ' + $t('statistics.all')
   }
+  return text
 })
 
 const handleEvent = (filter: string) => {

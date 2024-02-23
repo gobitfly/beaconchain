@@ -20,4 +20,4 @@ export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpeci
 
 export type DashboardValidatorContext = 'dashboard' | 'group' | 'attestation' | 'sync' | 'slashings' | 'proposal'
 
-export type SummaryRow = { details: SummaryDetail[], prop: SummaryDetailsEfficiencyCombinedProp, title: string, className: string }
+export type SummaryRow = { details: SummaryDetail[], prop: SummaryDetailsEfficiencyCombinedProp, title: string}

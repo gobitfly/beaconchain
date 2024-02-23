@@ -47,15 +47,14 @@ const groupName = computed(() => {
       :icon="faArrowUpRightFromSquare"
       @click="openValidatorModal"
     />
+    <DashboardValidatorSubsetModal
+      v-model="modalVisibility"
+      :context="props.context"
+      :time-frame="props.timeFrame"
+      :group-name="groupName"
+      :validators="props.validators"
+    />
   </div>
-
-  <DashboardValidatorSubsetModal
-    v-model="modalVisibility"
-    :context="props.context"
-    :time-frame="props.timeFrame"
-    :group-name="groupName"
-    :validators="props.validators"
-  />
 </template>
 
 <style lang="scss" scoped>

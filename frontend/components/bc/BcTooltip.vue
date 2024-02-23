@@ -227,12 +227,15 @@ onUnmounted(() => {
     }
   }
 
-  b {
+  :deep(b) {
+    font-weight: bold;
     font-weight: var(--inter-medium);
   }
+
   &:has(b){
     min-width: 200px;
     text-align: left;
   }
 }
+
 </style>

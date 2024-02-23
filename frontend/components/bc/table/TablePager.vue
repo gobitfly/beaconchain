@@ -135,8 +135,11 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       justify-content: center;
       align-items: center;
       height: 30px;
-      padding: 0 15px;
+      padding: 0 22px;
       border-radius: 0;
+      &:has(svg){
+        padding: 0 15px;
+      }
 
       &.button {
         &:not([disabled="true"]) {
