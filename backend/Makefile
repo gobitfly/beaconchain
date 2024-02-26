@@ -5,7 +5,7 @@ BUILDDATE=`date -u +"%Y-%m-%dT%H:%M:%S%:z"`
 PACKAGE=github.com/gobitfly/beaconchain/commons
 LDFLAGS="-X ${PACKAGE}/version.Version=${VERSION} -X ${PACKAGE}/version.BuildDate=${BUILDDATE} -X ${PACKAGE}/version.GitCommit=${GITCOMMIT} -X ${PACKAGE}/version.GitDate=${GITDATE} -s -w"
 
-all: exporter blobindexer misc ethstore-exporter api rewards-exporter eth1indexer stats
+all: exporter blobindexer misc ethstore-exporter api rewards-exporter eth1indexer stats user-service notification-sender notification-collector
 
 clean:
 	rm -rf bin
@@ -40,4 +40,14 @@ eth1indexer:
 stats:
 	go build --ldflags=${LDFLAGS} -o bin/statistics ./cmd/statistics/main.go
 
-	
+user-service:
+	go build --ldflags=${LDFLAGS} -o bin/user-service ./cmd/user_service/main.go
+
+notification-sender:
+	go build --ldflags=${LDFLAGS} -o bin/notification-sender ./cmd/notification_sender/main.go
+
+notification-collector:
+	go build --ldflags=${LDFLAGS} -o bin/notification-collector ./cmd/notification_collector/main.go
+
+addhooks:
+	git config core.hooksPath hooks
