@@ -5,9 +5,9 @@ import t "github.com/gobitfly/beaconchain/pkg/api/types"
 type DataAccessInterface interface {
 	GetUserDashboards(userId uint64) (t.DashboardData, error)
 
-	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostData, error)
+	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error)
 	GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error)
-	GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error)
+	GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error)
 
 	GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error)
@@ -31,7 +31,7 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, er
 	return d.dummy.GetUserDashboards(userId)
 }
 
-func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostData, error) {
+func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
 	// TODO @recy21
 	return d.dummy.CreateValidatorDashboard(userId, name, network)
 }
@@ -41,7 +41,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(userId uint64, dashboar
 	return d.dummy.GetValidatorDashboardOverview(userId, dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error) {
+func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSlotViz(dashboardId)
 }
