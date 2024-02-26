@@ -16,7 +16,6 @@ const (
 	packagePath    = "github.com/gobitfly/beaconchain/pkg/api/types"
 	fallbackType   = "any"
 	commonFileName = "common"
-	indent         = "    "
 	lintDisable    = "/* eslint-disable */\n"
 )
 
@@ -93,7 +92,6 @@ func getTygoConfig(out, file, frontmatter string) *tygo.Config {
 				IncludeFiles: []string{file + ".go"},
 				OutputPath:   out + file + ".ts",
 				Frontmatter:  lintDisable + frontmatter,
-				Indent:       indent,
 			},
 		},
 	}
