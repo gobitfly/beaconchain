@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -275,7 +276,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 		defer func() {
 			err := tx.Rollback(context.Background())
-			if err != nil {
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
@@ -1785,7 +1786,7 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

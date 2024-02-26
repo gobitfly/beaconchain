@@ -317,7 +317,7 @@ func main() {
 		}
 		defer func() {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
@@ -669,7 +669,7 @@ func migrateAppPurchases(appStoreSecret string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -854,7 +854,7 @@ func fixExecTransactionsCount() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1111,7 +1111,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 		}
 		defer func() {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
@@ -1286,7 +1286,7 @@ func updateAPIKey(user uint64) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1869,7 +1869,7 @@ func UpdateValidatorStatisticsSyncData(day uint64, dryRun bool) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1947,7 +1947,7 @@ func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
 
 		defer func() {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
