@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-v-html -->
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
@@ -41,18 +42,26 @@ const summary = computed<VDBSummaryTableResponse | undefined>(() => {
   return summaryMap.value?.[props.dashboardId]
 })
 
-const mapGroup = (groupId?: number) => {
+const mapGroupName = (groupId?: number) => {
   if (groupId === undefined || groupId < 0) {
-    return $t('dashboard.validator.summary.total_group_name')
+    return `${$t('dashboard.validator.summary.total_group_name')}`
   }
   const group = overview.value?.groups?.find(g => g.id === groupId)
   if (!group) {
-    return groupId
+    return `${groupId}` // fallback if we could not match the group name
   }
-  if (isMobile.value) {
-    return group.name
+  return `${group.name}`
+}
+
+const mapGroupId = (groupId?: number) => {
+  if (groupId === undefined || groupId < 0) {
+    return
   }
-  return `${group.name} (${$t('common.id')}: ${groupId})`
+  const group = overview.value?.groups?.find(g => g.id === groupId)
+  if (group && isMobile.value) {
+    return
+  }
+  return `: (${groupId})`
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -103,12 +112,12 @@ const getRowClass = (row: VDBSummaryTableRow) => {
           >
             <Column
               field="group_id"
-              body-class="bold"
               :sortable="true"
+              body-class="bold"
               :header="$t('dashboard.validator.summary.col.group')"
             >
               <template #body="slotProps">
-                {{ mapGroup(slotProps.data.group_id) }}
+                {{ mapGroupName(slotProps.data.group_id) }}<span class="discreet">{{ mapGroupId(slotProps.data.group_id) }}</span>
               </template>
             </Column>
             <Column

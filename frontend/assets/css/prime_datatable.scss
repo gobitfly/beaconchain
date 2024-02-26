@@ -81,6 +81,10 @@
       &.p-highlight {
         color: var(--primary-color);
       }
+      &.discreet,
+      .discreet {
+        color: var(--text-color-discreet);
+      }
       &:not(.p-datatable-row-expansion) {
         > td {
           padding: 14px 7px;
@@ -128,12 +132,12 @@
         > .p-column-title {
           font-weight: 700;
         }
+
       }
-      &.bold,
-      .bold {
-        > td {
+      &.bold > td,
+      .bold > td,
+      > td.bold{
           font-weight: var(--standard_text_bold_font_weight);
-        }
       }
     }
   }
