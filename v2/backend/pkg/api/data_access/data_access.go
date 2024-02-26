@@ -50,6 +50,9 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+
+		//TODO adjust db functions to be able to set local reader/writer without setting the global ones
+
 		db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.WriterDatabase.Username,
 			Password:     cfg.WriterDatabase.Password,
@@ -119,9 +122,15 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 }
 
 func (d DataAccessService) CloseDataAccessService() {
-	d.readerDb.Close()
-	d.writerDb.Close()
-	d.bigtable.Close()
+	if d.readerDb != nil {
+		d.readerDb.Close()
+	}
+	if d.writerDb != nil {
+		d.writerDb.Close()
+	}
+	if d.bigtable != nil {
+		d.bigtable.Close()
+	}
 }
 
 func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, error) {
