@@ -16,8 +16,11 @@ const (
 	packagePath    = "github.com/gobitfly/beaconchain/pkg/api/types"
 	fallbackType   = "any"
 	commonFileName = "common"
-	indent         = "    "
+	lintDisable    = "/* eslint-disable */\n"
 )
+
+// Files that should not be converted to TypeScript
+var ignoredFiles = []string{"data_access.go"}
 
 var typeMappings = map[string]string{
 	"decimal.Decimal": "string /* decimal.Decimal */",
@@ -64,7 +67,7 @@ func main() {
 	tygos = append(tygos, tygo.New(getTygoConfig(out, commonFileName, "")))
 	// Generate Tygo for each file
 	for file, typesUsed := range usage {
-		importStr := "import { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + ".ts';\n\n"
+		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
 		tygos = append(tygos, tygo.New(getTygoConfig(out, file, importStr)))
 	}
 
@@ -88,8 +91,7 @@ func getTygoConfig(out, file, frontmatter string) *tygo.Config {
 				FallbackType: fallbackType,
 				IncludeFiles: []string{file + ".go"},
 				OutputPath:   out + file + ".ts",
-				Frontmatter:  frontmatter,
-				Indent:       indent,
+				Frontmatter:  lintDisable + frontmatter,
 			},
 		},
 	}
@@ -122,7 +124,7 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			filename := strings.TrimSuffix(filepath.Base(pkg.Fset.File(file.Pos()).Name()), ".go")
-			if filepath.Base(filename) == commonFileName {
+			if filepath.Base(filename) == commonFileName || slices.Contains(ignoredFiles, filename) {
 				continue
 			}
 			ast.Inspect(file, func(n ast.Node) bool {
@@ -136,7 +138,7 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 				if _, exists := usage[filename]; !exists {
 					usage[filename] = make([]string, 0)
 				}
-				if !slices.Contains[[]string](usage[filename], ident.Name) {
+				if !slices.Contains(usage[filename], ident.Name) {
 					usage[filename] = append(usage[filename], ident.Name)
 				}
 				return true
