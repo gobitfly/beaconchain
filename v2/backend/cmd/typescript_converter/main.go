@@ -17,7 +17,11 @@ const (
 	fallbackType   = "any"
 	commonFileName = "common"
 	indent         = "    "
+	lintDisable    = "/* eslint-disable @typescript-eslint/no-unnecessary-type-constraint */\n/* eslint-disable spaced-comment */\n"
 )
+
+// Files that should not be converted to TypeScript
+var ignoredFiles = []string{"data_access.go"}
 
 var typeMappings = map[string]string{
 	"decimal.Decimal": "string/* decimal.Decimal */",
@@ -88,7 +92,7 @@ func getTygoConfig(out, file, frontmatter string) *tygo.Config {
 				FallbackType: fallbackType,
 				IncludeFiles: []string{file + ".go"},
 				OutputPath:   out + file + ".ts",
-				Frontmatter:  frontmatter,
+				Frontmatter:  lintDisable + frontmatter,
 				Indent:       indent,
 			},
 		},
@@ -122,7 +126,7 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			filename := strings.TrimSuffix(filepath.Base(pkg.Fset.File(file.Pos()).Name()), ".go")
-			if filepath.Base(filename) == commonFileName {
+			if filepath.Base(filename) == commonFileName || slices.Contains(ignoredFiles, filename) {
 				continue
 			}
 			ast.Inspect(file, func(n ast.Node) bool {
@@ -136,7 +140,7 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 				if _, exists := usage[filename]; !exists {
 					usage[filename] = make([]string, 0)
 				}
-				if !slices.Contains[[]string](usage[filename], ident.Name) {
+				if !slices.Contains(usage[filename], ident.Name) {
 					usage[filename] = append(usage[filename], ident.Name)
 				}
 				return true

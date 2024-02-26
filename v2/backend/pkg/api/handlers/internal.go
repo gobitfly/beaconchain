@@ -256,6 +256,10 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	returnCreated(w, response)
 }
 
+func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	// TODO check body for validators, ignore query param if body is present
@@ -453,7 +457,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	TODO_RemoveThisLine(dashboardId, paging)
 
 	response := types.ApiResponse{
-		Data: types.VDBRewardsTableResponse{},
+		Data: types.InternalGetValidatorDashboardRewardsResponse{},
 	}
 	returnOk(w, response)
 }
@@ -471,7 +475,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 	TODO_RemoveThisLine(dashboardId, groupId)
 
 	response := types.ApiResponse{
-		Data: types.VDBGroupRewardsResponse{},
+		Data: types.InternalGetValidatorDashboardGroupRewardsResponse{},
 	}
 	returnOk(w, response)
 }
