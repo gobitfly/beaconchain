@@ -17,9 +17,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -32,7 +32,7 @@ var eth1DepositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,by
 var eth1DepositContractFirstBlock uint64
 var eth1DepositContractAddress common.Address
 var eth1Client *ethclient.Client
-var eth1RPCClient *gethRPC.Client
+var eth1RPCClient *gethrpc.Client
 var infuraToMuchResultsErrorRE = regexp.MustCompile("query returned more than [0-9]+ results")
 var gethRequestEntityTooLargeRE = regexp.MustCompile("413 Request Entity Too Large")
 
@@ -44,7 +44,7 @@ func eth1DepositsExporter() {
 	eth1DepositContractAddress = common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress)
 	eth1DepositContractFirstBlock = utils.Config.Indexer.Eth1DepositContractFirstBlock
 
-	rpcClient, err := gethRPC.Dial(utils.Config.Eth1GethEndpoint)
+	rpcClient, err := gethrpc.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
 		log.Fatal(err, "new exporter geth client error", 0)
 	}
@@ -240,7 +240,7 @@ func fetchEth1Deposits(fromBlock, toBlock uint64) (depositsToSave []*types.Eth1D
 		if chainID == nil {
 			return depositsToSave, fmt.Errorf("error getting tx-chainId for eth1-deposit")
 		}
-		signer := gethTypes.NewCancunSigner(chainID)
+		signer := gethtypes.NewCancunSigner(chainID)
 		sender, err := signer.Sender(tx)
 		if err != nil {
 			return depositsToSave, fmt.Errorf("error getting sender for eth1-deposit (txHash: %x, chainID: %v): %w", d.TxHash, chainID, err)
@@ -318,16 +318,16 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 // eth1BatchRequestHeadersAndTxs requests the block range specified in the arguments.
 // Instead of requesting each block in one call, it batches all requests into a single rpc call.
 // This code is shamelessly stolen and adapted from https://github.com/prysmaticlabs/prysm/blob/2eac24c/beacon-chain/powchain/service.go#L473
-func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethTypes.Header, map[string]*gethTypes.Transaction, error) {
-	elems := make([]gethRPC.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
-	headers := make(map[uint64]*gethTypes.Header, len(blocksToFetch))
-	txs := make(map[string]*gethTypes.Transaction, len(txsToFetch))
+func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethtypes.Header, map[string]*gethtypes.Transaction, error) {
+	elems := make([]gethrpc.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
+	headers := make(map[uint64]*gethtypes.Header, len(blocksToFetch))
+	txs := make(map[string]*gethtypes.Transaction, len(txsToFetch))
 	errors := make([]error, 0, len(blocksToFetch)+len(txsToFetch))
 
 	for _, b := range blocksToFetch {
-		header := &gethTypes.Header{}
+		header := &gethtypes.Header{}
 		err := error(nil)
-		elems = append(elems, gethRPC.BatchElem{
+		elems = append(elems, gethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
 			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(b))), false},
 			Result: header,
@@ -338,9 +338,9 @@ func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) 
 	}
 
 	for _, txHashHex := range txsToFetch {
-		tx := &gethTypes.Transaction{}
+		tx := &gethtypes.Transaction{}
 		err := error(nil)
-		elems = append(elems, gethRPC.BatchElem{
+		elems = append(elems, gethrpc.BatchElem{
 			Method: "eth_getTransactionByHash",
 			Args:   []interface{}{txHashHex},
 			Result: tx,

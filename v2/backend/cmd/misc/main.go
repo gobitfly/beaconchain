@@ -871,6 +871,7 @@ func fixExecTransactionsCount() error {
 			valueStrings = append(valueStrings, fmt.Sprintf("(%v,%v)", v.BlockNumber, v.ExecTxsCount))
 		}
 
+		//nolint:gosec
 		stmt := fmt.Sprintf(`
 			update blocks as a set exec_transactions_count = b.exec_transactions_count 
 			from (values %s) as b(exec_block_number, exec_transactions_count)
@@ -1749,6 +1750,7 @@ func exportSyncCommitteePeriods(rpcClient rpc.Client, startDay, endDay uint64, d
 	log.Infof("finished all exporting sync_committee for periods %v - %v, took %v", firstPeriod, lastPeriod, time.Since(start))
 }
 
+//nolint:unparam
 func exportSyncCommitteeValidatorStats(rpcClient rpc.Client, startDay, endDay uint64, dryRun, skipPhase1 bool) {
 	if endDay <= 0 {
 		lastEpoch, err := db.GetLatestFinalizedEpoch()
@@ -1775,7 +1777,7 @@ func exportSyncCommitteeValidatorStats(rpcClient rpc.Client, startDay, endDay ui
 
 	for day := startDay; day <= endDay; day++ {
 		startDay := time.Now()
-		err := UpdateValidatorStatisticsSyncData(day, rpcClient, dryRun)
+		err := UpdateValidatorStatisticsSyncData(day, dryRun)
 		if err != nil {
 			log.Error(err, fmt.Errorf("error exporting stats for day %v", day), 0)
 			break
@@ -1788,7 +1790,7 @@ func exportSyncCommitteeValidatorStats(rpcClient rpc.Client, startDay, endDay ui
 	log.Infof("REMEMBER: To execute export-stats-totals now to update the totals")
 }
 
-func UpdateValidatorStatisticsSyncData(day uint64, client rpc.Client, dryRun bool) error {
+func UpdateValidatorStatisticsSyncData(day uint64, dryRun bool) error {
 	exportStart := time.Now()
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
 

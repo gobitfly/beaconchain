@@ -508,6 +508,7 @@ func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.
 	return res, nil
 }
 
+//nolint:unparam
 func machineMetricRowParts(r string) (bool, uint64, string, string) {
 	keySplit := strings.Split(r, ":")
 

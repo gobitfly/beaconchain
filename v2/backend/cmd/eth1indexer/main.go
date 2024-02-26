@@ -31,6 +31,7 @@ import (
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 
+	//nolint:gosec
 	_ "net/http/pprof"
 )
 
@@ -91,7 +92,13 @@ func main() {
 	if utils.Config.Pprof.Enabled {
 		go func() {
 			log.Infof("starting pprof http server on port %s", utils.Config.Pprof.Port)
-			err := http.ListenAndServe(fmt.Sprintf("localhost:%s", utils.Config.Pprof.Port), nil)
+			server := &http.Server{
+				Addr:         fmt.Sprintf("localhost:%s", utils.Config.Pprof.Port),
+				Handler:      nil,
+				ReadTimeout:  60 * time.Second,
+				WriteTimeout: 60 * time.Second,
+			}
+			err := server.ListenAndServe()
 
 			if err != nil {
 				log.Error(err, "error during ListenAndServe for pprof http server", 0)
