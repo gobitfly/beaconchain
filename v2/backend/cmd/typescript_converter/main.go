@@ -17,15 +17,15 @@ const (
 	fallbackType   = "any"
 	commonFileName = "common"
 	indent         = "    "
-	lintDisable    = "/* eslint-disable @typescript-eslint/no-unnecessary-type-constraint */\n/* eslint-disable spaced-comment */\n"
+	lintDisable    = "/* eslint-disable */\n"
 )
 
 // Files that should not be converted to TypeScript
 var ignoredFiles = []string{"data_access.go"}
 
 var typeMappings = map[string]string{
-	"decimal.Decimal": "string/* decimal.Decimal */",
-	"time.Time":       "string/* time.Time */",
+	"decimal.Decimal": "string /* decimal.Decimal */",
+	"time.Time":       "string /* time.Time */",
 }
 
 // Expects the following flags:
@@ -68,7 +68,7 @@ func main() {
 	tygos = append(tygos, tygo.New(getTygoConfig(out, commonFileName, "")))
 	// Generate Tygo for each file
 	for file, typesUsed := range usage {
-		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n\n"
+		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
 		tygos = append(tygos, tygo.New(getTygoConfig(out, file, importStr)))
 	}
 
