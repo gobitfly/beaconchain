@@ -20,17 +20,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
-	geth_rpc "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	geth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 type ErigonClient struct {
 	endpoint     string
-	rpcClient    *geth_rpc.Client
+	rpcClient    *gethrpc.Client
 	ethClient    *ethclient.Client
 	chainID      *big.Int
 	multiChecker *Balance
@@ -44,7 +44,7 @@ func NewErigonClient(endpoint string) (*ErigonClient, error) {
 		endpoint: endpoint,
 	}
 
-	rpcClient, err := geth_rpc.Dial(client.endpoint)
+	rpcClient, err := gethrpc.Dial(client.endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing rpc node: %w", err)
 	}
@@ -85,7 +85,7 @@ func (client *ErigonClient) GetNativeClient() *ethclient.Client {
 	return client.ethClient
 }
 
-func (client *ErigonClient) GetRPCClient() *geth_rpc.Client {
+func (client *ErigonClient) GetRPCClient() *gethrpc.Client {
 	return client.rpcClient
 }
 
@@ -159,7 +159,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		c.Uncles = append(c.Uncles, pbUncle)
 	}
 
-	receipts := make([]*geth_types.Receipt, len(block.Transactions()))
+	receipts := make([]*gethtypes.Receipt, len(block.Transactions()))
 
 	if len(block.Withdrawals()) > 0 {
 		withdrawalsIndexed := make([]*types.Eth1Withdrawal, 0, len(block.Withdrawals()))
@@ -178,7 +178,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 
 	for _, tx := range txs {
 		var from []byte
-		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
+		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
@@ -538,7 +538,7 @@ func (client *ErigonClient) TraceParityTx(txHash string) ([]*ParityTraceResult, 
 }
 
 func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addressIndex, tokenIndex int) ([]*types.Eth1AddressBalance, error) {
-	batchElements := make([]geth_rpc.BatchElem, 0, len(pairs))
+	batchElements := make([]gethrpc.BatchElem, 0, len(pairs))
 
 	ret := make([]*types.Eth1AddressBalance, len(pairs))
 
@@ -553,7 +553,7 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 		// log.LogInfo("retrieving balance for %x / %x", ret[i].Address, ret[i].Token)
 
 		if len(pair.Token) < 20 {
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_getBalance",
 				Args:   []interface{}{common.BytesToAddress(pair.Address), "latest"},
 				Result: &result,
@@ -566,7 +566,7 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 				Data: common.Hex2Bytes(fmt.Sprintf("70a08231000000000000000000000000%x", pair.Address)),
 			}
 
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_call",
 				Args:   []interface{}{toCallArg(msg), "latest"},
 				Result: &result,
