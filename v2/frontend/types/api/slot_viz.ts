@@ -30,10 +30,10 @@ export interface VDBSlotVizActiveDuty {
 export interface VDBSlotVizSlot {
     slot: number /* uint64 */;
     status: 'proposed' | 'missed' | 'scheduled' | 'orphaned';
-    attestations: VDBSlotVizPassiveDuty;
-    sync: VDBSlotVizPassiveDuty;
-    proposals: VDBSlotVizActiveDuty[];
-    slashing: VDBSlotVizActiveDuty[];
+    attestations?: VDBSlotVizPassiveDuty;
+    sync?: VDBSlotVizPassiveDuty;
+    proposals?: VDBSlotVizActiveDuty[];
+    slashing?: VDBSlotVizActiveDuty[];
 }
 export interface SlotVizEpoch {
     epoch: number /* uint64 */;
