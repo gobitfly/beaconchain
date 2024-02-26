@@ -28,9 +28,9 @@ type VDBSlotVizSlot struct {
 }
 type SlotVizEpoch struct {
 	Epoch    uint64           `json:"epoch"`
-	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized' |"` // only on landing page
-	Progress float64          `json:"progress,omitempty"`                                                                         // only on landing page
-	Slots    []VDBSlotVizSlot `json:"slots,omitempty"`                                                                            // only on dashboard page
+	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized' "` // only on landing page
+	Progress float64          `json:"progress,omitempty"`                                                                        // only on landing page
+	Slots    []VDBSlotVizSlot `json:"slots,omitempty"`                                                                           // only on dashboard page
 }
 
 type InternalGetValidatorDashboardSlotVizResponse ApiDataResponse[[]SlotVizEpoch]
