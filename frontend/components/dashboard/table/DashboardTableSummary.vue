@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBSummaryTableResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 
 interface Props {
@@ -38,7 +38,7 @@ watch(() => props.dashboardId, () => {
   loadData()
 }, { immediate: true })
 
-const summary = computed<VDBSummaryTableResponse | undefined>(() => {
+const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
   return summaryMap.value?.[props.dashboardId]
 })
 

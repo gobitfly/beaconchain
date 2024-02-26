@@ -1,683 +1,680 @@
 {
-  "currentSlot": 265874,
-  "epochs": [
+  "data": [
     {
-      "id": 265875,
+      "epoch": 265875,
       "state": "scheduled",
       "slots": [
         {
-          "id": 96,
-          "state": "scheduled"
+          "slot": 96,
+          "status": "scheduled"
         },
         {
-          "id": 97,
-          "state": "scheduled"
+          "slot": 97,
+          "status": "scheduled"
         },
         {
-          "id": 98,
-          "state": "scheduled"
+          "slot": 98,
+          "status": "scheduled"
         },
         {
-          "id": 99,
-          "state": "scheduled"
+          "slot": 99,
+          "status": "scheduled"
         },
         {
-          "id": 100,
-          "state": "scheduled"
+          "slot": 100,
+          "status": "scheduled"
         },
         {
-          "id": 101,
-          "state": "scheduled"
+          "slot": 101,
+          "status": "scheduled"
         },
         {
-          "id": 102,
-          "state": "scheduled"
+          "slot": 102,
+          "status": "scheduled"
         },
         {
-          "id": 103,
-          "state": "scheduled"
+          "slot": 103,
+          "status": "scheduled"
         },
         {
-          "id": 104,
-          "state": "scheduled",
-          "duties": [
-            { "type": "proposal", "pendingCount": 1, "validator": 1234 }
+          "slot": 104,
+          "status": "scheduled",
+          "proposals": [
+            {
+              "status": "scheduled",
+              "validator": 1234,
+              "duty_object": 4321
+            }
           ]
         },
         {
-          "id": 105,
-          "state": "scheduled",
-          "duties": [{ "type": "attestation", "pendingCount": 3 }]
+          "slot": 105,
+          "status": "scheduled",
+          "attestations": {
+            "pending_count": 3
+          }
         },
         {
-          "id": 106,
-          "state": "scheduled"
+          "slot": 106,
+          "status": "scheduled"
         },
         {
-          "id": 107,
-          "state": "scheduled"
+          "slot": 107,
+          "status": "scheduled"
         },
         {
-          "id": 108,
-          "state": "scheduled"
+          "slot": 108,
+          "status": "scheduled"
         },
         {
-          "id": 109,
-          "state": "scheduled"
+          "slot": 109,
+          "status": "scheduled"
         },
         {
-          "id": 110,
-          "state": "scheduled"
+          "slot": 110,
+          "status": "scheduled"
         },
         {
-          "id": 111,
-          "state": "scheduled"
+          "slot": 111,
+          "status": "scheduled"
         },
         {
-          "id": 112,
-          "state": "scheduled"
+          "slot": 112,
+          "status": "scheduled"
         },
         {
-          "id": 113,
-          "state": "scheduled"
+          "slot": 113,
+          "status": "scheduled"
         },
         {
-          "id": 114,
-          "state": "scheduled"
+          "slot": 114,
+          "status": "scheduled"
         },
         {
-          "id": 115,
-          "state": "scheduled"
+          "slot": 115,
+          "status": "scheduled"
         },
         {
-          "id": 116,
-          "state": "scheduled"
+          "slot": 116,
+          "status": "scheduled"
         },
         {
-          "id": 117,
-          "state": "scheduled"
+          "slot": 117,
+          "status": "scheduled"
         },
         {
-          "id": 118,
-          "state": "scheduled"
+          "slot": 118,
+          "status": "scheduled"
         },
         {
-          "id": 119,
-          "state": "scheduled"
+          "slot": 119,
+          "status": "scheduled"
         },
         {
-          "id": 120,
-          "state": "scheduled"
+          "slot": 120,
+          "status": "scheduled"
         },
         {
-          "id": 121,
-          "state": "scheduled"
+          "slot": 121,
+          "status": "scheduled"
         },
         {
-          "id": 122,
-          "state": "scheduled"
+          "slot": 122,
+          "status": "scheduled"
         },
         {
-          "id": 123,
-          "state": "scheduled"
+          "slot": 123,
+          "status": "scheduled"
         },
         {
-          "id": 124,
-          "state": "scheduled"
+          "slot": 124,
+          "status": "scheduled"
         },
         {
-          "id": 125,
-          "state": "scheduled"
+          "slot": 125,
+          "status": "scheduled"
         },
         {
-          "id": 126,
-          "state": "scheduled"
+          "slot": 126,
+          "status": "scheduled"
         },
         {
-          "id": 127,
-          "state": "scheduled"
+          "slot": 127,
+          "status": "scheduled"
         }
       ]
     },
     {
-      "id": 265874,
+      "epoch": 265874,
       "state": "head",
       "slots": [
         {
-          "id": 64,
-          "state": "proposed"
+          "slot": 64,
+          "status": "proposed"
         },
         {
-          "id": 65,
-          "state": "proposed"
+          "slot": 65,
+          "status": "proposed"
         },
         {
-          "id": 66,
-          "state": "proposed"
+          "slot": 66,
+          "status": "proposed"
         },
         {
-          "id": 67,
-          "state": "proposed"
+          "slot": 67,
+          "status": "proposed"
         },
         {
-          "id": 68,
-          "state": "proposed"
+          "slot": 68,
+          "status": "proposed"
         },
         {
-          "id": 69,
-          "state": "proposed"
+          "slot": 69,
+          "status": "proposed"
         },
         {
-          "id": 70,
-          "state": "proposed",
-          "duties": [
+          "slot": 70,
+          "status": "proposed",
+          "proposals": [
             {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "-11200000000000000",
-              "validator": 1234
-            }
-          ]
-        },
-        {
-          "id": 71,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "proposal",
-              "successCount": 1,
-              "successEarning": "11200000000000000",
-              "validator": 1234
-            }
-          ]
-        },
-        {
-          "id": 72,
-          "state": "missed",
-          "duties": [
-            {
-              "type": "proposal",
-              "successCount": 1,
-              "successEarning": "11200000000000000",
-              "validator": 1234
-            }
-          ]
-        },
-        {
-          "id": 73,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "attestation",
-              "failedCount": 3,
-              "failedEarnings": "-11200000000000000",
-              "successCount": 5,
-              "successEarning": "11200000000000000",
-              "validator": 1234
-            }
-          ]
-        },
-        {
-          "id": 74,
-          "state": "proposed"
-        },
-        {
-          "id": 75,
-          "state": "proposed"
-        },
-        {
-          "id": 76,
-          "state": "proposed"
-        },
-        {
-          "id": 77,
-          "state": "proposed"
-        },
-        {
-          "id": 78,
-          "state": "proposed"
-        },
-        {
-          "id": 79,
-          "state": "proposed"
-        },
-        {
-          "id": 80,
-          "state": "proposed"
-        },
-        {
-          "id": 81,
-          "state": "proposed"
-        },
-        {
-          "id": 82,
-          "state": "proposed"
-        },
-        {
-          "id": 83,
-          "state": "proposed"
-        },
-        {
-          "id": 84,
-          "state": "proposed"
-        },
-        {
-          "id": 85,
-          "state": "proposed"
-        },
-        {
-          "id": 86,
-          "state": "proposed"
-        },
-        {
-          "id": 87,
-          "state": "proposed"
-        },
-        {
-          "id": 88,
-          "state": "proposed"
-        },
-        {
-          "id": 89,
-          "state": "proposed"
-        },
-        {
-          "id": 90,
-          "state": "proposed"
-        },
-        {
-          "id": 91,
-          "state": "proposed"
-        },
-        {
-          "id": 92,
-          "state": "proposed"
-        },
-        {
-          "id": 93,
-          "state": "proposed"
-        },
-        {
-          "id": 94,
-          "state": "proposed"
-        },
-        {
-          "id": 95,
-          "state": "proposed"
-        }
-      ]
-    },
-    {
-      "id": 265873,
-      "state": "finalized",
-      "slots": [
-        {
-          "id": 32,
-          "state": "proposed"
-        },
-        {
-          "id": 33,
-          "state": "proposed"
-        },
-        {
-          "id": 34,
-          "state": "proposed"
-        },
-        {
-          "id": 35,
-          "state": "proposed"
-        },
-        {
-          "id": 36,
-          "state": "proposed"
-        },
-        {
-          "id": 37,
-          "state": "proposed"
-        },
-        {
-          "id": 38,
-          "state": "proposed"
-        },
-        {
-          "id": 39,
-          "state": "proposed"
-        },
-        {
-          "id": 40,
-          "state": "proposed"
-        },
-        {
-          "id": 41,
-          "state": "proposed"
-        },
-        {
-          "id": 42,
-          "state": "proposed"
-        },
-        {
-          "id": 43,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "-11200000000000000",
-              "successCount": 1,
-              "successEarning": "11200000000000000",
-              "validator": 1234
-            }
-          ]
-        },
-        {
-          "id": 44,
-          "state": "proposed"
-        },
-        {
-          "id": 45,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "proposal",
-              "successCount": 1,
+              "status": "failed",
               "validator": 1234,
-              "successEarning": "11200000000000000"
-            },
-            {
-              "type": "attestation",
-              "successCount": 3,
-              "successEarning": "11200000000000000"
+              "duty_object": 5321
             }
           ]
         },
         {
-          "id": 46,
-          "state": "proposed"
-        },
-        {
-          "id": 47,
-          "state": "proposed",
-          "duties": [
+          "slot": 71,
+          "status": "proposed",
+          "proposals": [
             {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "-11200000000000000",
-              "validator": 1234
-            },
-            {
-              "type": "attestation",
-              "successCount": 4,
-              "successEarning": "11200000000000000"
-            },
-            {
-              "type": "slashing",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
             }
           ]
         },
         {
-          "id": 48,
-          "state": "proposed"
+          "slot": 72,
+          "status": "missed",
+          "proposals": [
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ]
         },
         {
-          "id": 49,
-          "state": "proposed"
+          "slot": 73,
+          "status": "proposed",
+          "attestations": {
+            "success_count": 3,
+            "failed_count": 5
+          }
         },
         {
-          "id": 50,
-          "state": "proposed"
+          "slot": 74,
+          "status": "proposed"
         },
         {
-          "id": 51,
-          "state": "proposed"
+          "slot": 75,
+          "status": "proposed"
         },
         {
-          "id": 52,
-          "state": "proposed"
+          "slot": 76,
+          "status": "proposed"
         },
         {
-          "id": 53,
-          "state": "proposed"
+          "slot": 77,
+          "status": "proposed"
         },
         {
-          "id": 54,
-          "state": "proposed"
+          "slot": 78,
+          "status": "proposed"
         },
         {
-          "id": 55,
-          "state": "proposed"
+          "slot": 79,
+          "status": "proposed"
         },
         {
-          "id": 56,
-          "state": "proposed"
+          "slot": 80,
+          "status": "proposed"
         },
         {
-          "id": 57,
-          "state": "proposed"
+          "slot": 81,
+          "status": "proposed"
         },
         {
-          "id": 58,
-          "state": "proposed"
+          "slot": 82,
+          "status": "proposed"
         },
         {
-          "id": 59,
-          "state": "proposed"
+          "slot": 83,
+          "status": "proposed"
         },
         {
-          "id": 60,
-          "state": "proposed"
+          "slot": 84,
+          "status": "proposed"
         },
         {
-          "id": 61,
-          "state": "proposed"
+          "slot": 85,
+          "status": "proposed"
         },
         {
-          "id": 62,
-          "state": "proposed"
+          "slot": 86,
+          "status": "proposed"
         },
         {
-          "id": 63,
-          "state": "proposed"
+          "slot": 87,
+          "status": "proposed"
+        },
+        {
+          "slot": 88,
+          "status": "proposed"
+        },
+        {
+          "slot": 89,
+          "status": "proposed"
+        },
+        {
+          "slot": 90,
+          "status": "proposed"
+        },
+        {
+          "slot": 91,
+          "status": "proposed"
+        },
+        {
+          "slot": 92,
+          "status": "proposed"
+        },
+        {
+          "slot": 93,
+          "status": "proposed"
+        },
+        {
+          "slot": 94,
+          "status": "proposed"
+        },
+        {
+          "slot": 95,
+          "status": "proposed"
         }
       ]
     },
     {
-      "id": 265872,
+      "epoch": 265873,
       "state": "finalized",
       "slots": [
         {
-          "id": 0,
-          "state": "proposed"
+          "slot": 32,
+          "status": "proposed"
         },
         {
-          "id": 1,
-          "state": "proposed"
+          "slot": 33,
+          "status": "proposed"
         },
         {
-          "id": 2,
-          "state": "proposed"
+          "slot": 34,
+          "status": "proposed"
         },
         {
-          "id": 3,
-          "state": "missed"
+          "slot": 35,
+          "status": "proposed"
         },
         {
-          "id": 4,
-          "state": "proposed"
+          "slot": 36,
+          "status": "proposed"
         },
         {
-          "id": 5,
-          "state": "proposed"
+          "slot": 37,
+          "status": "proposed"
         },
         {
-          "id": 6,
-          "state": "missed",
-          "duties": [
+          "slot": 38,
+          "status": "proposed"
+        },
+        {
+          "slot": 39,
+          "status": "proposed"
+        },
+        {
+          "slot": 40,
+          "status": "proposed"
+        },
+        {
+          "slot": 41,
+          "status": "proposed"
+        },
+        {
+          "slot": 42,
+          "status": "proposed"
+        },
+        {
+          "slot": 43,
+          "status": "proposed",
+          "proposals": [
             {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "11200000000000000",
-              "validator": 1234
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
             },
             {
-              "type": "attestation",
-              "successCount": 4,
-              "successEarning": "11200000000000000"
-            },
-            {
-              "type": "slashing",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
+              "status": "failed",
+              "validator": 3234,
+              "duty_object": 7321
             }
           ]
         },
         {
-          "id": 7,
-          "state": "proposed"
+          "slot": 44,
+          "status": "proposed"
         },
         {
-          "id": 8,
-          "state": "proposed"
-        },
-        {
-          "id": 9,
-          "state": "proposed"
-        },
-        {
-          "id": 10,
-          "state": "proposed"
-        },
-        {
-          "id": 11,
-          "state": "proposed",
-          "duties": [
+          "slot": 45,
+          "status": "proposed",
+          "proposals": [
             {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "-11200000000000000",
-              "validator": 1234
-            },
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "attestations": {
+            "success_count": 3,
+            "failed_count": 5
+          },
+          "sync": {
+            "success_count": 300,
+            "failed_count": 512
+          }
+        },
+        {
+          "slot": 46,
+          "status": "proposed"
+        },
+        {
+          "slot": 47,
+          "status": "proposed",
+          "proposals": [
             {
-              "type": "attestation",
-              "successCount": 4,
-              "successEarning": "11200000000000000"
-            },
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "slashing": [
             {
-              "type": "slashing",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "attestations": {
+            "success_count": 3,
+            "failed_count": 5
+          }
+        },
+        {
+          "slot": 48,
+          "status": "proposed"
+        },
+        {
+          "slot": 49,
+          "status": "proposed"
+        },
+        {
+          "slot": 50,
+          "status": "proposed"
+        },
+        {
+          "slot": 51,
+          "status": "proposed"
+        },
+        {
+          "slot": 52,
+          "status": "proposed"
+        },
+        {
+          "slot": 53,
+          "status": "proposed"
+        },
+        {
+          "slot": 54,
+          "status": "proposed"
+        },
+        {
+          "slot": 55,
+          "status": "proposed"
+        },
+        {
+          "slot": 56,
+          "status": "proposed"
+        },
+        {
+          "slot": 57,
+          "status": "proposed"
+        },
+        {
+          "slot": 58,
+          "status": "proposed"
+        },
+        {
+          "slot": 59,
+          "status": "proposed"
+        },
+        {
+          "slot": 60,
+          "status": "proposed"
+        },
+        {
+          "slot": 61,
+          "status": "proposed"
+        },
+        {
+          "slot": 62,
+          "status": "proposed"
+        },
+        {
+          "slot": 63,
+          "status": "proposed"
+        }
+      ]
+    },
+    {
+      "epoch": 265872,
+      "state": "finalized",
+      "slots": [
+        {
+          "slot": 0,
+          "status": "proposed"
+        },
+        {
+          "slot": 1,
+          "status": "proposed"
+        },
+        {
+          "slot": 2,
+          "status": "proposed"
+        },
+        {
+          "slot": 3,
+          "status": "missed"
+        },
+        {
+          "slot": 4,
+          "status": "proposed"
+        },
+        {
+          "slot": 5,
+          "status": "proposed"
+        },
+        {
+          "slot": 6,
+          "status": "missed",
+          "proposals": [
+            {
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "attestations": {
+            "success_count": 3,
+            "failed_count": 5
+          }
+        },
+        {
+          "slot": 7,
+          "status": "proposed"
+        },
+        {
+          "slot": 8,
+          "status": "proposed"
+        },
+        {
+          "slot": 9,
+          "status": "proposed"
+        },
+        {
+          "slot": 10,
+          "status": "proposed"
+        },
+        {
+          "slot": 11,
+          "status": "proposed",
+          "proposals": [
+            {
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            }
+          ],
+          "attestations": {
+            "success_count": 3
+          }
+        },
+        {
+          "slot": 12,
+          "status": "proposed"
+        },
+        {
+          "slot": 13,
+          "status": "proposed",
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
             }
           ]
         },
         {
-          "id": 12,
-          "state": "proposed"
+          "slot": 14,
+          "status": "proposed"
         },
         {
-          "id": 13,
-          "state": "proposed",
-          "duties": [
+          "slot": 15,
+          "status": "proposed",
+          "sync": {
+            "success_count": 3
+          }
+        },
+        {
+          "slot": 16,
+          "status": "proposed",
+          "attestations": {
+            "success_count": 3
+          }
+        },
+        {
+          "slot": 17,
+          "status": "missed",
+          "proposals": [
             {
-              "type": "slashing",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
             }
           ]
         },
         {
-          "id": 14,
-          "state": "proposed"
+          "slot": 18,
+          "status": "proposed"
         },
         {
-          "id": 15,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "sync",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
-            }
-          ]
+          "slot": 19,
+          "status": "proposed"
         },
         {
-          "id": 16,
-          "state": "proposed",
-          "duties": [
-            {
-              "type": "attestation",
-              "successCount": 1,
-              "successEarning": "11200000000000000"
-            }
-          ]
+          "slot": 20,
+          "status": "proposed"
         },
         {
-          "id": 17,
-          "state": "missed",
-          "duties": [
-            {
-              "type": "proposal",
-              "failedCount": 1,
-              "failedEarnings": "-11200000000000000",
-              "validator": 1234
-            }
-          ]
+          "slot": 21,
+          "status": "proposed"
         },
         {
-          "id": 18,
-          "state": "proposed"
+          "slot": 22,
+          "status": "proposed"
         },
         {
-          "id": 19,
-          "state": "proposed"
+          "slot": 23,
+          "status": "proposed"
         },
         {
-          "id": 20,
-          "state": "proposed"
+          "slot": 24,
+          "status": "proposed"
         },
         {
-          "id": 21,
-          "state": "proposed"
+          "slot": 25,
+          "status": "proposed"
         },
         {
-          "id": 22,
-          "state": "proposed"
+          "slot": 26,
+          "status": "proposed"
         },
         {
-          "id": 23,
-          "state": "proposed"
+          "slot": 27,
+          "status": "proposed"
         },
         {
-          "id": 24,
-          "state": "proposed"
+          "slot": 28,
+          "status": "proposed"
         },
         {
-          "id": 25,
-          "state": "proposed"
+          "slot": 29,
+          "status": "proposed"
         },
         {
-          "id": 26,
-          "state": "proposed"
+          "slot": 30,
+          "status": "proposed"
         },
         {
-          "id": 27,
-          "state": "proposed"
-        },
-        {
-          "id": 28,
-          "state": "proposed"
-        },
-        {
-          "id": 29,
-          "state": "proposed"
-        },
-        {
-          "id": 30,
-          "state": "proposed"
-        },
-        {
-          "id": 31,
-          "state": "proposed"
+          "slot": 31,
+          "status": "proposed"
         }
       ]
     }

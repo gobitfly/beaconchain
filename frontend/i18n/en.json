@@ -40,7 +40,35 @@
     "all": "All Time"
   },
   "slotViz": {
-    "head": "Head"
+    "head": "Head",
+    "tooltip": {
+      "attestation": "Attestation",
+      "sync": "Sync Committee",
+      "proposal": {
+        "success": {
+          "main": "Block proposed", 
+          "sub": "proposed"
+        },
+        "failed": {
+          "main": "Block missed", 
+          "sub": "missed"
+        },
+        "scheduled": {
+          "main": "Block scheduled", 
+          "sub": "will propose"
+        }
+      },
+      "slashing": {
+        "success": {
+          "main": "You slashed", 
+          "sub": "slashed"
+        },
+        "failed": {
+          "main": "You got Slashed", 
+          "sub": "slashed"
+        }
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",

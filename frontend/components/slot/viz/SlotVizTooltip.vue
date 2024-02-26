@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { type SlotVizSlot, type SlotVizIcons } from '~/types/dashboard/slotViz'
+import type { VDBSlotVizActiveDuty, VDBSlotVizPassiveDuty, VDBSlotVizSlot } from '~/types/api/slot_viz'
+import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 import { type TooltipLayout } from '~/types/layouts'
 import { formatNumber } from '~/utils/format'
-type Row = { count: number; icon: SlotVizIcons; class: string; change?: string; validator?: number; }
+type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validator?: number; dutySubText?: string; dutySubLink?: string, duty_object?: number}
 interface Props {
   id: string
-  data: SlotVizSlot
+  data: VDBSlotVizSlot
 }
 const props = defineProps<Props>()
 const { t: $t } = useI18n()
@@ -14,30 +15,52 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const hasDuties = !!slot.duties?.length
+  const hasDuties = !!slot?.proposals?.length || !!slot?.slashing?.length || !!slot?.attestations || !!slot?.sync
   const tooltipLayout: TooltipLayout = hasDuties ? 'dark' : 'default'
   if (hasDuties) {
-    const addDuty = (type: SlotVizIcons) => {
-      const duty = slot.duties?.find(s => s.type === type)
+    const addActiveDuty = (type: SlotVizIcons, duty: VDBSlotVizActiveDuty) => {
+      const subRows: Row[] = []
+      rows.push(subRows)
+      const dutyText = $t(`slotViz.tooltip.${type}.${duty.status}.main`)
+      const dutySubText = $t(`slotViz.tooltip.${type}.${duty.status}.sub`)
+      let dutySubLink = ''
+      if (type === 'proposal') {
+        if (duty.status === 'success') {
+          dutySubLink = `/block/${duty.duty_object}`
+        } else {
+          dutySubLink = `/slot/${duty.duty_object}`
+        }
+      } else if (type === 'slashing') {
+        dutySubLink = `/validator/${duty.duty_object}`
+      }
+
+      subRows.push({ class: duty.status, icon: type, dutyText, count: 1, dutySubText, validator: duty.validator, dutySubLink, duty_object: duty.duty_object })
+    }
+
+    slot.proposals?.forEach(duty => addActiveDuty('proposal', duty))
+    slot.slashing?.forEach(duty => addActiveDuty('slashing', duty))
+
+    const addPassiveDuty = (type: SlotVizIcons, duty?: VDBSlotVizPassiveDuty) => {
       if (duty) {
         const subRows: Row[] = []
         rows.push(subRows)
-        if (duty.pendingCount) {
-          subRows.push({ class: 'pending', icon: type, validator: duty.validator, count: duty.pendingCount })
+        const dutyText = $t(`slotViz.tooltip.${type}`)
+        if (duty.pending_count) {
+          subRows.push({ class: 'scheduled', icon: type, count: duty.pending_count, dutyText })
         }
-        if (duty.successCount) {
-          subRows.push({ class: 'success', icon: type, validator: duty.validator, count: duty.successCount, change: duty.successEarning })
+        if (duty.success_count) {
+          subRows.push({ class: 'success', icon: type, count: duty.success_count, dutyText })
         }
-        if (duty.failedCount) {
-          subRows.push({ class: 'failed', icon: type, validator: duty.validator, count: duty.failedCount, change: duty.failedEarnings })
+        if (duty.failed_count) {
+          subRows.push({ class: 'failed', icon: type, count: duty.failed_count, dutyText })
         }
       }
     }
-    const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
-    types.forEach(type => addDuty(type))
+    addPassiveDuty('attestation', slot.attestations)
+    addPassiveDuty('sync', slot.sync)
   }
-  const stateLabel = $t(`slot_state.${slot.state}`)
-  const slotLabel = `${stateLabel} ${$t('common.slot')} ${formatNumber(slot.id)}`
+  const stateLabel = $t(`slot_state.${slot.status}`)
+  const slotLabel = `${stateLabel} ${$t('common.slot')} ${formatNumber(slot.slot)}`
 
   return {
     slotLabel,
@@ -50,25 +73,22 @@ const data = computed(() => {
 <template>
   <BcTooltip :target="props.id" :layout="data.tooltipLayout">
     <slot />
-    <template #tooltip>
-      <div v-if="!data.hasDuties">
-        {{ data.slotLabel }}
-      </div>
+    <template v-if="data.hasDuties" #tooltip>
       <div class="with-duties">
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
           <div v-for="row in rows" :key="row.class" class="row" :class="row.class">
             <span>{{ row.count }}x</span>
             <SlotVizIcon :icon="row.icon" class="icon" />
             <div class="value-col">
-              <BcFormatValue v-if="row.change" :value="row.change" :options="{addPlus: true}" />
+              {{ row.dutyText }}
               <div v-if="row.validator">
-                {{ $t('common.validator') }}
-                <NuxtLink :to="`/validator/${ row.validator }`" class="link">
+                <NuxtLink :to="`/validator/${row.validator}`" target="_blank" class="link">
                   {{ row.validator }}
                 </NuxtLink>
-              </div>
-              <div v-else-if="row.class === 'pending'">
-                {{ $t('validator_state.pending') }}
+                <span class="sub-text"> {{ row.dutySubText }} </span>
+                <NuxtLink v-if="row.dutySubLink" :to="row.dutySubLink" target="_blank" class="link">
+                  {{ row.duty_object }}
+                </NuxtLink>
               </div>
             </div>
           </div>
@@ -106,6 +126,11 @@ const data = computed(() => {
 
       &.failed {
         color: var(--flashy-red);
+      }
+
+      .sub-text {
+        color: var(--light-grey);
+        padding: 0 3px;
       }
 
       .icon {
