@@ -18,17 +18,17 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	geth_rpc "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	geth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 type GethClient struct {
 	endpoint     string
-	rpcClient    *geth_rpc.Client
+	rpcClient    *gethrpc.Client
 	ethClient    *ethclient.Client
 	chainID      *big.Int
 	multiChecker *Balance
@@ -42,7 +42,7 @@ func NewGethClient(endpoint string) (*GethClient, error) {
 		endpoint: endpoint,
 	}
 
-	rpcClient, err := geth_rpc.Dial(client.endpoint)
+	rpcClient, err := gethrpc.Dial(client.endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing rpc node: %v", err)
 	}
@@ -84,7 +84,7 @@ func (client *GethClient) GetNativeClient() *ethclient.Client {
 	return client.ethClient
 }
 
-func (client *GethClient) GetRPCClient() *geth_rpc.Client {
+func (client *GethClient) GetRPCClient() *gethrpc.Client {
 	return client.rpcClient
 }
 
@@ -149,14 +149,14 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		c.Uncles = append(c.Uncles, pbUncle)
 	}
 
-	receipts := make([]*geth_types.Receipt, len(block.Transactions()))
-	reqs := make([]geth_rpc.BatchElem, len(block.Transactions()))
+	receipts := make([]*gethtypes.Receipt, len(block.Transactions()))
+	reqs := make([]gethrpc.BatchElem, len(block.Transactions()))
 
 	txs := block.Transactions()
 
 	for _, tx := range txs {
 		var from []byte
-		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
+		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
@@ -187,7 +187,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	}
 
 	for i := range reqs {
-		reqs[i] = geth_rpc.BatchElem{
+		reqs[i] = gethrpc.BatchElem{
 			Method: "eth_getTransactionReceipt",
 			Args:   []interface{}{txs[i].Hash().String()},
 			Result: &receipts[i],
@@ -258,7 +258,7 @@ func (client *GethClient) TraceGeth(blockHash common.Hash) ([]*GethTraceCallResu
 }
 
 func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalance, error) {
-	batchElements := make([]geth_rpc.BatchElem, 0, len(pairs))
+	batchElements := make([]gethrpc.BatchElem, 0, len(pairs))
 
 	ret := make([]*types.Eth1AddressBalance, len(pairs))
 
@@ -283,7 +283,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 		}
 
 		if token == "00" {
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_getBalance",
 				Args:   []interface{}{common.HexToAddress(address), "latest"},
 				Result: &result,
@@ -296,7 +296,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 				Data: common.Hex2Bytes("70a08231000000000000000000000000" + address),
 			}
 
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_call",
 				Args:   []interface{}{toCallArg(msg), "latest"},
 				Result: &result,
