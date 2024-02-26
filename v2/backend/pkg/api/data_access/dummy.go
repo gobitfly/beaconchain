@@ -25,8 +25,8 @@ func (d DummyService) GetUserDashboards(userId uint64) (t.DashboardData, error) 
 	return r, err
 }
 
-func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostData, error) {
-	r := t.VDBPostData{}
+func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
+	r := t.VDBPostReturnData{}
 	err := commonFakeData(&r)
 	return r, err
 }
@@ -37,8 +37,8 @@ func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId u
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.VDBSlotVizEpoch, error) {
-	r := []t.VDBSlotVizEpoch{}
+func (d DummyService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
+	r := []t.SlotVizEpoch{}
 	err := commonFakeData(&r)
 	return r, err
 }

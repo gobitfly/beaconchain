@@ -102,6 +102,10 @@ func (h HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWr
 	returnCreated(w, r)
 }
 
+func (h HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, r)
+}
+
 func (h HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, r)
 }
