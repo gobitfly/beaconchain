@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import { type SlotVizEpoch } from '~/types/api/slot_viz'
+import { type InternalGetValidatorDashboardSlotVizResponse, type SlotVizEpoch } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
 const { getLatestState } = useLatestStateStore()
 await useAsyncData('latest_state', () => getLatestState())
@@ -10,8 +10,8 @@ const { latest } = storeToRefs(useLatestStateStore())
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
 
 await useAsyncData('test_slot_viz_data', async () => {
-  const res = await $fetch<SlotVizEpoch[]>('./mock/dashboard/slotViz.json')
-  slotVizData.value = res
+  const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
+  slotVizData.value = res.data
 })
 
 // Validator Subset Modal
@@ -19,8 +19,8 @@ const modalVisibility = ref(false)
 const modalValidators = ref([...Array(1000).fill(0).map((_, i) => i)])
 
 onMounted(async () => {
-  const res = await $fetch<SlotVizEpoch[]>('./mock/dashboard/slotViz.json')
-  slotVizData.value = res
+  const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
+  slotVizData.value = res.data
 })
 
 </script>
