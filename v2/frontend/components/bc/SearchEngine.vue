@@ -1,30 +1,48 @@
 <script setup lang="ts">
-import { Categories, CategoryInfo, ResultTypes, TypeInfo, getListOfResultTypes, organizeAPIinfo, type SearchAheadResults, type OrganizedResults } from '~/types/searchengine'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
+import {
+  Categories,
+  CategoryInfo,
+  ResultTypes,
+  TypeInfo,
+  getListOfResultTypes,
+  organizeAPIinfo,
+  type SearchAheadResults,
+  type OrganizedResults,
+  type SearchBarStyle
+} from '~/types/searchengine'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
-const { t: $t } = useI18n()
 
-const props = defineProps({ searchable: { type: Array, required: true }, width: { type: Number, required: true }, height: { type: Number, required: true } })
+const { t: $t } = useI18n()
+const props = defineProps({
+  searchable: { type: Array, required: true },
+  barStyle: { type: String, required: true }
+})
 const emit = defineEmits(['enter', 'select'])
 
-const engineWidth = String(props.width) + 'px'
-const dropDownWidth = String(props.width - 10) + 'px'
-const inputWidth = String(props.width - 10) + 'px'
-const inputHeight = String(props.height) + 'px'
+const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
+const width : number = (barStyle === 'discreet' ? 460 : 735)
+const height : number = (barStyle === 'discreet' ? 34 : 40)
+const inputHeight = String(height) + 'px'
+const inputWidth = String(width - height) + 'px'
+const searchButtonSize = String(height) + 'px'
 
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
 
-const PeriodOfDropDownUpdates = 2000
+const PeriodOfDropDownUpdates = 500 /* CHANGE TO 2000 when the design of the bar is ready */
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
 const showDropDown = ref(false)
 const populateDropDown = ref(true)
-const inputField = ref('')
+const inputted = ref('')
 let lastKnownInput = ''
-let isMouseOverEngine = false
 const networkDropdownOptions : {name: string, label: string}[] = []
 const networkDropdownUserSelection = ref<string[]>([])
+const inputFieldAndButton = ref<HTMLDivElement>()
+const dropDown = ref<HTMLDivElement>()
 
 const results = {
   raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
@@ -51,6 +69,15 @@ const userFilters = ref<UserFilters>({
   noCategoryIsSelected: true
 })
 
+function cleanUp () {
+  lastKnownInput = ''
+  inputted.value = ''
+  waitingForSearchResults.value = false
+  showDropDown.value = false
+  populateDropDown.value = true
+  results.raw = { data: [] }
+}
+
 onMounted(() => {
   searchableTypes = []
   // builds the list of search types from the list of searchable categories (obtained as a props)
@@ -74,17 +101,14 @@ onMounted(() => {
   }
   networkDropdownUserSelection.value = [] // deselects all options
   networkFilterHasChanged()
+
+  // listens to clicks outside the search engine
+  document.addEventListener('click', listenToClicks)
 })
 
-function cleanUp () {
-  lastKnownInput = ''
-  inputField.value = ''
-  waitingForSearchResults.value = false
-  showDropDown.value = false
-  populateDropDown.value = true
-  isMouseOverEngine = false
-  results.raw = { data: [] }
-}
+onUnmounted(() => {
+  document.removeEventListener('click', listenToClicks)
+})
 
 // In the V1, the server received a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
 // Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
@@ -104,12 +128,21 @@ setInterval(() => {
 PeriodOfDropDownUpdates
 )
 
-function inputMightHaveChanged () {
-  if (inputField.value === lastKnownInput) {
+// closes the drop-down if the user interacts with another part of the page
+function listenToClicks (event : Event) {
+  if (dropDown.value === undefined || inputFieldAndButton.value === undefined ||
+      dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
-  lastKnownInput = inputField.value
-  if (inputField.value.length === 0) {
+  showDropDown.value = false
+}
+
+function inputMightHaveChanged () {
+  if (inputted.value === lastKnownInput) {
+    return
+  }
+  lastKnownInput = inputted.value
+  if (inputted.value.length === 0) {
     cleanUp()
   } else {
     waitingForSearchResults.value = true
@@ -117,8 +150,8 @@ function inputMightHaveChanged () {
   }
 }
 
-function userPressedEnter () {
-  if (inputField.value.length === 0) {
+function userFeelsLucky () {
+  if (inputted.value.length === 0) {
     return
   }
   if (waitingForSearchResults.value) {
@@ -176,19 +209,25 @@ function refreshDropDown () {
   populateDropDown.value = true // this triggers Vue to refresh the list of results
 }
 
+let searchAheadInProgress : boolean = false
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
 function searchAhead () : boolean {
   let error = false
 
+  if (searchAheadInProgress) {
+    return false
+  }
+  searchAheadInProgress = true
+
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchableTypes[0] as string !== '-- to be removed --') {
-    results.raw = simulateAPIresponse(inputField.value)
+    results.raw = simulateAPIresponse(inputted.value)
   } else { // *** END OF STUFF TO REMOVE ***
     fetch('/api/2/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: inputField.value, searchable: searchableTypes }),
+      body: JSON.stringify({ input: inputted.value, searchable: searchableTypes }),
       signal: AbortSignal.timeout(APIcallTimeout)
     }).then((received) => {
       if (received.ok && received.status < 400) {
@@ -209,6 +248,7 @@ function searchAhead () : boolean {
   if (error) {
     results.raw = { data: [] }
   }
+  searchAheadInProgress = false
   return !error
 }
 
@@ -502,25 +542,30 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 
   return response
 }
+
 // *** END OF THE FUNCTION TO BE REMOVED WHEN THE API IS IMPLEMENTED ***
 </script>
 
 <template>
-  <label
-    id="whole-engine"
-    @mouseover="isMouseOverEngine = true"
-    @mouseleave="isMouseOverEngine = false"
-  >
-    <InputText
-      id="input-field"
-      v-model="inputField"
-      type="text"
-      placeholder="Search the blockchain"
-      @keyup="(e) => {if (e.key === 'Enter') {userPressedEnter()} else {inputMightHaveChanged()}}"
-      @blur="showDropDown = isMouseOverEngine"
-      @focus="showDropDown = inputField.length > 0"
-    />
-    <div v-if="showDropDown" id="drop-down">
+  <div class="whole-engine">
+    <div id="input-and-button" ref="inputFieldAndButton">
+      <InputText
+        id="input-field"
+        v-model="inputted"
+        type="text"
+        placeholder="Search the blockchain"
+        @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
+        @focus="showDropDown = inputted.length > 0"
+      />
+      <div
+        id="searchbutton"
+        :class="barStyle"
+        @click="userFeelsLucky()"
+      >
+        <FontAwesomeIcon :icon="faMagnifyingGlass" />
+      </div>
+    </div>
+    <div v-if="showDropDown" id="drop-down" ref="dropDown">
       <div id="filter-bar">
         <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
         <MultiSelect
@@ -587,28 +632,57 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         </div>
       </div>
     </div>
-  </label>
+  </div>
 </template>
 
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-#whole-engine {
-  width: v-bind(engineWidth);
+.whole-engine {
+  position: relative;
 }
 
-#input-field {
-  display: block;
-  width: v-bind(inputWidth);
-  height: v-bind(inputHeight);
+#input-and-button {
+  display: flex;
+
+  #input-field {
+    display: block;
+    width: v-bind(inputWidth);
+    height: v-bind(inputHeight);
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    background-color: var(--searchbar-background);
+    color: var(--text-color)
+  }
+  #searchbutton {
+    display: flex;
+    width: v-bind(searchButtonSize);
+    height: v-bind(searchButtonSize);
+    justify-content: center;
+    align-items: center;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    &.gaudy {
+      background-color: var(--button-color-active);
+      font-size: 18px;
+    }
+    &.discreet {
+      background-color: var(--searchbar-background);
+      font-size: 15px;
+    }
+  }
 }
 
 #drop-down {
   @include main.container;
   position: absolute;
   z-index: 256;
-  width: v-bind(dropDownWidth);
+  left: 0;
+  right: v-bind(searchButtonSize);
+  background-color: var(--searchbar-background);
   padding: 4px;
 
   #panel-of-results {

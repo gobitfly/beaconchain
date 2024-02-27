@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { Categories, ResultTypes } from '~/types/searchengine'
+import { Categories, ResultTypes, type SearchBarStyle } from '~/types/searchengine'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({ location: { type: String, required: true } })
 
-let width : number
-let height : number
+let searchBarStyle : SearchBarStyle
 
 switch (props.location) {
   case 'header' :
-    width = 460
-    height = 34
+    searchBarStyle = 'discreet'
     break
   case 'page' :
-    width = 735
-    height = 40
+    searchBarStyle = 'gaudy'
     break
 }
 
@@ -87,17 +84,9 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
 
 <template>
   <BcSearchEngine
-    id="main-bar"
     :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
-    :width="width"
-    :height="height"
+    :bar-style="searchBarStyle"
     @enter="redirectToRelevantPage"
     @select="redirectToRelevantPage"
   />
 </template>
-
-<style lang="scss" scoped>
-#main-bar{
-
-}
-</style>

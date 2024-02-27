@@ -4,6 +4,7 @@
     <div id="searchbar">
       <BcMainSearchBar location="page" />
     </div>
+    <br><br><br>
   </BcPageWrapper>
 </template>
 

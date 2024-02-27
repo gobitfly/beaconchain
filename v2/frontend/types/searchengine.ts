@@ -1,5 +1,7 @@
 import { ChainIDs } from '~/types/networks'
 
+export type SearchBarStyle = 'discreet' | 'gaudy'
+
 export enum Categories {
   Tokens = 'tokens',
   NFTs = 'nfts',
