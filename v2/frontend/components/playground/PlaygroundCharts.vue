@@ -12,6 +12,8 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 
+import { type ChartData } from '~/types/api/common'
+
 use([
   CanvasRenderer,
   LineChart,
@@ -24,118 +26,130 @@ use([
 
 const { t: $t } = useI18n()
 
-// TODO: Extend data to way more data points
-const dataSetAll = [85, 85, 90, 67.5, 80, 45, 95]
-const dataSetHetzner = [80, 75, 85, 85, 80, 0, 90]
-const dataSetOVH = [90, 95, 95, 50, 80, 90, 100]
+const chartData = ref<ChartData<number> | null>(null)
 
-// TODO: Replace with numeric values and provide a simple formatter
-const labels = ['22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393', '22.Aug\nEpoch 141393']
+onMounted(async () => {
+  const res = await $fetch<ChartData<number>>('./mock/dashboard/summaryChart.json')
+  chartData.value = res
+})
 
-const option = ref({
-  height: 400,
-
+const title = {
+  text: $t('dashboard.validator.summary.chart.title'),
+  left: 'center',
+  textAlign: 'center',
   textStyle: {
-    fontFamily: 'Roboto',
-    fontSize: 14,
-    fontWeight: 300,
+    fontSize: 24,
+    fontWeight: 500,
     color: '#f0f0f0'
+  }
+}
+
+// TODO: retrieve from css?
+const textStyle = {
+  fontFamily: 'Roboto',
+  fontSize: 14,
+  fontWeight: 300,
+  color: '#f0f0f0'
+}
+
+const color = ['#f0f0f0', '#e6194b', '#46f0f0', '#bcf60c', '#4363d8', '#ffe119', '#f032e6', '#3cb44b', '#911eb4', '#f58231', '#87ceeb', '#e6beff', '#40e0d0', '#fabebe', '#aaffc3', '#ffd8b1', '#fffac8', '#daa520', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#a0522d', '#008080', '#9a6324', '#800000', '#808000', '#000075', '#808080', '#708090', '#ffdb58']
+
+// TODO: Styling
+const legend = {
+  orient: 'horizontal',
+  bottom: 50,
+  textStyle: {
+    color: '#f0f0f0',
+    fontSize: 14,
+    fontWeight: 'bold'
+  }
+}
+
+// TODO: Styling
+const tooltip = {
+  order: 'valueDesc',
+  trigger: 'axis'
+}
+
+// TODO: Styling and default values
+const dataZoom = [
+  {
+    type: 'inside',
+    start: 0,
+    end: 20
+  },
+  {
+    start: 0,
+    end: 20
+  }
+]
+
+const yAxis = {
+  name: $t('dashboard.validator.summary.chart.yAxis'),
+  nameLocation: 'center',
+  nameTextStyle: {
+    padding: [0, 0, 35, 0]
   },
 
-  color: ['#f0f0f0', '#e6194b', '#46f0f0', '#bcf60c', '#4363d8', '#ffe119', '#f032e6', '#3cb44b', '#911eb4', '#f58231', '#87ceeb', '#e6beff', '#40e0d0', '#fabebe', '#aaffc3', '#ffd8b1', '#fffac8', '#daa520', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#a0522d', '#008080', '#9a6324', '#800000', '#808000', '#000075', '#808080', '#708090', '#ffdb58'],
+  type: 'value',
+  minInterval: 50,
+  silent: true,
 
-  title: {
-    text: $t('dashboard.validator.summary.chart.title'),
-    left: 'center',
-    textAlign: 'center',
-    textStyle: {
-      fontSize: 24,
-      fontWeight: 500,
-      color: '#f0f0f0'
-    }
-  },
+  axisLabel: {
+    formatter: '{value} %',
+    fontSize: 14
+  }
+}
 
-  xAxis: {
-    type: 'category',
-    data: labels,
-    boundaryGap: false,
+interface SeriesObject {
+  data: number[];
+  type: string;
+  name: string;
+}
 
-    axisLabel: {
-      fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
-      lineHeight: 20
-    },
-
-    axisLine: {
-      lineStyle: {
-        color: '#f0f0f0'
+const option = computed(() => {
+  const series: SeriesObject[] = []
+  if (chartData.value?.series) {
+    chartData.value.series.forEach((element) => {
+      const newObj: SeriesObject = {
+        data: element.data,
+        type: 'line',
+        name: 'Group ' + element.id // TODO: Use cached group names
       }
-    }
-  },
+      series.push(newObj)
+    })
+  }
 
-  yAxis: {
-    name: $t('dashboard.validator.summary.chart.yAxis'),
-    nameLocation: 'center',
-    nameTextStyle: { // TODO: retrieve from css?
-      padding: [0, 0, 35, 0]
+  return {
+    height: 400,
+
+    title,
+    textStyle,
+    color,
+    legend,
+    tooltip,
+    dataZoom,
+
+    xAxis: {
+      type: 'category',
+      data: chartData.value?.categories,
+      boundaryGap: false,
+
+      axisLabel: {
+        fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
+        lineHeight: 20
+      },
+
+      axisLine: {
+        lineStyle: {
+          color: '#f0f0f0'
+        }
+      }
     },
 
-    type: 'value',
-    minInterval: 50,
-    silent: true,
-
-    axisLabel: {
-      formatter: '{value} %',
-      fontSize: 14
-    }
-  },
-
-  // TODO: Styling
-  legend: {
-    orient: 'horizontal',
-    bottom: 50,
-    textStyle: {
-      color: '#f0f0f0',
-      fontSize: 14,
-      fontWeight: 'bold'
-    }
-  },
-
-  // TODO: Styling
-  tooltip: {
-    order: 'valueDesc',
-    trigger: 'axis'
-  },
-
-  // TODO: Styling
-  dataZoom: [
-    {
-      type: 'inside',
-      start: 0,
-      end: 20
-    },
-    {
-      start: 0,
-      end: 20
-    }
-  ],
-
-  series: [
-    {
-      data: dataSetAll,
-      type: 'line',
-      name: 'All Groups' // TODO: Translation
-    },
-    {
-      data: dataSetHetzner,
-      type: 'line',
-      name: 'Hetzner' // TODO: Use cached group names on dashboard
-    },
-    {
-      data: dataSetOVH,
-      type: 'line',
-      name: 'OVH' // TODO: Use cached group names on dashboard
-    }
-  ]
+    yAxis,
+    series
+  }
 })
 </script>
 
