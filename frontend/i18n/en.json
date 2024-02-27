@@ -1,5 +1,6 @@
 {
   "common": {
+    "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator"
   },
@@ -34,6 +35,12 @@
         "proposal_luck": "Proposal Luck",
         "sync_committee_luck": "Sync C. Luck",
         "total_apr": "Total APR"
+      },
+      "summary": {
+        "chart":{
+          "title": "Summary",
+          "yAxis": "Efficiency"
+        }
       }
     }
   },
