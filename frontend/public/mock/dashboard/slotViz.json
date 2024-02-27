@@ -39,13 +39,11 @@
         {
           "slot": 104,
           "status": "scheduled",
-          "proposals": [
-            {
-              "status": "scheduled",
-              "validator": 1234,
-              "duty_object": 4321
-            }
-          ]
+          "proposal": {
+            "status": "scheduled",
+            "validator": 1234,
+            "duty_object": 4321
+          }
         },
         {
           "slot": 105,
@@ -175,35 +173,29 @@
         {
           "slot": 70,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "failed",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ]
+          "proposal": {
+            "status": "failed",
+            "validator": 1234,
+            "duty_object": 5321
+          }
         },
         {
           "slot": 71,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "success",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ]
+          "proposal": {
+            "status": "success",
+            "validator": 1234,
+            "duty_object": 5321
+          }
         },
         {
           "slot": 72,
           "status": "missed",
-          "proposals": [
-            {
-              "status": "success",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ]
+          "proposal": {
+            "status": "success",
+            "validator": 1234,
+            "duty_object": 5321
+          }
         },
         {
           "slot": 73,
@@ -354,13 +346,11 @@
         {
           "slot": 43,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "success",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ],
+          "proposal": {
+            "status": "success",
+            "validator": 1234,
+            "duty_object": 5321
+          },
           "slashing": [
             {
               "status": "success",
@@ -381,13 +371,11 @@
         {
           "slot": 45,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "success",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ],
+          "proposal": {
+            "status": "success",
+            "validator": 1234,
+            "duty_object": 5321
+          },
           "attestations": {
             "success_count": 3,
             "failed_count": 5
@@ -404,13 +392,11 @@
         {
           "slot": 47,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "failed",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ],
+          "proposal": {
+            "status": "failed",
+            "validator": 1234,
+            "duty_object": 5321
+          },
           "slashing": [
             {
               "status": "success",
@@ -520,13 +506,11 @@
         {
           "slot": 6,
           "status": "missed",
-          "proposals": [
-            {
-              "status": "failed",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ],
+          "proposal": {
+            "status": "failed",
+            "validator": 1234,
+            "duty_object": 5321
+          },
           "slashing": [
             {
               "status": "success",
@@ -558,13 +542,11 @@
         {
           "slot": 11,
           "status": "proposed",
-          "proposals": [
-            {
-              "status": "failed",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ],
+          "proposal": {
+            "status": "failed",
+            "validator": 1234,
+            "duty_object": 5321
+          },
           "slashing": [
             {
               "status": "success",
@@ -612,13 +594,11 @@
         {
           "slot": 17,
           "status": "missed",
-          "proposals": [
-            {
-              "status": "failed",
-              "validator": 1234,
-              "duty_object": 5321
-            }
-          ]
+          "proposal": {
+            "status": "failed",
+            "validator": 1234,
+            "duty_object": 5321
+          }
         },
         {
           "slot": 18,

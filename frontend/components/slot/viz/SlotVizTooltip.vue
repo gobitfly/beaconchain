@@ -15,7 +15,7 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const hasDuties = !!slot?.proposals?.length || !!slot?.slashing?.length || !!slot?.attestations || !!slot?.sync
+  const hasDuties = !!slot?.proposal || !!slot?.slashing?.length || !!slot?.attestations || !!slot?.sync
   const tooltipLayout: TooltipLayout = hasDuties ? 'dark' : 'default'
   if (hasDuties) {
     const addActiveDuty = (type: SlotVizIcons, duty: VDBSlotVizActiveDuty) => {
@@ -37,7 +37,7 @@ const data = computed(() => {
       subRows.push({ class: duty.status, icon: type, dutyText, count: 1, dutySubText, validator: duty.validator, dutySubLink, duty_object: duty.duty_object })
     }
 
-    slot.proposals?.forEach(duty => addActiveDuty('proposal', duty))
+    slot.proposal && addActiveDuty('proposal', slot.proposal)
     slot.slashing?.forEach(duty => addActiveDuty('slashing', duty))
 
     const addPassiveDuty = (type: SlotVizIcons, duty?: VDBSlotVizPassiveDuty) => {

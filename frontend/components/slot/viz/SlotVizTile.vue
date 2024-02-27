@@ -24,9 +24,9 @@ const data = computed(() => {
   if (slot.status === 'scheduled') {
     inner = 'pending'
   } else {
-    const hasFailed = !!slot.attestations?.failed_count || !!slot.sync?.failed_count || [...slot.proposals ?? [], ...slot.slashing ?? []].find(duty => duty.status === 'failed')
-    const hasSuccess = !!slot.attestations?.success_count || !!slot.sync?.success_count || [...slot.proposals ?? [], ...slot.slashing ?? []].find(duty => duty.status === 'success')
-    const hasPending = !!slot.attestations?.pending_count || !!slot.sync?.pending_count || [...slot.proposals ?? [], ...slot.slashing ?? []].find(duty => duty.status === 'scheduled')
+    const hasFailed = !!slot.attestations?.failed_count || !!slot.sync?.failed_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'failed')
+    const hasSuccess = !!slot.attestations?.success_count || !!slot.sync?.success_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'success')
+    const hasPending = !!slot.attestations?.pending_count || !!slot.sync?.pending_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'scheduled')
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'
     } else if (hasFailed && hasSuccess) {
@@ -40,7 +40,7 @@ const data = computed(() => {
     }
   }
 
-  if (slot.proposals?.length) {
+  if (slot.proposal) {
     icons.push('proposal')
   }
   if (slot.slashing?.length) {
