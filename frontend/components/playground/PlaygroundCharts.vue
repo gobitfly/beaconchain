@@ -156,6 +156,7 @@ const option = computed(() => {
 
 <style lang="scss">
 .chart-container {
+  background-color: var(--container-background);
   padding-top: var(--padding-large);
   width: 100%;
   height: 625px;
