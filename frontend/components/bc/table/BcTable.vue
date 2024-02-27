@@ -14,9 +14,12 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
 
-const expandedRows = ref<any[]>([])
+const expandedRows = ref<Record<any, boolean>>({ })
 
 const allExpanded = computed(() => {
+  if (!props.expandable) {
+    return false
+  }
   return !!props.data?.data.every((item) => {
     return !!expandedRows.value[item[props.dataKey]]
   })
@@ -24,15 +27,25 @@ const allExpanded = computed(() => {
 
 const toggleAll = () => {
   const wasExpanded = allExpanded.value
-  const rows = { ...expandedRows.value }
   props.data?.data.forEach((item) => {
     if (wasExpanded) {
-      delete rows[item[props.dataKey]]
+      delete expandedRows.value[item[props.dataKey]]
     } else {
-      rows[item[props.dataKey]] = item
+      expandedRows.value[item[props.dataKey]] = true
     }
   })
-  expandedRows.value = rows
+  expandedRows.value = { ...expandedRows.value }
+}
+
+const toggleItem = (item: any) => {
+  if (expandedRows.value[item[props.dataKey]]) {
+    if (expandedRows.value) {
+      delete expandedRows.value[item[props.dataKey]]
+    }
+  } else {
+    expandedRows.value[item[props.dataKey]] = true
+  }
+  expandedRows.value = { ...expandedRows.value }
 }
 
 </script>
@@ -41,22 +54,20 @@ const toggleAll = () => {
     v-model:expandedRows="expandedRows"
     sort-mode="multiple"
     lazy
-    :total-records="props.data?.paging?.total_count"
-    :rows="pageSize"
     :value="props.data?.data"
     :data-key="dataKey"
   >
     <Column v-if="props.expandable" expander class="expander">
       <template #header>
-        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click="toggleAll" />
+        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click.stop.prevent="toggleAll" />
       </template>
-      <template #rowtogglericon="slotProps">
-        <IconChevron class="toggle" :direction="slotProps.rowExpanded ? 'bottom' : 'right'" />
+      <template #body="slotProps">
+        <IconChevron class="toggle mine" :direction="expandedRows[slotProps.data[props.dataKey]] ? 'bottom' : 'right'" @click.stop.prevent="toggleItem(slotProps.data)" />
       </template>
     </Column>
     <slot />
     <template #expansion="slotProps">
-      <slot name="expansion" v-bind="slotProps" />
+      <slot v-if="expandedRows[slotProps.data[props.dataKey]]" name="expansion" v-bind="slotProps" />
     </template>
     <template #footer>
       <BcTablePager
