@@ -83,7 +83,7 @@ type VDBGroupSummaryData struct {
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[[]HighchartsSeries]
+type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
 
 // ------------------------------------------------------------
 // Rewards Tab
@@ -118,7 +118,7 @@ type VDBGroupRewardsData struct {
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
-type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[[]HighchartsSeries]
+type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
 
 // Duties Modal
 type VDBEpochDutiesItem struct {
