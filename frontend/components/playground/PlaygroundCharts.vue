@@ -72,17 +72,28 @@ const tooltip = {
 }
 
 // TODO: Styling and default values
-const dataZoom = [
-  {
-    type: 'inside',
-    start: 0,
-    end: 20
+const dataZoom = {
+  type: 'slider',
+  start: 80,
+  end: 100
+}
+
+const xAxis = {
+  type: 'category',
+  data: chartData.value?.categories,
+  boundaryGap: false,
+
+  axisLabel: {
+    fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
+    lineHeight: 20
   },
-  {
-    start: 0,
-    end: 20
+
+  axisLine: {
+    lineStyle: {
+      color: '#f0f0f0'
+    }
   }
-]
+}
 
 const yAxis = {
   name: $t('dashboard.validator.summary.chart.yAxis'),
@@ -130,23 +141,7 @@ const option = computed(() => {
     tooltip,
     dataZoom,
 
-    xAxis: {
-      type: 'category',
-      data: chartData.value?.categories,
-      boundaryGap: false,
-
-      axisLabel: {
-        fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
-        lineHeight: 20
-      },
-
-      axisLine: {
-        lineStyle: {
-          color: '#f0f0f0'
-        }
-      }
-    },
-
+    xAxis,
     yAxis,
     series
   }
