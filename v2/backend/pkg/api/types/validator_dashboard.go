@@ -243,3 +243,20 @@ type VDBPostReturnData struct {
 	Network   uint64    `json:"network"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type VDBPostValidatorsData struct {
+	PublicKey string `json:"public_key"`
+	GroupId   uint64 `json:"group_id"`
+}
+
+type VDBGetValidatorsData struct {
+	// TODO
+}
+
+type VDBPostPublicIdData struct {
+	AccessToken   string `json:"access_token"`
+	Name          string `json:"name"`
+	ShareSettings struct {
+		GroupNames bool `json:"group_names"`
+	} `json:"share_settings"`
+}
