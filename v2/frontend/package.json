@@ -46,11 +46,13 @@
     "@fortawesome/vue-fontawesome": "^3.0.6",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@pinia/nuxt": "^0.5.1",
+    "echarts": "^5.5.0",
     "git-describe": "^4.1.1",
     "lodash-es": "^4.17.21",
     "pinia": "^2.1.7",
     "primevue": "^3.46.0",
-    "vee-validate": "^4.12.4"
+    "vee-validate": "^4.12.4",
+    "vue-echarts": "^6.6.9"
   },
   "overrides": {
     "vue": "^3.4.14"
