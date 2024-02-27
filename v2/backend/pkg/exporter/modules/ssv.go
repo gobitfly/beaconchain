@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -101,7 +102,7 @@ func saveSSV(res *SSVExporterResponse) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

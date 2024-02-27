@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sort"
 	"strconv"
@@ -72,7 +73,7 @@ func (ese *EthStoreExporter) reexportDay(day string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -96,7 +97,7 @@ func (ese *EthStoreExporter) exportDay(day string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

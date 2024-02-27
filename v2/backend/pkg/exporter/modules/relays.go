@@ -166,7 +166,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
