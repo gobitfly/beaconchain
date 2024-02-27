@@ -390,12 +390,12 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	pagingParams := checkPagingParams(&err, r)
+	sortingParams := checkSortingParams[types.VDBSummaryTableColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
 	}
-	var sort []types.Sort[types.VDBSummaryTableColumn]
-	data, paging, err := h.dai.GetValidatorDashboardSummary(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardSummary(dashboardId, pagingParams.cursor, sortingParams, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -448,13 +448,14 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	var err error
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
-	paging := checkPagingParams(&err, r)
+	pagingParams := checkPagingParams(&err, r)
+	sortingParams := checkSortingParams[types.VDBRewardsTableColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
 	}
 
-	TODO_RemoveThisLine(dashboardId, paging)
+	TODO_RemoveThisLine(dashboardId, pagingParams, sortingParams)
 
 	response := types.ApiResponse{
 		Data: types.InternalGetValidatorDashboardRewardsResponse{},
@@ -489,10 +490,15 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 }
 
 func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
-	var dashboardId, limit uint64
-	var cursor, search string
-	var sort []types.Sort[types.VDBBlocksTableColumn]
-	data, paging, err := h.dai.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+	var err error
+	var dashboardId uint64
+	pagingParams := checkPagingParams(&err, r)
+	sortingParams := checkSortingParams[types.VDBBlocksTableColumn](&err, r)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	data, paging, err := h.dai.GetValidatorDashboardBlocks(dashboardId, pagingParams.cursor, sortingParams, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return

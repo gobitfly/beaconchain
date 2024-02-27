@@ -52,8 +52,6 @@ const (
 type Paging struct {
 	cursor string
 	limit  uint64
-	order  string
-	sort   string
 	search string
 }
 
@@ -190,8 +188,6 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
 		limit:  defaultReturnLimit,
-		order:  defaultSortOrder,
-		sort:   q.Get("sort"),
 		search: q.Get("search"),
 	}
 
@@ -204,17 +200,74 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 		}
 	}
 
-	if order := q.Get("order"); order != "" {
-		paging.order = order
-	}
-	if paging.order != sortOrderAscending && paging.order == sortOrderDescending {
-		joinErr(handlerErr, fmt.Sprintf("invalid sorting order: %s", paging.order))
-	}
 	paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
-	paging.sort = checkName(handlerErr, paging.sort, 0)
 	paging.search = checkName(handlerErr, paging.search, 0)
 
 	return paging
+}
+
+func checkSortColumn[T ~int](handlerErr *error, column string) (T, bool) {
+	var arr []string
+	switch any(T(0)).(type) {
+	case types.VDBSummaryTableColumn:
+		arr = types.VDBSummaryTableColumnSortNames
+	case types.VDBRewardsTableColumn:
+		arr = types.VDBRewardsTableColumnSortNames
+	case types.VDBBlocksTableColumn:
+		arr = types.VDBBlocksTableColumnSortNames
+	case types.VDBWithdrawalsTableColumn:
+		arr = types.VDBWithdrawalsTableColumnSortNames
+	}
+	i := -1
+	for _, v := range arr {
+		i++
+		if v == column {
+			break
+		}
+	}
+	if i == -1 {
+		joinErr(handlerErr, fmt.Sprintf("given value '"+column+"' for parameter 'sort' is not a valid column name for sorting"))
+	}
+	return T(i), i != -1
+}
+
+func checkSortOrder(order string) (bool, bool) {
+	switch order {
+	case "":
+		return defaultSortOrder == sortOrderDescending, true
+	case sortOrderAscending:
+		return false, true
+	case sortOrderDescending:
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+func checkSortingParams[T ~int](handlerErr *error, r *http.Request) []types.Sort[T] {
+	q := r.URL.Query()
+	sort_queries := strings.Split(q.Get("sort"), ",")
+	var sorts []types.Sort[T]
+	for _, v := range sort_queries {
+		sort_split := strings.Split(v, ":")
+		if len(sort_split) > 2 {
+			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'")
+			continue
+		}
+		if len(sort_split) == 1 {
+			sort_split = append(sort_split, "")
+		}
+		sort, success := checkSortColumn[T](handlerErr, sort_split[0])
+		if !success {
+			continue
+		}
+		order, success := checkSortOrder(sort_split[1])
+		if !success {
+			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, allowed order values are: "+sortOrderAscending+", "+sortOrderDescending+"")
+		}
+		sorts = append(sorts, types.Sort[T]{Column: sort, Desc: order})
+	}
+	return sorts
 }
 
 func checkValidatorList(handlerErr *error, validators string) []string {
