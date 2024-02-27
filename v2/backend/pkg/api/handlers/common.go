@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -206,51 +207,35 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 	return paging
 }
 
-func checkSortColumn[T ~int](handlerErr *error, column string) (T, bool) {
-	var arr []string
-	switch any(T(0)).(type) {
-	case types.VDBSummaryTableColumn:
-		arr = types.VDBSummaryTableColumnSortNames
-	case types.VDBRewardsTableColumn:
-		arr = types.VDBRewardsTableColumnSortNames
-	case types.VDBBlocksTableColumn:
-		arr = types.VDBBlocksTableColumnSortNames
-	case types.VDBWithdrawalsTableColumn:
-		arr = types.VDBWithdrawalsTableColumnSortNames
-	case types.VDBDutiesTableColumn:
-		arr = types.VDBDutiesTableColumnSortNames
-	}
-	i := -1
-	for _, v := range arr {
-		i++
-		if v == column {
-			break
-		}
-	}
-	if i == -1 {
-		joinErr(handlerErr, fmt.Sprintf("given value '"+column+"' for parameter 'sort' is not a valid column name for sorting"))
-	}
-	return T(i), i != -1
+func checkSortColumn[T types.ColEnumFactory[T]](column string) (T, error) {
+	var c T
+    names := c.GetColNames()
+    index := slices.Index(names, column)
+	var err error
+    if index == -1 {
+        err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+    }
+    return c.NewFromIndex(index), err
 }
 
-func checkSortOrder(order string) (bool, bool) {
+func checkSortOrder(order string) (bool, error) {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending, true
+		return defaultSortOrder == sortOrderDescending, nil
 	case sortOrderAscending:
-		return false, true
+		return false, nil
 	case sortOrderDescending:
-		return true, true
+		return true, nil
 	default:
-		return false, false
+		return false, errors.New("given value '"+order+"' for parameter 'sort' is not valid, allowed order values are: "+sortOrderAscending+", "+sortOrderDescending+"")
 	}
 }
 
-func checkSortingParams[T ~int](handlerErr *error, r *http.Request) []types.Sort[T] {
+func checkSortingParams[T types.ColEnumFactory[T]](handlerErr *error, r *http.Request) []types.Sort[T] {
 	q := r.URL.Query()
-	sort_queries := strings.Split(q.Get("sort"), ",")
-	var sorts []types.Sort[T]
-	for _, v := range sort_queries {
+	sortQueries := strings.Split(q.Get("sort"), ",")
+	sorts := make([]types.Sort[T], 0, len(sortQueries))
+	for _, v := range sortQueries {
 		sort_split := strings.Split(v, ":")
 		if len(sort_split) > 2 {
 			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'")
@@ -259,13 +244,14 @@ func checkSortingParams[T ~int](handlerErr *error, r *http.Request) []types.Sort
 		if len(sort_split) == 1 {
 			sort_split = append(sort_split, "")
 		}
-		sort, success := checkSortColumn[T](handlerErr, sort_split[0])
-		if !success {
+		sort, err := checkSortColumn[T](sort_split[0])
+		if err != nil {
+			joinErr(handlerErr, err.Error())
 			continue
 		}
-		order, success := checkSortOrder(sort_split[1])
-		if !success {
-			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, allowed order values are: "+sortOrderAscending+", "+sortOrderDescending+"")
+		order, err := checkSortOrder(sort_split[1])
+		if err != nil {
+			joinErr(handlerErr, err.Error())
 		}
 		sorts = append(sorts, types.Sort[T]{Column: sort, Desc: order})
 	}
