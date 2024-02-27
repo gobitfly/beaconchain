@@ -21,12 +21,39 @@ type DataAccessInterface interface {
 
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error)
 	GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error)
+	RemoveValidatorDashboardOverview(userId uint64, dashboardId uint64) error
+
+	CreateValidatorDashboardGroup(userId uint64, dashboardId uint64, name string) (t.VDBOverviewGroup, error)
+	RemoveValidatorDashboardGroup(userId uint64, dashboardId uint64, groupId uint64) error
+
+	AddValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
+	GetValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error)
+	RemoveValidatorDashboardValidators(userId uint64, dashboardId uint64, validators []string) error
+
+	CreateValidatorDashboardPublicId(userId uint64, dashboardId uint64, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
+	UpdateValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
+	RemoveValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string) error
+
 	GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error)
 
 	GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error)
+	GetValidatorDashboardSummaryChart(dashboardId uint64) ([]t.HighchartsSeries, error)
+
+	GetValidatorDashboardRewards(dashboardId uint64, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
+	GetValidatorDashboardGroupRewards(dashboardId uint64, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
+	GetValidatorDashboardRewardsChart(dashboardId uint64) ([]t.HighchartsSeries, error)
+
+	GetValidatorDashboardDuties(dashboardId uint64, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
 
 	GetValidatorDashboardBlocks(dashboardId uint64, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
+
+	GetValidatorDashboardHeatmap(dashboardId uint64) (t.VDBHeatmap, error)
+	GetValidatorDashboardGroupHeatmap(dashboardId uint64, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error)
+
+	GetValidatorDashboardElDeposits(dashboardId uint64, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error)
+	GetValidatorDashboardClDeposits(dashboardId uint64, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error)
+	GetValidatorDashboardWithdrawals(dashboardId uint64, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
 
 	CloseDataAccessService()
 }
@@ -148,6 +175,51 @@ func (d DataAccessService) GetValidatorDashboardOverview(userId uint64, dashboar
 	return d.dummy.GetValidatorDashboardOverview(userId, dashboardId)
 }
 
+func (d DataAccessService) RemoveValidatorDashboardOverview(userId uint64, dashboardId uint64) error {
+	// TODO @recy21
+	return d.dummy.RemoveValidatorDashboardOverview(userId, dashboardId)
+}
+
+func (d DataAccessService) CreateValidatorDashboardGroup(userId uint64, dashboardId uint64, name string) (t.VDBOverviewGroup, error) {
+	// TODO @recy21
+	return d.dummy.CreateValidatorDashboardGroup(userId, dashboardId, name)
+}
+
+func (d DataAccessService) RemoveValidatorDashboardGroup(userId uint64, dashboardId uint64, groupId uint64) error {
+	// TODO @recy21
+	return d.dummy.RemoveValidatorDashboardGroup(userId, dashboardId, groupId)
+}
+
+func (d DataAccessService) AddValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
+	// TODO @recy21
+	return d.dummy.AddValidatorDashboardValidators(userId, dashboardId, groupId, validators)
+}
+
+func (d DataAccessService) GetValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardValidators(userId, dashboardId, groupId, cursor, sort, search, limit)
+}
+
+func (d DataAccessService) RemoveValidatorDashboardValidators(userId uint64, dashboardId uint64, validators []string) error {
+	// TODO @recy21
+	return d.dummy.RemoveValidatorDashboardValidators(userId, dashboardId, validators)
+}
+
+func (d DataAccessService) CreateValidatorDashboardPublicId(userId uint64, dashboardId uint64, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
+	// TODO @recy21
+	return d.dummy.CreateValidatorDashboardPublicId(userId, dashboardId, name, showGroupNames)
+}
+
+func (d DataAccessService) UpdateValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
+	// TODO @recy21
+	return d.dummy.UpdateValidatorDashboardPublicId(userId, dashboardId, publicDashboardId, name, showGroupNames)
+}
+
+func (d DataAccessService) RemoveValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string) error {
+	// TODO @recy21
+	return d.dummy.RemoveValidatorDashboardPublicId(userId, dashboardId, publicDashboardId)
+}
+
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSlotViz(dashboardId)
@@ -163,7 +235,57 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId uint64,
 	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 }
 
+func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardSummaryChart(dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardRewards(dashboardId uint64, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardRewards(dashboardId, cursor, sort, search, limit)
+}
+
+func (d DataAccessService) GetValidatorDashboardGroupRewards(dashboardId uint64, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
+}
+
+func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardDuties(dashboardId uint64, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, cursor, sort, search, limit)
+}
+
 func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId uint64, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+}
+
+func (d DataAccessService) GetValidatorDashboardHeatmap(dashboardId uint64) (t.VDBHeatmap, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardHeatmap(dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId uint64, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
+}
+
+func (d DataAccessService) GetValidatorDashboardElDeposits(dashboardId uint64, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardElDeposits(dashboardId, cursor, search, limit)
+}
+
+func (d DataAccessService) GetValidatorDashboardClDeposits(dashboardId uint64, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardClDeposits(dashboardId, cursor, search, limit)
+}
+
+func (d DataAccessService) GetValidatorDashboardWithdrawals(dashboardId uint64, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
 }

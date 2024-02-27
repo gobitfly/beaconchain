@@ -28,6 +28,13 @@ const (
 	VDBRewardDuty                        // Sort by sum of percentages
 )
 
+type VDBDutiesTableColumn int
+var VDBDutiesTableColumnSortNames = []string{"validator", "reward"}
+const (
+	VDBDutyValidator VDBDutiesTableColumn = iota
+	VDBDutyReward                        // Sort by sum of percentages
+)
+
 type VDBBlocksTableColumn int
 var VDBBlocksTableColumnSortNames = []string{"proposer", "group_id", "epoch", "slot", "block", "age", "status", "reward"}
 const (
@@ -51,3 +58,7 @@ const (
 	VDBWithdrawalRecipient
 	VDBWithdrawalAmount
 )
+
+
+// TODO
+type VDBValidatorsColumn int
