@@ -160,7 +160,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		returnInternalServerError(w, err)
 		return
 	}
-	response := types.ApiResponse{
+	response := types.VDBOverviewResponse{
 		Data: data,
 	}
 
@@ -378,7 +378,7 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 		returnInternalServerError(w, err)
 		return
 	}
-	response := types.ApiResponse{
+	response := types.VDBSlotVizResponse{
 		Data: data,
 	}
 
@@ -400,9 +400,9 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 		returnInternalServerError(w, err)
 		return
 	}
-	response := types.ApiResponse{
+	response := types.VDBSummaryTableResponse{
 		Data:   data,
-		Paging: &paging,
+		Paging: paging,
 	}
 	returnOk(w, response)
 }
@@ -421,7 +421,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 		returnInternalServerError(w, err)
 		return
 	}
-	response := types.ApiResponse{
+	response := types.VDBGroupSummaryResponse{
 		Data: data,
 	}
 	returnOk(w, response)
@@ -438,9 +438,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 
 	TODO_RemoveThisLine(dashboardId)
 
-	response := types.ApiResponse{
-		Data: nil, // apitypes.VDBSummaryChartResponse{},
-	}
+	response := types.VDBSummaryChartResponse{}
 	returnOk(w, response)
 }
 
@@ -482,16 +480,42 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 }
 
 func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+
+	TODO_RemoveThisLine(dashboardId)
+
+	response := types.VDBRewardsChartResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	epoch := checkUint(&err, vars["epoch"], "epoch")
+	pagingParams := checkPagingParams(&err, r)
+	sortingParams := checkSortingParams[types.VDBRewardsTableColumn](&err, r)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+
+	TODO_RemoveThisLine(dashboardId, epoch, pagingParams, sortingParams)
+
+	response := types.VDBEpochDutiesTableResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var dashboardId uint64
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
 	pagingParams := checkPagingParams(&err, r)
 	sortingParams := checkSortingParams[types.VDBBlocksTableColumn](&err, r)
 	if err != nil {
@@ -503,31 +527,87 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 		returnInternalServerError(w, err)
 		return
 	}
-	response := types.ApiResponse{
+	response := types.VDBBlocksTableResponse{
 		Data:   data,
-		Paging: &paging,
+		Paging: paging,
 	}
 	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	TODO_RemoveThisLine(dashboardId)
+
+	response := types.VDBHeatmapResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	groupId := checkGroupId(&err, vars["group_id"])
+	epoch := checkUint(&err, vars["epoch"], "epoch")
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	TODO_RemoveThisLine(dashboardId, groupId, epoch)
+
+	response := types.VDBHeatmapTooltipResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	pagingParams := checkPagingParams(&err, r)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	TODO_RemoveThisLine(dashboardId, pagingParams)
+
+	response := types.VDBExecutionDepositsTableResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	pagingParams := checkPagingParams(&err, r)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	TODO_RemoveThisLine(dashboardId, pagingParams)
+
+	response := types.VDBConsensusDepositsTableResponse{}
+	returnOk(w, response)
 }
 
 func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardId(&err, vars["dashboard_id"])
+	pagingParams := checkPagingParams(&err, r)
+	sortingParams := checkSortingParams[types.VDBWithdrawalsTableColumn](&err, r)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	TODO_RemoveThisLine(dashboardId, pagingParams, sortingParams)
+
+	response := types.VDBWithdrawalsTableResponse{}
+	returnOk(w, response)
 }
 
 func TODO_RemoveThisLine(args ...interface{}) {

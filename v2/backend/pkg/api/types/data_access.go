@@ -11,7 +11,7 @@ type Sort[T ~int] struct {
 
 type VDBSummaryTableColumn int
 // prob rather use maps
-var VDBSummaryTableColumnSortNames = []string{"group", "efficiencyDay", "efficiencyWeek", "efficiencyMonth", "efficiencyTotal", "validators"}
+var VDBSummaryTableColumnSortNames = []string{"group_id", "efficiency_day", "efficiency_week", "efficiency_month", "efficiency_total", "validators"}
 const (
 	VDBSummaryGroup VDBSummaryTableColumn = iota
 	VDBSummaryEfficiencyDay
@@ -29,7 +29,7 @@ const (
 )
 
 type VDBBlocksTableColumn int
-var VDBBlocksTableColumnSortNames = []string{"proposer", "group", "epoch", "slot", "block", "age", "status", "proposerReward"}
+var VDBBlocksTableColumnSortNames = []string{"proposer", "group_id", "epoch", "slot", "block", "age", "status", "reward"}
 const (
 	VDBBlockProposer VDBBlocksTableColumn = iota
 	VDBBlockGroup
@@ -42,7 +42,7 @@ const (
 )
 
 type VDBWithdrawalsTableColumn int
-var VDBWithdrawalsTableColumnSortNames = []string{"epoch", "age", "index", "group", "recipient", "amount"}
+var VDBWithdrawalsTableColumnSortNames = []string{"epoch", "age", "index", "group_id", "recipient", "amount"}
 const (
 	VDBWithdrawalEpoch VDBWithdrawalsTableColumn = iota
 	VDBWithdrawalAge
