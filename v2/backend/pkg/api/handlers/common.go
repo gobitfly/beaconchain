@@ -209,13 +209,13 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 
 func checkSortColumn[T types.ColEnumFactory[T]](column string) (T, error) {
 	var c T
-    names := c.GetColNames()
-    index := slices.Index(names, column)
+	names := c.GetColNames()
+	index := slices.Index(names, column)
 	var err error
-    if index == -1 {
-        err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
-    }
-    return c.NewFromIndex(index), err
+	if index == -1 {
+		err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+	}
+	return c.NewFromIndex(index), err
 }
 
 func checkSortOrder(order string) (bool, error) {
@@ -227,7 +227,7 @@ func checkSortOrder(order string) (bool, error) {
 	case sortOrderDescending:
 		return true, nil
 	default:
-		return false, errors.New("given value '"+order+"' for parameter 'sort' is not valid, allowed order values are: "+sortOrderAscending+", "+sortOrderDescending+"")
+		return false, errors.New("given value '" + order + "' for parameter 'sort' is not valid, allowed order values are: " + sortOrderAscending + ", " + sortOrderDescending + "")
 	}
 }
 
