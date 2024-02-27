@@ -33,7 +33,6 @@ const onInput = (value: string) => {
       </div>
       <div class="side right">
         <slot id="header-right" />
-        <!--TODO: replace input with styled input-->
         <BcContentFilter v-if="props.searchPlaceholder && tableIsShown" :search-placeholder="props.searchPlaceholder" @filter-changed="onInput" />
       </div>
     </div>

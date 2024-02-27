@@ -11,7 +11,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
 
-const pageSizes = [5, 10, 15, 30, 50, 100]
+const pageSizes = [5, 10, 25, 50, 100]
 
 const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
 
@@ -21,7 +21,7 @@ const data = computed(() => {
       mode: 'waiting'
     }
   }
-  if (!props.paging.total_count) {
+  if (props.paging.total_count === undefined) {
     return {
       mode: 'cursor',
       prev_cursor: props.paging.prev_cursor,
@@ -37,7 +37,7 @@ const data = computed(() => {
 })
 
 const next = () => {
-  emit('setCursor', currentOffset.value + props.pageSize)
+  emit('setCursor', Math.min(currentOffset.value + props.pageSize, data.value.lastPage ?? 0))
 }
 
 const prev = () => {

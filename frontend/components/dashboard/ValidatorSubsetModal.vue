@@ -106,15 +106,15 @@ function copyValidatorsToClipboard (): void {
       <span class="subtitle_text">
         {{ caption }}
       </span>
-      <BcContentFilter class="content_filter" @filter-changed="handleEvent" />
+      <BcContentFilter class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="handleEvent" />
     </div>
     <div class="link_container">
-      <span v-for="(v) in shownValidators" :key="v" class="link_list">
-        <NuxtLink :to="`/validator/${v}`" target="blank" class="link">
+      <template v-for="v in shownValidators" :key="v">
+        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
           {{ v }}
         </NuxtLink>
         <span>, </span>
-      </span>
+      </template>
     </div>
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
       <FontAwesomeIcon :icon="faCopy" />
@@ -162,7 +162,7 @@ function copyValidatorsToClipboard (): void {
     overflow-y: auto;
     word-break: break-all;
 
-    .link_list:last-child span:last-child {
+    span:last-child {
       display: none;
     }
   }

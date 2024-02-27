@@ -37,9 +37,12 @@ const groupName = computed(() => {
 <template>
   <div class="validator_column">
     <div class="validators">
-      <NuxtLink v-for="v in props.validators" :key="v" :to="`/validator/${v}`" class="link validator_link">
-        {{ v }}
-      </NuxtLink>
+      <template v-for="v in props.validators" :key="v">
+        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link validator_link" :no-prefetch="true">
+          {{ v }}
+        </NuxtLink>
+        <span>, </span>
+      </template>
     </div>
     <FontAwesomeIcon
       v-if="validators?.length"
@@ -68,8 +71,8 @@ const groupName = computed(() => {
   .validators {
     @include main.truncate-text;
 
-    .validator_link:not(:last-child)::after {
-      content: ", "
+    span:last-child {
+      display: none;
     }
   }
 

@@ -26,7 +26,7 @@
         text-align: left;
         color: var(--container-color);
         background-color: var(--container-background);
-        font-weight: 700;
+        font-weight: var(--standard_text_bold_font_weight);
         transition: box-shadow 0.2s;
 
         padding: 14px 7px;
@@ -130,7 +130,7 @@
         }
 
         > .p-column-title {
-          font-weight: 700;
+          font-weight: var(--standard_text_bold_font_weight);
         }
 
       }

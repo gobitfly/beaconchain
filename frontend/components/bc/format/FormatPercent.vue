@@ -32,7 +32,7 @@ const data = computed(() => {
   label = formatPercent(percent, config)
 
   if (props.colorBreakPoint) {
-    if ((props.base === 0 && percent === 0) || percent >= 80) {
+    if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
       className = 'text-positive'
     } else {
       className = 'text-negative'

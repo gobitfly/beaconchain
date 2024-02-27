@@ -92,50 +92,19 @@ const rowClass = (data:SummaryRow) => {
           </span>
         </template>
       </Column>
-      <Column field="col_1">
-        <template #body="slotProps">
-          <DashboardTableSummaryValue
-            :class="slotProps.data.className"
-            :data="summary"
-            :detail="slotProps.data.details[0]"
-            :property="slotProps.data.prop"
-            :row="props.row"
-          />
-        </template>
-      </Column>
-      <Column v-if="isWideEnough" field="col_2">
-        <template #body="slotProps">
-          <DashboardTableSummaryValue
-            :class="slotProps.data.className"
-            :data="summary"
-            :detail="slotProps.data.details[1]"
-            :property="slotProps.data.prop"
-            :row="props.row"
-          />
-        </template>
-      </Column>
-      <Column v-if="isWideEnough" field="col_3">
-        <template #body="slotProps">
-          <DashboardTableSummaryValue
-            :class="slotProps.data.className"
-            :data="summary"
-            :detail="slotProps.data.details[2]"
-            :property="slotProps.data.prop"
-            :row="props.row"
-          />
-        </template>
-      </Column>
-      <Column v-if="isWideEnough" field="col_4">
-        <template #body="slotProps">
-          <DashboardTableSummaryValue
-            :class="slotProps.data.className"
-            :data="summary"
-            :detail="slotProps.data.details[3]"
-            :property="slotProps.data.prop"
-            :row="props.row"
-          />
-        </template>
-      </Column>
+      <template v-for="(num, i) in 4" :key="i">
+        <Column v-if="!i || isWideEnough" :field="`col_${num}`">
+          <template #body="slotProps">
+            <DashboardTableSummaryValue
+              :class="slotProps.data.className"
+              :data="summary"
+              :detail="slotProps.data.details[i]"
+              :property="slotProps.data.prop"
+              :row="props.row"
+            />
+          </template>
+        </Column>
+      </template>
       <Column field="space_filler">
         <template #body>
           <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->

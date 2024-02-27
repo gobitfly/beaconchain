@@ -11,7 +11,8 @@
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
     "id": "ID",
-    "average": "Average"
+    "average": "Average",
+    "index": "Index"
   },
   "table": {
     "first": "First",
