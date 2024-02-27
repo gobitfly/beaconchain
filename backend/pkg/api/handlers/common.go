@@ -217,6 +217,8 @@ func checkSortColumn[T ~int](handlerErr *error, column string) (T, bool) {
 		arr = types.VDBBlocksTableColumnSortNames
 	case types.VDBWithdrawalsTableColumn:
 		arr = types.VDBWithdrawalsTableColumnSortNames
+	case types.VDBDutiesTableColumn:
+		arr = types.VDBDutiesTableColumnSortNames
 	}
 	i := -1
 	for _, v := range arr {
