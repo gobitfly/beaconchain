@@ -2,6 +2,12 @@
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
+const loading = ref(true)
+
+const toggleLoading = () => {
+  loading.value = !loading.value
+}
+
 </script>
 
 <template>
@@ -57,6 +63,22 @@ const slotModalVisibility = ref(false)
         <InputText placeholder="Disabled Input" disabled />
       </div>
     </TabPanel>
+    <TabPanel header="Spinner">
+      <Button @click="toggleLoading">
+        Toggle loading
+      </Button>
+      <div class="element_container">
+        <BcLoadingSpinner :loading="loading" />
+        <BcLoadingSpinner :loading="loading" size="small" style="color: lightblue;" />
+        <BcLoadingSpinner :loading="loading" size="large" />
+        <div class="box">
+          <BcLoadingSpinner :loading="loading" alignment="center" />
+        </div>
+        <div class="box">
+          <BcLoadingSpinner :loading="loading" size="full" />
+        </div>
+      </div>
+    </TabPanel>
     <TabPanel :disabled="true" header="Disabled Tab" />
   </TabView>
 </template>
@@ -67,5 +89,10 @@ const slotModalVisibility = ref(false)
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+.box{
+  width: 200px;
+  height: 200px;
+  background-color: antiquewhite;
 }
 </style>
