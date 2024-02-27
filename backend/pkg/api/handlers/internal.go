@@ -155,7 +155,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		returnBadRequest(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardOverview(1, dashboardId)
+	data, err := h.dai.GetValidatorDashboardOverview(dashboardId)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -176,7 +176,7 @@ func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, 
 		return
 	}
 
-	err = h.dai.RemoveValidatorDashboardOverview(1, dashboardId)
+	err = h.dai.RemoveValidatorDashboardOverview(dashboardId)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -201,7 +201,7 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboardGroup(1, dashboardId, name)
+	data, err := h.dai.CreateValidatorDashboardGroup(dashboardId, name)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -225,7 +225,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		return
 	}
 
-	err = h.dai.RemoveValidatorDashboardGroup(1, dashboardId, groupId)
+	err = h.dai.RemoveValidatorDashboardGroup(dashboardId, groupId)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -253,7 +253,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		return
 	}
 
-	data, err := h.dai.AddValidatorDashboardValidators(1, dashboardId, groupId, validators)
+	data, err := h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -282,7 +282,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 		return
 	}
 
-	err = h.dai.RemoveValidatorDashboardValidators(1, dashboardId, validators)
+	err = h.dai.RemoveValidatorDashboardValidators(dashboardId, validators)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -311,7 +311,7 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboardPublicId(1, dashboardId, name, req.ShareSettings.GroupNames)
+	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -345,7 +345,7 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 		return
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardPublicId(1, dashboardId, publicDashboardId, name, req.ShareSettings.GroupNames)
+	data, err := h.dai.UpdateValidatorDashboardPublicId(dashboardId, publicDashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return
@@ -367,7 +367,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 		return
 	}
 
-	err = h.dai.RemoveValidatorDashboardPublicId(1, dashboardId, publicDashboardId)
+	err = h.dai.RemoveValidatorDashboardPublicId(dashboardId, publicDashboardId)
 	if err != nil {
 		returnInternalServerError(w, err)
 		return

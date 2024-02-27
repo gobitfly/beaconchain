@@ -35,55 +35,55 @@ func (d DummyService) CreateValidatorDashboard(userId uint64, name string, netwo
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardOverview(userId uint64, dashboardId uint64) (t.VDBOverviewData, error) {
+func (d DummyService) GetValidatorDashboardOverview(dashboardId uint64) (t.VDBOverviewData, error) {
 	r := t.VDBOverviewData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) RemoveValidatorDashboardOverview(userId uint64, dashboardId uint64) error {
+func (d DummyService) RemoveValidatorDashboardOverview(dashboardId uint64) error {
 	return nil
 }
 
-func (d DummyService) CreateValidatorDashboardGroup(userId uint64, dashboardId uint64, name string) (t.VDBOverviewGroup, error) {
+func (d DummyService) CreateValidatorDashboardGroup(dashboardId uint64, name string) (t.VDBOverviewGroup, error) {
 	r := t.VDBOverviewGroup{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) RemoveValidatorDashboardGroup(userId uint64, dashboardId uint64, groupId uint64) error {
+func (d DummyService) RemoveValidatorDashboardGroup(dashboardId uint64, groupId uint64) error {
 	return nil
 }
 
-func (d DummyService) AddValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
+func (d DummyService) AddValidatorDashboardValidators(dashboardId uint64, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardValidators(userId uint64, dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error) {
+func (d DummyService) GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error) {
 	r := []t.VDBGetValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) RemoveValidatorDashboardValidators(userId uint64, dashboardId uint64, validators []string) error {
+func (d DummyService) RemoveValidatorDashboardValidators(dashboardId uint64, validators []string) error {
 	return nil
 }
 
-func (d DummyService) CreateValidatorDashboardPublicId(userId uint64, dashboardId uint64, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
+func (d DummyService) CreateValidatorDashboardPublicId(dashboardId uint64, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
 	r := t.VDBPostPublicIdData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) UpdateValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
+func (d DummyService) UpdateValidatorDashboardPublicId(dashboardId uint64, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
 	r := t.VDBPostPublicIdData{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d DummyService) RemoveValidatorDashboardPublicId(userId uint64, dashboardId uint64, publicDashboardId string) error {
+func (d DummyService) RemoveValidatorDashboardPublicId(dashboardId uint64, publicDashboardId string) error {
 	return nil
 }
 
