@@ -38,11 +38,11 @@ type DataAccessInterface interface {
 
 	GetValidatorDashboardSummary(dashboardId uint64, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId uint64, groupId uint64) (t.VDBGroupSummaryData, error)
-	GetValidatorDashboardSummaryChart(dashboardId uint64) ([]t.HighchartsSeries, error)
+	GetValidatorDashboardSummaryChart(dashboardId uint64) (t.ChartData[int], error)
 
 	GetValidatorDashboardRewards(dashboardId uint64, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId uint64, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
-	GetValidatorDashboardRewardsChart(dashboardId uint64) ([]t.HighchartsSeries, error)
+	GetValidatorDashboardRewardsChart(dashboardId uint64) (t.ChartData[int], error)
 
 	GetValidatorDashboardDuties(dashboardId uint64, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
 
@@ -235,7 +235,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId uint64,
 	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 }
 
-func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
+func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId uint64) (t.ChartData[int], error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSummaryChart(dashboardId)
 }
@@ -250,7 +250,7 @@ func (d DataAccessService) GetValidatorDashboardGroupRewards(dashboardId uint64,
 	return d.dummy.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
 }
 
-func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
+func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId uint64) (t.ChartData[int], error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)
 }
