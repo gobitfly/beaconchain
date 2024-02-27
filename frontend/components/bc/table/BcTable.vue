@@ -62,7 +62,7 @@ const toggleItem = (item: any) => {
         <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click.stop.prevent="toggleAll" />
       </template>
       <template #body="slotProps">
-        <IconChevron class="toggle mine" :direction="expandedRows[slotProps.data[props.dataKey]] ? 'bottom' : 'right'" @click.stop.prevent="toggleItem(slotProps.data)" />
+        <IconChevron class="toggle" :direction="expandedRows[slotProps.data[props.dataKey]] ? 'bottom' : 'right'" @click.stop.prevent="toggleItem(slotProps.data)" />
       </template>
     </Column>
     <slot />

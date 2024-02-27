@@ -116,7 +116,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.summary.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{ groupIdLabel(slotProps.data.group_id) }}</span>
+                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
+                  groupIdLabel(slotProps.data.group_id) }}</span>
               </template>
             </Column>
             <Column
@@ -204,11 +205,20 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
     }
   }
+
   @media (max-width: 600px) {
     --col-width: 140px;
   }
 
   .total-row {
+    &:not(:has(.bottom)) {
+      td {
+        border-bottom-color: var(--primary-color);
+      }
+    }
+  }
+
+  .total-row+.p-datatable-row-expansion {
     td {
       border-bottom-color: var(--primary-color);
     }
