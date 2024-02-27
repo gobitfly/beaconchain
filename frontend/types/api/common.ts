@@ -55,13 +55,14 @@ export interface PeriodicClElValues<T extends ClElUnion> {
   month: ClElValue<T>;
   year: ClElValue<T>;
 }
-export interface HighchartsDataPoint {
-  x: number /* float64 */;
-  y: number /* float64 */;
+export interface ChartSeries<T extends number /* int */ | string> {
+  id: T; // id may be a string or an int
+  stack?: string; // for stacking bar charts
+  data: number /* float64 */[]; // y-axis values
 }
-export interface HighchartsSeries {
-  name: string;
-  data: HighchartsDataPoint[];
+export interface ChartData<T extends number /* int */ | string> {
+  categories: number /* uint64 */[]; // x-axis
+  series: ChartSeries<T>[];
 }
 export interface SearchResult {
   type: string;
