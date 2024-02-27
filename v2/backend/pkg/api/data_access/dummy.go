@@ -107,8 +107,8 @@ func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId uint64, grou
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardSummaryChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
-	r := []t.HighchartsSeries{}
+func (d DummyService) GetValidatorDashboardSummaryChart(dashboardId uint64) (t.ChartData[int], error) {
+	r := t.ChartData[int]{}
 	err := commonFakeData(&r)
 	return r, err
 }
@@ -127,8 +127,8 @@ func (d DummyService) GetValidatorDashboardGroupRewards(dashboardId uint64, grou
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardRewardsChart(dashboardId uint64) ([]t.HighchartsSeries, error) {
-	r := []t.HighchartsSeries{}
+func (d DummyService) GetValidatorDashboardRewardsChart(dashboardId uint64) (t.ChartData[int], error) {
+	r := t.ChartData[int]{}
 	err := commonFakeData(&r)
 	return r, err
 }
