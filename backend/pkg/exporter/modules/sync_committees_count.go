@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -88,7 +89,7 @@ func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

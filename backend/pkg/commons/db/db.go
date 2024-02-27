@@ -556,7 +556,7 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -596,7 +596,7 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1663,7 +1663,7 @@ func UpdateAdConfiguration(adConfig types.AdConfig) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1701,7 +1701,7 @@ func DeleteAdConfiguration(id string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && err != sql.ErrTxDone {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

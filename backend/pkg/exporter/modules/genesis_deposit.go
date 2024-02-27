@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -84,7 +85,7 @@ func genesisDepositsExporter(client rpc.Client) {
 			WHERE block_slot = 0 AND blocks_deposits.publickey = a.publickey AND blocks_deposits.signature = '\x'`)
 		if err != nil {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && err != sql.ErrTxDone {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 			log.Error(err, "error hydrating eth1 data into genesis-deposits", 0)
@@ -96,7 +97,7 @@ func genesisDepositsExporter(client rpc.Client) {
 		_, err = tx.Exec("UPDATE blocks SET depositscount = $1 WHERE slot = 0", len(genesisValidators.Data))
 		if err != nil {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && err != sql.ErrTxDone {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 			log.Error(err, "error updating deposit count for the genesis slot", 0)
@@ -107,7 +108,7 @@ func genesisDepositsExporter(client rpc.Client) {
 		err = tx.Commit()
 		if err != nil {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && err != sql.ErrTxDone {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 			log.Error(err, "error committing db-tx when exporting genesis-deposits", 0)
