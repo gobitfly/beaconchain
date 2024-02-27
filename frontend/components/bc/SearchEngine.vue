@@ -552,6 +552,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       <InputText
         id="input-field"
         v-model="inputted"
+        :class="barStyle"
         type="text"
         placeholder="Search the blockchain"
         @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
@@ -653,7 +654,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     border-top-right-radius: 0px;
     border-bottom-right-radius: 0px;
     background-color: var(--searchbar-background);
-    color: var(--text-color)
+    color: var(--text-color);
+    box-shadow: none; // TO BE REMOVED ONCE prime.scss CONTAINS OUR STYLE
+    &.discreet {
+      border-color: var(--searchbar-background);
+    }
+    &.gaudy {
+      border-color: var(--input-border-color);
+    }
   }
   #searchbutton {
     display: flex;
@@ -665,13 +673,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     border-bottom-left-radius: 0px;
     border-top-right-radius: 4px;
     border-bottom-right-radius: 4px;
-    &.gaudy {
-      background-color: var(--button-color-active);
-      font-size: 18px;
-    }
+    cursor: pointer;
     &.discreet {
       background-color: var(--searchbar-background);
       font-size: 15px;
+    }
+    &.gaudy {
+      background-color: var(--button-color-active);
+      font-size: 18px;
     }
   }
 }
