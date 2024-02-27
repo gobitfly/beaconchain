@@ -70,13 +70,15 @@ type PeriodicClElValues[T ClElUnion] struct {
 	Year  ClElValue[T] `json:"year"`
 }
 
-type HighchartsDataPoint struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+type ChartSeries[T int | string] struct {
+	Id    T         `json:"id"`              // id may be a string or an int
+	Stack string    `json:"stack,omitempty"` // for stacking bar charts
+	Data  []float64 `json:"data"`            // y-axis values
 }
-type HighchartsSeries struct {
-	Name string                `json:"name"`
-	Data []HighchartsDataPoint `json:"data"`
+
+type ChartData[T int | string] struct {
+	Categories []uint64         `json:"categories"` // x-axis
+	Series     []ChartSeries[T] `json:"series"`
 }
 
 type SearchResult struct {
