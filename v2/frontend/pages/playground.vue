@@ -34,6 +34,9 @@ onMounted(async () => {
     </div>
 
     <TabView>
+      <TabPanel header="Chart">
+        <PlaygroundCharts />
+      </TabPanel>
       <TabPanel header="Icons">
         <PlaygroundIcons />
       </TabPanel>
