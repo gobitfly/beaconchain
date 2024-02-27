@@ -847,10 +847,14 @@ github.com/warpfork/go-wish v0.0.0-20180510122957-5ad1f5abf436/go.mod h1:x6AKhvS
 github.com/warpfork/go-wish v0.0.0-20200122115046-b9ea61034e4a/go.mod h1:x6AKhvSSexNrVSrViXSHUEbICjmGXhtgABaHIySUSGw=
 github.com/warpfork/go-wish v0.0.0-20220906213052-39a1cc7a02d0 h1:GDDkbFiaK8jsSDJfjId/PEGEShv6ugrt4kYsC5UIDaQ=
 github.com/warpfork/go-wish v0.0.0-20220906213052-39a1cc7a02d0/go.mod h1:x6AKhvSSexNrVSrViXSHUEbICjmGXhtgABaHIySUSGw=
+github.com/wealdtech/go-bytesutil v1.2.0 h1:GEIzvAZEIgqOoRfnEAaMRNL73gl8e+YlQzqxhFyR30Y=
+github.com/wealdtech/go-bytesutil v1.2.0/go.mod h1:FHQSlwhzfSZGffu1osaUGdnNtl5C8tBKwmqvPdB66pM=
 github.com/wealdtech/go-ens/v3 v3.6.0 h1:EAByZlHRQ3vxqzzwNi0GvEq1AjVozfWO4DMldHcoVg8=
 github.com/wealdtech/go-ens/v3 v3.6.0/go.mod h1:hcmMr9qPoEgVSEXU2Bwzrn/9NczTWZ1rE53jIlqUpzw=
 github.com/wealdtech/go-eth2-types/v2 v2.8.2 h1:b5aXlNBLKgjAg/Fft9VvGlqAUCQMP5LzYhlHRrr4yPg=
 github.com/wealdtech/go-eth2-types/v2 v2.8.2/go.mod h1:IAz9Lz1NVTaHabQa+4zjk2QDKMv8LVYo0n46M9o/TXw=
+github.com/wealdtech/go-eth2-util v1.8.0 h1:hhs3h2y3Ldty18lppFdpe46nZpdDAMbY7QqiHO5BvE0=
+github.com/wealdtech/go-eth2-util v1.8.0/go.mod h1:rSuE0v5zX+uyZrqW/iUmXOxeDpB7lTvhcZvAVh0KlMU=
 github.com/wealdtech/go-multicodec v1.4.0 h1:iq5PgxwssxnXGGPTIK1srvt6U5bJwIp7k6kBrudIWxg=
 github.com/wealdtech/go-multicodec v1.4.0/go.mod h1:aedGMaTeYkIqi/KCPre1ho5rTb3hGpu/snBOS3GQLw4=
 github.com/wealdtech/go-string2eth v1.2.1 h1:u9sofvGFkp+uvTg4Nvsvy5xBaiw8AibGLLngfC4F76g=

@@ -52,7 +52,6 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 		defer wg.Done()
 
 		//TODO adjust db functions to be able to set local reader/writer without setting the global ones
-
 		db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.WriterDatabase.Username,
 			Password:     cfg.WriterDatabase.Password,
