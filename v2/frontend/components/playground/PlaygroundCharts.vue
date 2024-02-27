@@ -142,7 +142,7 @@ const option = ref({
 <template>
   <div class="chart-container">
     <!-- TODO: Somehow this is not reactive yet -->
-    <VChart class="chart" :option="option" />
+    <VChart class="chart" :option="option" autoresize />
   </div>
 </template>
 
