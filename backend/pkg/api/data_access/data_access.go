@@ -449,7 +449,6 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 			// TODO: Get the slashings for the slot
 		}
-
 	}
 
 	return slotVizEpochs, nil
