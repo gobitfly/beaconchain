@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"math"
@@ -196,7 +197,7 @@ func tableRenaming(currentTableName, destinationTableName string, numberOfPartit
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()

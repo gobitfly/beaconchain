@@ -23,7 +23,7 @@ type VDBSlotVizSlot struct {
 	Status       string                 `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'"`
 	Attestations *VDBSlotVizPassiveDuty `json:"attestations,omitempty"`
 	Sync         *VDBSlotVizPassiveDuty `json:"sync,omitempty"`
-	Proposals    *VDBSlotVizActiveDuty  `json:"proposals,omitempty"`
+	Proposal     *VDBSlotVizActiveDuty  `json:"proposal,omitempty"`
 	Slashing     []VDBSlotVizActiveDuty `json:"slashing,omitempty"`
 }
 type SlotVizEpoch struct {

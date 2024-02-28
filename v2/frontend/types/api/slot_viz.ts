@@ -30,7 +30,7 @@ export interface VDBSlotVizSlot {
   status: 'proposed' | 'missed' | 'scheduled' | 'orphaned';
   attestations?: VDBSlotVizPassiveDuty;
   sync?: VDBSlotVizPassiveDuty;
-  proposals?: VDBSlotVizActiveDuty[];
+  proposal?: VDBSlotVizActiveDuty;
   slashing?: VDBSlotVizActiveDuty[];
 }
 export interface SlotVizEpoch {
