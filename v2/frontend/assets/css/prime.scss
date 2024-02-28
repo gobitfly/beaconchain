@@ -267,12 +267,13 @@
 .p-multiselect .p-multiselect-trigger {
   background: transparent;
   color: var(--light-grey);
-  width: 2rem;
+  width: 1.5rem;  // MAYBE 2rem IS BETTER
   border-top-right-radius: var(--border-radius);
   border-bottom-right-radius: var(--border-radius);
 }
 .p-multiselect .p-multiselect-label {
   padding: 6px;
+  padding-top: 3px;
   transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .p-multiselect-panel {

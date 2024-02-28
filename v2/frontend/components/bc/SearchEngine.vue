@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
+import { BaseTransition } from 'vue'
+import { find } from 'lodash-es'
 import {
   Categories,
   CategoryInfo,
@@ -10,16 +12,18 @@ import {
   organizeAPIinfo,
   type SearchAheadResults,
   type OrganizedResults,
-  type SearchBarStyle
+  type SearchBarStyle,
+  type Matching
 } from '~/types/searchengine'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
 const props = defineProps({
-  searchable: { type: Array, required: true },
-  barStyle: { type: String, required: true }
+  searchable: { type: Array, required: true }, // list of categories that the bar can search in
+  barStyle: { type: String, required: true }, // look of the bar ('discreet' for small, 'gaudy'  for big)
+  pickByDefault: { type: Function, required: true } // when the user presses Enter, this callback function receives a simplified list of the possible matches and must return one element of the list. The bar will then trigger the event @go to call your handler with the data correponding to the matching that you returned. The first parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The second parameter is the index of the best matching result in this list so is only a suggestion, you are free to pick something else to fulfill your logic.
 })
-const emit = defineEmits(['enter', 'select'])
+const emit = defineEmits(['go'])
 
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const width : number = (barStyle === 'discreet' ? 460 : 735)
@@ -31,7 +35,7 @@ const searchButtonSize = String(height) + 'px'
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
 
-const PeriodOfDropDownUpdates = 500 /* CHANGE TO 2000 when the design of the bar is ready */
+const PeriodOfDropDownUpdates = 500 /* TODO: change to 2000 for production !!!! */
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
@@ -163,23 +167,47 @@ function userFeelsLucky () {
   if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
     return
   }
-  // picks a relevant search-ahead result, the priority is given to filtered-in results
+  // the priority is given to filtered-in results
   let toConsider : OrganizedResults
   if (results.organized.howManyResultsIn > 0) {
     toConsider = results.organized.in
   } else {
-    // by default, we pick a filtered-out result if there are results but the drop down does not show them
+    // we default to the filtered-out results if there are results but the drop down does not show them
     toConsider = results.organized.out
   }
-  // cleans up and calls back user's function with the first result
+  // builds the list of matchings that the parent component will pick from (in callback function `props.pickByDefault()`)
+  const possibilities : Matching[] = []
+  const mapOfBestPossibilitiesToOrganizedResults : {nw: number, ty : number}[] = []
+  let bestMatchWithHigherPriority = 0
+  for (let nw = 0; nw < toConsider.networks.length; nw++) {
+    const network = toConsider.networks[nw]
+    for (let ty = 0; ty < network.types.length; ty++) {
+      const type = network.types[ty]
+      // in the following, we assume that the `type.found` array is sorted by increasing `closeness` values (which is what `filterAndOrganizeResults()` did)
+      possibilities.push({ closeness: type.found[0].closeness, network: network.chainId, type: type.type })
+      mapOfBestPossibilitiesToOrganizedResults.push({ nw, ty })
+      const last = possibilities.length - 1
+      if (possibilities[last].closeness < possibilities[bestMatchWithHigherPriority].closeness) {
+        bestMatchWithHigherPriority = last
+      }
+    }
+  }
+  // `bestMatchWithHigherPriority` indicates the possibility that matches the best with the user input. If several
+  // possibilities with this best match-closeness value exist, it indicates the one having the highest priority. This happens
+  // for example when a block and a validator index match perfectly, in this case validators have a higher priority.
+
+  // calls back user's function with the chosen result
+  const picked = props.pickByDefault(possibilities, bestMatchWithHigherPriority)
+  const network = toConsider.networks.find(nw => nw.chainId === picked.network)
+  const type = network?.types.find(ty => ty.type === picked.type)
   cleanUp()
-  emit('enter', toConsider.networks[0].types[0].found[0].main, toConsider.networks[0].types[0].type, toConsider.networks[0].chainId)
+  emit('go', type?.found[0].main, type?.type, network?.chainId)
 }
 
 function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: string) {
   // cleans up and calls back user's function
   cleanUp()
-  emit('select', found, type, chain)
+  emit('go', found, type, chain)
 }
 
 function networkFilterHasChanged () {
@@ -306,17 +334,29 @@ function filterAndOrganizeResults () {
       })
     }
     // now we can insert the finding at the right place in the organized results
+    toBeAdded.closeness = calculateCloseness(toBeAdded.main)
     place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
   }
 
   function sortResults (place : OrganizedResults) {
-    place.networks.sort((a, b) => { return ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority })
+    place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority)
     for (const network of place.networks) {
-      network.types.sort((a, b) => { return TypeInfo[a.type].priority - TypeInfo[b.type].priority })
+      network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority)
+      for (const type of network.types) {
+        type.found.sort((a, b) => a.closeness - b.closeness)
+      }
     }
   }
   sortResults(results.organized.in)
   sortResults(results.organized.out)
+}
+
+// Calculates how close the suggestion of result is to what the user typed. Lower result means better matching.
+function calculateCloseness (suggestion : string) : number {
+  // For now, our only criteria is the length of the suggested result (a shorter suggestion means that it is closer to what the user typed).
+  // This function can be improved later if the API returns approximate results (similar to what Google does). The rest of the component has
+  // been programmed to work with any implementation as long as the returned value decreases strictly with respect to the closeness of the suggestion.
+  return suggestion.length / inputted.value.length
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -568,23 +608,25 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     </div>
     <div v-if="showDropDown" id="drop-down" ref="dropDown">
       <div id="filter-bar">
-        <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
-        <MultiSelect
-          id="filter-networks"
-          v-model="networkDropdownUserSelection"
-          :options="networkDropdownOptions"
-          option-value="name"
-          option-label="label"
-          placeholder="Networks:&nbsp;all"
-          :variant="'filled'"
-          display="comma"
-          :show-toggle-all="false"
-          :max-selected-labels="1"
-          :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
-          append-to="self"
-          @change="networkFilterHasChanged(); refreshDropDown()"
-          @click="(e : Event) => e.stopPropagation()"
-        />
+        <span id="filter-networks">
+          <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
+          <MultiSelect
+            v-model="networkDropdownUserSelection"
+            :options="networkDropdownOptions"
+            option-value="name"
+            option-label="label"
+            placeholder="Networks:&nbsp;all"
+            :variant="'filled'"
+            display="comma"
+            :show-toggle-all="false"
+            :max-selected-labels="1"
+            :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
+            append-to="self"
+            @change="networkFilterHasChanged(); refreshDropDown()"
+            @click="(e : Event) => e.stopPropagation()"
+          />
+          <div v-if="barStyle === 'discreet'" />
+        </span>
         <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
           <input
             v-model="userFilters.categories[filter]"
@@ -655,7 +697,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     border-bottom-right-radius: 0px;
     background-color: var(--searchbar-background);
     color: var(--text-color);
-    box-shadow: none; // TO BE REMOVED ONCE prime.scss CONTAINS OUR STYLE
+    box-shadow: none; // TODO : REMOVE ONCE prime.scss CONTAINS OUR STYLE
     &.discreet {
       border-color: var(--searchbar-background);
     }
@@ -681,6 +723,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     &.gaudy {
       background-color: var(--button-color-active);
       font-size: 18px;
+      &:hover {
+        background-color: var(--button-color-hover);
+      }
+      &:active {
+        background-color: var(--button-color-pressed);
+      }
     }
   }
 }
@@ -729,22 +777,29 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   padding-bottom: 8px;
 
   #filter-networks {
-    @include fonts.small_text_bold;
-    width: 160px;
-    &.p-multiselect {
+    margin-left: 6px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    .p-multiselect {
+      @include fonts.small_text_bold;
+      width: 138px;
       height: 20px;
       border-radius: 10px;
+      .p-multiselect-trigger {
+        width: 1.5rem;
+      }
       .p-multiselect-label {
+        padding-top: 3px;
         border-top-left-radius: 10px;
         border-bottom-left-radius: 10px;
-        &.p-placeholder {
+        .p-placeholder {
           border-top-left-radius: 10px;
           border-bottom-left-radius: 10px;
         }
       }
-    }
-    .p-multiselect-panel {
-      width: 140px;
+      &.p-multiselect-panel {
+        width: 140px;
+      }
     }
   }
   .filter-button {
@@ -753,13 +808,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       color: var(--primary-contrast-color);
       display: inline-block;
       border-radius: 10px;
-      background-color: var(--button-color-disabled);
-      width: 80px;
+      width: 75px;
       height: 17px;
       padding-top: 3px;
       text-align: center;
       margin-right: 6px;
+      margin-bottom: 6px;
       transition: 0.2s;
+      background-color: var(--button-color-disabled);
+      &:hover {
+        background-color: var(--light-grey-3);
+      }
+      &:active {
+        background-color: var(--button-color-pressed);
+      }
     }
     .hiddencheckbox {
       display: none;
@@ -767,7 +829,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       height: 0;
     }
     .hiddencheckbox:checked + .face {
-      background-color: var(--button-color-pressed);
+      background-color: var(--button-color-active);
+      &:hover {
+        background-color: var(--button-color-hover);
+      }
+      &:active {
+        background-color: var(--button-color-pressed);
+      }
     }
   }
 }

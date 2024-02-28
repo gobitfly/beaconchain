@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Categories, ResultTypes, type SearchBarStyle } from '~/types/searchengine'
+import { Categories, ResultTypes, type SearchBarStyle, type Matching } from '~/types/searchengine'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({ location: { type: String, required: true } })
 
@@ -12,6 +12,17 @@ switch (props.location) {
   case 'page' :
     searchBarStyle = 'gaudy'
     break
+}
+
+// picks a result by default when the user presses Enter instead of clicking a result in the drop-down
+function userFeelsLucky (possibilities : Matching[], bestMatchWithHigherPriority : number) : Matching {
+  // SearchEngine.vue has sorted the possible results in `possibilities` by network and type priorities.
+  // `bestMatchWithHigherPriority` indicates the possibility that matches the best with the user input. If several
+  // possibilities with this best match-closeness value exist, it indicates the one having the highest priority. This happens
+  // for example when a block and a validator index match perfectly, in this case validators have a higher priority.
+
+  // The work done by SearchEngine.vue descibed above is already what we want so we have nothing else to do:
+  return possibilities[bestMatchWithHigherPriority]
 }
 
 function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
@@ -86,7 +97,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
   <BcSearchEngine
     :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
     :bar-style="searchBarStyle"
-    @enter="redirectToRelevantPage"
-    @select="redirectToRelevantPage"
+    :pick-by-default="userFeelsLucky"
+    @go="redirectToRelevantPage"
   />
 </template>

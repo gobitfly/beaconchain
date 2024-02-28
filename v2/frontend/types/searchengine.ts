@@ -281,15 +281,25 @@ export interface SearchAheadResults {
   error?: string
 }
 
+// The parameter of the callback function that you give to SearchEngine.vue's props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
+export interface Matching {
+  closeness: number, // if different results of this type exist in this network, only the best matching number is recorded here
+  network: ChainIDs,
+  type: ResultTypes
+}
+
+export interface SingleOrganizedResult {
+  main: string, // data corresponding to the input, like the address, the complete ens name, graffito ...
+  complement: string, // optional additional information, like the number of findings matching the input ...
+  closeness: number // how close the result is to the user input
+}
+
 export interface OrganizedResults {
   networks: {
     chainId: ChainIDs,
     types: {
       type: ResultTypes,
-      found: {
-        main: string, // data corresponding to the input, like the address, the complete ens name, graffito ...
-        complement: string // optional additional information, like the number of findings matching the input ...
-      }[]
+      found: SingleOrganizedResult[]
     }[]
   }[]
 }
@@ -300,11 +310,11 @@ export interface OrganizedResults {
 // organizes/standardizes it into information ready to be displayed in the drop-down of the search bar.
 // If the data from the API is empty or unexpected then the function returns '' in field `main`,
 // otherwise `main` contains result data. Field `complement` is '' if the API did not give 2 informations.
-export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) : { main: string, complement: string } {
+export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) : SingleOrganizedResult {
   const SearchAheadResultFields : (keyof SearchAheadSingleResult)[] = ['str_value', 'num_value', 'hash_value']
   let mainField : keyof SearchAheadSingleResult
   let complement = ''
-  const emptyResult = { main: '', complement }
+  const emptyResult = { main: '', complement, closeness: NaN }
 
   switch (apiResponseElement.type as ResultTypes) {
     case ResultTypes.Tokens :
@@ -352,7 +362,7 @@ export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) :
     }
   }
 
-  return { main: String(apiResponseElement[mainField]), complement }
+  return { main: String(apiResponseElement[mainField]), complement, closeness: NaN }
 }
 
 export function getListOfCategories () : Categories[] {
