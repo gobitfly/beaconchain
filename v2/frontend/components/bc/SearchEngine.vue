@@ -348,7 +348,7 @@ function calculateCloseness (suggestion : string) : number {
   // it is sufficient for now to return the length of the suggested result. This produces an ordering equivalent to
   // the ordering that the Levenshtein distance would produce.
   // Implementing the Levenshtein distance here would make SearchEngine.vue independent of any assumption about the back-end
-  // search capabilities (in the future, the API might also give results approximating the input, for example with ENS names and graffiti).
+  // search capabilities (in the future, the API might include results approximating the input, for example with ENS names and graffiti).
   return suggestion.length - inputted.value.length
 }
 
@@ -594,7 +594,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     </div>
     <div v-if="showDropDown" id="drop-down" ref="dropDown">
       <div id="filter-bar">
-        <span id="filter-networks">
+        <span id="filter-networks" :class="barStyle">
           <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
           <MultiSelect
             v-model="networkDropdownUserSelection"
@@ -611,7 +611,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
             @change="networkFilterHasChanged(); refreshDropDown()"
             @click="(e : Event) => e.stopPropagation()"
           />
-          <div v-if="barStyle === 'discreet'" />
         </span>
         <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
           <input
@@ -622,7 +621,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
             type="checkbox"
             @change="categoryFilterHasChanged(); refreshDropDown()"
           >
-          <span class="face">{{ CategoryInfo[filter as Categories].filterLabel }}</span>
+          <span class="face">
+            {{ CategoryInfo[filter as Categories].filterLabel }}
+            <span v-if="barStyle === 'gaudy' && CategoryInfo[filter as Categories].filterLabelHint !== ''">
+              {{ '(' + CategoryInfo[filter as Categories].filterLabelHint + ')' }}
+            </span>
+          </span>
         </label>
       </div>
       <div v-if="waitingForSearchResults">
@@ -728,7 +732,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   padding: 4px;
 
   #panel-of-results {
-    min-height: 200px;
+    min-height: 128px;
     max-height: 300px;
     overflow: auto;
     h2 {
@@ -764,7 +768,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   #filter-networks {
     margin-left: 6px;
     margin-right: 6px;
-    margin-bottom: 6px;
+    &.discreet {
+      display: block;
+      margin-bottom: 8px;
+    }
+    &.gaudy {
+
+    }
     .p-multiselect {
       @include fonts.small_text_bold;
       width: 138px;
@@ -780,10 +790,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         .p-placeholder {
           border-top-left-radius: 10px;
           border-bottom-left-radius: 10px;
+          background: var(--searchbar-filter-unselected);
         }
       }
       &.p-multiselect-panel {
         width: 140px;
+        max-height: 100px;
+        overflow: auto;
       }
     }
   }
@@ -793,14 +806,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       color: var(--primary-contrast-color);
       display: inline-block;
       border-radius: 10px;
-      width: 75px;
       height: 17px;
-      padding-top: 3px;
+      padding-top: 2.5px;
+      padding-left: 8px;
+      padding-right: 8px;
       text-align: center;
-      margin-right: 6px;
-      margin-bottom: 6px;
+      margin-left: 6px;
       transition: 0.2s;
-      background-color: var(--button-color-disabled);
+      background-color: var(--searchbar-filter-unselected);
       &:hover {
         background-color: var(--light-grey-3);
       }
