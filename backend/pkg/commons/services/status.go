@@ -24,7 +24,7 @@ func ReportStatus(name, status string, metadata *json.RawMessage) {
 	version := version.Version
 
 	_, err = db.WriterDb.Exec(`
-		INSERT INTO service_status (name, executable_name, version, pid, status, metadata, last_update) VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+		INSERT INTO service_status (name, executable_name, version, pid, status, metadata, last_update) VALUES ($1, $2, $3, $4, $5, $6, NOW())
 		ON CONFLICT (name, executable_name, version, pid) DO UPDATE SET
 		status = excluded.status,
 		metadata = excluded.metadata,
