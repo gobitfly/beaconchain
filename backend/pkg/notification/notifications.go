@@ -232,10 +232,10 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 	var dbIsCoherent bool
 
 	err = db.WriterDb.Get(&dbIsCoherent, `
-		SELECT 
+		SELECT
 			NOT (array[false] && array_agg(is_coherent)) AS is_coherent
 		FROM (
-			SELECT 
+			SELECT
 				epoch - 1 = lead(epoch) OVER (ORDER BY epoch DESC) AS is_coherent
 			FROM epochs
 			ORDER BY epoch DESC
@@ -852,9 +852,9 @@ func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventN
 				retries,
 				event_names,
 				destination
-			FROM 
+			FROM
 				users_webhooks
-			WHERE 
+			WHERE
 				user_id = $1 AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
 		`, userID, types.WebhookNotificationChannel)
 		// continue if the user does not have a webhook
@@ -2197,11 +2197,11 @@ func collectEthClientNotifications(notificationsByUserID map[uint64]map[types.Ev
 		err := db.FrontendWriterDB.Select(&dbResult, `
 			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
 			FROM users_subscriptions AS us
-			WHERE 
-				us.event_name=$1 
-			AND 
-				us.event_filter=$2 
-			AND 
+			WHERE
+				us.event_name=$1
+			AND
+				us.event_filter=$2
+			AND
 				((us.last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP($3) > us.last_sent_ts) OR us.last_sent_ts IS NULL)
 			`,
 			eventName, strings.ToLower(client.Name), client.Date.Unix()) // was last notification sent 2 days ago for this client
@@ -2320,19 +2320,19 @@ func collectMonitoringMachine(
 	notificationsByUserID map[uint64]map[types.EventName][]types.Notification,
 	eventName types.EventName,
 	epochWaitInBetween int,
-	notifyConditionFullfilled func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool,
+	notifyConditionFulfilled func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool,
 	epoch uint64,
 ) error {
 	var allSubscribed []MachineEvents
 	err := db.FrontendWriterDB.Select(&allSubscribed,
-		`SELECT 
+		`SELECT
 			us.user_id,
 			max(us.id) AS id,
 			ENCODE((array_agg(us.unsubscribe_hash))[1], 'hex') AS unsubscribe_hash,
 			event_filter AS machine,
 			COALESCE(event_threshold, 0) AS event_threshold
-		FROM users_subscriptions us 
-		WHERE us.event_name = $1 AND us.created_epoch <= $2 
+		FROM users_subscriptions us
+		WHERE us.event_name = $1 AND us.created_epoch <= $2
 		AND (us.last_sent_epoch < ($2 - $3) OR us.last_sent_epoch IS NULL)
 		group by us.user_id, machine, event_threshold`,
 		eventName, epoch, epochWaitInBetween)
@@ -2363,7 +2363,7 @@ func collectMonitoringMachine(
 		}
 
 		//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
-		if notifyConditionFullfilled(&localData, currentMachineData) {
+		if notifyConditionFulfilled(&localData, currentMachineData) {
 			result = append(result, localData)
 		}
 	}
@@ -2385,7 +2385,7 @@ func collectMonitoringMachine(
 
 	var subScriptionCount uint64
 	err = db.FrontendWriterDB.Get(&subScriptionCount,
-		`SELECT 
+		`SELECT
 			COUNT(DISTINCT user_id)
 			FROM users_subscriptions
 			WHERE event_name = $1`,
@@ -3145,7 +3145,7 @@ func collectSyncCommittee(notificationsByUserID map[uint64]map[types.EventName][
 
 	err = db.FrontendWriterDB.Select(&dbResult, `
 				SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
-				FROM users_subscriptions AS us 
+				FROM users_subscriptions AS us
 				WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '26 hours' OR us.last_sent_ts IS NULL) AND event_filter = ANY($2);
 				`,
 		utils.GetNetwork()+":"+string(eventName), pq.StringArray(pubKeys),

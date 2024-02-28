@@ -96,7 +96,7 @@ go get github.com/protolambda/eth2-val-tools@master
 go install github.com/protolambda/eth2-val-tools@master
 ```
 To enable withdrawals for specific validators in your local network, we provide the script `add_withdrawal_address.sh`. It creates and submits a BLS-to-execution-layer-address-change message.
-The script needs some arguments: 
+The script needs some arguments:
 ```
 cd ~/eth2-beaconchain-explorer/local_deployment/scripts
 bash add_withdrawal_address.sh -a "ETH address" -m "mnemonic" -b "URL" -i validator_index

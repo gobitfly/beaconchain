@@ -398,7 +398,7 @@ func aggregateDeposits() error {
 			COUNT(CASE WHEN v.status = 'deposited' THEN 1 END) AS pendingcount,
 			COUNT(CASE WHEN v.status = 'exited' THEN 1 END) AS voluntary_exit_count
 		FROM (
-			SELECT 
+			SELECT
 				from_address,
 				publickey,
 				SUM(amount) AS amount,
