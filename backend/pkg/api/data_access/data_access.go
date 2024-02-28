@@ -227,14 +227,14 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId uint64, 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
 	// TODO: Get the validators from the dashboardId
 
-	dummyValidators := []uint64{900000, 900001, 900002, 900003, 900004, 900005, 900006, 900007, 900008, 900009}
+	dummyValidators := []uint64{900000, 900001, 900002, 900003, 900004, 900005, 900006, 900007, 900008, 1053541}
 	ValidatorsMap := make(map[uint64]bool)
 	for _, v := range dummyValidators {
 		ValidatorsMap[v] = true
 	}
 
 	// Get min/max slot/epoch
-	headEpoch := cache.LatestEpoch.Get()
+	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
 	minEpoch := headEpoch - 2
@@ -357,6 +357,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 		slotStatus[duty.Slot] = duty.Status
 		slotBlock[duty.Slot] = duty.Block
 		if duty.Status == 1 { // 1: Proposed
+			// Attestations
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
 				if slotAttested[attestedSlot] == nil {
@@ -366,7 +367,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 					slotAttested[attestedSlot][uint64(validator)] = true
 				}
 			}
-
+			// Syncs
 			if slotSyncParticipated[duty.Slot] == nil {
 				slotSyncParticipated[duty.Slot] = make(map[uint64]bool, 0)
 
@@ -394,13 +395,15 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 			// Set the slot status
 			status := "scheduled"
-			switch slotStatus[slot] {
-			case 0, 2:
-				status = "missed"
-			case 1:
-				status = "proposed"
-			case 3:
-				status = "orphaned"
+			if _, ok := slotStatus[slot]; ok {
+				switch slotStatus[slot] {
+				case 0, 2:
+					status = "missed"
+				case 1:
+					status = "proposed"
+				case 3:
+					status = "orphaned"
+				}
 			}
 			slotVizEpochs[epochIdx].Slots[slotIdx].Status = status
 
@@ -412,12 +415,14 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 				status := "scheduled"
 				dutyObject := slot
-				switch slotStatus[slot] {
-				case 0, 2:
-					status = "failed"
-				case 1, 3:
-					status = "success"
-					dutyObject = slotBlock[slot]
+				if _, ok := slotStatus[slot]; ok {
+					switch slotStatus[slot] {
+					case 0, 2:
+						status = "failed"
+					case 1, 3:
+						status = "success"
+						dutyObject = slotBlock[slot]
+					}
 				}
 				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Status = status
 				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.DutyObject = dutyObject
@@ -426,7 +431,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 			// Get the attestation summary for the slot
 			slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
 			for validator := range attAssignmentsForSlot[slot] {
-				if slot > latestSlot {
+				if slot >= latestSlot {
+					// If the latest slot is the one that must be attested we still show it as pending
+					// as the attestation cannot yet have been included in a block
 					slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
 				} else if _, ok := slotAttested[slot][validator]; ok {
 					slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
