@@ -77,8 +77,10 @@ const data = computed(() => {
       <div class="with-duties">
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
           <div v-for="row in rows" :key="row.class" class="row" :class="row.class">
-            <span>{{ row.count }}x</span>
-            <SlotVizIcon :icon="row.icon" class="icon" />
+            <div class="count-icon">
+              <span>{{ row.count }}x</span>
+              <SlotVizIcon :icon="row.icon" class="icon" />
+            </div>
             <div class="value-col">
               {{ row.dutyText }}
               <div v-if="row.validator">
@@ -128,6 +130,12 @@ const data = computed(() => {
         color: var(--flashy-red);
       }
 
+      .count-icon{
+        display: inline-flex;
+        width: 90px;
+        justify-content: end;
+        align-items: center;
+      }
       .sub-text {
         color: var(--light-grey);
         padding: 0 3px;
