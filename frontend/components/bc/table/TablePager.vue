@@ -37,7 +37,7 @@ const data = computed(() => {
 })
 
 const next = () => {
-  emit('setCursor', Math.min(currentOffset.value + props.pageSize, data.value.lastPage ?? 0))
+  emit('setCursor', Math.min(currentOffset.value + props.pageSize, ((data.value.lastPage ?? 1) - 1) * props.pageSize))
 }
 
 const prev = () => {
