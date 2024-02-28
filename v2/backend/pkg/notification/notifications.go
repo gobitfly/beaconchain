@@ -757,7 +757,7 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 						unsubURL += "&hash=" + html.EscapeString(unsubHash)
 					}
 					//nolint:gosec // this is a static string
-					msg.UnSubURL = template.HTML(fmt.Sprintf(`<a style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'" href="%v">Unsubscribe</a>`, unsubURL))
+					msg.UnsubURL = template.HTML(fmt.Sprintf(`<a style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'" href="%v">Unsubscribe</a>`, unsubURL))
 
 					if event != types.SyncCommitteeSoon {
 						// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
