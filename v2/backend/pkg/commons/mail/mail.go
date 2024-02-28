@@ -69,21 +69,6 @@ func createTextMessage(msg types.Email) string {
 	return fmt.Sprintf("%s\n\n%s\n\n― You are receiving this because you are registered on beaconcha.in. You can manage your subscriptions at %s.", msg.Title, msg.Body, msg.SubscriptionManageURL)
 }
 
-// SendMail sends an email to the given address with the given message.
-// It will use smtp if configured otherwise it will use gunmail if configured.
-// func SendMail(to, subject, msg string, attachment []types.EmailAttachment) error {
-// 	var err error
-// 	if utils.Config.Frontend.Mail.SMTP.User != "" {
-// 		fmt.Println("Email Attachments will not work with SMTP server")
-// 		err = SendMailSMTP(to, subject, msg)
-// 	} else if utils.Config.Frontend.Mail.Mailgun.PrivateKey != "" {
-// 		err = SendMailMailgun(to, subject, msg, attachment)
-// 	} else {
-// 		err = fmt.Errorf("invalid config for mail-service")
-// 	}
-// 	return err
-// }
-
 // SendMailRateLimited sends an email to a given address with the given message.
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
 func SendMailRateLimited(to, subject string, msg types.Email, attachment []types.EmailAttachment) error {
@@ -154,33 +139,6 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 	}
 
 	return nil
-
-	// mg := mailgun.NewMailgun(
-	// 	utils.Config.Frontend.Mail.Mailgun.Domain,
-	// 	utils.Config.Frontend.Mail.Mailgun.PrivateKey,
-	// )
-	// mg.SetAPIBase(mailgun.APIBaseEU)
-	// niceFrom := fmt.Sprintf("%v <%v>", "Ethermine Staking", utils.Config.Frontend.Mail.Mailgun.Sender)
-
-	// message := mg.NewMessage(niceFrom, subject, msgText, to)
-	// message.SetHtml(msgHtml)
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	// defer cancel()
-	// if len(attachment) > 0 {
-	// 	for _, att := range attachment {
-	// 		message.AddBufferAttachment(att.Name, att.Attachment)
-	// 	}
-	// }
-
-	// // Send the message with a 10 second timeout
-	// resp, id, err := mg.Send(ctx, message)
-	// if err != nil {
-	// 	logrus.WithField("resp", resp).WithField("id", id).Errorf("error sending mail via mailgun: %v", err)
-	// 	return fmt.Errorf("error sending mail via mailgun: %w", err)
-	// }
-
-	// return nil
 }
 
 // SendMailSMTP sends an email to the given address with the given message, using smtp.
