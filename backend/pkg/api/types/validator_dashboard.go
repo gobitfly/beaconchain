@@ -83,7 +83,7 @@ type VDBGroupSummaryData struct {
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[[]HighchartsSeries]
+type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
 
 // ------------------------------------------------------------
 // Rewards Tab
@@ -118,7 +118,7 @@ type VDBGroupRewardsData struct {
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
-type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[[]HighchartsSeries]
+type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
 
 // Duties Modal
 type VDBEpochDutiesItem struct {
@@ -242,4 +242,21 @@ type VDBPostReturnData struct {
 	Name      string    `json:"name"`
 	Network   uint64    `json:"network"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type VDBPostValidatorsData struct {
+	PublicKey string `json:"public_key"`
+	GroupId   uint64 `json:"group_id"`
+}
+
+type VDBGetValidatorsData struct {
+	// TODO
+}
+
+type VDBPostPublicIdData struct {
+	AccessToken   string `json:"access_token"`
+	Name          string `json:"name"`
+	ShareSettings struct {
+		GroupNames bool `json:"group_names"`
+	} `json:"share_settings"`
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -52,8 +53,6 @@ const (
 type Paging struct {
 	cursor string
 	limit  uint64
-	order  string
-	sort   string
 	search string
 }
 
@@ -190,8 +189,6 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
 		limit:  defaultReturnLimit,
-		order:  defaultSortOrder,
-		sort:   q.Get("sort"),
 		search: q.Get("search"),
 	}
 
@@ -204,17 +201,61 @@ func checkPagingParams(handlerErr *error, r *http.Request) Paging {
 		}
 	}
 
-	if order := q.Get("order"); order != "" {
-		paging.order = order
-	}
-	if paging.order != sortOrderAscending && paging.order == sortOrderDescending {
-		joinErr(handlerErr, fmt.Sprintf("invalid sorting order: %s", paging.order))
-	}
 	paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
-	paging.sort = checkName(handlerErr, paging.sort, 0)
 	paging.search = checkName(handlerErr, paging.search, 0)
 
 	return paging
+}
+
+func checkSortColumn[T types.ColEnumFactory[T]](column string) (T, error) {
+	var c T
+	names := c.GetColNames()
+	index := slices.Index(names, column)
+	var err error
+	if index == -1 {
+		err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+	}
+	return c.NewFromIndex(index), err
+}
+
+func checkSortOrder(order string) (bool, error) {
+	switch order {
+	case "":
+		return defaultSortOrder == sortOrderDescending, nil
+	case sortOrderAscending:
+		return false, nil
+	case sortOrderDescending:
+		return true, nil
+	default:
+		return false, errors.New("given value '" + order + "' for parameter 'sort' is not valid, allowed order values are: " + sortOrderAscending + ", " + sortOrderDescending + "")
+	}
+}
+
+func checkSortingParams[T types.ColEnumFactory[T]](handlerErr *error, r *http.Request) []types.Sort[T] {
+	q := r.URL.Query()
+	sortQueries := strings.Split(q.Get("sort"), ",")
+	sorts := make([]types.Sort[T], 0, len(sortQueries))
+	for _, v := range sortQueries {
+		sort_split := strings.Split(v, ":")
+		if len(sort_split) > 2 {
+			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'")
+			continue
+		}
+		if len(sort_split) == 1 {
+			sort_split = append(sort_split, "")
+		}
+		sort, err := checkSortColumn[T](sort_split[0])
+		if err != nil {
+			joinErr(handlerErr, err.Error())
+			continue
+		}
+		order, err := checkSortOrder(sort_split[1])
+		if err != nil {
+			joinErr(handlerErr, err.Error())
+		}
+		sorts = append(sorts, types.Sort[T]{Column: sort, Desc: order})
+	}
+	return sorts
 }
 
 func checkValidatorList(handlerErr *error, validators string) []string {
