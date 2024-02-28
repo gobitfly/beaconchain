@@ -30,7 +30,6 @@ func StartAll(context ModuleContext) {
 	go networkLivenessUpdater(context.ConsClient)
 	go eth1DepositsExporter()
 	go genesisDepositsExporter(context.ConsClient)
-	go checkSubscriptions()
 	go syncCommitteesExporter(context.ConsClient)
 	go syncCommitteesCountExporter()
 	if utils.Config.SSVExporter.Enabled {

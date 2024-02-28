@@ -34,7 +34,7 @@ message MachineMetricSystem {
     string misc_os = 21;
 
     // do not store in bigtable but include them in generated model
-    optional string machine = 22; 
+    optional string machine = 22;
 }
 
 message MachineMetricValidator {
@@ -55,7 +55,7 @@ message MachineMetricValidator {
     uint64 validator_active = 11;
 
     // do not store in bigtable but include them in generated model
-    optional string machine = 12; 
+    optional string machine = 12;
 }
 
 message MachineMetricNode {
@@ -83,7 +83,7 @@ message MachineMetricNode {
     bool sync_eth1_fallback_connected = 18;
 
     // do not store in bigtable but include them in generated model
-    optional string machine = 19; 
+    optional string machine = 19;
 }
 
 

@@ -3,6 +3,7 @@ package modules
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -166,7 +167,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -194,7 +195,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 				insert into blocks_tags
 				select blocks.slot, blocks.blockroot, $1
 				from blocks
-				where 
+				where
 					blocks.slot = $2 and
 					blocks.exec_block_hash = $3
 				ON CONFLICT DO NOTHING`, r.ID, payload.Slot, utils.MustParseHex(payload.BlockHash))
@@ -214,7 +215,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 					proposer_pubkey,
 					proposer_fee_recipient
 				)
-				select 
+				select
 					$1,	blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
 				from blocks
 				where

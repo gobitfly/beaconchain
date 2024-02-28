@@ -38,7 +38,7 @@ func CreateValDashboardValidator(dashboard_id, group_id, validator_index int64) 
 }
 
 func CreateValDashboardSharing(dashboard_id int64, shared_groups bool) error {
-	_, err := db.DB.Exec(`	
+	_, err := db.DB.Exec(`
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, shared_groups) VALUES ($1, $2)
 	`, dashboard_id, shared_groups)
 	return err
@@ -166,8 +166,6 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			created_at timestamp,
 			primary key (id)
 		);
-
-		
 	`)
 	if err != nil {
 		return err
