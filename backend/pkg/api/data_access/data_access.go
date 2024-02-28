@@ -406,9 +406,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 			// Get the proposals for the slot
 			if _, ok := propAssignmentsForSlot[slot]; ok {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals = &t.VDBSlotVizActiveDuty{}
+				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizActiveDuty{}
 
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals.Validator = propAssignmentsForSlot[slot]
+				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = propAssignmentsForSlot[slot]
 
 				status := "scheduled"
 				dutyObject := slot
@@ -419,8 +419,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 					status = "success"
 					dutyObject = slotBlock[slot]
 				}
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals.Status = status
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals.DutyObject = dutyObject
+				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Status = status
+				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.DutyObject = dutyObject
 			}
 
 			// Get the attestation summary for the slot
