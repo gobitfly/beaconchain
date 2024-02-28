@@ -245,7 +245,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 	// create waiting group for concurrency
 	gOuter := &errgroup.Group{}
 
-	// Get the fullfilled duties
+	// Get the fulfilled duties
 	var validatorDuties []types.ValidatorDutyInfo
 	gOuter.Go(func() error {
 		var err error

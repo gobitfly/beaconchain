@@ -2320,7 +2320,7 @@ func collectMonitoringMachine(
 	notificationsByUserID map[uint64]map[types.EventName][]types.Notification,
 	eventName types.EventName,
 	epochWaitInBetween int,
-	notifyConditionFullfilled func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool,
+	notifyConditionFulfilled func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool,
 	epoch uint64,
 ) error {
 	var allSubscribed []MachineEvents
@@ -2363,7 +2363,7 @@ func collectMonitoringMachine(
 		}
 
 		//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
-		if notifyConditionFullfilled(&localData, currentMachineData) {
+		if notifyConditionFulfilled(&localData, currentMachineData) {
 			result = append(result, localData)
 		}
 	}
