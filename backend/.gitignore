@@ -1,7 +1,7 @@
 bin/
 .vscode/
 __gitignore/
-local-deployment/config.yml
-local-deployment/elconfig.json
-local-deployment/.env
+local_deployment/config.yml
+local_deployment/elconfig.json
+local_deployment/.env
 __gitignore
