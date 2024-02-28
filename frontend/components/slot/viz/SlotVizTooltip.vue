@@ -18,7 +18,7 @@ const data = computed(() => {
   const hasDuties = !!slot?.proposal || !!slot?.slashing?.length || !!slot?.attestations || !!slot?.sync
   const tooltipLayout: TooltipLayout = hasDuties ? 'dark' : 'default'
   if (hasDuties) {
-    const addActiveDuty = (type: SlotVizIcons, duty: VDBSlotVizActiveDuty) => {
+    const addActiveDuty = (type: SlotVizIcons, duty: VDBSlotVizActiveDuty, count = 1) => {
       const subRows: Row[] = []
       rows.push(subRows)
       const dutyText = $t(`slotViz.tooltip.${type}.${duty.status}.main`)
@@ -34,11 +34,18 @@ const data = computed(() => {
         dutySubLink = `/validator/${duty.duty_object}`
       }
 
-      subRows.push({ class: duty.status, icon: type, dutyText, count: 1, dutySubText, validator: duty.validator, dutySubLink, duty_object: duty.duty_object })
+      subRows.push({ class: duty.status, icon: type, dutyText, count, dutySubText, validator: count === 1 ? duty.validator : undefined, dutySubLink, duty_object: duty.duty_object })
     }
 
     slot.proposal && addActiveDuty('proposal', slot.proposal)
-    slot.slashing?.forEach(duty => addActiveDuty('slashing', duty))
+    const iHaveSlashed = slot.slashing?.filter(s => s.status !== 'failed')
+    const iGotSlashed = slot.slashing?.filter(s => s.status === 'failed')
+    if (iHaveSlashed?.length) {
+      addActiveDuty('slashing', iHaveSlashed[0], iHaveSlashed.length)
+    }
+    if (iGotSlashed?.length) {
+      addActiveDuty('slashing', iGotSlashed[0], iGotSlashed.length)
+    }
 
     const addPassiveDuty = (type: SlotVizIcons, duty?: VDBSlotVizPassiveDuty) => {
       if (duty) {
@@ -71,7 +78,7 @@ const data = computed(() => {
 })
 </script>
 <template>
-  <BcTooltip :target="props.id" :layout="data.tooltipLayout">
+  <BcTooltip :target="props.id" :layout="data.tooltipLayout" scroll-container="#slot-viz">
     <slot />
     <template v-if="data.hasDuties" #tooltip>
       <div class="with-duties">

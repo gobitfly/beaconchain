@@ -70,14 +70,10 @@ const setPosition = () => {
       top = rect.top + rect.height / 2 - ttHeight / 2
       break
   }
-  if (left > width.value - ttWidth) {
-    left = width.value - ttWidth
-  }
-  left = Math.max(0, left)
-  if (top > height.value - ttHeight) {
-    top = height.value - ttHeight
-  }
-  top = Math.max(0, top)
+  left = Math.max(0, Math.min(left, (width.value - ttWidth)))
+  console.log('top', top, height.value, ttHeight, height.value - ttHeight)
+  top = Math.max(0, Math.min(top, (height.value - ttHeight)))
+  console.log('top after', top)
   pos.value = { top: `${top}px`, left: `${left}px` }
 }
 
@@ -151,7 +147,7 @@ onUnmounted(() => {
     @blur="onHover(false)"
   >
     <slot />
-    <Teleport :disabled="!isOpen" to="body">
+    <Teleport v-if="isOpen" to="body">
       <div class="bc-tooltip-wrapper" :style="pos">
         <div
           ref="bcTooltip"
