@@ -112,6 +112,10 @@
           "validators_slashings": "Validators",
           "apr": "APR",
           "luck": "Luck"
+        },
+        "chart":{
+          "title": "Summary",
+          "yAxis": "Efficiency"
         }
       },
       "tabs": {
@@ -132,10 +136,6 @@
         "sync": {
           "title": "Sync Committee Efficiency: ",
           "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
-        },
-        "chart":{
-          "title": "Summary",
-          "yAxis": "Efficiency"
         }
       }
     }
