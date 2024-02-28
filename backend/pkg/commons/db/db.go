@@ -2142,7 +2142,7 @@ func GetValidatorDuties(readerDb *sqlx.DB, startSlot uint64) ([]types.ValidatorD
 			COALESCE(blocks.exec_block_number, 0) AS exec_block_number,
 			blocks.syncaggregate_bits,
 			blocks_attestations.validators,
-			blocks_attestations.slot attested_slot,
+			blocks_attestations.slot AS attested_slot,
 			blocks.proposerslashingscount,
 			blocks.attesterslashingscount
 		FROM blocks
