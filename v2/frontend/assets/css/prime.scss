@@ -202,44 +202,6 @@
   color: #ff5757;
 }
 
-// InputText
-// TODO: Apply our styles
-
-.p-inputtext {
-  font-family: var(--font-family);
-  font-feature-settings: var(--font-feature-settings, normal);
-  font-size: 1rem;
-  color: #4b5563;
-  background: #ffffff;
-  padding: 0.75rem 0.75rem;
-  border: 1px solid #d1d5db;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
-    box-shadow 0.2s;
-  appearance: none;
-  border-radius: var(--border-radius);
-
-  &:enabled:hover {
-    border-color: var(--primary-color);
-  }
-  &:enabled:focus {
-    outline: 0 none;
-    outline-offset: 0;
-    box-shadow: 0 0 0 0.2rem #a7f3d0;
-    border-color: var(--primary-color);
-  }
-  &.p-invalid.p-component {
-    border-color: #e24c4c;
-  }
-  &.p-inputtext-sm {
-    font-size: 0.875rem;
-    padding: 0.65625rem 0.65625rem;
-  }
-  &.p-inputtext-lg {
-    font-size: 1.25rem;
-    padding: 0.9375rem 0.9375rem;
-  }
-}
-
 // Multiselect drop-down
 // TODO: Apply our styles better and completely
 
