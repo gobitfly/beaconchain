@@ -33,6 +33,25 @@ onMounted(async () => {
   chartData.value = res
 })
 
+function timeToDateString (time: number): string {
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }
+  return new Date(time * 1000).toLocaleDateString(undefined, options)
+}
+
+function xToLabel (x: number): string | undefined {
+  const ts = epochToTs(x)
+  if (ts === undefined) {
+    return undefined
+  }
+
+  const date = timeToDateString(ts)
+  return `${date}\nEpoch ${x}`
+}
+
 const title = {
   text: $t('dashboard.validator.summary.chart.title'),
   left: 'center',
@@ -54,21 +73,23 @@ const textStyle = {
 
 const color = ['#f0f0f0', '#e6194b', '#46f0f0', '#bcf60c', '#4363d8', '#ffe119', '#f032e6', '#3cb44b', '#911eb4', '#f58231', '#87ceeb', '#e6beff', '#40e0d0', '#fabebe', '#aaffc3', '#ffd8b1', '#fffac8', '#daa520', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#a0522d', '#008080', '#9a6324', '#800000', '#808000', '#000075', '#808080', '#708090', '#ffdb58']
 
-// TODO: Styling
 const legend = {
   orient: 'horizontal',
   bottom: 50,
   textStyle: {
     color: '#f0f0f0',
     fontSize: 14,
-    fontWeight: 'bold'
+    fontWeight: 500
   }
 }
 
 // TODO: Styling
 const tooltip = {
-  order: 'valueDesc',
-  trigger: 'axis'
+  order: 'seriesAsc',
+  trigger: 'axis',
+  valueFormatter: (value: number) => {
+    return `${value}% ${$t('dashboard.validator.summary.chart.yAxis')}`
+  }
 }
 
 // TODO: Styling and default values
@@ -78,23 +99,7 @@ const dataZoom = {
   end: 100
 }
 
-const xAxis = {
-  type: 'category',
-  data: chartData.value?.categories,
-  boundaryGap: false,
-
-  axisLabel: {
-    fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
-    lineHeight: 20
-  },
-
-  axisLine: {
-    lineStyle: {
-      color: '#f0f0f0'
-    }
-  }
-}
-
+// yAxis does not need to be computed as it will always be the same
 const yAxis = {
   name: $t('dashboard.validator.summary.chart.yAxis'),
   nameLocation: 'center',
@@ -119,6 +124,26 @@ interface SeriesObject {
 }
 
 const option = computed(() => {
+  const xAxis = {
+    type: 'category',
+    data: chartData.value?.categories,
+    boundaryGap: false,
+
+    axisLabel: {
+      fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
+      lineHeight: 20,
+      formatter: (value: number) => {
+        return xToLabel(value) || ''
+      }
+    },
+
+    axisLine: {
+      lineStyle: {
+        color: '#f0f0f0'
+      }
+    }
+  }
+
   const series: SeriesObject[] = []
   if (chartData.value?.series) {
     chartData.value.series.forEach((element) => {
@@ -155,10 +180,10 @@ const option = computed(() => {
 </template>
 
 <style lang="scss">
-.chart-container {
-  background-color: var(--container-background);
-  padding-top: var(--padding-large);
-  width: 100%;
-  height: 625px;
-}
+  .chart-container {
+    background-color: var(--container-background);
+    padding-top: var(--padding-large);
+    width: 100%;
+    height: 625px;
+  }
 </style>
