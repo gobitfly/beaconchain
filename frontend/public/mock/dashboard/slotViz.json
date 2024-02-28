@@ -14,7 +14,10 @@
         },
         {
           "slot": 98,
-          "status": "scheduled"
+          "status": "scheduled",
+          "sync": {
+            "pending_count": 256
+          }
         },
         {
           "slot": 99,
@@ -30,7 +33,15 @@
         },
         {
           "slot": 102,
-          "status": "scheduled"
+          "status": "scheduled",
+          "proposal": {
+            "status": "scheduled",
+            "validator": 1234,
+            "duty_object": 4319
+          },
+          "attestations": {
+            "pending_count": 2
+          }
         },
         {
           "slot": 103,
@@ -58,7 +69,18 @@
         },
         {
           "slot": 107,
-          "status": "scheduled"
+          "status": "scheduled",
+          "proposal": {
+            "status": "scheduled",
+            "validator": 5422,
+            "duty_object": 4323
+          },
+          "attestations": {
+            "pending_count": 50
+          },
+          "sync": {
+            "pending_count": 188
+          }
         },
         {
           "slot": 108,
@@ -148,7 +170,25 @@
       "slots": [
         {
           "slot": 64,
-          "status": "proposed"
+          "status": "proposed",
+          "proposal": {
+            "status": "success",
+            "validator": 4654,
+            "duty_object": 5312
+          },
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 128965,
+              "duty_object": 7433
+            }
+          ],
+          "attestations": {
+            "success_count": 1
+          },
+          "sync": {
+            "success_count": 99
+          }
         },
         {
           "slot": 65,
@@ -223,7 +263,25 @@
         },
         {
           "slot": 78,
-          "status": "proposed"
+          "status": "missed",
+          "proposal": {
+            "status": "failed",
+            "validator": 7974,
+            "duty_object": 5330
+          },
+          "slashing": [
+            {
+              "status": "failed",
+              "validator": 128965,
+              "duty_object": 7433
+            }
+          ],
+          "attestations": {
+            "failed_count": 1
+          },
+          "sync": {
+            "failed_count": 12
+          }
         },
         {
           "slot": 79,
@@ -235,7 +293,25 @@
         },
         {
           "slot": 81,
-          "status": "proposed"
+          "status": "proposed",
+          "proposal": {
+            "status": "success",
+            "validator": 1246,
+            "duty_object": 5333
+          },
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 46461,
+              "duty_object": 1255
+            }
+          ],
+          "attestations": {
+            "success_count": 2
+          },
+          "sync": {
+            "success_count": 9
+          }
         },
         {
           "slot": 82,
@@ -305,7 +381,19 @@
         },
         {
           "slot": 33,
-          "status": "proposed"
+          "status": "proposed",
+          "proposal": {
+            "status": "success",
+            "validator": 674533,
+            "duty_object": 5315
+          },
+          "slashing": [
+            {
+              "status": "success",
+              "validator": 756322,
+              "duty_object": 56233
+            }
+          ]
         },
         {
           "slot": 34,
