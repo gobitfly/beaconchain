@@ -4,6 +4,8 @@ import type { LoginResponse } from '~/types/user'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
+  DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
@@ -14,7 +16,7 @@ export enum API_PATH {
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]
 
-export type PathValues = Record<string, string>
+export type PathValues = Record<string, string | number>
 
 type MappingData = {
   path: string,
@@ -23,10 +25,28 @@ type MappingData = {
   mock?: boolean
 }
 
+function addQueryParams (path: string, query?: PathValues) {
+  if (!query) {
+    return path
+  }
+  const q = Object.entries(query).filter(([_, value]) => value !== undefined).map(([key, value]) => `${key}=${value}`).join('&')
+  return `${path}?${q}`
+}
+
 const mapping: Record<string, MappingData> = {
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?=dashboard_id}?keys=${values?.keys}`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
+    path: '/validator-dashboards/{dashboard_id}/groups/{group_id}/summary',
+    getPath: values => `/validator-dashboards/${values?.dashboardId}/groups/${values?.groupId}/summary`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SUMMARY]: {
+    path: '/validator-dashboards/{dashboard_id}/summary?',
+    getPath: values => `/validator-dashboards/${values?.dashboardId}/summary`,
     mock: true
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
@@ -55,7 +75,7 @@ const mapping: Record<string, MappingData> = {
   }
 }
 
-export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}, pathValues?: PathValues): Promise<T> {
+export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}, pathValues?: PathValues, query?: PathValues): Promise<T> {
   // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
   const refreshToken = useCookie('refreshToken')
   const accessToken = useCookie('accessToken')
@@ -67,7 +87,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
 
   const url = useRequestURL()
   const { public: { apiClient }, private: pConfig } = useRuntimeConfig()
-  const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
+  const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
   let baseURL = map.mock ? './mock' : apiClient
 
   if (process.server) {
