@@ -71,9 +71,7 @@ const setPosition = () => {
       break
   }
   left = Math.max(0, Math.min(left, (width.value - ttWidth)))
-  console.log('top', top, height.value, ttHeight, height.value - ttHeight)
   top = Math.max(0, Math.min(top, (height.value - ttHeight)))
-  console.log('top after', top)
   pos.value = { top: `${top}px`, left: `${left}px` }
 }
 
