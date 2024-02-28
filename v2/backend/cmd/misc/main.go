@@ -226,16 +226,16 @@ func main() {
 		epochs := []uint64{}
 		err = db.ReaderDb.Select(&epochs, `
 			WITH last_exported_epoch AS (
-				SELECT (MAX(epoch)*$1) AS slot 
-				FROM epochs 
-				WHERE epoch <= $2 
+				SELECT (MAX(epoch)*$1) AS slot
+				FROM epochs
+				WHERE epoch <= $2
 				AND rewards_exported
 			)
-			SELECT epoch 
+			SELECT epoch
 			FROM blocks
-			WHERE status = '0' 
+			WHERE status = '0'
 				AND slot < (SELECT slot FROM last_exported_epoch)
-			GROUP BY epoch 
+			GROUP BY epoch
 			ORDER BY epoch;
 		`, utils.Config.Chain.ClConfig.SlotsPerEpoch, latestFinalizedEpoch)
 		if err != nil {
@@ -631,15 +631,15 @@ func fixEnsAddresses(erigonClient *rpc.ErigonClient) error {
 			if !opts.DryRun {
 				_, err = db.WriterDb.Exec(`
 					INSERT INTO ens (
-						name_hash, 
-						ens_name, 
+						name_hash,
+						ens_name,
 						address,
-						is_primary_name, 
+						is_primary_name,
 						valid_to)
-					VALUES ($1, $2, $3, $4, $5) 
-					ON CONFLICT 
-						(name_hash) 
-					DO UPDATE SET 
+					VALUES ($1, $2, $3, $4, $5)
+					ON CONFLICT
+						(name_hash)
+					DO UPDATE SET
 						ens_name = excluded.ens_name,
 						address = excluded.address,
 						is_primary_name = excluded.is_primary_name,
@@ -873,7 +873,7 @@ func fixExecTransactionsCount() error {
 
 		//nolint:gosec
 		stmt := fmt.Sprintf(`
-			update blocks as a set exec_transactions_count = b.exec_transactions_count 
+			update blocks as a set exec_transactions_count = b.exec_transactions_count
 			from (values %s) as b(exec_block_number, exec_transactions_count)
 			where a.exec_block_number = b.exec_block_number`, strings.Join(valueStrings, ","))
 
@@ -1154,7 +1154,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 				status := uint64(0)
 				err := tx.Get(&status, `
 				SELECT status
-				FROM blocks WHERE 
+				FROM blocks WHERE
 					slot=$1`, block.Slot)
 				if err != nil {
 					log.Error(err, fmt.Errorf("error getting Slot [%v] status", block.Slot), 0)
@@ -1174,9 +1174,9 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 					count := 0
 					err := tx.Get(&count, `
 						SELECT COUNT(*)
-						FROM 
-							blocks_attestations 
-						WHERE 
+						FROM
+							blocks_attestations
+						WHERE
 							block_slot=$1`, block.Slot)
 					if err != nil {
 						log.Error(err, fmt.Errorf("error getting Slot [%v] status", block.Slot), 0)
@@ -1212,7 +1212,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 						// block_slot and block_index are already unique, but to be sure we use the correct index we also check the signature
 						err := tx.Get(&aggregationbits, `
 							SELECT aggregationbits
-							FROM blocks_attestations WHERE 
+							FROM blocks_attestations WHERE
 								block_slot=$1 AND
 								block_index=$2
 						`, block.Slot, index)
@@ -1334,7 +1334,7 @@ func compareRewards(dayStart uint64, dayEnd uint64, validator uint64, bt *db.Big
 		log.Infof("Total CL Rewards for day [%v]: %v", day, tot)
 		var dbRewards *int64
 		err = db.ReaderDb.Get(&dbRewards, `
-		SELECT 
+		SELECT
 		COALESCE(cl_rewards_gwei, 0) AS cl_rewards_gwei
 		FROM validator_stats WHERE validatorindex = $2 AND day = $1`, day, validator)
 		if err != nil {

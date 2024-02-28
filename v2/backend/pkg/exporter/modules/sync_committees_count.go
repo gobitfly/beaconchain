@@ -97,7 +97,7 @@ func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float
 
 	_, err = tx.Exec(
 		fmt.Sprintf(`
-			INSERT INTO sync_committees_count_per_validator (period, count_so_far) 
+			INSERT INTO sync_committees_count_per_validator (period, count_so_far)
 			VALUES (%d, %f)
 			ON CONFLICT (period) DO UPDATE SET
 				period = excluded.period,

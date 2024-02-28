@@ -556,15 +556,15 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	}
 	_, err = WriterDb.Exec(`
 	INSERT INTO ens (
-		name_hash, 
-		ens_name, 
+		name_hash,
+		ens_name,
 		address,
-		is_primary_name, 
+		is_primary_name,
 		valid_to)
-	VALUES ($1, $2, $3, $4, $5) 
-	ON CONFLICT 
-		(name_hash) 
-	DO UPDATE SET 
+	VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT
+		(name_hash)
+	DO UPDATE SET
 		ens_name = excluded.ens_name,
 		address = excluded.address,
 		is_primary_name = excluded.is_primary_name,
@@ -585,7 +585,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 func GetAddressForEnsName(name string) (address *common.Address, err error) {
 	addressBytes := []byte{}
 	err = ReaderDb.Get(&addressBytes, `
-	SELECT address 
+	SELECT address
 	FROM ens
 	WHERE
 		ens_name = $1 AND
@@ -600,7 +600,7 @@ func GetAddressForEnsName(name string) (address *common.Address, err error) {
 
 func GetEnsNameForAddress(address common.Address) (name *string, err error) {
 	err = ReaderDb.Get(&name, `
-	SELECT ens_name 
+	SELECT ens_name
 	FROM ens
 	WHERE
 		address = $1 AND
@@ -625,7 +625,7 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 	}
 
 	err := ReaderDb.Select(&dbAddresses, `
-	SELECT address, ens_name 
+	SELECT address, ens_name
 	FROM ens
 	WHERE
 		address = ANY($1) AND
@@ -643,8 +643,8 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 
 func removeEnsName(name string) error {
 	_, err := WriterDb.Exec(`
-	DELETE FROM ens 
-	WHERE 
+	DELETE FROM ens
+	WHERE
 		ens_name = $1
 	;`, name)
 	if err != nil && strings.Contains(fmt.Sprintf("%v", err), "invalid byte sequence") {
