@@ -7,7 +7,7 @@ import {
   ResultTypes,
   TypeInfo,
   getListOfResultTypes,
-  organizeAPIinfo,
+  convertSearchAheadResultIntoOrganizedResult,
   type SearchAheadResults,
   type OrganizedResults,
   type SearchBarStyle,
@@ -19,7 +19,7 @@ const { t: $t } = useI18n()
 const props = defineProps({
   searchable: { type: Array, required: true }, // list of categories that the bar can search in
   barStyle: { type: String, required: true }, // look of the bar ('discreet' for small, 'gaudy'  for big)
-  pickByDefault: { type: Function, required: true } // when the user presses Enter, this callback function receives a simplified list of the possible matches and must return one element of the list. The bar will then trigger the event @go to call your handler with the data correponding to the matching that you returned. The first parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The second parameter is the index of the best matching result in this list so is only a suggestion, you are free to pick something else to fulfill your logic.
+  pickByDefault: { type: Function, required: true } // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
 })
 const emit = defineEmits(['go'])
 
@@ -173,31 +173,21 @@ function userFeelsLucky () {
     // we default to the filtered-out results if there are results but the drop down does not show them
     toConsider = results.organized.out
   }
-  // builds the list of matchings that the parent component will pick from (in callback function `props.pickByDefault()`)
+  // Builds the list of matchings that the parent component will need to pick one by default (in callback function `props.pickByDefault()`).
+  // We guarantee props.pickByDefault() that the list is ordered by network and type priority (the sorting is done in `filterAnsdOrganizeResults()`).
   const possibilities : Matching[] = []
-  const mapOfBestPossibilitiesToOrganizedResults : {nw: number, ty : number}[] = []
-  let bestMatchWithHigherPriority = 0
-  for (let nw = 0; nw < toConsider.networks.length; nw++) {
-    const network = toConsider.networks[nw]
-    for (let ty = 0; ty < network.types.length; ty++) {
-      const type = network.types[ty]
-      // in the following, we assume that the `type.found` array is sorted by increasing `closeness` values (which is what `filterAndOrganizeResults()` did)
+  for (const network of toConsider.networks) {
+    for (const type of network.types) {
+      // here we assume that the result with the best `closeness` value is the first one is array `type.found` (see the sorting done in `filterAnsdOrganizeResults()`)
       possibilities.push({ closeness: type.found[0].closeness, network: network.chainId, type: type.type })
-      mapOfBestPossibilitiesToOrganizedResults.push({ nw, ty })
-      const last = possibilities.length - 1
-      if (possibilities[last].closeness < possibilities[bestMatchWithHigherPriority].closeness) {
-        bestMatchWithHigherPriority = last
-      }
     }
   }
-  // `bestMatchWithHigherPriority` indicates the possibility that matches the best with the user input. If several
-  // possibilities with this best match-closeness value exist, it indicates the one having the highest priority. This happens
-  // for example when a block and a validator index match perfectly, in this case validators have a higher priority.
-
-  // calls back user's function with the chosen result
-  const picked = props.pickByDefault(possibilities, bestMatchWithHigherPriority)
+  // calling back parent's function in charge of making a choice
+  const picked = props.pickByDefault(possibilities)
+  // retrieving the result corresponding to the choice
   const network = toConsider.networks.find(nw => nw.chainId === picked.network)
   const type = network?.types.find(ty => ty.type === picked.type)
+  // calling back parent's function taking action with the result
   cleanUp()
   emit('go', type?.found[0].main, type?.type, network?.chainId)
 }
@@ -293,7 +283,7 @@ function filterAndOrganizeResults () {
     const type = finding.type as ResultTypes
 
     // getting organized information from the finding
-    const toBeAdded = organizeAPIinfo(finding)
+    const toBeAdded = convertSearchAheadResultIntoOrganizedResult(finding)
     if (toBeAdded.main === '') {
       continue
     }
@@ -336,6 +326,7 @@ function filterAndOrganizeResults () {
     place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
   }
 
+  // This sorting orders the displayed results and is fundamental for function userFeelsLucky(). Do not alter the sorting without considering the needs of that function.
   function sortResults (place : OrganizedResults) {
     place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority)
     for (const network of place.networks) {
@@ -349,12 +340,16 @@ function filterAndOrganizeResults () {
   sortResults(results.organized.out)
 }
 
-// Calculates how close the suggestion of result is to what the user typed. Lower result means better matching.
+// Calculates how close the suggestion of result is to what the user typed.
+// Guarantee: lower value <=> better matching
 function calculateCloseness (suggestion : string) : number {
-  // For now, our only criteria is the length of the suggested result (a shorter suggestion means that it is closer to what the user typed).
-  // This function can be improved later if the API returns approximate results (similar to what Google does). The rest of the component has
-  // been programmed to work with any implementation as long as the returned value decreases strictly with respect to the closeness of the suggestion.
-  return suggestion.length / inputted.value.length
+  // TODO ideally : calculate the Levenshtein distance between the two strings.
+  // For now, the API suggests only exact matches and strings starting with the same letters as the user input. Therefore,
+  // it is sufficient for now to return the length of the suggested result. This produces an ordering equivalent to
+  // the ordering that the Levenshtein distance would produce.
+  // Implementing the Levenshtein distance here would make SearchEngine.vue independent of any assumption about the back-end
+  // search capabilities (in the future, the API might also give results approximating the input, for example with ENS names and graffiti).
+  return suggestion.length - inputted.value.length
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -688,14 +683,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   display: flex;
 
   #input-field {
-    display: block;
     width: v-bind(inputWidth);
     height: v-bind(inputHeight);
     border-top-right-radius: 0px;
     border-bottom-right-radius: 0px;
     background-color: var(--searchbar-background);
     color: var(--text-color);
-    box-shadow: none; // TODO ? remove if prime.scss contains this line
+    box-shadow: none;
     &.discreet {
       border-color: var(--searchbar-background);
     }
@@ -711,8 +705,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     align-items: center;
     border-top-left-radius: 0px;
     border-bottom-left-radius: 0px;
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
+    border-top-right-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
     cursor: pointer;
     &.discreet {
       background-color: var(--searchbar-background);
