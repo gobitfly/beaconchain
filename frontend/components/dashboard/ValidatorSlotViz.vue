@@ -6,7 +6,7 @@ interface Props {
   dashboardId: number
 }
 const props = defineProps<Props>()
-const { tick } = useTimeout(6000)
+const { tick } = useInterval(12000)
 
 const store = useValidatorSlotVizStore()
 
