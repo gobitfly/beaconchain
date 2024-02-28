@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
-import { BaseTransition } from 'vue'
-import { find } from 'lodash-es'
 import {
   Categories,
   CategoryInfo,
@@ -697,7 +695,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     border-bottom-right-radius: 0px;
     background-color: var(--searchbar-background);
     color: var(--text-color);
-    box-shadow: none; // TODO : REMOVE ONCE prime.scss CONTAINS OUR STYLE
+    box-shadow: none; // TODO ? remove if prime.scss contains this line
     &.discreet {
       border-color: var(--searchbar-background);
     }
