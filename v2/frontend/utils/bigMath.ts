@@ -1,4 +1,5 @@
 import { BigNumber } from '@ethersproject/bignumber'
+import type { ClElValue } from '~/types/api/common'
 
 const getFactor = (str?: string): number => {
   const decimals = str?.length ?? 0
@@ -29,4 +30,22 @@ export const bigDiv = (big: BigNumber, num: number): BigNumber => {
   }
   const { factor, combined } = split(num)
   return big.mul(factor).div(combined)
+}
+
+export const convertSum = (...values:string[]):BigNumber | undefined => {
+  return values?.reduce((sum, newValue) => sum.add(BigNumber.from(newValue)), BigNumber.from('0'))
+}
+
+export const totalElCl = (value: ClElValue<string>): BigNumber | undefined => {
+  if (!value) {
+    return
+  }
+  return convertSum(value.el, value.cl)
+}
+
+export const totalElClNumbers = (value: ClElValue<number>): number | undefined => {
+  if (!value) {
+    return
+  }
+  return value.el + value.cl
 }

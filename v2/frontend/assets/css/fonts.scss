@@ -90,6 +90,10 @@
   --header1_font_size: 24px;
   --header1_font_weight: var(--montserrat-medium);
 
+  --subtitle_font_family: var(--montserrat-family);
+  --subtitle_font_size: 18px;
+  --subtitle_font_weight: var(--montserrat-medium);
+
   --big_text_font_family: var(--roboto-family);
   --big_text_font_size: 24px;
   --big_text_font_weight: var(--roboto-medium);
@@ -101,6 +105,7 @@
   --standard_text_font_family: var(--roboto-family);
   --standard_text_font_size: 14px;
   --standard_text_font_weight: var(--roboto-regular);
+  --standard_text_bold_font_weight: var(--roboto-bold);
   
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 12px;
@@ -119,6 +124,16 @@ h1 {
   font-family: var(--header1_font_family);
   font-size: var(--header1_font_size);
   font-weight: var(--header1_font_weight);
+}
+
+@mixin subtitle_text() {
+  font-family: var(--subtitle_font_family);
+  font-size: var(--subtitle_font_size);
+  font-weight: var(--subtitle_font_weight);
+}
+
+.subtitle_text {
+  @include subtitle_text;
 }
 
 @mixin big_text(){

@@ -87,6 +87,7 @@ const columns: Row[] = [
 
 .link-line {
   line-height: 27px;
+  font-size: 16px;
 }
 
 .icon {

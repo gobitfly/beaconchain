@@ -3,6 +3,7 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
   text?: string,
+  title?: string,
   layout?: 'dark' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean
@@ -63,7 +64,7 @@ const handleClick = () => {
   }
 }
 
-const onHover = (enter:boolean) => {
+const onHover = (enter: boolean) => {
   if (!enter) {
     hover.value = false
   } else if (canBeOpened.value && !selected.value) {
@@ -111,7 +112,12 @@ onUnmounted(() => {
       <div class="bc-tooltip-wrapper" :style="pos">
         <div class="bc-tooltip" :class="classList" @click="$event.stopImmediatePropagation()">
           <slot name="tooltip">
-            {{ text }}
+            <span>
+              <b v-if="props.title">
+                {{ props.title }}
+              </b>
+              {{ text }}
+            </span>
           </slot>
         </div>
       </div>
@@ -120,28 +126,30 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.slot_container{
+.slot_container {
   display: inline;
-  &.active{
+
+  &.active {
     cursor: pointer;
   }
 }
+
 .bc-tooltip-wrapper {
   position: fixed;
   width: 1px;
   height: 1px;
   overflow: visible;
   z-index: 99999;
-
 }
 
 .bc-tooltip {
 
-  --tt-bg-color: var(--light-grey);
+  --tt-bg-color: var(--light-grey-2);
   --tt-color: var(--light-black);
 
   position: relative;
   display: inline-flex;
+  flex-wrap: wrap;
   opacity: 0;
   transition: opacity 1s;
   text-align: center;
@@ -150,7 +158,8 @@ onUnmounted(() => {
   border-radius: var(--border-radius);
   color: var(--tt-color);
   background: var(--tt-bg-color);
-  font-family: var(--roboto-family);
+  font-family: var(--inter-family);
+  font-weight: var(--inter-light);
   font-size: 10px;
   pointer-events: none;
   transform: translate(-50%, 0);
@@ -189,6 +198,7 @@ onUnmounted(() => {
 
   &.top {
     transform: translate(-50%, -100%);
+
     &::after {
       top: 100%;
       left: 50%;
@@ -199,6 +209,7 @@ onUnmounted(() => {
 
   &.right {
     transform: translate(0, -50%);
+
     &::after {
       top: calc(50% - 5px);
       left: -10px;
@@ -208,11 +219,23 @@ onUnmounted(() => {
 
   &.left {
     transform: translate(-100%, -50%);
+
     &::after {
       top: calc(50% - 5px);
       left: 100%;
       border-color: transparent transparent transparent var(--tt-bg-color);
     }
   }
+
+  :deep(b) {
+    font-weight: bold;
+    font-weight: var(--inter-medium);
+  }
+
+  &:has(b){
+    min-width: 200px;
+    text-align: left;
+  }
 }
+
 </style>
