@@ -15,8 +15,7 @@ const { slotViz } = storeToRefs(store)
 await useAsyncData('validator_dashboard_slot_viz', () => getSlotViz(props.dashboardId))
 
 watch(() => [props.dashboardId, tick.value], () => {
-  console.log('tick', tick)
-  // getSlotViz(props.dashboardId)
+  getSlotViz(props.dashboardId)
 }, { immediate: true })
 
 </script>
