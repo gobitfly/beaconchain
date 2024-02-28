@@ -2118,7 +2118,7 @@ func GetValidatorActivationBalance(validators []uint64, balance *uint64) error {
 	`, validatorsPQArray)
 }
 
-func GetValidatorPropsosals(validators []uint64, proposals *[]types.ValidatorProposalInfo) error {
+func GetValidatorProposals(validators []uint64, proposals *[]types.ValidatorProposalInfo) error {
 	validatorsPQArray := pq.Array(validators)
 
 	return ReaderDb.Select(proposals, `
@@ -2130,6 +2130,27 @@ func GetValidatorPropsosals(validators []uint64, proposals *[]types.ValidatorPro
 		WHERE proposer = ANY($1)
 		ORDER BY slot ASC
 		`, validatorsPQArray)
+}
+
+func GetValidatorDuties(readerDb *sqlx.DB, startSlot uint64) ([]types.ValidatorDutyInfo, error) {
+	validatorDutyInfo := []types.ValidatorDutyInfo{}
+
+	err := readerDb.Select(&validatorDutyInfo, `
+		SELECT 
+			blocks.slot,
+			blocks.status,
+			COALESCE(blocks.exec_block_number, 0) AS exec_block_number,
+			blocks.syncaggregate_bits,
+			blocks_attestations.validators,
+			blocks_attestations.slot attested_slot,
+			blocks.proposerslashingscount,
+			blocks.attesterslashingscount
+		FROM blocks
+		LEFT JOIN blocks_attestations ON blocks.slot = blocks_attestations.block_slot
+		WHERE blocks.slot >= $1
+		`, startSlot)
+
+	return validatorDutyInfo, err
 }
 
 func GetMissedSlots(slots []uint64) ([]uint64, error) {
@@ -2192,6 +2213,23 @@ func GetBlockStatus(block int64, latestFinalizedEpoch uint64, epochInfo *types.E
 				WHERE blocks.exec_block_number = $1 
 				AND blocks.status='1'`,
 		block, latestFinalizedEpoch)
+}
+
+func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, error) {
+	validatoridxs := []uint64{}
+
+	err := readerDb.Select(&validatoridxs, `
+			SELECT
+				validatorindex
+			FROM sync_committees
+			WHERE period = $1
+			ORDER BY committeeindex`,
+		utils.SyncPeriodOfEpoch(epoch))
+	if err != nil {
+		return nil, err
+	}
+
+	return validatoridxs, nil
 }
 
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
