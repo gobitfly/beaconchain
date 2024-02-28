@@ -6,10 +6,11 @@ export interface NumberFormatConfig {
   addPositiveSign?: boolean
 }
 
-export function formatPercent (percent?: number, { precision, fixed, addPositiveSign }: NumberFormatConfig = { precision: 2, fixed: 2, addPositiveSign: false }):string {
+export function formatPercent (percent?: number, config?: NumberFormatConfig):string {
   if (percent === undefined) {
     return ''
   }
+  const { precision, fixed, addPositiveSign } = { ...{ precision: 2, fixed: 2, addPositiveSign: false }, ...config }
   let result = percent
   if (precision !== undefined) {
     result = round(result, precision)
@@ -18,14 +19,22 @@ export function formatPercent (percent?: number, { precision, fixed, addPositive
   if (fixed !== undefined) {
     return `${result.toFixed(fixed)}%`
   }
+
   return addPositiveSign ? addPlusSign(label) : label
+}
+
+export function calculatePercent (value?: number, base?: number):number {
+  if (!base) {
+    return 0
+  }
+  return (value ?? 0) * 100 / base
 }
 
 export function formatAndCalculatePercent (value?: number, base?: number, config?: NumberFormatConfig):string {
   if (!base) {
     return ''
   }
-  return formatPercent((value ?? 0) * 100 & base, config)
+  return formatPercent(calculatePercent(value, base), config)
 }
 
 export function formatNumber (value?: number):string {
