@@ -368,11 +368,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     {
       chain_id: 1,
       type: 'tokens',
-      str_value: searched
-    },
-    {
-      chain_id: 1,
-      type: 'tokens',
       str_value: searched + 'Coin'
     },
     {
@@ -411,6 +406,11 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     )
   } else {
     response.data.push(
+      {
+        chain_id: 1,
+        type: 'tokens',
+        str_value: searched
+      },
       {
         chain_id: 1,
         type: 'ens_names',
@@ -485,29 +485,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         chain_id: 8453,
         type: 'validators_by_index',
         num_value: Number(searched)
-      }
-    )
-  } else {
-    response.data.push(
-      {
-        chain_id: 8453,
-        type: 'tokens',
-        str_value: searched + 'USD'
       },
-      {
-        chain_id: 8453,
-        type: 'tokens',
-        str_value: searched + '42'
-      },
-      {
-        chain_id: 8453,
-        type: 'tokens',
-        str_value: searched + 'Plus'
-      }
-    )
-  }
-  if (searchedIsPositiveInteger) {
-    response.data.push(
       {
         chain_id: 100,
         type: 'epochs',
@@ -531,6 +509,21 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     )
   } else {
     response.data.push(
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + 'USD'
+      },
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + '42'
+      },
+      {
+        chain_id: 8453,
+        type: 'tokens',
+        str_value: searched + 'Plus'
+      },
       {
         chain_id: 100,
         type: 'tokens',
