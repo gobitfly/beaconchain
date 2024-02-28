@@ -37,15 +37,16 @@ export enum ResultTypes {
 }
 
 interface CategoryInfoFields {
-  filterLabel : string
+  filterLabel : string,
+  filterLabelHint : string
 }
 
 export const CategoryInfo: Record<Categories, CategoryInfoFields> = {
-  [Categories.Tokens]: { filterLabel: 'Tokens' },
-  [Categories.NFTs]: { filterLabel: 'NFTs' },
-  [Categories.Protocol]: { filterLabel: 'Protocol' },
-  [Categories.Addresses]: { filterLabel: 'Addresses' },
-  [Categories.Validators]: { filterLabel: 'Validators' }
+  [Categories.Tokens]: { filterLabel: 'Tokens', filterLabelHint: 'ERC-20' },
+  [Categories.NFTs]: { filterLabel: 'NFTs', filterLabelHint: 'ERC-721 & ERC-1155' },
+  [Categories.Protocol]: { filterLabel: 'Protocol', filterLabelHint: '' },
+  [Categories.Addresses]: { filterLabel: 'Addresses', filterLabelHint: '' },
+  [Categories.Validators]: { filterLabel: 'Validators', filterLabelHint: '' }
 }
 
 interface TypeInfoFields {
