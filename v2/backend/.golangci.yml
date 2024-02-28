@@ -2,7 +2,7 @@ linters:
   enable-all: true
   enable:
     # default needs explicit enabling?
-    - unused 
+    - unused
     - staticcheck
     - govet
     - errcheck
@@ -106,7 +106,7 @@ linters-settings:
       - p: ^log\.Fatalf.*$
         msg: Use log.Fatal instead
       - p: ^logger\.Fatalf.*$
-        msg: Use log.Fatal instead      
+        msg: Use log.Fatal instead
       - p: ^logrus\.Errorf.*$
         msg: Use log.Error instead
       - p: ^logger\.Errorf.*$

@@ -77,12 +77,12 @@ func genesisDepositsExporter(client rpc.Client) {
 
 		// hydrate the eth1 deposit signature for all genesis validators that have a corresponding eth1 deposit
 		_, err = tx.Exec(`
-			UPDATE blocks_deposits 
-			SET signature = a.signature 
+			UPDATE blocks_deposits
+			SET signature = a.signature
 			FROM (
-				SELECT DISTINCT ON(publickey) publickey, signature 
-				FROM eth1_deposits 
-				WHERE valid_signature = true) AS a 
+				SELECT DISTINCT ON(publickey) publickey, signature
+				FROM eth1_deposits
+				WHERE valid_signature = true) AS a
 			WHERE block_slot = 0 AND blocks_deposits.publickey = a.publickey AND blocks_deposits.signature = '\x'`)
 		if err != nil {
 			err := tx.Rollback()

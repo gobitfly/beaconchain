@@ -186,23 +186,23 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string) error {
 	}
 
 	_, err = tx.Exec(`
-		insert into historical_pool_performance 
-		select 
-			eth_store_stats.day, 
-			coalesce(validator_pool.pool, 'Unknown'), 
+		insert into historical_pool_performance
+		select
+			eth_store_stats.day,
+			coalesce(validator_pool.pool, 'Unknown'),
 			count(*) as validators,
-			sum(effective_balances_sum_wei) as effective_balances_sum_wei, 
-			sum(start_balances_sum_wei) as start_balances_sum_wei, 
-			sum(end_balances_sum_wei) as end_balances_sum_wei, 
-			sum(deposits_sum_wei) as deposits_sum_wei, 
-			sum(tx_fees_sum_wei) as tx_fees_sum_wei, 
-			sum(consensus_rewards_sum_wei) as consensus_rewards_sum_wei, 
-			sum(total_rewards_wei) as total_rewards_wei, 
+			sum(effective_balances_sum_wei) as effective_balances_sum_wei,
+			sum(start_balances_sum_wei) as start_balances_sum_wei,
+			sum(end_balances_sum_wei) as end_balances_sum_wei,
+			sum(deposits_sum_wei) as deposits_sum_wei,
+			sum(tx_fees_sum_wei) as tx_fees_sum_wei,
+			sum(consensus_rewards_sum_wei) as consensus_rewards_sum_wei,
+			sum(total_rewards_wei) as total_rewards_wei,
 			avg(eth_store_stats.apr) as apr
-		from validators 
-		left join validator_pool on validators.pubkey = validator_pool.publickey 
-		inner join eth_store_stats on validators.validatorindex = eth_store_stats.validator 
-		where day = $1 
+		from validators
+		left join validator_pool on validators.pubkey = validator_pool.publickey
+		inner join eth_store_stats on validators.validatorindex = eth_store_stats.validator
+		where day = $1
 		group by validator_pool.pool, eth_store_stats.day
 		on conflict (day, pool) do update set
 			day                         = excluded.day,
@@ -272,7 +272,7 @@ DBCHECK:
 			if ethStoreDayCount > 0 {
 				var ethStoreDays []types.EthStoreDay
 				err = ese.DB.Select(&ethStoreDays, `
-						SELECT day 
+						SELECT day
 						FROM eth_store_stats WHERE validator = -1`)
 				if err != nil {
 					log.Error(err, "error retrieving eth.store days from db", 0)

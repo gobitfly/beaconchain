@@ -307,7 +307,7 @@ func getValidatorDetails(validators []uint64) [][]string {
 	var data []types.ValidatorPageData
 	err := db.WriterDb.Select(&data,
 		`SELECT validatorindex, balanceactivation
-		 FROM validators 
+		 FROM validators
 		 WHERE validatorindex = ANY($1)
 		 ORDER BY validatorindex ASC`, validatorFilter)
 	if err != nil {

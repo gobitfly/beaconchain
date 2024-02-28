@@ -209,3 +209,14 @@ func SortedUniqueUint64(arr []uint64) []uint64 {
 
 	return result
 }
+
+func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validators []uint64) []uint64 {
+	participatingValidators := []uint64{}
+	for i := 0; i < len(syncAggregateBits)*8; i++ {
+		val := validators[i]
+		if BitAtVector(syncAggregateBits, i) {
+			participatingValidators = append(participatingValidators, val)
+		}
+	}
+	return participatingValidators
+}
