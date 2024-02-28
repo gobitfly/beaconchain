@@ -49,9 +49,9 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 	}
 	exported := Exported{}
 	err := WriterDb.Get(&exported, `
-		SELECT 
+		SELECT
 			status
-		FROM validator_stats_status 
+		FROM validator_stats_status
 		WHERE day = $1;
 		`, day)
 
@@ -66,9 +66,9 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	previousDayExported := Exported{}
 	err = WriterDb.Get(&previousDayExported, `
-		SELECT 
+		SELECT
 			status
-		FROM validator_stats_status 
+		FROM validator_stats_status
 		WHERE day = $1;
 		`, int64(day)-1)
 
@@ -445,7 +445,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 			_, err = tx.Exec(context.Background(), `
 				WITH ranked_performance AS (
 					SELECT
-						validatorindex, 
+						validatorindex,
 						row_number() OVER (ORDER BY cl_performance_7d DESC) AS rank7d
 					FROM validator_performance
 				)
@@ -548,26 +548,26 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 				mev_performance_365d,
 				mev_performance_total
 				) (
-					select 
-					vs_now.validatorindex, 
+					select
+					vs_now.validatorindex,
 						COALESCE(vs_now.end_balance, 0) as balance,
 						0 as rank7d,
 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_1d.cl_rewards_gwei_total, 0) as cl_performance_1d, 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_7d.cl_rewards_gwei_total, 0) as cl_performance_7d, 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_31d.cl_rewards_gwei_total, 0) as cl_performance_31d, 
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_1d.cl_rewards_gwei_total, 0) as cl_performance_1d,
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_7d.cl_rewards_gwei_total, 0) as cl_performance_7d,
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_31d.cl_rewards_gwei_total, 0) as cl_performance_31d,
 						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_365d.cl_rewards_gwei_total, 0) as cl_performance_365d,
-						coalesce(vs_now.cl_rewards_gwei_total, 0) as cl_performance_total, 
-						
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_1d.el_rewards_wei_total, 0) as el_performance_1d, 
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_7d.el_rewards_wei_total, 0) as el_performance_7d, 
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_31d.el_rewards_wei_total, 0) as el_performance_31d, 
+						coalesce(vs_now.cl_rewards_gwei_total, 0) as cl_performance_total,
+
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_1d.el_rewards_wei_total, 0) as el_performance_1d,
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_7d.el_rewards_wei_total, 0) as el_performance_7d,
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_31d.el_rewards_wei_total, 0) as el_performance_31d,
 						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_365d.el_rewards_wei_total, 0) as el_performance_365d,
-						coalesce(vs_now.el_rewards_wei_total, 0) as el_performance_total, 
-						
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_1d.mev_rewards_wei_total, 0) as mev_performance_1d, 
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_7d.mev_rewards_wei_total, 0) as mev_performance_7d, 
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_31d.mev_rewards_wei_total, 0) as mev_performance_31d, 
+						coalesce(vs_now.el_rewards_wei_total, 0) as el_performance_total,
+
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_1d.mev_rewards_wei_total, 0) as mev_performance_1d,
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_7d.mev_rewards_wei_total, 0) as mev_performance_7d,
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_31d.mev_rewards_wei_total, 0) as mev_performance_31d,
 						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_365d.mev_rewards_wei_total, 0) as mev_performance_365d,
 						coalesce(vs_now.mev_rewards_wei_total, 0) as mev_performance_total
 					from validator_stats vs_now
@@ -576,8 +576,8 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 					left join validator_stats vs_31d on vs_31d.validatorindex = vs_now.validatorindex and vs_31d.day = $4
 					left join validator_stats vs_365d on vs_365d.validatorindex = vs_now.validatorindex and vs_365d.day = $5
 					where vs_now.day = $1
-				) 
-				on conflict (validatorindex) do update set 
+				)
+				on conflict (validatorindex) do update set
 					balance = excluded.balance,
 					rank7d=excluded.rank7d,
 
@@ -612,7 +612,7 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 	_, err = tx.Exec(context.Background(), `
 		WITH ranked_performance AS (
 			SELECT
-				validatorindex, 
+				validatorindex,
 				row_number() OVER (ORDER BY cl_performance_7d DESC) AS rank7d
 			FROM validator_performance
 		)
@@ -997,10 +997,10 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 	lastSlot := ((lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1)
 	lastQuerySlot := ((lastEpoch+2)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1)
 
-	rows, err := ReaderDb.Query(`SELECT 
-	blocks_attestations.slot, 
-	validators 
-	FROM blocks_attestations 
+	rows, err := ReaderDb.Query(`SELECT
+	blocks_attestations.slot,
+	validators
+	FROM blocks_attestations
 	LEFT JOIN blocks ON blocks_attestations.block_root = blocks.blockroot WHERE
 	blocks_attestations.block_slot >= $1 AND blocks_attestations.block_slot <= $2 AND blocks.status = '1' ORDER BY block_slot`, firstSlot, lastQuerySlot)
 	if err != nil {
@@ -1100,9 +1100,9 @@ func GatherStatisticsForDay(day int64) ([]*types.ValidatorStatsTableDbRow, error
 
 	ret := make([]*types.ValidatorStatsTableDbRow, 0)
 
-	err := WriterDb.Select(&ret, `SELECT 
-		validatorindex, 
-		day, 
+	err := WriterDb.Select(&ret, `SELECT
+		validatorindex,
+		day,
 		COALESCE(start_balance, 0) AS start_balance,
 		COALESCE(end_balance, 0) AS end_balance,
 		COALESCE(min_balance, 0) AS min_balance,
@@ -1196,13 +1196,13 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 
 	var result []types.ValidatorIncomeHistory
 	err := ReaderDb.Select(&result, `
-		SELECT 
-			day, 
+		SELECT
+			day,
 			SUM(COALESCE(cl_rewards_gwei, 0)) AS cl_rewards_gwei,
 			SUM(COALESCE(end_balance, 0)) AS end_balance
-		FROM validator_stats 
-		WHERE validatorindex = ANY($1) AND day BETWEEN $2 AND $3 
-		GROUP BY day 
+		FROM validator_stats
+		WHERE validatorindex = ANY($1) AND day BETWEEN $2 AND $3
+		GROUP BY day
 		ORDER BY day
 	;`, validatorIndicesPqArr, lowerBoundDay, upperBoundDay)
 	if err != nil {
@@ -1801,7 +1801,7 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	_, err = tx.Exec(`
 		insert into graffiti_stats
 		select $1::int as day, graffiti, graffiti_text, count(*), count(distinct proposer) as proposer_count
-		from blocks 
+		from blocks
 		where slot >= $2 and slot < $3 and status = '1' and graffiti <> '\x' and graffiti <> '\x0000000000000000000000000000000000000000000000000000000000000000'
 		group by day, graffiti, graffiti_text
 		on conflict (graffiti, day) do update set
