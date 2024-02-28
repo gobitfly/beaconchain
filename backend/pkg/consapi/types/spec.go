@@ -16,13 +16,13 @@ type StandardSpec struct {
 	GenesisForkVersion                      string   `json:"GENESIS_FORK_VERSION"`
 	GenesisDelay                            int64    `json:"GENESIS_DELAY,string"`
 	AltairForkVersion                       string   `json:"ALTAIR_FORK_VERSION"`
-	AltairForkEpoch                         int64    `json:"ALTAIR_FORK_EPOCH,string"`
+	AltairForkEpoch                         *uint64  `json:"ALTAIR_FORK_EPOCH,string"`
 	BellatrixForkVersion                    string   `json:"BELLATRIX_FORK_VERSION"`
-	BellatrixForkEpoch                      int64    `json:"BELLATRIX_FORK_EPOCH,string"`
+	BellatrixForkEpoch                      *uint64  `json:"BELLATRIX_FORK_EPOCH,string"`
 	CapellaForkVersion                      string   `json:"CAPELLA_FORK_VERSION"`
-	CapellaForkEpoch                        int64    `json:"CAPELLA_FORK_EPOCH,string"`
+	CapellaForkEpoch                        *uint64  `json:"CAPELLA_FORK_EPOCH,string"`
 	DenebForkVersion                        string   `json:"DENEB_FORK_VERSION"`
-	DenebForkEpoch                          int64    `json:"DENEB_FORK_EPOCH,string"`
+	DenebForkEpoch                          *uint64  `json:"DENEB_FORK_EPOCH,string"`
 	SecondsPerSlot                          int64    `json:"SECONDS_PER_SLOT,string"`
 	SecondsPerEth1Block                     int64    `json:"SECONDS_PER_ETH1_BLOCK,string"`
 	MinValidatorWithdrawabilityDelay        int64    `json:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY,string"`
