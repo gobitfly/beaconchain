@@ -304,6 +304,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 			// Get the proposals for the slot
 			if _, ok := propAssignmentsForSlot[slot]; ok {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals = &t.VDBSlotVizActiveDuty{}
+
 				slotVizEpochs[epochIdx].Slots[slotIdx].Proposals.Validator = propAssignmentsForSlot[slot]
 
 				status := "scheduled"
@@ -320,6 +322,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 			}
 
 			// Get the attestation summary for the slot
+			slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
 			for validator := range attAssignmentsForSlot[slot] {
 				if slot > latestSlot {
 					slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
@@ -332,6 +335,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 			// Get the sync summary for the slot
 			for validator := range syncAssignmentsForEpoch[epoch] {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
 				if slot > latestSlot {
 					slotVizEpochs[epochIdx].Slots[slotIdx].Sync.PendingCount++
 				} else if _, ok := slotSyncParticipated[slot][validator]; ok {
