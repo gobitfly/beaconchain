@@ -1156,7 +1156,7 @@ func GetWithdrawalsCountForQuery(query string) (uint64, error) {
 	if utils.IsEth1Address(query) {
 		searchQuery := `WHERE w.address = $1`
 		addr, decErr := hex.DecodeString(trimmedQuery)
-		if err != nil {
+		if decErr != nil {
 			return 0, decErr
 		}
 		err = ReaderDb.Get(&count, fmt.Sprintf(withdrawalsQuery, searchQuery, WithdrawalsQueryLimit),
