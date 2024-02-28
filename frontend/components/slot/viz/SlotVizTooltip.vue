@@ -133,7 +133,7 @@ const data = computed(() => {
       .count-icon{
         display: inline-flex;
         width: 90px;
-        justify-content: end;
+        justify-content: flex-end;
         align-items: center;
       }
       .sub-text {
