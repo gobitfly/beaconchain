@@ -22,7 +22,8 @@ type MappingData = {
   path: string,
   getPath?: (values?: PathValues) => string,
   noAuth?: boolean,
-  mock?: boolean
+  mock?: boolean,
+  legacy?: boolean
 }
 
 function addQueryParams (path: string, query?: PathValues) {
@@ -55,12 +56,13 @@ const mapping: Record<string, MappingData> = {
     mock: true
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
-    path: '/validator-slot-viz/{dashboard_id}',
-    getPath: values => `/validator-slot-viz/${values?.validatorId}`,
-    mock: true
+    path: '/validator-dashboards/{dashboard_id}/slot-viz',
+    getPath: values => `/validator-dashboards/${values?.dashboardId}/slot-viz`,
+    mock: false
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latestState',
+    legacy: true,
     mock: true
   },
   [API_PATH.LOGIN]: {
@@ -75,7 +77,7 @@ const mapping: Record<string, MappingData> = {
   }
 }
 
-export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = {}, pathValues?: PathValues, query?: PathValues): Promise<T> {
+export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues): Promise<T> {
   // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
   const refreshToken = useCookie('refreshToken')
   const accessToken = useCookie('accessToken')
@@ -86,12 +88,12 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
   }
 
   const url = useRequestURL()
-  const { public: { apiClient }, private: pConfig } = useRuntimeConfig()
+  const { public: { apiClient, legacyApiClient }, private: pConfig } = useRuntimeConfig()
   const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
-  let baseURL = map.mock ? './mock' : apiClient
+  let baseURL = map.mock ? './mock' : map.legacy ? legacyApiClient : apiClient
 
   if (process.server) {
-    baseURL = map.mock ? `${url.protocol}${url.host}/mock` : pConfig?.apiServer
+    baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
   }
 
   if (pathName === API_PATH.LOGIN) {

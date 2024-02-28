@@ -23,7 +23,7 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
       <DashboardValidatorOverview class="overview" />
     </template>
     <div>
-      <DashboardValidatorSlotViz />
+      <DashboardValidatorSlotViz :dashboard-id="1" />
     </div>
     <TabView lazy>
       <TabPanel>
