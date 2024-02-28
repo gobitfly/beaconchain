@@ -9,7 +9,7 @@ type VDBSlotVizPassiveDuty struct {
 }
 
 type VDBSlotVizActiveDuty struct {
-	Status    string `json:"status" tstype:"'success' | 'failed' | 'scheduled'"`
+	Status    string `json:"status" tstype:"'success' | 'failed' | 'scheduled'" faker:"oneof: success, failed, scheduled"`
 	Validator uint64 `json:"validator"`
 	// If the duty is a proposal & it's successful, the duty_object is the proposed block
 	// If the duty is a proposal & it failed/scheduled, the duty_object is the slot
@@ -20,7 +20,7 @@ type VDBSlotVizActiveDuty struct {
 
 type VDBSlotVizSlot struct {
 	Slot         uint64                 `json:"slot"`
-	Status       string                 `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'"`
+	Status       string                 `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'" faker:"oneof: proposed, missed, scheduled, orphaned"`
 	Attestations *VDBSlotVizPassiveDuty `json:"attestations,omitempty"`
 	Sync         *VDBSlotVizPassiveDuty `json:"sync,omitempty"`
 	Proposal     *VDBSlotVizActiveDuty  `json:"proposal,omitempty"`
@@ -28,9 +28,9 @@ type VDBSlotVizSlot struct {
 }
 type SlotVizEpoch struct {
 	Epoch    uint64           `json:"epoch"`
-	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized' "` // only on landing page
-	Progress float64          `json:"progress,omitempty"`                                                                        // only on landing page
-	Slots    []VDBSlotVizSlot `json:"slots,omitempty"`                                                                           // only on dashboard page
+	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized'" faker:"oneof: scheduled, head, justifying, justified, finalized"`
+	Progress float64          `json:"progress,omitempty"`                   // only on landing page
+	Slots    []VDBSlotVizSlot `json:"slots,omitempty" faker:"slice_len=32"` // only on dashboard page
 }
 
 type InternalGetValidatorDashboardSlotVizResponse ApiDataResponse[[]SlotVizEpoch]
