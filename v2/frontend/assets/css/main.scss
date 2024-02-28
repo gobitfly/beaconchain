@@ -29,7 +29,7 @@ a {
   }
 }
 
-@mixin container() {  
+@mixin container() {
   color: var(--container-color);
   background-color: var(--container-background);
   border: 1px solid var(--container-border-color);
@@ -40,7 +40,7 @@ a {
   @include container;
 }
 
-@mixin truncate-text() {  
+@mixin truncate-text() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

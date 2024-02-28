@@ -43,7 +43,7 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  
+
   .p-dialog-header {
     color: var(--text-color);
     .p-dialog-title {
@@ -81,11 +81,11 @@
 
 // TabView
 // https://primevue.org/tabview/
-.p-tabview {  
+.p-tabview {
   .p-tabview-nav {
     li {
       margin-right: 0;
-    
+
       .p-tabview-nav-link {
         border: solid transparent 1px;
         border-top-right-radius: var(--border-radius);
