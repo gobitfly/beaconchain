@@ -288,7 +288,7 @@ export interface Matching {
   type: ResultTypes
 }
 
-export interface SingleOrganizedResult {
+export interface OrganizedSingleResult {
   main: string, // data corresponding to the input, like the address, the complete ens name, graffito ...
   complement: string, // optional additional information, like the number of findings matching the input ...
   closeness: number // how close the result is to the user input
@@ -299,18 +299,17 @@ export interface OrganizedResults {
     chainId: ChainIDs,
     types: {
       type: ResultTypes,
-      found: SingleOrganizedResult[]
+      found: OrganizedSingleResult[]
     }[]
   }[]
 }
 
-// This function executes a guessing procedure, hopefully correct. It is the best doable until the API specification
-// is published to settle the structure of the response in every case. It will be improved that day if it is incorrect.
 // This function takes a single result element returned by the API and
-// organizes/standardizes it into information ready to be displayed in the drop-down of the search bar.
-// If the data from the API is empty or unexpected then the function returns '' in field `main`,
+// standardizes it into a data element simpler to handle by the code of the search bar.
+// If the API returns more than one data field, this function sees it and stores the additional information.
+// If the data from the API is empty or unexpected, then the function returns '' in field `main`,
 // otherwise `main` contains result data. Field `complement` is '' if the API did not give 2 informations.
-export function organizeAPIinfo (apiResponseElement : SearchAheadSingleResult) : SingleOrganizedResult {
+export function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
   const SearchAheadResultFields : (keyof SearchAheadSingleResult)[] = ['str_value', 'num_value', 'hash_value']
   let mainField : keyof SearchAheadSingleResult
   let complement = ''

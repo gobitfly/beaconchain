@@ -15,14 +15,18 @@ switch (props.location) {
 }
 
 // picks a result by default when the user presses Enter instead of clicking a result in the drop-down
-function userFeelsLucky (possibilities : Matching[], bestMatchWithHigherPriority : number) : Matching {
-  // SearchEngine.vue has sorted the possible results in `possibilities` by network and type priorities.
-  // `bestMatchWithHigherPriority` indicates the possibility that matches the best with the user input. If several
-  // possibilities with this best match-closeness value exist, it indicates the one having the highest priority. This happens
-  // for example when a block and a validator index match perfectly, in this case validators have a higher priority.
-
-  // The work done by SearchEngine.vue descibed above is already what we want so we have nothing else to do:
-  return possibilities[bestMatchWithHigherPriority]
+function pickSomethingByDefault (possibilities : Matching[]) : Matching {
+  // SearchEngine.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
+  // Now we look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
+  // If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority). This
+  // happens for example when the user input corresponds to both a validator index and a block number.
+  let bestMatchWithHigherPriority = possibilities[0]
+  for (const possibility of possibilities) {
+    if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
+      bestMatchWithHigherPriority = possibility
+    }
+  }
+  return bestMatchWithHigherPriority
 }
 
 function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
@@ -97,7 +101,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
   <BcSearchEngine
     :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
     :bar-style="searchBarStyle"
-    :pick-by-default="userFeelsLucky"
+    :pick-by-default="pickSomethingByDefault"
     @go="redirectToRelevantPage"
   />
 </template>
