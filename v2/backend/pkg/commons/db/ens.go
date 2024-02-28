@@ -22,7 +22,7 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	go_ens "github.com/wealdtech/go-ens/v3"
@@ -134,7 +134,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			nameLog := eth_types.Log{
+			nameLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,
@@ -153,7 +153,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			resolverLog := eth_types.Log{
+			resolverLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,
@@ -205,7 +205,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			nameRenewedLog := eth_types.Log{
+			nameRenewedLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,
@@ -242,7 +242,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
-			newOwnerLog := eth_types.Log{
+			newOwnerLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,
@@ -272,7 +272,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			addressChangedLog := eth_types.Log{
+			addressChangedLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,
@@ -497,7 +497,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	if err != nil {
 		log.Error(err, "error could not hash name -> removing ens entry", 0, map[string]interface{}{"name": name})
 
-		err = removeEnsName(client, name)
+		err = removeEnsName(name)
 		if err != nil {
 			return fmt.Errorf("error removing ens name [%v]: %w", name, err)
 		}
@@ -517,7 +517,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 			err.Error() == "invalid jump destination" ||
 			err.Error() == "invalid opcode: INVALID" {
 			// the given name is not available anymore or resolving it did not work properly => we can remove it from the db (if it is there)
-			err = removeEnsName(client, name)
+			err = removeEnsName(name)
 			if err != nil {
 				return fmt.Errorf("error removing ens name after resolve failed [%v]: %w", name, err)
 			}
@@ -641,7 +641,7 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 	return nil
 }
 
-func removeEnsName(client *ethclient.Client, name string) error {
+func removeEnsName(name string) error {
 	_, err := WriterDb.Exec(`
 	DELETE FROM ens 
 	WHERE 

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	gtypes "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -38,12 +38,12 @@ type LighthouseClient struct {
 	assignmentsCacheMux *sync.Mutex
 	slotsCache          *lru.Cache
 	slotsCacheMux       *sync.Mutex
-	signer              gtypes.Signer
+	signer              gethtypes.Signer
 }
 
 // NewLighthouseClient is used to create a new Lighthouse client
 func NewLighthouseClient(cl *consapi.NodeClient, chainID *big.Int) (*LighthouseClient, error) {
-	signer := gtypes.NewCancunSigner(chainID)
+	signer := gethtypes.NewCancunSigner(chainID)
 	client := &LighthouseClient{
 		cl:                  cl,
 		assignmentsCacheMux: &sync.Mutex{},
@@ -809,7 +809,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		txs := make([]*types.Transaction, 0, len(payload.Transactions))
 		for i, rawTx := range payload.Transactions {
 			tx := &types.Transaction{Raw: rawTx}
-			var decTx gtypes.Transaction
+			var decTx gethtypes.Transaction
 			if err := decTx.UnmarshalBinary(rawTx); err != nil {
 				return nil, fmt.Errorf("error parsing tx %d block %x: %w", i, payload.BlockHash, err)
 			} else {

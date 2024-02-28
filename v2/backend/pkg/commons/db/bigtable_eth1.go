@@ -32,7 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/go-redis/redis/v8"
 
 	"google.golang.org/protobuf/proto"
@@ -1386,7 +1386,7 @@ func (bigtable *Bigtable) TransformERC20(blk *types.Eth1Block, cache *freecache.
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			ethLog := eth_types.Log{
+			ethLog := gethtypes.Log{
 				Address:     common.BytesToAddress(log.GetAddress()),
 				Data:        log.Data,
 				Topics:      topics,
@@ -1537,7 +1537,7 @@ func (bigtable *Bigtable) TransformERC721(blk *types.Eth1Block, cache *freecache
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			ethLog := eth_types.Log{
+			ethLog := gethtypes.Log{
 				Address:     common.BytesToAddress(log.GetAddress()),
 				Data:        log.Data,
 				Topics:      topics,
@@ -1691,7 +1691,7 @@ func (bigtable *Bigtable) TransformERC1155(blk *types.Eth1Block, cache *freecach
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			ethLog := eth_types.Log{
+			ethLog := gethtypes.Log{
 				Address:     common.BytesToAddress(txLog.GetAddress()),
 				Data:        txLog.Data,
 				Topics:      topics,

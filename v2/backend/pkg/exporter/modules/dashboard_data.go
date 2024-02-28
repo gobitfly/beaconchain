@@ -7,7 +7,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	ctypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
 )
 
@@ -49,14 +49,14 @@ func (d *dashboardData) Start(args []any) error {
 }
 
 type Data struct {
-	startBalances            *ctypes.StandardValidatorsResponse
-	endBalances              *ctypes.StandardValidatorsResponse
-	proposerAssignments      *ctypes.StandardProposerAssignmentsResponse
-	syncCommitteeAssignments *ctypes.StandardSyncCommitteesResponse
-	attestationRewards       *ctypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[int]*ctypes.StandardBeaconSlotResponse
-	beaconBlockRewardData    map[int]*ctypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData  map[int]*ctypes.StandardSyncCommitteeRewardsResponse
+	startBalances            *constypes.StandardValidatorsResponse
+	endBalances              *constypes.StandardValidatorsResponse
+	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
+	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
+	attestationRewards       *constypes.StandardAttestationRewardsResponse
+	beaconBlockData          map[int]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[int]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[int]*constypes.StandardSyncCommitteeRewardsResponse
 }
 
 func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
@@ -67,9 +67,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
 
-	result.beaconBlockData = make(map[int]*ctypes.StandardBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[int]*ctypes.StandardBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[int]*ctypes.StandardSyncCommitteeRewardsResponse)
+	result.beaconBlockData = make(map[int]*constypes.StandardBeaconSlotResponse)
+	result.beaconBlockRewardData = make(map[int]*constypes.StandardBlockRewardsResponse)
+	result.syncCommitteeRewardData = make(map[int]*constypes.StandardSyncCommitteeRewardsResponse)
 
 	// retrieve the validator balances at the start of the epoch
 	log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)

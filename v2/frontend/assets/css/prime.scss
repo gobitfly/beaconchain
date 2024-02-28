@@ -1,5 +1,5 @@
 @use "~/assets/css/fonts.scss";
-
+@import "~/assets/css/prime_datatable.scss";
 // Button
 // https://primevue.org/button/
 .p-button {
@@ -32,7 +32,7 @@
   }
 
   &.p-button-icon-only {
-    padding: 8px 10px;
+    padding: 8px;
   }
 }
 
@@ -42,9 +42,10 @@
   background: var(--container-background);
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
+  padding: var(--padding-large);
+  
   .p-dialog-header {
     color: var(--text-color);
-    padding: var(--padding-large);
     .p-dialog-title {
       @include fonts.big_text;
     }

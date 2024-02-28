@@ -17,7 +17,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/hashicorp/go-version"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -41,7 +41,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var rpEth1RPRCClient *gethRPC.Client
+var rpEth1RPRCClient *gethrpc.Client
 var rpEth1Client *ethclient.Client
 
 const GethEventLogInterval = 25000
@@ -63,7 +63,7 @@ func rocketpoolExporter() {
 	}
 
 	var err error
-	rpEth1RPRCClient, err = gethRPC.Dial(endpoint)
+	rpEth1RPRCClient, err = gethrpc.Dial(endpoint)
 	if err != nil {
 		log.Fatal(err, "new rocketpool geth client error", 0)
 	}
@@ -148,75 +148,6 @@ func NewRocketpoolExporter(eth1Client *ethclient.Client, storageContractAddressH
 	rpe.RocketpoolRewardTreesDownloadQueue = []RocketpoolRewardTreeDownloadable{}
 	rpe.RocketpoolRewardTreeData = map[uint64]RewardsFile{}
 	return rpe, nil
-}
-
-func (rp *RocketpoolExporter) Init() error {
-	var err error
-	err = rp.InitMinipools()
-	if err != nil {
-		return err
-	}
-	err = rp.InitNodes()
-	if err != nil {
-		return err
-	}
-	err = rp.InitDAOProposals()
-	if err != nil {
-		return err
-	}
-	err = rp.InitDAOMembers()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (rp *RocketpoolExporter) InitMinipools() error {
-	dbRes := []RocketpoolMinipool{}
-	err := rp.DB.Select(&dbRes, `select address, pubkey, node_address, node_fee, deposit_type, status,status_time, penalty_count from rocketpool_minipools`)
-	if err != nil {
-		return err
-	}
-	for _, val := range dbRes {
-		rp.MinipoolsByAddress[fmt.Sprintf("%x", val.Address)] = &val
-	}
-	return nil
-}
-
-func (rp *RocketpoolExporter) InitNodes() error {
-	dbRes := []RocketpoolNode{}
-	err := rp.DB.Select(&dbRes, `select address, timezone_location, rpl_stake, min_rpl_stake, max_rpl_stake, rpl_cumulative_rewards, smoothing_pool_opted_in, claimed_smoothing_pool, unclaimed_smoothing_pool, unclaimed_rpl_rewards from rocketpool_nodes`)
-	if err != nil {
-		return err
-	}
-	for _, val := range dbRes {
-		rp.NodesByAddress[fmt.Sprintf("%x", val.Address)] = &val
-	}
-	return nil
-}
-
-func (rp *RocketpoolExporter) InitDAOProposals() error {
-	dbRes := []RocketpoolDAOProposal{}
-	err := rp.DB.Select(&dbRes, `select id, dao, proposer_address, message, created_time, start_time, end_time, expiry_time, votes_required, votes_for, votes_against, member_voted, member_supported, is_cancelled, is_executed, payload, state from rocketpool_proposals`)
-	if err != nil {
-		return err
-	}
-	for _, val := range dbRes {
-		rp.DAOProposalsByID[val.ID] = &val
-	}
-	return nil
-}
-
-func (rp *RocketpoolExporter) InitDAOMembers() error {
-	dbRes := []RocketpoolDAOMember{}
-	err := rp.DB.Select(&dbRes, `select url, address, id, joined_time, last_proposal_time, rpl_bond_amount, unbonded_validator_count from rocketpool_dao_members`)
-	if err != nil {
-		return err
-	}
-	for _, val := range dbRes {
-		rp.DAOMembersByAddress[fmt.Sprintf("%x", val.Address)] = &val
-	}
-	return nil
 }
 
 func (rp *RocketpoolExporter) Run() error {

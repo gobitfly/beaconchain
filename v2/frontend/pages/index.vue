@@ -1,6 +1,6 @@
 <template>
   <BcPageWrapper :is-home-page="true">
-    Index page
+    <h1>Index page</h1>
     <div id="searchbar">
       <BcMainSearchBar location="page" />
     </div>

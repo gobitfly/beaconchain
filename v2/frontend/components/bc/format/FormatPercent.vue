@@ -6,25 +6,42 @@ interface Props {
   hideEmptyValue?: boolean
   precision?: number
   fixed?: number
+  fullOnEmptyBase?: boolean
+  colorBreakPoint?: number // if set then the percentage will be colored accordingly
 }
 
 const props = defineProps<Props>()
 
-const label = computed(() => {
-  if (props.percent === undefined && !props.base) {
-    if (props.hideEmptyValue) {
-      return null
+const data = computed(() => {
+  let label: string | null = null
+  let className = ''
+  if (props.base === 0 && props.fullOnEmptyBase) {
+    return {
+      label: '100%',
+      className: 'text-positive'
     }
-    return '0%'
   }
-  const config = { precision: props.precision, fixed: props.fixed }
-  if (props.percent !== undefined) {
-    return formatPercent(props.percent, config)
+  if (props.percent === undefined && !props.base) {
+    if (!props.hideEmptyValue) {
+      label = '0%'
+    }
+    return { label, className }
   }
-  return formatAndCalculatePercent(props.value, props.base, config)
+  const percent = props.percent ?? calculatePercent(props.value, props.base)
+  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2 }
+  label = formatPercent(percent, config)
+
+  if (props.colorBreakPoint) {
+    if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
+      className = 'text-positive'
+    } else {
+      className = 'text-negative'
+    }
+  }
+  return { label, className }
 })
 
 </script>
 <template>
-  {{ label }}
+  <span :class="data.className">{{ data.label }}</span>
 </template>
