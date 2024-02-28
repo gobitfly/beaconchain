@@ -12,4 +12,3 @@ services:
       - ./.data:/var/lib/postgresql/data
     ports:
       - 5437:5432
- 
