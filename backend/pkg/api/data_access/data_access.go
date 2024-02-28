@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/sync/errgroup"
 )
 
 type DataAccessInterface interface {
@@ -170,75 +171,105 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 
 	minSlot := minEpoch * slotsPerEpoch
 
+	// create waiting group for concurrency
+	gOuter := &errgroup.Group{}
+
+	// Get the fullfilled duties
+	var validatorDuties []types.ValidatorDutyInfo
+	gOuter.Go(func() error {
+		var err error
+		validatorDuties, err = db.GetValidatorDuties(d.readerDb, minSlot)
+		return err
+	})
+
 	// Gather the assignments data
 	propAssignmentsForSlot := make(map[uint64]uint64)
 	attAssignmentsForSlot := make(map[uint64]map[uint64]bool)
 	totalSyncAssignmentsForEpoch := make(map[uint64][]uint64)
 	syncAssignmentsForEpoch := make(map[uint64]map[uint64]bool)
-	for epoch := minEpoch; epoch <= maxEpoch; epoch++ {
-		// Get the epoch assignments data
-		key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
-		encodedRedisCachedEpochAssignments, err := d.persistentRedisDbClient.Get(context.Background(), key).Result()
-		if err != nil {
-			return nil, err
-		}
+	{
+		muxPropAssignmentsForSlot := &sync.Mutex{}
+		muxAttAssignmentsForSlot := &sync.Mutex{}
+		muxTotalSyncAssignmentsForEpoch := &sync.Mutex{}
+		muxSyncAssignmentsForEpoch := &sync.Mutex{}
 
-		var serializedAssignmentsData bytes.Buffer
-		_, err = serializedAssignmentsData.Write([]byte(encodedRedisCachedEpochAssignments))
-		if err != nil {
-			return nil, err
-		}
-		var decodedRedisCachedEpochAssignments types.RedisCachedEpochAssignments
+		for e := minEpoch; e <= maxEpoch; e++ {
+			epoch := e
+			gOuter.Go(func() error {
+				// Get the epoch assignments data
+				key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
+				encodedRedisCachedEpochAssignments, err := d.persistentRedisDbClient.Get(context.Background(), key).Result()
+				if err != nil {
+					return err
+				}
 
-		dec := gob.NewDecoder(&serializedAssignmentsData)
-		err = dec.Decode(&decodedRedisCachedEpochAssignments)
-		if err != nil {
-			return nil, err
-		}
+				var serializedAssignmentsData bytes.Buffer
+				_, err = serializedAssignmentsData.Write([]byte(encodedRedisCachedEpochAssignments))
+				if err != nil {
+					return err
+				}
+				var decodedRedisCachedEpochAssignments types.RedisCachedEpochAssignments
 
-		// Save the assignments data in maps
+				dec := gob.NewDecoder(&serializedAssignmentsData)
+				err = dec.Decode(&decodedRedisCachedEpochAssignments)
+				if err != nil {
+					return err
+				}
 
-		// Proposals
-		for slot, propValidator := range decodedRedisCachedEpochAssignments.Assignments.ProposerAssignments {
-			// Only add results for validators we care about
-			if _, isValid := ValidatorsMap[propValidator]; isValid {
-				propAssignmentsForSlot[slot] = propValidator
-			}
-		}
+				// Save the assignments data in maps
 
-		// Attestations
-		for key, attValidator := range decodedRedisCachedEpochAssignments.Assignments.AttestorAssignments {
-			keyParts := strings.Split(key, "-")
-			slot, err := strconv.ParseUint(keyParts[0], 10, 64)
-			if err != nil {
-				return nil, err
-			}
+				// Proposals
+				for slot, propValidator := range decodedRedisCachedEpochAssignments.Assignments.ProposerAssignments {
+					// Only add results for validators we care about
+					if _, isValid := ValidatorsMap[propValidator]; isValid {
+						muxPropAssignmentsForSlot.Lock()
+						propAssignmentsForSlot[slot] = propValidator
+						muxPropAssignmentsForSlot.Unlock()
+					}
+				}
 
-			if attAssignmentsForSlot[slot] == nil {
-				attAssignmentsForSlot[slot] = make(map[uint64]bool, 0)
-			}
-			// Only add results for validators we care about
-			if _, isValid := ValidatorsMap[attValidator]; isValid {
-				attAssignmentsForSlot[slot][attValidator] = true
-			}
-		}
+				// Attestations
+				for key, attValidator := range decodedRedisCachedEpochAssignments.Assignments.AttestorAssignments {
+					keyParts := strings.Split(key, "-")
+					slot, err := strconv.ParseUint(keyParts[0], 10, 64)
+					if err != nil {
+						return err
+					}
 
-		// Syncs
-		totalSyncAssignmentsForEpoch[epoch] = decodedRedisCachedEpochAssignments.Assignments.SyncAssignments
-		if syncAssignmentsForEpoch[epoch] == nil {
-			syncAssignmentsForEpoch[epoch] = make(map[uint64]bool, 0)
-		}
-		for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
-			// Only add results for validators we care about
-			if _, isValid := ValidatorsMap[validator]; isValid {
-				syncAssignmentsForEpoch[epoch][validator] = true
-			}
+					muxAttAssignmentsForSlot.Lock()
+					if attAssignmentsForSlot[slot] == nil {
+						attAssignmentsForSlot[slot] = make(map[uint64]bool, 0)
+					}
+					// Only add results for validators we care about
+					if _, isValid := ValidatorsMap[attValidator]; isValid {
+						attAssignmentsForSlot[slot][attValidator] = true
+					}
+					muxAttAssignmentsForSlot.Unlock()
+				}
+
+				// Syncs
+				muxTotalSyncAssignmentsForEpoch.Lock()
+				totalSyncAssignmentsForEpoch[epoch] = decodedRedisCachedEpochAssignments.Assignments.SyncAssignments
+				muxTotalSyncAssignmentsForEpoch.Unlock()
+				muxSyncAssignmentsForEpoch.Lock()
+				if syncAssignmentsForEpoch[epoch] == nil {
+					syncAssignmentsForEpoch[epoch] = make(map[uint64]bool, 0)
+				}
+				for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
+					// Only add results for validators we care about
+					if _, isValid := ValidatorsMap[validator]; isValid {
+						syncAssignmentsForEpoch[epoch][validator] = true
+					}
+				}
+				muxSyncAssignmentsForEpoch.Unlock()
+
+				return nil
+			})
 		}
 	}
 
-	// Get the fullfilled duties
-	validatorDuties, err := db.GetValidatorDuties(d.readerDb, minSlot)
-	if err != nil {
+	// wait for routines to complete
+	if err := gOuter.Wait(); err != nil {
 		return nil, err
 	}
 
