@@ -66,7 +66,7 @@ func SendTextMail(to, subject, msg string, attachment []types.EmailAttachment) e
 }
 
 func createTextMessage(msg types.Email) string {
-	return fmt.Sprintf("%s\n\n%s\n\n― You are receiving this because you are staking on Ethermine Staking. You can manage your subscriptions at %s.", msg.Title, msg.Body, msg.SubscriptionManageURL)
+	return fmt.Sprintf("%s\n\n%s\n\n― You are receiving this because you are registered on beaconcha.in. You can manage your subscriptions at %s.", msg.Title, msg.Body, msg.SubscriptionManageURL)
 }
 
 // SendMail sends an email to the given address with the given message.

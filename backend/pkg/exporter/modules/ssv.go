@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -102,7 +103,7 @@ func saveSSV(res *SSVExporterResponse) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil && err != sql.ErrTxDone {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
