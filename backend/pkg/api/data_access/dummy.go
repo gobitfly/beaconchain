@@ -89,7 +89,12 @@ func (d DummyService) RemoveValidatorDashboardPublicId(dashboardId uint64, publi
 
 func (d DummyService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
 	r := []t.SlotVizEpoch{}
-	err := commonFakeData(&r)
+	var err error
+	for i := 0; i < 4; i++ {
+		epoch := t.SlotVizEpoch{}
+		err = commonFakeData(&epoch)
+		r = append(r, epoch)
+	}
 	return r, err
 }
 

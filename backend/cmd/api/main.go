@@ -53,7 +53,7 @@ func main() {
 	router := api.NewApiRouter(dai)
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         net.JoinHostPort(host, port),
+		Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
