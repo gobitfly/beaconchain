@@ -9,13 +9,13 @@
       "24h": "sur 24h",
       "7d": "sur 7d",
       "31d": "sur 31d",
-      "365d": "sur 365j"
+      "365d": "sur 365j",
+      "all": "depuis toujours"
     },
     "dashboard": {
       "title": "Tableau de bord",
       "validator": {
         "overview": {
-          "your_active_validators": "Vos validateurs actifs",
           "total_efficiency": "Efficacité totale",
           "total_rewards": "Récompense totale",
           "proposal_luck": "Chance: Proposal",

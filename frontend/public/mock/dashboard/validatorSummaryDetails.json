@@ -1,0 +1,316 @@
+{
+  "data": {
+    "details_day": {
+      "attestation_head": {
+        "status_count": {
+          "success": 121,
+          "failed": 32
+        },
+        "earned": "11100000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_source": {
+        "status_count": {
+          "success": 122,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23, 5432, 2309, 333, 22, 111]
+      },
+      "attestation_target": {
+        "status_count": {
+          "success": 0,
+          "failed": 32
+        },
+        "earned": "11300000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_efficiency": 87.1234412,
+      "attestation_avg_incl_dist": 12,
+      "sync": {
+        "status_count": {
+          "success": 123,
+          "failed": 0
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23, 2309, 333, 22, 111, 133455]
+      },
+      "proposals": {
+        "status_count": {
+          "success": 0,
+          "failed": 0
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "slashed": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "apr": {
+        "el": 2.123,
+        "cl": 3.1234
+      },
+      "income": {
+        "el": "11200000000000000",
+        "cl": "11200000000000000"
+      },
+      "luck": {
+        "proposal": {
+          "percent": 102.32,
+          "expected": 120,
+          "average": 233
+        },
+        "sync": {
+          "percent": 202.32,
+          "expected": 120,
+          "average": 233
+        }
+      }
+    },
+    "details_week": {
+      "attestation_head": {
+        "status_count": {
+          "success": 223,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_source": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_target": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_efficiency": 87.1234412,
+      "attestation_avg_incl_dist": 12,
+      "sync": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "proposals": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "slashed": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "apr": {
+        "el": 2.123,
+        "cl": 3.1234
+      },
+      "income": {
+        "el": "11200000000000000",
+        "cl": "11200000000000000"
+      },
+      "luck": {
+        "proposal": {
+          "percent": 102.32,
+          "expected": 120,
+          "average": 233
+        },
+        "sync": {
+          "percent": 202.32,
+          "expected": 120,
+          "average": 233
+        }
+      }
+    },
+    "details_month": {
+      "attestation_head": {
+        "status_count": {
+          "success": 323,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_source": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_target": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_efficiency": 87.1234412,
+      "attestation_avg_incl_dist": 12,
+      "sync": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "proposals": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "slashed": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "apr": {
+        "el": 2.123,
+        "cl": 3.1234
+      },
+      "income": {
+        "el": "11200000000000000",
+        "cl": "11200000000000000"
+      },
+      "luck": {
+        "proposal": {
+          "percent": 102.32,
+          "expected": 120,
+          "average": 233
+        },
+        "sync": {
+          "percent": 202.32,
+          "expected": 120,
+          "average": 233
+        }
+      }
+    },
+    "details_total": {
+      "attestation_head": {
+        "status_count": {
+          "success": 423,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_source": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_target": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_efficiency": 87.1234412,
+      "attestation_avg_incl_dist": 12,
+      "sync": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "proposals": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "slashed": {
+        "status_count": {
+          "success": 123,
+          "failed": 32
+        },
+        "earned": "11200000000000000",
+        "penalty": "3200000000000000",
+        "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "apr": {
+        "el": 2.123,
+        "cl": 3.1234
+      },
+      "income": {
+        "el": "11200000000000000",
+        "cl": "11200000000000000"
+      },
+      "luck": {
+        "proposal": {
+          "percent": 102.32,
+          "expected": 120,
+          "average": 233
+        },
+        "sync": {
+          "percent": 202.32,
+          "expected": 120,
+          "average": 233
+        }
+      }
+    }
+  }
+}

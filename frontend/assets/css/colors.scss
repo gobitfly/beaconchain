@@ -3,6 +3,7 @@
   --grey-1: #e9e9e9;
   --grey-4: #f4f4f4;
   --light-grey: #f0f0f0;
+  --light-grey-2: #dfdfdf;
   --light-grey-3: #d3d3d3;
   --dark-grey: #5c4e4e;
   --very-dark-grey: #362f32;
@@ -31,6 +32,7 @@
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
   --text-color-disabled: var(--grey);
+  --text-color-discreet: var(--grey);
 
   --button-color-active: var(--primary-orange);
   --button-color-hover: var(--primary-orange-hover);
@@ -42,6 +44,8 @@
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
 
+  --subcontainer-background: var(--light-grey-2);
+
   --input-background: var(--grey-4);
   --input-border-color: var(--light-grey-3);
   --input-active-text-color: var(--light-black);
@@ -49,11 +53,11 @@
 
   --link-color: var(--blue);
 
-  --negtive-color: var(--light-red);
+  --negative-color: var(--light-red);
   --positive-color: var(--light-green);
 
   &.dark-mode {
-    --primary-color: -var(--primary-orange);
+    --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
 
     --background-color: var(--almost-black);
@@ -72,6 +76,8 @@
     --container-color: var(--grey-4);
     --container-border-color: var(--dark-grey);
 
+    --subcontainer-background: var(--graphite);
+
     --input-background: var(--very-dark-grey);
     --input-border-color: var(--dark-grey);
     --input-active-text-color: var(--light-grey);
@@ -79,7 +85,7 @@
 
     --link-color: var(--light-blue);
 
-    --negtive-color: var(--flashy-red);
+    --negative-color: var(--flashy-red);
     --positive-color: var(--flashy-green);
   }
 }
