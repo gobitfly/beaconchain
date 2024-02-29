@@ -49,6 +49,9 @@ watch(colorMode, (newColorMode) => {
 
 const styles = window.getComputedStyle(document.documentElement)
 const fontFamily = styles.getPropertyValue('--roboto-family')
+const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
+const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
+const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
 const option = computed(() => {
   interface SeriesObject {
@@ -83,7 +86,7 @@ const option = computed(() => {
       data: chartData.value?.categories,
       boundaryGap: false,
       axisLabel: {
-        fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
+        fontSize: textSize,
         lineHeight: 20,
         formatter: (value: number) => {
           const ts = epochToTs(value)
@@ -107,7 +110,7 @@ const option = computed(() => {
       silent: true,
       axisLabel: {
         formatter: '{value} %',
-        fontSize: 14
+        fontSize: textSize
       },
       splitLine: {
         lineStyle: {
@@ -118,8 +121,8 @@ const option = computed(() => {
     series,
     textStyle: {
       fontFamily,
-      fontSize: 14,
-      fontWeight: 300,
+      fontSize: textSize,
+      fontWeight: fontWeightLight,
       color: elementColor.value
     },
     color: groupColors.value,
@@ -128,8 +131,8 @@ const option = computed(() => {
       bottom: 50,
       textStyle: {
         color: elementColor.value,
-        fontSize: 14,
-        fontWeight: 500
+        fontSize: textSize,
+        fontWeight: fontWeightMedium
       }
     },
     tooltip: {
