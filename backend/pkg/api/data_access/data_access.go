@@ -228,7 +228,6 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId uint64, 
 var getValidatorDashboardSlotVizMux = &sync.Mutex{}
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
-
 	log.Infof("retrieving data for dashboard with id %d", dashboardId)
 	// make sure that the function is only executed once during development not to go oom
 	getValidatorDashboardSlotVizMux.Lock()
