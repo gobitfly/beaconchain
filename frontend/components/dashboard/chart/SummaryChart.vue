@@ -40,11 +40,11 @@ onMounted(async () => {
 })
 
 const groupColors = ref<string[]>()
-const elementColor = ref<string>()
+const labelColor = ref<string>()
 
 watch(colorMode, (newColorMode) => {
   groupColors.value = getSummaryChartGroupColors(newColorMode.value)
-  elementColor.value = getSummaryChartTextColor(newColorMode.value)
+  labelColor.value = getSummaryChartTextColor(newColorMode.value)
 }, { immediate: true })
 
 const styles = window.getComputedStyle(document.documentElement)
@@ -67,7 +67,7 @@ const option = computed(() => {
 
       if (element.id !== -1) {
         const group = overview.value?.groups.find(group => group.id === element.id)
-        name = group !== undefined ? group.name : 'Group Id ' + element.id
+        name = group !== undefined ? group.name : element.id.toString()
       }
 
       const newObj: SeriesObject = {
@@ -114,7 +114,7 @@ const option = computed(() => {
       },
       splitLine: {
         lineStyle: {
-          color: elementColor.value
+          color: labelColor.value
         }
       }
     },
@@ -123,14 +123,14 @@ const option = computed(() => {
       fontFamily,
       fontSize: textSize,
       fontWeight: fontWeightLight,
-      color: elementColor.value
+      color: labelColor.value
     },
     color: groupColors.value,
     legend: {
       orient: 'horizontal',
-      bottom: 50,
+      bottom: 65,
       textStyle: {
-        color: elementColor.value,
+        color: labelColor.value,
         fontSize: textSize,
         fontWeight: fontWeightMedium
       }
@@ -163,13 +163,13 @@ const option = computed(() => {
       end: 100,
       dataBackground: {
         lineStyle: {
-          color: elementColor.value
+          color: labelColor.value
         },
         areaStyle: {
-          color: elementColor.value
+          color: labelColor.value
         }
       },
-      borderColor: elementColor.value
+      borderColor: labelColor.value
     }
   }
 })
