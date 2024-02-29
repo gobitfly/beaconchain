@@ -604,6 +604,21 @@
               "status": "success",
               "validator": 1234,
               "duty_object": 5321
+            },
+            {
+              "status": "success",
+              "validator": 1234,
+              "duty_object": 5321
+            },
+            {
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
+            },
+            {
+              "status": "failed",
+              "validator": 1234,
+              "duty_object": 5321
             }
           ],
           "attestations": {
