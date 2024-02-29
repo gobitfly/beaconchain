@@ -37,16 +37,6 @@ onMounted(async () => {
   chartData.value = res
 })
 
-function xToLabel (x: number): string | undefined {
-  const ts = epochToTs(x)
-  if (ts === undefined) {
-    return undefined
-  }
-
-  const date = formatTs(ts)
-  return `${date}\nEpoch ${x}`
-}
-
 // TODO: retrieve from css?
 const textStyle = {
   fontFamily: 'Roboto',
@@ -56,7 +46,8 @@ const textStyle = {
 }
 
 // TODO: Replace with colors coming from designer
-const color = ['#f0f0f0', '#e6194b', '#46f0f0', '#bcf60c', '#4363d8', '#ffe119', '#f032e6', '#3cb44b', '#911eb4', '#f58231', '#87ceeb', '#e6beff', '#40e0d0', '#fabebe', '#aaffc3', '#ffd8b1', '#fffac8', '#daa520', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#a0522d', '#008080', '#9a6324', '#800000', '#808000', '#000075', '#808080', '#708090', '#ffdb58']
+// const colorsLight = ['#E7416A', '#6CF0F0', '#B2DF27', '#5D78DC', '#FFDB58', '#F067E9', '#57BD64', '#A448C0', '#DC2A7F', '#F58E45', '#87CEEB', '#438D61', '#E6BEFF', '#6BE4D8', '#FABEBE', '#90D9A5', '#FF6A00', '#FFBE7C', '#BCB997', '#DEB244', '#DDA0DD', '#FA8072', '#D2B48C', '#6B8E23', '#0E8686', '#9A6324', '#932929', '#808000', '#30308E', '#708090']
+const colorsDark = ['#E7416A', '#6CF0F0', '#C3F529', '#5D78DC', '#FFDB58', '#F067E9', '#57BD64', '#A448C0', '#DC2A7F', '#F58E45', '#87CEEB', '#438D61', '#E6BEFF', '#6BE4D8', '#FABEBE', '#AAFFC3', '#FF6A00', '#FFD8B1', '#FFFAC8', '#DEB244', '#DDA0DD', '#FA8072', '#D2B48C', '#6B8E23', '#0E8686', '#9A6324', '#932929', '#808000', '#30308E', '#708090']
 
 const legend = {
   orient: 'horizontal',
@@ -130,7 +121,13 @@ const option = computed(() => {
       fontSize: 14, // TODO: Why is this needed? It should use the global textStyle
       lineHeight: 20,
       formatter: (value: number) => {
-        return xToLabel(value) || ''
+        const ts = epochToTs(value)
+        if (ts === undefined) {
+          return ''
+        }
+
+        const date = formatTs(ts)
+        return `${date}\nEpoch ${value}`
       }
     },
 
@@ -164,7 +161,7 @@ const option = computed(() => {
     height: 400,
 
     textStyle,
-    color,
+    color: colorsDark,
     legend,
     tooltip,
     dataZoom,
