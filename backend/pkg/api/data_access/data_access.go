@@ -512,8 +512,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 					slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
 						t.VDBSlotVizActiveDuty{
 							Status:     "success",
-							Validator:  propAssignmentsForSlot[slot],
-							DutyObject: validator,
+							Validator:  propAssignmentsForSlot[slot], // Dashboard validator
+							DutyObject: validator,                    // Validator that got slashed
 						})
 				}
 			}
@@ -525,8 +525,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
 					t.VDBSlotVizActiveDuty{
 						Status:     "failed",
-						Validator:  validator,
-						DutyObject: validator,
+						Validator:  validator, // Dashboard validator
+						DutyObject: validator, // Validator that got slashed
 					})
 			}
 		}
