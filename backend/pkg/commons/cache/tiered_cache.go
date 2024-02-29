@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/coocood/freecache"
-	"github.com/sirupsen/logrus"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 // Tiered cache is a cache implementation combining a
@@ -40,7 +38,7 @@ func MustInitTieredCache(redisAddress string) {
 
 	remoteCache, err := InitRedisCache(ctx, redisAddress)
 	if err != nil {
-		logrus.WithError(err).Panicf("error initializing remote redis cache. address: %v", redisAddress)
+		log.Fatal(err, "error initializing remote redis cache", 0, map[string]interface{}{"address": redisAddress})
 	}
 
 	TieredCache = &tieredCache{
@@ -178,9 +176,9 @@ func (cache *tieredCache) GetWithLocalTimeout(key string, localExpiration time.D
 	// try to retrieve the key from the local cache
 	wanted, err := cache.localGoCache.Get([]byte(key))
 	if err == nil {
-		err = json.Unmarshal([]byte(wanted), returnValue)
+		err = json.Unmarshal(wanted, returnValue)
 		if err != nil {
-			utils.LogError(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
+			log.Error(err, "error unmarshalling data for key", 0, map[string]interface{}{"key": key})
 			return nil, err
 		}
 		return returnValue, nil

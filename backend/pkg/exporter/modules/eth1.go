@@ -3,12 +3,14 @@ package modules
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"regexp"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -16,14 +18,13 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
 )
 
 var eth1LookBack = uint64(100)
@@ -32,7 +33,7 @@ var eth1DepositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,by
 var eth1DepositContractFirstBlock uint64
 var eth1DepositContractAddress common.Address
 var eth1Client *ethclient.Client
-var eth1RPCClient *gethRPC.Client
+var eth1RPCClient *gethrpc.Client
 var infuraToMuchResultsErrorRE = regexp.MustCompile("query returned more than [0-9]+ results")
 var gethRequestEntityTooLargeRE = regexp.MustCompile("413 Request Entity Too Large")
 
@@ -44,9 +45,9 @@ func eth1DepositsExporter() {
 	eth1DepositContractAddress = common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress)
 	eth1DepositContractFirstBlock = utils.Config.Indexer.Eth1DepositContractFirstBlock
 
-	rpcClient, err := gethRPC.Dial(utils.Config.Eth1GethEndpoint)
+	rpcClient, err := gethrpc.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
-		utils.LogFatal(err, "new exporter geth client error", 0)
+		log.Fatal(err, "new exporter geth client error", 0)
 	}
 	eth1RPCClient = rpcClient
 	client := ethclient.NewClient(rpcClient)
@@ -60,7 +61,7 @@ func eth1DepositsExporter() {
 		var lastDepositBlock uint64
 		err = db.WriterDb.Get(&lastDepositBlock, "select coalesce(max(block_number),0) from eth1_deposits")
 		if err != nil {
-			utils.LogError(err, "error retrieving highest block_number of eth1-deposits from db", 0)
+			log.Error(err, "error retrieving highest block_number of eth1-deposits from db", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -68,7 +69,7 @@ func eth1DepositsExporter() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		header, err := eth1Client.HeaderByNumber(ctx, nil)
 		if err != nil {
-			utils.LogError(err, "error getting header from eth1-client", 0)
+			log.Error(err, "error getting header from eth1-client", 0)
 			cancel()
 			time.Sleep(time.Second * 5)
 			continue
@@ -111,11 +112,11 @@ func eth1DepositsExporter() {
 				if toBlock > blockHeight {
 					toBlock = blockHeight
 				}
-				logger.Infof("limiting block-range to %v-%v when fetching eth1-deposits due to too much results", fromBlock, toBlock)
+				log.Infof("limiting block-range to %v-%v when fetching eth1-deposits due to too much results", fromBlock, toBlock)
 				depositsToSave, err = fetchEth1Deposits(fromBlock, toBlock)
 			}
 			if err != nil {
-				utils.LogError(err, "error fetching eth1-deposits", 0, map[string]interface{}{"fromBlock": fromBlock, "toBlock": toBlock})
+				log.Error(err, "error fetching eth1-deposits", 0, map[string]interface{}{"fromBlock": fromBlock, "toBlock": toBlock})
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -123,7 +124,7 @@ func eth1DepositsExporter() {
 
 		err = saveEth1Deposits(depositsToSave)
 		if err != nil {
-			utils.LogError(err, "error saving eth1-deposits", 0)
+			log.Error(err, "error saving eth1-deposits", 0)
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -131,7 +132,7 @@ func eth1DepositsExporter() {
 		if len(depositsToSave) > 0 {
 			err = aggregateDeposits()
 			if err != nil {
-				utils.LogError(err, "error saving eth1-deposits-leaderboard", 0)
+				log.Error(err, "error saving eth1-deposits-leaderboard", 0)
 				time.Sleep(time.Second * 5)
 				continue
 			}
@@ -141,13 +142,13 @@ func eth1DepositsExporter() {
 		lastFetchedBlock = toBlock
 
 		if len(depositsToSave) > 0 {
-			logger.WithFields(logrus.Fields{
+			log.InfoWithFields(log.Fields{
 				"duration":      time.Since(t0),
 				"blockHeight":   blockHeight,
 				"fromBlock":     fromBlock,
 				"toBlock":       toBlock,
 				"depositsSaved": len(depositsToSave),
-			}).Info("exported eth1-deposits")
+			}, "exported eth1-deposits")
 		}
 
 		// progress faster if we are not synced to head yet
@@ -240,7 +241,7 @@ func fetchEth1Deposits(fromBlock, toBlock uint64) (depositsToSave []*types.Eth1D
 		if chainID == nil {
 			return depositsToSave, fmt.Errorf("error getting tx-chainId for eth1-deposit")
 		}
-		signer := gethTypes.NewCancunSigner(chainID)
+		signer := gethtypes.NewCancunSigner(chainID)
 		sender, err := signer.Sender(tx)
 		if err != nil {
 			return depositsToSave, fmt.Errorf("error getting sender for eth1-deposit (txHash: %x, chainID: %v): %w", d.TxHash, chainID, err)
@@ -258,8 +259,8 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -318,16 +319,16 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 // eth1BatchRequestHeadersAndTxs requests the block range specified in the arguments.
 // Instead of requesting each block in one call, it batches all requests into a single rpc call.
 // This code is shamelessly stolen and adapted from https://github.com/prysmaticlabs/prysm/blob/2eac24c/beacon-chain/powchain/service.go#L473
-func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethTypes.Header, map[string]*gethTypes.Transaction, error) {
-	elems := make([]gethRPC.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
-	headers := make(map[uint64]*gethTypes.Header, len(blocksToFetch))
-	txs := make(map[string]*gethTypes.Transaction, len(txsToFetch))
+func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethtypes.Header, map[string]*gethtypes.Transaction, error) {
+	elems := make([]gethrpc.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
+	headers := make(map[uint64]*gethtypes.Header, len(blocksToFetch))
+	txs := make(map[string]*gethtypes.Transaction, len(txsToFetch))
 	errors := make([]error, 0, len(blocksToFetch)+len(txsToFetch))
 
 	for _, b := range blocksToFetch {
-		header := &gethTypes.Header{}
+		header := &gethtypes.Header{}
 		err := error(nil)
-		elems = append(elems, gethRPC.BatchElem{
+		elems = append(elems, gethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
 			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(b))), false},
 			Result: header,
@@ -338,9 +339,9 @@ func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) 
 	}
 
 	for _, txHashHex := range txsToFetch {
-		tx := &gethTypes.Transaction{}
+		tx := &gethtypes.Transaction{}
 		err := error(nil)
-		elems = append(elems, gethRPC.BatchElem{
+		elems = append(elems, gethrpc.BatchElem{
 			Method: "eth_getTransactionByHash",
 			Args:   []interface{}{txHashHex},
 			Result: tx,
@@ -397,7 +398,7 @@ func aggregateDeposits() error {
 			COUNT(CASE WHEN v.status = 'deposited' THEN 1 END) AS pendingcount,
 			COUNT(CASE WHEN v.status = 'exited' THEN 1 END) AS voluntary_exit_count
 		FROM (
-			SELECT 
+			SELECT
 				from_address,
 				publickey,
 				SUM(amount) AS amount,

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 
@@ -18,18 +18,17 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	geth_rpc "github.com/ethereum/go-ethereum/rpc"
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	geth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 type GethClient struct {
 	endpoint     string
-	rpcClient    *geth_rpc.Client
+	rpcClient    *gethrpc.Client
 	ethClient    *ethclient.Client
 	chainID      *big.Int
 	multiChecker *Balance
@@ -38,12 +37,12 @@ type GethClient struct {
 var CurrentGethClient *GethClient
 
 func NewGethClient(endpoint string) (*GethClient, error) {
-	logger.Infof("initializing geth client at %v", endpoint)
+	log.Infof("initializing geth client at %v", endpoint)
 	client := &GethClient{
 		endpoint: endpoint,
 	}
 
-	rpcClient, err := geth_rpc.Dial(client.endpoint)
+	rpcClient, err := gethrpc.Dial(client.endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing rpc node: %v", err)
 	}
@@ -85,7 +84,7 @@ func (client *GethClient) GetNativeClient() *ethclient.Client {
 	return client.ethClient
 }
 
-func (client *GethClient) GetRPCClient() *geth_rpc.Client {
+func (client *GethClient) GetRPCClient() *gethrpc.Client {
 	return client.rpcClient
 }
 
@@ -96,7 +95,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	start := time.Now()
 	timings := &types.GetBlockTimings{}
 
-	block, err := client.ethClient.BlockByNumber(ctx, big.NewInt(int64(number)))
+	block, err := client.ethClient.BlockByNumber(ctx, big.NewInt(number))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -150,17 +149,17 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		c.Uncles = append(c.Uncles, pbUncle)
 	}
 
-	receipts := make([]*geth_types.Receipt, len(block.Transactions()))
-	reqs := make([]geth_rpc.BatchElem, len(block.Transactions()))
+	receipts := make([]*gethtypes.Receipt, len(block.Transactions()))
+	reqs := make([]gethrpc.BatchElem, len(block.Transactions()))
 
 	txs := block.Transactions()
 
 	for _, tx := range txs {
 		var from []byte
-		sender, err := geth_types.Sender(geth_types.NewCancunSigner(tx.ChainId()), tx)
+		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			utils.LogError(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
 			from = sender.Bytes()
 		}
@@ -188,7 +187,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	}
 
 	for i := range reqs {
-		reqs[i] = geth_rpc.BatchElem{
+		reqs[i] = gethrpc.BatchElem{
 			Method: "eth_getTransactionReceipt",
 			Args:   []interface{}{txs[i].Hash().String()},
 			Result: &receipts[i],
@@ -259,7 +258,7 @@ func (client *GethClient) TraceGeth(blockHash common.Hash) ([]*GethTraceCallResu
 }
 
 func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalance, error) {
-	batchElements := make([]geth_rpc.BatchElem, 0, len(pairs))
+	batchElements := make([]gethrpc.BatchElem, 0, len(pairs))
 
 	ret := make([]*types.Eth1AddressBalance, len(pairs))
 
@@ -267,11 +266,11 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 		s := strings.Split(pair, ":")
 
 		if len(s) != 3 {
-			utils.LogFatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
+			log.Fatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
 		}
 
 		if s[0] != "B" {
-			utils.LogFatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
+			log.Fatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
 		}
 
 		address := s[1]
@@ -284,7 +283,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 		}
 
 		if token == "00" {
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_getBalance",
 				Args:   []interface{}{common.HexToAddress(address), "latest"},
 				Result: &result,
@@ -297,7 +296,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 				Data: common.Hex2Bytes("70a08231000000000000000000000000" + address),
 			}
 
-			batchElements = append(batchElements, geth_rpc.BatchElem{
+			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_call",
 				Args:   []interface{}{toCallArg(msg), "latest"},
 				Result: &result,
@@ -312,7 +311,7 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 
 	for i, el := range batchElements {
 		if el.Error != nil {
-			logrus.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
+			log.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
 		}
 
 		res := strings.TrimPrefix(*el.Result.(*string), "0x")
@@ -379,7 +378,7 @@ func (client *GethClient) GetERC20TokenBalance(address string, token string) ([]
 }
 
 func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
-	logger.Infof("retrieving metadata for token %x", token)
+	log.Infof("retrieving metadata for token %x", token)
 
 	contract, err := erc20.NewErc20(common.BytesToAddress(token), client.ethClient)
 	if err != nil {

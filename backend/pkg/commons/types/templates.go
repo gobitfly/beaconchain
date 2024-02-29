@@ -2,7 +2,6 @@ package types
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -13,10 +12,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	geth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	itypes "github.com/gobitfly/eth-rewards/types"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -674,19 +672,6 @@ type BlockPageData struct {
 	Tags       TagMetadataSlice `db:"tags"`
 	IsValidMev bool             `db:"is_valid_mev"`
 	ValidatorProposalInfo
-}
-
-func (u *BlockPageData) MarshalJSON() ([]byte, error) {
-	type Alias BlockPageData
-	return json.Marshal(&struct {
-		BlockRoot string
-		Ts        int64
-		*Alias
-	}{
-		BlockRoot: fmt.Sprintf("%x", u.BlockRoot),
-		Ts:        u.Ts.Unix(),
-		Alias:     (*Alias)(u),
-	})
 }
 
 // BlockVote stores a vote for a given block
@@ -1535,29 +1520,6 @@ type NetworkEventModal struct {
 	Events          []EventNameCheckbox
 }
 
-type DataTableSaveState struct {
-	Key     string                      `json:"key"`
-	Time    uint64                      `json:"time"`   // Time stamp of when the object was created
-	Start   uint64                      `json:"start"`  // Display start point
-	Length  uint64                      `json:"length"` // Page length
-	Order   [][]string                  `json:"order"`  // 2D array of column ordering information (see `order` option)
-	Search  DataTableSaveStateSearch    `json:"search"`
-	Columns []DataTableSaveStateColumns `json:"columns"`
-}
-
-func (e *DataTableSaveState) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-
-	return json.Unmarshal(b, &e)
-}
-
-func (a DataTableSaveState) Value() (driver.Value, error) {
-	return json.Marshal(a)
-}
-
 type DataTableSaveStateOrder struct {
 }
 
@@ -1737,7 +1699,7 @@ type Eth1TxData struct {
 	TxnPosition                 uint
 	Hash                        common.Hash
 	Value                       []byte
-	Receipt                     *geth_types.Receipt
+	Receipt                     *gethtypes.Receipt
 	ErrorMsg                    string
 	BlockNumber                 int64
 	Timestamp                   time.Time
@@ -2126,4 +2088,15 @@ type ValidatorProposalInfo struct {
 	Slot            uint64        `db:"slot"`
 	Status          uint64        `db:"status"`
 	ExecBlockNumber sql.NullInt64 `db:"exec_block_number"`
+}
+
+type ValidatorDutyInfo struct {
+	Slot                   uint64        `db:"slot"`
+	Status                 uint64        `db:"status"`
+	Block                  uint64        `db:"exec_block_number"`
+	SyncAggregateBits      []byte        `db:"syncaggregate_bits"`
+	Validators             pq.Int64Array `db:"validators"`
+	AttestedSlot           sql.NullInt64 `db:"attested_slot"`
+	ProposerSlashingsCount uint64        `db:"proposerslashingscount"`
+	AttesterSlashingsCount uint64        `db:"attesterslashingscount"`
 }

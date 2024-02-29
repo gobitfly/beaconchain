@@ -9,6 +9,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/prysmaticlabs/go-ssz"
 	e2types "github.com/wealdtech/go-eth2-types/v2"
 )
@@ -16,7 +17,7 @@ import (
 func init() {
 	err := e2types.InitBLS()
 	if err != nil {
-		LogFatal(err, "error in e2types.InitBLS()", 0)
+		log.Fatal(err, "error in e2types.InitBLS()", 0)
 	}
 }
 
@@ -229,4 +230,8 @@ func SyncPeriodOfEpoch(epoch uint64) uint64 {
 
 func FirstEpochOfSyncPeriod(syncPeriod uint64) uint64 {
 	return syncPeriod * Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod
+}
+
+func SlotsPerSyncCommittee() uint64 {
+	return Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod * Config.Chain.ClConfig.SlotsPerEpoch
 }
