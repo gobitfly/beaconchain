@@ -11,7 +11,7 @@ on:
       - 'backend/**'
     branches:
       - '*'
-      
+
 permissions:
   contents: read
   pull-requests: read
@@ -33,7 +33,6 @@ jobs:
           version: v1.56.1
           working-directory: backend
           args: --timeout=5m
-  
-      
-              
-            
+
+
+

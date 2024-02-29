@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/sirupsen/logrus"
 )
 
 func StartHistoricPriceService() {
 	for {
 		err := updateHistoricPrices()
 		if err != nil {
-			utils.LogError(err, "error updating historic prices", 0)
+			log.Error(err, "error updating historic prices", 0)
 		}
 		time.Sleep(time.Hour)
 	}
@@ -97,7 +97,7 @@ func updateHistoricPrices() error {
 		if !datesMap[currentDayTrunc.Format("01-02-2006")] {
 			err = WriteHistoricPricesForDay(currentDayTrunc)
 			if err != nil {
-				utils.LogError(err, "error writing historic price", 0)
+				log.Error(err, "error writing historic price", 0)
 			}
 
 			// Wait to not overload the API
@@ -109,7 +109,7 @@ func updateHistoricPrices() error {
 }
 
 func fetchHistoricPrice(ts time.Time) (*types.HistoricEthPrice, error) {
-	logrus.Infof("fetching historic prices for day %v", ts)
+	log.Infof("fetching historic prices for day %v", ts)
 	client := &http.Client{Timeout: time.Second * 10}
 
 	chain := "ethereum"
@@ -118,10 +118,10 @@ func fetchHistoricPrice(ts time.Time) (*types.HistoricEthPrice, error) {
 		chain = "gnosis"
 	}
 	resp, err := client.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%s/history?date=%s", chain, ts.Truncate(utils.Day).Format("02-01-2006")))
-
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	priceData := &types.HistoricEthPrice{}
 	err = json.NewDecoder(resp.Body).Decode(&priceData)

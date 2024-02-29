@@ -1,7 +1,24 @@
 {
   "common": {
     "slot": "Slot",
-    "validator": "Validator"
+    "validator": "Validator",
+    "earned": "Earned",
+    "penalty": "Penalty",
+    "execution_layer": "Execution Layer",
+    "consensus_layer": "Consensus Layer",
+    "luck": "Luck",
+    "expected": "Expected",
+    "in_day": "In one day | In {count} days",
+    "every_day": "Every day | Every {count} days",
+    "id": "ID",
+    "average": "Average",
+    "index": "Index"
+  },
+  "table": {
+    "first": "First",
+    "last": "Last",
+    "of": "of",
+    "showing": "Showing {from} to {to} of {total}"
   },
   "validator_state": {
     "active": "active",
@@ -16,24 +33,105 @@
     "scheduled": "Scheduled"
   },
   "statistics": {
-    "24h": "(24h)",
-    "7d": "(7d)",
-    "31d": "(31d)",
-    "365d": "(365d)"
+    "day": "24h",
+    "week": "7d",
+    "month": "31d",
+    "year": "365d",
+    "total": "All Time",
+    "all": "All Time"
   },
   "slotViz": {
-    "head": "Head"
+    "head": "Head",
+    "tooltip": {
+      "attestation": "Attestation",
+      "sync": "Sync Committee",
+      "proposal": {
+        "success": {
+          "main": "Block proposed",
+          "sub": "proposed"
+        },
+        "failed": {
+          "main": "Block missed",
+          "sub": "missed"
+        },
+        "scheduled": {
+          "main": "Block scheduled",
+          "sub": "will propose"
+        }
+      },
+      "slashing": {
+        "success": {
+          "main": "You slashed",
+          "sub": "slashed"
+        },
+        "failed": {
+          "main": "You got Slashed",
+          "sub": "slashed"
+        }
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",
     "validator": {
       "overview": {
-        "your_active_validators": "Your Active Validators",
+        "your_online_validators": "Your Online Validators",
         "total_efficiency": "Total Efficiency",
         "total_rewards": "Total Rewards",
         "proposal_luck": "Proposal Luck",
         "sync_committee_luck": "Sync C. Luck",
         "total_apr": "Total APR"
+      },
+      "summary": {
+        "total_group_name": "Total Efficiency",
+        "title": "Summary",
+        "search_placeholder": "Index, Public Key, Group",
+        "col": {
+          "group": "Group",
+          "efficiency_day": "Efficiency (24h)",
+          "efficiency_week": "Efficiency (7d)",
+          "efficiency_month": "Efficiency (31d)",
+          "efficiency_total": "Efficiency (All Time)",
+          "validators": "Validators"
+        },
+        "row": {
+          "efficiency_total": "Efficiency",
+          "attestations": "Attestations",
+          "attestation_total": "Total Attestations",
+          "attestation_head": "Head",
+          "attestation_source": "Source",
+          "attestation_target": "Target",
+          "attestation_efficiency": "Att. Efficiency",
+          "attestation_avg_incl_dist": "Avg. Incl. Distance",
+          "sync": "Sync Committee",
+          "validators_sync": "Validators",
+          "proposals": "Proposals",
+          "validators_proposal": "Validators",
+          "slashed": "Slashings",
+          "validators_slashings": "Validators",
+          "apr": "APR",
+          "luck": "Luck"
+        }
+      },
+      "tabs": {
+        "summary": "Summary",
+        "rewards": "Rewards",
+        "blocks": "Blocks",
+        "heatmap": "Heatmap",
+        "deposits": "Deposits",
+        "withdrawals": "Withdrawals"
+      },
+      "tooltip": {
+        "attestation_efficiency": {
+          "title": "Attestation Efficiency: ",
+          "text": "Indicates the percentage of rewards in relation to the theoretical maximum value"
+        },
+        "block_proposal": "Block Proposal",
+        "sync_committee": "Sync Committee",
+        "sync": {
+          "title": "Sync Committee Efficiency: ",
+          "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
+        }
       }
     }
   },
@@ -103,7 +201,7 @@
     "privacy": "Privacy",
     "api_docs": "API Docs",
     "api_pricing": "API Pricing",
-    "premium" : "beaconcha.in Premium",
+    "premium": "beaconcha.in Premium",
     "advertise": "Advertise",
     "shop": "Swag Shop",
     "status": "Site Status",

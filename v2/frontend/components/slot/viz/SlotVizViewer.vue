@@ -1,30 +1,24 @@
 <script setup lang="ts">
-import { type SlotVizData } from '~/types/dashboard/slotViz'
+import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
 interface Props {
-  data: SlotVizData
+  data: SlotVizEpoch[]
 }
 const props = defineProps<Props>()
 
-const rows = computed(() => {
-  const data = props.data
-  // Todo: add empty placeholder data while loading
-  return data.epochs
-})
-
 </script>
 <template>
-  <div class="content">
+  <div id="slot-viz" class="content">
     <div class="rows">
-      <div v-for="row in rows" :key="row.id" class="row">
+      <div v-for="row in props.data" :key="row.epoch" class="row">
         <div class="epoch">
-          {{ row.state === 'head' ? $t('slotViz.head') : formatNumber(row.id) }}
+          {{ row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch) }}
         </div>
       </div>
     </div>
     <div class="rows">
-      <div v-for="row in rows" :key="row.id" class="row">
-        <SlotVizTile v-for="slot in row.slots" :key="slot.id" :data="slot" />
+      <div v-for="row in props.data" :key="row.epoch" class="row">
+        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" />
       </div>
     </div>
   </div>

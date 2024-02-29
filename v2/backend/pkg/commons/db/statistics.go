@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -21,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
@@ -35,22 +36,22 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
 
-	logger.Infof("exporting statistics for day %v (epoch %v to %v)", day, firstEpoch, lastEpoch)
+	log.Infof("exporting statistics for day %v (epoch %v to %v)", day, firstEpoch, lastEpoch)
 
 	if err := CheckIfDayIsFinalized(day); err != nil {
 		return err
 	}
 
-	logger.Infof("getting exported state for day %v", day)
+	log.Infof("getting exported state for day %v", day)
 
 	type Exported struct {
 		Status bool `db:"status"`
 	}
 	exported := Exported{}
 	err := WriterDb.Get(&exported, `
-		SELECT 
+		SELECT
 			status
-		FROM validator_stats_status 
+		FROM validator_stats_status
 		WHERE day = $1;
 		`, day)
 
@@ -59,15 +60,15 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 	}
 
 	if exported.Status {
-		logger.Infof("Skipping day %v as it is already exported", day)
+		log.Infof("Skipping day %v as it is already exported", day)
 		return nil
 	}
 
 	previousDayExported := Exported{}
 	err = WriterDb.Get(&previousDayExported, `
-		SELECT 
+		SELECT
 			status
-		FROM validator_stats_status 
+		FROM validator_stats_status
 		WHERE day = $1;
 		`, int64(day)-1)
 
@@ -87,7 +88,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 	validatorData := make([]*types.ValidatorStatsTableDbRow, 0, maxValidatorIndex)
 	validatorDataMux := &sync.Mutex{}
 
-	logger.Infof("processing statistics for validators 0-%d", maxValidatorIndex)
+	log.Infof("processing statistics for validators 0-%d", maxValidatorIndex)
 	for i := uint64(0); i <= maxValidatorIndex; i++ {
 		validators = append(validators, i)
 		validatorData = append(validatorData, &types.ValidatorStatsTableDbRow{
@@ -177,12 +178,12 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 		return err
 	}
 
-	logger.Infof("statistics data collection for day %v completed", day)
+	log.Infof("statistics data collection for day %v completed", day)
 
 	// calculate cl income data & update totals
 	for index, data := range validatorData {
 		previousDayData := &types.ValidatorStatsTableDbRow{
-			ValidatorIndex: uint64(data.ValidatorIndex),
+			ValidatorIndex: data.ValidatorIndex,
 		}
 
 		if index < len(statisticsData1d) && day > 0 {
@@ -276,11 +277,11 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 		defer func() {
 			err := tx.Rollback(context.Background())
 			if err != nil {
-				utils.LogError(err, "error rolling back transaction", 0)
+				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
 
-		logger.Infof("bulk inserting statistics data into the validator_stats table")
+		log.Infof("bulk inserting statistics data into the validator_stats table")
 		_, err = tx.Exec(context.Background(), "DELETE FROM validator_stats WHERE day = $1", day)
 		if err != nil {
 			return err
@@ -378,15 +379,15 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 		}
 
 		if day > lastExportedStatsDay {
-			logger.Infof("updating validator_performance table")
+			log.Infof("updating validator_performance table")
 
-			logger.Infof("deleting validator_performance table contents")
+			log.Infof("deleting validator_performance table contents")
 
 			_, err = tx.Exec(context.Background(), "TRUNCATE validator_performance")
 			if err != nil {
 				return err
 			}
-			logger.Infof("bulk loading new validator_performance table contents")
+			log.Infof("bulk loading new validator_performance table contents")
 
 			_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"validator_performance"}, []string{
 				"validatorindex",
@@ -440,11 +441,11 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 				return fmt.Errorf("error writing to validator_performance table: %w", err)
 			}
 
-			logger.Infof("populate validator_performance rank7d")
+			log.Infof("populate validator_performance rank7d")
 			_, err = tx.Exec(context.Background(), `
 				WITH ranked_performance AS (
 					SELECT
-						validatorindex, 
+						validatorindex,
 						row_number() OVER (ORDER BY cl_performance_7d DESC) AS rank7d
 					FROM validator_performance
 				)
@@ -457,10 +458,10 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 				return fmt.Errorf("error updating rank7d while exporting day [%v]: %w", day, err)
 			}
 		} else {
-			logger.Infof("skipping total performance export as last exported day (%v) is greater than the exported day (%v)", lastExportedStatsDay, day)
+			log.Infof("skipping total performance export as last exported day (%v) is greater than the exported day (%v)", lastExportedStatsDay, day)
 		}
 
-		logger.Infof("marking day %v as exported", day)
+		log.Infof("marking day %v as exported", day)
 		if err := WriteValidatorStatsExported(day, tx); err != nil {
 			return fmt.Errorf("error in WriteValidatorStatsExported: %w", err)
 		}
@@ -470,22 +471,27 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 			return err
 		}
 
+		err = cache.LatestExportedStatisticDay.Set(day)
+		if err != nil {
+			log.Warn(err, "can not set latest exported statistic day in cache", 0)
+		}
+
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("error during statistics data insert: %w", err)
 	}
 
-	logger.Infof("batch insert of statistics data completed")
+	log.Infof("batch insert of statistics data completed")
 
-	logger.Infof("statistics export of day %v completed, took %v", day, time.Since(exportStart))
+	log.Infof("statistics export of day %v completed, took %v", day, time.Since(exportStart))
 	return nil
 }
 
 func WriteValidatorStatsExported(day uint64, tx pgx.Tx) error {
 	start := time.Now()
 
-	logger.Infof("marking day export as completed in the validator_stats_status table for day %v", day)
+	log.Infof("marking day export as completed in the validator_stats_status table for day %v", day)
 	_, err := tx.Exec(context.Background(), `
 		INSERT INTO validator_stats_status (day, status,failed_attestations_exported,sync_duties_exported,withdrawals_deposits_exported,balance_exported,cl_rewards_exported,el_rewards_exported,total_performance_exported,block_stats_exported,total_accumulation_exported)
 		VALUES ($1, true, true, true, true,true,true,true,true,true,true)
@@ -504,7 +510,7 @@ func WriteValidatorStatsExported(day uint64, tx pgx.Tx) error {
 	if err != nil {
 		return fmt.Errorf("error marking day export as completed in the validator_stats_status table for day %v: %w", day, err)
 	}
-	logger.Infof("marking completed, took %v", time.Since(start))
+	log.Infof("marking completed, took %v", time.Since(start))
 
 	return nil
 }
@@ -517,7 +523,7 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 
 	start := time.Now()
 
-	logger.Infof("exporting total performance stats")
+	log.Infof("exporting total performance stats")
 
 	_, err := tx.Exec(context.Background(), `insert into validator_performance (
 				validatorindex,
@@ -542,26 +548,26 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 				mev_performance_365d,
 				mev_performance_total
 				) (
-					select 
-					vs_now.validatorindex, 
+					select
+					vs_now.validatorindex,
 						COALESCE(vs_now.end_balance, 0) as balance,
 						0 as rank7d,
 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_1d.cl_rewards_gwei_total, 0) as cl_performance_1d, 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_7d.cl_rewards_gwei_total, 0) as cl_performance_7d, 
-						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_31d.cl_rewards_gwei_total, 0) as cl_performance_31d, 
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_1d.cl_rewards_gwei_total, 0) as cl_performance_1d,
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_7d.cl_rewards_gwei_total, 0) as cl_performance_7d,
+						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_31d.cl_rewards_gwei_total, 0) as cl_performance_31d,
 						coalesce(vs_now.cl_rewards_gwei_total, 0) - coalesce(vs_365d.cl_rewards_gwei_total, 0) as cl_performance_365d,
-						coalesce(vs_now.cl_rewards_gwei_total, 0) as cl_performance_total, 
-						
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_1d.el_rewards_wei_total, 0) as el_performance_1d, 
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_7d.el_rewards_wei_total, 0) as el_performance_7d, 
-						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_31d.el_rewards_wei_total, 0) as el_performance_31d, 
+						coalesce(vs_now.cl_rewards_gwei_total, 0) as cl_performance_total,
+
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_1d.el_rewards_wei_total, 0) as el_performance_1d,
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_7d.el_rewards_wei_total, 0) as el_performance_7d,
+						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_31d.el_rewards_wei_total, 0) as el_performance_31d,
 						coalesce(vs_now.el_rewards_wei_total, 0) - coalesce(vs_365d.el_rewards_wei_total, 0) as el_performance_365d,
-						coalesce(vs_now.el_rewards_wei_total, 0) as el_performance_total, 
-						
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_1d.mev_rewards_wei_total, 0) as mev_performance_1d, 
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_7d.mev_rewards_wei_total, 0) as mev_performance_7d, 
-						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_31d.mev_rewards_wei_total, 0) as mev_performance_31d, 
+						coalesce(vs_now.el_rewards_wei_total, 0) as el_performance_total,
+
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_1d.mev_rewards_wei_total, 0) as mev_performance_1d,
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_7d.mev_rewards_wei_total, 0) as mev_performance_7d,
+						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_31d.mev_rewards_wei_total, 0) as mev_performance_31d,
 						coalesce(vs_now.mev_rewards_wei_total, 0) - coalesce(vs_365d.mev_rewards_wei_total, 0) as mev_performance_365d,
 						coalesce(vs_now.mev_rewards_wei_total, 0) as mev_performance_total
 					from validator_stats vs_now
@@ -570,8 +576,8 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 					left join validator_stats vs_31d on vs_31d.validatorindex = vs_now.validatorindex and vs_31d.day = $4
 					left join validator_stats vs_365d on vs_365d.validatorindex = vs_now.validatorindex and vs_365d.day = $5
 					where vs_now.day = $1
-				) 
-				on conflict (validatorindex) do update set 
+				)
+				on conflict (validatorindex) do update set
 					balance = excluded.balance,
 					rank7d=excluded.rank7d,
 
@@ -598,15 +604,15 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 		return fmt.Errorf("error inserting performance into validator_performance for day [%v]: %w", day, err)
 	}
 
-	logger.Infof("export completed, took %v", time.Since(start))
+	log.Infof("export completed, took %v", time.Since(start))
 
 	start = time.Now()
-	logger.Infof("populate validator_performance rank7d")
+	log.Infof("populate validator_performance rank7d")
 
 	_, err = tx.Exec(context.Background(), `
 		WITH ranked_performance AS (
 			SELECT
-				validatorindex, 
+				validatorindex,
 				row_number() OVER (ORDER BY cl_performance_7d DESC) AS rank7d
 			FROM validator_performance
 		)
@@ -619,9 +625,9 @@ func WriteValidatorTotalPerformance(day uint64, tx pgx.Tx) error {
 		return fmt.Errorf("error updating rank7d while exporting day [%v]: %w", day, err)
 	}
 
-	logger.Infof("export completed, took %v", time.Since(start))
+	log.Infof("export completed, took %v", time.Since(start))
 
-	logger.Infof("total performance statistics export of day %v completed, took %v", day, time.Since(exportStart))
+	log.Infof("total performance statistics export of day %v completed, took %v", day, time.Since(exportStart))
 	return nil
 }
 
@@ -632,11 +638,6 @@ func gatherValidatorBlockStats(day uint64, data []*types.ValidatorStatsTableDbRo
 	}()
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
-	logger := logger.WithFields(logrus.Fields{
-		"day":        day,
-		"firstEpoch": firstEpoch,
-		"lastEpoch":  lastEpoch,
-	})
 
 	type resRowBlocks struct {
 		ValidatorIndex uint64 `db:"validatorindex"`
@@ -646,7 +647,7 @@ func gatherValidatorBlockStats(day uint64, data []*types.ValidatorStatsTableDbRo
 	}
 	resBlocks := make([]*resRowBlocks, 0, 1024)
 
-	logger.Infof("gathering proposed_blocks, missed_blocks and orphaned_blocks statistics")
+	log.Infof("gathering proposed_blocks, missed_blocks and orphaned_blocks statistics")
 	err := WriterDb.Select(&resBlocks, `select proposer AS validatorindex, sum(case when status = '1' then 1 else 0 end) AS proposed_blocks, sum(case when status = '2' then 1 else 0 end) AS missed_blocks, sum(case when status = '3' then 1 else 0 end) AS orphaned_blocks
 			from blocks
 			where epoch >= $1 and epoch <= $2 and proposer != $3
@@ -672,7 +673,7 @@ func gatherValidatorBlockStats(day uint64, data []*types.ValidatorStatsTableDbRo
 	}
 	resSlashings := make([]*resRowSlashings, 0, 1024)
 
-	logger.Infof("gathering attester_slashings and proposer_slashings statistics")
+	log.Infof("gathering attester_slashings and proposer_slashings statistics")
 	err = WriterDb.Select(&resSlashings, `
 			select proposer AS validatorindex, sum(attesterslashingscount) AS attester_slashings, sum(proposerslashingscount) AS proposer_slashings
 			from blocks
@@ -691,7 +692,7 @@ func gatherValidatorBlockStats(day uint64, data []*types.ValidatorStatsTableDbRo
 	}
 	mux.Unlock()
 
-	logger.Infof("gathering block statistics completed, took %v", time.Since(exportStart))
+	log.Infof("gathering block statistics completed, took %v", time.Since(exportStart))
 	return nil
 }
 
@@ -702,13 +703,8 @@ func gatherValidatorElIcome(day uint64, data []*types.ValidatorStatsTableDbRow, 
 	}()
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
-	logger := logger.WithFields(logrus.Fields{
-		"day":        day,
-		"firstEpoch": firstEpoch,
-		"lastEpoch":  lastEpoch,
-	})
 
-	logger.Infof("gathering mev & el rewards")
+	log.Infof("gathering mev & el rewards")
 
 	type Container struct {
 		Slot            uint64 `db:"slot"`
@@ -774,7 +770,7 @@ func gatherValidatorElIcome(day uint64, data []*types.ValidatorStatsTableDbRow, 
 	}
 	mux.Unlock()
 
-	logger.Infof("gathering mev & el rewards statistics completed, took %v", time.Since(exportStart))
+	log.Infof("gathering mev & el rewards statistics completed, took %v", time.Since(exportStart))
 	return nil
 }
 
@@ -785,23 +781,18 @@ func gatherValidatorBalances(client rpc.Client, day uint64, data []*types.Valida
 	}()
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
-	logger := logger.WithFields(logrus.Fields{
-		"day":        day,
-		"firstEpoch": firstEpoch,
-		"lastEpoch":  lastEpoch,
-	})
 
-	logger.Infof("gathering balance statistics")
+	log.Infof("gathering balance statistics")
 	firstEpochBalances, err := client.GetValidatorState(firstEpoch)
 	if err != nil {
 		return fmt.Errorf("error in GetValidatorBalanceStatistics for firstEpoch [%v] and lastEpoch [%v]: %w", firstEpoch, lastEpoch, err)
 	}
-	logger.Infof("retrieved balances for first epoch of day")
+	log.Infof("retrieved balances for first epoch of day")
 	lastEpochBalances, err := client.GetValidatorState(lastEpoch)
 	if err != nil {
 		return fmt.Errorf("error in GetValidatorBalanceStatistics for firstEpoch [%v] and lastEpoch [%v]: %w", firstEpoch, lastEpoch, err)
 	}
-	logger.Infof("retrieved balances for last epoch of day")
+	log.Infof("retrieved balances for last epoch of day")
 
 	mux.Lock()
 	for _, stat := range firstEpochBalances.Data {
@@ -814,7 +805,7 @@ func gatherValidatorBalances(client rpc.Client, day uint64, data []*types.Valida
 	}
 	mux.Unlock()
 
-	logger.Infof("gathering balance statistics completed, took %v", time.Since(exportStart))
+	log.Infof("gathering balance statistics completed, took %v", time.Since(exportStart))
 	return nil
 }
 
@@ -833,13 +824,7 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 	}
 	lastSlot := utils.GetLastBalanceInfoSlotForDay(day)
 
-	logger := logger.WithFields(logrus.Fields{
-		"day":       day,
-		"firstSlot": firstSlot,
-		"lastSlot":  lastSlot,
-	})
-
-	logger.Infof("gathering deposits + withdrawals")
+	log.Infof("gathering deposits + withdrawals")
 
 	type resRowDeposits struct {
 		ValidatorIndex uint64 `db:"validatorindex"`
@@ -891,7 +876,7 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 	}
 	mux.Unlock()
 
-	logger.Infof("gathering deposits + withdrawals completed, took %v", time.Since(exportStart))
+	log.Infof("gathering deposits + withdrawals completed, took %v", time.Since(exportStart))
 	return nil
 }
 
@@ -905,17 +890,10 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 	if firstEpoch < utils.Config.Chain.ClConfig.AltairForkEpoch && lastEpoch > utils.Config.Chain.ClConfig.AltairForkEpoch {
 		firstEpoch = utils.Config.Chain.ClConfig.AltairForkEpoch
 	} else if lastEpoch < utils.Config.Chain.ClConfig.AltairForkEpoch {
-		logger.Infof("day %v is pre-altair, skipping sync committee export", day)
+		log.Infof("day %v is pre-altair, skipping sync committee export", day)
 		return nil
 	}
-	logger := logger.WithFields(logrus.Fields{
-		"day":         day,
-		"firstEpoch":  firstEpoch,
-		"lastEpoch":   lastEpoch,
-		"startPeriod": utils.SyncPeriodOfEpoch(firstEpoch),
-		"endPeriod":   utils.SyncPeriodOfEpoch(lastEpoch),
-	})
-	logger.Infof("gathering sync duties")
+	log.Infof("gathering sync duties")
 
 	//map to hold the sync committee members for a given period
 	syncCommittees := make(map[types.SyncCommitteePeriod]map[types.CommitteeIndex]types.ValidatorIndex)
@@ -943,7 +921,7 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 	rows.Close()
 
 	for slot := firstEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= ((lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch)-1; slot++ {
-		period := utils.SyncPeriodOfEpoch(utils.EpochOfSlot(uint64(slot)))
+		period := utils.SyncPeriodOfEpoch(utils.EpochOfSlot(slot))
 
 		committee := syncCommittees[types.SyncCommitteePeriod(period)]
 		if committee == nil {
@@ -963,7 +941,7 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 				syncCommittees[types.SyncCommitteePeriod(period)][row.CommitteeIndex] = row.ValidatorIndex
 			}
 			committee = syncCommittees[types.SyncCommitteePeriod(period)]
-			logger.Infof("retrieved committee members for period %v", period)
+			log.Infof("retrieved committee members for period %v", period)
 		}
 
 		mux.Lock()
@@ -985,7 +963,7 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 		mux.Unlock()
 	}
 
-	logger.Infof("gathering sync duties completed, took %v", time.Since(exportStart))
+	log.Infof("gathering sync duties completed, took %v", time.Since(exportStart))
 
 	return nil
 }
@@ -997,15 +975,10 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 	}()
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
-	logger := logger.WithFields(logrus.Fields{
-		"day":        day,
-		"firstEpoch": firstEpoch,
-		"lastEpoch":  lastEpoch,
-	})
 
 	start := time.Now()
 
-	logger.Infof("gathering missed attestations statistics")
+	log.Infof("gathering missed attestations statistics")
 
 	// first retrieve activation & exit epoch for all validators
 	activityData := []struct {
@@ -1024,10 +997,10 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 	lastSlot := ((lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1)
 	lastQuerySlot := ((lastEpoch+2)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1)
 
-	rows, err := ReaderDb.Query(`SELECT 
-	blocks_attestations.slot, 
-	validators 
-	FROM blocks_attestations 
+	rows, err := ReaderDb.Query(`SELECT
+	blocks_attestations.slot,
+	validators
+	FROM blocks_attestations
 	LEFT JOIN blocks ON blocks_attestations.block_root = blocks.blockroot WHERE
 	blocks_attestations.block_slot >= $1 AND blocks_attestations.block_slot <= $2 AND blocks.status = '1' ORDER BY block_slot`, firstSlot, lastQuerySlot)
 	if err != nil {
@@ -1056,7 +1029,7 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 		if participation == nil {
 			epochParticipation[epoch] = make(map[types.ValidatorIndex]bool)
 
-			// logger.Infof("seeding validator duties for epoch %v", epoch)
+			// log.LogInfo("seeding validator duties for epoch %v", epoch)
 			for _, validator := range validators {
 				if activityData[validator].ActivationEpoch <= epoch && epoch < activityData[validator].ExitEpoch {
 					epochParticipation[epoch][types.ValidatorIndex(validator)] = false
@@ -1073,7 +1046,7 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 		if len(epochParticipation) == 3 { // we have data for 3 epochs now available, which means data for the earliest epoch is now complete (takes data of two epochs)
 			completedEpoch := epoch - 2
 
-			// logger.Infof("processing data for completed epoch %v", completedEpoch)
+			// log.LogInfo("processing data for completed epoch %v", completedEpoch)
 			completedEpochData := epochParticipation[completedEpoch]
 
 			if completedEpochData == nil {
@@ -1108,10 +1081,10 @@ func gatherValidatorMissedAttestationsStatisticsForDay(validators []uint64, day 
 
 	// mux.Lock()
 	// for i := 0; i < 100; i++ {
-	// 	logger.Infof("validator %v has %v missed attestations", i, data[i].MissedAttestations)
+	// 	log.LogInfo("validator %v has %v missed attestations", i, data[i].MissedAttestations)
 	// }
 	// mux.Unlock()
-	logrus.Infof("gathering missed attestations completed, took %v", time.Since(start))
+	log.Infof("gathering missed attestations completed, took %v", time.Since(start))
 
 	return nil
 }
@@ -1121,19 +1094,15 @@ func GatherStatisticsForDay(day int64) ([]*types.ValidatorStatsTableDbRow, error
 		return nil, nil
 	}
 
-	logger := logger.WithFields(logrus.Fields{
-		"day": day,
-	})
-
 	start := time.Now()
 
-	logger.Infof("gathering existing statistics for day %v", day)
+	log.Infof("gathering existing statistics for day %v", day)
 
 	ret := make([]*types.ValidatorStatsTableDbRow, 0)
 
-	err := WriterDb.Select(&ret, `SELECT 
-		validatorindex, 
-		day, 
+	err := WriterDb.Select(&ret, `SELECT
+		validatorindex,
+		day,
 		COALESCE(start_balance, 0) AS start_balance,
 		COALESCE(end_balance, 0) AS end_balance,
 		COALESCE(min_balance, 0) AS min_balance,
@@ -1177,7 +1146,7 @@ func GatherStatisticsForDay(day int64) ([]*types.ValidatorStatsTableDbRow, error
 		return nil, fmt.Errorf("error statistics for day %v data: %w", day, err)
 	}
 
-	logrus.Infof("gathering existing statistics for day %v completed, took %v", day, time.Since(start))
+	log.Infof("gathering existing statistics for day %v completed, took %v", day, time.Since(start))
 	return ret, nil
 }
 
@@ -1227,13 +1196,13 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 
 	var result []types.ValidatorIncomeHistory
 	err := ReaderDb.Select(&result, `
-		SELECT 
-			day, 
+		SELECT
+			day,
 			SUM(COALESCE(cl_rewards_gwei, 0)) AS cl_rewards_gwei,
 			SUM(COALESCE(end_balance, 0)) AS end_balance
-		FROM validator_stats 
-		WHERE validatorindex = ANY($1) AND day BETWEEN $2 AND $3 
-		GROUP BY day 
+		FROM validator_stats
+		WHERE validatorindex = ANY($1) AND day BETWEEN $2 AND $3
+		GROUP BY day
 		ORDER BY day
 	;`, validatorIndicesPqArr, lowerBoundDay, upperBoundDay)
 	if err != nil {
@@ -1244,7 +1213,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 	if upperBoundDay == 65536 {
 		lastDay := int64(0)
 		if len(result) > 0 {
-			lastDay = int64(result[len(result)-1].Day)
+			lastDay = result[len(result)-1].Day
 		} else {
 			lastDayDb, err := GetLastExportedStatisticDay()
 			if err == nil {
@@ -1269,7 +1238,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 		g.Go(func() error {
 			latestBalances, err := BigtableClient.GetValidatorBalanceHistory(validatorIndices, lastFinalizedEpoch, lastFinalizedEpoch)
 			if err != nil {
-				utils.LogError(err, "error in GetValidatorIncomeHistory calling BigtableClient.GetValidatorBalanceHistory", 0)
+				log.Error(err, "error in GetValidatorIncomeHistory calling BigtableClient.GetValidatorBalanceHistory", 0)
 				return err
 			}
 
@@ -1308,7 +1277,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 		}
 
 		result = append(result, types.ValidatorIncomeHistory{
-			Day:        int64(currentDay),
+			Day:        currentDay,
 			ClRewards:  int64(totalBalance - lastBalance - lastDeposits + lastWithdrawals),
 			EndBalance: sql.NullInt64{Int64: int64(totalBalance), Valid: true}, // show the latest balance for todays income
 		})
@@ -1317,7 +1286,7 @@ func GetValidatorIncomeHistory(validatorIndices []uint64, lowerBoundDay uint64, 
 	go func() {
 		err := cache.TieredCache.Set(cacheKey, &result, cacheDur)
 		if err != nil {
-			utils.LogError(err, fmt.Errorf("error setting tieredCache for GetValidatorIncomeHistory with key %v", cacheKey), 0)
+			log.Error(err, fmt.Errorf("error setting tieredCache for GetValidatorIncomeHistory with key %v", cacheKey), 0)
 		}
 	}()
 
@@ -1362,19 +1331,19 @@ func WriteChartSeriesForDay(day int64) error {
 		return err
 	}
 
-	logger.Infof("marking day export as completed in the chart_series_status table for day %v", day)
+	log.Infof("marking day export as completed in the chart_series_status table for day %v", day)
 	_, err = WriterDb.Exec("insert into chart_series_status (day, status) values ($1, true)", day)
 	if err != nil {
 		return err
 	}
 
-	logger.Infof("chart_series export completed: took %v", time.Since(startTs))
+	log.Infof("chart_series export completed: took %v", time.Since(startTs))
 	return nil
 }
 
 func WriteConsensusChartSeriesForDay(day int64) error {
 	if day < 0 {
-		logger.Warnf("no consensus-charts for day < 0: %v", day)
+		log.Warnf("no consensus-charts for day < 0: %v", day)
 		return nil
 	}
 
@@ -1399,7 +1368,7 @@ func WriteConsensusChartSeriesForDay(day int64) error {
 	lastEpoch := lastSlot / int64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	lastSlot = lastEpoch * int64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 
-	logrus.WithFields(logrus.Fields{"day": day, "firstSlot": firstSlot, "lastSlot": lastSlot, "firstEpoch": firstEpoch, "lastEpoch": lastEpoch, "startDate": startDate, "dateTrunc": dateTrunc}).Infof("exporting consensus chart_series")
+	log.InfoWithFields(log.Fields{"day": day, "firstSlot": firstSlot, "lastSlot": lastSlot, "firstEpoch": firstEpoch, "lastEpoch": lastEpoch, "startDate": startDate, "dateTrunc": dateTrunc}, "exporting consensus chart_series")
 
 	var err error
 
@@ -1469,7 +1438,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 	if day < 0 {
 		// before the beaconchain
-		logger.Warnf("no execution charts for days before beaconchain")
+		log.Warnf("no execution charts for days before beaconchain")
 		return nil
 	}
 
@@ -1500,7 +1469,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 		return fmt.Errorf("delaying chart series export as not all epochs for day %v finalized. last epoch of the day [%v] last finalized epoch [%v]", day, lastEpoch, latestFinalizedEpoch)
 	}
 
-	firstBlock, err := GetBlockNumber(uint64(firstSlot))
+	firstBlock, err := GetBlockNumber(firstSlot)
 	if err != nil {
 		return fmt.Errorf("error getting block number for slot: %v err: %w", firstSlot, err)
 	}
@@ -1513,12 +1482,12 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	if err != nil {
 		return fmt.Errorf("error getting block number for slot: %v err: %w", lastSlot, err)
 	}
-	logger.Infof("exporting chart_series for day %v ts: %v (slot %v to %v, block %v to %v)", day, dateTrunc, firstSlot, lastSlot, firstBlock, lastBlock)
+	log.Infof("exporting chart_series for day %v ts: %v (slot %v to %v, block %v to %v)", day, dateTrunc, firstSlot, lastSlot, firstBlock, lastBlock)
 
 	blocksChan := make(chan *types.Eth1Block, 360)
 	batchSize := int64(360)
 	go func(stream chan *types.Eth1Block) {
-		logger.Infof("querying blocks from %v to %v", firstBlock, lastBlock)
+		log.Infof("querying blocks from %v to %v", firstBlock, lastBlock)
 		for b := int64(lastBlock) - 1; b > int64(firstBlock); b -= batchSize {
 			high := b
 			low := b - batchSize + 1
@@ -1528,13 +1497,13 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 			err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
 			if err != nil {
-				utils.LogError(err, "error getting blocks descending high: %v low: %v err: %v", 0, map[string]interface{}{"high": high, "low": low})
+				log.Error(err, "error getting blocks descending high: %v low: %v err: %v", 0, map[string]interface{}{"high": high, "low": low})
 			}
 		}
 		close(stream)
 	}(blocksChan)
 
-	// logger.Infof("got %v blocks", len(blocks))
+	// log.LogInfo("got %v blocks", len(blocks))
 
 	blockCount := int64(0)
 	txCount := int64(0)
@@ -1575,7 +1544,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	accumulatedBlockTime := decimal.NewFromInt(0)
 
 	for blk := range blocksChan {
-		// logger.Infof("analyzing block: %v with: %v transactions", blk.Number, len(blk.Transactions))
+		// log.LogInfo("analyzing block: %v with: %v transactions", blk.Number, len(blk.Transactions))
 		blockCount += 1
 		baseFee := decimal.NewFromBigInt(new(big.Int).SetBytes(blk.BaseFee), 0)
 		totalBaseFee = totalBaseFee.Add(baseFee)
@@ -1634,7 +1603,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				totalBlobCount = totalBlobCount.Add(decimal.NewFromInt(int64(len(tx.BlobVersionedHashes))))
 
 			default:
-				utils.LogFatal(fmt.Errorf("error unknown tx type %v hash: %x", tx.Status, tx.Hash), "", 0)
+				log.Fatal(fmt.Errorf("error unknown tx type %v hash: %x", tx.Status, tx.Hash), "", 0)
 			}
 			totalTxFees = totalTxFees.Add(txFees)
 
@@ -1646,7 +1615,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 			case 1:
 				successTxCount += 1
 			default:
-				utils.LogFatal(fmt.Errorf("error unknown status code %v hash: %x", tx.Status, tx.Hash), "", 0)
+				log.Fatal(fmt.Errorf("error unknown status code %v hash: %x", tx.Status, tx.Hash), "", 0)
 			}
 			totalGasUsed = totalGasUsed.Add(gasUsed)
 			totalBurned = totalBurned.Add(baseFee.Mul(gasUsed)).Add(totalBurnedBlob)
@@ -1661,7 +1630,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 	avgBlockTime := accumulatedBlockTime.Div(decimal.NewFromInt(blockCount - 1))
 
-	logger.Infof("exporting consensus rewards from %v to %v", firstEpoch, lastEpoch)
+	log.Infof("exporting consensus rewards from %v to %v", firstEpoch, lastEpoch)
 
 	// consensus rewards are in Gwei
 	totalConsensusRewards := int64(0)
@@ -1670,47 +1639,47 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	if err != nil {
 		return fmt.Errorf("error calculating totalConsensusRewards: %w", err)
 	}
-	logger.Infof("consensus rewards: %v", totalConsensusRewards)
+	log.Infof("consensus rewards: %v", totalConsensusRewards)
 
-	logger.Infof("Exporting BURNED_FEES %v", totalBurned.String())
+	log.Infof("Exporting BURNED_FEES %v", totalBurned.String())
 	err = SaveChartSeriesPoint(dateTrunc, "BURNED_FEES", totalBurned.String())
 	if err != nil {
 		return fmt.Errorf("error calculating BURNED_FEES chart_series: %w", err)
 	}
 
-	logger.Infof("Exporting BURNED_BLOB_FEES %v", totalBurnedBlob.String())
+	log.Infof("Exporting BURNED_BLOB_FEES %v", totalBurnedBlob.String())
 	err = SaveChartSeriesPoint(dateTrunc, "BURNED_BLOB_FEES", totalBurnedBlob.String())
 	if err != nil {
 		return fmt.Errorf("error calculating BURNED_BLOB_FEES chart_series: %w", err)
 	}
 
-	logger.Infof("Exporting NON_FAILED_TX_GAS_USAGE %v", totalGasUsed.Sub(totalFailedGasUsed).String())
+	log.Infof("Exporting NON_FAILED_TX_GAS_USAGE %v", totalGasUsed.Sub(totalFailedGasUsed).String())
 	err = SaveChartSeriesPoint(dateTrunc, "NON_FAILED_TX_GAS_USAGE", totalGasUsed.Sub(totalFailedGasUsed).String())
 	if err != nil {
 		return fmt.Errorf("error calculating NON_FAILED_TX_GAS_USAGE chart_series: %w", err)
 	}
 
-	logger.Infof("Exporting BLOCK_COUNT %v", blockCount)
+	log.Infof("Exporting BLOCK_COUNT %v", blockCount)
 	err = SaveChartSeriesPoint(dateTrunc, "BLOCK_COUNT", blockCount)
 	if err != nil {
 		return fmt.Errorf("error calculating BLOCK_COUNT chart_series: %w", err)
 	}
 
-	logger.Infof("Exporting BLOB_COUNT %v", blockCount)
+	log.Infof("Exporting BLOB_COUNT %v", blockCount)
 	err = SaveChartSeriesPoint(dateTrunc, "BLOB_COUNT", totalBlobCount)
 	if err != nil {
 		return fmt.Errorf("error calculating BLOB_COUNT chart_series: %w", err)
 	}
 
 	// convert microseconds to seconds
-	logger.Infof("Exporting BLOCK_TIME_AVG %v", avgBlockTime.Div(decimal.NewFromInt(1e6)).Abs().String())
+	log.Infof("Exporting BLOCK_TIME_AVG %v", avgBlockTime.Div(decimal.NewFromInt(1e6)).Abs().String())
 	err = SaveChartSeriesPoint(dateTrunc, "BLOCK_TIME_AVG", avgBlockTime.Div(decimal.NewFromInt(1e6)).String())
 	if err != nil {
 		return fmt.Errorf("error calculating BLOCK_TIME_AVG chart_series: %w", err)
 	}
 	// convert consensus rewards to gwei
 	emission := (totalBaseBlockReward.Add(decimal.NewFromInt(totalConsensusRewards).Mul(decimal.NewFromInt(1000000000))).Add(totalTips)).Sub(totalBurned)
-	logger.Infof("Exporting TOTAL_EMISSION %v day emission", emission)
+	log.Infof("Exporting TOTAL_EMISSION %v day emission", emission)
 
 	var lastEmission float64
 	err = ReaderDb.Get(&lastEmission, "SELECT value FROM chart_series WHERE indicator = 'TOTAL_EMISSION' AND time < $1 ORDER BY time DESC LIMIT 1", dateTrunc)
@@ -1725,7 +1694,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	}
 
 	if totalGasPrice.GreaterThan(decimal.NewFromInt(0)) && decimal.NewFromInt(legacyTxCount).Add(decimal.NewFromInt(accessListTxCount)).GreaterThan(decimal.NewFromInt(0)) {
-		logger.Infof("Exporting AVG_GASPRICE")
+		log.Infof("Exporting AVG_GASPRICE")
 		err = SaveChartSeriesPoint(dateTrunc, "AVG_GASPRICE", totalGasPrice.Div((decimal.NewFromInt(legacyTxCount).Add(decimal.NewFromInt(accessListTxCount)))).String())
 		if err != nil {
 			return fmt.Errorf("error calculating AVG_GASPRICE chart_series err: %w", err)
@@ -1733,27 +1702,27 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	}
 
 	if txCount > 0 {
-		logger.Infof("Exporting AVG_GASUSED %v", totalGasUsed.Div(decimal.NewFromInt(blockCount)).String())
+		log.Infof("Exporting AVG_GASUSED %v", totalGasUsed.Div(decimal.NewFromInt(blockCount)).String())
 		err = SaveChartSeriesPoint(dateTrunc, "AVG_GASUSED", totalGasUsed.Div(decimal.NewFromInt(blockCount)).String())
 		if err != nil {
 			return fmt.Errorf("error calculating AVG_GASUSED chart_series: %w", err)
 		}
 	}
 
-	logger.Infof("Exporting TOTAL_GASUSED %v", totalGasUsed.String())
+	log.Infof("Exporting TOTAL_GASUSED %v", totalGasUsed.String())
 	err = SaveChartSeriesPoint(dateTrunc, "TOTAL_GASUSED", totalGasUsed.String())
 	if err != nil {
 		return fmt.Errorf("error calculating TOTAL_GASUSED chart_series: %w", err)
 	}
 
-	logger.Infof("Exporting TOTAL_BLOB_GASUSED %v", totalBlobGasUsed.String())
+	log.Infof("Exporting TOTAL_BLOB_GASUSED %v", totalBlobGasUsed.String())
 	err = SaveChartSeriesPoint(dateTrunc, "TOTAL_BLOB_GASUSED", totalBlobGasUsed.String())
 	if err != nil {
 		return fmt.Errorf("error calculating TOTAL_BLOB_GASUSED chart_series: %w", err)
 	}
 
 	if blockCount > 0 {
-		logger.Infof("Exporting AVG_GASLIMIT %v", totalGasLimit.Div(decimal.NewFromInt(blockCount)))
+		log.Infof("Exporting AVG_GASLIMIT %v", totalGasLimit.Div(decimal.NewFromInt(blockCount)))
 		err = SaveChartSeriesPoint(dateTrunc, "AVG_GASLIMIT", totalGasLimit.Div(decimal.NewFromInt(blockCount)))
 		if err != nil {
 			return fmt.Errorf("error calculating AVG_GASLIMIT chart_series: %w", err)
@@ -1761,7 +1730,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	}
 
 	if !totalGasLimit.IsZero() {
-		logger.Infof("Exporting AVG_BLOCK_UTIL %v", totalGasUsed.Div(totalGasLimit).Mul(decimal.NewFromInt(100)))
+		log.Infof("Exporting AVG_BLOCK_UTIL %v", totalGasUsed.Div(totalGasLimit).Mul(decimal.NewFromInt(100)))
 		err = SaveChartSeriesPoint(dateTrunc, "AVG_BLOCK_UTIL", totalGasUsed.Div(totalGasLimit).Mul(decimal.NewFromInt(100)))
 		if err != nil {
 			return fmt.Errorf("error calculating AVG_BLOCK_UTIL chart_series: %w", err)
@@ -1771,33 +1740,33 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 	switch utils.Config.Chain.ClConfig.DepositChainID {
 	case 1:
 		crowdSale := 72009990.50
-		logger.Infof("Exporting MARKET_CAP: %v", newEmission.Div(decimal.NewFromInt(1e18)).Add(decimal.NewFromFloat(crowdSale)).Mul(decimal.NewFromFloat(price.GetPrice(utils.Config.Frontend.MainCurrency, "USD"))).String())
+		log.Infof("Exporting MARKET_CAP: %v", newEmission.Div(decimal.NewFromInt(1e18)).Add(decimal.NewFromFloat(crowdSale)).Mul(decimal.NewFromFloat(price.GetPrice(utils.Config.Frontend.MainCurrency, "USD"))).String())
 		err = SaveChartSeriesPoint(dateTrunc, "MARKET_CAP", newEmission.Div(decimal.NewFromInt(1e18)).Add(decimal.NewFromFloat(crowdSale)).Mul(decimal.NewFromFloat(price.GetPrice(utils.Config.Frontend.MainCurrency, "USD"))).String())
 		if err != nil {
 			return fmt.Errorf("error calculating MARKET_CAP chart_series: %w", err)
 		}
 	}
 
-	logger.Infof("Exporting TX_COUNT %v", txCount)
+	log.Infof("Exporting TX_COUNT %v", txCount)
 	err = SaveChartSeriesPoint(dateTrunc, "TX_COUNT", txCount)
 	if err != nil {
 		return fmt.Errorf("error calculating TX_COUNT chart_series: %w", err)
 	}
 
 	// Not sure how this is currently possible (where do we store the size, i think this is missing)
-	// logger.Infof("Exporting AVG_SIZE %v", totalSize.div)
+	// log.LogInfo("Exporting AVG_SIZE %v", totalSize.div)
 	// err = SaveChartSeriesPoint(dateTrunc, "AVG_SIZE", totalSize.div)
 	// if err != nil {
 	// 	return fmt.Errorf("error calculating AVG_SIZE chart_series: %w", err)
 	// }
 
-	// logger.Infof("Exporting POWER_CONSUMPTION %v", avgBlockTime.String())
+	// log.LogInfo("Exporting POWER_CONSUMPTION %v", avgBlockTime.String())
 	// err = SaveChartSeriesPoint(dateTrunc, "POWER_CONSUMPTION", avgBlockTime.String())
 	// if err != nil {
 	// 	return fmt.Errorf("error calculating POWER_CONSUMPTION chart_series: %w", err)
 	// }
 
-	// logger.Infof("Exporting NEW_ACCOUNTS %v", avgBlockTime.String())
+	// log.LogInfo("Exporting NEW_ACCOUNTS %v", avgBlockTime.String())
 	// err = SaveChartSeriesPoint(dateTrunc, "NEW_ACCOUNTS", avgBlockTime.String())
 	// if err != nil {
 	// 	return fmt.Errorf("error calculating NEW_ACCOUNTS chart_series: %w", err)
@@ -1808,7 +1777,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 func WriteGraffitiStatisticsForDay(day int64) error {
 	if day < 0 {
-		logger.Warnf("no graffiti-stats for days before beaconchain")
+		log.Warnf("no graffiti-stats for days before beaconchain")
 		return nil
 	}
 
@@ -1822,8 +1791,8 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -1832,7 +1801,7 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	_, err = tx.Exec(`
 		insert into graffiti_stats
 		select $1::int as day, graffiti, graffiti_text, count(*), count(distinct proposer) as proposer_count
-		from blocks 
+		from blocks
 		where slot >= $2 and slot < $3 and status = '1' and graffiti <> '\x' and graffiti <> '\x0000000000000000000000000000000000000000000000000000000000000000'
 		group by day, graffiti, graffiti_text
 		on conflict (graffiti, day) do update set

@@ -126,8 +126,8 @@ func RunGetAllForExport(b benchmarks.Benchmarker, epochs int, conf Data) {
 	randomEndEpoch := randomStartEpoch + epochs
 
 	err := db.DB.Select(&data, fmt.Sprintf(`
-		SELECT 
-			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards 
+		SELECT
+			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards
 		FROM %s
 		WHERE epoch BETWEEN %d AND %d`,
 		b.TableName, randomStartEpoch, randomEndEpoch))
@@ -164,8 +164,8 @@ func RunRandomValis(b benchmarks.Benchmarker, validatorAmount int, conf Data) {
 	}
 
 	query := fmt.Sprintf(`
-		SELECT 
-			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards 
+		SELECT
+			sum(attestations_source_reward+attestations_target_reward+attestations_head_reward+blocks_cl_reward) as rewards
 		FROM %s
 		WHERE validatorindex IN (
 			%s

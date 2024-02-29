@@ -1,22 +1,22 @@
 <template>
-  <div class="icon_holder">
+  <div id="iconHolder" class="icon_holder">
     <div>
-      <BcTooltip position="left" text="left tt">
+      <BcTooltip position="left" text="left tt" scroll-container="#iconHolder">
         <IconSlotAttestation /> Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="right" text="right tt">
+      <BcTooltip position="right" text="right tt" scroll-container="#iconHolder">
         <IconSlotHeadAttestation /> Head Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="top" text="top tt">
+      <BcTooltip position="top" text="top tt" scroll-container="#iconHolder">
         <IconSlotSourceAttestation /> Source Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="bottom" text="bottom tt">
+      <BcTooltip position="bottom" text="bottom tt" scroll-container="#iconHolder">
         <IconSlotTargetAttestation /> Target Attestation
       </BcTooltip>
     </div>
@@ -36,7 +36,9 @@
 .icon_holder {
   margin: 10px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  overflow-y: auto;
   gap: 10px;
+  height: 100px;
 }
 </style>

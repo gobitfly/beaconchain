@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
@@ -22,7 +22,7 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	go_ens "github.com/wealdtech/go-ens/v3"
@@ -82,7 +82,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 
 	filterer, err := ens.NewEnsRegistrarFilterer(common.Address{}, nil)
 	if err != nil {
-		log.Printf("error creating filterer: %v", err)
+		log.Error(err, "error creating filterer", 0)
 		return nil, nil, err
 	}
 	keys := make(map[string]bool)
@@ -127,42 +127,42 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 		}
 		// We found a register name event
 		if foundNameIndex > -1 && foundResolverIndex > -1 {
-			log := logs[foundNameIndex]
-			topics := make([]common.Hash, 0, len(log.GetTopics()))
+			txLog := logs[foundNameIndex]
+			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
 
-			for _, lTopic := range log.GetTopics() {
+			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			nameLog := eth_types.Log{
-				Address:     common.BytesToAddress(log.GetAddress()),
-				Data:        log.Data,
+			nameLog := gethtypes.Log{
+				Address:     common.BytesToAddress(txLog.GetAddress()),
+				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blk.GetNumber(),
 				TxHash:      common.BytesToHash(tx.GetHash()),
 				TxIndex:     uint(i),
 				BlockHash:   common.BytesToHash(blk.GetHash()),
 				Index:       uint(foundNameIndex),
-				Removed:     log.GetRemoved(),
+				Removed:     txLog.GetRemoved(),
 			}
 
-			log = logs[foundResolverIndex]
-			topics = make([]common.Hash, 0, len(log.GetTopics()))
+			txLog = logs[foundResolverIndex]
+			topics = make([]common.Hash, 0, len(txLog.GetTopics()))
 
-			for _, lTopic := range log.GetTopics() {
+			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			resolverLog := eth_types.Log{
-				Address:     common.BytesToAddress(log.GetAddress()),
-				Data:        log.Data,
+			resolverLog := gethtypes.Log{
+				Address:     common.BytesToAddress(txLog.GetAddress()),
+				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blk.GetNumber(),
 				TxHash:      common.BytesToHash(tx.GetHash()),
 				TxIndex:     uint(i),
 				BlockHash:   common.BytesToHash(blk.GetHash()),
 				Index:       uint(foundResolverIndex),
-				Removed:     log.GetRemoved(),
+				Removed:     txLog.GetRemoved(),
 			}
 
 			var owner common.Address
@@ -172,7 +172,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			if err != nil {
 				nameRegisteredV2, err := filterer.ParseNameRegisteredV2(nameLog)
 				if err != nil {
-					utils.LogError(err, fmt.Sprintf("indexing of register event failed parse register event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
+					log.Error(err, fmt.Sprintf("indexing of register event failed parse register event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
 					continue
 				}
 				owner = nameRegisteredV2.Owner
@@ -183,13 +183,13 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			}
 
 			if err = verifyName(name); err != nil {
-				logger.Warnf("indexing of register event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
+				log.Warnf("indexing of register event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
 				continue
 			}
 
 			resolver, err := filterer.ParseNewResolver(resolverLog)
 			if err != nil {
-				utils.LogError(err, fmt.Sprintf("indexing of register event failed parse resolver event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
+				log.Error(err, fmt.Sprintf("indexing of register event failed parse resolver event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
 				continue
 			}
 
@@ -198,65 +198,65 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, owner)] = true
 			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, name)] = true
 		} else if foundNameRenewedIndex > -1 { // We found a renew name event
-			log := logs[foundNameRenewedIndex]
-			topics := make([]common.Hash, 0, len(log.GetTopics()))
+			txLog := logs[foundNameRenewedIndex]
+			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
 
-			for _, lTopic := range log.GetTopics() {
+			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			nameRenewedLog := eth_types.Log{
-				Address:     common.BytesToAddress(log.GetAddress()),
-				Data:        log.Data,
+			nameRenewedLog := gethtypes.Log{
+				Address:     common.BytesToAddress(txLog.GetAddress()),
+				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blk.GetNumber(),
 				TxHash:      common.BytesToHash(tx.GetHash()),
 				TxIndex:     uint(i),
 				BlockHash:   common.BytesToHash(blk.GetHash()),
 				Index:       uint(foundNameRenewedIndex),
-				Removed:     log.GetRemoved(),
+				Removed:     txLog.GetRemoved(),
 			}
 
 			nameRenewed, err := filterer.ParseNameRenewed(nameRenewedLog)
 			if err != nil {
-				utils.LogError(err, fmt.Sprintf("indexing of renew event failed parse event at tx [%v] index [%v] on block [%v]", i, foundNameRenewedIndex, blk.Number), 0)
+				log.Error(err, fmt.Sprintf("indexing of renew event failed parse event at tx [%v] index [%v] on block [%v]", i, foundNameRenewedIndex, blk.Number), 0)
 				continue
 			}
 
 			if err = verifyName(nameRenewed.Name); err != nil {
-				logger.Warnf("indexing of renew event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
+				log.Warnf("indexing of renew event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
 				continue
 			}
 
 			nameHash, err := go_ens.NameHash(nameRenewed.Name)
 			if err != nil {
-				utils.LogError(err, fmt.Sprintf("error hashing ens name [%v] at tx [%v] index [%v] on block [%v]", nameRenewed.Name, i, foundNameRenewedIndex, blk.Number), 0)
+				log.Error(err, fmt.Sprintf("error hashing ens name [%v] at tx [%v] index [%v] on block [%v]", nameRenewed.Name, i, foundNameRenewedIndex, blk.Number), 0)
 				continue
 			}
 			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, nameHash, tx.GetHash())] = true
 			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, nameRenewed.Name)] = true
 		} else if foundNameChangedIndex > -1 && foundNewOwnerIndex > -1 { // we found a name change event
-			log := logs[foundNewOwnerIndex]
-			topics := make([]common.Hash, 0, len(log.GetTopics()))
+			txLog := logs[foundNewOwnerIndex]
+			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
 
-			for _, lTopic := range log.GetTopics() {
+			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
-			newOwnerLog := eth_types.Log{
-				Address:     common.BytesToAddress(log.GetAddress()),
-				Data:        log.Data,
+			newOwnerLog := gethtypes.Log{
+				Address:     common.BytesToAddress(txLog.GetAddress()),
+				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blk.GetNumber(),
 				TxHash:      common.BytesToHash(tx.GetHash()),
 				TxIndex:     uint(i),
 				BlockHash:   common.BytesToHash(blk.GetHash()),
 				Index:       uint(foundNewOwnerIndex),
-				Removed:     log.GetRemoved(),
+				Removed:     txLog.GetRemoved(),
 			}
 
 			newOwner, err := filterer.ParseNewOwner(newOwnerLog)
 			if err != nil {
-				utils.LogError(err, fmt.Errorf("indexing of new owner event failed parse event at index %v on block [%v]", foundNewOwnerIndex, blk.Number), 0)
+				log.Error(err, fmt.Errorf("indexing of new owner event failed parse event at index %v on block [%v]", foundNewOwnerIndex, blk.Number), 0)
 				continue
 			}
 
@@ -265,28 +265,28 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 		}
 		// We found a change address event, there can be multiple within one transaction
 		for _, addressChangeIndex := range foundAddressChangedIndices {
-			log := logs[addressChangeIndex]
-			topics := make([]common.Hash, 0, len(log.GetTopics()))
+			txLog := logs[addressChangeIndex]
+			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
 
-			for _, lTopic := range log.GetTopics() {
+			for _, lTopic := range txLog.GetTopics() {
 				topics = append(topics, common.BytesToHash(lTopic))
 			}
 
-			addressChangedLog := eth_types.Log{
-				Address:     common.BytesToAddress(log.GetAddress()),
-				Data:        log.Data,
+			addressChangedLog := gethtypes.Log{
+				Address:     common.BytesToAddress(txLog.GetAddress()),
+				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blk.GetNumber(),
 				TxHash:      common.BytesToHash(tx.GetHash()),
 				TxIndex:     uint(i),
 				BlockHash:   common.BytesToHash(blk.GetHash()),
 				Index:       uint(addressChangeIndex),
-				Removed:     log.GetRemoved(),
+				Removed:     txLog.GetRemoved(),
 			}
 
 			addressChanged, err := filterer.ParseAddressChanged(addressChangedLog)
 			if err != nil {
-				utils.LogError(err, fmt.Sprintf("indexing of address change event failed parse event at index [%v] on block [%v]", addressChangeIndex, blk.Number), 0)
+				log.Error(err, fmt.Sprintf("indexing of address change event failed parse event at index [%v] on block [%v]", addressChangeIndex, blk.Number), 0)
 				continue
 			}
 
@@ -338,11 +338,11 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 	}
 
 	if len(keys) == 0 {
-		logger.Info("No ENS entries to validate")
+		log.Warnf("No ENS entries to validate")
 		return nil
 	}
 
-	logger.Infof("Validating %v ENS entries", len(keys))
+	log.Infof("Validating %v ENS entries", len(keys))
 	alreadyChecked := EnsCheckedDictionary{
 		address: make(map[common.Address]bool),
 		name:    make(map[string]bool),
@@ -359,7 +359,7 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 			to = total
 		}
 		batch := keys[i:to]
-		logger.Infof("Batching ENS entries %v:%v of %v", i, to, total)
+		log.Infof("Batching ENS entries %v:%v of %v", i, to, total)
 
 		g := new(errgroup.Group)
 		g.SetLimit(10) // limit load on the node
@@ -380,7 +380,7 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 				// if we have a hash we look if we find a name in the db. If not we can ignore it.
 				nameHash, err := hex.DecodeString(value)
 				if err != nil {
-					utils.LogError(err, fmt.Errorf("name hash could not be decoded: %v", value), 0)
+					log.Error(err, fmt.Errorf("name hash could not be decoded: %v", value), 0)
 				} else {
 					err := ReaderDb.Get(&name, `
 					SELECT
@@ -395,7 +395,7 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 			case "A":
 				addressHash, err := hex.DecodeString(value)
 				if err != nil {
-					utils.LogError(err, fmt.Errorf("address hash could not be decoded: %v", value), 0)
+					log.Error(err, fmt.Errorf("address hash could not be decoded: %v", value), 0)
 				} else {
 					add := common.BytesToAddress(addressHash)
 					address = &add
@@ -437,7 +437,7 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 		time.Sleep(time.Millisecond * 100)
 	}
 
-	logger.Info("Import of ENS updates completed")
+	log.Warnf("Import of ENS updates completed")
 	return nil
 }
 
@@ -453,7 +453,7 @@ func validateEnsAddress(client *ethclient.Client, address common.Address, alread
 	name, err := go_ens.ReverseResolve(client, address)
 	if err != nil {
 		if err.Error() == "not a resolver" || err.Error() == "no resolution" {
-			logger.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
+			log.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
 			return nil
 		}
 
@@ -469,14 +469,14 @@ func validateEnsAddress(client *ethclient.Client, address common.Address, alread
 		if *currentName == name {
 			return nil
 		}
-		logger.Infof("Address [%x] has a new main name from %x to: %v", address, *currentName, name)
+		log.Infof("Address [%x] has a new main name from %x to: %v", address, *currentName, name)
 		err := validateEnsName(client, *currentName, alreadyChecked, &isPrimary)
 		if err != nil {
 			return fmt.Errorf("error validating new name [%v]: %w", *currentName, err)
 		}
 	}
 	isPrimary = true
-	logger.Infof("Address [%x] has a primary name: %v", address, name)
+	log.Infof("Address [%x] has a primary name: %v", address, name)
 	return validateEnsName(client, name, alreadyChecked, &isPrimary)
 }
 
@@ -495,9 +495,9 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 
 	nameHash, err := go_ens.NameHash(name)
 	if err != nil {
-		utils.LogError(err, "error could not hash name -> removing ens entry", 0, map[string]interface{}{"name": name})
+		log.Error(err, "error could not hash name -> removing ens entry", 0, map[string]interface{}{"name": name})
 
-		err = removeEnsName(client, name)
+		err = removeEnsName(name)
 		if err != nil {
 			return fmt.Errorf("error removing ens name [%v]: %w", name, err)
 		}
@@ -508,7 +508,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 
 	addr, err := go_ens.Resolve(client, name)
 	if err != nil {
-		utils.LogError(err, "error, could not resolve name", 0, map[string]interface{}{"name": name})
+		log.Error(err, "error, could not resolve name", 0, map[string]interface{}{"name": name})
 		if err.Error() == "unregistered name" ||
 			err.Error() == "no address" ||
 			err.Error() == "no resolver" ||
@@ -517,7 +517,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 			err.Error() == "invalid jump destination" ||
 			err.Error() == "invalid opcode: INVALID" {
 			// the given name is not available anymore or resolving it did not work properly => we can remove it from the db (if it is there)
-			err = removeEnsName(client, name)
+			err = removeEnsName(name)
 			if err != nil {
 				return fmt.Errorf("error removing ens name after resolve failed [%v]: %w", name, err)
 			}
@@ -543,7 +543,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 		reverseName, err := go_ens.ReverseResolve(client, addr)
 		if err != nil {
 			if err.Error() == "not a resolver" || err.Error() == "no resolution" {
-				logger.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
+				log.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
 			} else {
 				return fmt.Errorf("error could not reverse resolve address [%v]: %w", addr, err)
 			}
@@ -556,15 +556,15 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	}
 	_, err = WriterDb.Exec(`
 	INSERT INTO ens (
-		name_hash, 
-		ens_name, 
+		name_hash,
+		ens_name,
 		address,
-		is_primary_name, 
+		is_primary_name,
 		valid_to)
-	VALUES ($1, $2, $3, $4, $5) 
-	ON CONFLICT 
-		(name_hash) 
-	DO UPDATE SET 
+	VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT
+		(name_hash)
+	DO UPDATE SET
 		ens_name = excluded.ens_name,
 		address = excluded.address,
 		is_primary_name = excluded.is_primary_name,
@@ -572,20 +572,20 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	`, nameHash[:], name, addr.Bytes(), isPrimary, expires)
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%v", err), "invalid byte sequence") {
-			logger.Warnf("could not insert ens name [%v]: %v", name, err)
+			log.Warnf("could not insert ens name [%v]: %v", name, err)
 			return nil
 		}
 		return fmt.Errorf("error writing ens data for name [%v]: %w", name, err)
 	}
 
-	logger.Infof("Name [%v] resolved -> %x, expires: %v, is primary: %v", name, addr, expires, isPrimary)
+	log.Infof("Name [%v] resolved -> %x, expires: %v, is primary: %v", name, addr, expires, isPrimary)
 	return nil
 }
 
 func GetAddressForEnsName(name string) (address *common.Address, err error) {
 	addressBytes := []byte{}
 	err = ReaderDb.Get(&addressBytes, `
-	SELECT address 
+	SELECT address
 	FROM ens
 	WHERE
 		ens_name = $1 AND
@@ -600,7 +600,7 @@ func GetAddressForEnsName(name string) (address *common.Address, err error) {
 
 func GetEnsNameForAddress(address common.Address) (name *string, err error) {
 	err = ReaderDb.Get(&name, `
-	SELECT ens_name 
+	SELECT ens_name
 	FROM ens
 	WHERE
 		address = $1 AND
@@ -625,7 +625,7 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 	}
 
 	err := ReaderDb.Select(&dbAddresses, `
-	SELECT address, ens_name 
+	SELECT address, ens_name
 	FROM ens
 	WHERE
 		address = ANY($1) AND
@@ -641,18 +641,18 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 	return nil
 }
 
-func removeEnsName(client *ethclient.Client, name string) error {
+func removeEnsName(name string) error {
 	_, err := WriterDb.Exec(`
-	DELETE FROM ens 
-	WHERE 
+	DELETE FROM ens
+	WHERE
 		ens_name = $1
 	;`, name)
 	if err != nil && strings.Contains(fmt.Sprintf("%v", err), "invalid byte sequence") {
-		logger.Warnf("could not delete ens name [%v]: %v", name, err)
+		log.Warnf("could not delete ens name [%v]: %v", name, err)
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("error deleting ens name [%v]: %v", name, err)
 	}
-	logger.Infof("Ens name removed from db: %v", name)
+	log.Infof("Ens name removed from db: %v", name)
 	return nil
 }

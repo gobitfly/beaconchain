@@ -2,6 +2,8 @@ package modules
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -29,7 +32,7 @@ type EthStoreExporter struct {
 
 // start exporting of eth.store into db
 func StartEthStoreExporter(bnAddress string, enAddress string, updateInterval, errorInterval, sleepInterval time.Duration, startDayReexport, endDayReexport int64) {
-	logger.Info("starting eth.store exporter")
+	log.Infof("starting eth.store exporter")
 	ese := &EthStoreExporter{
 		DB:             db.WriterDb,
 		BNAddress:      bnAddress,
@@ -54,7 +57,7 @@ func StartEthStoreExporter(bnAddress string, enAddress string, updateInterval, e
 		for day := startDayReexport; day <= endDayReexport; day++ {
 			err := ese.reexportDay(strconv.FormatInt(day, 10))
 			if err != nil {
-				utils.LogError(err, fmt.Sprintf("error reexporting eth.store day %d in database", day), 0)
+				log.Error(err, fmt.Sprintf("error reexporting eth.store day %d in database", day), 0)
 				return
 			}
 		}
@@ -71,8 +74,8 @@ func (ese *EthStoreExporter) reexportDay(day string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 	err = ese.prepareClearDayTx(tx, day)
@@ -95,8 +98,8 @@ func (ese *EthStoreExporter) exportDay(day string) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
@@ -183,23 +186,23 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string) error {
 	}
 
 	_, err = tx.Exec(`
-		insert into historical_pool_performance 
-		select 
-			eth_store_stats.day, 
-			coalesce(validator_pool.pool, 'Unknown'), 
+		insert into historical_pool_performance
+		select
+			eth_store_stats.day,
+			coalesce(validator_pool.pool, 'Unknown'),
 			count(*) as validators,
-			sum(effective_balances_sum_wei) as effective_balances_sum_wei, 
-			sum(start_balances_sum_wei) as start_balances_sum_wei, 
-			sum(end_balances_sum_wei) as end_balances_sum_wei, 
-			sum(deposits_sum_wei) as deposits_sum_wei, 
-			sum(tx_fees_sum_wei) as tx_fees_sum_wei, 
-			sum(consensus_rewards_sum_wei) as consensus_rewards_sum_wei, 
-			sum(total_rewards_wei) as total_rewards_wei, 
+			sum(effective_balances_sum_wei) as effective_balances_sum_wei,
+			sum(start_balances_sum_wei) as start_balances_sum_wei,
+			sum(end_balances_sum_wei) as end_balances_sum_wei,
+			sum(deposits_sum_wei) as deposits_sum_wei,
+			sum(tx_fees_sum_wei) as tx_fees_sum_wei,
+			sum(consensus_rewards_sum_wei) as consensus_rewards_sum_wei,
+			sum(total_rewards_wei) as total_rewards_wei,
 			avg(eth_store_stats.apr) as apr
-		from validators 
-		left join validator_pool on validators.pubkey = validator_pool.publickey 
-		inner join eth_store_stats on validators.validatorindex = eth_store_stats.validator 
-		where day = $1 
+		from validators
+		left join validator_pool on validators.pubkey = validator_pool.publickey
+		inner join eth_store_stats on validators.validatorindex = eth_store_stats.validator
+		where day = $1
 		group by validator_pool.pool, eth_store_stats.day
 		on conflict (day, pool) do update set
 			day                         = excluded.day,
@@ -219,7 +222,7 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string) error {
 }
 
 func (ese *EthStoreExporter) getStoreDay(day string) (*ethstore.Day, map[uint64]*ethstore.Day, error) {
-	logger.Infof("retrieving eth.store for day %v", day)
+	log.Infof("retrieving eth.store for day %v", day)
 	return ethstore.Calculate(context.Background(), ese.BNAddress, ese.ENAddress, day, 1, ethstore.RECEIPTS_MODE_SINGLE)
 }
 
@@ -231,31 +234,31 @@ DBCHECK:
 		// get latest eth.store day
 		latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
 		if err != nil {
-			utils.LogError(err, "error retrieving latest finalized epoch from db", 0)
+			log.Error(err, "error retrieving latest finalized epoch from db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 
 		if latestFinalizedEpoch == 0 {
-			utils.LogError(err, "error retrieved 0 as latest finalized epoch from the db", 0)
+			log.Error(err, "error retrieved 0 as latest finalized epoch from the db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 		latestDay := utils.DayOfSlot(latestFinalizedEpoch*utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
 
-		logger.Infof("latest day is %v", latestDay)
+		log.Infof("latest day is %v", latestDay)
 		// count rows of eth.store days in db
 		var ethStoreDayCount uint64
 		err = ese.DB.Get(&ethStoreDayCount, `
 				SELECT COUNT(*)
 				FROM eth_store_stats WHERE validator = -1`)
 		if err != nil {
-			utils.LogError(err, "error retrieving eth.store days count from db", 0)
+			log.Error(err, "error retrieving eth.store days count from db", 0)
 			time.Sleep(ese.ErrorInterval)
 			continue
 		}
 
-		logger.Infof("ethStoreDayCount is %v", ethStoreDayCount)
+		log.Infof("ethStoreDayCount is %v", ethStoreDayCount)
 
 		if ethStoreDayCount <= latestDay {
 			// db is incomplete
@@ -269,10 +272,10 @@ DBCHECK:
 			if ethStoreDayCount > 0 {
 				var ethStoreDays []types.EthStoreDay
 				err = ese.DB.Select(&ethStoreDays, `
-						SELECT day 
+						SELECT day
 						FROM eth_store_stats WHERE validator = -1`)
 				if err != nil {
-					utils.LogError(err, "error retrieving eth.store days from db", 0)
+					log.Error(err, "error retrieving eth.store days from db", 0)
 					time.Sleep(ese.ErrorInterval)
 					continue
 				}
@@ -294,11 +297,11 @@ DBCHECK:
 			for _, dayToExport := range daysToExportArray {
 				err = ese.exportDay(strconv.FormatUint(dayToExport, 10))
 				if err != nil {
-					utils.LogError(err, fmt.Sprintf("error exporting eth.store day %d into database", dayToExport), 0)
+					log.Error(err, fmt.Sprintf("error exporting eth.store day %d into database", dayToExport), 0)
 					time.Sleep(ese.ErrorInterval)
 					continue DBCHECK
 				}
-				logger.Infof("exported eth.store day %d into db", dayToExport)
+				log.Infof("exported eth.store day %d into db", dayToExport)
 				if ethStoreDayCount < latestDay {
 					// more than 1 day is being exported, sleep for duration specified in config
 					time.Sleep(ese.Sleep)

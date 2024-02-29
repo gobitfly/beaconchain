@@ -1,17 +1,19 @@
 package modules
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 )
 
 type SSVExporterResponse struct {
@@ -34,19 +36,20 @@ func ssvExporter() {
 	for {
 		err := exportSSV()
 		if err != nil {
-			utils.LogError(err, "error exporting ssv validators", 0)
+			log.Error(err, "error exporting ssv validators", 0)
 		}
-		logger.Warning("connection to ssv-exporter closed, reconnecting")
+		log.Warnf("connection to ssv-exporter closed, reconnecting")
 		time.Sleep(time.Second * 10)
 	}
 }
 
 func exportSSV() error {
-	c, _, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
+	c, r, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
+	defer r.Body.Close()
 
 	done := make(chan struct{})
 
@@ -55,7 +58,7 @@ func exportSSV() error {
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				utils.LogError(err, "error reading message from ssv-exporter", 0)
+				log.Error(err, "error reading message from ssv-exporter", 0)
 				return
 			}
 
@@ -63,16 +66,16 @@ func exportSSV() error {
 			res := SSVExporterResponse{}
 			err = json.Unmarshal(message, &res)
 			if err != nil {
-				utils.LogError(err, "error unmarshaling json from ssv-exporter", 0)
+				log.Error(err, "error unmarshaling json from ssv-exporter", 0)
 				continue
 			}
-			logger.WithFields(logrus.Fields{"number": len(res.Data)}).Infof("exporting ssv validators")
+			log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
 			err = saveSSV(&res)
 			if err != nil {
-				utils.LogError(err, "error tagging ssv validators", 0)
+				log.Error(err, "error tagging ssv validators", 0)
 				continue
 			}
-			logger.WithFields(logrus.Fields{"number": len(res.Data), "duration": time.Since(t0)}).Infof("tagged ssv validators")
+			log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(t0)}, "tagged ssv validators")
 		}
 	}()
 
@@ -100,8 +103,8 @@ func saveSSV(res *SSVExporterResponse) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
-			utils.LogError(err, "error rolling back transaction", 0)
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
