@@ -187,7 +187,6 @@ h1 {
   @include small_text_bold
 }
 
-// TODO: Use this and tooltip_text_bold for SlotViz tooltips
 @mixin tooltip_text(){
   font-family: var(--tooltip_text_font_family);
   font-size: var(--tooltip_text_font_size);
