@@ -11,3 +11,7 @@ export function epochToTs (epoch: number): number | undefined {
 
   return tsForSlot0 + ((epoch * slotsPerEpoch) * secondsPerSlot)
 }
+
+export function epochsPerDay (): number {
+  return 24 * 60 * 60 / (slotsPerEpoch * secondsPerSlot)
+}

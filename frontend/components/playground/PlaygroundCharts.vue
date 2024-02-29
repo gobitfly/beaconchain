@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 
+import { h, render } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -11,6 +12,7 @@ import {
   DataZoomComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
+import SummaryChartTooltip from '../dashboard/chart/SummaryChartTooltip.vue'
 
 import { type ChartData } from '~/types/api/common'
 
@@ -71,6 +73,7 @@ const textStyle = {
   color: '#f0f0f0'
 }
 
+// TODO: Replace with colors coming from designer
 const color = ['#f0f0f0', '#e6194b', '#46f0f0', '#bcf60c', '#4363d8', '#ffe119', '#f032e6', '#3cb44b', '#911eb4', '#f58231', '#87ceeb', '#e6beff', '#40e0d0', '#fabebe', '#aaffc3', '#ffd8b1', '#fffac8', '#daa520', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#a0522d', '#008080', '#9a6324', '#800000', '#808000', '#000075', '#808080', '#708090', '#ffdb58']
 
 const legend = {
@@ -83,12 +86,25 @@ const legend = {
   }
 }
 
-// TODO: Styling
 const tooltip = {
   order: 'seriesAsc',
   trigger: 'axis',
   valueFormatter: (value: number) => {
     return `${value}% ${$t('dashboard.validator.summary.chart.yAxis')}`
+  },
+  formatter (params : any) : HTMLElement {
+    const startEpoch = parseInt(params[0].axisValue)
+    const groupInfos = params.map((param: any) => {
+      return {
+        name: param.seriesName,
+        efficiency: param.value,
+        color: param.color
+      }
+    })
+
+    const d = document.createElement('div')
+    render(h(SummaryChartTooltip, { startEpoch, groupInfos }), d)
+    return d
   }
 }
 
