@@ -130,11 +130,11 @@ const data = computed(() => {
       }
 
       &.success {
-        color: var(--green);
+        color: var(--positive-color);
       }
 
       &.failed {
-        color: var(--flashy-red);
+        color: var(--negative-color);
       }
 
       .count-icon{
