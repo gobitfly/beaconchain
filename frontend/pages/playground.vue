@@ -59,8 +59,8 @@ onMounted(async () => {
       <TabPanel header="Styling">
         <PlaygroundStyling />
       </TabPanel>
-      <TabPanel header="Test">
-        <PlaygroundTest />
+      <TabPanel header="Composable">
+        <PlaygroundComposable />
       </TabPanel>
       <TabPanel header="Ads">
         <PlaygroundAds />
