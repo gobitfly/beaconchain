@@ -452,10 +452,10 @@ type EmailAttachment struct {
 }
 
 type Email struct {
-	Title                 string        `json:"title"`
-	Body                  template.HTML `json:"body"`
-	SubscriptionManageURL template.HTML `json:"subscriptionManageUrl"`
-	UnSubURL              template.HTML `json:"unSubURL"`
+	Title                 string
+	Body                  template.HTML
+	SubscriptionManageURL template.HTML
+	UnsubURL              template.HTML
 }
 
 type UserWebhook struct {

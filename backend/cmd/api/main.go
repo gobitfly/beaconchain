@@ -18,7 +18,7 @@ import (
 // TODO load these from config
 const (
 	host     = "0.0.0.0"
-	port     = "8081"
+	port     = "8080"
 	dummyApi = false
 )
 
@@ -53,7 +53,7 @@ func main() {
 	router := api.NewApiRouter(dai)
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         net.JoinHostPort(host, port),
+		Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}

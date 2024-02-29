@@ -47,25 +47,25 @@
       "sync": "Sync Committee",
       "proposal": {
         "success": {
-          "main": "Block proposed", 
+          "main": "Block proposed",
           "sub": "proposed"
         },
         "failed": {
-          "main": "Block missed", 
+          "main": "Block missed",
           "sub": "missed"
         },
         "scheduled": {
-          "main": "Block scheduled", 
+          "main": "Block scheduled",
           "sub": "will propose"
         }
       },
       "slashing": {
         "success": {
-          "main": "You slashed", 
+          "main": "You slashed",
           "sub": "slashed"
         },
         "failed": {
-          "main": "You got Slashed", 
+          "main": "You got Slashed",
           "sub": "slashed"
         }
       }

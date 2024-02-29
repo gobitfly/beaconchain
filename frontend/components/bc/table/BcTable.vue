@@ -20,14 +20,14 @@ const allExpanded = computed(() => {
   if (!props.expandable) {
     return false
   }
-  return !!props.data?.data.every((item) => {
+  return !!props.data?.data?.every((item) => {
     return !!expandedRows.value[item[props.dataKey]]
   })
 })
 
 const toggleAll = (forceClose = false) => {
   const wasExpanded = allExpanded.value
-  props.data?.data.forEach((item) => {
+  props.data?.data?.forEach((item) => {
     if (wasExpanded || forceClose) {
       delete expandedRows.value[item[props.dataKey]]
     } else {
