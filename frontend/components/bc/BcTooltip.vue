@@ -25,9 +25,10 @@ const slots = useSlots()
 const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
-const hover = ref(false)
+const { value: hover, bounce: bounceHover, instant: instantHover } = useDebounceValue<boolean>(false, 50)
+const { value: hoverTooltip, bounce: bounceHoverTooltip, instant: instantHoverTooltip } = useDebounceValue<boolean>(false, 50)
 const isSelected = computed(() => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value)
-const isOpen = computed(() => isSelected.value || hover.value)
+const isOpen = computed(() => isSelected.value || hover.value || hoverTooltip.value)
 
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
 
@@ -50,7 +51,7 @@ const setPosition = () => {
   }
   if (!tt) {
     // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
-    tooltipAddedTimeout.value = setTimeout(setPosition, 100)
+    tooltipAddedTimeout.value = setTimeout(setPosition, 10)
   }
   const ttWidth = tt?.width ?? 100
   const ttHeight = tt?.height ?? 60
@@ -84,11 +85,9 @@ const handleClick = () => {
   }
 }
 
-const onHover = (enter: boolean) => {
-  if (!enter) {
-    hover.value = false
-  } else if (canBeOpened.value && !selected.value) {
-    hover.value = true
+const onHover = () => {
+  if (canBeOpened.value && !selected.value) {
+    instantHover(true)
     setPosition()
   }
 }
@@ -100,7 +99,7 @@ const doHide = (event: Event) => {
   if (isSelected.value) {
     doSelect(null)
   }
-  hover.value = false
+  instantHover(false)
   if (!isOpen.value) {
     bcTooltipOwner.value?.blur()
   }
@@ -139,10 +138,10 @@ onUnmounted(() => {
   <div
     ref="bcTooltipOwner"
     class="slot_container"
-    @mouseover="onHover(true)"
-    @mouseleave="hover = false"
+    @mouseover="onHover()"
+    @mouseleave="bounceHover(false, false, true)"
     @click="handleClick()"
-    @blur="onHover(false)"
+    @blur="bounceHover(false, false, true)"
   >
     <slot />
     <Teleport v-if="isOpen" to="body">
@@ -152,7 +151,8 @@ onUnmounted(() => {
           class="bc-tooltip"
           :class="classList"
           @click="$event.stopImmediatePropagation()"
-          @mouseleave="hover = false"
+          @mouseover="instantHoverTooltip(true)"
+          @mouseleave="bounceHoverTooltip(false, false, true)"
         >
           <slot name="tooltip">
             <span>
