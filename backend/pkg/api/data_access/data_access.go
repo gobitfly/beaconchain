@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/juliangruber/go-intersect"
 	"github.com/lib/pq"
 	go_cache "github.com/patrickmn/go-cache"
 	"golang.org/x/sync/errgroup"
@@ -512,10 +513,14 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				slashedValidators = append(slashedValidators, slashedPropValidators...)
 			}
 			if _, ok := slotValiAttSlashed[slot]; ok {
-				slashedAttValidators := []pq.Int64Array{}
+				attSlashings := []struct {
+					Attestestation1Indices pq.Int64Array `db:"attestation1_indices"`
+					Attestestation2Indices pq.Int64Array `db:"attestation2_indices"`
+				}{}
 
-				err := d.readerDb.Select(&slashedAttValidators, `
+				err := d.readerDb.Select(&attSlashings, `
 					SELECT
+						attestation1_indices,
 						attestation2_indices
 					FROM blocks_attesterslashings
 					WHERE block_slot = $1`, slot)
@@ -523,9 +528,13 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 					return nil, err
 				}
 
-				for _, slashedAttValidator := range slashedAttValidators {
-					for _, validator := range slashedAttValidator {
-						slashedValidators = append(slashedValidators, uint64(validator))
+				for _, row := range attSlashings {
+					inter := intersect.Simple(row.Attestestation1Indices, row.Attestestation2Indices)
+					if len(inter) == 0 {
+						log.Warn(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": slot})
+					}
+					for _, v := range inter {
+						slashedValidators = append(slashedValidators, uint64(v.(int64)))
 					}
 				}
 			}
