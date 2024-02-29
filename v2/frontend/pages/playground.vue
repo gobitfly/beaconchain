@@ -56,11 +56,11 @@ onMounted(async () => {
       <TabPanel header="Icons">
         <PlaygroundIcons />
       </TabPanel>
-      <TabPanel header="Conversion">
-        <PlaygroundConversion />
-      </TabPanel>
       <TabPanel header="Styling">
         <PlaygroundStyling />
+      </TabPanel>
+      <TabPanel header="Composable">
+        <PlaygroundComposable />
       </TabPanel>
       <TabPanel header="Ads">
         <PlaygroundAds />
