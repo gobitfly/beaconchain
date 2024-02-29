@@ -1,11 +1,11 @@
 
   .p-megamenu {
-    padding: 0.5rem;
+    padding: 8px;
     background: var(--container-background);
   }
 
   .p-megamenu .p-menuitem > .p-menuitem-content .p-menuitem-link {
-    padding: 0.75rem 1.25rem;
+    padding: 12px 20px;
   }
   .p-megamenu .p-menuitem:not(.orange-box) > .p-menuitem-content .p-menuitem-link {
     .p-menuitem-text,
@@ -25,13 +25,13 @@
   }
   .p-megamenu .p-submenu-header {
     margin: 0;
-    padding: 0.75rem 1.25rem;
+    padding: 12px 20px;
     color: var(--text-color);
-    font-weight: 400;
-    font-size: 20px; 
+    font-weight: var(--big_text_label_font_weight);
+    font-size: var(--big_text_label_font_size); 
   }
   .p-megamenu .p-submenu-list {
-    padding: 0.5rem 0;
+    padding: 8px 0;
     min-width: fit-content;
   }
   .p-megamenu.p-megamenu-horizontal:not(.p-megamenu-mobile) .p-megamenu-root-list > .p-menuitem:not(.p-highlight) > .p-menuitem-content .p-menuitem-link {
@@ -41,7 +41,7 @@
     }
   }
   .p-megamenu.p-megamenu-horizontal .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link .p-submenu-icon {
-    margin-left: 0.5rem;
+    margin-left: 8px;
   }
   .p-megamenu.p-megamenu-horizontal .p-megamenu-root-list > .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
     background: var(--container-background);
@@ -55,10 +55,10 @@
     flex-direction: column;
   }
   .p-megamenu.p-megamenu-mobile .p-megamenu-button {
-    width: 2rem;
-    height: 2rem;
+    width: 32px;
+    height: 32px;
     color: var(--text-color);
-    border-radius: 50%;
+    border-radius: var(--border-radius);
     transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
   }
   .p-megamenu.p-megamenu-mobile .p-megamenu-root-list {
@@ -70,14 +70,14 @@
   }
   .p-megamenu.p-megamenu-mobile .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
     position: static;
-    border-radius: 4px;
-    padding: 0 10px;
+    border-radius: var(--border-radius);
+    padding: 0 var(--padding);
   }
   .p-megamenu.p-megamenu-mobile .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
     .p-menuitem-text,
     .p-submenu-icon {
       color: var(--text-color);
-      font-size: 22px;
+      font-size: var(--big_text_label_font_size);
     }
   }
 
@@ -102,7 +102,7 @@
         &.orange-box{
           .p-menuitem-link {
             background-color: var(--primary-orange);
-            border-radius: 3px;
+            border-radius: var(--border-radius);
 
             .p-menuitem-text{
               color: var(--text-color-inverted);
