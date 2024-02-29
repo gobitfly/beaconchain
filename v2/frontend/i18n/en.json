@@ -114,7 +114,7 @@
           "luck": "Luck"
         },
         "chart":{
-          "title": "Summary",
+          "all_groups": "All Groups",
           "yAxis": "Efficiency"
         }
       },
