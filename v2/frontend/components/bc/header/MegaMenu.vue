@@ -1,4 +1,45 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
+import {
+  faHistory,
+  faCube,
+  faCubes,
+  faCreditCard,
+  faUpload,
+  faTable,
+  faUserSlash,
+  faMedal,
+  faFileImport,
+  faFileSignature,
+  faMoneyBill,
+  faChartBar,
+  faChartLine,
+  faFireFlame,
+  faRobot,
+  faMegaphone,
+  faExternalLinkAlt,
+  faDesktop
+} from '@fortawesome/pro-solid-svg-icons'
+import {
+  faDrumstickBite,
+  faChartPie,
+  faRocket,
+  faMoneyBill as farMoneyBill,
+  faCalculator,
+  faProjectDiagram,
+  faMobileScreen,
+  faGem,
+  faLaptopCode,
+  faGasPump,
+  faBell,
+  faPaintBrush,
+  faDesktop as farDesktop
+} from '@fortawesome/pro-regular-svg-icons'
+import {
+  faBuildingColumns
+} from '@fortawesome/sharp-solid-svg-icons'
+
 import IconEthereumOverview from '~/components/icon/megaMenu/EthereumOverview.vue'
 import IconGnosisOverview from '~/components/icon/megaMenu/GnosisOverview.vue'
 import IconArbitrumOverview from '~/components/icon/megaMenu/ArbitrumOverview.vue'
@@ -11,7 +52,6 @@ import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 
 const { t: $t } = useI18n()
 
-// const minFullViewWidth = '1360px'
 const minFullViewWidth = '1360px'
 
 const items = [
@@ -29,27 +69,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.epochs'),
-              icon: 'fa-solid fa-history',
+              icon: faHistory,
               url: '/epochs'
             },
             {
               label: $t('header.megamenu.slots'),
-              icon: 'fas fa-cube',
+              icon: faCube,
               url: '/slots'
             },
             {
               label: $t('header.megamenu.blocks'),
-              icon: 'fas fa-cubes',
+              icon: faCubes,
               url: '/blocks'
             },
             {
               label: $t('header.megamenu.txs'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: '/transactions'
             },
             {
               label: $t('header.megamenu.mempool'),
-              icon: 'fas fa-upload',
+              icon: faUpload,
               url: '/mempool'
             }
           ]
@@ -61,32 +101,32 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              icon: 'fas fa-table',
+              icon: faTable,
               url: '/validators'
             },
             {
               label: $t('header.megamenu.slashings'),
-              icon: 'fas fa-user-slash',
+              icon: faUserSlash,
               url: '/validators/slashings'
             },
             {
               label: $t('header.megamenu.validator_leaderboard'),
-              icon: 'fas fa-medal',
+              icon: faMedal,
               url: '/validators/leaderboard'
             },
             {
               label: $t('header.megamenu.deposit_leaderboard'),
-              icon: 'fas fa-file-import',
+              icon: faFileImport,
               url: '/validators/deposit-leaderboard'
             },
             {
               label: $t('header.megamenu.deposits'),
-              icon: 'fas fa-file-signature',
+              icon: faFileSignature,
               url: '/validators/deposits'
             },
             {
               label: $t('header.megamenu.withdrawals'),
-              icon: 'fas fa-money-bill',
+              icon: faMoneyBill,
               url: '/validators/withdrawals'
             }
           ]
@@ -109,17 +149,17 @@ const items = [
             },
             {
               label: $t('header.megamenu.staking_services'),
-              icon: 'far fa-drumstick-bite',
+              icon: faDrumstickBite,
               url: '/stakingServices'
             },
             {
               label: $t('header.megamenu.pool_benchmarks'),
-              icon: 'far fa-chart-pie',
+              icon: faChartPie,
               url: '/pools'
             },
             {
               label: $t('header.megamenu.rocket_pool_stats'),
-              icon: 'far fa-rocket',
+              icon: faRocket,
               url: '/pools/rocketpool'
             }
           ]
@@ -131,37 +171,37 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.charts'),
-              icon: 'fas fa-chart-bar',
+              icon: faChartBar,
               url: '/charts'
             },
             {
               label: $t('header.megamenu.reward_history'),
-              icon: 'far fa-money-bill',
+              icon: farMoneyBill,
               url: '/rewards'
             },
             {
               label: $t('header.megamenu.profit_calculator'),
-              icon: 'far fa-calculator',
+              icon: faCalculator,
               url: '/calculator'
             },
             {
               label: $t('header.megamenu.block_viz'),
-              icon: 'far fa-project-diagram',
+              icon: faProjectDiagram,
               url: '/vis'
             },
             {
               label: $t('header.megamenu.correlations'),
-              icon: 'fas fa-chart-line',
+              icon: faChartLine,
               url: '/correlations'
             },
             {
               label: $t('header.megamenu.eip1599_burn'),
-              icon: 'fas fa-fire-flame',
+              icon: faFireFlame,
               url: '/burn'
             },
             {
               label: $t('header.megamenu.relays'),
-              icon: 'fas fa-robot',
+              icon: faRobot,
               url: '/relays'
             }
           ]
@@ -173,12 +213,12 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.beaconchain_app'),
-              icon: 'far fa-mobile-screen',
+              icon: faMobileScreen,
               url: '/mobile'
             },
             {
               label: $t('header.megamenu.beaconchain_premium'),
-              icon: 'far fa-gem',
+              icon: faGem,
               url: '/premium'
             },
             {
@@ -188,27 +228,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.api_docs'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/api/v1/docs/index.html'
             },
             {
               label: $t('header.megamenu.api_pricing'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/pricing'
             },
             {
               label: $t('header.megamenu.unit_converter'),
-              icon: 'fass fa-building-columns',
+              icon: faBuildingColumns,
               url: '/tools/unitConverter'
             },
             {
               label: $t('header.megamenu.gasnow'),
-              icon: 'far fa-gas-pump',
+              icon: faGasPump,
               url: '/gasnow'
             },
             {
               label: $t('header.megamenu.broadcast_signed_messages'),
-              icon: 'fas fa-megaphone',
+              icon: faMegaphone,
               url: '/tools/broadcast'
             }
           ]
@@ -226,27 +266,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.notifications'),
-              icon: 'far fa-bell',
+              icon: faBell,
               url: '/user/notifications'
             },
             {
               label: $t('header.megamenu.graffiti_wall'),
-              icon: 'far fa-paint-brush',
+              icon: faPaintBrush,
               url: '/graffitiwall'
             },
             {
               label: $t('header.megamenu.ethereum_clients'),
-              icon: 'far fa-desktop',
+              icon: farDesktop,
               url: '/ethClients'
             },
             {
               label: $t('header.megamenu.knowledge_base'),
-              icon: 'fas fa-external-link-alt',
+              icon: faExternalLinkAlt,
               url: 'https://kb.beaconcha.in'
             },
             {
               label: $t('header.megamenu.slot_finder'),
-              icon: 'fas fa-cube',
+              icon: faCube,
               url: '/slots/finder'
             }
           ]
@@ -258,22 +298,22 @@ const items = [
           items: [
             {
               label: 'Discord',
-              icon: 'fab fa-discord',
+              icon: faDiscord,
               url: 'https://dsc.gg/beaconchain'
             },
             {
               label: 'Twitter',
-              icon: 'fab fa-twitter',
+              icon: faTwitter,
               url: 'https://twitter.com/beaconcha_in'
             },
             {
               label: 'Github',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/beaconchain'
             },
             {
               label: 'Github Mobile App',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
             }
           ]
@@ -294,32 +334,32 @@ const items = [
             },
             {
               label: $t('header.megamenu.epochs'),
-              icon: 'fas fa-history',
+              icon: faHistory,
               url: '/epochs'
             },
             {
               label: $t('header.megamenu.slots'),
-              icon: 'fas fa-cube',
+              icon: faCube,
               url: '/slots'
             },
             {
               label: $t('header.megamenu.blocks'),
-              icon: 'fas fa-cubes',
+              icon: faCubes,
               url: '/blocks'
             },
             {
               label: $t('header.megamenu.txs'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: '/transactions'
             },
             {
               label: $t('header.megamenu.validators'),
-              icon: 'fas fa-desktop',
+              icon: faDesktop,
               url: ''
             },
             {
               label: $t('header.megamenu.mempool'),
-              icon: 'fas fa-upload',
+              icon: faUpload,
               url: '/mempool'
             }
           ]
@@ -331,32 +371,32 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              icon: 'fas fa-table',
+              icon: faTable,
               url: '/validators'
             },
             {
               label: $t('header.megamenu.slashings'),
-              icon: 'fas fa-user-slash',
+              icon: faUserSlash,
               url: '/validators/slashings'
             },
             {
               label: $t('header.megamenu.validator_leaderboard'),
-              icon: 'fas fa-medal',
+              icon: faMedal,
               url: '/validators/leaderboard'
             },
             {
               label: $t('header.megamenu.deposit_leaderboard'),
-              icon: 'fas fa-file-import',
+              icon: faFileImport,
               url: '/validators/deposit-leaderboard'
             },
             {
               label: $t('header.megamenu.deposits'),
-              icon: 'fas fa-file-signature',
+              icon: faFileSignature,
               url: '/validators/deposits'
             },
             {
               label: $t('header.megamenu.withdrawals'),
-              icon: 'fas fa-money-bill',
+              icon: faMoneyBill,
               url: '/validators/withdrawals'
             }
           ]
@@ -368,37 +408,37 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.charts'),
-              icon: 'fas fa-chart-bar',
+              icon: faChartBar,
               url: '/charts'
             },
             {
               label: $t('header.megamenu.reward_history'),
-              icon: 'far fa-money-bill',
+              icon: farMoneyBill,
               url: '/rewards'
             },
             {
               label: $t('header.megamenu.profit_calculator'),
-              icon: 'far fa-calculator',
+              icon: faCalculator,
               url: '/calculator'
             },
             {
               label: $t('header.megamenu.block_viz'),
-              icon: 'far fa-project-diagram',
+              icon: faProjectDiagram,
               url: '/vis'
             },
             {
               label: $t('header.megamenu.correlations'),
-              icon: 'fas fa-chart-line',
+              icon: faChartLine,
               url: '/correlations'
             },
             {
               label: $t('header.megamenu.eip1599_burn'),
-              icon: 'fas fa-fire-flame',
+              icon: faFireFlame,
               url: '/burn'
             },
             {
               label: $t('header.megamenu.relays'),
-              icon: 'fas fa-robot',
+              icon: faRobot,
               url: '/relays'
             }
           ]
@@ -410,12 +450,12 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.beaconchain_app'),
-              icon: 'far fa-mobile-screen',
+              icon: faMobileScreen,
               url: '/mobile'
             },
             {
               label: $t('header.megamenu.beaconchain_premium'),
-              icon: 'far fa-gem',
+              icon: faGem,
               url: '/premium'
             },
             {
@@ -425,17 +465,17 @@ const items = [
             },
             {
               label: $t('header.megamenu.api_docs'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/api/v1/docs/index.html'
             },
             {
               label: $t('header.megamenu.api_pricing'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/pricing'
             },
             {
               label: $t('header.megamenu.broadcast_signed_messages'),
-              icon: 'fas fa-megaphone',
+              icon: faMegaphone,
               url: '/tools/broadcast'
             }
           ]
@@ -453,12 +493,12 @@ const items = [
             },
             {
               label: $t('header.megamenu.notifications'),
-              icon: 'far fa-bell',
+              icon: faBell,
               url: '/user/notifications'
             },
             {
               label: $t('header.megamenu.knowledge_base'),
-              icon: 'fas fa-external-link-alt',
+              icon: faExternalLinkAlt,
               url: 'https://kb.beaconcha.in'
             }
           ]
@@ -470,22 +510,22 @@ const items = [
           items: [
             {
               label: 'Discord',
-              icon: 'fab fa-discord',
+              icon: faDiscord,
               url: 'https://dsc.gg/beaconchain'
             },
             {
               label: 'Twitter',
-              icon: 'fab fa-twitter',
+              icon: faTwitter,
               url: 'https://twitter.com/beaconcha_in'
             },
             {
               label: 'Github',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/beaconchain'
             },
             {
               label: 'Github Mobile App',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
             }
           ]
@@ -506,27 +546,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.blocks'),
-              icon: 'fas fa-cubes',
+              icon: faCubes,
               url: '/blocks'
             },
             {
               label: $t('header.megamenu.txs'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: '/transactions'
             },
             {
               label: $t('header.megamenu.txsL1L2'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.txsL2L1'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.mempool'),
-              icon: 'fas fa-upload',
+              icon: faUpload,
               url: '/mempool'
             }
           ]
@@ -543,12 +583,12 @@ const items = [
             },
             {
               label: $t('header.megamenu.api_docs'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/api/v1/docs/index.html'
             },
             {
               label: $t('header.megamenu.api_pricing'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/pricing'
             }
           ]
@@ -566,7 +606,7 @@ const items = [
             },
             {
               label: $t('header.megamenu.knowledge_base'),
-              icon: 'fas fa-external-link-alt',
+              icon: faExternalLinkAlt,
               url: 'https://kb.beaconcha.in'
             }
           ]
@@ -578,22 +618,22 @@ const items = [
           items: [
             {
               label: 'Discord',
-              icon: 'fab fa-discord',
+              icon: faDiscord,
               url: 'https://dsc.gg/beaconchain'
             },
             {
               label: 'Twitter',
-              icon: 'fab fa-twitter',
+              icon: faTwitter,
               url: 'https://twitter.com/beaconcha_in'
             },
             {
               label: 'Github',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/beaconchain'
             },
             {
               label: 'Github Mobile App',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
             }
           ]
@@ -614,27 +654,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.blocks'),
-              icon: 'fas fa-cubes',
+              icon: faCubes,
               url: '/blocks'
             },
             {
               label: $t('header.megamenu.txs'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: '/transactions'
             },
             {
               label: $t('header.megamenu.txsL1L2'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.txsL2L1'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.mempool'),
-              icon: 'fas fa-upload',
+              icon: faUpload,
               url: '/mempool'
             }
           ]
@@ -651,12 +691,12 @@ const items = [
             },
             {
               label: $t('header.megamenu.api_docs'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/api/v1/docs/index.html'
             },
             {
               label: $t('header.megamenu.api_pricing'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/pricing'
             }
           ]
@@ -674,7 +714,7 @@ const items = [
             },
             {
               label: $t('header.megamenu.knowledge_base'),
-              icon: 'fas fa-external-link-alt',
+              icon: faExternalLinkAlt,
               url: 'https://kb.beaconcha.in'
             }
           ]
@@ -686,22 +726,22 @@ const items = [
           items: [
             {
               label: 'Discord',
-              icon: 'fab fa-discord',
+              icon: faDiscord,
               url: 'https://dsc.gg/beaconchain'
             },
             {
               label: 'Twitter',
-              icon: 'fab fa-twitter',
+              icon: faTwitter,
               url: 'https://twitter.com/beaconcha_in'
             },
             {
               label: 'Github',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/beaconchain'
             },
             {
               label: 'Github Mobile App',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
             }
           ]
@@ -722,27 +762,27 @@ const items = [
             },
             {
               label: $t('header.megamenu.blocks'),
-              icon: 'fas fa-cubes',
+              icon: faCubes,
               url: '/blocks'
             },
             {
               label: $t('header.megamenu.txs'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: '/transactions'
             },
             {
               label: $t('header.megamenu.txsL1L2'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.txsL2L1'),
-              icon: 'fas fa-credit-card',
+              icon: faCreditCard,
               url: ''
             },
             {
               label: $t('header.megamenu.mempool'),
-              icon: 'fas fa-upload',
+              icon: faUpload,
               url: '/mempool'
             }
           ]
@@ -759,12 +799,12 @@ const items = [
             },
             {
               label: $t('header.megamenu.api_docs'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/api/v1/docs/index.html'
             },
             {
               label: $t('header.megamenu.api_pricing'),
-              icon: 'far fa-laptop-code',
+              icon: faLaptopCode,
               url: '/pricing'
             }
           ]
@@ -782,7 +822,7 @@ const items = [
             },
             {
               label: $t('header.megamenu.knowledge_base'),
-              icon: 'fas fa-external-link-alt',
+              icon: faExternalLinkAlt,
               url: 'https://kb.beaconcha.in'
             }
           ]
@@ -794,22 +834,22 @@ const items = [
           items: [
             {
               label: 'Discord',
-              icon: 'fab fa-discord',
+              icon: faDiscord,
               url: 'https://dsc.gg/beaconchain'
             },
             {
               label: 'Twitter',
-              icon: 'fab fa-twitter',
+              icon: faTwitter,
               url: 'https://twitter.com/beaconcha_in'
             },
             {
               label: 'Github',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/beaconchain'
             },
             {
               label: 'Github Mobile App',
-              icon: 'fab fa-github',
+              icon: faGithub,
               url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
             }
           ]
@@ -833,7 +873,7 @@ const items = [
     <template #itemicon="{ item }">
       <span v-if="item.svg || item.icon" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
         <component :is="item.svg" v-if="item.svg" />
-        <i v-else-if="item.icon" :class="item.icon" />
+        <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
       </span>
     </template>
   </MegaMenu>
