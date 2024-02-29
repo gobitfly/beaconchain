@@ -13,6 +13,7 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from '../dashboard/chart/SummaryChartTooltip.vue'
+import { formatTs } from '~/utils/format'
 
 import { type ChartData } from '~/types/api/common'
 
@@ -35,22 +36,13 @@ onMounted(async () => {
   chartData.value = res
 })
 
-function timeToDateString (time: number): string {
-  const options: Intl.DateTimeFormatOptions = {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }
-  return new Date(time * 1000).toLocaleDateString(undefined, options)
-}
-
 function xToLabel (x: number): string | undefined {
   const ts = epochToTs(x)
   if (ts === undefined) {
     return undefined
   }
 
-  const date = timeToDateString(ts)
+  const date = formatTs(ts)
   return `${date}\nEpoch ${x}`
 }
 

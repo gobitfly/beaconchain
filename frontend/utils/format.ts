@@ -84,3 +84,12 @@ export function trim (value:string, maxDecimalCount: number, minDecimalCount?: n
   }
   return `${left}.${dec}`
 }
+
+export function formatTs (ts: number): string {
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }
+  return new Date(ts * 1000).toLocaleDateString(undefined, options)
+}
