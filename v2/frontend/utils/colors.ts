@@ -1,6 +1,6 @@
 export function getSummaryChartGroupColors (theme: string) {
-  const colorsLight = ['#E7416A', '#6CF0F0', '#B2DF27', '#5D78DC', '#FFDB58', '#F067E9', '#57BD64', '#A448C0', '#DC2A7F', '#F58E45', '#87CEEB', '#438D61', '#E6BEFF', '#6BE4D8', '#FABEBE', '#90D9A5', '#FF6A00', '#FFBE7C', '#BCB997', '#DEB244', '#DDA0DD', '#FA8072', '#D2B48C', '#6B8E23', '#0E8686', '#9A6324', '#932929', '#808000', '#30308E', '#708090']
-  const colorsDark = ['#E7416A', '#6CF0F0', '#C3F529', '#5D78DC', '#FFDB58', '#F067E9', '#57BD64', '#A448C0', '#DC2A7F', '#F58E45', '#87CEEB', '#438D61', '#E6BEFF', '#6BE4D8', '#FABEBE', '#AAFFC3', '#FF6A00', '#FFD8B1', '#FFFAC8', '#DEB244', '#DDA0DD', '#FA8072', '#D2B48C', '#6B8E23', '#0E8686', '#9A6324', '#932929', '#808000', '#30308E', '#708090']
+  const colorsLight = ['#e7416a', '#6cf0f0', '#b2df27', '#5d78dc', '#ffdb58', '#f067e9', '#57bd64', '#a448c0', '#dc2a7f', '#f58e45', '#87ceeb', '#438d61', '#e6beff', '#6be4d8', '#fabebe', '#90d9a5', '#ff6a00', '#ffbe7c', '#bcb997', '#deb244', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#0e8686', '#9a6324', '#932929', '#808000', '#30308e', '#708090']
+  const colorsDark = ['#e7416a', '#6cf0f0', '#c3f529', '#5d78dc', '#ffdb58', '#f067e9', '#57bd64', '#a448c0', '#dc2a7f', '#f58e45', '#87ceeb', '#438d61', '#e6beff', '#6be4d8', '#fabebe', '#aaffc3', '#ff6a00', '#ffd8b1', '#fffac8', '#deb244', '#dda0dd', '#fa8072', '#d2b48c', '#6b8e23', '#0e8686', '#9a6324', '#932929', '#808000', '#30308e', '#708090']
 
   return theme === 'light' ? colorsLight : colorsDark
 }
