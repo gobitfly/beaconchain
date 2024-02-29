@@ -37,16 +37,15 @@ export enum ResultTypes {
 }
 
 interface CategoryInfoFields {
-  filterLabel : string,
-  filterLabelHint : string
+  filterLabel : string
 }
 
 export const CategoryInfo: Record<Categories, CategoryInfoFields> = {
-  [Categories.Tokens]: { filterLabel: 'Tokens', filterLabelHint: 'ERC-20' },
-  [Categories.NFTs]: { filterLabel: 'NFTs', filterLabelHint: 'ERC-721 & ERC-1155' },
-  [Categories.Protocol]: { filterLabel: 'Protocol', filterLabelHint: '' },
-  [Categories.Addresses]: { filterLabel: 'Addresses', filterLabelHint: '' },
-  [Categories.Validators]: { filterLabel: 'Validators', filterLabelHint: '' }
+  [Categories.Tokens]: { filterLabel: 'Tokens' },
+  [Categories.NFTs]: { filterLabel: 'NFTs' },
+  [Categories.Protocol]: { filterLabel: 'Protocol' },
+  [Categories.Addresses]: { filterLabel: 'Addresses' },
+  [Categories.Validators]: { filterLabel: 'Validators' }
 }
 
 interface TypeInfoFields {
@@ -61,7 +60,7 @@ interface TypeInfoFields {
 
 export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
   [ResultTypes.Tokens]: {
-    title: 'Tokens',
+    title: 'ERC-20 tokens',
     preLabels: '',
     midLabels: '',
     postLabels: '',
@@ -70,7 +69,7 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
     belongsToAllNetworks: true
   },
   [ResultTypes.NFTs]: {
-    title: 'NFTs',
+    title: 'NFTs (ERC-721 & ERC-1155- tokens)',
     preLabels: '',
     midLabels: '',
     postLabels: '',
@@ -384,4 +383,22 @@ export function getListOfResultTypes (sortByPriority : boolean) : ResultTypes[] 
     list.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
   }
   return list
+}
+
+const searchableTypesPerCategory : Record<string, ResultTypes[]> = {}
+// Returns the list of types belonging to the given category.
+// This function is fast on average: it computes the list only at the first call. Subsequent calls return the already computed list.
+export function getListOfResultTypesInCategory (category: Categories) : ResultTypes[] {
+  if (!searchableTypesPerCategory[category]) {
+    const list : ResultTypes[] = []
+
+    for (const t of getListOfResultTypes(true)) {
+      if (TypeInfo[t].category === category) {
+        list.push(t)
+      }
+    }
+    searchableTypesPerCategory[category] = list
+  }
+
+  return searchableTypesPerCategory[category]
 }

@@ -8,6 +8,7 @@ import {
   TypeInfo,
   getListOfResultTypes,
   convertSearchAheadResultIntoOrganizedResult,
+  getListOfResultTypesInCategory,
   type SearchAheadResults,
   type OrganizedResults,
   type SearchBarStyle,
@@ -24,7 +25,7 @@ const props = defineProps({
 const emit = defineEmits(['go'])
 
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
-const width : number = (barStyle === 'discreet' ? 460 : 735)
+const width : number = (barStyle === 'discreet' ? 460 : 735) // 735 on computer 380 on mobile
 const height : number = (barStyle === 'discreet' ? 34 : 40)
 const inputHeight = String(height) + 'px'
 const inputWidth = String(width - height) + 'px'
@@ -82,7 +83,7 @@ function cleanUp () {
 
 onMounted(() => {
   searchableTypes = []
-  // builds the list of search types from the list of searchable categories (obtained as a props)
+  // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained as a props)
   for (const t of getListOfResultTypes(false)) {
     if (searchable.includes(TypeInfo[t].category)) {
       searchableTypes.push(t)
@@ -352,6 +353,28 @@ function calculateCloseness (suggestion : string) : number {
   return suggestion.length - inputted.value.length
 }
 
+function filterHint (category : Categories) : string {
+  let hint : string
+  const list = getListOfResultTypesInCategory(category)
+
+  hint = 'Shows '
+  if (list.length > 1) {
+    hint += 'these types of results'
+  } else {
+    hint += 'this type of results'
+  }
+  hint += ': '
+
+  for (let i = 0; i < list.length; i++) {
+    hint += TypeInfo[list[i]].title
+    if (i < list.length - 1) {
+      hint += ', '
+    }
+  }
+
+  return hint
+}
+
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
 function simulateAPIresponse (searched : string) : SearchAheadResults {
   const response : SearchAheadResults = {}; response.data = []
@@ -593,8 +616,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       </div>
     </div>
     <div v-if="showDropDown" id="drop-down" ref="dropDown">
-      <div id="filter-bar">
-        <span id="filter-networks" :class="barStyle">
+      <div id="filter-area">
+        <div id="filter-networks">
           <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
           <MultiSelect
             v-model="networkDropdownUserSelection"
@@ -611,23 +634,26 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
             @change="networkFilterHasChanged(); refreshDropDown()"
             @click="(e : Event) => e.stopPropagation()"
           />
-        </span>
-        <label v-for="filter of Object.keys(userFilters.categories)" :key="filter" class="filter-button">
-          <input
-            v-model="userFilters.categories[filter]"
-            class="hiddencheckbox"
-            :true-value="true"
-            :false-value="false"
-            type="checkbox"
-            @change="categoryFilterHasChanged(); refreshDropDown()"
-          >
-          <span class="face">
-            {{ CategoryInfo[filter as Categories].filterLabel }}
-            <span v-if="barStyle === 'gaudy' && CategoryInfo[filter as Categories].filterLabelHint !== ''">
-              {{ '(' + CategoryInfo[filter as Categories].filterLabelHint + ')' }}
-            </span>
+        </div>
+        <div id="filter-categories">
+          <span v-for="filter of Object.keys(userFilters.categories)" :key="filter">
+            <BcTooltip :text="filterHint(filter as Categories)">
+              <label class="filter-button">
+                <input
+                  v-model="userFilters.categories[filter]"
+                  class="hiddencheckbox"
+                  :true-value="true"
+                  :false-value="false"
+                  type="checkbox"
+                  @change="categoryFilterHasChanged(); refreshDropDown()"
+                >
+                <span class="face">
+                  {{ CategoryInfo[filter as Categories].filterLabel }}
+                </span>
+              </label>
+            </BcTooltip>
           </span>
-        </label>
+        </div>
       </div>
       <div v-if="waitingForSearchResults">
         {{ $t('search_engine.searching') }}
@@ -730,54 +756,21 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   right: v-bind(searchButtonSize);
   background-color: var(--searchbar-background);
   padding: 4px;
-
-  #panel-of-results {
-    min-height: 128px;
-    max-height: 300px;
-    overflow: auto;
-    h2 {
-      margin: 0;
-    }
-    h3 {
-      margin: 0;
-    }
-    .network-container {
-      margin-bottom: 24px;
-      .network-title {
-        background-color: #b0b0b0;
-        padding-left: 4px;
-      }
-      .type-container {
-        border-bottom: 0.5px dashed var(--light-grey-3);
-        padding: 4px;
-        .type-title {
-
-        }
-        .single-result {
-          cursor: pointer;
-        }
-      }
-    }
-  }
 }
 
-#drop-down #filter-bar {
+#drop-down #filter-area {
+  display: flex;
   padding-top: 4px;
-  padding-bottom: 8px;
+  row-gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 
   #filter-networks {
     margin-left: 6px;
-    margin-right: 6px;
-    &.discreet {
-      display: block;
-      margin-bottom: 8px;
-    }
-    &.gaudy {
 
-    }
     .p-multiselect {
       @include fonts.small_text_bold;
-      width: 138px;
+      width: 128px;
       height: 20px;
       border-radius: 10px;
       .p-multiselect-trigger {
@@ -802,6 +795,10 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   }
   .filter-button {
     @include fonts.small_text_bold;
+    @media (max-width: 600px) {
+      // mobile
+      letter-spacing: -0.3px;  // needed to fit all the buttons in one line
+    }
     .face{
       color: var(--primary-contrast-color);
       display: inline-block;
@@ -833,6 +830,34 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       }
       &:active {
         background-color: var(--button-color-pressed);
+      }
+    }
+  }
+}
+
+#drop-down #panel-of-results {
+  min-height: 128px;
+  max-height: 270px;  // the height of the filter section is subtracted
+  overflow: auto;
+  h2 {
+    margin: 0;
+  }
+  h3 {
+    margin: 0;
+  }
+  .network-container {
+    margin-bottom: 24px;
+    .network-title {
+      background-color: #b0b0b0;
+      padding-left: 4px;
+    }
+    .type-container {
+      border-bottom: 0.5px dashed var(--light-grey-3);
+      padding: 4px;
+      .type-title {
+       }
+      .single-result {
+        cursor: pointer;
       }
     }
   }
