@@ -1,4 +1,4 @@
-package modules
+package userservice
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 
 var duplicateOrderMap map[string]uint64 = make(map[string]uint64)
 
-func checkSubscriptions() {
+func CheckMobileSubscriptions() {
 	if !utils.Config.Frontend.VerifyAppSubs {
 		return
 	}

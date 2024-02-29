@@ -4,8 +4,8 @@ SELECT 'add column activationeligibilityepoch to validator_queue_deposits';
 ALTER TABLE validator_queue_deposits ADD COLUMN IF NOT EXISTS activationeligibilityepoch BIGINT;
 
 SELECT 'populate activationeligibilityepoch data on validator_queue_deposits from validators table';
-UPDATE validator_queue_deposits 
-SET 
+UPDATE validator_queue_deposits
+SET
 	activationeligibilityepoch=validators.activationeligibilityepoch
 FROM validators
 Where validators.validatorindex = validator_queue_deposits.validatorindex;

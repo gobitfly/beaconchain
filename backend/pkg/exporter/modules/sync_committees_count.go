@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,14 +90,14 @@ func exportSyncCommitteesCountAtPeriod(period uint64, countSoFar float64) (float
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
 
 	_, err = tx.Exec(
 		fmt.Sprintf(`
-			INSERT INTO sync_committees_count_per_validator (period, count_so_far) 
+			INSERT INTO sync_committees_count_per_validator (period, count_so_far)
 			VALUES (%d, %f)
 			ON CONFLICT (period) DO UPDATE SET
 				period = excluded.period,

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { type SlotVizSlot, type SlotVizIcons } from '~/types/dashboard/slotViz'
-import { type TooltipLayout } from '~/types/layouts'
+import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
+import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 interface Props {
-  data: SlotVizSlot
+  data: VDBSlotVizSlot
 }
 const props = defineProps<Props>()
 
@@ -10,7 +10,7 @@ const data = computed(() => {
   const slot = props.data
   let outer = ''
   const icons: SlotVizIcons[] = []
-  switch (slot.state) {
+  switch (slot.status) {
     case 'missed':
     case 'orphaned':
       outer = 'missed'
@@ -21,12 +21,12 @@ const data = computed(() => {
   }
 
   let inner = ''
-  if (slot.state === 'scheduled') {
+  if (slot.status === 'scheduled') {
     inner = 'pending'
   } else {
-    const hasFailed = !!slot.duties?.find(s => s.failedCount)
-    const hasSuccess = !!slot.duties?.find(s => s.successCount)
-    const hasPending = !!slot.duties?.find(s => s.pendingCount)
+    const hasFailed = !!slot.attestations?.failed_count || !!slot.sync?.failed_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'failed')
+    const hasSuccess = !!slot.attestations?.success_count || !!slot.sync?.success_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'success')
+    const hasPending = !!slot.attestations?.pending_count || !!slot.sync?.pending_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'scheduled')
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'
     } else if (hasFailed && hasSuccess) {
@@ -40,18 +40,21 @@ const data = computed(() => {
     }
   }
 
-  const types: SlotVizIcons[] = ['proposal', 'slashing', 'sync', 'attestation']
-  types.forEach((type) => {
-    if (slot.duties?.find(s => s.type === type)) {
-      icons.push(type)
-    }
-  })
-
-  const tooltipLayout: TooltipLayout = slot.duties?.length ? 'dark' : 'default'
+  if (slot.proposal) {
+    icons.push('proposal')
+  }
+  if (slot.slashing?.length) {
+    icons.push('slashing')
+  }
+  if (slot.sync) {
+    icons.push('sync')
+  }
+  if (slot.attestations) {
+    icons.push('attestation')
+  }
 
   return {
-    id: `slot_${slot.id}`,
-    tooltipLayout,
+    id: `slot_${slot.slot}`,
     outer,
     inner,
     icons,
@@ -134,7 +137,7 @@ const data = computed(() => {
 }
 
 .proposed {
-  background-color: var(--flashy-green);
+  background-color: var(--positive-color);
 
   &.inner {
     color: var(--graphite);
@@ -142,7 +145,7 @@ const data = computed(() => {
 }
 
 .missed {
-  background-color: var(--flashy-red);
+  background-color: var(--negative-color);
 
   &.inner {
     color: var(--graphite);

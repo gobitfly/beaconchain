@@ -3,16 +3,21 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
   text?: string,
+  title?: string,
   layout?: 'dark' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
-  hide?: boolean
+  hide?: boolean,
+  scrollContainer?: string // query selector for scrollable parent container
 }
 
 const props = defineProps<Props>()
+const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
+const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
 const ttStore = useTooltipStore()
 const { doSelect } = ttStore
 const { selected } = storeToRefs(ttStore)
+const { width, height } = useWindowSize()
 
 // this const will be avaiable on template
 const slots = useSlots()
@@ -21,7 +26,7 @@ const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
 const hover = ref(false)
-const isSelected = computed(() => !!bcTooltip.value && selected.value === bcTooltip.value)
+const isSelected = computed(() => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value)
 const isOpen = computed(() => isSelected.value || hover.value)
 
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
@@ -31,26 +36,42 @@ const classList = computed(() => {
 })
 
 const setPosition = () => {
-  const rect = bcTooltip.value?.getBoundingClientRect()
+  if (tooltipAddedTimeout.value) {
+    clearTimeout(tooltipAddedTimeout.value)
+    tooltipAddedTimeout.value = null
+  }
+  if (!isSelected.value && !hover.value) {
+    return
+  }
+  const rect = bcTooltipOwner.value?.getBoundingClientRect()
+  const tt = bcTooltip.value?.getBoundingClientRect?.()
   if (!rect) {
     return
   }
+  if (!tt) {
+    // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
+    tooltipAddedTimeout.value = setTimeout(setPosition, 100)
+  }
+  const ttWidth = tt?.width ?? 100
+  const ttHeight = tt?.height ?? 60
   const padding = 4
   let top = rect.bottom + padding
-  let left = rect.left + rect.width / 2
+  let left = rect.left + rect.width / 2 - ttWidth / 2
   switch (props.position) {
     case 'left':
-      left = rect.left - padding
-      top = rect.top + rect.height / 2
+      left = rect.left - padding - ttWidth
+      top = rect.top + rect.height / 2 - ttHeight / 2
       break
     case 'top':
-      top = rect.top - padding
+      top = rect.top - padding - ttHeight
       break
     case 'right':
-      left = rect.left + rect.width + padding
-      top = rect.top + rect.height / 2
+      left = rect.right + padding
+      top = rect.top + rect.height / 2 - ttHeight / 2
       break
   }
+  left = Math.max(0, Math.min(left, (width.value - ttWidth)))
+  top = Math.max(0, Math.min(top, (height.value - ttHeight)))
   pos.value = { top: `${top}px`, left: `${left}px` }
 }
 
@@ -58,12 +79,12 @@ const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
   } else if (canBeOpened.value) {
-    doSelect(bcTooltip.value)
+    doSelect(bcTooltipOwner.value)
     setPosition()
   }
 }
 
-const onHover = (enter:boolean) => {
+const onHover = (enter: boolean) => {
   if (!enter) {
     hover.value = false
   } else if (canBeOpened.value && !selected.value) {
@@ -72,8 +93,8 @@ const onHover = (enter:boolean) => {
   }
 }
 
-const doHide = (event: MouseEvent) => {
-  if (event.target === bcTooltip.value || isParent(bcTooltip.value, event.target as HTMLElement)) {
+const doHide = (event: Event) => {
+  if (event.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event.target as HTMLElement)) {
     return
   }
   if (isSelected.value) {
@@ -81,16 +102,33 @@ const doHide = (event: MouseEvent) => {
   }
   hover.value = false
   if (!isOpen.value) {
-    bcTooltip.value?.blur()
+    bcTooltipOwner.value?.blur()
+  }
+}
+
+const checkScrollListener = (add: boolean) => {
+  if (props.scrollContainer) {
+    const container = document.querySelector(props.scrollContainer)
+    if (container) {
+      if (add) {
+        container.addEventListener('scroll', doHide)
+      } else {
+        container.removeEventListener('scroll', doHide)
+      }
+    }
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', doHide)
+  document.addEventListener('scroll', doHide)
+  checkScrollListener(true)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', doHide)
+  document.removeEventListener('scroll', doHide)
+  checkScrollListener(false)
   if (isSelected.value) {
     doSelect(null)
   }
@@ -99,7 +137,7 @@ onUnmounted(() => {
 </script>
 <template>
   <div
-    ref="bcTooltip"
+    ref="bcTooltipOwner"
     class="slot_container"
     @mouseover="onHover(true)"
     @mouseleave="hover = false"
@@ -109,9 +147,20 @@ onUnmounted(() => {
     <slot />
     <Teleport v-if="isOpen" to="body">
       <div class="bc-tooltip-wrapper" :style="pos">
-        <div class="bc-tooltip" :class="classList" @click="$event.stopImmediatePropagation()">
+        <div
+          ref="bcTooltip"
+          class="bc-tooltip"
+          :class="classList"
+          @click="$event.stopImmediatePropagation()"
+          @mouseleave="hover = false"
+        >
           <slot name="tooltip">
-            {{ text }}
+            <span>
+              <b v-if="props.title">
+                {{ props.title }}
+              </b>
+              {{ text }}
+            </span>
           </slot>
         </div>
       </div>
@@ -120,28 +169,30 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.slot_container{
+.slot_container {
   display: inline;
-  &.active{
+
+  &.active {
     cursor: pointer;
   }
 }
+
 .bc-tooltip-wrapper {
   position: fixed;
   width: 1px;
   height: 1px;
   overflow: visible;
   z-index: 99999;
-
 }
 
 .bc-tooltip {
 
-  --tt-bg-color: var(--light-grey);
+  --tt-bg-color: var(--light-grey-2);
   --tt-color: var(--light-black);
 
   position: relative;
   display: inline-flex;
+  flex-wrap: wrap;
   opacity: 0;
   transition: opacity 1s;
   text-align: center;
@@ -150,10 +201,10 @@ onUnmounted(() => {
   border-radius: var(--border-radius);
   color: var(--tt-color);
   background: var(--tt-bg-color);
-  font-family: var(--roboto-family);
+  font-family: var(--inter-family);
+  font-weight: var(--inter-light);
   font-size: 10px;
   pointer-events: none;
-  transform: translate(-50%, 0);
 
   &.dark {
     --tt-bg-color: var(--light-black);
@@ -188,7 +239,6 @@ onUnmounted(() => {
   }
 
   &.top {
-    transform: translate(-50%, -100%);
     &::after {
       top: 100%;
       left: 50%;
@@ -198,7 +248,6 @@ onUnmounted(() => {
   }
 
   &.right {
-    transform: translate(0, -50%);
     &::after {
       top: calc(50% - 5px);
       left: -10px;
@@ -207,12 +256,21 @@ onUnmounted(() => {
   }
 
   &.left {
-    transform: translate(-100%, -50%);
     &::after {
       top: calc(50% - 5px);
       left: 100%;
       border-color: transparent transparent transparent var(--tt-bg-color);
     }
+  }
+
+  :deep(b) {
+    font-weight: bold;
+    font-weight: var(--inter-medium);
+  }
+
+  &:has(b) {
+    min-width: 200px;
+    text-align: left;
   }
 }
 </style>

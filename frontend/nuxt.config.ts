@@ -27,10 +27,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiClient: process.env.API_CLIENT,
+      legacyApiClient: process.env.LEGACY_API_CLIENT,
       gitVersion
     },
     private: {
-      apiServer: process.env.API_SERVER
+      apiServer: process.env.API_SERVER,
+      legacyApiServer: process.env.LEGACY_API_SERVER
     }
   },
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
@@ -50,7 +52,7 @@ export default defineNuxtConfig({
   },
   colorMode: {
     preference: 'system', // default value of $colorMode.preference
-    fallback: 'light' // fallback value if not system preference found
+    fallback: 'dark' // fallback value if not system preference found
   },
   i18n: {
     vueI18n: './i18n.config.ts'

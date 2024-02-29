@@ -231,3 +231,7 @@ func SyncPeriodOfEpoch(epoch uint64) uint64 {
 func FirstEpochOfSyncPeriod(syncPeriod uint64) uint64 {
 	return syncPeriod * Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod
 }
+
+func SlotsPerSyncCommittee() uint64 {
+	return Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod * Config.Chain.ClConfig.SlotsPerEpoch
+}

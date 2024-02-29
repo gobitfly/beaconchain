@@ -5,7 +5,7 @@ clean_up () {
     ARG=$?
     rm -rf /tmp/full_withdrawal
     exit $ARG
-} 
+}
 trap clean_up EXIT
 
 while getopts b:i:m: flag

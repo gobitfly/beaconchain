@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { warn } from 'vue'
+import {
+  faChartLineUp,
+  faCube,
+  faCubes,
+  faFire,
+  faWallet,
+  faMoneyBill
+} from '@fortawesome/pro-solid-svg-icons'
 
 const route = useRoute()
 
@@ -15,25 +23,43 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
       <DashboardValidatorOverview class="overview" />
     </template>
     <div>
-      <DashboardValidatorSlotViz />
+      <DashboardValidatorSlotViz :dashboard-id="1" />
     </div>
-    <TabView>
-      <TabPanel header="Summary">
-        Summary coming soon!
+    <TabView lazy>
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
+        </template>
+        <DashboardTableSummary :dashboard-id="1" />
       </TabPanel>
-      <TabPanel header="Rewards">
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
+        </template>
         Rewards coming soon!
       </TabPanel>
-      <TabPanel header="Blocks">
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
+        </template>
         Blocks coming soon!
       </TabPanel>
-      <TabPanel header="Heatmap">
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
+        </template>
         Heatmap coming soon!
       </TabPanel>
-      <TabPanel header="Deposits">
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
+        </template>
         Deposits coming soon!
       </TabPanel>
-      <TabPanel header="Withdrawals">
+      <TabPanel>
+        <template #header>
+          <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
+        </template>
         Withdrawals coming soon!
       </TabPanel>
     </TabView>

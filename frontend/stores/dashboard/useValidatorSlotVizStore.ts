@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import type { SlotVizData } from '~/types/dashboard/slotViz'
 import { useCustomFetch } from '~/composables/useCustomFetch'
+import type { SlotVizEpoch, InternalGetValidatorDashboardSlotVizResponse } from '~/types/api/slot_viz'
 
 export const useValidatorSlotVizStore = defineStore('validator_slotViz', () => {
-  const slotViz = ref<SlotVizData | undefined | null>()
-  async function getSlotViz () {
-    const res = await useCustomFetch<SlotVizData>(API_PATH.DASHBOARD_SLOTVIZ)
-    slotViz.value = res
+  const slotViz = ref<SlotVizEpoch[] | undefined | null>()
+  async function getSlotViz (dashboardId: number) {
+    const res = await useCustomFetch<InternalGetValidatorDashboardSlotVizResponse>(API_PATH.DASHBOARD_SLOTVIZ, { headers: {} }, { dashboardId })
+    slotViz.value = res.data
     return slotViz.value
   }
 

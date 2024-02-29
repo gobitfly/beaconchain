@@ -1,7 +1,16 @@
 <script setup lang="ts">
+import {
+  faTable
+} from '@fortawesome/pro-solid-svg-icons'
+import {
+  faChartColumn
+} from '@fortawesome/pro-regular-svg-icons'
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
+const isTable = ref<boolean>(true)
+const isAttestation = ref<boolean>(true)
+
 const loading = ref(true)
 
 const toggleLoading = () => {
@@ -35,7 +44,7 @@ const toggleLoading = () => {
     </template>
   </BcDialog>
 
-  <TabView>
+  <TabView lazy>
     <TabPanel header="Buttons">
       <div class="element_container">
         <Button>
@@ -61,6 +70,23 @@ const toggleLoading = () => {
       <div class="element_container">
         <InputText placeholder="Input" />
         <InputText placeholder="Disabled Input" disabled />
+      </div>
+    </TabPanel>
+    <TabPanel header="Toggle">
+      <div class="element_container">
+        <div>isTable: {{ isTable }} <BcIconToggle v-model="isTable" :true-icon="faTable" :false-icon="faChartColumn" /></div>
+
+        <div>
+          isAttestation: {{ isAttestation }}
+          <BcIconToggle v-model="isAttestation">
+            <template #trueIcon>
+              <IconSlotAttestation />
+            </template>
+            <template #falseIcon>
+              <IconSlotBlockProposal />
+            </template>
+          </BcIconToggle>
+        </div>
       </div>
     </TabPanel>
     <TabPanel header="Spinner">

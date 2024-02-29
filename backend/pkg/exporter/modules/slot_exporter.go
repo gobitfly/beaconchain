@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/gob"
+	"errors"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -85,7 +86,7 @@ func (d *slotExporterData) Start(args []any) (err error) {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil && err != sql.ErrTxDone {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
