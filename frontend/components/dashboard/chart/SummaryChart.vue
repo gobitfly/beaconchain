@@ -127,6 +127,7 @@ const option = computed(() => {
     },
     color: groupColors.value,
     legend: {
+      type: 'scroll',
       orient: 'horizontal',
       bottom: 65,
       textStyle: {
