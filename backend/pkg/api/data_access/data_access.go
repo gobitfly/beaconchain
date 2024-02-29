@@ -225,7 +225,14 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId uint64, 
 	return d.dummy.RemoveValidatorDashboardPublicId(dashboardId, publicDashboardId)
 }
 
+var getValidatorDashboardSlotVizMux = &sync.Mutex{}
+
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
+
+	log.Infof("retrieving data for dashboard with id %d", dashboardId)
+	// make sure that the function is only executed once during development not to go oom
+	getValidatorDashboardSlotVizMux.Lock()
+	defer getValidatorDashboardSlotVizMux.Unlock()
 	// TODO: Get the validators from the dashboardId
 
 	dummyValidators := []uint64{900005, 900006, 900007, 900008, 900009}

@@ -7,7 +7,7 @@ import "net/http"
 // Public handlers must never call internal handlers
 
 func (h HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, r)
+	returnOk(w, nil)
 }
 
 func (h HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {
