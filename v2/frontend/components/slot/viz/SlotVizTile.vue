@@ -137,7 +137,7 @@ const data = computed(() => {
 }
 
 .proposed {
-  background-color: var(--flashy-green);
+  background-color: var(--green);
 
   &.inner {
     color: var(--graphite);

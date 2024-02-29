@@ -29,7 +29,7 @@ const data = computed(() => {
     }
   }
   const page = 1 + Math.floor(currentOffset.value / props.pageSize)
-  const from = currentOffset.value
+  const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
   const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
@@ -37,7 +37,7 @@ const data = computed(() => {
 })
 
 const next = () => {
-  emit('setCursor', Math.min(currentOffset.value + props.pageSize, data.value.lastPage ?? 0))
+  emit('setCursor', Math.min(currentOffset.value + props.pageSize, ((data.value.lastPage ?? 1) - 1) * props.pageSize))
 }
 
 const prev = () => {
@@ -50,6 +50,17 @@ const first = () => {
 
 const last = () => {
   emit('setCursor', (data.value.lastPage! - 1) * props.pageSize)
+}
+
+const setPageSize = (size: number) => {
+  if (data.value.mode === 'offset') {
+    // in case we increase the page size we must adjust the offset
+    const off = currentOffset.value % size
+    if (off > 0) {
+      emit('setCursor', currentOffset.value - off)
+    }
+  }
+  emit('setPageSize', size)
 }
 
 // in case the totalCount decreased
@@ -80,7 +91,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
           {{ $t('table.last') }}
         </div>
         <!--TODO: implement dropdown styles-->
-        <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => emit('setPageSize', event.value )" />
+        <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => setPageSize(event.value)" />
       </div>
       <div class="left-info">
         {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
@@ -97,7 +108,11 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         <IconChevron class="toggle" direction="right" />
       </div>
       <!--TODO: implement dropdown styles-->
-      <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => emit('setPageSize', event.value )" />
+      <Dropdown
+        :model-value="props.pageSize"
+        :options="pageSizes"
+        @change="(event) => setPageSize(event.value)"
+      />
     </div>
   </div>
 </template>
@@ -137,7 +152,8 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       height: 30px;
       padding: 0 22px;
       border-radius: 0;
-      &:has(svg){
+
+      &:has(svg) {
         padding: 0 15px;
       }
 

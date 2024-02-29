@@ -8,7 +8,7 @@ const props = defineProps<Props>()
 
 </script>
 <template>
-  <div class="content">
+  <div id="slot-viz" class="content">
     <div class="rows">
       <div v-for="row in props.data" :key="row.epoch" class="row">
         <div class="epoch">
