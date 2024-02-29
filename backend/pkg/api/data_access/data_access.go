@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	go_cache "github.com/patrickmn/go-cache"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -226,18 +228,23 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId uint64, 
 }
 
 var getValidatorDashboardSlotVizMux = &sync.Mutex{}
+var getValidatorDashboardCache = go_cache.New(time.Minute*2, time.Minute*2)
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t.SlotVizEpoch, error) {
-	log.Infof("retrieving data for dashboard with id %d", dashboardId)
 	// make sure that the function is only executed once during development not to go oom
 	getValidatorDashboardSlotVizMux.Lock()
 	defer getValidatorDashboardSlotVizMux.Unlock()
 	// TODO: Get the validators from the dashboardId
 
-	dummyValidators := []uint64{900005, 900006, 900007, 900008, 900009}
+	if val, found := getValidatorDashboardCache.Get(fmt.Sprintf("%d", dashboardId)); found {
+		log.Infof("returning data for dashboard %d from in memory cache", dashboardId)
+		return val.([]t.SlotVizEpoch), nil
+	}
 	validatorsMap := make(map[uint64]bool)
-	for _, v := range dummyValidators {
-		validatorsMap[v] = true
+	validatorsMapMux := &sync.Mutex{}
+	for i := 0; i < 10; i++ {
+		//nolint: gosec
+		validatorsMap[uint64(rand.Int63n(1000000))] = true
 	}
 
 	// Get min/max slot/epoch
@@ -272,6 +279,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 		for e := minEpoch; e <= maxEpoch; e++ {
 			epoch := e
 			gOuter.Go(func() error {
+				validatorsMapMux.Lock()
+				defer validatorsMapMux.Unlock()
 				// Get the epoch assignments data
 				key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
 				encodedRedisCachedEpochAssignments, err := d.persistentRedisDbClient.Get(context.Background(), key).Result()
@@ -295,7 +304,15 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				// Save the assignments data in maps
 
 				// Proposals
+				dummyProposerAdded := false
 				for slot, propValidator := range decodedRedisCachedEpochAssignments.Assignments.ProposerAssignments {
+					// for testing add a single proposer to the validator set
+					if !dummyProposerAdded {
+						validatorsMap[propValidator] = true
+						log.Infof("added validator %d as proposer for slot %d", propValidator, slot)
+						dummyProposerAdded = true
+					}
+
 					// Only add results for validators we care about
 					if _, isValid := validatorsMap[propValidator]; isValid {
 						muxPropAssignmentsForSlot.Lock()
@@ -331,7 +348,12 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				if syncAssignmentsForEpoch[epoch] == nil {
 					syncAssignmentsForEpoch[epoch] = make(map[uint64]bool, 0)
 				}
+				dummySyncAdded := false
 				for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
+					if !dummySyncAdded {
+						validatorsMap[validator] = true
+						dummySyncAdded = true
+					}
 					// Only add results for validators we care about
 					if _, isValid := validatorsMap[validator]; isValid {
 						syncAssignmentsForEpoch[epoch][validator] = true
@@ -348,6 +370,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 	if err := gOuter.Wait(); err != nil {
 		return nil, err
 	}
+
+	log.Infof("retrieving data for dashboard with id %d for validators %v", dashboardId, validatorsMap)
 
 	// Restructure proposal status, attestations, sync duties and slashings
 	latestSlot := uint64(0)
@@ -530,6 +554,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 			}
 		}
 	}
+
+	getValidatorDashboardCache.Set(fmt.Sprintf("%d", dashboardId), slotVizEpochs, go_cache.DefaultExpiration)
 
 	return slotVizEpochs, nil
 }
