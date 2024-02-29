@@ -21,17 +21,18 @@ export enum ResultTypes {
   Transactions = 'transactions',
   TransactionBatches = 'transaction_batches',
   StateBatches = 'state_batches',
-  Addresses = 'addresses',
+  Accounts = 'accounts',
+  Contracts = 'contracts',
   Ens = 'ens_names',
   EnsOverview = 'ens_overview',
   Graffiti = 'graffiti',
   ValidatorsByIndex = 'validators_by_index',
   ValidatorsByPubkey = 'validators_by_pubkey',
-  ValidatorsByDepositAddress = 'count_validators_by_deposit_address',
-  ValidatorsByDepositEnsName = 'count_validators_by_deposit_ens_name',
-  ValidatorsByWithdrawalCredential = 'count_validators_by_withdrawal_credential',
-  ValidatorsByWithdrawalAddress = 'count_validators_by_withdrawal_address',
-  ValidatorsByWithdrawalEnsName = 'count_validators_by_withdrawal_ens_name',
+  ValidatorsByDepositAddress = 'validators_by_deposit_address',
+  ValidatorsByDepositEnsName = 'validators_by_deposit_ens_name',
+  ValidatorsByWithdrawalCredential = 'validators_by_withdrawal_credential',
+  ValidatorsByWithdrawalAddress = 'validators_by_withdrawal_address',
+  ValidatorsByWithdrawalEnsName = 'validators_by_withdrawal_ens_name',
   ValidatorsByGraffiti = 'validators_by_graffiti',
   ValidatorsByName = 'validators_by_name'
 }
@@ -50,9 +51,8 @@ export const CategoryInfo: Record<Categories, CategoryInfoFields> = {
 
 interface TypeInfoFields {
   title: string,
-  preLabels: string, // to be displayed before the ahead-result returned by the API,
-  midLabels: string, // between the two values in the result...
-  postLabels: string, // and after. These labels can be text, or HTML code for icons
+  titleShort: string,
+  logo: string,
   category: Categories,
   priority: number,
   belongsToAllNetworks: boolean
@@ -60,208 +60,193 @@ interface TypeInfoFields {
 
 export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
   [ResultTypes.Tokens]: {
-    title: 'ERC-20 tokens',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'ERC-20 token',
+    titleShort: 'Token',
+    logo: '',
     category: Categories.Tokens,
     priority: 3,
     belongsToAllNetworks: true
   },
   [ResultTypes.NFTs]: {
-    title: 'NFTs (ERC-721 & ERC-1155- tokens)',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'NFT (ERC-721 & ERC-1155 token)',
+    titleShort: 'NFT',
+    logo: '',
     category: Categories.NFTs,
     priority: 4,
     belongsToAllNetworks: true
   },
   [ResultTypes.Epochs]: {
-    title: 'Epochs',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Epoch',
+    titleShort: 'Epoch',
+    logo: '',
     category: Categories.Protocol,
     priority: 12,
     belongsToAllNetworks: false
   },
   [ResultTypes.Slots]: {
-    title: 'Slots',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Slot',
+    titleShort: 'Slot',
+    logo: '',
     category: Categories.Protocol,
     priority: 11,
     belongsToAllNetworks: false
   },
   [ResultTypes.Blocks]: {
-    title: 'Blocks',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Block',
+    titleShort: 'Block',
+    logo: '',
     category: Categories.Protocol,
     priority: 10,
     belongsToAllNetworks: false
   },
   [ResultTypes.BlockRoots]: {
-    title: 'Block roots',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Block root',
+    titleShort: 'Block Root',
+    logo: '',
     category: Categories.Protocol,
     priority: 18,
     belongsToAllNetworks: false
   },
   [ResultTypes.StateRoots]: {
-    title: 'State roots',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'State root',
+    titleShort: 'State Root',
+    logo: '',
     category: Categories.Protocol,
     priority: 19,
     belongsToAllNetworks: false
   },
   [ResultTypes.Transactions]: {
-    title: 'Transactions',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Transaction',
+    titleShort: 'Transaction',
+    logo: '',
     category: Categories.Protocol,
     priority: 17,
     belongsToAllNetworks: false
   },
   [ResultTypes.TransactionBatches]: {
-    title: 'Transaction batches',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Transaction batch',
+    titleShort: 'TX Batch',
+    logo: '',
     category: Categories.Protocol,
     priority: 14,
     belongsToAllNetworks: false
   },
   [ResultTypes.StateBatches]: {
-    title: 'State batches',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'State batch',
+    titleShort: 'State Batch',
+    logo: '',
     category: Categories.Protocol,
     priority: 13,
     belongsToAllNetworks: false
   },
-  [ResultTypes.Addresses]: {
-    title: 'Addresses',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+  [ResultTypes.Accounts]: {
+    title: 'Account',
+    titleShort: 'Account',
+    logo: '',
+    category: Categories.Addresses,
+    priority: 2,
+    belongsToAllNetworks: true
+  },
+  [ResultTypes.Contracts]: {
+    title: 'Contract',
+    titleShort: 'Contract',
+    logo: '',
     category: Categories.Addresses,
     priority: 2,
     belongsToAllNetworks: true
   },
   [ResultTypes.Ens]: {
-    title: 'ENS addresses',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'ENS address',
+    titleShort: 'ENS',
+    logo: '',
     category: Categories.Addresses,
     priority: 1,
     belongsToAllNetworks: true
   },
   [ResultTypes.EnsOverview]: {
-    title: 'Overview of an ENS domain',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Overview of ENS domain',
+    titleShort: 'ENS Overview',
+    logo: '',
     category: Categories.Addresses,
     priority: 15,
     belongsToAllNetworks: true
   },
   [ResultTypes.Graffiti]: {
-    title: 'Graffiti',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Graffito',
+    titleShort: 'Graffito',
+    logo: '',
     category: Categories.Protocol,
     priority: 16,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByIndex]: {
-    title: 'Validators by index',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by index',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 9,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByPubkey]: {
-    title: 'Validators by public key',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by public key',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 9,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByDepositAddress]: {
-    title: 'Validators by deposit address',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by deposit address',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 6,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByDepositEnsName]: {
-    title: 'Validators by ENS of the deposit address',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by ENS of the deposit address',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 5,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalCredential]: {
-    title: 'Validators by withdrawal credential',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by withdrawal credential',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 8,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalAddress]: {
-    title: 'Validators by withdrawal address',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by withdrawal address',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 8,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByWithdrawalEnsName]: {
-    title: 'Validators by ENS of the withdrawal address',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by ENS of the withdrawal address',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 7,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByGraffiti]: {
-    title: 'Validators by graffiti',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by graffito',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 9999,
     belongsToAllNetworks: false
   },
   [ResultTypes.ValidatorsByName]: {
-    title: 'Validators by name',
-    preLabels: '',
-    midLabels: '',
-    postLabels: '',
+    title: 'Validator by name',
+    titleShort: 'Validator',
+    logo: '',
     category: Categories.Validators,
     priority: 9999,
     belongsToAllNetworks: false
@@ -283,85 +268,9 @@ export interface SearchAheadResults {
 
 // The parameter of the callback function that you give to SearchEngine.vue's props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
 export interface Matching {
-  closeness: number, // if different results of this type exist in this network, only the best matching number is recorded here
+  closeness: number, // if different results of this type exist in this network, only the best closeness is recorded here
   network: ChainIDs,
   type: ResultTypes
-}
-
-export interface OrganizedSingleResult {
-  main: string, // data corresponding to the input, like the address, the complete ens name, graffito ...
-  complement: string, // optional additional information, like the number of findings matching the input ...
-  closeness: number // how close the result is to the user input
-}
-
-export interface OrganizedResults {
-  networks: {
-    chainId: ChainIDs,
-    types: {
-      type: ResultTypes,
-      found: OrganizedSingleResult[]
-    }[]
-  }[]
-}
-
-// This function takes a single result element returned by the API and
-// standardizes it into a data element simpler to handle by the code of the search bar.
-// If the API returns more than one data field, this function sees it and stores the additional information.
-// If the data from the API is empty or unexpected, then the function returns '' in field `main`,
-// otherwise `main` contains result data. Field `complement` is '' if the API did not give 2 informations.
-export function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
-  const SearchAheadResultFields : (keyof SearchAheadSingleResult)[] = ['str_value', 'num_value', 'hash_value']
-  let mainField : keyof SearchAheadSingleResult
-  let complement = ''
-  const emptyResult = { main: '', complement, closeness: NaN }
-
-  switch (apiResponseElement.type as ResultTypes) {
-    case ResultTypes.Tokens :
-    case ResultTypes.NFTs :
-    case ResultTypes.Ens :
-    case ResultTypes.EnsOverview :
-    case ResultTypes.Graffiti :
-    case ResultTypes.ValidatorsByDepositEnsName :
-    case ResultTypes.ValidatorsByWithdrawalEnsName :
-    case ResultTypes.ValidatorsByGraffiti :
-    case ResultTypes.ValidatorsByName :
-      mainField = SearchAheadResultFields[0]
-      break
-    case ResultTypes.Epochs :
-    case ResultTypes.Slots :
-    case ResultTypes.Blocks :
-    case ResultTypes.TransactionBatches :
-    case ResultTypes.StateBatches :
-    case ResultTypes.ValidatorsByIndex :
-      mainField = SearchAheadResultFields[1]
-      break
-    case ResultTypes.BlockRoots :
-    case ResultTypes.StateRoots :
-    case ResultTypes.Transactions :
-    case ResultTypes.Addresses :
-    case ResultTypes.ValidatorsByPubkey :
-    case ResultTypes.ValidatorsByDepositAddress :
-    case ResultTypes.ValidatorsByWithdrawalCredential :
-    case ResultTypes.ValidatorsByWithdrawalAddress :
-      mainField = SearchAheadResultFields[2]
-      break
-    default:
-      return emptyResult
-  }
-  if (!(mainField in apiResponseElement) || apiResponseElement[mainField] === undefined || String(apiResponseElement[mainField]) === '') {
-    return emptyResult
-  }
-
-  // fills the optional (second) field of OrganizedResults if the API gave a second information
-  for (const optField of SearchAheadResultFields) {
-    if (optField !== mainField &&
-        optField in apiResponseElement && apiResponseElement[optField] !== undefined && String(apiResponseElement[optField]) !== '') {
-      complement = String(apiResponseElement[optField])
-      break
-    }
-  }
-
-  return { main: String(apiResponseElement[mainField]), complement, closeness: NaN }
 }
 
 export function getListOfCategories () : Categories[] {
@@ -402,3 +311,14 @@ export function getListOfResultTypesInCategory (category: Categories) : ResultTy
 
   return searchableTypesPerCategory[category]
 }
+
+/*interface OrganizedSingleResult {
+  columns: string[],
+  suggestion: number,
+  closeness: number
+}
+apiResponseElement
+  str_value?: string,
+  num_value?: number,
+  hash_value?: string
+  

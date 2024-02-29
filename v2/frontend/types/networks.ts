@@ -60,6 +60,7 @@ interface ChainInfoFields {
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
   path: string,
+  logo: '',
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
@@ -71,6 +72,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/undefined',
+    logo: '',
     priority: 0 // data belonging to all networks is displayed first by default
   },
 
@@ -81,6 +83,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/ethereum',
+    logo: '',
     priority: 1
   },
   [ChainIDs.Holesky]: {
@@ -90,6 +93,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/holesky',
+    logo: '',
     priority: 2
   },
   [ChainIDs.Sepolia]: {
@@ -99,6 +103,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/sepolia',
+    logo: '',
     priority: 3
   },
 
@@ -109,6 +114,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-one-ethereum',
+    logo: '',
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
@@ -118,6 +124,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-nova-ethereum',
+    logo: '',
     priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
@@ -127,6 +134,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-one-sepolia',
+    logo: '',
     priority: 12
   },
 
@@ -137,6 +145,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/optimism-ethereum',
+    logo: '',
     priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
@@ -146,6 +155,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/optimism-sepolia',
+    logo: '',
     priority: 21
   },
 
@@ -156,6 +166,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/base-ethereum',
+    logo: '',
     priority: 30
   },
   [ChainIDs.BaseSepolia]: {
@@ -165,6 +176,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/base-sepolia',
+    logo: '',
     priority: 31
   },
 
@@ -175,6 +187,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     path: '/gnosis',
+    logo: '',
     priority: 40
   },
   [ChainIDs.Chiado]: {
@@ -184,6 +197,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     path: '/chiado',
+    logo: '',
     priority: 41
   }
 }

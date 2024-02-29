@@ -7,10 +7,9 @@ import {
   ResultTypes,
   TypeInfo,
   getListOfResultTypes,
-  convertSearchAheadResultIntoOrganizedResult,
   getListOfResultTypesInCategory,
+  type SearchAheadSingleResult,
   type SearchAheadResults,
-  type OrganizedResults,
   type SearchBarStyle,
   type Matching
 } from '~/types/searchengine'
@@ -24,12 +23,23 @@ const props = defineProps({
 })
 const emit = defineEmits(['go'])
 
+interface OrganizedSingleResult {
+  columns: string[],
+  approximated: number, // index of the string similar to the user input (not necessarily an exact match, depending of the capabilities of the back-end search engine)
+  closeness: number // how close the approximated string is to the user input
+}
+interface OrganizedResults {
+  networks: {
+    chainId: ChainIDs,
+    types: {
+      type: ResultTypes,
+      found: OrganizedSingleResult[]
+    }[]
+  }[]
+}
+
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
-const width : number = (barStyle === 'discreet' ? 460 : 735) // 735 on computer 380 on mobile
-const height : number = (barStyle === 'discreet' ? 34 : 40)
-const inputHeight = String(height) + 'px'
-const inputWidth = String(width - height) + 'px'
-const searchButtonSize = String(height) + 'px'
+const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
 
 const searchable = props.searchable as Categories[]
 let searchableTypes : ResultTypes[] = []
@@ -285,7 +295,7 @@ function filterAndOrganizeResults () {
 
     // getting organized information from the finding
     const toBeAdded = convertSearchAheadResultIntoOrganizedResult(finding)
-    if (toBeAdded.main === '') {
+    if (toBeAdded.columns.length === 0) {
       continue
     }
     // determining the network that the finding belongs to
@@ -323,7 +333,6 @@ function filterAndOrganizeResults () {
       })
     }
     // now we can insert the finding at the right place in the organized results
-    toBeAdded.closeness = calculateCloseness(toBeAdded.main)
     place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
   }
 
@@ -341,30 +350,153 @@ function filterAndOrganizeResults () {
   sortResults(results.organized.out)
 }
 
-// Calculates how close the suggestion of result is to what the user typed.
+// This function takes a single result element returned by the API and organizes it into an element
+// simpler to handle by the code of the search bar.
+// If the result element from the API is somehow unexpected, then the function returns an empty array,
+// otherwise `approximated` points to the string suggested by the API similar to the user input
+// and `closeness` measures how close to the input the approximated string is.
+function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
+  const emptyResult : OrganizedSingleResult = { columns: [], approximated: -1, closeness: NaN }
+  let columns : (string | undefined)[] = [undefined, undefined, undefined]
+
+  switch (apiResponseElement.type as ResultTypes) {
+    case ResultTypes.Tokens :
+      columns = [apiResponseElement.str_value, apiResponseElement.hash_value, '']
+      break
+    case ResultTypes.NFTs :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Ens :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.EnsOverview :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Graffiti :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByDepositEnsName :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByWithdrawalEnsName :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByGraffiti :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByName :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+
+    case ResultTypes.Epochs :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Slots :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Blocks :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.TransactionBatches :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.StateBatches :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByIndex :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+
+    case ResultTypes.BlockRoots :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.StateRoots :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Transactions :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Accounts :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.Contracts :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByPubkey :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByDepositAddress :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByWithdrawalCredential :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+    case ResultTypes.ValidatorsByWithdrawalAddress :
+      columns = [apiResponseElement., apiResponseElement., '']
+      break
+
+    default:
+      return emptyResult
+  }
+
+  for (const col of columns) {
+    if (col === undefined) {
+      return emptyResult
+    }
+  }
+
+  // Now we detect what field in the API response completes/approximates the user input. To achieve this detection, we pick the data looking the most like the input.
+  // The reason for this detection step is that different user inputs can make the API return the same data (ex: whether the user types an ERC-20 contract address
+  // or the name of a token, the API might return the token name and the address - same situation with addresses and ENS domains, and so on).
+  let approximated = -1
+  let closeness = Number.MAX_SAFE_INTEGER
+  for (let i = 0; i < columns.length; i++) {
+    const colCloseness = calculateCloseness(columns[i] as string)
+    if (colCloseness < closeness) {
+      closeness = colCloseness
+      approximated = i
+    }
+  }
+
+  return { columns: columns as string[], approximated, closeness }
+}
+
+// Calculates how close to what the user typed a string is.
 // Guarantee: lower value <=> better matching
-function calculateCloseness (suggestion : string) : number {
-  // TODO ideally : calculate the Levenshtein distance between the two strings.
-  // For now, the API suggests only exact matches and strings starting with the same letters as the user input. Therefore,
-  // it is sufficient for now to return the length of the suggested result. This produces an ordering equivalent to
-  // the ordering that the Levenshtein distance would produce.
-  // Implementing the Levenshtein distance here would make SearchEngine.vue independent of any assumption about the back-end
-  // search capabilities (in the future, the API might include results approximating the input, for example with ENS names and graffiti).
-  return suggestion.length - inputted.value.length
+function calculateCloseness (str2 : string) : number {
+  const str1 = inputted.value
+  const distances = []
+  // Calculation of the Levenshtein distance using Wagner–Fischer's algorithm
+  if (str1.length === 0) {
+    return str2.length
+  }
+  if (str2.length === 0) {
+    return str1.length
+  }
+
+  for (let i = 0; i <= str2.length; i++) {
+    distances[i] = [i]
+    for (let j = 1; j <= str1.length; j++) {
+      if (i === 0) {
+        distances[i][j] = j
+      } else {
+        distances[i][j] = Math.min(
+          distances[i - 1][j] + 1,
+          distances[i][j - 1] + 1,
+          distances[i - 1][j - 1] + (str1[j - 1] === str2[i - 1] ? 0 : 1)
+        )
+      }
+    }
+  }
+
+  return distances[str2.length][str1.length]
 }
 
 function filterHint (category : Categories) : string {
   let hint : string
   const list = getListOfResultTypesInCategory(category)
 
-  hint = 'Shows '
-  if (list.length > 1) {
-    hint += 'these types of results'
-  } else {
-    hint += 'this type of results'
-  }
-  hint += ': '
-
+  hint = $t('shows') + ' ' + (list.length === 1 ? $t('this_type') : $t('these_types')) + ' '
   for (let i = 0; i < list.length; i++) {
     hint += TypeInfo[list[i]].title
     if (i < list.length - 1) {
@@ -395,7 +527,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     },
     {
       chain_id: 1,
-      type: 'addresses',
+      type: 'accounts',
       hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
     },
     {
@@ -447,7 +579,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       },
       {
         chain_id: 1,
-        type: 'count_validators_by_withdrawal_ens_name',
+        type: 'validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth',
         num_value: 7
       }
@@ -456,18 +588,18 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
   response.data.push(
     {
       chain_id: 17000,
-      type: 'addresses',
+      type: 'contracts',
       hash_value: '0x' + searched + '00bfCb29F2d2FaDEa7EA50F757Ca938'
     },
     {
       chain_id: 17000,
-      type: 'count_validators_by_withdrawal_address',
+      type: 'validators_by_withdrawal_address',
       hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938',
       num_value: 11
     },
     {
       chain_id: 42161,
-      type: 'addresses',
+      type: 'contracts',
       hash_value: '0x' + searched + '00000000000000000000000000CAFFE'
     },
     {
@@ -477,12 +609,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     },
     {
       chain_id: 8453,
-      type: 'addresses',
+      type: 'accounts',
       hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
     },
     {
       chain_id: 8453,
-      type: 'count_validators_by_deposit_address',
+      type: 'validators_by_deposit_address',
       hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa',
       num_value: 150
     }
@@ -576,13 +708,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       },
       {
         chain_id: 100,
-        type: 'count_validators_by_withdrawal_ens_name',
+        type: 'validators_by_withdrawal_ens_name',
         str_value: searched + 'hallo.eth',
         num_value: 2
       },
       {
         chain_id: 100,
-        type: 'count_validators_by_withdrawal_ens_name',
+        type: 'validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth',
         num_value: 150
       }
@@ -596,7 +728,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 </script>
 
 <template>
-  <div class="whole-engine">
+  <div class="whole-engine" :class="barStyle">
     <div id="input-and-button" ref="inputFieldAndButton">
       <InputText
         id="input-field"
@@ -607,13 +739,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
         @focus="showDropDown = inputted.length > 0"
       />
-      <div
+      <span
         id="searchbutton"
         :class="barStyle"
         @click="userFeelsLucky()"
       >
         <FontAwesomeIcon :icon="faMagnifyingGlass" />
-      </div>
+      </span>
     </div>
     <div v-if="showDropDown" id="drop-down" ref="dropDown">
       <div id="filter-area">
@@ -700,14 +832,36 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
 
 .whole-engine {
   position: relative;
+  &.discreet {
+    @media (min-width: 600px) {
+      // large screen
+      width: 460px;
+    }
+    @media (max-width: 600px) {
+      // mobile
+      width: 380px;
+    }
+  }
+  &.gaudy {
+    @media (min-width: 600px) {
+      // large screen
+      width: 735px;
+    }
+    @media (max-width: 600px) {
+      // mobile
+      width: 380px;
+    }
+  }
 }
 
 #input-and-button {
   display: flex;
 
   #input-field {
-    width: v-bind(inputWidth);
-    height: v-bind(inputHeight);
+    display: flex;
+    flex-grow: 1;
+    left: 0;
+    height: v-bind(searchButtonSize);
     border-top-right-radius: 0px;
     border-bottom-right-radius: 0px;
     background-color: var(--searchbar-background);
@@ -724,6 +878,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     display: flex;
     width: v-bind(searchButtonSize);
     height: v-bind(searchButtonSize);
+    right: 0px;
     justify-content: center;
     align-items: center;
     border-top-left-radius: 0px;
@@ -734,10 +889,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
     &.discreet {
       background-color: var(--searchbar-background);
       font-size: 15px;
+      color: var(--input-placeholder-text-color);
     }
     &.gaudy {
       background-color: var(--button-color-active);
       font-size: 18px;
+      color: var(--grey-4);
       &:hover {
         background-color: var(--button-color-hover);
       }
