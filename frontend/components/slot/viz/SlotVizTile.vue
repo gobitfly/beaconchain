@@ -137,7 +137,7 @@ const data = computed(() => {
 }
 
 .proposed {
-  background-color: var(--positive-color);
+  background-color: var(--green);
 
   &.inner {
     color: var(--graphite);
@@ -145,7 +145,7 @@ const data = computed(() => {
 }
 
 .missed {
-  background-color: var(--negative-color);
+  background-color: var(--flashy-red);
 
   &.inner {
     color: var(--graphite);
