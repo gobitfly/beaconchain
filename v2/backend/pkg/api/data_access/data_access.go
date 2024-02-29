@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -228,9 +229,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 	// TODO: Get the validators from the dashboardId
 
 	dummyValidators := []uint64{900005, 900006, 900007, 900008, 900009}
-	ValidatorsMap := make(map[uint64]bool)
+	validatorsMap := make(map[uint64]bool)
 	for _, v := range dummyValidators {
-		ValidatorsMap[v] = true
+		validatorsMap[v] = true
 	}
 
 	// Get min/max slot/epoch
@@ -244,10 +245,10 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 	gOuter := &errgroup.Group{}
 
 	// Get the fulfilled duties
-	var validatorDuties []types.ValidatorDutyInfo
+	var validatorDutiesInfo []types.ValidatorDutyInfo
 	gOuter.Go(func() error {
 		var err error
-		validatorDuties, err = db.GetValidatorDuties(d.readerDb, minEpoch*slotsPerEpoch)
+		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(d.readerDb, minEpoch*slotsPerEpoch)
 		return err
 	})
 
@@ -290,7 +291,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				// Proposals
 				for slot, propValidator := range decodedRedisCachedEpochAssignments.Assignments.ProposerAssignments {
 					// Only add results for validators we care about
-					if _, isValid := ValidatorsMap[propValidator]; isValid {
+					if _, isValid := validatorsMap[propValidator]; isValid {
 						muxPropAssignmentsForSlot.Lock()
 						propAssignmentsForSlot[slot] = propValidator
 						muxPropAssignmentsForSlot.Unlock()
@@ -310,7 +311,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 						attAssignmentsForSlot[slot] = make(map[uint64]bool, 0)
 					}
 					// Only add results for validators we care about
-					if _, isValid := ValidatorsMap[attValidator]; isValid {
+					if _, isValid := validatorsMap[attValidator]; isValid {
 						attAssignmentsForSlot[slot][attValidator] = true
 					}
 					muxAttAssignmentsForSlot.Unlock()
@@ -326,7 +327,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				}
 				for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
 					// Only add results for validators we care about
-					if _, isValid := ValidatorsMap[validator]; isValid {
+					if _, isValid := validatorsMap[validator]; isValid {
 						syncAssignmentsForEpoch[epoch][validator] = true
 					}
 				}
@@ -342,13 +343,15 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 		return nil, err
 	}
 
-	// Restructure proposal status, attestations and sync duties
+	// Restructure proposal status, attestations, sync duties and slashings
 	latestSlot := uint64(0)
 	slotStatus := make(map[uint64]uint64)
 	slotBlock := make(map[uint64]uint64)
 	slotAttested := make(map[uint64]map[uint64]bool)
 	slotSyncParticipated := make(map[uint64]map[uint64]bool)
-	for _, duty := range validatorDuties {
+	slotValiPropSlashed := make(map[uint64]bool)
+	slotValiAttSlashed := make(map[uint64]bool)
+	for _, duty := range validatorDutiesInfo {
 		if duty.Slot > latestSlot {
 			latestSlot = duty.Slot
 		}
@@ -373,6 +376,13 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				for _, validator := range partValidators {
 					slotSyncParticipated[duty.Slot][validator] = true
 				}
+			}
+			// Slashings
+			if duty.ProposerSlashingsCount > 0 {
+				slotValiPropSlashed[duty.Slot] = true
+			}
+			if duty.AttesterSlashingsCount > 0 {
+				slotValiAttSlashed[duty.Slot] = true
 			}
 		}
 	}
@@ -456,7 +466,62 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 				}
 			}
 
-			// TODO: Get the slashings for the slot
+			// Get the slashings for the slot
+			slashedValidators := []uint64{}
+			if _, ok := slotValiPropSlashed[slot]; ok {
+				slashedPropValidators := []uint64{}
+				err := d.readerDb.Select(&slashedPropValidators, `
+					SELECT
+						proposerindex
+					FROM blocks_proposerslashings
+					WHERE block_slot = $1`, slot)
+				if err != nil {
+					return nil, err
+				}
+
+				slashedValidators = append(slashedValidators, slashedPropValidators...)
+			}
+			if _, ok := slotValiAttSlashed[slot]; ok {
+				slashedAttValidators := []pq.Int64Array{}
+
+				err := d.readerDb.Select(&slashedAttValidators, `
+					SELECT
+						attestation2_indices
+					FROM blocks_attesterslashings
+					WHERE block_slot = $1`, slot)
+				if err != nil {
+					return nil, err
+				}
+
+				for _, slashedAttValidator := range slashedAttValidators {
+					for _, validator := range slashedAttValidator {
+						slashedValidators = append(slashedValidators, uint64(validator))
+					}
+				}
+			}
+			if _, ok := propAssignmentsForSlot[slot]; ok {
+				// One of the dashboard validators slashed
+				for _, validator := range slashedValidators {
+					slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
+						t.VDBSlotVizActiveDuty{
+							Status:     "success",
+							Validator:  propAssignmentsForSlot[slot],
+							DutyObject: validator,
+						})
+				}
+			}
+			for _, validator := range slashedValidators {
+				if _, ok := validatorsMap[validator]; !ok {
+					continue
+				}
+				// One of the dashboard validators got slashed
+				slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
+					t.VDBSlotVizActiveDuty{
+						Status:     "failed",
+						Validator:  validator,
+						DutyObject: validator,
+					})
+			}
 		}
 	}
 
