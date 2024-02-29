@@ -51,7 +51,7 @@ const setPosition = () => {
   }
   if (!tt) {
     // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
-    tooltipAddedTimeout.value = setTimeout(setPosition, 100)
+    tooltipAddedTimeout.value = setTimeout(setPosition, 10)
   }
   const ttWidth = tt?.width ?? 100
   const ttHeight = tt?.height ?? 60
@@ -139,9 +139,9 @@ onUnmounted(() => {
     ref="bcTooltipOwner"
     class="slot_container"
     @mouseover="onHover()"
-    @mouseleave="bounceHover(false)"
+    @mouseleave="bounceHover(false, false, true)"
     @click="handleClick()"
-    @blur="bounceHover(false)"
+    @blur="bounceHover(false, false, true)"
   >
     <slot />
     <Teleport v-if="isOpen" to="body">
@@ -152,7 +152,7 @@ onUnmounted(() => {
           :class="classList"
           @click="$event.stopImmediatePropagation()"
           @mouseover="instantHoverTooltip(true)"
-          @mouseleave="bounceHoverTooltip(false)"
+          @mouseleave="bounceHoverTooltip(false, false, true)"
         >
           <slot name="tooltip">
             <span>

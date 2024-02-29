@@ -12,8 +12,14 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
         <Button @click="bounceTrue(!isTrueTemp)">
           Toggle
         </Button>
+        <Button @click="bounceTrue(!isTrueTemp, false, true)">
+          Toggle endles
+        </Button>
         <Button @click="bounceTrue(!isTrueTemp, true)">
           Toggle if no timer
+        </Button>
+        <Button @click="bounceTrue(!isTrueTemp, true, true)">
+          Toggle if no timer endles
         </Button>
         <Button @click="instantTrue(!isTrueTemp)">
           Instant Toggle
@@ -24,13 +30,22 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
         <Button @click="bounceNum(numTemp+1)">
           Add
         </Button>
+        <Button @click="bounceNum(numTemp+1, false, true)">
+          Add endles
+        </Button>
         <Button @click="bounceNum(numTemp+1, true)">
-          Toggle if no timer
+          Add if no timer
+        </Button>
+        <Button @click="bounceNum(numTemp+1, true, true)">
+          Add if no timer endles
         </Button>
         <Button @click="instantNum(numTemp+1)">
           Instant Toggle
         </Button>
       </div>
+    </TabPanel>
+    <TabPanel header="Conversion">
+      <PlaygroundConversion />
     </TabPanel>
   </TabView>
 </template>

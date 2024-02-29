@@ -53,9 +53,6 @@ onMounted(async () => {
       <TabPanel header="Icons">
         <PlaygroundIcons />
       </TabPanel>
-      <TabPanel header="Conversion">
-        <PlaygroundConversion />
-      </TabPanel>
       <TabPanel header="Styling">
         <PlaygroundStyling />
       </TabPanel>

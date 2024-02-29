@@ -2,7 +2,7 @@ export function useDebounceValue<T> (initialValue: T, bounceMs: number = 100) {
   const valueRef = shallowRef<T>(initialValue)
   const value = readonly(valueRef)
   const tempRef = shallowRef<T>(initialValue)
-  const temp = readonly(valueRef)
+  const temp = readonly(tempRef)
   const timeout = ref<NodeJS.Timeout | null>(null)
 
   const removeTimeout = () => {
@@ -15,17 +15,15 @@ export function useDebounceValue<T> (initialValue: T, bounceMs: number = 100) {
     timeout.value = null
   }
 
-  const bounce = (value: T, instantIfNoTimer = false) => {
+  const bounce = (value: T, instantIfNoTimer = false, endlesBounce = false) => {
     tempRef.value = value
-    if (instantIfNoTimer) {
-      if (!timeout.value) {
-        valueRef.value = value
-        timeout.value = setTimeout(timeFinished, bounceMs)
-      }
-      return
+    if (instantIfNoTimer && !timeout.value) {
+      valueRef.value = value
     }
-    removeTimeout()
-    timeout.value = setTimeout(timeFinished, bounceMs)
+    if (endlesBounce || !timeout.value) {
+      removeTimeout()
+      timeout.value = setTimeout(timeFinished, bounceMs)
+    }
   }
 
   const instant = (value: T) => {
