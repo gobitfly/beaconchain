@@ -1,3 +1,6 @@
+<script setup lang="ts">
+</script>
+
 <template>
   <div id="iconHolder" class="icon_holder">
     <div>

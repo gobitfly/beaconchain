@@ -5,6 +5,8 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
+import { IconSlotBlockProposal } from '#components'
+
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
 const slotModalVisibility = ref(false)
@@ -16,6 +18,11 @@ const loading = ref(true)
 const toggleLoading = () => {
   loading.value = !loading.value
 }
+
+const selected = ref(true)
+
+const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
+const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 </script>
 
@@ -74,7 +81,10 @@ const toggleLoading = () => {
     </TabPanel>
     <TabPanel header="Toggle">
       <div class="element_container">
-        <div>isTable: {{ isTable }} <BcIconToggle v-model="isTable" :true-icon="faTable" :false-icon="faChartColumn" /></div>
+        <div>
+          isTable: {{ isTable }}
+          <BcIconToggle v-model="isTable" :true-icon="faTable" :false-icon="faChartColumn" />
+        </div>
 
         <div>
           isAttestation: {{ isAttestation }}
@@ -86,6 +96,22 @@ const toggleLoading = () => {
               <IconSlotBlockProposal />
             </template>
           </BcIconToggle>
+        </div>
+
+        <div>
+          Selected: {{ selected }}
+          <BcToggleButton v-model="selected" :icon="faTable" />
+        </div>
+        <div>
+          <BcToggleBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
+            <template #attestation>
+              <IconSlotAttestation />
+            </template>
+            <template #sync>
+              <IconSlotSync />
+            </template>
+          </BcToggleBar>
+          Selected: {{ selectedList.join(', ') }}
         </div>
       </div>
     </TabPanel>
@@ -116,9 +142,9 @@ const toggleLoading = () => {
   flex-wrap: wrap;
   gap: 10px;
 }
-.box{
+
+.box {
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
-}
-</style>
+}</style>
