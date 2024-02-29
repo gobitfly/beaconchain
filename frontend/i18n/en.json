@@ -163,6 +163,9 @@
     "your_filters": " your filters",
     "result_hidden": "result hidden",
     "results_hidden": "results hidden",
-    "by_your_filters": "by your filters"
+    "by_your_filters": "by your filters",
+    "shows": "Shows",
+    "this_type": "this type of results:",
+    "these_types": "these types of results:"
   }
 }

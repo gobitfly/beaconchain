@@ -52,7 +52,10 @@
       "your_filters": "vos filtres",
       "result_hidden": "résultat caché",
       "results_hidden": "résultats cachés",
-      "by_your_filters": "par vos filtres"
+      "by_your_filters": "par vos filtres",
+      "shows": "Montre",
+      "this_type": "ce type de résultats :",
+      "these_types": "ces types de résultats :"
     }
   }
   
