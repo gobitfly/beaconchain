@@ -62,6 +62,7 @@ const legend = {
 const tooltip = {
   order: 'seriesAsc',
   trigger: 'axis',
+  padding: 0,
   valueFormatter: (value: number) => {
     return `${value}% ${$t('dashboard.validator.summary.chart.yAxis')}`
   },

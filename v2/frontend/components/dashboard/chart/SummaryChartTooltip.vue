@@ -57,6 +57,7 @@ const epochText = computed(() => {
   background-color: var(--tooltip-background);
   color: var(--tooltip-text-color);
   line-height: 1.5;
+  padding: var(--padding);
 
   .line-container{
     display: flex;
