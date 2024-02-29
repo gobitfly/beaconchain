@@ -29,7 +29,7 @@ const data = computed(() => {
     }
   }
   const page = 1 + Math.floor(currentOffset.value / props.pageSize)
-  const from = currentOffset.value
+  const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
   const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
