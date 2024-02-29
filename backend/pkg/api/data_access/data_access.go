@@ -371,7 +371,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId uint64) ([]t
 		return nil, err
 	}
 
-	log.Infof("retrieving data for dashboard with id %d for validators %v", dashboardId, validatorsMap)
+	log.Infof("retrieving data for dashboard with id %d for %d validators", dashboardId, len(validatorsMap))
 
 	// Restructure proposal status, attestations, sync duties and slashings
 	latestSlot := uint64(0)
