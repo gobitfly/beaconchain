@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { formatTs } from '~/utils/format'
+
 interface Props {
   startEpoch: number,
   groupInfos: {
@@ -10,23 +12,13 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// TODO: This function is duplicated, don't do that!
-function timeToDateString (time: number): string {
-  const options: Intl.DateTimeFormatOptions = {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }
-  return new Date(time * 1000).toLocaleDateString(undefined, options)
-}
-
 const dateText = computed(() => {
   const ts = epochToTs(props.startEpoch)
   if (ts === undefined) {
     return undefined
   }
 
-  const date = timeToDateString(ts)
+  const date = formatTs(ts)
   return `${date}`
 })
 
