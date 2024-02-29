@@ -11,6 +11,12 @@ const slotModalVisibility = ref(false)
 const isTable = ref<boolean>(true)
 const isAttestation = ref<boolean>(true)
 
+const loading = ref(true)
+
+const toggleLoading = () => {
+  loading.value = !loading.value
+}
+
 </script>
 
 <template>
@@ -83,6 +89,22 @@ const isAttestation = ref<boolean>(true)
         </div>
       </div>
     </TabPanel>
+    <TabPanel header="Spinner">
+      <Button @click="toggleLoading">
+        Toggle loading
+      </Button>
+      <div class="element_container">
+        <BcLoadingSpinner :loading="loading" />
+        <BcLoadingSpinner :loading="loading" size="small" style="color: lightblue;" />
+        <BcLoadingSpinner :loading="loading" size="large" />
+        <div class="box">
+          <BcLoadingSpinner :loading="loading" alignment="center" />
+        </div>
+        <div class="box">
+          <BcLoadingSpinner :loading="loading" size="full" />
+        </div>
+      </div>
+    </TabPanel>
     <TabPanel :disabled="true" header="Disabled Tab" />
   </TabView>
 </template>
@@ -93,5 +115,10 @@ const isAttestation = ref<boolean>(true)
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+.box{
+  width: 200px;
+  height: 200px;
+  background-color: antiquewhite;
 }
 </style>
