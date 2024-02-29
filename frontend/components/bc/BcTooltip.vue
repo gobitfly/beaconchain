@@ -25,8 +25,8 @@ const slots = useSlots()
 const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
-const { value: hover, bounce: bounceHover, instant: instantHover } = useDebounceValue<boolean>(false)
-const { value: hoverTooltip, bounce: bounceHoverTooltip, instant: instantHoverTooltip } = useDebounceValue<boolean>(false)
+const { value: hover, bounce: bounceHover, instant: instantHover } = useDebounceValue<boolean>(false, 50)
+const { value: hoverTooltip, bounce: bounceHoverTooltip, instant: instantHoverTooltip } = useDebounceValue<boolean>(false, 50)
 const isSelected = computed(() => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value)
 const isOpen = computed(() => isSelected.value || hover.value || hoverTooltip.value)
 
