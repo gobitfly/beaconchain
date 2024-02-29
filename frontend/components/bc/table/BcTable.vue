@@ -25,10 +25,10 @@ const allExpanded = computed(() => {
   })
 })
 
-const toggleAll = () => {
+const toggleAll = (forceClose = false) => {
   const wasExpanded = allExpanded.value
   props.data?.data?.forEach((item) => {
-    if (wasExpanded) {
+    if (wasExpanded || forceClose) {
       delete expandedRows.value[item[props.dataKey]]
     } else {
       expandedRows.value[item[props.dataKey]] = true
@@ -48,6 +48,16 @@ const toggleItem = (item: any) => {
   expandedRows.value = { ...expandedRows.value }
 }
 
+const setCursor = (value: Cursor) => {
+  toggleAll(true)
+  emit('setCursor', value)
+}
+
+const setPageSize = (value: number) => {
+  toggleAll(true)
+  emit('setPageSize', value)
+}
+
 </script>
 <template>
   <DataTable
@@ -59,7 +69,7 @@ const toggleItem = (item: any) => {
   >
     <Column v-if="props.expandable" expander class="expander">
       <template #header>
-        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click.stop.prevent="toggleAll" />
+        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click.stop.prevent="toggleAll()" />
       </template>
       <template #body="slotProps">
         <IconChevron class="toggle" :direction="expandedRows[slotProps.data[props.dataKey]] ? 'bottom' : 'right'" @click.stop.prevent="toggleItem(slotProps.data)" />
@@ -74,8 +84,8 @@ const toggleItem = (item: any) => {
         :page-size="pageSize"
         :paging="props.data?.paging"
         :cursor="cursor"
-        @set-cursor="(cursor) => emit('setCursor', cursor)"
-        @set-page-size="(size) => emit('setPageSize', size)"
+        @set-cursor="setCursor"
+        @set-page-size="setPageSize"
       />
     </template>
   </DataTable>
