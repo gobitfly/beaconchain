@@ -2,8 +2,8 @@ name: Lint & Format
 
 on:
   push:
-    paths:
-      - 'frontend/**'
+    # paths:
+    #   - 'frontend/**'
     branches:
       - main
       - add_frontend_dockerfile
