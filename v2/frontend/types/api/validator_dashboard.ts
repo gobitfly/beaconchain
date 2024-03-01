@@ -223,12 +223,30 @@ export interface VDBManageValidatorsTableRow {
 export type InternalGetValidatorDashboardValidatorsResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
 /**
  * ------------------------------------------------------------
- * Misc. Responses
+ * Misc.
  */
+export type VDBIdPrimary = number /* int */;
+export type VDBIdPublic = string;
+export type VDBIdValidatorSet = VDBValidator[];
+export interface VDBValidator {
+  index: number /* uint64 */;
+  version: number /* uint64 */;
+}
 export interface VDBPostReturnData {
   id: number /* uint64 */;
   user_id: number /* uint64 */;
   name: string;
   network: number /* uint64 */;
   created_at: string /* time.Time */;
+}
+export interface VDBPostValidatorsData {
+  public_key: string;
+  group_id: number /* uint64 */;
+}
+export interface VDBPostPublicIdData {
+  public_id: string;
+  name: string;
+  share_settings: {
+    group_names: boolean;
+  };
 }

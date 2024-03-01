@@ -42,7 +42,7 @@ export interface StatusCount {
   success: number /* uint64 */;
   failed: number /* uint64 */;
 }
-export type ClElUnion =
+export type ClElUnion = 
     number /* float64 */ | string /* decimal.Decimal */;
 export interface ClElValue<T extends ClElUnion> {
   el: T;
