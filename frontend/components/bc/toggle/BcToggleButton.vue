@@ -35,16 +35,15 @@ const icon = computed(() => {
       height: 30px;
       padding: 2px;
       border-style: none;
-      background-color:var(--container-background);
-      color: var(--container-color);
 
-      &.p-highlight:not(:hover) {
-        background-color:var(--container-color);
-        color: var(--container-background);
+      &:not(.p-highlight) {
+        background-color: var(--container-background);
+        color: var(--container-color);
       }
 
-      &:hover {
-        color: var(--button-color-hover);
+      // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
+      .p-button-label {
+        display: none;
       }
     }
 

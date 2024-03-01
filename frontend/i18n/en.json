@@ -45,17 +45,22 @@
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
+      "and_more": "and {count} more",
       "proposal": {
-        "success": {
-          "main": "Block proposed",
+        "proposed": {
+          "main": "Block",
           "sub": "proposed"
         },
-        "failed": {
-          "main": "Block missed",
+        "missed": {
+          "main": "Block",
+          "sub": "missed"
+        },
+        "orphaned": {
+          "main": "Block",
           "sub": "missed"
         },
         "scheduled": {
-          "main": "Block scheduled",
+          "main": "Block",
           "sub": "will propose"
         }
       },
@@ -65,9 +70,25 @@
           "sub": "slashed"
         },
         "failed": {
-          "main": "You got Slashed",
+          "main": "You got slashed",
           "sub": "slashed"
         }
+      },
+      "network": {
+        "proposed": "Network proposed slot {slot}",
+        "missed": "Network missed slot at {slot}",
+        "scheduled": "Slot {slot} is scheduled",
+        "orphaned": "Network orphaned slot at {slot}"
+      },
+      "status": {
+        "scheduled":{
+          "no_duties": "<span>You have <span class=\"scheduled\">no scheduled duties</span></span>",
+          "has_duties":"<span>You have <span class=\"scheduled\">scheduled duties</span></span>"
+        }, 
+        "no_duties": "<span>You have <span class=\"scheduled\">no</span> duties</span>",
+        "duties_some":"<span>You missed <span class=\"some\">some</span> duties</span>",
+        "duties_success":"<span>All of your duties were <span class=\"success\">successful</span></span>",
+        "duties_failed":"<span>All of your duties were <span class=\"failed\">missed</span></span>"      
       }
     }
   },

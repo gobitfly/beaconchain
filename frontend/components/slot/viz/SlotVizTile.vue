@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
-import { type SlotVizIcons } from '~/types/dashboard/slotViz'
+import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slotViz'
 interface Props {
-  data: VDBSlotVizSlot
+  data: VDBSlotVizSlot,
+  selectedCategoris: SlotVizCategories[]
 }
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  const slot = props.data
+  const slot:VDBSlotVizSlot = {
+    ...props.data,
+    attestations: props.selectedCategoris.includes('attestation') ? props.data.attestations : undefined,
+    proposal: props.selectedCategoris.includes('proposal') ? props.data.proposal : undefined,
+    slashing: props.selectedCategoris.includes('slashing') ? props.data.slashing : undefined,
+    sync: props.selectedCategoris.includes('sync') ? props.data.sync : undefined
+  }
   let outer = ''
   const icons: SlotVizIcons[] = []
   switch (slot.status) {
@@ -24,9 +31,9 @@ const data = computed(() => {
   if (slot.status === 'scheduled') {
     inner = 'pending'
   } else {
-    const hasFailed = !!slot.attestations?.failed_count || !!slot.sync?.failed_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'failed')
-    const hasSuccess = !!slot.attestations?.success_count || !!slot.sync?.success_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'success')
-    const hasPending = !!slot.attestations?.pending_count || !!slot.sync?.pending_count || [...[slot.proposal], ...slot.slashing ?? []].find(duty => duty?.status === 'scheduled')
+    const hasFailed = !!slot.attestations?.failed || !!slot.sync?.failed || !!slot.slashing?.failed || (!!slot.proposal && slot.status === 'missed')
+    const hasSuccess = !!slot.attestations?.success || !!slot.sync?.success || !!slot.slashing?.success || (!!slot.proposal && slot.status === 'proposed')
+    const hasPending = !!slot.attestations?.scheduled || !!slot.sync?.scheduled
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'
     } else if (hasFailed && hasSuccess) {
@@ -43,7 +50,7 @@ const data = computed(() => {
   if (slot.proposal) {
     icons.push('proposal')
   }
-  if (slot.slashing?.length) {
+  if (slot.slashing) {
     icons.push('slashing')
   }
   if (slot.sync) {
