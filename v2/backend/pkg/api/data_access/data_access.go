@@ -41,7 +41,7 @@ type DataAccessInterface interface {
 	AddValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
 	GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
-	GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
+	GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error
 	RemoveValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, validators []string) error
 
@@ -61,7 +61,7 @@ type DataAccessInterface interface {
 	GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (t.VDBGroupSummaryData, error)
 	GetValidatorDashboardGroupSummaryByPublicId(dashboardId t.VDBIdPublic, groupId uint64) (t.VDBGroupSummaryData, error)
-	GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64) (t.VDBGroupSummaryData, error)
+	GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBGroupSummaryData, error)
 	GetValidatorDashboardSummaryChart(dashboardId t.VDBIdPrimary) (t.ChartData[int], error)
 	GetValidatorDashboardSummaryChartByPublicId(dashboardId t.VDBIdPublic) (t.ChartData[int], error)
 	GetValidatorDashboardSummaryChartByValidators(dashboardId t.VDBIdValidatorSet) (t.ChartData[int], error)
@@ -71,7 +71,7 @@ type DataAccessInterface interface {
 	GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
 	GetValidatorDashboardGroupRewardsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
-	GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
+	GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBGroupRewardsData, error)
 	GetValidatorDashboardRewardsChart(dashboardId t.VDBIdPrimary) (t.ChartData[int], error)
 	GetValidatorDashboardRewardsChartByPublicId(dashboardId t.VDBIdPublic) (t.ChartData[int], error)
 	GetValidatorDashboardRewardsChartByValidators(dashboardId t.VDBIdValidatorSet) (t.ChartData[int], error)
@@ -89,7 +89,7 @@ type DataAccessInterface interface {
 	GetValidatorDashboardHeatmapByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBHeatmap, error)
 	GetValidatorDashboardGroupHeatmap(dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error)
 	GetValidatorDashboardGroupHeatmapByPublicId(dashboardId t.VDBIdPublic, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error)
-	GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error)
+	GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBHeatmapTooltipData, error)
 
 	GetValidatorDashboardElDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error)
 	GetValidatorDashboardElDepositsByPublicId(dashboardId t.VDBIdPublic, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error)
@@ -280,9 +280,9 @@ func (d DataAccessService) GetValidatorDashboardValidatorsByPublicId(dashboardId
 	return d.dummy.GetValidatorDashboardValidatorsByPublicId(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	// TODO @recy21
-	return d.dummy.GetValidatorDashboardValidatorsByValidators(dashboardId, groupId, cursor, sort, search, limit)
+	return d.dummy.GetValidatorDashboardValidatorsByValidators(dashboardId, cursor, sort, search, limit)
 }
 
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error {
@@ -669,9 +669,9 @@ func (d DataAccessService) GetValidatorDashboardGroupSummaryByPublicId(dashboard
 	return d.dummy.GetValidatorDashboardGroupSummaryByPublicId(dashboardId, groupId)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64) (t.VDBGroupSummaryData, error) {
+func (d DataAccessService) GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBGroupSummaryData, error) {
 	// TODO @recy21
-	return d.dummy.GetValidatorDashboardGroupSummaryByValidators(dashboardId, groupId)
+	return d.dummy.GetValidatorDashboardGroupSummaryByValidators(dashboardId)
 }
 
 func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBIdPrimary) (t.ChartData[int], error) {
@@ -714,9 +714,9 @@ func (d DataAccessService) GetValidatorDashboardGroupRewardsByPublicId(dashboard
 	return d.dummy.GetValidatorDashboardGroupRewardsByPublicId(dashboardId, groupId, epoch)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error) {
+func (d DataAccessService) GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBGroupRewardsData, error) {
 	// TODO @recy21
-	return d.dummy.GetValidatorDashboardGroupRewardsByValidators(dashboardId, groupId, epoch)
+	return d.dummy.GetValidatorDashboardGroupRewardsByValidators(dashboardId, epoch)
 }
 
 func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBIdPrimary) (t.ChartData[int], error) {
@@ -789,9 +789,9 @@ func (d DataAccessService) GetValidatorDashboardGroupHeatmapByPublicId(dashboard
 	return d.dummy.GetValidatorDashboardGroupHeatmapByPublicId(dashboardId, groupId, epoch)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error) {
+func (d DataAccessService) GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBHeatmapTooltipData, error) {
 	// TODO @recy21
-	return d.dummy.GetValidatorDashboardGroupHeatmapByValidators(dashboardId, groupId, epoch)
+	return d.dummy.GetValidatorDashboardGroupHeatmapByValidators(dashboardId, epoch)
 }
 
 func (d DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error) {

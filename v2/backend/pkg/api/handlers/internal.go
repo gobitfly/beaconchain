@@ -336,7 +336,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	case types.VDBIdPublic:
 		data, paging, err = h.dai.GetValidatorDashboardValidatorsByPublicId(dashboardId, groupId, pagingParams.cursor, sortingParams, pagingParams.search, pagingParams.limit)
 	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardValidatorsByValidators(dashboardId, groupId, pagingParams.cursor, sortingParams, pagingParams.search, pagingParams.limit)
+		data, paging, err = h.dai.GetValidatorDashboardValidatorsByValidators(dashboardId, pagingParams.cursor, sortingParams, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
@@ -578,7 +578,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 	case types.VDBIdPublic:
 		data, err = h.dai.GetValidatorDashboardGroupSummaryByPublicId(dashboardId, groupId)
 	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupSummaryByValidators(dashboardId, groupId)
+		data, err = h.dai.GetValidatorDashboardGroupSummaryByValidators(dashboardId)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
@@ -677,7 +677,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 	case types.VDBIdPublic:
 		data, err = h.dai.GetValidatorDashboardGroupRewardsByPublicId(dashboardId, groupId, epoch)
 	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupRewardsByValidators(dashboardId, groupId, epoch)
+		data, err = h.dai.GetValidatorDashboardGroupRewardsByValidators(dashboardId, epoch)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
@@ -843,7 +843,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respons
 	case types.VDBIdPublic:
 		data, err = h.dai.GetValidatorDashboardGroupHeatmapByPublicId(dashboardId, groupId, epoch)
 	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupHeatmapByValidators(dashboardId, groupId, epoch)
+		data, err = h.dai.GetValidatorDashboardGroupHeatmapByValidators(dashboardId, epoch)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return

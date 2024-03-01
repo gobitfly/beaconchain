@@ -240,8 +240,6 @@ type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
 
-type VDBId interface{}
-
 type VDBValidator struct {
 	Index   uint64 `json:"index"`
 	Version uint64 `json:"version"`

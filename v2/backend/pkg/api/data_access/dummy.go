@@ -109,7 +109,7 @@ func (d DummyService) GetValidatorDashboardValidatorsByPublicId(dashboardId t.VD
 	return r, p, err
 }
 
-func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	r := []t.VDBManageValidatorsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -216,7 +216,7 @@ func (d DummyService) GetValidatorDashboardGroupSummaryByPublicId(dashboardId t.
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64) (t.VDBGroupSummaryData, error) {
+func (d DummyService) GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBGroupSummaryData, error) {
 	r := t.VDBGroupSummaryData{}
 	err := commonFakeData(&r)
 	return r, err
@@ -276,7 +276,7 @@ func (d DummyService) GetValidatorDashboardGroupRewardsByPublicId(dashboardId t.
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error) {
+func (d DummyService) GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBGroupRewardsData, error) {
 	r := t.VDBGroupRewardsData{}
 	err := commonFakeData(&r)
 	return r, err
@@ -378,7 +378,7 @@ func (d DummyService) GetValidatorDashboardGroupHeatmapByPublicId(dashboardId t.
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, groupId uint64, epoch uint64) (t.VDBHeatmapTooltipData, error) {
+func (d DummyService) GetValidatorDashboardGroupHeatmapByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return r, err
