@@ -1,15 +1,16 @@
 name: Lint & Format
 
-# TODO frontend
 on:
   push:
+    paths:
+      - 'frontend/**'
     branches:
-      - master
-      - staging
+      - main
   pull_request:
+    paths:
+      - 'frontend/**'
     branches:
-      - staging
-      - master
+      - '*'
 
 jobs:
   lint-format:
@@ -21,7 +22,7 @@ jobs:
     - name: Setup Node Environment
       uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: 18
     - name: Install Dependencies
       run: npm ci
     - name: Check File Format
