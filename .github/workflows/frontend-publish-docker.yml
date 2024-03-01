@@ -47,4 +47,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           secrets: |
-            FA_PRO_KEY=${{ secrets.FA_PRO_KEY }}  
+            NPMRC_FILE=${{ secrets.NPMRC_FILE }}  

@@ -4,7 +4,8 @@ RUN mkdir -p /usr/src/nuxt-app
 WORKDIR /usr/src/nuxt-app
 COPY . .
 
-RUN echo "//npm.fontawesome.com/:_authToken=${FA_PRO_KEY}" > .npmrc && npm ci && npm cache clean --force && rm -f .npmrc
+RUN --mount=type=secret,id=NPMRC_FILE,target=/usr/src/nuxt-app/.npmrc \
+    npm ci && npm cache clean --force
 RUN npm run build
 
 FROM node:18-alpine
