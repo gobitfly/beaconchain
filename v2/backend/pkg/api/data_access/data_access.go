@@ -211,7 +211,6 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, er
 }
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
-	// TODO @recy21
 	return d.dummy.CreateValidatorDashboard(userId, name, network)
 }
 
