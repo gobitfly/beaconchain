@@ -16,7 +16,7 @@ const { t: $t } = useI18n()
         <Button>{{ $t('dashboard.creation.type.validators') }}</Button>
       </div>
       <div class="row_container">
-        <InputText />
+        <InputText :placeholder="$t('dashboard.creation.type.name')" />
         <Button>{{ $t('dashboard.creation.continue') }}</Button>
       </div>
     </div>
