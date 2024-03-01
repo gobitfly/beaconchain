@@ -24,10 +24,12 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 18
-        working-directory: frontend
     - name: Install Dependencies
+      working-directory: frontend
       run: npm ci
     - name: Check File Format
+      working-directory: frontend
       run: npm run check-format
     - name: Lint Files
+      working-directory: frontend
       run: npm run check-style
