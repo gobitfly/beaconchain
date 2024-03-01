@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"math/rand"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -324,10 +326,10 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 	// TODO: Get the validators from the dashboardId
 	validatorsMap := make(map[uint64]bool)
-	for i := 900000; i < 900000+100; i++ {
-		validatorsMap[uint64(i)] = true
+	for i := 0; i < 10000; i++ {
+		//nolint: gosec
+		validatorsMap[uint64(rand.Int63n(1000000))] = true
 	}
-	validatorsMap[381428] = true
 
 	// Get min/max slot/epoch
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2

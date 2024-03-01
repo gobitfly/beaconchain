@@ -28,7 +28,7 @@ var currentDataMutex = &sync.RWMutex{}
 func StartSlotVizDataService() {
 	for {
 		startTime := time.Now()
-		err := updateSlotVizData()
+		err := updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
 			log.Error(err, "error updating slotviz data", 0)
 		}
