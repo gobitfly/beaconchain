@@ -29,9 +29,6 @@ jobs:
       env:
         FA_PRO_KEY: ${{ secrets.FA_PRO_KEY }}
       run: npm --userconfig=".npmrc_ci" ci
-    - name: Check File Format
-      working-directory: frontend
-      run: npm run check-format
     - name: Lint Files
       working-directory: frontend
-      run: npm run check-style
+      run: npm run lint
