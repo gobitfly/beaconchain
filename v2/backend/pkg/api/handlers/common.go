@@ -177,19 +177,14 @@ func checkUint(handlerErr *error, id, paramName string) uint64 {
 	return id64
 }
 
-// TODO remove this function and use checkDashboardId directly
-func checkUintDashboardId(handlerErr *error, id string) uint64 {
-	return checkUint(handlerErr, id, "dashboardId")
-}
-
-func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) interface{} {
+func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) types.VDBId {
 	if reNumber.MatchString(id) {
 		// given id is a normal id
-		return checkUint(handlerErr, id, "dashboardId")
+		return types.VDBIdPrimary(checkUint(handlerErr, id, "dashboardId"))
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
-		return id
+		return types.VDBIdPublic(id)
 	}
 	if !acceptValidatorSet {
 		joinErr(handlerErr, ("given value '" + id + "' for parameter 'dashboard_id' is not a valid id"))
@@ -225,7 +220,7 @@ func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) int
 		validators = append(validators, types.VDBValidator{Index: index, Version: version})
 	}
 
-	return validators
+	return types.VDBIdValidatorSet(validators)
 }
 
 func checkGroupId(handlerErr *error, id string) uint64 {
