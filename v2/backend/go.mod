@@ -48,6 +48,7 @@ require (
 	github.com/prysmaticlabs/prysm/v3 v3.2.2
 	github.com/rocket-pool/rocketpool-go v1.8.2
 	github.com/rocket-pool/smartnode v1.11.7
+	github.com/rs/cors v1.8.2
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
