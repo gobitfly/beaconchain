@@ -215,7 +215,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 }
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBIdPrimary) (t.VDBOverviewData, error) {
-	// TODO @recy21
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardOverview(dashboardId)
 }
 
