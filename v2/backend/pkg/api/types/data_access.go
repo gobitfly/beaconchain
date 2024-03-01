@@ -8,19 +8,19 @@ type Sort[T ColEnum] struct {
 // ----------------
 // Table Column Enums
 // shouldn't be converted to typescript, so they are defined here
+
 type ColEnum interface {
 	GetColNames() []string
 }
 
-// Define a generic type constraint that extends ColEnum and includes a method to instantiate itself.
+// Factory interface for creating enum values from int
 type ColEnumFactory[T ColEnum] interface {
 	ColEnum
-	NewFromIndex(i int) T
+	NewFromInt(i int) T
 }
 
 type VDBSummaryTableColumn int
 
-// prob rather use maps
 const (
 	VDBSummaryGroup VDBSummaryTableColumn = iota
 	VDBSummaryEfficiencyDay
@@ -31,9 +31,9 @@ const (
 )
 
 func (VDBSummaryTableColumn) GetColNames() []string {
-	return []string{"group_id", "efficiency_day", "efficiency_week", "efficiency_month", "efficiency_total", "validators"}
+	return []string{"group", "efficiency_day", "efficiency_week", "efficiency_month", "efficiency_total", "validators"}
 }
-func (VDBSummaryTableColumn) NewFromIndex(i int) VDBSummaryTableColumn {
+func (VDBSummaryTableColumn) NewFromInt(i int) VDBSummaryTableColumn {
 	return VDBSummaryTableColumn(i)
 }
 
@@ -48,7 +48,7 @@ func (c VDBRewardsTableColumn) GetColNames() []string {
 	return []string{"epoch", "duty"}
 }
 
-func (c VDBRewardsTableColumn) NewFromIndex(i int) VDBRewardsTableColumn {
+func (c VDBRewardsTableColumn) NewFromInt(i int) VDBRewardsTableColumn {
 	return VDBRewardsTableColumn(i)
 }
 
@@ -62,7 +62,7 @@ const (
 func (VDBDutiesTableColumn) GetColNames() []string {
 	return []string{"validator", "reward"}
 }
-func (VDBDutiesTableColumn) NewFromIndex(i int) VDBDutiesTableColumn {
+func (VDBDutiesTableColumn) NewFromInt(i int) VDBDutiesTableColumn {
 	return VDBDutiesTableColumn(i)
 }
 
@@ -80,9 +80,9 @@ const (
 )
 
 func (VDBBlocksTableColumn) GetColNames() []string {
-	return []string{"proposer", "group_id", "epoch", "slot", "block", "age", "status", "reward"}
+	return []string{"proposer", "group", "epoch", "slot", "block", "age", "status", "reward"}
 }
-func (VDBBlocksTableColumn) NewFromIndex(i int) VDBBlocksTableColumn {
+func (VDBBlocksTableColumn) NewFromInt(i int) VDBBlocksTableColumn {
 	return VDBBlocksTableColumn(i)
 }
 
@@ -98,20 +98,27 @@ const (
 )
 
 func (c VDBWithdrawalsTableColumn) GetColNames() []string {
-	return []string{"epoch", "age", "index", "group_id", "recipient", "amount"}
+	return []string{"epoch", "age", "index", "group", "recipient", "amount"}
 }
-func (VDBWithdrawalsTableColumn) NewFromIndex(i int) VDBWithdrawalsTableColumn {
+func (VDBWithdrawalsTableColumn) NewFromInt(i int) VDBWithdrawalsTableColumn {
 	return VDBWithdrawalsTableColumn(i)
 }
 
-// TODO
-type VDBValidatorsColumn int
+type VDBManageValidatorsTableColumn int
 
-var VDBValidatorsColumnSortNames = []string{}
+const (
+	VDBManageValidatorsIndex VDBManageValidatorsTableColumn = iota
+	VDBManageValidatorsPublicKey
+	VDBManageValidatorsBalance
+	VDBManageValidatorsStatus
+	VDBManageValidatorsWithdrawalCredential
+)
 
-func (c VDBValidatorsColumn) GetColNames() []string {
+var VDBValidatorsColumnSortNames = []string{"index", "public_key", "balance", "status", "withdrawal_credential"}
+
+func (c VDBManageValidatorsTableColumn) GetColNames() []string {
 	return VDBValidatorsColumnSortNames
 }
-func (VDBValidatorsColumn) NewFromIndex(i int) VDBValidatorsColumn {
-	return VDBValidatorsColumn(i)
+func (VDBManageValidatorsTableColumn) NewFromInt(i int) VDBManageValidatorsTableColumn {
+	return VDBManageValidatorsTableColumn(i)
 }
