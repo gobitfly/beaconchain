@@ -46,5 +46,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          secret-envs: |
-            "FA_PRO_KEY=${{ secrets.FA_PRO_KEY }}"        
+          secret: |
+            FA_PRO_KEY=${{ secrets.FA_PRO_KEY }}  
