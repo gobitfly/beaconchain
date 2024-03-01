@@ -1,23 +1,23 @@
 <script lang="ts" setup>
-
+const { t: $t } = useI18n()
 </script>
 
 <template>
   <div class="mask_container">
     <div class="element_container">
       <div class="big_text">
-        Add a new dashboard
+        {{ $t('dashboard.creation.title') }}
       </div>
       <div class="subtitle_text">
-        What would you like to monitor?
+        {{ $t('dashboard.creation.type.subtitle') }}
       </div>
       <div class="row_container">
-        <Button>Accounts</Button>
-        <Button>Validators</Button>
+        <Button>{{ $t('dashboard.creation.type.accounts') }}</Button>
+        <Button>{{ $t('dashboard.creation.type.validators') }}</Button>
       </div>
       <div class="row_container">
         <InputText />
-        <Button>Continue</Button>
+        <Button>{{ $t('dashboard.creation.continue') }}</Button>
       </div>
     </div>
   </div>

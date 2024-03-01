@@ -73,6 +73,19 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "creation": {
+      "title": "Add a new dashboard",
+      "type": {
+        "subtitle": "What would you like to monitor?",
+        "accounts": "Accounts",
+        "validators": "Validators",
+        "name": "Name"
+      },
+      "network": {
+        "subtitle": "What network are your validators on?"
+      },
+      "continue": "Continue"
+    },
     "validator": {
       "overview": {
         "your_online_validators": "Your Online Validators",
