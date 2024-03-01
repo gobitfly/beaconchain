@@ -1,9 +1,9 @@
-name: Lint & Format
+name: Frontend Linter
 
 on:
   push:
-    # paths:
-    #   - 'frontend/**'
+    paths:
+      - 'frontend/**'
     branches:
       - main
       - add_frontend_dockerfile
@@ -14,8 +14,8 @@ on:
       - '*'
 
 jobs:
-  frontend-lint-format:
-    name: lint-format
+  frontend-lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
