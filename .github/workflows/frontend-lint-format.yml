@@ -13,11 +13,6 @@ on:
     branches:
       - '*'
 
-permissions:
-  contents: read
-  pull-requests: read
-  checks: write
-
 jobs:
   lint-format:
     name: lint-format
