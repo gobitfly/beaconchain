@@ -59,7 +59,8 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
     case ResultTypes.StateBatches :
       path = networkPath + '/batch/' + searched
       break
-    case ResultTypes.Addresses :
+    case ResultTypes.Accounts :
+    case ResultTypes.Contracts :
     case ResultTypes.Ens :
       path = '/address/' + searched
       break

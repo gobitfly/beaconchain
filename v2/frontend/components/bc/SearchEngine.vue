@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { warn } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
 import {
@@ -25,8 +26,8 @@ const emit = defineEmits(['go'])
 
 interface OrganizedSingleResult {
   columns: string[],
-  approximated: number, // index of the string similar to the user input (not necessarily an exact match, depending of the capabilities of the back-end search engine)
-  closeness: number // how close the approximated string is to the user input
+  queryParam: number, // index of the string given to the callback function `@go`
+  closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
 }
 interface OrganizedResults {
   networks: {
@@ -200,13 +201,13 @@ function userFeelsLucky () {
   const type = network?.types.find(ty => ty.type === picked.type)
   // calling back parent's function taking action with the result
   cleanUp()
-  emit('go', type?.found[0].main, type?.type, network?.chainId)
+  emit('go', type?.found[0].columns[type?.found[0].queryParam], type?.type, network?.chainId)
 }
 
-function userClickedProposal (chain : ChainIDs, type : ResultTypes, found: string) {
+function userClickedProposal (chain : ChainIDs, type : ResultTypes, what: string) {
   // cleans up and calls back user's function
   cleanUp()
-  emit('go', found, type, chain)
+  emit('go', what, type, chain)
 }
 
 function networkFilterHasChanged () {
@@ -351,114 +352,63 @@ function filterAndOrganizeResults () {
 }
 
 // This function takes a single result element returned by the API and organizes it into an element
-// simpler to handle by the code of the search bar.
-// If the result element from the API is somehow unexpected, then the function returns an empty array,
-// otherwise `approximated` points to the string suggested by the API similar to the user input
-// and `closeness` measures how close to the input the approximated string is.
+// simpler to handle by the code of the search bar (not only for displaying).
+// If the result element from the API is somehow unexpected, then the function returns an empty array.
 function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
-  const emptyResult : OrganizedSingleResult = { columns: [], approximated: -1, closeness: NaN }
-  let columns : (string | undefined)[] = [undefined, undefined, undefined]
+  const emptyResult : OrganizedSingleResult = { columns: [], queryParam: -1, closeness: NaN }
 
-  switch (apiResponseElement.type as ResultTypes) {
-    case ResultTypes.Tokens :
-      columns = [apiResponseElement.str_value, apiResponseElement.hash_value, '']
-      break
-    case ResultTypes.NFTs :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Ens :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.EnsOverview :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Graffiti :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByDepositEnsName :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByWithdrawalEnsName :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByGraffiti :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByName :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-
-    case ResultTypes.Epochs :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Slots :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Blocks :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.TransactionBatches :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.StateBatches :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByIndex :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-
-    case ResultTypes.BlockRoots :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.StateRoots :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Transactions :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Accounts :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.Contracts :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByPubkey :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByDepositAddress :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByWithdrawalCredential :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-    case ResultTypes.ValidatorsByWithdrawalAddress :
-      columns = [apiResponseElement., apiResponseElement., '']
-      break
-
-    default:
-      return emptyResult
+  if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
+    warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
+    return emptyResult
   }
 
+  const type = apiResponseElement.type as ResultTypes
+  const columns = Array.from(TypeInfo[type].dropdownColumns)
+  let queryParam : number = 0
+
+  // Filling the empty columns of the drop down (some are already filled statically by TypeInfo[type].dropdownColumns)
+  // We fill them by taking the API data in the order defined in TypeInfo[type].dataInSearchAheadResult
+  const fieldsContainingData = TypeInfo[type].dataInSearchAheadResult
+  const queryParamField = fieldsContainingData[TypeInfo[type].queryParamIndex]
+  for (const field of fieldsContainingData) {
+    // Searching for the column to fill with the API data (this nested loop might look inefficient but an optimization would be an overkill (our two arrays are of size 3), so would grow the code without effect)
+    for (let i = 0; i < columns.length; i++) {
+      if (columns[i] === undefined) {
+        // The column to fill is found.
+        columns[i] = String(apiResponseElement[field])
+        if (field === queryParamField) {
+          queryParam = i
+        }
+        break
+      }
+    }
+  }
+
+  if (columns[0] === '') {
+    // Defaulting to the name of the result type.
+    // This is useful for example with contracts, when the back-end does not know the name of a contract, the first columns shows "Contract"
+    columns[0] = TypeInfo[ResultTypes.Contracts].title
+  }
+
+  // checking that the API returned all the fields that we need
   for (const col of columns) {
     if (col === undefined) {
+      warn('The API returned a search-ahead result with missing field(s).')
       return emptyResult
     }
   }
 
-  // Now we detect what field in the API response completes/approximates the user input. To achieve this detection, we pick the data looking the most like the input.
-  // The reason for this detection step is that different user inputs can make the API return the same data (ex: whether the user types an ERC-20 contract address
-  // or the name of a token, the API might return the token name and the address - same situation with addresses and ENS domains, and so on).
-  let approximated = -1
+  // Now calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
+  // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
-  for (let i = 0; i < columns.length; i++) {
-    const colCloseness = calculateCloseness(columns[i] as string)
-    if (colCloseness < closeness) {
-      closeness = colCloseness
-      approximated = i
+  for (const field of TypeInfo[type].dataInSearchAheadResult) {
+    const cl = calculateCloseness(String(apiResponseElement[field]))
+    if (cl < closeness) {
+      closeness = cl
     }
   }
 
-  return { columns: columns as string[], approximated, closeness }
+  return { columns: columns as string[], queryParam, closeness }
 }
 
 // Calculates how close to what the user typed a string is.
@@ -494,9 +444,9 @@ function calculateCloseness (str2 : string) : number {
 
 function filterHint (category : Categories) : string {
   let hint : string
-  const list = getListOfResultTypesInCategory(category)
+  const list = getListOfResultTypesInCategory(category, false)
 
-  hint = $t('shows') + ' ' + (list.length === 1 ? $t('this_type') : $t('these_types')) + ' '
+  hint = $t('search_engine.shows') + ' ' + (list.length === 1 ? $t('search_engine.this_type') : $t('search_engine.these_types')) + ' '
   for (let i = 0; i < list.length; i++) {
     hint += TypeInfo[list[i]].title
     if (i < list.length - 1) {
@@ -792,21 +742,30 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
       </div>
       <div v-else-if="populateDropDown" id="panel-of-results">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
-          <div class="network-title">
+          <!--<div class="network-title">
             <h2>{{ ChainInfo[network.chainId].name }}</h2>
-          </div>
+          </div>-->
           <div v-for="types of network.types" :key="types.type" class="type-container">
-            <div class="type-title">
+            <!--<div class="type-title">
               <h3>{{ TypeInfo[types.type].title }}</h3>
-            </div>
-            <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.main)">
-              {{ TypeInfo[types.type].preLabels }}
-              {{ found.main }}
-              <span v-if="found.complement !== ''">
-                {{ TypeInfo[types.type].midLabels }}
-                {{ found.complement }}
+            </div>-->
+            <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.columns[found.queryParam])">
+              <span>
+                {{ TypeInfo[types.type].logo }}
+                {{ ChainInfo[network.chainId].logo }}
               </span>
-              {{ TypeInfo[types.type].postLabels }}
+              <span>
+                {{ found.columns[0] }}
+              </span>
+              <span>
+                {{ found.columns[1] }}
+              </span>
+              <span v-if="found.columns[2] !== ''">
+                {{ found.columns[2] }}
+              </span>
+              <span>
+                {{ TypeInfo[types.type].category }}
+              </span>
             </div>
           </div>
         </div>
