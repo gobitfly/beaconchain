@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/barkimedes/go-deepcopy"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -286,7 +287,11 @@ func initDutiesInfo() *SyncData {
 }
 
 func copyAndCleanDutiesInfo() *SyncData {
-	dutiesInfo := *currentDutiesInfo
+	dutiesInfoCopyResult, err := deepcopy.Anything(*currentDutiesInfo)
+	if err != nil {
+		log.Fatal(err, "error creating deep copy of currentDutiesInfo object", 0)
+	}
+	dutiesInfo := dutiesInfoCopyResult.(SyncData)
 
 	// cleaning
 	headSlot := cache.LatestEpoch.Get() * utils.Config.Chain.ClConfig.SlotsPerEpoch
