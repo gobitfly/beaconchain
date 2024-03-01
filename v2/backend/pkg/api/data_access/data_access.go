@@ -27,13 +27,15 @@ type DataAccessInterface interface {
 
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error)
 	GetValidatorDashboardOverview(dashboardId uint64) (t.VDBOverviewData, error)
-	RemoveValidatorDashboardOverview(dashboardId uint64) error
+	GetValidatorDashboardOverviewByPublicId(publicDashboardId string) (t.VDBOverviewData, error)
+	GetValidatorDashboardOverviewByValidators(validators []t.VDBValidator) (t.VDBOverviewData, error)
+	RemoveValidatorDashboard(dashboardId uint64) error
 
 	CreateValidatorDashboardGroup(dashboardId uint64, name string) (t.VDBOverviewGroup, error)
 	RemoveValidatorDashboardGroup(dashboardId uint64, groupId uint64) error
 
 	AddValidatorDashboardValidators(dashboardId uint64, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
-	GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error)
+	GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	RemoveValidatorDashboardValidators(dashboardId uint64, validators []string) error
 
 	CreateValidatorDashboardPublicId(dashboardId uint64, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
@@ -180,9 +182,19 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId uint64) (t.
 	return d.dummy.GetValidatorDashboardOverview(dashboardId)
 }
 
-func (d DataAccessService) RemoveValidatorDashboardOverview(dashboardId uint64) error {
+func (d DataAccessService) GetValidatorDashboardOverviewByPublicId(publicDashboardId string) (t.VDBOverviewData, error) {
 	// TODO @recy21
-	return d.dummy.RemoveValidatorDashboardOverview(dashboardId)
+	return d.dummy.GetValidatorDashboardOverviewByPublicId(publicDashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardOverviewByValidators(validators []t.VDBValidator) (t.VDBOverviewData, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardOverviewByValidators(validators)
+}
+
+func (d DataAccessService) RemoveValidatorDashboard(dashboardId uint64) error {
+	// TODO @recy21
+	return d.dummy.RemoveValidatorDashboard(dashboardId)
 }
 
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId uint64, name string) (t.VDBOverviewGroup, error) {
@@ -200,7 +212,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId uint64, g
 	return d.dummy.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error) {
+func (d DataAccessService) GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }

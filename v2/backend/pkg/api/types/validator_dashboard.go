@@ -235,7 +235,13 @@ type VDBManageValidatorsTableRow struct {
 type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManageValidatorsTableRow]
 
 // ------------------------------------------------------------
-// Misc. Responses
+// Misc.
+
+type VDBValidator struct {
+	Index   uint64 `json:"index"`
+	Version uint64 `json:"version"`
+}
+
 type VDBPostReturnData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`
@@ -249,12 +255,8 @@ type VDBPostValidatorsData struct {
 	GroupId   uint64 `json:"group_id"`
 }
 
-type VDBGetValidatorsData struct {
-	// TODO
-}
-
 type VDBPostPublicIdData struct {
-	AccessToken   string `json:"access_token"`
+	PublicId      string `json:"public_id"`
 	Name          string `json:"name"`
 	ShareSettings struct {
 		GroupNames bool `json:"group_names"`

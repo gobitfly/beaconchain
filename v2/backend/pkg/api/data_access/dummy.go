@@ -41,7 +41,19 @@ func (d DummyService) GetValidatorDashboardOverview(dashboardId uint64) (t.VDBOv
 	return r, err
 }
 
-func (d DummyService) RemoveValidatorDashboardOverview(dashboardId uint64) error {
+func (d DummyService) GetValidatorDashboardOverviewByPublicId(publicDashboardId string) (t.VDBOverviewData, error) {
+	r := t.VDBOverviewData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d DummyService) GetValidatorDashboardOverviewByValidators(validators []t.VDBValidator) (t.VDBOverviewData, error) {
+	r := t.VDBOverviewData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d DummyService) RemoveValidatorDashboard(dashboardId uint64) error {
 	return nil
 }
 
@@ -61,10 +73,12 @@ func (d DummyService) AddValidatorDashboardValidators(dashboardId uint64, groupI
 	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBValidatorsColumn], search string, limit uint64) ([]t.VDBGetValidatorsData, error) {
-	r := []t.VDBGetValidatorsData{}
-	err := commonFakeData(&r)
-	return r, err
+func (d DummyService) GetValidatorDashboardValidators(dashboardId uint64, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+	r := []t.VDBManageValidatorsTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, p, err
 }
 
 func (d DummyService) RemoveValidatorDashboardValidators(dashboardId uint64, validators []string) error {
