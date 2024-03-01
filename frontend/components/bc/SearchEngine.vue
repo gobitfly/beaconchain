@@ -402,7 +402,7 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
   // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
   for (const field of TypeInfo[type].dataInSearchAheadResult) {
-    const cl = calculateCloseness(String(apiResponseElement[field]))
+    const cl = resemblanceWithInput(String(apiResponseElement[field]))
     if (cl < closeness) {
       closeness = cl
     }
@@ -411,35 +411,24 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
   return { columns: columns as string[], queryParam, closeness }
 }
 
-// Calculates how close to what the user typed a string is.
-// Guarantee: lower value <=> better matching
-function calculateCloseness (str2 : string) : number {
+// Calculates the Levenshtein distance between the parameter and the user input.
+// lower value means better similarity and vice-versa
+function resemblanceWithInput (str2 : string) : number {
   const str1 = inputted.value
-  const distances = []
-  // Calculation of the Levenshtein distance using Wagner–Fischer's algorithm
-  if (str1.length === 0) {
-    return str2.length
-  }
-  if (str2.length === 0) {
-    return str1.length
-  }
+  const dist = []
 
-  for (let i = 0; i <= str2.length; i++) {
-    distances[i] = [i]
-    for (let j = 1; j <= str1.length; j++) {
+  for (let i = 0; i <= str1.length; i++) {
+    dist[i] = [i]
+    for (let j = 1; j <= str2.length; j++) {
       if (i === 0) {
-        distances[i][j] = j
+        dist[i][j] = j
       } else {
-        distances[i][j] = Math.min(
-          distances[i - 1][j] + 1,
-          distances[i][j - 1] + 1,
-          distances[i - 1][j - 1] + (str1[j - 1] === str2[i - 1] ? 0 : 1)
-        )
+        const subst = (str1[i - 1] === str2[j - 1]) ? 0 : 1
+        dist[i][j] = Math.min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + subst)
       }
     }
   }
-
-  return distances[str2.length][str1.length]
+  return dist[str1.length][str2.length]
 }
 
 function filterHint (category : Categories) : string {
@@ -764,7 +753,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
                 {{ found.columns[2] }}
               </span>
               <span>
-                {{ TypeInfo[types.type].category }}
+                {{ CategoryInfo[TypeInfo[types.type].category].filterLabel }}
               </span>
             </div>
           </div>
