@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -22,6 +21,8 @@ import (
 )
 
 var currentDutiesInfo *SyncData
+
+var currentDataMutex = &sync.RWMutex{}
 
 func StartSlotVizDataService() {
 	for {
@@ -37,11 +38,13 @@ func StartSlotVizDataService() {
 
 func updateSlotVizData() error {
 	var dutiesInfo *SyncData
+	currentDataMutex.RLock()
 	if currentDutiesInfo == nil {
 		dutiesInfo = initDutiesInfo()
 	} else {
 		dutiesInfo = copyAndCleanDutiesInfo()
 	}
+	currentDataMutex.RUnlock()
 
 	var validatorDutiesInfo []types.ValidatorDutyInfo
 
@@ -71,9 +74,11 @@ func updateSlotVizData() error {
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
+		currentDataMutex.RLock()
 		if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 {
 			minEpoch = currentDutiesInfo.AssignmentsFetchedForEpoch + 1
 		}
+		currentDataMutex.RUnlock()
 
 		maxEpoch := headEpoch + 1
 
@@ -242,48 +247,26 @@ func updateSlotVizData() error {
 	log.Debugf("process slotduties extra data: %s", time.Since(startTime))
 
 	// update currentDutiesInfo and hence frontend data
-	for {
-		setDataUpdateInProgress(true) // prevent active locks from changing
-		currentAtomic := getDataUpdaterActiveLocks()
-		if currentAtomic == 0 { // update data if frontend is not using it right now
-			if currentDutiesInfo == nil { // info on first iteration
-				log.Infof("== slot-viz data updater initialized ==")
-			}
-			currentDutiesInfo = dutiesInfo
-			setDataUpdateInProgress(false)
-			break
-		}
-		setDataUpdateInProgress(false)
-		time.Sleep(10 * time.Millisecond)
+	currentDataMutex.Lock()
+	if currentDutiesInfo == nil { // info on first iteration
+		log.Infof("== slot-viz data updater initialized ==")
 	}
+	currentDutiesInfo = dutiesInfo
+	currentDataMutex.Unlock()
 
 	return nil
 }
 
-const maxFrontendWaitForDataTime = 150 // 150 * 10ms = 1.5s
-
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
 func GetCurrentDutiesInfo() (*SyncData, func(), error) {
-	// wait if slot viz service signaled that it want's to update currentDutiesInfo
-	for i := 0; i <= maxFrontendWaitForDataTime; i++ {
-		if getDataUpdateInProgress() {
-			time.Sleep(10 * time.Millisecond)
-		} else {
-			break
-		}
-		if i >= maxFrontendWaitForDataTime {
-			return nil, func() {}, fmt.Errorf("timeout waiting for frontendSlotVizMutex to unlock")
-		}
-	}
+	currentDataMutex.RLock()
 
-	// signals slot viz service that currently currentDutiesInfo is being accessed by a request, so it won't update while we are reading
-	preventDataUpdate()
 	if currentDutiesInfo == nil {
-		return nil, releaseDataUpdate, errors.New("waiting for dutiesInfo to be initialized")
+		return nil, currentDataMutex.RUnlock, errors.New("waiting for dutiesInfo to be initialized")
 	}
 
-	return currentDutiesInfo, releaseDataUpdate, nil
+	return currentDutiesInfo, currentDataMutex.RUnlock, nil
 }
 
 func initDutiesInfo() *SyncData {
@@ -341,34 +324,6 @@ func getMaxValidatorDutiesInfoSlot() uint64 {
 	maxValidatorDutiesInfoSlot := minEpoch * slotsPerEpoch
 
 	return maxValidatorDutiesInfoSlot
-}
-
-var lockFrontend int32
-
-func setDataUpdateInProgress(value bool) {
-	intVal := int32(0)
-	if value {
-		intVal = 1
-	}
-	atomic.StoreInt32(&lockFrontend, intVal)
-}
-
-func getDataUpdateInProgress() bool {
-	return atomic.LoadInt32(&lockFrontend) == 1
-}
-
-var frontendDataUsage = int32(0)
-
-func preventDataUpdate() {
-	atomic.AddInt32(&frontendDataUsage, 1)
-}
-
-func releaseDataUpdate() {
-	atomic.AddInt32(&frontendDataUsage, -1)
-}
-
-func getDataUpdaterActiveLocks() int32 {
-	return atomic.LoadInt32(&frontendDataUsage)
 }
 
 type SyncData struct {
