@@ -18,9 +18,9 @@ type VDBSlotVizSlashing struct {
 }
 
 type VDBSlotVizStatus[T any] struct {
-	Success   T `json:"success,omitempty"`
-	Failed    T `json:"failed,omitempty"`
-	Scheduled T `json:"scheduled,omitempty"`
+	Success   *T `json:"success,omitempty"`
+	Failed    *T `json:"failed,omitempty"`
+	Scheduled *T `json:"scheduled,omitempty"`
 }
 
 type VDBSlotVizSlot struct {
