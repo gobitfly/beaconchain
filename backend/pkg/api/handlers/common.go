@@ -177,7 +177,7 @@ func checkUint(handlerErr *error, id, paramName string) uint64 {
 	return id64
 }
 
-func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) types.VDBId {
+func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) interface{} {
 	if reNumber.MatchString(id) {
 		// given id is a normal id
 		return types.VDBIdPrimary(checkUint(handlerErr, id, "dashboardId"))
