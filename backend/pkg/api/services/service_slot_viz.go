@@ -141,10 +141,10 @@ func updateSlotVizData() error {
 
 					muxAttAssignmentsForSlot.Lock()
 					if dutiesInfo.AttAssignmentsForSlot[slot] == nil {
-						dutiesInfo.AttAssignmentsForSlot[slot] = make(map[uint64]bool, 0)
+						dutiesInfo.AttAssignmentsForSlot[slot] = make(map[uint32]bool, 0)
 					}
 
-					dutiesInfo.AttAssignmentsForSlot[slot][attValidator] = true
+					dutiesInfo.AttAssignmentsForSlot[slot][uint32(attValidator)] = true
 
 					muxAttAssignmentsForSlot.Unlock()
 				}
@@ -195,10 +195,10 @@ func updateSlotVizData() error {
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
 				if dutiesInfo.SlotAttested[attestedSlot] == nil {
-					dutiesInfo.SlotAttested[attestedSlot] = make(map[uint64]bool, 0)
+					dutiesInfo.SlotAttested[attestedSlot] = make(map[uint32]bool, 0)
 				}
 				for _, validator := range duty.Validators {
-					dutiesInfo.SlotAttested[attestedSlot][uint64(validator)] = true
+					dutiesInfo.SlotAttested[attestedSlot][uint32(validator)] = true
 				}
 			}
 			// Syncs
@@ -275,12 +275,12 @@ func initDutiesInfo() *SyncData {
 	dutiesInfo.LatestSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
 	dutiesInfo.SlotBlock = make(map[uint64]uint64)
-	dutiesInfo.SlotAttested = make(map[uint64]map[uint64]bool)
+	dutiesInfo.SlotAttested = make(map[uint64]map[uint32]bool)
 	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[uint64]bool)
 	dutiesInfo.SlotValiPropSlashed = make(map[uint64][]uint64)
 	dutiesInfo.SlotValiAttSlashed = make(map[uint64][]uint64)
 	dutiesInfo.PropAssignmentsForSlot = make(map[uint64]uint64)
-	dutiesInfo.AttAssignmentsForSlot = make(map[uint64]map[uint64]bool)
+	dutiesInfo.AttAssignmentsForSlot = make(map[uint64]map[uint32]bool)
 	dutiesInfo.SyncAssignmentsForEpoch = make(map[uint64]map[uint64]bool)
 	dutiesInfo.TotalSyncAssignmentsForEpoch = make(map[uint64][]uint64)
 	return &dutiesInfo
@@ -304,8 +304,24 @@ func copyAndCleanDutiesInfo() *SyncData {
 			delete(dutiesInfo.SlotSyncParticipated, slot)
 			delete(dutiesInfo.SlotValiPropSlashed, slot)
 			delete(dutiesInfo.SlotValiAttSlashed, slot)
+			delete(dutiesInfo.PropAssignmentsForSlot, slot)
+			delete(dutiesInfo.AttAssignmentsForSlot, slot)
+			delete(dutiesInfo.SyncAssignmentsForEpoch, utils.EpochOfSlot(slot))
+			delete(dutiesInfo.TotalSyncAssignmentsForEpoch, utils.EpochOfSlot(slot))
 		}
 	}
+
+	log.Infof("total number of items cached: %d", len(dutiesInfo.SlotStatus)+
+		len(dutiesInfo.SlotBlock)+
+		len(dutiesInfo.SlotBlock)+
+		len(dutiesInfo.SlotAttested)+
+		len(dutiesInfo.SlotSyncParticipated)+
+		len(dutiesInfo.SlotValiPropSlashed)+
+		len(dutiesInfo.SlotValiAttSlashed)+
+		len(dutiesInfo.PropAssignmentsForSlot)+
+		len(dutiesInfo.AttAssignmentsForSlot)+
+		len(dutiesInfo.SyncAssignmentsForEpoch)+
+		len(dutiesInfo.TotalSyncAssignmentsForEpoch))
 	return &dutiesInfo
 }
 
@@ -335,12 +351,12 @@ type SyncData struct {
 	LatestSlot                   uint64
 	SlotStatus                   map[uint64]int8            // slot -> status
 	SlotBlock                    map[uint64]uint64          // slot -> block
-	SlotAttested                 map[uint64]map[uint64]bool // slot -> validatorindex -> attested
+	SlotAttested                 map[uint64]map[uint32]bool // slot -> validatorindex -> attested
 	SlotSyncParticipated         map[uint64]map[uint64]bool // slot -> validatorindex -> participated
 	SlotValiPropSlashed          map[uint64][]uint64        // slot -> list of slashed indexes
 	SlotValiAttSlashed           map[uint64][]uint64        // slot -> list of slashed indexes
 	PropAssignmentsForSlot       map[uint64]uint64          // slot -> validatorindex
-	AttAssignmentsForSlot        map[uint64]map[uint64]bool // slot -> validatorindex -> assigned
+	AttAssignmentsForSlot        map[uint64]map[uint32]bool // slot -> validatorindex -> assigned
 	SyncAssignmentsForEpoch      map[uint64]map[uint64]bool // epoch -> validatorindex -> assigned
 	TotalSyncAssignmentsForEpoch map[uint64][]uint64        // epoch -> list of assigned indexes
 	AssignmentsFetchedForEpoch   uint64
