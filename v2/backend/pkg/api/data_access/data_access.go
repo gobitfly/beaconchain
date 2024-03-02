@@ -326,7 +326,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 	// TODO: Get the validators from the dashboardId
 	validatorsMap := make(map[uint64]bool)
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		//nolint: gosec
 		validatorsMap[uint64(rand.Int63n(1000000))] = true
 	}
@@ -400,31 +400,49 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			// Get the attestation summary for the slot
 			if len(dutiesInfo.AttAssignmentsForSlot[slot]) > 0 {
 				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
-				for validator := range dutiesInfo.AttAssignmentsForSlot[slot] {
-					// only validators we care about
-					if _, ok := validatorsMap[validator]; !ok {
-						continue
-					}
-					if slot >= dutiesInfo.LatestSlot {
-						// If the latest slot is the one that must be attested we still show it as pending
-						// as the attestation cannot yet have been included in a block
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
-					} else if _, ok := dutiesInfo.SlotAttested[slot][validator]; ok {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
-					} else {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
+				for validator := range validatorsMap {
+					if _, found := dutiesInfo.AttAssignmentsForSlot[slot][uint32(validator)]; found {
+						if slot >= dutiesInfo.LatestSlot {
+							// If the latest slot is the one that must be attested we still show it as pending
+							// as the attestation cannot yet have been included in a block
+							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
+						} else if _, ok := dutiesInfo.SlotAttested[slot][uint32(validator)]; ok {
+							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
+						} else {
+							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
+						}
 					}
 				}
+				// below is faster for dashboards with more than 30000 validators !
+				// for validator := range dutiesInfo.AttAssignmentsForSlot[slot] {
+				// 	// only validators we care about
+				// 	if _, ok := validatorsMap[uint64(validator)]; !ok {
+				// 		continue
+				// 	}
+				// 	if slot >= dutiesInfo.LatestSlot {
+				// 		// If the latest slot is the one that must be attested we still show it as pending
+				// 		// as the attestation cannot yet have been included in a block
+				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
+				// 	} else if _, ok := dutiesInfo.SlotAttested[slot][validator]; ok {
+				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
+				// 	} else {
+				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
+				// 	}
+				// }
 			}
 
 			// Get the sync summary for the slot
 			if len(dutiesInfo.SyncAssignmentsForEpoch[epoch]) > 0 {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
 				for validator := range dutiesInfo.SyncAssignmentsForEpoch[epoch] {
 					// only validators we care about
 					if _, ok := validatorsMap[validator]; !ok {
 						continue
 					}
+
+					if slotVizEpochs[epochIdx].Slots[slotIdx].Sync == nil {
+						slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
+					}
+
 					if slot > dutiesInfo.LatestSlot {
 						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.PendingCount++
 					} else if _, ok := dutiesInfo.SlotSyncParticipated[slot][validator]; ok {
