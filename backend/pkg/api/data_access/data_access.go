@@ -324,11 +324,19 @@ func (d DataAccessService) RemoveValidatorDashboardPublicIdByPublicId(dashboardI
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
 	log.Infof("retrieving data for dashboard with id %d", dashboardId)
 
+	start := time.Now()
+
 	// TODO: Get the validators from the dashboardId
-	validatorsMap := make(map[uint64]bool)
-	for i := 0; i < 1000; i++ {
+	setSize := 1000
+
+	validatorsMap := make(map[uint32]bool, setSize)
+
+	validatorsArray := make([]uint32, 0, setSize)
+	for i := 0; i < setSize; i++ {
 		//nolint: gosec
-		validatorsMap[uint64(rand.Int63n(1000000))] = true
+		i := uint32(rand.Int31n(1000000))
+		validatorsMap[i] = true
+		validatorsArray = append(validatorsArray, i)
 	}
 
 	// Get min/max slot/epoch
@@ -344,6 +352,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 		return nil, err
 	}
 
+	attProcessing := time.Duration(0)
 	// Restructure proposal status, attestations, sync duties and slashings
 	slotVizEpochs := make([]t.SlotVizEpoch, maxEpoch-minEpoch+1)
 	for epochIdx := uint64(0); epochIdx <= maxEpoch-minEpoch; epochIdx++ {
@@ -351,6 +360,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 		// Set the epoch number
 		slotVizEpochs[epochIdx].Epoch = epoch
+
+		// every validator can only attest once per epoch
+		attestedValidators := make(map[uint32]bool, len(validatorsArray))
 
 		// Set the slots
 		slotVizEpochs[epochIdx].Slots = make([]t.VDBSlotVizSlot, slotsPerEpoch)
@@ -376,7 +388,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			// Get the proposals for the slot
 			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
 				// Only add results for validators we care about
-				if _, ok := validatorsMap[proposerIndex]; ok {
+				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizActiveDuty{}
 
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = dutiesInfo.PropAssignmentsForSlot[slot]
@@ -398,44 +410,54 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			}
 
 			// Get the attestation summary for the slot
+			attProcessingStart := time.Now()
 			if len(dutiesInfo.AttAssignmentsForSlot[slot]) > 0 {
 				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
-				for validator := range validatorsMap {
-					if _, found := dutiesInfo.AttAssignmentsForSlot[slot][uint32(validator)]; found {
+
+				if len(validatorsMap) < 30000 {
+					for _, validator := range validatorsArray {
+						if attestedValidators[validator] {
+							continue
+						}
+						if _, found := dutiesInfo.AttAssignmentsForSlot[slot][validator]; found {
+							if slot >= dutiesInfo.LatestSlot {
+								// If the latest slot is the one that must be attested we still show it as pending
+								// as the attestation cannot yet have been included in a block
+								slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
+							} else if dutiesInfo.SlotAttested[slot][validator] {
+								slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
+							} else {
+								slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
+							}
+							attestedValidators[validator] = true
+						}
+					}
+				} else {
+					// below is faster for dashboards with more than 30000 validators
+					for validator := range dutiesInfo.AttAssignmentsForSlot[slot] {
+						// only validators we care about
+						if _, ok := validatorsMap[validator]; !ok {
+							continue
+						}
 						if slot >= dutiesInfo.LatestSlot {
 							// If the latest slot is the one that must be attested we still show it as pending
 							// as the attestation cannot yet have been included in a block
 							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
-						} else if _, ok := dutiesInfo.SlotAttested[slot][uint32(validator)]; ok {
+						} else if ok := dutiesInfo.SlotAttested[slot][validator]; ok {
 							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
 						} else {
 							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
 						}
 					}
 				}
-				// below is faster for dashboards with more than 30000 validators !
-				// for validator := range dutiesInfo.AttAssignmentsForSlot[slot] {
-				// 	// only validators we care about
-				// 	if _, ok := validatorsMap[uint64(validator)]; !ok {
-				// 		continue
-				// 	}
-				// 	if slot >= dutiesInfo.LatestSlot {
-				// 		// If the latest slot is the one that must be attested we still show it as pending
-				// 		// as the attestation cannot yet have been included in a block
-				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
-				// 	} else if _, ok := dutiesInfo.SlotAttested[slot][validator]; ok {
-				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
-				// 	} else {
-				// 		slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
-				// 	}
-				// }
 			}
+			attProcessing += time.Since(attProcessingStart)
 
 			// Get the sync summary for the slot
 			if len(dutiesInfo.SyncAssignmentsForEpoch[epoch]) > 0 {
 				for validator := range dutiesInfo.SyncAssignmentsForEpoch[epoch] {
 					// only validators we care about
-					if _, ok := validatorsMap[validator]; !ok {
+					if _, ok := validatorsMap[uint32(validator)]; !ok {
 						continue
 					}
 
@@ -459,7 +481,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
 				// only add if we care about this validator
-				if _, ok := validatorsMap[proposerIndex]; ok {
+				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
 					// One of the dashboard validators slashed
 					for _, validator := range slashedValidators {
 						slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
@@ -472,7 +494,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 				}
 			}
 			for _, validator := range slashedValidators {
-				if _, ok := validatorsMap[validator]; !ok {
+				if _, ok := validatorsMap[uint32(validator)]; !ok {
 					continue
 				}
 				// One of the dashboard validators got slashed
@@ -485,6 +507,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			}
 		}
 	}
+
+	log.Infof("request took %v (att processing: %v)", time.Since(start), attProcessing)
 
 	return slotVizEpochs, nil
 }
