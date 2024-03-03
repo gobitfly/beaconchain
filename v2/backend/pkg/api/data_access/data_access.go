@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"math/rand"
-
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -327,14 +325,12 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 	start := time.Now()
 
 	// TODO: Get the validators from the dashboardId
-	setSize := 1000
+	setSize := uint32(1000)
 
 	validatorsMap := make(map[uint32]bool, setSize)
 
 	validatorsArray := make([]uint32, 0, setSize)
-	for i := 0; i < setSize; i++ {
-		//nolint: gosec
-		i := uint32(rand.Int31n(1000000))
+	for i := uint32(0); i < setSize; i++ {
 		validatorsMap[i] = true
 		validatorsArray = append(validatorsArray, i)
 	}
@@ -416,7 +412,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 				if len(validatorsMap) < 30000 {
 					for _, validator := range validatorsArray {
-						if attestedValidators[validator] {
+						if attestedValidators[validator] { // if the validator did already attestat in that epoch, skip if during the next interations
 							continue
 						}
 						if _, found := dutiesInfo.AttAssignmentsForSlot[slot][validator]; found {
@@ -439,6 +435,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 						if _, ok := validatorsMap[validator]; !ok {
 							continue
 						}
+						if attestedValidators[validator] { // if the validator did already attestat in that epoch, skip if during the next interations
+							continue
+						}
 						if slot >= dutiesInfo.LatestSlot {
 							// If the latest slot is the one that must be attested we still show it as pending
 							// as the attestation cannot yet have been included in a block
@@ -448,6 +447,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 						} else {
 							slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
 						}
+						attestedValidators[validator] = true
 					}
 				}
 			}
