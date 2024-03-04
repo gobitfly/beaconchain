@@ -2,10 +2,11 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 
 interface Props {
-  dashboardId: number
+  dashboardKey: DashboardKey
 }
 const props = defineProps<Props>()
 
@@ -31,15 +32,15 @@ const loadData = (query?: TableQueryParams) => {
   if (!query) {
     query = { limit: pageSize.value }
   }
-  getSummary(props.dashboardId, query)
+  getSummary(props.dashboardKey, query)
 }
 
-watch(() => props.dashboardId, () => {
+watch(() => props.dashboardKey, () => {
   loadData()
 }, { immediate: true })
 
 const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
-  return summaryMap.value?.[props.dashboardId]
+  return summaryMap.value?.[props.dashboardKey]
 })
 
 const groupNameLabel = (groupId?: number) => {
@@ -65,21 +66,21 @@ const groupIdLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, queryMap.value[props.dashboardId]))
+  loadData(setQuerySort(sort, queryMap.value[props.dashboardKey]))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, queryMap.value[props.dashboardId]))
+  loadData(setQueryCursor(value, queryMap.value[props.dashboardKey]))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, queryMap.value[props.dashboardId]))
+  loadData(setQueryPageSize(value, queryMap.value[props.dashboardKey]))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, queryMap.value[props.dashboardId]))
+  loadData(setQuerySearch(value, queryMap.value[props.dashboardKey]))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
@@ -175,7 +176,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-id="props.dashboardId" />
+              <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-key="props.dashboardKey" />
             </template>
           </BcTable>
         </ClientOnly>
