@@ -39,18 +39,18 @@ func StartSlotVizDataService() {
 
 func updateSlotVizData() error {
 	var dutiesInfo *SyncData
-	currentDataMutex.RLock()
 	if currentDutiesInfo == nil {
 		dutiesInfo = initDutiesInfo()
 	} else {
 		dutiesInfo = copyAndCleanDutiesInfo()
 	}
-	currentDataMutex.RUnlock()
 
 	var validatorDutiesInfo []types.ValidatorDutyInfo
 
 	// create waiting group for concurrency
 	gOuter := &errgroup.Group{}
+
+	gOuter.SetLimit(3)
 
 	// Get the fulfilled duties
 	gOuter.Go(func() error {
@@ -75,11 +75,9 @@ func updateSlotVizData() error {
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
-		currentDataMutex.RLock()
 		if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 {
 			minEpoch = currentDutiesInfo.AssignmentsFetchedForEpoch + 1
 		}
-		currentDataMutex.RUnlock()
 
 		maxEpoch := headEpoch + 1
 
