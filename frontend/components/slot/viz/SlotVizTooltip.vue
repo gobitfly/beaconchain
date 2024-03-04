@@ -56,7 +56,6 @@ const data = computed(() => {
     if (slot.slashing?.failed) {
       const dutyText = $t('slotViz.tooltip.slashing.failed.main')
       const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
-      hasFailedDuties = true
       rows.push([{
         class: 'failed',
         icon: 'sync',
