@@ -50,6 +50,8 @@ import IconEthStore from '~/components/icon/megaMenu/EthStore.vue'
 import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
 import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 
+import { Target } from '~/types/links'
+
 const { t: $t } = useI18n()
 
 const minFullViewWidth = '1360px'
@@ -140,7 +142,8 @@ const items = [
               label: $t('header.megamenu.run_a_validator'),
               svg: IconEthermineStaking,
               url: 'https://ethpool.org/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.eth_store'),
@@ -262,7 +265,8 @@ const items = [
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
               url: 'https://eversteel.io/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.notifications'),
@@ -282,7 +286,8 @@ const items = [
             {
               label: $t('header.megamenu.knowledge_base'),
               icon: faExternalLinkAlt,
-              url: 'https://kb.beaconcha.in'
+              url: 'https://kb.beaconcha.in',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.slot_finder'),
@@ -299,22 +304,26 @@ const items = [
             {
               label: 'Discord',
               icon: faDiscord,
-              url: 'https://dsc.gg/beaconchain'
+              url: 'https://dsc.gg/beaconchain',
+              target: Target.External
             },
             {
               label: 'Twitter',
               icon: faTwitter,
-              url: 'https://twitter.com/beaconcha_in'
+              url: 'https://twitter.com/beaconcha_in',
+              target: Target.External
             },
             {
               label: 'Github',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/beaconchain'
+              url: 'https://github.com/gobitfly/beaconchain',
+              target: Target.External
             },
             {
               label: 'Github Mobile App',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
+              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
+              target: Target.External
             }
           ]
         }
@@ -489,7 +498,8 @@ const items = [
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
               url: 'https://eversteel.io/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.notifications'),
@@ -499,7 +509,8 @@ const items = [
             {
               label: $t('header.megamenu.knowledge_base'),
               icon: faExternalLinkAlt,
-              url: 'https://kb.beaconcha.in'
+              url: 'https://kb.beaconcha.in',
+              target: Target.External
             }
           ]
         }
@@ -511,22 +522,26 @@ const items = [
             {
               label: 'Discord',
               icon: faDiscord,
-              url: 'https://dsc.gg/beaconchain'
+              url: 'https://dsc.gg/beaconchain',
+              target: Target.External
             },
             {
               label: 'Twitter',
               icon: faTwitter,
-              url: 'https://twitter.com/beaconcha_in'
+              url: 'https://twitter.com/beaconcha_in',
+              target: Target.External
             },
             {
               label: 'Github',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/beaconchain'
+              url: 'https://github.com/gobitfly/beaconchain',
+              target: Target.External
             },
             {
               label: 'Github Mobile App',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
+              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
+              target: Target.External
             }
           ]
         }
@@ -602,12 +617,14 @@ const items = [
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
               url: 'https://eversteel.io/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.knowledge_base'),
               icon: faExternalLinkAlt,
-              url: 'https://kb.beaconcha.in'
+              url: 'https://kb.beaconcha.in',
+              target: Target.External
             }
           ]
         }
@@ -619,22 +636,26 @@ const items = [
             {
               label: 'Discord',
               icon: faDiscord,
-              url: 'https://dsc.gg/beaconchain'
+              url: 'https://dsc.gg/beaconchain',
+              target: Target.External
             },
             {
               label: 'Twitter',
               icon: faTwitter,
-              url: 'https://twitter.com/beaconcha_in'
+              url: 'https://twitter.com/beaconcha_in',
+              target: Target.External
             },
             {
               label: 'Github',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/beaconchain'
+              url: 'https://github.com/gobitfly/beaconchain',
+              target: Target.External
             },
             {
               label: 'Github Mobile App',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
+              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
+              target: Target.External
             }
           ]
         }
@@ -710,12 +731,14 @@ const items = [
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
               url: 'https://eversteel.io/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.knowledge_base'),
               icon: faExternalLinkAlt,
-              url: 'https://kb.beaconcha.in'
+              url: 'https://kb.beaconcha.in',
+              target: Target.External
             }
           ]
         }
@@ -727,22 +750,26 @@ const items = [
             {
               label: 'Discord',
               icon: faDiscord,
-              url: 'https://dsc.gg/beaconchain'
+              url: 'https://dsc.gg/beaconchain',
+              target: Target.External
             },
             {
               label: 'Twitter',
               icon: faTwitter,
-              url: 'https://twitter.com/beaconcha_in'
+              url: 'https://twitter.com/beaconcha_in',
+              target: Target.External
             },
             {
               label: 'Github',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/beaconchain'
+              url: 'https://github.com/gobitfly/beaconchain',
+              target: Target.External
             },
             {
               label: 'Github Mobile App',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
+              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
+              target: Target.External
             }
           ]
         }
@@ -818,12 +845,14 @@ const items = [
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
               url: 'https://eversteel.io/',
-              class: 'orange-box'
+              class: 'orange-box',
+              target: Target.External
             },
             {
               label: $t('header.megamenu.knowledge_base'),
               icon: faExternalLinkAlt,
-              url: 'https://kb.beaconcha.in'
+              url: 'https://kb.beaconcha.in',
+              target: Target.External
             }
           ]
         }
@@ -835,22 +864,26 @@ const items = [
             {
               label: 'Discord',
               icon: faDiscord,
-              url: 'https://dsc.gg/beaconchain'
+              url: 'https://dsc.gg/beaconchain',
+              target: Target.External
             },
             {
               label: 'Twitter',
               icon: faTwitter,
-              url: 'https://twitter.com/beaconcha_in'
+              url: 'https://twitter.com/beaconcha_in',
+              target: Target.External
             },
             {
               label: 'Github',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/beaconchain'
+              url: 'https://github.com/gobitfly/beaconchain',
+              target: Target.External
             },
             {
               label: 'Github Mobile App',
               icon: faGithub,
-              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app'
+              url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
+              target: Target.External
             }
           ]
         }
