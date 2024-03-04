@@ -157,6 +157,7 @@ const data = computed(() => {
           <div class="row network">
             {{ data.networkLabel }}
           </div>
+          <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row" v-html="data.stateLabel" />
         </div>
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
