@@ -11,6 +11,7 @@ import {
   DataZoomComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
+import { useI18n } from 'vue-i18n'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatTs } from '~/utils/format'
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
@@ -154,7 +155,7 @@ const option = computed(() => {
         })
 
         const d = document.createElement('div')
-        render(h(SummaryChartTooltip, { startEpoch, groupInfos }), d)
+        render(h(SummaryChartTooltip, { t: $t, startEpoch, groupInfos }), d)
         return d
       }
     },

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { type ComposerTranslation } from 'vue-i18n'
 import { formatTs } from '~/utils/format'
 
 interface Props {
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context
   startEpoch: number,
   groupInfos: {
     name: string,
@@ -24,7 +26,7 @@ const dateText = computed(() => {
 
 const epochText = computed(() => {
   const endEpoch = props.startEpoch + epochsPerDay()
-  return `Epoch ${props.startEpoch} - ${endEpoch}`
+  return `${props.t('common.epoch')} ${props.startEpoch} - ${endEpoch}`
 })
 
 </script>
