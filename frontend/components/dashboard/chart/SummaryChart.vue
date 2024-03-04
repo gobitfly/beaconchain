@@ -44,13 +44,12 @@ const { overview } = storeToRefs(useValidatorDashboardOverview())
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
 
-const groupColors = ref<string[]>()
-const labelColor = ref<string>()
-
-watch(colorMode, (newColorMode) => {
-  groupColors.value = getSummaryChartGroupColors(newColorMode.value)
-  labelColor.value = getSummaryChartTextColor(newColorMode.value)
-}, { immediate: true })
+const colors = computed(() => {
+  return {
+    groups: getSummaryChartGroupColors(colorMode.value),
+    label: getSummaryChartTextColor(colorMode.value)
+  }
+})
 
 const styles = window.getComputedStyle(document.documentElement)
 const fontFamily = styles.getPropertyValue('--roboto-family')
@@ -119,7 +118,7 @@ const option = computed(() => {
       },
       splitLine: {
         lineStyle: {
-          color: labelColor.value
+          color: colors.value.label
         }
       }
     },
@@ -128,15 +127,15 @@ const option = computed(() => {
       fontFamily,
       fontSize: textSize,
       fontWeight: fontWeightLight,
-      color: labelColor.value
+      color: colors.value.label
     },
-    color: groupColors.value,
+    color: colors.value.groups,
     legend: {
       type: 'scroll',
       orient: 'horizontal',
       bottom: 65,
       textStyle: {
-        color: labelColor.value,
+        color: colors.value.label,
         fontSize: textSize,
         fontWeight: fontWeightMedium
       }
@@ -169,13 +168,13 @@ const option = computed(() => {
       end: 100,
       dataBackground: {
         lineStyle: {
-          color: labelColor.value
+          color: colors.value.label
         },
         areaStyle: {
-          color: labelColor.value
+          color: colors.value.label
         }
       },
-      borderColor: labelColor.value
+      borderColor: colors.value.label
     }
   }
 })
