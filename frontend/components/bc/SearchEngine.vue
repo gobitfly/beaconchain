@@ -3,14 +3,14 @@ import { warn } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
 import {
-  Categories,
+  Category,
   CategoryInfo,
-  ResultTypes,
+  ResultType,
   TypeInfo,
   getListOfResultTypes,
   getListOfResultTypesInCategory,
   type SearchAheadSingleResult,
-  type SearchAheadResults,
+  type SearchAheadResult,
   type SearchBarStyle,
   type Matching
 } from '~/types/searchengine'
@@ -33,7 +33,7 @@ interface OrganizedResults {
   networks: {
     chainId: ChainIDs,
     types: {
-      type: ResultTypes,
+      type: ResultType,
       found: OrganizedSingleResult[]
     }[]
   }[]
@@ -42,8 +42,8 @@ interface OrganizedResults {
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
 
-const searchable = props.searchable as Categories[]
-let searchableTypes : ResultTypes[] = []
+const searchable = props.searchable as Category[]
+let searchableTypes : ResultType[] = []
 
 const PeriodOfDropDownUpdates = 500 /* TODO: change to 2000 for production !!!! */
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
@@ -59,7 +59,7 @@ const inputFieldAndButton = ref<HTMLDivElement>()
 const dropDown = ref<HTMLDivElement>()
 
 const results = {
-  raw: { data: [] } as SearchAheadResults, // response of the API, without structure nor order
+  raw: { data: [] } as SearchAheadResult, // response of the API, without structure nor order
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered results, organized
     howManyResultsIn: 0,
@@ -72,7 +72,7 @@ interface UserFilters {
   networks: Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
   noNetworkIsSelected : boolean,
   everyNetworkIsSelected : boolean,
-  categories : Record<string, boolean>, // each field will have a Categories as key and the state of the button as value
+  categories : Record<string, boolean>, // each field will have a Category as key and the state of the button as value
   noCategoryIsSelected : boolean
 }
 const userFilters = ref<UserFilters>({
@@ -204,7 +204,7 @@ function userFeelsLucky () {
   emit('go', type?.found[0].columns[type?.found[0].queryParam], type?.type, network?.chainId)
 }
 
-function userClickedProposal (chain : ChainIDs, type : ResultTypes, what: string) {
+function userClickedProposal (chain : ChainIDs, type : ResultType, what: string) {
   // cleans up and calls back user's function
   cleanUp()
   emit('go', what, type, chain)
@@ -292,7 +292,7 @@ function filterAndOrganizeResults () {
   }
 
   for (const finding of results.raw.data) {
-    const type = finding.type as ResultTypes
+    const type = finding.type as ResultType
 
     // getting organized information from the finding
     const toBeAdded = convertSearchAheadResultIntoOrganizedResult(finding)
@@ -362,7 +362,7 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
     return emptyResult
   }
 
-  const type = apiResponseElement.type as ResultTypes
+  const type = apiResponseElement.type as ResultType
   const columns = Array.from(TypeInfo[type].dropdownColumns)
   let queryParam : number = 0
 
@@ -371,6 +371,10 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
   const fieldsContainingData = TypeInfo[type].dataInSearchAheadResult
   const queryParamField = fieldsContainingData[TypeInfo[type].queryParamIndex]
   for (const field of fieldsContainingData) {
+    if (!apiResponseElement[field]) {
+      warn('The API returned a search-ahead result of type ', type, ' with a missing field: ', field)
+      return emptyResult
+    }
     // Searching for the column to fill with the API data (this nested loop might look inefficient but an optimization would be an overkill (our two arrays are of size 3), so would grow the code without effect)
     for (let i = 0; i < columns.length; i++) {
       if (columns[i] === undefined) {
@@ -387,15 +391,7 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
   if (columns[0] === '') {
     // Defaulting to the name of the result type.
     // This is useful for example with contracts, when the back-end does not know the name of a contract, the first columns shows "Contract"
-    columns[0] = TypeInfo[ResultTypes.Contracts].title
-  }
-
-  // checking that the API returned all the fields that we need
-  for (const col of columns) {
-    if (col === undefined) {
-      warn('The API returned a search-ahead result with missing field(s).')
-      return emptyResult
-    }
+    columns[0] = TypeInfo[type].title
   }
 
   // Now calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
@@ -431,7 +427,7 @@ function resemblanceWithInput (str2 : string) : number {
   return dist[str1.length][str2.length]
 }
 
-function filterHint (category : Categories) : string {
+function filterHint (category : Category) : string {
   let hint : string
   const list = getListOfResultTypesInCategory(category, false)
 
@@ -447,8 +443,8 @@ function filterHint (category : Categories) : string {
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
-function simulateAPIresponse (searched : string) : SearchAheadResults {
-  const response : SearchAheadResults = {}; response.data = []
+function simulateAPIresponse (searched : string) : SearchAheadResult {
+  const response : SearchAheadResult = {}; response.data = []
 
   // results are found 80% of the time
   if (Math.random() < 1 / 5.0) {
@@ -708,7 +704,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
         </div>
         <div id="filter-categories">
           <span v-for="filter of Object.keys(userFilters.categories)" :key="filter">
-            <BcTooltip :text="filterHint(filter as Categories)">
+            <BcTooltip :text="filterHint(filter as Category)">
               <label class="filter-button">
                 <input
                   v-model="userFilters.categories[filter]"
@@ -719,7 +715,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
                   @change="categoryFilterHasChanged(); refreshDropDown()"
                 >
                 <span class="face">
-                  {{ CategoryInfo[filter as Categories].filterLabel }}
+                  {{ CategoryInfo[filter as Category].filterLabel }}
                 </span>
               </label>
             </BcTooltip>
@@ -734,26 +730,33 @@ function simulateAPIresponse (searched : string) : SearchAheadResults {
           <!--<div class="network-title">
             <h2>{{ ChainInfo[network.chainId].name }}</h2>
           </div>-->
-          <div v-for="types of network.types" :key="types.type" class="type-container">
+          <div v-for="type of network.types" :key="type.type" class="type-container">
             <!--<div class="type-title">
               <h3>{{ TypeInfo[types.type].title }}</h3>
             </div>-->
-            <div v-for="(found, i) of types.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, types.type, found.columns[found.queryParam])">
+            <div v-for="(found, i) of type.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, type.type, found.columns[found.queryParam])">
               <span>
-                {{ TypeInfo[types.type].logo }}
-                {{ ChainInfo[network.chainId].logo }}
+                <IconTypeIcons :type="type.type" />
+                <IconNetworkIcons :chain-id="network.chainId" />
               </span>
               <span>
+                &nbsp;
+                0:
                 {{ found.columns[0] }}
+                &nbsp;
               </span>
               <span>
+                1:
                 {{ found.columns[1] }}
-              </span>
-              <span v-if="found.columns[2] !== ''">
-                {{ found.columns[2] }}
+                &nbsp;
               </span>
               <span>
-                {{ CategoryInfo[TypeInfo[types.type].category].filterLabel }}
+                2:
+                {{ found.columns[2] }}
+                &nbsp;
+              </span>
+              <span>
+                {{ CategoryInfo[TypeInfo[type.type].category].filterLabel }}
               </span>
             </div>
           </div>

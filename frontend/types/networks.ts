@@ -24,6 +24,8 @@
 
 import type { CryptoCurrency } from '~/types/currencies'
 
+export type NetworkFamily = 'Any' | 'Ethereum' | 'Arbitrum' | 'Optimism' | 'Base' | 'Gnosis'
+
 export enum ChainIDs {
   Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
 
@@ -55,149 +57,149 @@ export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainI
 
 interface ChainInfoFields {
   name: string,
+  family: NetworkFamily,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
   path: string,
-  logo: '',
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Any]: {
     name: 'Any',
+    family: 'Any',
     mainNet: ChainIDs.Any,
     L1: ChainIDs.Any,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/undefined',
-    logo: '',
     priority: 0 // data belonging to all networks is displayed first by default
   },
 
   [ChainIDs.Ethereum]: {
     name: 'Ethereum Mainnet',
+    family: 'Ethereum',
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/ethereum',
-    logo: '',
     priority: 1
   },
   [ChainIDs.Holesky]: {
     name: 'Holesky Testnet',
+    family: 'Ethereum',
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/holesky',
-    logo: '',
     priority: 2
   },
   [ChainIDs.Sepolia]: {
     name: 'Sepolia Testnet',
+    family: 'Ethereum',
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/sepolia',
-    logo: '',
     priority: 3
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
     name: 'Arbitrum One L2',
+    family: 'Arbitrum',
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-one-ethereum',
-    logo: '',
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
     name: 'Arbitrum Nova L2',
+    family: 'Arbitrum',
     mainNet: ChainIDs.ArbitrumNovaEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-nova-ethereum',
-    logo: '',
     priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
     name: 'Arbitrum One Sepolia Testnet',
+    family: 'Arbitrum',
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/arbitrum-one-sepolia',
-    logo: '',
     priority: 12
   },
 
   [ChainIDs.OptimismEthereum]: {
     name: 'Optimism L2',
+    family: 'Optimism',
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/optimism-ethereum',
-    logo: '',
     priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
     name: 'Optimism Sepolia Testnet',
+    family: 'Optimism',
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/optimism-sepolia',
-    logo: '',
     priority: 21
   },
 
   [ChainIDs.BaseEthereum]: {
     name: 'Base L2',
+    family: 'Base',
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/base-ethereum',
-    logo: '',
     priority: 30
   },
   [ChainIDs.BaseSepolia]: {
     name: 'Base Sepolia Testnet',
+    family: 'Base',
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     path: '/base-sepolia',
-    logo: '',
     priority: 31
   },
 
   [ChainIDs.Gnosis]: {
     name: 'Gnosis',
+    family: 'Gnosis',
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     path: '/gnosis',
-    logo: '',
     priority: 40
   },
   [ChainIDs.Chiado]: {
     name: 'Gnosis Chiado Testnet',
+    family: 'Gnosis',
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     path: '/chiado',
-    logo: '',
     priority: 41
   }
 }
