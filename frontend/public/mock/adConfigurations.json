@@ -18,7 +18,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#replace_me",
     "insert_mode": "replace",
     "refresh_interval": 10,
@@ -27,7 +27,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "top",
     "insert_mode": "insert",
     "refresh_interval": 0,
@@ -36,7 +36,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#inside_me",
     "insert_mode": "insert",
     "refresh_interval": 10,
@@ -45,7 +45,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#before_me",
     "insert_mode": "before",
     "refresh_interval": 10,
@@ -54,7 +54,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#after_me",
     "insert_mode": "after",
     "refresh_interval": 10,
@@ -63,7 +63,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#around_me",
     "insert_mode": "before",
     "refresh_interval": 10,
@@ -72,7 +72,7 @@
     "enabled": true
   },
   {
-    "key": "/playground",
+    "key": "playground",
     "jquery_selector": "#around_me",
     "insert_mode": "after",
     "refresh_interval": 10,
