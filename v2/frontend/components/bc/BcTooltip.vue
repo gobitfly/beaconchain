@@ -169,6 +169,12 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
 .slot_container {
   display: inline;
 
@@ -183,6 +189,8 @@ onUnmounted(() => {
   height: 1px;
   overflow: visible;
   z-index: 99999;
+  opacity: 1;
+  animation: fadeIn 100ms;
 }
 
 .bc-tooltip {
