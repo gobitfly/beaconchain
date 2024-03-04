@@ -12,7 +12,7 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
-import { formatTs } from '~/utils/format'
+import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor } from '~/utils/colors'
 
@@ -92,13 +92,12 @@ const option = computed(() => {
         fontSize: textSize,
         lineHeight: 20,
         formatter: (value: number) => {
-          const ts = epochToTs(value)
-          if (ts === undefined) {
+          const date = formatEpochToDate(value, $t('locales.date'))
+          if (date === undefined) {
             return ''
           }
 
-          const date = formatTs(ts, $t('locales.date'))
-          return `${date}\nEpoch ${value}`
+          return `${date}\n${$t('common.epoch')} ${value}`
         }
       }
     },
