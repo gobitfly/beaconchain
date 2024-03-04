@@ -17,8 +17,6 @@ import { formatTs } from '~/utils/format'
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor } from '~/utils/colors'
 
-import { type ChartData } from '~/types/api/common'
-
 use([
   CanvasRenderer,
   LineChart,
@@ -28,17 +26,23 @@ use([
   GridComponent
 ])
 
+interface Props {
+  dashboardId : number
+}
+const props = defineProps<Props>()
+
+const store = useValidatorDashboardSummaryChartStore()
+const { getDashboardSummaryChart } = store
+const { chartData } = storeToRefs(store)
+
+watch(props, () => {
+  getDashboardSummaryChart(props.dashboardId)
+}, { immediate: true })
+
 const { overview } = storeToRefs(useValidatorDashboardOverview())
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
-
-const chartData = ref<ChartData<number> | null>(null)
-
-onMounted(async () => {
-  const res = await $fetch<ChartData<number>>('./mock/dashboard/summaryChart.json')
-  chartData.value = res
-})
 
 const groupColors = ref<string[]>()
 const labelColor = ref<string>()

@@ -4,7 +4,7 @@ import SummaryChart from '../dashboard/chart/SummaryChart.vue'
 
 <template>
   <div class="chart-container">
-    <SummaryChart />
+    <SummaryChart :dashboard-id="1" />
   </div>
 </template>
 
