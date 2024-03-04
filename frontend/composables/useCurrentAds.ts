@@ -8,7 +8,7 @@ export function useCurrentAds () {
   const { path, name } = useRoute()
 
   watch(() => ({ name, path }), ({ name, path }) => {
-    const newName = name?.toString ? name?.toString() : path
+    const newName = name?.toString?.() || path
     getAds(newName)
   }, { immediate: true })
 
