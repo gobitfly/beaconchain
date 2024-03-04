@@ -186,10 +186,6 @@ onUnmounted(() => {
 }
 
 .bc-tooltip {
-
-  --tt-bg-color: var(--light-grey-2);
-  --tt-color: var(--light-black);
-
   position: relative;
   display: inline-flex;
   flex-wrap: wrap;
@@ -199,16 +195,14 @@ onUnmounted(() => {
   padding: 9px 12px;
   min-width: 120px;
   border-radius: var(--border-radius);
-  color: var(--tt-color);
-  background: var(--tt-bg-color);
+  color: var(--tooltip-text-color);
+  background: var(--tooltip-background);
   font-family: var(--inter-family);
   font-weight: var(--inter-light);
   font-size: 10px;
   pointer-events: none;
 
   &.dark {
-    --tt-bg-color: var(--light-black);
-    --tt-color: var(--light-grey);
     border: solid 1px var(--container-border-color);
   }
 
@@ -225,7 +219,7 @@ onUnmounted(() => {
 
     top: -10px;
     left: 50%;
-    border-color: transparent transparent var(--tt-bg-color) transparent;
+    border-color: transparent transparent var(--tooltip-background) transparent;
   }
 
   &.hover,
@@ -242,7 +236,7 @@ onUnmounted(() => {
     &::after {
       top: 100%;
       left: 50%;
-      border-color: var(--tt-bg-color) transparent transparent transparent;
+      border-color: var(--tooltip-background) transparent transparent transparent;
     }
 
   }
@@ -251,7 +245,7 @@ onUnmounted(() => {
     &::after {
       top: calc(50% - 5px);
       left: -10px;
-      border-color: transparent var(--tt-bg-color) transparent transparent;
+      border-color: transparent var(--tooltip-background) transparent transparent;
     }
   }
 
@@ -259,7 +253,7 @@ onUnmounted(() => {
     &::after {
       top: calc(50% - 5px);
       left: 100%;
-      border-color: transparent transparent transparent var(--tt-bg-color);
+      border-color: transparent transparent transparent var(--tooltip-background);
     }
   }
 
