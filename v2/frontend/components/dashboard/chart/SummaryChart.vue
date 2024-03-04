@@ -67,7 +67,7 @@ const option = computed(() => {
 
       if (element.id !== -1) {
         const group = overview.value?.groups.find(group => group.id === element.id)
-        name = group !== undefined ? group.name : element.id.toString()
+        name = group?.name || element.id.toString()
       }
 
       const newObj: SeriesObject = {
