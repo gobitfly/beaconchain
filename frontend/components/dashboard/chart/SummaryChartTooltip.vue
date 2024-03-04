@@ -20,7 +20,7 @@ const dateText = computed(() => {
     return undefined
   }
 
-  const date = formatTs(ts)
+  const date = formatTs(ts, props.t('locales.date'))
   return `${date}`
 })
 
