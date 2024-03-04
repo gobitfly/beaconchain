@@ -17,9 +17,11 @@ const { latest } = storeToRefs(useLatestStateStore())
   </div>
   <div class="header bottom">
     <div class="content">
-      <NuxtLink to="/" class="">
+      <NuxtLink to="/" class="logo">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </NuxtLink>
+
+      <BcHeaderMegaMenu />
     </div>
   </div>
 </template>
@@ -38,7 +40,7 @@ const { latest } = storeToRefs(useLatestStateStore())
   }
 
   &.bottom {
-    height: var(--navbar2-height);
+    min-height: var(--navbar2-height);
     background-color: var(--container-background);
     color: var(--container-color);
     border-bottom: 1px solid var(--container-border-color);
@@ -49,8 +51,14 @@ const { latest } = storeToRefs(useLatestStateStore())
     margin-left: var(--content-margin);
     margin-right: var(--content-margin);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+  }
+
+  .logo {
+    height: var(--navbar2-height);
+    display: flex;
+    align-items: center;
   }
 }
 
