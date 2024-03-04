@@ -6,7 +6,7 @@ export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
-  DASHBOARD_SUMMARY_CHART = '/dashboard/summaryChart',
+  DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
