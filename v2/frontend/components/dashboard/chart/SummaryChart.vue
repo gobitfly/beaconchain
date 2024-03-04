@@ -62,9 +62,9 @@ const option = computed(() => {
 
   const series: SeriesObject[] = []
   if (chartData.value?.series) {
+    const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     chartData.value.series.forEach((element) => {
-      let name = $t('dashboard.validator.summary.chart.all_groups')
-
+      let name = allGroups
       if (element.id !== -1) {
         const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
