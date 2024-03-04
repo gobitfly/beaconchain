@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { DashboardKey } from '~/types/dashboard'
 import { SummaryDetails, type SummaryDetail, type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
 
 interface Props {
-  dashboardId: number
+  dashboardKey: DashboardKey
   row: VDBSummaryTableRow
 }
 const props = defineProps<Props>()
@@ -14,10 +15,10 @@ const store = useValidatorDashboardSummaryDetailsStore()
 const { getKey, getDetails } = store
 const { detailsMap } = storeToRefs(store)
 
-const key = computed(() => getKey(props.dashboardId, props.row.group_id))
+const key = computed(() => getKey(props.dashboardKey, props.row.group_id))
 
 watch(key, () => {
-  getDetails(props.dashboardId, props.row.group_id)
+  getDetails(props.dashboardKey, props.row.group_id)
 }, { immediate: true })
 
 const isWideEnough = computed(() => width.value >= 1400)

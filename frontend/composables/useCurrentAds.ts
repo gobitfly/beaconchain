@@ -5,10 +5,11 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 export function useCurrentAds () {
   const { getAds } = useAdConfigurationStore()
   const { configurations } = storeToRefs(useAdConfigurationStore())
-  const { path } = useRoute()
+  const { path, name } = useRoute()
 
-  watch(() => path, (newPath) => {
-    getAds(newPath)
+  watch(() => ({ name, path }), ({ name, path }) => {
+    const newName = name?.toString ? name?.toString() : path
+    getAds(newName)
   }, { immediate: true })
 
   // TODO: also validate if user is premium user and config is not for all
