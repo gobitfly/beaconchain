@@ -522,7 +522,6 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 				continue
 			}
 
-			// log.Infof("epochIdx: %d, slotIdx: %d", epochIdx, slotIdx)
 			if slotVizEpochs[epochIdx].Slots[slotIdx].Attestations == nil {
 				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
 			}
