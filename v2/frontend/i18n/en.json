@@ -1,5 +1,9 @@
 {
+  "locales" : {
+    "date": "en-US"
+  },
   "common": {
+    "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator",
     "earned": "Earned",
@@ -111,6 +115,10 @@
           "validators_slashings": "Validators",
           "apr": "APR",
           "luck": "Luck"
+        },
+        "chart":{
+          "all_groups": "All Groups",
+          "efficiency": "Efficiency"
         }
       },
       "tabs": {
