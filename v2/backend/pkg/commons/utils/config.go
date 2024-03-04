@@ -14,6 +14,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/kelseyhightower/envconfig"
+
+	//nolint:depguard
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -463,5 +466,11 @@ func setCLConfig(cfg *types.Config) error {
 		}
 		cfg.Chain.ClConfig = *chainConfig
 	}
+
+	// Set log level based on environment variable
+	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
 	return nil
 }
