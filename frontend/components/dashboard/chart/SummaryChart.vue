@@ -15,6 +15,7 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
+import type { DashboardKey } from '~/types/dashboard'
 
 use([
   CanvasRenderer,
@@ -26,7 +27,7 @@ use([
 ])
 
 interface Props {
-  dashboardId : number
+  dashboardKey: DashboardKey
 }
 const props = defineProps<Props>()
 
@@ -35,7 +36,7 @@ const { getDashboardSummaryChart } = store
 const { chartData } = storeToRefs(store)
 
 watch(props, () => {
-  getDashboardSummaryChart(props.dashboardId)
+  getDashboardSummaryChart(props.dashboardKey)
 }, { immediate: true })
 
 const { overview } = storeToRefs(useValidatorDashboardOverview())
