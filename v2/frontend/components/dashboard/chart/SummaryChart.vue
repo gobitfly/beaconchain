@@ -103,7 +103,7 @@ const option = computed(() => {
       }
     },
     yAxis: {
-      name: $t('dashboard.validator.summary.chart.yAxis'),
+      name: $t('dashboard.validator.summary.chart.efficiency'),
       nameLocation: 'center',
       nameTextStyle: {
         padding: [0, 0, 35, 0]
@@ -144,7 +144,7 @@ const option = computed(() => {
       trigger: 'axis',
       padding: 0,
       valueFormatter: (value: number) => {
-        return `${value}% ${$t('dashboard.validator.summary.chart.yAxis')}`
+        return `${value}% ${$t('dashboard.validator.summary.chart.efficiency')}`
       },
       formatter (params : any) : HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)

@@ -118,7 +118,7 @@
         },
         "chart":{
           "all_groups": "All Groups",
-          "yAxis": "Efficiency"
+          "efficiency": "Efficiency"
         }
       },
       "tabs": {
