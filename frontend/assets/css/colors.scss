@@ -1,3 +1,5 @@
+// When updating values here, please keep in mind that you might have to updated utils/colors.ts too
+
 :root {
   --grey: #a5a5a5;
   --grey-1: #e9e9e9;
@@ -51,6 +53,9 @@
   --input-active-text-color: var(--light-black);
   --input-placeholder-text-color: var(--grey);
 
+  --tooltip-background: var(--light-grey-2);
+  --tooltip-text-color: var(--light-black);
+
   --link-color: var(--blue);
 
   --negative-color: var(--light-red);
@@ -86,6 +91,9 @@
     --input-border-color: var(--dark-grey);
     --input-active-text-color: var(--light-grey);
     --input-placeholder-text-color: var(--grey);
+
+    --tooltip-background: var(--light-grey);
+    --tooltip-text-color: var(--light-black);
 
     --link-color: var(--light-blue);
 
