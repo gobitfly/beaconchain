@@ -1,4 +1,7 @@
 {
+  "locales" : {
+    "date": "en-US"
+  },
   "common": {
     "epoch": "Epoch",
     "slot": "Slot",
