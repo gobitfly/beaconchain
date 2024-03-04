@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/barkimedes/go-deepcopy"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/juliangruber/go-intersect"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -140,11 +140,12 @@ func updateSlotVizData() error {
 					}
 
 					muxAttAssignmentsForSlot.Lock()
-					if dutiesInfo.AttAssignmentsForSlot[slot] == nil {
-						dutiesInfo.AttAssignmentsForSlot[slot] = make(map[uint32]bool, 0)
+
+					if dutiesInfo.EpochAttestationDuties[uint32(attValidator)] == nil {
+						dutiesInfo.EpochAttestationDuties[uint32(attValidator)] = make(map[uint32]bool, 5)
 					}
 
-					dutiesInfo.AttAssignmentsForSlot[slot][uint32(attValidator)] = true
+					dutiesInfo.EpochAttestationDuties[uint32(attValidator)][uint32(slot)] = false // validator has an attestation scheduled for that slot
 
 					muxAttAssignmentsForSlot.Unlock()
 				}
@@ -194,11 +195,8 @@ func updateSlotVizData() error {
 			// Attestations
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
-				if dutiesInfo.SlotAttested[attestedSlot] == nil {
-					dutiesInfo.SlotAttested[attestedSlot] = make(map[uint32]bool, 0)
-				}
 				for _, validator := range duty.Validators {
-					dutiesInfo.SlotAttested[attestedSlot][uint32(validator)] = true
+					dutiesInfo.EpochAttestationDuties[uint32(validator)][uint32(attestedSlot)] = true // validator has attested for that slot
 				}
 			}
 			// Syncs
@@ -224,21 +222,29 @@ func updateSlotVizData() error {
 				dutiesInfo.SlotValiPropSlashed[duty.Slot] = slashedPropValidators
 			}
 			if duty.AttesterSlashingsCount > 0 {
-				slashedAttValidators := []pq.Int64Array{}
+				attSlashings := []struct {
+					Attestestation1Indices pq.Int64Array `db:"attestation1_indices"`
+					Attestestation2Indices pq.Int64Array `db:"attestation2_indices"`
+				}{}
 				slashedValidators := []uint64{}
 
-				err := db.ReaderDb.Select(&slashedAttValidators, `
-					SELECT
-						attestation2_indices
-					FROM blocks_attesterslashings
-					WHERE block_slot = $1`, duty.Slot)
+				err := db.ReaderDb.Select(&attSlashings, `
+				SELECT
+					attestation1_indices,
+					attestation2_indices
+				FROM blocks_attesterslashings
+				WHERE block_slot = $1`, duty.Slot)
 				if err != nil {
 					return err
 				}
 
-				for _, slashedAttValidator := range slashedAttValidators {
-					for _, validator := range slashedAttValidator {
-						slashedValidators = append(slashedValidators, uint64(validator))
+				for _, row := range attSlashings {
+					inter := intersect.Simple(row.Attestestation1Indices, row.Attestestation2Indices)
+					if len(inter) == 0 {
+						log.Warn(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
+					}
+					for _, v := range inter {
+						slashedValidators = append(slashedValidators, uint64(v.(int64)))
 					}
 				}
 				dutiesInfo.SlotValiAttSlashed[duty.Slot] = slashedValidators
@@ -275,54 +281,126 @@ func initDutiesInfo() *SyncData {
 	dutiesInfo.LatestSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
 	dutiesInfo.SlotBlock = make(map[uint64]uint64)
-	dutiesInfo.SlotAttested = make(map[uint64]map[uint32]bool)
 	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[uint64]bool)
 	dutiesInfo.SlotValiPropSlashed = make(map[uint64][]uint64)
 	dutiesInfo.SlotValiAttSlashed = make(map[uint64][]uint64)
 	dutiesInfo.PropAssignmentsForSlot = make(map[uint64]uint64)
-	dutiesInfo.AttAssignmentsForSlot = make(map[uint64]map[uint32]bool)
 	dutiesInfo.SyncAssignmentsForEpoch = make(map[uint64]map[uint64]bool)
 	dutiesInfo.TotalSyncAssignmentsForEpoch = make(map[uint64][]uint64)
+	dutiesInfo.EpochAttestationDuties = make(map[uint32]map[uint32]bool)
 	return &dutiesInfo
 }
 
 func copyAndCleanDutiesInfo() *SyncData {
-	dutiesInfoCopyResult, err := deepcopy.Anything(*currentDutiesInfo)
-	if err != nil {
-		log.Fatal(err, "error creating deep copy of currentDutiesInfo object", 0)
-	}
-	dutiesInfo := dutiesInfoCopyResult.(SyncData)
-
-	// cleaning
+	// deep copy & clean
 	headSlot := cache.LatestEpoch.Get() * utils.Config.Chain.ClConfig.SlotsPerEpoch
 	dropBelowSlot := headSlot - 2*utils.Config.Chain.ClConfig.SlotsPerEpoch
-	for slot := range dutiesInfo.SlotStatus {
+
+	dutiesInfo := &SyncData{
+		LatestSlot:                   currentDutiesInfo.LatestSlot,
+		SlotStatus:                   make(map[uint64]int8, len(currentDutiesInfo.SlotStatus)),
+		SlotBlock:                    make(map[uint64]uint64, len(currentDutiesInfo.SlotBlock)),
+		SlotSyncParticipated:         make(map[uint64]map[uint64]bool, len(currentDutiesInfo.SlotSyncParticipated)),
+		SlotValiPropSlashed:          make(map[uint64][]uint64, len(currentDutiesInfo.SlotValiPropSlashed)),
+		SlotValiAttSlashed:           make(map[uint64][]uint64, len(currentDutiesInfo.SlotValiAttSlashed)),
+		PropAssignmentsForSlot:       make(map[uint64]uint64, len(currentDutiesInfo.PropAssignmentsForSlot)),
+		SyncAssignmentsForEpoch:      make(map[uint64]map[uint64]bool, len(currentDutiesInfo.SyncAssignmentsForEpoch)),
+		TotalSyncAssignmentsForEpoch: make(map[uint64][]uint64, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch)),
+		EpochAttestationDuties:       make(map[uint32]map[uint32]bool, len(currentDutiesInfo.EpochAttestationDuties)),
+		AssignmentsFetchedForEpoch:   currentDutiesInfo.AssignmentsFetchedForEpoch,
+	}
+
+	// copy SlotStatus
+	for slot, v := range currentDutiesInfo.SlotStatus {
 		if slot < dropBelowSlot {
-			delete(dutiesInfo.SlotStatus, slot)
-			delete(dutiesInfo.SlotBlock, slot)
-			delete(dutiesInfo.SlotAttested, slot)
-			delete(dutiesInfo.SlotSyncParticipated, slot)
-			delete(dutiesInfo.SlotValiPropSlashed, slot)
-			delete(dutiesInfo.SlotValiAttSlashed, slot)
-			delete(dutiesInfo.PropAssignmentsForSlot, slot)
-			delete(dutiesInfo.AttAssignmentsForSlot, slot)
-			delete(dutiesInfo.SyncAssignmentsForEpoch, utils.EpochOfSlot(slot))
-			delete(dutiesInfo.TotalSyncAssignmentsForEpoch, utils.EpochOfSlot(slot))
+			continue
+		}
+		dutiesInfo.SlotStatus[slot] = v
+	}
+
+	// copy SlotBlock
+	for slot, v := range currentDutiesInfo.SlotBlock {
+		if slot < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.SlotBlock[slot] = v
+	}
+
+	// copy SlotSyncParticipated
+	for slot, v := range currentDutiesInfo.SlotSyncParticipated {
+		if slot < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.SlotSyncParticipated[slot] = make(map[uint64]bool, len(v))
+
+		for k2, v2 := range v {
+			dutiesInfo.SlotSyncParticipated[slot][k2] = v2
 		}
 	}
 
-	log.Infof("total number of items cached: %d", len(dutiesInfo.SlotStatus)+
-		len(dutiesInfo.SlotBlock)+
-		len(dutiesInfo.SlotBlock)+
-		len(dutiesInfo.SlotAttested)+
-		len(dutiesInfo.SlotSyncParticipated)+
-		len(dutiesInfo.SlotValiPropSlashed)+
-		len(dutiesInfo.SlotValiAttSlashed)+
-		len(dutiesInfo.PropAssignmentsForSlot)+
-		len(dutiesInfo.AttAssignmentsForSlot)+
-		len(dutiesInfo.SyncAssignmentsForEpoch)+
-		len(dutiesInfo.TotalSyncAssignmentsForEpoch))
-	return &dutiesInfo
+	// copy SlotValiPropSlashed
+	for slot, v := range currentDutiesInfo.SlotValiPropSlashed {
+		if slot < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.SlotValiPropSlashed[slot] = make([]uint64, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiPropSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
+	}
+
+	// copy SlotValiAttSlashed
+	for slot, v := range currentDutiesInfo.SlotValiAttSlashed {
+		if slot < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.SlotValiAttSlashed[slot] = make([]uint64, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiAttSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
+	}
+
+	// copy PropAssignmentsForSlot
+	for slot, v := range currentDutiesInfo.PropAssignmentsForSlot {
+		if slot < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.PropAssignmentsForSlot[slot] = v
+	}
+
+	// copy SyncAssignmentsForEpoch
+	for epoch, v := range currentDutiesInfo.SyncAssignmentsForEpoch {
+		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.SyncAssignmentsForEpoch[epoch] = make(map[uint64]bool, len(v))
+
+		for k2, v2 := range v {
+			dutiesInfo.SyncAssignmentsForEpoch[epoch][k2] = v2
+		}
+	}
+
+	// copy TotalSyncAssignmentsForEpoch
+	for epoch, v := range currentDutiesInfo.TotalSyncAssignmentsForEpoch {
+		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
+			continue
+		}
+		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = make([]uint64, 0, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch[epoch]))
+		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = append(dutiesInfo.TotalSyncAssignmentsForEpoch[epoch], v...)
+	}
+
+	// copy EpochAttestationDuties
+	for validator, v := range currentDutiesInfo.EpochAttestationDuties {
+		dutiesInfo.EpochAttestationDuties[validator] = make(map[uint32]bool, len(v))
+
+		for slot, v2 := range v {
+			if slot < uint32(dropBelowSlot) {
+				continue
+			}
+			dutiesInfo.EpochAttestationDuties[validator][slot] = v2
+		}
+
+		if len(dutiesInfo.EpochAttestationDuties[validator]) == 0 {
+			delete(dutiesInfo.EpochAttestationDuties, validator)
+		}
+	}
+	return dutiesInfo
 }
 
 func getMaxValidatorDutiesInfoSlot() uint64 {
@@ -351,13 +429,12 @@ type SyncData struct {
 	LatestSlot                   uint64
 	SlotStatus                   map[uint64]int8            // slot -> status
 	SlotBlock                    map[uint64]uint64          // slot -> block
-	SlotAttested                 map[uint64]map[uint32]bool // slot -> validatorindex -> attested
 	SlotSyncParticipated         map[uint64]map[uint64]bool // slot -> validatorindex -> participated
 	SlotValiPropSlashed          map[uint64][]uint64        // slot -> list of slashed indexes
 	SlotValiAttSlashed           map[uint64][]uint64        // slot -> list of slashed indexes
 	PropAssignmentsForSlot       map[uint64]uint64          // slot -> validatorindex
-	AttAssignmentsForSlot        map[uint64]map[uint32]bool // slot -> validatorindex -> assigned
 	SyncAssignmentsForEpoch      map[uint64]map[uint64]bool // epoch -> validatorindex -> assigned
 	TotalSyncAssignmentsForEpoch map[uint64][]uint64        // epoch -> list of assigned indexes
+	EpochAttestationDuties       map[uint32]map[uint32]bool // validatorindex -> slot -> attested
 	AssignmentsFetchedForEpoch   uint64
 }
