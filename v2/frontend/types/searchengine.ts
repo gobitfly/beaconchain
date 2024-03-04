@@ -2,7 +2,7 @@ import { ChainIDs } from '~/types/networks'
 
 export type SearchBarStyle = 'discreet' | 'gaudy'
 
-export enum Categories {
+export enum Category {
   Tokens = 'tokens',
   NFTs = 'nfts',
   Protocol = 'protocol',
@@ -10,7 +10,21 @@ export enum Categories {
   Validators = 'validators'
 }
 
-export enum ResultTypes {
+export enum SubCategory {
+  Tokens,
+  NFTs,
+  Epochs,
+  SlotsAndBlocks,
+  Transactions,
+  Batches,
+  Contracts,
+  Accounts,
+  EnsSystem,
+  Graffiti,
+  Validators
+}
+
+export enum ResultType {
   Tokens = 'tokens',
   NFTs = 'nfts',
   Epochs = 'epochs',
@@ -21,8 +35,8 @@ export enum ResultTypes {
   Transactions = 'transactions',
   TransactionBatches = 'transaction_batches',
   StateBatches = 'state_batches',
-  Accounts = 'accounts',
   Contracts = 'contracts',
+  Accounts = 'accounts',
   Ens = 'ens_names',
   EnsOverview = 'ens_overview',
   Graffiti = 'graffiti',
@@ -41,19 +55,19 @@ interface CategoryInfoFields {
   filterLabel : string
 }
 
-export const CategoryInfo: Record<Categories, CategoryInfoFields> = {
-  [Categories.Tokens]: { filterLabel: 'Tokens' },
-  [Categories.NFTs]: { filterLabel: 'NFTs' },
-  [Categories.Protocol]: { filterLabel: 'Protocol' },
-  [Categories.Addresses]: { filterLabel: 'Addresses' },
-  [Categories.Validators]: { filterLabel: 'Validators' }
+export const CategoryInfo: Record<Category, CategoryInfoFields> = {
+  [Category.Tokens]: { filterLabel: 'Tokens' },
+  [Category.NFTs]: { filterLabel: 'NFTs' },
+  [Category.Protocol]: { filterLabel: 'Protocol' },
+  [Category.Addresses]: { filterLabel: 'Addresses' },
+  [Category.Validators]: { filterLabel: 'Validators' }
 }
 
 // The parameter of the callback function that you give to SearchEngine.vue's props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
 export interface Matching {
   closeness: number, // if different results of this type exist on the network, only the best closeness is recorded here
   network: ChainIDs,
-  type: ResultTypes
+  type: ResultType
 }
 
 export interface SearchAheadSingleResult {
@@ -64,15 +78,15 @@ export interface SearchAheadSingleResult {
   hash_value?: string
 }
 
-export interface SearchAheadResults {
+export interface SearchAheadResult {
   data?: SearchAheadSingleResult[],
   error?: string
 }
 
 interface TypeInfoFields {
   title: string,
-  logo: string,
-  category: Categories,
+  category: Category,
+  subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
   dataInSearchAheadResult : (keyof SearchAheadSingleResult)[], // the order of these field-names sets the order of the information displayed in the dropdown
@@ -80,241 +94,241 @@ interface TypeInfoFields {
   dropdownColumns : (string|undefined)[] // Static information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (dataInSearchAheadResult). The first column often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` (see above).
 }
 
-export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
-  [ResultTypes.Tokens]: {
+export const TypeInfo: Record<ResultType, TypeInfoFields> = {
+  [ResultType.Tokens]: {
     title: 'ERC-20 token',
-    logo: '',
-    category: Categories.Tokens,
+    category: Category.Tokens,
+    subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
     queryParamIndex: 0,
     dropdownColumns: [undefined, undefined, '']
   },
-  [ResultTypes.NFTs]: {
+  [ResultType.NFTs]: {
     title: 'NFT (ERC-721 & ERC-1155 token)',
-    logo: '',
-    category: Categories.NFTs,
+    category: Category.NFTs,
+    subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
     queryParamIndex: 0,
     dropdownColumns: [undefined, undefined, '']
   },
-  [ResultTypes.Epochs]: {
+  [ResultType.Epochs]: {
     title: 'Epoch',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, '']
   },
-  [ResultTypes.Slots]: {
+  [ResultType.Slots]: {
     title: 'Slot',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'], // num_value is the slot number, hash_value is the state root if it is what the user typed otherwise it contains by default the block root
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, undefined]
   },
-  [ResultTypes.Blocks]: {
+  [ResultType.Blocks]: {
     title: 'Block',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'], // same as above
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, undefined]
   },
-  [ResultTypes.BlockRoots]: {
+  [ResultType.BlockRoots]: {
     title: 'Block root',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, undefined]
   },
-  [ResultTypes.StateRoots]: {
+  [ResultType.StateRoots]: {
     title: 'State root',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, undefined]
   },
-  [ResultTypes.Transactions]: {
+  [ResultType.Transactions]: {
     title: 'Transaction',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, '']
   },
-  [ResultTypes.TransactionBatches]: {
+  [ResultType.TransactionBatches]: {
     title: 'Transaction batch',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value'],
     queryParamIndex: 0,
     dropdownColumns: ['TX Batch', undefined, '']
   },
-  [ResultTypes.StateBatches]: {
+  [ResultType.StateBatches]: {
     title: 'State batch',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, '']
   },
-  [ResultTypes.Accounts]: {
-    title: 'Account',
-    logo: '',
-    category: Categories.Addresses,
-    priority: 2,
-    belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['hash_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, '']
-  },
-  [ResultTypes.Contracts]: {
+  [ResultType.Contracts]: {
     title: 'Contract',
-    logo: '',
-    category: Categories.Addresses,
+    category: Category.Addresses,
+    subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
     queryParamIndex: 1,
     dropdownColumns: [undefined, undefined, '']
   },
-  [ResultTypes.Ens]: {
+  [ResultType.Accounts]: {
+    title: 'Account',
+    category: Category.Addresses,
+    subCategory: SubCategory.Accounts,
+    priority: 2,
+    belongsToAllNetworks: true,
+    dataInSearchAheadResult: ['hash_value'],
+    queryParamIndex: 0,
+    dropdownColumns: ['', undefined, '']
+  },
+  [ResultType.Ens]: {
     title: 'ENS address',
-    logo: '',
-    category: Categories.Addresses,
+    category: Category.Addresses,
+    subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
     queryParamIndex: 0,
     dropdownColumns: [undefined, undefined, '']
   },
-  [ResultTypes.EnsOverview]: {
+  [ResultType.EnsOverview]: {
     title: 'Overview of ENS domain',
-    logo: '',
-    category: Categories.Addresses,
+    category: Category.Addresses,
+    subCategory: SubCategory.EnsSystem,
     priority: 15,
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // same as above
     queryParamIndex: 0,
     dropdownColumns: ['ENS Overview', undefined, undefined]
   },
-  [ResultTypes.Graffiti]: {
+  [ResultType.Graffiti]: {
     title: 'Graffito',
-    logo: '',
-    category: Categories.Protocol,
+    category: Category.Protocol,
+    subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['str_value'],
     queryParamIndex: 0,
     dropdownColumns: ['', 'Blocks with', undefined]
   },
-  [ResultTypes.ValidatorsByIndex]: {
+  [ResultType.ValidatorsByIndex]: {
     title: 'Validator by index',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
     queryParamIndex: 0,
     dropdownColumns: ['Validator', undefined, undefined]
   },
-  [ResultTypes.ValidatorsByPubkey]: {
+  [ResultType.ValidatorsByPubkey]: {
     title: 'Validator by public key',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
     queryParamIndex: 1,
     dropdownColumns: ['Validator', undefined, undefined]
   },
-  [ResultTypes.ValidatorsByDepositAddress]: {
+  [ResultType.ValidatorsByDepositAddress]: {
     title: 'Validator by deposit address',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'], // deposit address
     queryParamIndex: 0,
     dropdownColumns: ['Validator', 'Deposited by', undefined]
   },
-  [ResultTypes.ValidatorsByDepositEnsName]: {
+  [ResultType.ValidatorsByDepositEnsName]: {
     title: 'Validator by ENS of the deposit address',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['str_value'], // ENS name
     queryParamIndex: 0,
     dropdownColumns: ['Validator', 'Deposited by', undefined]
   },
-  [ResultTypes.ValidatorsByWithdrawalCredential]: {
+  [ResultType.ValidatorsByWithdrawalCredential]: {
     title: 'Validator by withdrawal credential',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'], // withdrawal credential
     queryParamIndex: 0,
     dropdownColumns: ['Validator', undefined, '']
   },
-  [ResultTypes.ValidatorsByWithdrawalAddress]: {
+  [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'], // withdrawal address
     queryParamIndex: 0,
     dropdownColumns: ['Validator', 'Withdrawn to', undefined]
   },
-  [ResultTypes.ValidatorsByWithdrawalEnsName]: {
+  [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: 'Validator by ENS of the withdrawal address',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['str_value'], // ENS name
     queryParamIndex: 0,
     dropdownColumns: ['Validator', 'Withdrawn to', undefined]
   },
-  [ResultTypes.ValidatorsByGraffiti]: {
+  [ResultType.ValidatorsByGraffiti]: {
     title: 'Validator by graffito',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['str_value'], // graffito
     queryParamIndex: 0,
     dropdownColumns: ['Validator', 'Tagging with', undefined]
   },
-  [ResultTypes.ValidatorsByName]: {
+  [ResultType.ValidatorsByName]: {
     title: 'Validator by name',
-    logo: '',
-    category: Categories.Validators,
+    category: Category.Validators,
+    subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['str_value'], // name that the owner recorded on beaconcha.in
@@ -323,20 +337,20 @@ export const TypeInfo: Record<ResultTypes, TypeInfoFields> = {
   }
 }
 
-export function getListOfCategories () : Categories[] {
-  const list : Categories[] = []
+export function getListOfCategories () : Category[] {
+  const list : Category[] = []
 
-  for (const cat in Categories) {
-    list.push(Categories[cat as keyof typeof Categories])
+  for (const cat in Category) {
+    list.push(Category[cat as keyof typeof Category])
   }
   return list
 }
 
-export function getListOfResultTypes (sortByPriority : boolean) : ResultTypes[] {
-  const list : ResultTypes[] = []
+export function getListOfResultTypes (sortByPriority : boolean) : ResultType[] {
+  const list : ResultType[] = []
 
-  for (const type in ResultTypes) {
-    list.push(ResultTypes[type as keyof typeof ResultTypes])
+  for (const type in ResultType) {
+    list.push(ResultType[type as keyof typeof ResultType])
   }
   if (sortByPriority) {
     list.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
@@ -344,10 +358,10 @@ export function getListOfResultTypes (sortByPriority : boolean) : ResultTypes[] 
   return list
 }
 
-const searchableTypesPerCategory : Record<string, ResultTypes[]> = {}
+const searchableTypesPerCategory : Record<string, ResultType[]> = {}
 // Returns the list of types belonging to the given category.
 // This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
-export function getListOfResultTypesInCategory (category: Categories, sortByPriority : boolean) : ResultTypes[] {
+export function getListOfResultTypesInCategory (category: Category, sortByPriority : boolean) : ResultType[] {
   if (Object.keys(searchableTypesPerCategory).length === 0) {
     for (const t of getListOfResultTypes(sortByPriority)) {
       const c = TypeInfo[t].category

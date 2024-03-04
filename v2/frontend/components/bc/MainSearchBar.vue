@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Categories, ResultTypes, type SearchBarStyle, type Matching } from '~/types/searchengine'
+import { Category, ResultType, type SearchBarStyle, type Matching } from '~/types/searchengine'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({ location: { type: String, required: true } })
 
@@ -29,60 +29,60 @@ function pickSomethingByDefault (possibilities : Matching[]) : Matching {
   return bestMatchWithHigherPriority
 }
 
-function redirectToRelevantPage (searched : string, type : ResultTypes, chain : ChainIDs) {
+function redirectToRelevantPage (searched : string, type : ResultType, chain : ChainIDs) {
   let path : string
   let q = ''
   const networkPath = '/networks' + ChainInfo[chain].path
 
   switch (type) {
-    case ResultTypes.Tokens :
-    case ResultTypes.NFTs :
+    case ResultType.Tokens :
+    case ResultType.NFTs :
       path = '/token/' + searched
       break
-    case ResultTypes.Epochs :
+    case ResultType.Epochs :
       path = networkPath + '/epoch/' + searched
       break
-    case ResultTypes.Slots :
+    case ResultType.Slots :
       path = networkPath + '/slot/' + searched
       break
-    case ResultTypes.Blocks :
+    case ResultType.Blocks :
       path = networkPath + '/block/' + searched
       break
-    case ResultTypes.BlockRoots :
-    case ResultTypes.StateRoots :
-    case ResultTypes.Transactions :
+    case ResultType.BlockRoots :
+    case ResultType.StateRoots :
+    case ResultType.Transactions :
       path = networkPath + '/tx/' + searched
       break
-    case ResultTypes.TransactionBatches :
+    case ResultType.TransactionBatches :
       path = networkPath + '/transactionbatch/' + searched
       break
-    case ResultTypes.StateBatches :
+    case ResultType.StateBatches :
       path = networkPath + '/batch/' + searched
       break
-    case ResultTypes.Accounts :
-    case ResultTypes.Contracts :
-    case ResultTypes.Ens :
+    case ResultType.Contracts :
+    case ResultType.Accounts :
+    case ResultType.Ens :
       path = '/address/' + searched
       break
-    case ResultTypes.EnsOverview :
+    case ResultType.EnsOverview :
       path = '/ens/' + searched
       break
-    case ResultTypes.Graffiti :
+    case ResultType.Graffiti :
       path = networkPath + '/slots'
       q = searched
       break
-    case ResultTypes.ValidatorsByIndex :
-    case ResultTypes.ValidatorsByPubkey :
+    case ResultType.ValidatorsByIndex :
+    case ResultType.ValidatorsByPubkey :
       path = networkPath + '/validator/' + searched
       break
-    case ResultTypes.ValidatorsByDepositAddress :
-    case ResultTypes.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
       path = networkPath + '/validators/deposits'
       q = searched
       break
-    case ResultTypes.ValidatorsByWithdrawalCredential :
-    case ResultTypes.ValidatorsByWithdrawalAddress :
-    case ResultTypes.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
       path = networkPath + '/validators/withdrawals'
       q = searched
       break
@@ -100,7 +100,7 @@ function redirectToRelevantPage (searched : string, type : ResultTypes, chain : 
 
 <template>
   <BcSearchEngine
-    :searchable="[Categories.Protocol, Categories.Addresses, Categories.Tokens, Categories.NFTs, Categories.Validators]"
+    :searchable="[Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators]"
     :bar-style="searchBarStyle"
     :pick-by-default="pickSomethingByDefault"
     @go="redirectToRelevantPage"
