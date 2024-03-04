@@ -1,5 +1,8 @@
 import { commify } from '@ethersproject/units'
 import { round } from 'lodash-es'
+
+const { epochToTs } = useNetwork()
+
 export interface NumberFormatConfig {
   precision?: number
   fixed?:number
@@ -92,4 +95,14 @@ export function formatTs (ts: number, locales: string): string {
     year: 'numeric'
   }
   return new Date(ts * 1000).toLocaleDateString(locales, options)
+}
+
+export function formatEpochToDate (epoch: number, locales: string): string | undefined {
+  const ts = epochToTs(epoch)
+  if (ts === undefined) {
+    return undefined
+  }
+
+  const date = formatTs(ts, locales)
+  return `${date}`
 }
