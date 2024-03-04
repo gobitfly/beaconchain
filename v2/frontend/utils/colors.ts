@@ -14,3 +14,13 @@ export function getSummaryChartTextColor (theme: string) {
     return styles.getPropertyValue('--light-grey')
   }
 }
+
+export function getSummaryChartTooltipBackgroundColor (theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+
+  if (theme === 'light') {
+    return styles.getPropertyValue('--light-grey-2')
+  } else {
+    return styles.getPropertyValue('--light-grey')
+  }
+}

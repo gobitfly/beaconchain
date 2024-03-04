@@ -14,7 +14,7 @@ import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getSummaryChartGroupColors, getSummaryChartTextColor } from '~/utils/colors'
+import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 
 use([
   CanvasRenderer,
@@ -46,7 +46,8 @@ const colorMode = useColorMode()
 const colors = computed(() => {
   return {
     groups: getSummaryChartGroupColors(colorMode.value),
-    label: getSummaryChartTextColor(colorMode.value)
+    label: getSummaryChartTextColor(colorMode.value),
+    background: getSummaryChartTooltipBackgroundColor(colorMode.value)
   }
 })
 
@@ -142,6 +143,7 @@ const option = computed(() => {
       order: 'seriesAsc',
       trigger: 'axis',
       padding: 0,
+      borderColor: colors.value.background,
       valueFormatter: (value: number) => {
         return `${value}% ${$t('dashboard.validator.summary.chart.efficiency')}`
       },
