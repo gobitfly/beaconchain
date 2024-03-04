@@ -7,14 +7,15 @@ export function useCurrentAds () {
   const { configurations } = storeToRefs(useAdConfigurationStore())
   const { path, name } = useRoute()
 
-  watch(() => ({ name, path }), ({ name, path }) => {
-    const newName = name?.toString?.() || path
+  const pathName = computed(() => name?.toString?.() || path)
+
+  watch(pathName, (newName) => {
     getAds(newName)
   }, { immediate: true })
 
   // TODO: also validate if user is premium user and config is not for all
   const ads = computed(() => {
-    const configs: AdConfiguration[] = configurations.value[path]?.filter(c => c.enabled) ?? []
+    const configs: AdConfiguration[] = configurations.value[pathName.value]?.filter(c => c.enabled) ?? []
     configurations.value.global?.forEach((config) => {
       if (config.enabled && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
         configs.push(config)
