@@ -76,9 +76,9 @@
       },
       "network": {
         "proposed": "Network proposed slot {slot}",
-        "missed": "Network missed slot at {slot}",
+        "missed": "Network missed slot {slot}",
         "scheduled": "Slot {slot} is scheduled",
-        "orphaned": "Network orphaned slot at {slot}"
+        "orphaned": "Network orphaned slot {slot}"
       },
       "status": {
         "scheduled":{
