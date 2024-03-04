@@ -85,7 +85,7 @@
           "no_duties": "<span>You have <span class=\"scheduled\">no scheduled duties</span></span>",
           "has_duties":"<span>You have <span class=\"scheduled\">scheduled duties</span></span>"
         }, 
-        "no_duties": "<span>You have <span class=\"scheduled\">no</span> duties</span>",
+        "no_duties": "<span>You had <span class=\"scheduled\">no</span> duties</span>",
         "duties_some":"<span>You missed <span class=\"some\">some</span> duties</span>",
         "duties_success":"<span>All of your duties were <span class=\"success\">successful</span></span>",
         "duties_failed":"<span>All of your duties were <span class=\"failed\">missed</span></span>"      
