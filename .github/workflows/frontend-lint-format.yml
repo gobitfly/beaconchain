@@ -6,7 +6,6 @@ on:
       - 'frontend/**'
     branches:
       - main
-      - add_frontend_dockerfile
   pull_request:
     paths:
       - 'frontend/**'
