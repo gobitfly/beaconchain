@@ -182,7 +182,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart />
+          <SummaryChart :dashboard-id="props.dashboardId" />
         </div>
       </template>
     </BcTableControl>

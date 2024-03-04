@@ -6,6 +6,7 @@ export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
+  DASHBOARD_SUMMARY_CHART = '/dashboard/summaryChart',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
@@ -48,6 +49,11 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboard_id}/summary?',
     getPath: values => `/validator-dashboards/${values?.dashboardId}/summary`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SUMMARY_CHART]: {
+    path: '/validator-dashboards/{dashboard_id}/summary-chart?',
+    getPath: values => `/validator-dashboards/${values?.dashboardId}/summary-chart`,
     mock: true
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
