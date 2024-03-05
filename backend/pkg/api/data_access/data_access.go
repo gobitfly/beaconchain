@@ -454,22 +454,15 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
 				// Only add results for validators we care about
 				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
-					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizActiveDuty{}
+					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizTuple{}
 
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = dutiesInfo.PropAssignmentsForSlot[slot]
-
-					status := "scheduled"
 					dutyObject := slot
 					if _, ok := dutiesInfo.SlotStatus[slot]; ok {
-						switch dutiesInfo.SlotStatus[slot] {
-						case 0, 2:
-							status = "failed"
-						case 1, 3:
-							status = "success"
+						if dutiesInfo.SlotStatus[slot] == 1 || dutiesInfo.SlotStatus[slot] == 3 {
 							dutyObject = dutiesInfo.SlotBlock[slot]
 						}
 					}
-					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Status = status
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.DutyObject = dutyObject
 				}
 			}
@@ -482,16 +475,29 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 						continue
 					}
 
-					if slotVizEpochs[epochIdx].Slots[slotIdx].Sync == nil {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
+					if slotVizEpochs[epochIdx].Slots[slotIdx].Syncs == nil {
+						slotVizEpochs[epochIdx].Slots[slotIdx].Syncs = &t.VDBSlotVizStatus[t.VDBSlotVizDuty]{}
 					}
+					syncsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Syncs
 
 					if slot > dutiesInfo.LatestSlot {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.PendingCount++
+						if syncsRef.Scheduled == nil {
+							syncsRef.Scheduled = &t.VDBSlotVizDuty{}
+						}
+						syncsRef.Scheduled.TotalCount++
+						syncsRef.Scheduled.Validators = append(syncsRef.Scheduled.Validators, validator)
 					} else if _, ok := dutiesInfo.SlotSyncParticipated[slot][validator]; ok {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.SuccessCount++
+						if syncsRef.Success == nil {
+							syncsRef.Success = &t.VDBSlotVizDuty{}
+						}
+						syncsRef.Success.TotalCount++
+						syncsRef.Success.Validators = append(syncsRef.Success.Validators, validator)
 					} else {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.FailedCount++
+						if syncsRef.Failed == nil {
+							syncsRef.Failed = &t.VDBSlotVizDuty{}
+						}
+						syncsRef.Failed.TotalCount++
+						syncsRef.Failed.Validators = append(syncsRef.Failed.Validators, validator)
 					}
 				}
 			}
@@ -505,12 +511,22 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
 					// One of the dashboard validators slashed
 					for _, validator := range slashedValidators {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
-							t.VDBSlotVizActiveDuty{
-								Status:     "success",
-								Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Dashboard validator
-								DutyObject: validator,                               // Validator that got slashed
-							})
+						if slotVizEpochs[epochIdx].Slots[slotIdx].Slashings == nil {
+							slotVizEpochs[epochIdx].Slots[slotIdx].Slashings = &t.VDBSlotVizStatus[t.VDBSlotVizSlashing]{}
+						}
+						slashingsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Slashings
+
+						if slashingsRef.Success == nil {
+							slashingsRef.Success = &t.VDBSlotVizSlashing{}
+						}
+
+						slashingsRef.Success.TotalCount++
+
+						slashing := t.VDBSlotVizTuple{
+							Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
+							DutyObject: validator,                               // Slashed validator
+						}
+						slashingsRef.Success.Slashings = append(slashingsRef.Success.Slashings, slashing)
 					}
 				}
 			}
@@ -519,19 +535,29 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 					continue
 				}
 				// One of the dashboard validators got slashed
-				slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
-					t.VDBSlotVizActiveDuty{
-						Status:     "failed",
-						Validator:  validator, // Dashboard validator
-						DutyObject: validator, // Validator that got slashed
-					})
+				if slotVizEpochs[epochIdx].Slots[slotIdx].Slashings == nil {
+					slotVizEpochs[epochIdx].Slots[slotIdx].Slashings = &t.VDBSlotVizStatus[t.VDBSlotVizSlashing]{}
+				}
+				slashingsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Slashings
+
+				if slashingsRef.Failed == nil {
+					slashingsRef.Failed = &t.VDBSlotVizSlashing{}
+				}
+
+				slashingsRef.Failed.TotalCount++
+
+				slashing := t.VDBSlotVizTuple{
+					Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
+					DutyObject: validator,                               // Slashed validator
+				}
+				slashingsRef.Failed.Slashings = append(slashingsRef.Failed.Slashings, slashing)
 			}
 		}
 	}
 
 	// Hydrate the attestation data
-	for validator := range validatorsArray {
-		for slot, duty := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+	for _, validator := range validatorsArray {
+		for slot, duty := range dutiesInfo.EpochAttestationDuties[validator] {
 			epoch := utils.EpochOfSlot(uint64(slot))
 			epochIdx, ok := epochToIndexMap[epoch]
 			if !ok {
@@ -543,14 +569,28 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			}
 
 			if slotVizEpochs[epochIdx].Slots[slotIdx].Attestations == nil {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
+				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizStatus[t.VDBSlotVizDuty]{}
 			}
+			attestationsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Attestations
+
 			if uint64(slot) >= dutiesInfo.LatestSlot {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
+				if attestationsRef.Scheduled == nil {
+					attestationsRef.Scheduled = &t.VDBSlotVizDuty{}
+				}
+				attestationsRef.Scheduled.TotalCount++
+				attestationsRef.Scheduled.Validators = append(attestationsRef.Scheduled.Validators, uint64(validator))
 			} else if duty {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
+				if attestationsRef.Success == nil {
+					attestationsRef.Success = &t.VDBSlotVizDuty{}
+				}
+				attestationsRef.Success.TotalCount++
+				attestationsRef.Success.Validators = append(attestationsRef.Success.Validators, uint64(validator))
 			} else {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
+				if attestationsRef.Failed == nil {
+					attestationsRef.Failed = &t.VDBSlotVizDuty{}
+				}
+				attestationsRef.Failed.TotalCount++
+				attestationsRef.Failed.Validators = append(attestationsRef.Failed.Validators, uint64(validator))
 			}
 		}
 	}
