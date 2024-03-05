@@ -582,7 +582,7 @@ func (d DataAccessService) GetValidatorDashboardDutiesByValidators(dashboardId t
 }
 
 func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
-	// TODO @recy21
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 }
 
