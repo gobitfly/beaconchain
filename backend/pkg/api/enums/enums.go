@@ -4,7 +4,7 @@ type Enum interface {
 	Int() int
 }
 
-// Factory interface for creating enum values from int
+// Factory interface for creating enum values from strings
 type EnumFactory[T Enum] interface {
 	Enum
 	NewFromString(string) T
