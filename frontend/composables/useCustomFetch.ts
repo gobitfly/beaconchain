@@ -4,6 +4,7 @@ import type { LoginResponse } from '~/types/user'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  DASHBOARD_GROUPS = '/dashboard/groups',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -41,6 +42,10 @@ const mapping: Record<string, MappingData> = {
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true
   },
+  [API_PATH.DASHBOARD_GROUPS]: {
+    path: '/api/i/users/me/dashboards',
+    mock: false
+  },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
@@ -64,7 +69,7 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
-    mock: true
+    mock: false
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latestState',

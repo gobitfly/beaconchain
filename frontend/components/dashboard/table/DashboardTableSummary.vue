@@ -18,7 +18,7 @@ const store = useValidatorDashboardSummaryStore()
 const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {

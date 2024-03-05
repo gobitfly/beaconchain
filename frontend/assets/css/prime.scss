@@ -204,3 +204,68 @@
 .p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
   color: #ff5757;
 }
+
+
+// Dropdown
+// https://primevue.org/dropdown/
+
+.p-dropdown {
+  background: var(--input-background);
+  border: 1px solid var(--input-border-color);
+  color: var(--input-active-text-color);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  border-radius: var(--border-radius);
+  padding: var(--padding);
+
+  &:not(.p-disabled).p-focus {
+    outline: 0 none;
+    outline-offset: 0;
+  }
+  .p-dropdown-label {
+    background: transparent;
+    border: 0 none;
+    padding: 0;
+    &.p-placeholder {
+      color: var(--input-placeholder-text-colo);
+    }
+    &:focus, &:enabled:focus {
+      outline: 0 none;
+      box-shadow: none;
+    }
+  }
+  .p-dropdown-trigger {
+    background: transparent;
+    border-top-right-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+  }
+}
+
+.p-dropdown-panel {
+  background: var(--input-background);
+  border: 1px solid var(--input-border-color);
+  color: var(--input-active-text-color);
+  border-radius: var(--border-radius);
+  .p-dropdown-items {
+    padding: var(--padding);
+  }
+  .p-dropdown-item {
+    &:not(:first-child){
+      padding-top: var(--padding-small);
+    }
+  }
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  color: #047857;
+  background: #F0FDFA;
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight.p-focus {
+  background: rgba(16, 185, 129, 0.24);
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item:not(.p-highlight):not(.p-disabled).p-focus {
+  color: #4b5563;
+  background: #e5e7eb;
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
+  color: #4b5563;
+  background: #f3f4f6;
+}

@@ -16,7 +16,7 @@ const props = defineProps<Props>()
 const modalVisibility = ref(false)
 
 const { t: $t } = useI18n()
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const openValidatorModal = () => {
   modalVisibility.value = true

@@ -13,7 +13,7 @@ import {
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
-import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 import type { DashboardKey } from '~/types/dashboard'
 
@@ -39,7 +39,7 @@ watch(props, () => {
   getDashboardSummaryChart(props.dashboardKey)
 }, { immediate: true })
 
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()

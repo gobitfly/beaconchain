@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-const { getOverview } = useValidatorDashboardOverview()
+const { getOverview } = useValidatorDashboardOverviewStore()
 await useAsyncData('validator_dashboard_overview', () => getOverview())
 
 </script>
