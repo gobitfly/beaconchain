@@ -140,13 +140,15 @@ type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutie
 // ------------------------------------------------------------
 // Blocks Tab
 type VDBBlocksTableRow struct {
-	Proposer uint64                     `json:"proposer"`
-	GroupId  uint64                     `json:"group_id"`
-	Epoch    uint64                     `json:"epoch"`
-	Slot     uint64                     `json:"slot"`
-	Block    uint64                     `json:"block"`
-	Status   string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
-	Reward   ClElValue[decimal.Decimal] `json:"reward"`
+	Proposer        uint64                     `json:"proposer"`
+	GroupId         uint64                     `json:"group_id"`
+	Epoch           uint64                     `json:"epoch"`
+	Slot            uint64                     `json:"slot"`
+	Block           uint64                     `json:"block"`
+	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
+	RewardRecipient Address                    `json:"reward_recipient"`
+	Reward          ClElValue[decimal.Decimal] `json:"reward"`
+	Graffiti        string                     `json:"graffiti"`
 }
 type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTableRow]
 
@@ -236,15 +238,6 @@ type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManage
 
 // ------------------------------------------------------------
 // Misc.
-type VDBIdPrimary int
-type VDBIdPublic string
-type VDBIdValidatorSet []VDBValidator
-
-type VDBValidator struct {
-	Index   uint64 `json:"index"`
-	Version uint64 `json:"version"`
-}
-
 type VDBPostReturnData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`

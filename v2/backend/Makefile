@@ -2,7 +2,7 @@ GITCOMMIT=`git describe --always`
 VERSION=`git describe --always --tags`
 GITDATE=`TZ=UTC git show -s --date=iso-strict-local --format=%cd HEAD`
 BUILDDATE=`date -u +"%Y-%m-%dT%H:%M:%S%:z"`
-PACKAGE=github.com/gobitfly/beaconchain/commons
+PACKAGE=github.com/gobitfly/beaconchain/pkg/commons
 LDFLAGS="-X ${PACKAGE}/version.Version=${VERSION} -X ${PACKAGE}/version.BuildDate=${BUILDDATE} -X ${PACKAGE}/version.GitCommit=${GITCOMMIT} -X ${PACKAGE}/version.GitDate=${GITDATE} -s -w"
 
 all: exporter blobindexer misc ethstore-exporter api rewards-exporter eth1indexer stats user-service notification-sender notification-collector node-jobs-processor signatures
