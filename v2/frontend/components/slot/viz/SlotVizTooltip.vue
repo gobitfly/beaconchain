@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { VDBSlotVizActiveDuty, VDBSlotVizPassiveDuty, VDBSlotVizSlot } from '~/types/api/slot_viz'
+import type { VDBSlotVizDuty, VDBSlotVizSlot, VDBSlotVizStatus } from '~/types/api/slot_viz'
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
-import { type TooltipLayout } from '~/types/layouts'
 import { formatNumber } from '~/utils/format'
-type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validator?: number; dutySubText?: string; dutySubLink?: string, duty_object?: number}
+type RowDuty = { validator?: number; dutySubText?: string; dutySubLink?: string, duty_object?: number }
+type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validators?: number[], duties?: RowDuty[], andMore?: number }
 interface Props {
   id: string
   data: VDBSlotVizSlot
@@ -15,89 +15,181 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const hasDuties = !!slot?.proposal || !!slot?.slashing?.length || !!slot?.attestations || !!slot?.sync
-  const tooltipLayout: TooltipLayout = hasDuties ? 'dark' : 'default'
+  const networkLabel = $t(`slotViz.tooltip.network.${slot.status}`, { slot: formatNumber(slot.slot) })
+
+  const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
+  let hasSuccessDuties = false
+  let hasFailedDuties = false
+  let maxCount = 0
+
   if (hasDuties) {
-    const addActiveDuty = (type: SlotVizIcons, duty: VDBSlotVizActiveDuty, count = 1) => {
+    if (slot.proposal) {
+      const dutyText = $t(`slotViz.tooltip.proposal.${slot.status}.main`)
+      const dutySubText = $t(`slotViz.tooltip.proposal.${slot.status}.sub`)
+      let className = 'scheduled'
+      switch (slot.status) {
+        case 'proposed':
+          className = 'success'
+          hasSuccessDuties = true
+          break
+        case 'missed':
+        case 'orphaned':
+          className = 'failed'
+          hasFailedDuties = true
+          break
+      }
+      rows.push([{
+        class: className,
+        icon: 'proposal',
+        dutyText,
+        count: 1,
+        duties: [
+          {
+            ...slot.proposal,
+            dutySubText,
+            dutySubLink: slot.status === 'proposed' ? `/block/${slot.proposal.duty_object}` : `/slot/${slot.proposal.duty_object}`
+          }
+        ]
+      }])
+    }
+
+    if (slot.slashing?.failed) {
+      const dutyText = $t('slotViz.tooltip.slashing.failed.main')
+      const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
+      rows.push([{
+        class: 'failed',
+        icon: 'sync',
+        dutyText,
+        count: slot.slashing.failed.total_count,
+        duties: slot.slashing.failed.slashings?.map(slash => ({
+          ...slash,
+          dutySubText,
+          dutySubLink: `/validator/${slash.duty_object}`
+        })),
+        andMore: Math.max(0, (slot.slashing.failed.total_count - slot.slashing.failed.slashings?.length))
+      }])
+    }
+    if (slot.slashing?.success) {
+      hasSuccessDuties = true
+      const dutyText = $t('slotViz.tooltip.slashing.success.main')
+      rows.push([{
+        class: 'success',
+        icon: 'sync',
+        dutyText,
+        count: slot.slashing.success.total_count
+      }])
+    }
+
+    const addDuties = (type: SlotVizIcons, duty?: VDBSlotVizStatus<VDBSlotVizDuty>) => {
+      if (!duty) {
+        return
+      }
       const subRows: Row[] = []
       rows.push(subRows)
-      const dutyText = $t(`slotViz.tooltip.${type}.${duty.status}.main`)
-      const dutySubText = $t(`slotViz.tooltip.${type}.${duty.status}.sub`)
-      let dutySubLink = ''
-      if (type === 'proposal') {
-        if (duty.status === 'success') {
-          dutySubLink = `/block/${duty.duty_object}`
-        } else {
-          dutySubLink = `/slot/${duty.duty_object}`
-        }
-      } else if (type === 'slashing') {
-        dutySubLink = `/validator/${duty.duty_object}`
+      const dutyText = $t(`slotViz.tooltip.${type}`)
+
+      if (duty.scheduled) {
+        maxCount = Math.max(maxCount, duty.scheduled.total_count)
+        subRows.push({
+          class: 'scheduled',
+          icon: type,
+          count: duty.scheduled.total_count,
+          dutyText,
+          validators: duty.scheduled.validators,
+          andMore: Math.max(0, (duty.scheduled.total_count - duty.scheduled.validators?.length))
+        })
       }
-
-      subRows.push({ class: duty.status, icon: type, dutyText, count, dutySubText, validator: count === 1 ? duty.validator : undefined, dutySubLink, duty_object: duty.duty_object })
-    }
-
-    slot.proposal && addActiveDuty('proposal', slot.proposal)
-    const iHaveSlashed = slot.slashing?.filter(s => s.status !== 'failed')
-    const iGotSlashed = slot.slashing?.filter(s => s.status === 'failed')
-    if (iHaveSlashed?.length) {
-      addActiveDuty('slashing', iHaveSlashed[0], iHaveSlashed.length)
-    }
-    if (iGotSlashed?.length) {
-      addActiveDuty('slashing', iGotSlashed[0], iGotSlashed.length)
-    }
-
-    const addPassiveDuty = (type: SlotVizIcons, duty?: VDBSlotVizPassiveDuty) => {
-      if (duty) {
-        const subRows: Row[] = []
-        rows.push(subRows)
-        const dutyText = $t(`slotViz.tooltip.${type}`)
-        if (duty.pending_count) {
-          subRows.push({ class: 'scheduled', icon: type, count: duty.pending_count, dutyText })
-        }
-        if (duty.success_count) {
-          subRows.push({ class: 'success', icon: type, count: duty.success_count, dutyText })
-        }
-        if (duty.failed_count) {
-          subRows.push({ class: 'failed', icon: type, count: duty.failed_count, dutyText })
-        }
+      if (duty.success) {
+        hasSuccessDuties = true
+        maxCount = Math.max(maxCount, duty.success.total_count)
+        subRows.push({
+          class: 'success',
+          icon: type,
+          count: duty.success.total_count,
+          dutyText
+        })
+      }
+      if (duty.failed) {
+        hasFailedDuties = true
+        maxCount = Math.max(maxCount, duty.failed.total_count)
+        subRows.push({
+          class: 'failed',
+          icon: type,
+          count: duty.failed.total_count,
+          dutyText,
+          validators: duty.failed.validators,
+          andMore: Math.max(0, (duty.failed.total_count - duty.failed.validators?.length))
+        })
       }
     }
-    addPassiveDuty('attestation', slot.attestations)
-    addPassiveDuty('sync', slot.sync)
+    addDuties('attestation', slot.attestations)
+    addDuties('sync', slot.sync)
   }
-  const stateLabel = $t(`slot_state.${slot.status}`)
-  const slotLabel = `${stateLabel} ${$t('common.slot')} ${formatNumber(slot.slot)}`
+
+  let stateLabel = ''
+  if (slot.status === 'scheduled') {
+    stateLabel = formatMultiPartSpan($t, `slotViz.tooltip.status.scheduled.${hasDuties ? 'has_duties' : 'no_duties'}`, [undefined, 'scheduled', undefined])
+  } else if (hasFailedDuties && hasSuccessDuties) {
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [undefined, 'some', undefined])
+  } else if (hasFailedDuties) {
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_failed', [undefined, 'failed', undefined])
+  } else if (hasSuccessDuties) {
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_success', [undefined, 'success', undefined])
+  } else {
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.no_duties', [undefined, 'scheduled', undefined])
+  }
 
   return {
-    slotLabel,
-    tooltipLayout,
+    stateLabel,
+    networkLabel,
     rows,
-    hasDuties
+    hasDuties,
+    minWidth: (1 + (`${maxCount}`.length) * 11) + 'px'
   }
 })
 </script>
 <template>
-  <BcTooltip :target="props.id" :layout="data.tooltipLayout" scroll-container="#slot-viz">
+  <BcTooltip :target="props.id" layout="dark" scroll-container="#slot-viz">
     <slot />
-    <template v-if="data.hasDuties" #tooltip>
+    <template #tooltip>
       <div class="with-duties">
+        <div class="rows">
+          <div class="row network">
+            {{ data.networkLabel }}
+          </div>
+          <!--eslint-disable-next-line vue/no-v-html-->
+          <div class="row" v-html="data.stateLabel" />
+        </div>
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
-          <div v-for="row in rows" :key="row.class" class="row" :class="row.class">
-            <div class="count-icon">
-              <span>{{ row.count }}x</span>
+          <div v-for="row in rows" :key="row.class" class="row">
+            <div class="count-icon" :class="row.class">
+              <span :style="{minWidth: data.minWidth}">{{ row.count }}x</span>
               <SlotVizIcon :icon="row.icon" class="icon" />
             </div>
             <div class="value-col">
-              {{ row.dutyText }}
-              <div v-if="row.validator">
-                <NuxtLink :to="`/validator/${row.validator}`" target="_blank" class="link">
-                  {{ row.validator }}
-                </NuxtLink>
-                <span class="sub-text"> {{ row.dutySubText }} </span>
-                <NuxtLink v-if="row.dutySubLink" :to="row.dutySubLink" target="_blank" class="link">
-                  {{ row.duty_object }}
-                </NuxtLink>
+              <span :class="row.class">{{ row.dutyText }}</span>
+              <div v-if="row.validators?.length" class="validators">
+                <span v-for="validator in row.validators" :key="validator">
+                  <NuxtLink :to="`/validator/${validator}`" target="_blank" class="link">
+                    {{ validator }}
+                  </NuxtLink>
+                  <span>, </span>
+                </span>
+                <span v-if="row.andMore"> ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }} </span>
+              </div>
+              <div v-if="row.duties" class="duties">
+                <div v-for="(duty, d_index) in row.duties" :key="d_index">
+                  <NuxtLink :to="`/validator/${duty.validator}`" target="_blank" class="link">
+                    {{ duty.validator }}
+                  </NuxtLink>
+                  <span class="sub-text"> {{ duty.dutySubText }} </span>
+                  <NuxtLink v-if="duty.dutySubLink" :to="duty.dutySubLink" target="_blank" class="link">
+                    {{ duty.duty_object }}
+                  </NuxtLink>
+                </div>
+                <div v-if="row.andMore">
+                  ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }}
+                </div>
               </div>
             </div>
           </div>
@@ -116,8 +208,23 @@ const data = computed(() => {
     padding-bottom: var(--padding);
     padding-top: var(--padding);
 
-    &:not(:first-child) {
+    &:first-child {
+      margin-left: calc(var(--padding) * -1);
+      margin-right: calc(var(--padding) * -1);
+      padding-left: var(--padding);
+      padding-right: var(--padding);
+
+      &:has(+.rows) {
+        border-bottom: 3px solid var(--container-border-color);
+      }
+    }
+
+    &:not(:first-child):not(:nth-child(2)) {
       border-top: 1px solid var(--container-border-color);
+    }
+
+    &:nth-child(2) {
+      border-width: 3px;
     }
 
     .row {
@@ -125,24 +232,45 @@ const data = computed(() => {
       display: flex;
       align-items: center;
 
+      &.network {
+        text-wrap: nowrap;
+        white-space: nowrap;
+      }
+
       &:not(:first-child) {
         padding-top: var(--padding);
       }
 
+      :deep(.some) {
+        color: var(--yellow);
+      }
+
+      :deep(.scheduled) {
+        color: var(--grey);
+      }
+
+      :deep(.success),
       &.success {
         color: var(--positive-color);
       }
 
+      :deep(.failed),
       &.failed {
         color: var(--negative-color);
       }
 
-      .count-icon{
+      .duties > div,
+      .validators{
+        margin-top: var(--padding);
+      }
+
+      .count-icon {
         display: inline-flex;
-        width: 90px;
         justify-content: flex-end;
         align-items: center;
+        text-align: right;
       }
+
       .sub-text {
         color: var(--light-grey);
         padding: 0 3px;

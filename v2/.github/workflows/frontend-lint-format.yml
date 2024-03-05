@@ -1,19 +1,20 @@
-name: Lint & Format
+name: Frontend Linter
 
-# TODO frontend
 on:
   push:
+    paths:
+      - 'frontend/**'
     branches:
-      - master
-      - staging
+      - main
   pull_request:
+    paths:
+      - 'frontend/**'
     branches:
-      - staging
-      - master
+      - '*'
 
 jobs:
-  lint-format:
-    name: lint-format
+  frontend-lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -21,10 +22,12 @@ jobs:
     - name: Setup Node Environment
       uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: 18
     - name: Install Dependencies
-      run: npm ci
-    - name: Check File Format
-      run: npm run check-format
+      working-directory: frontend
+      env:
+        FA_PRO_KEY: ${{ secrets.FA_PRO_KEY }}
+      run: npm --userconfig=".npmrc_ci" ci
     - name: Lint Files
-      run: npm run check-style
+      working-directory: frontend
+      run: npm run lint

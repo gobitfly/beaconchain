@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { warn } from 'vue'
 import {
   faChartLineUp,
   faCube,
@@ -11,7 +10,13 @@ import {
 
 const route = useRoute()
 
-warn(`route id: ${route.params.id}, query: ${route.query}`)
+const key = computed(() => {
+  if (Array.isArray(route.params.id)) {
+    return route.params.id.join(',')
+  }
+  return route.params.id
+})
+
 </script>
 
 <template>
@@ -23,14 +28,14 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
       <DashboardValidatorOverview class="overview" />
     </template>
     <div>
-      <DashboardValidatorSlotViz :dashboard-id="1" />
+      <DashboardValidatorSlotViz :dashboard-key="key" />
     </div>
     <TabView lazy>
       <TabPanel>
         <template #header>
           <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
         </template>
-        <DashboardTableSummary :dashboard-id="1" />
+        <DashboardTableSummary :dashboard-key="1" />
       </TabPanel>
       <TabPanel>
         <template #header>

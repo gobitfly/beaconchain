@@ -5,7 +5,7 @@ await useAsyncData('validator_dashboard_overview', () => getOverview())
 
 </script>
 <template>
-  <DashboardTableSummary :dashboard-id="1" />
+  <DashboardTableSummary :dashboard-key="1" />
 </template>
 
 <style lang="scss" scoped>

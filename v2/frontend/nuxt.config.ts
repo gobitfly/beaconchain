@@ -61,5 +61,8 @@ export default defineNuxtConfig({
     plugins: {
       autoprefixer: {}
     }
+  },
+  build: {
+    transpile: ['echarts', 'zrender', 'tslib']
   }
 })
