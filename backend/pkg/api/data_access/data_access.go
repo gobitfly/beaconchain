@@ -527,11 +527,11 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 						slashingsRef.Success.TotalCount++
 
-						slashing := t.VDBSlotVizTuple{
-							Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
-							DutyObject: validator,                               // Slashed validator
-						}
 						if len(slashingsRef.Success.Slashings) < maxValidatorsInResponse {
+							slashing := t.VDBSlotVizTuple{
+								Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
+								DutyObject: validator,                               // Slashed validator
+							}
 							slashingsRef.Success.Slashings = append(slashingsRef.Success.Slashings, slashing)
 						}
 					}
@@ -553,11 +553,11 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 
 				slashingsRef.Failed.TotalCount++
 
-				slashing := t.VDBSlotVizTuple{
-					Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
-					DutyObject: validator,                               // Slashed validator
-				}
 				if len(slashingsRef.Failed.Slashings) < maxValidatorsInResponse {
+					slashing := t.VDBSlotVizTuple{
+						Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
+						DutyObject: validator,                               // Slashed validator
+					}
 					slashingsRef.Failed.Slashings = append(slashingsRef.Failed.Slashings, slashing)
 				}
 			}
