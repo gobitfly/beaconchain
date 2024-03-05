@@ -1,10 +1,24 @@
 <script lang="ts" setup>
+import { type DashboardCreationState } from '~/types/dashboard/creation'
 import { IconMegaMenuEthereumOverview, IconMegaMenuGnosisOverview } from '#components'
 
 const { t: $t } = useI18n()
 
-const network = defineModel<string>({ required: true })
+const network = defineModel<string>('network', { required: true })
+const state = defineModel<DashboardCreationState>('state', { required: true })
 const allNetworks = ref([{ text: 'Ethereum', value: 'ethereum', component: IconMegaMenuEthereumOverview }, { text: 'Gnosis', value: 'gnosis', component: IconMegaMenuGnosisOverview }])
+
+const continueDisabled = computed(() => {
+  return network.value === ''
+})
+
+function onContinue () {
+  state.value = ''
+}
+
+function onBack () {
+  state.value = 'type'
+}
 </script>
 
 <template>
@@ -18,8 +32,12 @@ const allNetworks = ref([{ text: 'Ethereum', value: 'ethereum', component: IconM
       </div>
       <BcToggleSingleBar v-model="network" :buttons="allNetworks" />
       <div class="row_container">
-        <Button>{{ $t('dashboard.creation.back') }}</Button>
-        <Button>{{ $t('dashboard.creation.continue') }}</Button>
+        <Button @click="onBack()">
+          {{ $t('dashboard.creation.back') }}
+        </Button>
+        <Button :disabled="continueDisabled" @click="onContinue()">
+          {{ $t('dashboard.creation.continue') }}
+        </Button>
       </div>
     </div>
   </div>

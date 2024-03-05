@@ -16,15 +16,15 @@ watch(() => props.displayType, () => {
 
 const modalVisibility = ref(false)
 
-const state = ref<DashboardCreationState>('none')
+const state = ref<DashboardCreationState>('')
 const changeState = (newState: DashboardCreationState) => {
   state.value = newState
-  if (newState === 'none') {
+  if (newState === '') {
     modalVisibility.value = false
   }
 }
 
-const type = ref<DashboardType>('none')
+const type = ref<DashboardType>('')
 const name = ref<string>('')
 const network = ref<string>('')
 </script>
@@ -45,7 +45,7 @@ const network = ref<string>('')
     </div>
     Current State: {{ state }}
     <div class="button_container">
-      <Button @click="changeState('none')">
+      <Button @click="changeState('')">
         State: None
       </Button>
       <Button @click="changeState('type')">
@@ -57,12 +57,12 @@ const network = ref<string>('')
     </div>
   </div>
   <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
-    <DashboardCreationNetworkMask v-if="state === 'network'" v-model="network" />
-    <DashboardCreationTypeMask v-else-if="state === 'type'" v-model:type="type" v-model:name="name" />
+    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
+    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
   </BcDialog>
   <div v-else-if="displayType === 'panel'">
-    <DashboardCreationNetworkMask v-if="state === 'network'" v-model="network" />
-    <DashboardCreationTypeMask v-else-if="state === 'type'" v-model:type="type" v-model:name="name" />
+    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
+    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
   </div>
 </template>
 
