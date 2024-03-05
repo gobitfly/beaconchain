@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -18,7 +19,7 @@ import (
 )
 
 type DataAccessInterface interface {
-	GetUserDashboards(userId uint64) (t.DashboardData, error)
+	GetUserDashboards(userId uint64) (t.UserDashboardsData, error)
 
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error)
 	GetValidatorDashboardOverview(dashboardId t.VDBIdPrimary) (t.VDBOverviewData, error)
@@ -34,9 +35,9 @@ type DataAccessInterface interface {
 
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
 	AddValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
-	GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
-	GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
-	GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
+	GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
+	GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
+	GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error
 	RemoveValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, validators []string) error
 
@@ -51,9 +52,9 @@ type DataAccessInterface interface {
 	GetValidatorDashboardSlotVizByPublicId(dashboardId t.VDBIdPublic) ([]t.SlotVizEpoch, error)
 	GetValidatorDashboardSlotVizByValidators(dashboardId t.VDBIdValidatorSet) ([]t.SlotVizEpoch, error)
 
-	GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
-	GetValidatorDashboardSummaryByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
-	GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
+	GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
+	GetValidatorDashboardSummaryByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
+	GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (t.VDBGroupSummaryData, error)
 	GetValidatorDashboardGroupSummaryByPublicId(dashboardId t.VDBIdPublic, groupId uint64) (t.VDBGroupSummaryData, error)
 	GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBGroupSummaryData, error)
@@ -61,9 +62,9 @@ type DataAccessInterface interface {
 	GetValidatorDashboardSummaryChartByPublicId(dashboardId t.VDBIdPublic) (t.ChartData[int], error)
 	GetValidatorDashboardSummaryChartByValidators(dashboardId t.VDBIdValidatorSet) (t.ChartData[int], error)
 
-	GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
-	GetValidatorDashboardRewardsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
-	GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
+	GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
+	GetValidatorDashboardRewardsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
+	GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
 	GetValidatorDashboardGroupRewardsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, epoch uint64) (t.VDBGroupRewardsData, error)
 	GetValidatorDashboardGroupRewardsByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64) (t.VDBGroupRewardsData, error)
@@ -71,13 +72,13 @@ type DataAccessInterface interface {
 	GetValidatorDashboardRewardsChartByPublicId(dashboardId t.VDBIdPublic) (t.ChartData[int], error)
 	GetValidatorDashboardRewardsChartByValidators(dashboardId t.VDBIdValidatorSet) (t.ChartData[int], error)
 
-	GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
-	GetValidatorDashboardDutiesByPublicId(dashboardId t.VDBIdPublic, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
-	GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
+	GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
+	GetValidatorDashboardDutiesByPublicId(dashboardId t.VDBIdPublic, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
+	GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error)
 
-	GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
-	GetValidatorDashboardBlocksByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
-	GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
+	GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
+	GetValidatorDashboardBlocksByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
+	GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error)
 
 	GetValidatorDashboardHeatmap(dashboardId t.VDBIdPrimary) (t.VDBHeatmap, error)
 	GetValidatorDashboardHeatmapByPublicId(dashboardId t.VDBIdPublic) (t.VDBHeatmap, error)
@@ -92,9 +93,9 @@ type DataAccessInterface interface {
 	GetValidatorDashboardClDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error)
 	GetValidatorDashboardClDepositsByPublicId(dashboardId t.VDBIdPublic, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error)
 	GetValidatorDashboardClDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error)
-	GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
-	GetValidatorDashboardWithdrawalsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
-	GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
+	GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
+	GetValidatorDashboardWithdrawalsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
+	GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error)
 
 	CloseDataAccessService()
 }
@@ -107,6 +108,9 @@ type DataAccessService struct {
 	Bigtable                *db.Bigtable
 	PersistentRedisDbClient *redis.Client
 }
+
+// ensure DataAccessService implements DataAccessInterface
+var _ DataAccessInterface = DataAccessService{}
 
 func NewDataAccessService(cfg *types.Config) DataAccessService {
 	// Create the data access service
@@ -200,7 +204,7 @@ func (d DataAccessService) CloseDataAccessService() {
 	}
 }
 
-func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, error) {
+func (d DataAccessService) GetUserDashboards(userId uint64) (t.UserDashboardsData, error) {
 	// TODO @recy21
 	return d.dummy.GetUserDashboards(userId)
 }
@@ -331,17 +335,17 @@ func (d DataAccessService) AddValidatorDashboardValidatorsByPublicId(dashboardId
 	return d.dummy.AddValidatorDashboardValidatorsByPublicId(dashboardId, groupId, validators)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardValidatorsByPublicId(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBManageValidatorsTableColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardValidatorsByValidators(dashboardId, cursor, sort, search, limit)
 }
@@ -568,17 +572,17 @@ func (d DataAccessService) GetValidatorDashboardSlotVizByValidators(dashboardId 
 	return d.dummy.GetValidatorDashboardSlotVizByValidators(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardSummaryByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardSummaryByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSummaryByPublicId(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBSummaryTableColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardSummaryByValidators(dashboardId, cursor, sort, search, limit)
 }
@@ -613,17 +617,17 @@ func (d DataAccessService) GetValidatorDashboardSummaryChartByValidators(dashboa
 	return d.dummy.GetValidatorDashboardSummaryChartByValidators(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardRewards(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardRewardsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardRewardsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardRewardsByPublicId(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBRewardsTableColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardRewardsByValidators(dashboardId, cursor, sort, search, limit)
 }
@@ -658,32 +662,32 @@ func (d DataAccessService) GetValidatorDashboardRewardsChartByValidators(dashboa
 	return d.dummy.GetValidatorDashboardRewardsChartByValidators(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardDutiesByPublicId(dashboardId t.VDBIdPublic, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardDutiesByPublicId(dashboardId t.VDBIdPublic, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardDutiesByPublicId(dashboardId, epoch, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[t.VDBDutiesTableColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardDutiesByValidators(dashboardId, epoch, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardBlocksByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardBlocksByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardBlocksByPublicId(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBBlocksTableColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardBlocksByValidators(dashboardId, cursor, sort, search, limit)
 }
@@ -748,17 +752,17 @@ func (d DataAccessService) GetValidatorDashboardClDepositsByValidators(dashboard
 	return d.dummy.GetValidatorDashboardClDepositsByValidators(dashboardId, cursor, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardWithdrawalsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardWithdrawalsByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardWithdrawalsByPublicId(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[t.VDBWithdrawalsTableColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardWithdrawalsByValidators(dashboardId, cursor, sort, search, limit)
 }

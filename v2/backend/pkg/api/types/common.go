@@ -92,12 +92,3 @@ type SearchResult struct {
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
 }
-
-type Dashboard struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-type DashboardData struct {
-	ValidatorDashboards []Dashboard `json:"validator_dashboards"`
-	AccountDashboards   []Dashboard `json:"account_dashboards"`
-}

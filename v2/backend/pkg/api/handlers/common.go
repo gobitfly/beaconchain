@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +19,7 @@ import (
 	b64 "encoding/base64"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
@@ -253,15 +253,13 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 	return paging
 }
 
-func parseSortColumn[T types.ColEnumFactory[T]](column string) (T, error) {
+func parseSortColumn[T enums.EnumFactory[T]](column string) (T, error) {
 	var c T
-	names := c.GetColNames()
-	index := slices.Index(names, column)
-	var err error
-	if index == -1 {
-		err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+	col := c.NewFromString(column)
+	if col.Int() == -1 {
+		return col, errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
 	}
-	return c.NewFromInt(index), err
+	return col, nil
 }
 
 func parseSortOrder(order string) (bool, error) {
@@ -277,7 +275,7 @@ func parseSortOrder(order string) (bool, error) {
 	}
 }
 
-func checkSort[T types.ColEnumFactory[T]](handlerErr *error, r *http.Request) []types.Sort[T] {
+func checkSort[T enums.EnumFactory[T]](handlerErr *error, r *http.Request) []types.Sort[T] {
 	q := r.URL.Query()
 	sortQueries := strings.Split(q.Get("sort"), ",")
 	sorts := make([]types.Sort[T], 0, len(sortQueries))

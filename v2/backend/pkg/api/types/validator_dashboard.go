@@ -236,15 +236,6 @@ type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManage
 
 // ------------------------------------------------------------
 // Misc.
-type VDBIdPrimary int
-type VDBIdPublic string
-type VDBIdValidatorSet []VDBValidator
-
-type VDBValidator struct {
-	Index   uint64 `json:"index"`
-	Version uint64 `json:"version"`
-}
-
 type VDBPostReturnData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`
