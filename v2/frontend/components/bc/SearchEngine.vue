@@ -87,8 +87,7 @@ function cleanUp () {
   lastKnownInput = ''
   inputted.value = ''
   waitingForSearchResults.value = false
-  showDropDown.value = false
-  populateDropDown.value = true
+  populateDropDown.value = false
   results.raw = { data: [] }
 }
 
@@ -160,7 +159,7 @@ function inputMightHaveChanged () {
     cleanUp()
   } else {
     waitingForSearchResults.value = true
-    showDropDown.value = true
+    populateDropDown.value = true
   }
 }
 
@@ -354,6 +353,9 @@ function filterAndOrganizeResults () {
 // This function takes a single result element returned by the API and organizes it into an element
 // simpler to handle by the code of the search bar (not only for displaying).
 // If the result element from the API is somehow unexpected, then the function returns an empty array.
+// The fields that the function read in the API response as well as the place they are displayed
+// in the drop-down are set in the object `TypeInfo` filled in types/searchengine.ts, by its properties
+// dataInSearchAheadResult (sets the fields to read and their order) and dropdownColumns (sets the columns to fill with that ordered data).
 function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
   const emptyResult : OrganizedSingleResult = { columns: [], queryParam: -1, closeness: NaN }
 
@@ -394,7 +396,7 @@ function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : Searc
     columns[0] = TypeInfo[type].title
   }
 
-  // Now calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
+  // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
   // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
   for (const field of TypeInfo[type].dataInSearchAheadResult) {
@@ -458,7 +460,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     {
       chain_id: 1,
       type: 'tokens',
-      str_value: searched + 'Coin'
+      str_value: searched + 'Coin',
+      hash_value: '0xb794f5ea0ba39494ce839613fffba74279579268'
     },
     {
       chain_id: 1,
@@ -469,6 +472,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       chain_id: 1,
       type: 'graffiti',
       str_value: searched + ' tutta la vita'
+    },
+    {
+      chain_id: 1,
+      type: 'contracts',
+      hash_value: '0x' + searched + 'a0ba39494ce839613fffba74279579260',
+      str_value: 'Uniswap'
     }
   )
   if (searchedIsPositiveInteger) {
@@ -481,17 +490,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       {
         chain_id: 1,
         type: 'slots',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce'
       },
       {
         chain_id: 1,
         type: 'blocks',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce'
       },
       {
         chain_id: 1,
         type: 'validators_by_index',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0xa525497ec3116c1310be8d73d2efd536dc0ce6bd4b0163dffddf94dad3d91d154c061b9a3bfd1b704a5ba67fc443974a'
       }
     )
   } else {
@@ -499,24 +511,25 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       {
         chain_id: 1,
         type: 'tokens',
-        str_value: searched
+        str_value: searched,
+        hash_value: '0xb794f5ea0ba39494ce839613fffba74279579268'
       },
       {
         chain_id: 1,
-        type: 'ens_names',
+        type: 'ens_addresses',
         str_value: searched + '.bitfly.eth',
         hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
       },
       {
         chain_id: 1,
         type: 'ens_overview',
-        str_value: searched + '.bitfly.eth'
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
       },
       {
         chain_id: 1,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '.bitfly.eth',
-        num_value: 7
+        str_value: searched + '.bitfly.eth'
       }
     )
   }
@@ -524,18 +537,19 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     {
       chain_id: 17000,
       type: 'contracts',
-      hash_value: '0x' + searched + '00bfCb29F2d2FaDEa7EA50F757Ca938'
+      hash_value: '0x' + searched + 'a0ba39494ce839613fffba74279579260',
+      str_value: 'Uniswap'
     },
     {
       chain_id: 17000,
       type: 'validators_by_withdrawal_address',
-      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938',
-      num_value: 11
+      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938'
     },
     {
       chain_id: 42161,
       type: 'contracts',
-      hash_value: '0x' + searched + '00000000000000000000000000CAFFE'
+      hash_value: '0x' + searched + '00000000000000000000000000CAFFE',
+      str_value: 'Tormato Cash'
     },
     {
       chain_id: 42161,
@@ -550,8 +564,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     {
       chain_id: 8453,
       type: 'validators_by_deposit_address',
-      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa',
-      num_value: 150
+      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
     }
   )
   if (searchedIsPositiveInteger) {
@@ -564,17 +577,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       {
         chain_id: 8453,
         type: 'slots',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca'
       },
       {
         chain_id: 8453,
         type: 'blocks',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca'
       },
       {
         chain_id: 8453,
         type: 'validators_by_index',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0x99f9ec412465e15243a5996205928ef1461fd4ef6b6a0c642748c6f85de72c801751facda0c96454a8c2ad3bd19f91ee'
       },
       {
         chain_id: 100,
@@ -584,17 +600,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       {
         chain_id: 100,
         type: 'slots',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81'
       },
       {
         chain_id: 100,
         type: 'blocks',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81'
       },
       {
         chain_id: 100,
         type: 'validators_by_index',
-        num_value: Number(searched)
+        num_value: Number(searched),
+        hash_value: '0x85e5ac15a728a2bf0b0b4f22312dad780d4e27856e30997ee11f73d74d86682800046a86a01d134dbdf171326cd7cc54'
       }
     )
   } else {
@@ -602,56 +621,54 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       {
         chain_id: 8453,
         type: 'tokens',
-        str_value: searched + 'USD'
+        str_value: searched + 'USD',
+        hash_value: '0xb794f5ea0ba39494ce839613fffba74279579268'
       },
       {
         chain_id: 8453,
         type: 'tokens',
-        str_value: searched + '42'
-      },
-      {
-        chain_id: 8453,
-        type: 'tokens',
-        str_value: searched + 'Plus'
+        str_value: searched + 'Plus',
+        hash_value: '0x0701BF988309bf45a6771afaa6B8802Ba3E24090'
       },
       {
         chain_id: 100,
         type: 'tokens',
-        str_value: searched + ' Coin'
+        str_value: searched + ' Coin',
+        hash_value: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
       },
       {
         chain_id: 100,
-        type: 'ens_names',
+        type: 'ens_addresses',
         str_value: searched + 'hallo.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
         chain_id: 100,
-        type: 'ens_names',
+        type: 'ens_addresses',
         str_value: searched + '.bitfly.eth',
         hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
       },
       {
         chain_id: 100,
         type: 'ens_overview',
-        str_value: searched + 'hallo.eth'
+        str_value: searched + 'hallo.eth',
+        hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
         chain_id: 100,
         type: 'ens_overview',
-        str_value: searched + '.bitfly.eth'
-      },
-      {
-        chain_id: 100,
-        type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + 'hallo.eth',
-        num_value: 2
-      },
-      {
-        chain_id: 100,
-        type: 'validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth',
-        num_value: 150
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557CaBdF'
+      },
+      {
+        chain_id: 100,
+        type: 'validators_by_withdrawal_ens_name',
+        str_value: searched + 'hallo.eth'
+      },
+      {
+        chain_id: 100,
+        type: 'validators_by_withdrawal_ens_name',
+        str_value: searched + '.bitfly.eth'
       }
     )
   }
@@ -670,9 +687,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         v-model="inputted"
         :class="barStyle"
         type="text"
-        placeholder="Search the blockchain"
+        :placeholder="$t('search_engine.placeholder')"
         @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
-        @focus="showDropDown = inputted.length > 0"
+        @focus="showDropDown = true"
       />
       <span
         id="searchbutton"
@@ -722,46 +739,44 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           </span>
         </div>
       </div>
-      <div v-if="waitingForSearchResults">
-        {{ $t('search_engine.searching') }}
+      <div v-if="inputted.length === 0" class="panel-of-results">
+        <div class="bottom-info">
+          {{ $t('search_engine.help') }}
+        </div>
       </div>
-      <div v-else-if="populateDropDown" id="panel-of-results">
+      <div v-else-if="waitingForSearchResults" class="panel-of-results">
+        <div class="bottom-info">
+          {{ $t('search_engine.searching') }}
+        </div>
+      </div>
+      <div v-else-if="populateDropDown" class="panel-of-results">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
-          <!--<div class="network-title">
-            <h2>{{ ChainInfo[network.chainId].name }}</h2>
-          </div>-->
-          <div v-for="type of network.types" :key="type.type" class="type-container">
-            <!--<div class="type-title">
-              <h3>{{ TypeInfo[types.type].title }}</h3>
-            </div>-->
-            <div v-for="(found, i) of type.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, type.type, found.columns[found.queryParam])">
-              <span>
-                <IconTypeIcons :type="type.type" />
+          <div v-for="typ of network.types" :key="typ.type" class="type-container">
+            <div v-for="(found, i) of typ.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, typ.type, found.columns[found.queryParam])">
+              <span class="columns-icons">
+                <IconTypeIcons :type="typ.type" />
                 <IconNetworkIcons :chain-id="network.chainId" />
               </span>
-              <span>
-                &nbsp;
-                0:
+              <span class="columns-0">
                 {{ found.columns[0] }}
-                &nbsp;
               </span>
-              <span>
-                1:
-                {{ found.columns[1] }}
-                &nbsp;
+              <span class="columns-1and2">
+                <span class="columns-1">
+                  {{ found.columns[1] }}
+                </span>
+                <span class="columns-2">
+                  {{ found.columns[2] }}
+                </span>
               </span>
-              <span>
-                2:
-                {{ found.columns[2] }}
-                &nbsp;
-              </span>
-              <span>
-                {{ CategoryInfo[TypeInfo[type.type].category].filterLabel }}
+              <span class="columns-category">
+                <span class="category-label">
+                  {{ CategoryInfo[TypeInfo[typ.type].category].filterLabel }}
+                </span>
               </span>
             </div>
           </div>
         </div>
-        <div id="absent-results">
+        <div class="bottom-info">
           <span v-if="results.organized.howManyResultsIn == 0">
             {{ $t('search_engine.no_result_matches') }}
             {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
@@ -943,37 +958,97 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#drop-down #panel-of-results {
+#drop-down .panel-of-results {
+  display: flex;
+  flex-direction: column;
   min-height: 128px;
   max-height: 270px;  // the height of the filter section is subtracted
+  right: 0px;
   overflow: auto;
-  h2 {
-    margin: 0;
-  }
-  h3 {
-    margin: 0;
-  }
+
   .network-container {
-    margin-bottom: 24px;
-    .network-title {
-      background-color: #b0b0b0;
-      padding-left: 4px;
-    }
+    display: flex;
+    flex-direction: column;
+    border-bottom: 0.5px dashed var(--light-grey-3);
+    right: 0px;
     .type-container {
-      border-bottom: 0.5px dashed var(--light-grey-3);
-      padding: 4px;
-      .type-title {
-       }
+      display: flex;
+      flex-direction: column;
+      right: 0px;
       .single-result {
         cursor: pointer;
+        display: grid;
+        min-width: 0;
+        right: 0px;
+        @media (min-width: 600px) { // large screen
+          grid-template-columns: 64px 120px auto auto;
+        }
+        @media (max-width: 600px) { // mobile
+          grid-template-columns: 40px 100px 190px;
+        }
+
+        .columns-icons {
+          border: 1px solid rgba(0, 0, 0, 0.8);
+          grid-column: 1;
+          grid-row: 1;
+          @media (max-width: 600px) { // mobile
+            grid-row-end: span 2;
+          }
+        }
+        .columns-0 {
+          border: 1px solid rgba(0, 0, 0, 0.8);
+          grid-column: 2;
+          grid-row: 1;
+          overflow-wrap: break-word;
+        }
+        .columns-1and2 {
+          display: flex;
+          min-width: 0;
+          border: 1px solid rgba(0, 0, 0, 0.8);
+          grid-column: 3;
+          grid-row: 1;
+          @media (max-width: 600px) { // mobile
+            grid-row-end: span 2;
+          }
+          .columns-1 {
+            display: flex;
+          min-width: 0;
+            overflow-wrap: break-word;
+          }
+          .columns-2 {
+            display: flex;
+          min-width: 0;
+            overflow-wrap: break-word;
+          }
+        }
+        .columns-category {
+          @media (min-width: 600px) { // large screen
+            grid-column: 4;
+            grid-row: 1;
+          }
+          @media (max-width: 600px) { // mobile
+            grid-column: 2;
+            grid-row: 2;
+          }
+          border: 1px solid rgba(0, 0, 0, 0.8);
+          .category-label {
+            @media (min-width: 600px) { // large screen
+              float: right;
+            }
+          }
+        }
       }
     }
   }
-}
 
-#absent-results {
-  @include fonts.standard_text;
-  color: var(--text-color-disabled);
-  text-align: center;
+  .bottom-info {
+    width: 100%;
+    @include fonts.standard_text;
+    color: var(--text-color-disabled);
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    margin-top: auto;
+  }
 }
 </style>

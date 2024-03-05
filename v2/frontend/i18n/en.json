@@ -157,10 +157,12 @@
     "press_kit": "Press Kit"
   },
   "search_engine": {
+    "placeholder": "Search the blockchain",
     "searching": "Searching...",
     "no_result_matches": "No result matches",
     "your_input": " your input.",
     "your_filters": " your filters",
+    "help": "Type something and select the results that you are interested in by means of the filters above.",
     "result_hidden": "result hidden",
     "results_hidden": "results hidden",
     "by_your_filters": "by your filters",

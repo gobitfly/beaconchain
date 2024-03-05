@@ -61,7 +61,7 @@ function redirectToRelevantPage (searched : string, type : ResultType, chain : C
       break
     case ResultType.Contracts :
     case ResultType.Accounts :
-    case ResultType.Ens :
+    case ResultType.EnsAddresses :
       path = '/address/' + searched
       break
     case ResultType.EnsOverview :
