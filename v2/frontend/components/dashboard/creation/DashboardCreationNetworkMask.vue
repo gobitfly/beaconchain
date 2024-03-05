@@ -1,5 +1,10 @@
 <script lang="ts" setup>
+import { IconMegaMenuEthereumOverview, IconMegaMenuGnosisOverview } from '#components'
+
 const { t: $t } = useI18n()
+
+const network = defineModel<string>({ required: true })
+const allNetworks = ref([{ text: 'Ethereum', value: 'ethereum', component: IconMegaMenuEthereumOverview }, { text: 'Gnosis', value: 'gnosis', component: IconMegaMenuGnosisOverview }])
 </script>
 
 <template>
@@ -11,35 +16,34 @@ const { t: $t } = useI18n()
       <div class="subtitle_text">
         {{ $t('dashboard.creation.network.subtitle') }}
       </div>
-      <div class="network_button_container">
-        <Button>Ethereum</Button>
-        <Button>Gnosis</Button>
-      </div>
-      <div class="continue_button_container">
+      <BcToggleSingleBar v-model="network" :buttons="allNetworks" />
+      <div class="row_container">
+        <Button>{{ $t('dashboard.creation.back') }}</Button>
         <Button>{{ $t('dashboard.creation.continue') }}</Button>
       </div>
     </div>
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
   .mask_container{
     width: 460px;
     height: 248px;
+    padding: var(--padding-large);
 
     .element_container{
       display: flex;
       flex-direction: column;
       gap: 10px;
 
-      .network_button_container{
+      .row_container{
         display: flex;
+        justify-content: flex-end;
         gap: 10px;
       }
 
-      .continue_button_container{
-        display: flex;
-        justify-content: flex-end;
+      button {
+        width: 90px;
       }
     }
   }

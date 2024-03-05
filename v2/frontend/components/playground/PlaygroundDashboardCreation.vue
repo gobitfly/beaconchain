@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 
-import { type DisplayType } from '~/types/dashboard/creation'
+import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
-const displayType = ref<DisplayType>('modal')
+const displayType = ref<DashboardCreationDisplayType>('modal')
 
-const changeDisplayType = (newDisplayType: DisplayType) => {
+const changeDisplayType = (newDisplayType: DashboardCreationDisplayType) => {
   displayType.value = newDisplayType
 }
 </script>

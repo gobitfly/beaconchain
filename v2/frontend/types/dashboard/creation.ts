@@ -1,3 +1,3 @@
-// TODO: Most likely these types should have more specific names
-export type State = 'none' | 'type' | 'network'
-export type DisplayType = 'modal' | 'panel'
+export type DashboardType = 'account' | 'validator' | 'none'
+export type DashboardCreationState = 'type' | 'network' | 'none'
+export type DashboardCreationDisplayType = 'modal' | 'panel'
