@@ -1,3 +1,5 @@
+// When updating values here, please keep in mind that you might have to updated utils/colors.ts too
+
 :root {
   --grey: #a5a5a5;
   --grey-1: #e9e9e9;
@@ -51,10 +53,17 @@
   --input-active-text-color: var(--light-black);
   --input-placeholder-text-color: var(--grey);
 
+  --tooltip-background: var(--light-grey-2);
+  --tooltip-text-color: var(--light-black);
+
   --link-color: var(--blue);
 
   --negative-color: var(--light-red);
   --positive-color: var(--light-green);
+
+  --megamenu-panel-color: var(--light-grey);
+  --megamenu-text-color: var(--grey);
+  --megamenu-hover-color: var(--light-grey-3);
 
   &.dark-mode {
     --primary-color: var(--primary-orange);
@@ -83,9 +92,16 @@
     --input-active-text-color: var(--light-grey);
     --input-placeholder-text-color: var(--grey);
 
+    --tooltip-background: var(--light-grey);
+    --tooltip-text-color: var(--light-black);
+
     --link-color: var(--light-blue);
 
     --negative-color: var(--flashy-red);
     --positive-color: var(--green);
+
+    --megamenu-panel-color: var(--graphite);
+    --megamenu-text-color: var(--grey);
+    --megamenu-hover-color: var(--asphalt);
   }
 }

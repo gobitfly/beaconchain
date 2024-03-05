@@ -1,5 +1,9 @@
 {
+  "locales" : {
+    "date": "en-US"
+  },
   "common": {
+    "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator",
     "earned": "Earned",
@@ -111,6 +115,10 @@
           "validators_slashings": "Validators",
           "apr": "APR",
           "luck": "Luck"
+        },
+        "chart":{
+          "all_groups": "All Groups",
+          "efficiency": "Efficiency"
         }
       },
       "tabs": {
@@ -140,6 +148,57 @@
     "submit": "Login",
     "title": "Login",
     "email": "Email address"
+  },
+  "header": {
+    "megamenu": {
+      "blockchain": "Blockchain",
+      "overview": "Overview",
+      "epochs": "Epochs",
+      "slots": "Slots",
+      "blocks": "Blocks",
+      "txs": "Txs",
+      "txsL1L2": "Txs (L1 to L2)",
+      "txsL2L1": "Txs (L2 to L1)",
+      "mempool": "Mempool",
+      "validators": "Validators",
+      "slashings": "Slashings",
+      "validator_leaderboard": "Validator Leaderboard",
+      "deposit_leaderboard": "Deposit Leaderboard",
+      "deposits": "Deposits",
+      "withdrawals": "Withdrawals",
+      "staking_pools": "Staking Pools",
+      "run_a_validator": "Run a validator!",
+      "eth_store": "ETH.STORE",
+      "staking_services": "Staking Services",
+      "pool_benchmarks": "Pool Blockchain",
+      "rocket_pool_stats": "Rocket Pool Stats",
+      "stats": "Stats",
+      "charts": "Charts",
+      "reward_history": "Reward History",
+      "profit_calculator": "Profit Calculator",
+      "block_viz": "Block Viz",
+      "correlations": "Correlations",
+      "eip1599_burn": "EIP-1599 Burn",
+      "relays": "Relays",
+      "tools": "Tools",
+      "beaconchain_app": "Beaconchain App",
+      "beaconchain_premium": "Beaconchain Premium",
+      "webhooks": "Webhooks",
+      "api_docs": "API Docs",
+      "api_pricing": "API Pricing",
+      "unit_converter": "Unit Converter",
+      "gasnow": "GasNow",
+      "broadcast_signed_messages": "Broadcast Signed Messages",
+      "services": "Services",
+      "eversteel": "Eversteel",
+      "notifications": "Notifications",
+      "graffiti_wall": "Graffiti Wall",
+      "ethereum_clients": "Ethereum Clients",
+      "knowledge_base": "Knowledge Base",
+      "slot_finder": "Slot Finder",
+      "community": "Community",
+      "dashboard": "Dashboard"
+    }
   },
   "footer": {
     "legal_notices": "Legal Notices",
