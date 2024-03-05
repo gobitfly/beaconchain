@@ -22,31 +22,27 @@ type DataAccessInterface interface {
 	GetUserDashboards(userId uint64) (t.UserDashboardsData, error)
 
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error)
+	RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error
+
+	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (t.DashboardInfo, error)
+	GetValidatorDashboardInfoByPublicId(dashboardId t.VDBIdPublic) (t.DashboardInfo, error)
+
 	GetValidatorDashboardOverview(dashboardId t.VDBIdPrimary) (t.VDBOverviewData, error)
 	GetValidatorDashboardOverviewByPublicId(publicDashboardId t.VDBIdPublic) (t.VDBOverviewData, error)
 	GetValidatorDashboardOverviewByValidators(validators t.VDBIdValidatorSet) (t.VDBOverviewData, error)
-	RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error
-	RemoveValidatorDashboardByPublicId(dashboardId t.VDBIdPublic) error
 
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (t.VDBOverviewGroup, error)
-	CreateValidatorDashboardGroupByPublicId(dashboardId t.VDBIdPublic, name string) (t.VDBOverviewGroup, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
-	RemoveValidatorDashboardGroupByPublicId(dashboardId t.VDBIdPublic, groupId uint64) error
 
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
-	AddValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error)
+	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error
 	GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	GetValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
 	GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error)
-	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error
-	RemoveValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, validators []string) error
 
 	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
-	CreateValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
 	UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
-	UpdateValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error)
 	RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string) error
-	RemoveValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, publicDashboardId string) error
 
 	GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error)
 	GetValidatorDashboardSlotVizByPublicId(dashboardId t.VDBIdPublic) ([]t.SlotVizEpoch, error)
@@ -213,6 +209,16 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 	return d.dummy.CreateValidatorDashboard(userId, name, network)
 }
 
+func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (t.DashboardInfo, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardInfo(dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardInfoByPublicId(dashboardId t.VDBIdPublic) (t.DashboardInfo, error) {
+	// TODO @recy21
+	return d.dummy.GetValidatorDashboardInfoByPublicId(dashboardId)
+}
+
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBIdPrimary) (t.VDBOverviewData, error) {
 	// WORKING Rami
 
@@ -310,29 +316,14 @@ func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	return d.dummy.CreateValidatorDashboardGroup(dashboardId, name)
 }
 
-func (d DataAccessService) CreateValidatorDashboardGroupByPublicId(dashboardId t.VDBIdPublic, name string) (t.VDBOverviewGroup, error) {
-	// TODO @recy21
-	return d.dummy.CreateValidatorDashboardGroupByPublicId(dashboardId, name)
-}
-
 func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
 	// TODO @recy21
 	return d.dummy.RemoveValidatorDashboardGroup(dashboardId, groupId)
 }
 
-func (d DataAccessService) RemoveValidatorDashboardGroupByPublicId(dashboardId t.VDBIdPublic, groupId uint64) error {
-	// TODO @recy21
-	return d.dummy.RemoveValidatorDashboardGroupByPublicId(dashboardId, groupId)
-}
-
 func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
 	// TODO @recy21
 	return d.dummy.AddValidatorDashboardValidators(dashboardId, groupId, validators)
-}
-
-func (d DataAccessService) AddValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
-	// TODO @recy21
-	return d.dummy.AddValidatorDashboardValidatorsByPublicId(dashboardId, groupId, validators)
 }
 
 func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
@@ -355,19 +346,9 @@ func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBI
 	return d.dummy.RemoveValidatorDashboardValidators(dashboardId, validators)
 }
 
-func (d DataAccessService) RemoveValidatorDashboardValidatorsByPublicId(dashboardId t.VDBIdPublic, validators []string) error {
-	// TODO @recy21
-	return d.dummy.RemoveValidatorDashboardValidatorsByPublicId(dashboardId, validators)
-}
-
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
 	// TODO @recy21
 	return d.dummy.CreateValidatorDashboardPublicId(dashboardId, name, showGroupNames)
-}
-
-func (d DataAccessService) CreateValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
-	// TODO @recy21
-	return d.dummy.CreateValidatorDashboardPublicIdByPublicId(dashboardId, name, showGroupNames)
 }
 
 func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
@@ -375,19 +356,9 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdP
 	return d.dummy.UpdateValidatorDashboardPublicId(dashboardId, publicDashboardId, name, showGroupNames)
 }
 
-func (d DataAccessService) UpdateValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
-	// TODO @recy21
-	return d.dummy.UpdateValidatorDashboardPublicIdByPublicId(dashboardId, publicDashboardId, name, showGroupNames)
-}
-
 func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string) error {
 	// TODO @recy21
 	return d.dummy.RemoveValidatorDashboardPublicId(dashboardId, publicDashboardId)
-}
-
-func (d DataAccessService) RemoveValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, publicDashboardId string) error {
-	// TODO @recy21
-	return d.dummy.RemoveValidatorDashboardPublicIdByPublicId(dashboardId, publicDashboardId)
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
