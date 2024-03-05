@@ -6,7 +6,7 @@ const { t: $t } = useI18n()
 
 const type = defineModel<DashboardType>('type', { required: true })
 const state = defineModel<DashboardCreationState>('state', { required: true })
-const allTypes = ref([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
+const typeButtons = ref([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
 
 const name = defineModel<string>('name', { required: true })
 
@@ -32,7 +32,7 @@ function onContinue () {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="type" :buttons="allTypes" />
+      <BcToggleSingleBar v-model="type" :buttons="typeButtons" :initial="type" />
       <div class="row_container">
         <InputText v-model="name" :placeholder="$t('dashboard.creation.type.name')" class="input-field" />
         <Button class="button" :disabled="continueDisabled" @click="onContinue()">

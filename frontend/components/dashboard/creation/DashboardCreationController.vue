@@ -9,20 +9,21 @@ const props = defineProps<Props>()
 watch(() => props.displayType, () => {
   if (props.displayType === 'panel') {
     modalVisibility.value = false
-  } else {
+    state.value = 'type'
+  } else if (props.displayType === 'modal') {
     modalVisibility.value = true
+    state.value = 'type'
+  } else {
+    state.value = ''
+    type.value = ''
+    name.value = ''
+    network.value = ''
   }
 })
 
 const modalVisibility = ref(false)
 
 const state = ref<DashboardCreationState>('')
-const changeState = (newState: DashboardCreationState) => {
-  state.value = newState
-  if (newState === '') {
-    modalVisibility.value = false
-  }
-}
 
 const type = ref<DashboardType>('')
 const name = ref<string>('')
@@ -42,18 +43,6 @@ const network = ref<string>('')
     </div>
     <div>
       Network: {{ network }}
-    </div>
-    Current State: {{ state }}
-    <div class="button_container">
-      <Button @click="changeState('')">
-        State: None
-      </Button>
-      <Button @click="changeState('type')">
-        State: Type
-      </Button>
-      <Button @click="changeState('network')">
-        State: Network
-      </Button>
     </div>
   </div>
   <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
