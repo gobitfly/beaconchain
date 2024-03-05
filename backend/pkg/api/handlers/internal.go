@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 
 	"github.com/gorilla/mux"
@@ -50,7 +51,20 @@ func (h HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *
 // Dashboards
 
 func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	userId, err := getUser(r)
+	if err != nil {
+		returnUnauthorized(w, err)
+		return
+	}
+	data, err := h.dai.GetUserDashboards(userId)
+	if err != nil {
+		returnInternalServerError(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.UserDashboardsData]{
+		Data: data,
+	}
+	returnOk(w, response)
 }
 
 // --------------------------------------
@@ -224,6 +238,7 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		returnBadRequest(w, err)
 		return
 	}
+	// TODO check group limit reached
 
 	var data types.VDBOverviewGroup
 	switch dashboardId := dashboardId.(type) {
@@ -239,7 +254,6 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		returnInternalServerError(w, err)
 		return
 	}
-	// TODO check group limit reached
 	response := types.ApiResponse{
 		Data: data,
 	}
@@ -322,7 +336,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	groupId := checkGroupId(&err, q.Get("group_id"))
 	pagingParams := checkPagingParams(&err, q)
-	sortingParams := checkSort[types.VDBManageValidatorsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBManageValidatorsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -531,7 +545,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[types.VDBSummaryTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBSummaryColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -629,7 +643,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[types.VDBRewardsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBRewardsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -729,7 +743,7 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	epoch := checkUint(&err, vars["epoch"], "epoch")
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[types.VDBDutiesTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBDutiesColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -764,7 +778,7 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[types.VDBBlocksTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBBlocksColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -931,7 +945,7 @@ func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Response
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[types.VDBWithdrawalsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBWithdrawalsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
