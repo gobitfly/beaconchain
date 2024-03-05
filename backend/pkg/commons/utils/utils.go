@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -219,4 +220,11 @@ func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validator
 		}
 	}
 	return participatingValidators
+}
+
+func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
+	elapsed := time.Since(start)
+	if elapsed < intendedMinWait {
+		time.Sleep(intendedMinWait - elapsed)
+	}
 }

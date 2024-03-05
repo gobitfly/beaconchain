@@ -1,16 +1,13 @@
 package dataaccess
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -18,8 +15,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-	"golang.org/x/sync/errgroup"
 )
 
 type DataAccessInterface interface {
@@ -107,10 +102,10 @@ type DataAccessInterface interface {
 type DataAccessService struct {
 	dummy DummyService
 
-	readerDb                *sqlx.DB
-	writerDb                *sqlx.DB
-	bigtable                *db.Bigtable
-	persistentRedisDbClient *redis.Client
+	ReaderDb                *sqlx.DB
+	WriterDb                *sqlx.DB
+	Bigtable                *db.Bigtable
+	PersistentRedisDbClient *redis.Client
 }
 
 func NewDataAccessService(cfg *types.Config) DataAccessService {
@@ -143,8 +138,8 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
 		})
 
-		dataAccessService.readerDb = db.ReaderDb
-		dataAccessService.writerDb = db.WriterDb
+		dataAccessService.ReaderDb = db.ReaderDb
+		dataAccessService.WriterDb = db.WriterDb
 	}()
 
 	// Initialize the bigtable
@@ -155,7 +150,7 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 		if err != nil {
 			log.Fatal(err, "error connecting to bigtable", 0)
 		}
-		dataAccessService.bigtable = bt
+		dataAccessService.Bigtable = bt
 	}()
 
 	// Initialize the tiered cache (redis)
@@ -174,13 +169,13 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 		defer wg.Done()
 		rdc := redis.NewClient(&redis.Options{
 			Addr:        utils.Config.RedisSessionStoreEndpoint,
-			ReadTimeout: time.Second * 20,
+			ReadTimeout: time.Second * 60,
 		})
 
 		if err := rdc.Ping(context.Background()).Err(); err != nil {
 			log.Fatal(err, "error connecting to persistent redis store", 0)
 		}
-		dataAccessService.persistentRedisDbClient = rdc
+		dataAccessService.PersistentRedisDbClient = rdc
 	}()
 
 	wg.Wait()
@@ -194,14 +189,14 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 }
 
 func (d DataAccessService) CloseDataAccessService() {
-	if d.readerDb != nil {
-		d.readerDb.Close()
+	if d.ReaderDb != nil {
+		d.ReaderDb.Close()
 	}
-	if d.writerDb != nil {
-		d.writerDb.Close()
+	if d.WriterDb != nil {
+		d.WriterDb.Close()
 	}
-	if d.bigtable != nil {
-		d.bigtable.Close()
+	if d.Bigtable != nil {
+		d.Bigtable.Close()
 	}
 }
 
@@ -211,12 +206,78 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (t.DashboardData, er
 }
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
-	// TODO @recy21
 	return d.dummy.CreateValidatorDashboard(userId, name, network)
 }
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBIdPrimary) (t.VDBOverviewData, error) {
-	// TODO @recy21
+	// WORKING Rami
+
+	// TODO: Get the validators from the dashboardId
+	validators := make([]uint64, 100)
+	for i := uint64(0); i < uint64(len(validators)); i++ {
+		validators[i] = i
+	}
+
+	data := t.VDBOverviewData{}
+	// get data from DB
+	// data.Groups =
+	qry := `SELECT
+		status AS statename, COUNT(*) AS statecount
+	FROM
+		validators
+	WHERE
+		validatorindex = ANY($1)
+	GROUP BY
+		status`
+	var currentStateCounts []*struct {
+		Name  string `db:"statename"`
+		Count uint64 `db:"statecount"`
+	}
+	err := db.ReaderDb.Select(&currentStateCounts, qry, validators)
+	if err != nil {
+		// utils.Log(err, "error retrieving validators data", 0)
+		return t.VDBOverviewData{}, err
+	}
+	for _, state := range currentStateCounts {
+		// count exited, pending, slashed?
+		data.Validators.Total += state.Count
+		switch state.Name {
+		// exiting_online, exiting_offline?
+		case "active_online":
+			fallthrough
+		case "active_offline":
+			data.Validators.Active += state.Count
+		case "pending":
+			data.Validators.Pending += state.Count
+		case "slashed":
+			fallthrough
+		case "exited":
+			data.Validators.Exited += state.Count
+		case "slashing_online":
+			fallthrough
+		case "slashing_offline":
+			data.Validators.Slashed += state.Count
+		}
+	}
+	income := types.ValidatorIncomePerformance{}
+	err = db.GetValidatorIncomePerformance(validators, &income)
+	if err != nil {
+		return t.VDBOverviewData{}, err
+	}
+	data.Rewards.Day.El = income.ElIncomeWei1d
+	data.Rewards.Day.Cl = income.ClIncomeWei1d
+	data.Rewards.Week.El = income.ElIncomeWei7d
+	data.Rewards.Week.Cl = income.ClIncomeWei7d
+	data.Rewards.Month.El = income.ElIncomeWei31d
+	data.Rewards.Month.Cl = income.ClIncomeWei31d
+	data.Rewards.Year.El = income.ElIncomeWei365d
+	data.Rewards.Year.Cl = income.ClIncomeWei365d
+	data.Rewards.Total.El = income.ElIncomeWeiTotal
+	data.Rewards.Total.Cl = income.ClIncomeWeiTotal
+
+	//data.Luck =
+	//data.Apr =
+
 	return d.dummy.GetValidatorDashboardOverview(dashboardId)
 }
 
@@ -320,8 +381,6 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdP
 	return d.dummy.RemoveValidatorDashboardPublicId(dashboardId, publicDashboardId)
 }
 
-var getValidatorDashboardSlotVizMux = &sync.Mutex{}
-
 func (d DataAccessService) RemoveValidatorDashboardPublicIdByPublicId(dashboardId t.VDBIdPublic, publicDashboardId string) error {
 	// TODO @recy21
 	return d.dummy.RemoveValidatorDashboardPublicIdByPublicId(dashboardId, publicDashboardId)
@@ -329,15 +388,16 @@ func (d DataAccessService) RemoveValidatorDashboardPublicIdByPublicId(dashboardI
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
 	log.Infof("retrieving data for dashboard with id %d", dashboardId)
-	// make sure that the function is only executed once during development not to go oom
-	getValidatorDashboardSlotVizMux.Lock()
-	defer getValidatorDashboardSlotVizMux.Unlock()
-	// TODO: Get the validators from the dashboardId
 
-	dummyValidators := []uint64{900005, 900006, 900007, 900008, 900009}
-	validatorsMap := make(map[uint64]bool)
-	for _, v := range dummyValidators {
-		validatorsMap[v] = true
+	// TODO: Get the validators from the dashboardId
+	setSize := uint32(1000)
+
+	validatorsMap := make(map[uint32]bool, setSize)
+
+	validatorsArray := make([]uint32, 0, setSize)
+	for i := uint32(0); i < setSize; i++ {
+		validatorsMap[i] = true
+		validatorsArray = append(validatorsArray, i)
 	}
 
 	// Get min/max slot/epoch
@@ -347,158 +407,27 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 	minEpoch := headEpoch - 2
 	maxEpoch := headEpoch + 1
 
-	// create waiting group for concurrency
-	gOuter := &errgroup.Group{}
-
-	// Get the fulfilled duties
-	var validatorDutiesInfo []types.ValidatorDutyInfo
-	gOuter.Go(func() error {
-		var err error
-		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(d.readerDb, minEpoch*slotsPerEpoch)
-		return err
-	})
-
-	// Gather the assignments data
-	propAssignmentsForSlot := make(map[uint64]uint64)
-	attAssignmentsForSlot := make(map[uint64]map[uint64]bool)
-	totalSyncAssignmentsForEpoch := make(map[uint64][]uint64)
-	syncAssignmentsForEpoch := make(map[uint64]map[uint64]bool)
-	{
-		muxPropAssignmentsForSlot := &sync.Mutex{}
-		muxAttAssignmentsForSlot := &sync.Mutex{}
-		muxTotalSyncAssignmentsForEpoch := &sync.Mutex{}
-		muxSyncAssignmentsForEpoch := &sync.Mutex{}
-
-		for e := minEpoch; e <= maxEpoch; e++ {
-			epoch := e
-			gOuter.Go(func() error {
-				// Get the epoch assignments data
-				key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
-				encodedRedisCachedEpochAssignments, err := d.persistentRedisDbClient.Get(context.Background(), key).Result()
-				if err != nil {
-					return err
-				}
-
-				var serializedAssignmentsData bytes.Buffer
-				_, err = serializedAssignmentsData.Write([]byte(encodedRedisCachedEpochAssignments))
-				if err != nil {
-					return err
-				}
-				var decodedRedisCachedEpochAssignments types.RedisCachedEpochAssignments
-
-				dec := gob.NewDecoder(&serializedAssignmentsData)
-				err = dec.Decode(&decodedRedisCachedEpochAssignments)
-				if err != nil {
-					return err
-				}
-
-				// Save the assignments data in maps
-
-				// Proposals
-				for slot, propValidator := range decodedRedisCachedEpochAssignments.Assignments.ProposerAssignments {
-					// Only add results for validators we care about
-					if _, isValid := validatorsMap[propValidator]; isValid {
-						muxPropAssignmentsForSlot.Lock()
-						propAssignmentsForSlot[slot] = propValidator
-						muxPropAssignmentsForSlot.Unlock()
-					}
-				}
-
-				// Attestations
-				for key, attValidator := range decodedRedisCachedEpochAssignments.Assignments.AttestorAssignments {
-					keyParts := strings.Split(key, "-")
-					slot, err := strconv.ParseUint(keyParts[0], 10, 64)
-					if err != nil {
-						return err
-					}
-
-					muxAttAssignmentsForSlot.Lock()
-					if attAssignmentsForSlot[slot] == nil {
-						attAssignmentsForSlot[slot] = make(map[uint64]bool, 0)
-					}
-					// Only add results for validators we care about
-					if _, isValid := validatorsMap[attValidator]; isValid {
-						attAssignmentsForSlot[slot][attValidator] = true
-					}
-					muxAttAssignmentsForSlot.Unlock()
-				}
-
-				// Syncs
-				muxTotalSyncAssignmentsForEpoch.Lock()
-				totalSyncAssignmentsForEpoch[epoch] = decodedRedisCachedEpochAssignments.Assignments.SyncAssignments
-				muxTotalSyncAssignmentsForEpoch.Unlock()
-				muxSyncAssignmentsForEpoch.Lock()
-				if syncAssignmentsForEpoch[epoch] == nil {
-					syncAssignmentsForEpoch[epoch] = make(map[uint64]bool, 0)
-				}
-				for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
-					// Only add results for validators we care about
-					if _, isValid := validatorsMap[validator]; isValid {
-						syncAssignmentsForEpoch[epoch][validator] = true
-					}
-				}
-				muxSyncAssignmentsForEpoch.Unlock()
-
-				return nil
-			})
-		}
-	}
-
-	// wait for routines to complete
-	if err := gOuter.Wait(); err != nil {
+	dutiesInfo, releaseLock, err := services.GetCurrentDutiesInfo()
+	defer releaseLock() // important to unlock once done, otherwise data updater cant update the data
+	if err != nil {
 		return nil, err
 	}
 
+	epochToIndexMap := make(map[uint64]uint64)
+	slotToIndexMap := make(map[uint64]uint64)
+
+	// attProcessing := time.Duration(0)
 	// Restructure proposal status, attestations, sync duties and slashings
-	latestSlot := uint64(0)
-	slotStatus := make(map[uint64]uint64)
-	slotBlock := make(map[uint64]uint64)
-	slotAttested := make(map[uint64]map[uint64]bool)
-	slotSyncParticipated := make(map[uint64]map[uint64]bool)
-	slotValiPropSlashed := make(map[uint64]bool)
-	slotValiAttSlashed := make(map[uint64]bool)
-	for _, duty := range validatorDutiesInfo {
-		if duty.Slot > latestSlot {
-			latestSlot = duty.Slot
-		}
-		slotStatus[duty.Slot] = duty.Status
-		slotBlock[duty.Slot] = duty.Block
-		if duty.Status == 1 { // 1: Proposed
-			// Attestations
-			if duty.AttestedSlot.Valid {
-				attestedSlot := uint64(duty.AttestedSlot.Int64)
-				if slotAttested[attestedSlot] == nil {
-					slotAttested[attestedSlot] = make(map[uint64]bool, 0)
-				}
-				for _, validator := range duty.Validators {
-					slotAttested[attestedSlot][uint64(validator)] = true
-				}
-			}
-			// Syncs
-			if slotSyncParticipated[duty.Slot] == nil {
-				slotSyncParticipated[duty.Slot] = make(map[uint64]bool, 0)
-
-				partValidators := utils.GetParticipatingSyncCommitteeValidators(duty.SyncAggregateBits, totalSyncAssignmentsForEpoch[utils.EpochOfSlot(duty.Slot)])
-				for _, validator := range partValidators {
-					slotSyncParticipated[duty.Slot][validator] = true
-				}
-			}
-			// Slashings
-			if duty.ProposerSlashingsCount > 0 {
-				slotValiPropSlashed[duty.Slot] = true
-			}
-			if duty.AttesterSlashingsCount > 0 {
-				slotValiAttSlashed[duty.Slot] = true
-			}
-		}
-	}
-
 	slotVizEpochs := make([]t.SlotVizEpoch, maxEpoch-minEpoch+1)
 	for epochIdx := uint64(0); epochIdx <= maxEpoch-minEpoch; epochIdx++ {
 		epoch := maxEpoch - epochIdx
+		epochToIndexMap[epoch] = epochIdx
 
 		// Set the epoch number
 		slotVizEpochs[epochIdx].Epoch = epoch
+
+		// every validator can only attest once per epoch
+		// attestedValidators := make(map[uint32]bool, len(validatorsArray))
 
 		// Set the slots
 		slotVizEpochs[epochIdx].Slots = make([]t.VDBSlotVizSlot, slotsPerEpoch)
@@ -506,65 +435,60 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			// Set the slot number
 			slot := epoch*slotsPerEpoch + slotIdx
 			slotVizEpochs[epochIdx].Slots[slotIdx].Slot = slot
-
+			slotToIndexMap[slot] = slotIdx
 			// Set the slot status
 			status := "scheduled"
-			if _, ok := slotStatus[slot]; ok {
-				switch slotStatus[slot] {
-				case 0, 2:
+			if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+				switch dutiesInfo.SlotStatus[slot] {
+				case 0, 2, 3:
 					status = "missed"
 				case 1:
 					status = "proposed"
-				case 3:
-					status = "orphaned"
+					// case 3:
+					// 	status = "orphaned"
 				}
 			}
 			slotVizEpochs[epochIdx].Slots[slotIdx].Status = status
 
 			// Get the proposals for the slot
-			if _, ok := propAssignmentsForSlot[slot]; ok {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizActiveDuty{}
+			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
+				// Only add results for validators we care about
+				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
+					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizActiveDuty{}
 
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = propAssignmentsForSlot[slot]
+					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = dutiesInfo.PropAssignmentsForSlot[slot]
 
-				status := "scheduled"
-				dutyObject := slot
-				if _, ok := slotStatus[slot]; ok {
-					switch slotStatus[slot] {
-					case 0, 2:
-						status = "failed"
-					case 1, 3:
-						status = "success"
-						dutyObject = slotBlock[slot]
+					status := "scheduled"
+					dutyObject := slot
+					if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+						switch dutiesInfo.SlotStatus[slot] {
+						case 0, 2:
+							status = "failed"
+						case 1, 3:
+							status = "success"
+							dutyObject = dutiesInfo.SlotBlock[slot]
+						}
 					}
-				}
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Status = status
-				slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.DutyObject = dutyObject
-			}
-
-			// Get the attestation summary for the slot
-			if len(attAssignmentsForSlot[slot]) > 0 {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
-				for validator := range attAssignmentsForSlot[slot] {
-					if slot >= latestSlot {
-						// If the latest slot is the one that must be attested we still show it as pending
-						// as the attestation cannot yet have been included in a block
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
-					} else if _, ok := slotAttested[slot][validator]; ok {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
-					} else {
-						slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
-					}
+					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Status = status
+					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.DutyObject = dutyObject
 				}
 			}
 
 			// Get the sync summary for the slot
-			if len(syncAssignmentsForEpoch[epoch]) > 0 {
-				slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
-				for validator := range syncAssignmentsForEpoch[epoch] {
-					if slot > latestSlot {
+			if len(dutiesInfo.SyncAssignmentsForEpoch[epoch]) > 0 {
+				for validator := range dutiesInfo.SyncAssignmentsForEpoch[epoch] {
+					// only validators we care about
+					if _, ok := validatorsMap[uint32(validator)]; !ok {
+						continue
+					}
+
+					if slotVizEpochs[epochIdx].Slots[slotIdx].Sync == nil {
+						slotVizEpochs[epochIdx].Slots[slotIdx].Sync = &t.VDBSlotVizPassiveDuty{}
+					}
+
+					if slot > dutiesInfo.LatestSlot {
 						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.PendingCount++
-					} else if _, ok := slotSyncParticipated[slot][validator]; ok {
+					} else if _, ok := dutiesInfo.SlotSyncParticipated[slot][validator]; ok {
 						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.SuccessCount++
 					} else {
 						slotVizEpochs[epochIdx].Slots[slotIdx].Sync.FailedCount++
@@ -573,51 +497,25 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 			}
 
 			// Get the slashings for the slot
-			slashedValidators := []uint64{}
-			if _, ok := slotValiPropSlashed[slot]; ok {
-				slashedPropValidators := []uint64{}
-				err := d.readerDb.Select(&slashedPropValidators, `
-					SELECT
-						proposerindex
-					FROM blocks_proposerslashings
-					WHERE block_slot = $1`, slot)
-				if err != nil {
-					return nil, err
-				}
+			slashedValidators := dutiesInfo.SlotValiPropSlashed[slot]
+			slashedValidators = append(slashedValidators, dutiesInfo.SlotValiAttSlashed[slot]...)
 
-				slashedValidators = append(slashedValidators, slashedPropValidators...)
-			}
-			if _, ok := slotValiAttSlashed[slot]; ok {
-				slashedAttValidators := []pq.Int64Array{}
-
-				err := d.readerDb.Select(&slashedAttValidators, `
-					SELECT
-						attestation2_indices
-					FROM blocks_attesterslashings
-					WHERE block_slot = $1`, slot)
-				if err != nil {
-					return nil, err
-				}
-
-				for _, slashedAttValidator := range slashedAttValidators {
-					for _, validator := range slashedAttValidator {
-						slashedValidators = append(slashedValidators, uint64(validator))
+			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
+				// only add if we care about this validator
+				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
+					// One of the dashboard validators slashed
+					for _, validator := range slashedValidators {
+						slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
+							t.VDBSlotVizActiveDuty{
+								Status:     "success",
+								Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Dashboard validator
+								DutyObject: validator,                               // Validator that got slashed
+							})
 					}
 				}
 			}
-			if _, ok := propAssignmentsForSlot[slot]; ok {
-				// One of the dashboard validators slashed
-				for _, validator := range slashedValidators {
-					slotVizEpochs[epochIdx].Slots[slotIdx].Slashing = append(slotVizEpochs[epochIdx].Slots[slotIdx].Slashing,
-						t.VDBSlotVizActiveDuty{
-							Status:     "success",
-							Validator:  propAssignmentsForSlot[slot], // Dashboard validator
-							DutyObject: validator,                    // Validator that got slashed
-						})
-				}
-			}
 			for _, validator := range slashedValidators {
-				if _, ok := validatorsMap[validator]; !ok {
+				if _, ok := validatorsMap[uint32(validator)]; !ok {
 					continue
 				}
 				// One of the dashboard validators got slashed
@@ -627,6 +525,32 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 						Validator:  validator, // Dashboard validator
 						DutyObject: validator, // Validator that got slashed
 					})
+			}
+		}
+	}
+
+	// Hydrate the attestation data
+	for validator := range validatorsArray {
+		for slot, duty := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+			epoch := utils.EpochOfSlot(uint64(slot))
+			epochIdx, ok := epochToIndexMap[epoch]
+			if !ok {
+				continue
+			}
+			slotIdx, ok := slotToIndexMap[uint64(slot)]
+			if !ok {
+				continue
+			}
+
+			if slotVizEpochs[epochIdx].Slots[slotIdx].Attestations == nil {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations = &t.VDBSlotVizPassiveDuty{}
+			}
+			if uint64(slot) >= dutiesInfo.LatestSlot {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.PendingCount++
+			} else if duty {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.SuccessCount++
+			} else {
+				slotVizEpochs[epochIdx].Slots[slotIdx].Attestations.FailedCount++
 			}
 		}
 	}

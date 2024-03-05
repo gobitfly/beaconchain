@@ -6,6 +6,7 @@ export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
+  DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
@@ -37,27 +38,32 @@ function addQueryParams (path: string, query?: PathValues) {
 const mapping: Record<string, MappingData> = {
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
-    getPath: values => `/ad-configurations?=dashboard_id}?keys=${values?.keys}`,
+    getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
-    path: '/validator-dashboards/{dashboard_id}/groups/{group_id}/summary',
-    getPath: values => `/validator-dashboards/${values?.dashboardId}/groups/${values?.groupId}/summary`,
+    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
     mock: true
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
-    path: '/validator-dashboards/{dashboard_id}/summary?',
-    getPath: values => `/validator-dashboards/${values?.dashboardId}/summary`,
+    path: '/validator-dashboards/{dashboardKey}/summary?',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
+    mock: true
+  },
+  [API_PATH.DASHBOARD_SUMMARY_CHART]: {
+    path: '/validator-dashboards/{dashboard_id}/summary-chart?',
+    getPath: values => `/validator-dashboards/${values?.dashboardId}/summary-chart`,
     mock: true
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
-    path: '/validator-dashboards/{dashboard_id}',
-    getPath: values => `/validator-dashboards/${values?.validatorId}`,
+    path: '/validator-dashboards/{dashboardKey}',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
     mock: true
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
-    path: '/validator-dashboards/{dashboard_id}/slot-viz',
-    getPath: values => `/validator-dashboards/${values?.dashboardId}/slot-viz`,
+    path: '/validator-dashboards/{dashboardKey}/slot-viz',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
   [API_PATH.LATEST_STATE]: {
@@ -90,7 +96,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
   const url = useRequestURL()
   const { public: { apiClient, legacyApiClient }, private: pConfig } = useRuntimeConfig()
   const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
-  let baseURL = map.mock ? './mock' : map.legacy ? legacyApiClient : apiClient
+  let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
   if (process.server) {
     baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer

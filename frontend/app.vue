@@ -4,7 +4,7 @@ useHead({
   script: [
     {
       key: 'revive',
-      src: 'js/revive.min.js',
+      src: '../js/revive.min.js',
       async: false
     }
   ]
