@@ -2092,11 +2092,11 @@ type ValidatorProposalInfo struct {
 
 type ValidatorDutyInfo struct {
 	Slot                   uint64        `db:"slot"`
-	Status                 uint64        `db:"status"`
+	Status                 int8          `db:"status"`
 	Block                  uint64        `db:"exec_block_number"`
 	SyncAggregateBits      []byte        `db:"syncaggregate_bits"`
 	Validators             pq.Int64Array `db:"validators"`
 	AttestedSlot           sql.NullInt64 `db:"attested_slot"`
-	ProposerSlashingsCount uint64        `db:"proposerslashingscount"`
-	AttesterSlashingsCount uint64        `db:"attesterslashingscount"`
+	ProposerSlashingsCount int8          `db:"proposerslashingscount"`
+	AttesterSlashingsCount int8          `db:"attesterslashingscount"`
 }

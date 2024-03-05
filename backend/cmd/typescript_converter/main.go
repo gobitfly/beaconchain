@@ -57,14 +57,13 @@ func main() {
 		log.Fatal(nil, "Failed to load package", 0)
 	}
 
-	// Find all common types and their usages
+	// Find all common types
 	commonTypes := getCommonTypes(pkgs)
 	// Find all usages of common types
 	usage := getCommonUsages(pkgs, commonTypes)
 
-	tygos := []*tygo.Tygo{}
 	// Generate Tygo for common.go
-	tygos = append(tygos, tygo.New(getTygoConfig(out, commonFileName, "")))
+	tygos := []*tygo.Tygo{tygo.New(getTygoConfig(out, commonFileName, ""))}
 	// Generate Tygo for each file
 	for file, typesUsed := range usage {
 		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
