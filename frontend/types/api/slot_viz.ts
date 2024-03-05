@@ -30,9 +30,9 @@ export interface VDBSlotVizSlot {
   slot: number /* uint64 */;
   status: 'proposed' | 'missed' | 'scheduled' | 'orphaned';
   proposal?: VDBSlotVizTuple;
-  attestations: VDBSlotVizStatus<VDBSlotVizDuty>;
-  sync: VDBSlotVizStatus<VDBSlotVizDuty>;
-  slashing: VDBSlotVizStatus<VDBSlotVizSlashing>;
+  attestations?: VDBSlotVizStatus<VDBSlotVizDuty>;
+  sync?: VDBSlotVizStatus<VDBSlotVizDuty>;
+  slashing?: VDBSlotVizStatus<VDBSlotVizSlashing>;
 }
 export interface SlotVizEpoch {
   epoch: number /* uint64 */;
