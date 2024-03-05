@@ -94,7 +94,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
   }
 
   const url = useRequestURL()
-  const { public: { apiClient, legacyApiClient }, private: pConfig } = useRuntimeConfig()
+  const { public: { apiClient, legacyApiClient, xUserId }, private: pConfig } = useRuntimeConfig()
   const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
   let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
@@ -116,6 +116,9 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
     if (accessToken.value) {
       options.headers = new Headers({})
       options.headers.append('Authorization', `Bearer ${accessToken.value}`)
+    } else if (xUserId) {
+      options.headers = new Headers({})
+      options.headers.append('X-User-Id', xUserId)
     }
   }
   return await $fetch<T>(path, { ...options, baseURL })
