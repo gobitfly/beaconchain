@@ -194,6 +194,8 @@ onUnmounted(() => {
 }
 
 .bc-tooltip {
+  --tt-bg-color: var(--tooltip-background);
+  --tt-color: var(--tooltip-text-color);
   position: relative;
   display: inline-flex;
   flex-wrap: wrap;
@@ -203,14 +205,16 @@ onUnmounted(() => {
   padding: 9px 12px;
   min-width: 120px;
   border-radius: var(--border-radius);
-  color: var(--tooltip-text-color);
-  background: var(--tooltip-background);
+  color: var(--tt-color);
+  background: var(--tt-bg-color);
   font-family: var(--inter-family);
   font-weight: var(--inter-light);
   font-size: 10px;
   pointer-events: none;
 
   &.dark {
+    --tt-bg-color: var(--light-black);
+    --tt-color: var(--light-grey);
     border: solid 1px var(--container-border-color);
   }
 
@@ -226,8 +230,8 @@ onUnmounted(() => {
     pointer-events: none;
 
     top: -10px;
-    left: 50%;
-    border-color: transparent transparent var(--tooltip-background) transparent;
+    left: calc(50% - 5px);
+    border-color: transparent transparent var(--tt-bg-color) transparent;
   }
 
   &.hover,
@@ -243,8 +247,8 @@ onUnmounted(() => {
   &.top {
     &::after {
       top: 100%;
-      left: 50%;
-      border-color: var(--tooltip-background) transparent transparent transparent;
+      left: calc(50% - 5px);
+      border-color: var(--tt-bg-color) transparent transparent transparent;
     }
 
   }
@@ -253,7 +257,7 @@ onUnmounted(() => {
     &::after {
       top: calc(50% - 5px);
       left: -10px;
-      border-color: transparent var(--tooltip-background) transparent transparent;
+      border-color: transparent var(--tt-bg-color) transparent transparent;
     }
   }
 
@@ -261,7 +265,7 @@ onUnmounted(() => {
     &::after {
       top: calc(50% - 5px);
       left: 100%;
-      border-color: transparent transparent transparent var(--tooltip-background);
+      border-color: transparent transparent transparent var(--tt-bg-color);
     }
   }
 

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +19,7 @@ import (
 	b64 "encoding/base64"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
@@ -36,7 +36,6 @@ func NewHandlerService(dataAccessInterface dataaccess.DataAccessInterface) Handl
 var (
 	// Subject to change, just examples
 	reName                       = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
-	reId                         = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -61,7 +60,7 @@ type Paging struct {
 	search string
 }
 
-// All changes to common functions MUST NOT break any public handler behavior
+// All changes to common functions MUST NOT break any public handler behavior (not in effect yet)
 
 // --------------------------------------
 //   Validation
@@ -180,7 +179,7 @@ func checkUint(handlerErr *error, id, paramName string) uint64 {
 func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) interface{} {
 	if reNumber.MatchString(id) {
 		// given id is a normal id
-		return types.VDBIdPrimary(checkUint(handlerErr, id, "dashboardId"))
+		return types.VDBIdPrimary(checkUint(handlerErr, id, "dashboard_id"))
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
@@ -227,8 +226,8 @@ func checkGroupId(handlerErr *error, id string) uint64 {
 	return checkUint(handlerErr, id, "groupId")
 }
 
-func checkPublicDashboardId(handlerErr *error, id string) string {
-	return checkRegex(handlerErr, reId, id, "public dashboard id")
+func checkValidatorDashboardPublicId(handlerErr *error, publicId string) string {
+	return checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id")
 }
 
 func checkPagingParams(handlerErr *error, q url.Values) Paging {
@@ -241,27 +240,23 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 	if limitStr := q.Get("limit"); limitStr != "" {
 		limit, err := strconv.ParseUint(limitStr, 10, 64)
 		joinErr(handlerErr, err.Error())
-		paging.limit = limit
-		if limit > maxQueryLimit {
-			joinErr(handlerErr, fmt.Sprintf("Paging limit %d is too high, maximum value is %d", paging.limit, maxQueryLimit))
-		}
+		paging.limit = min(limit, maxQueryLimit)
 	}
 
-	paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
-	paging.search = checkName(handlerErr, paging.search, 0)
+	if paging.cursor != "" {
+		paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
+	}
 
 	return paging
 }
 
-func parseSortColumn[T types.ColEnumFactory[T]](column string) (T, error) {
+func parseSortColumn[T enums.EnumFactory[T]](column string) (T, error) {
 	var c T
-	names := c.GetColNames()
-	index := slices.Index(names, column)
-	var err error
-	if index == -1 {
-		err = errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+	col := c.NewFromString(column)
+	if col.Int() == -1 {
+		return col, errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
 	}
-	return c.NewFromInt(index), err
+	return col, nil
 }
 
 func parseSortOrder(order string) (bool, error) {
@@ -277,9 +272,8 @@ func parseSortOrder(order string) (bool, error) {
 	}
 }
 
-func checkSort[T types.ColEnumFactory[T]](handlerErr *error, r *http.Request) []types.Sort[T] {
-	q := r.URL.Query()
-	sortQueries := strings.Split(q.Get("sort"), ",")
+func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.Sort[T] {
+	sortQueries := strings.Split(sort, ",")
 	sorts := make([]types.Sort[T], 0, len(sortQueries))
 	for _, v := range sortQueries {
 		sortSplit := strings.Split(v, ":")
@@ -325,21 +319,28 @@ func checkNetwork(handlerErr *error, network string) uint64 {
 // --------------------------------------
 // Authorization
 
-func getUser(r *http.Request) (uint64, error) {
+type User struct {
+	Id uint64
+	// TODO add more user fields, e.g. subscription tier
+}
+
+func getUser(r *http.Request) (User, error) {
 	// TODO @LuccaBitfly add real user auth
 	userId := r.Header.Get("X-User-Id")
 	if userId == "" {
-		return 0, errors.New("missing user id, please set the X-User-Id header")
+		return User{}, errors.New("missing user id, please set the X-User-Id header")
 	}
 	id, err := strconv.ParseUint(userId, 10, 64)
 	if err != nil {
-		return 0, errors.New("invalid user id, must be a positive integer")
+		return User{}, errors.New("invalid user id, must be a positive integer")
 	}
 	// TODO if api key is used, fetch user id from the database
 
 	// TODO if access token is used, verify the token and get user id from the token
 
-	return id, nil
+	return User{
+		Id: id,
+	}, nil
 }
 
 // --------------------------------------
