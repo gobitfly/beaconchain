@@ -2,7 +2,7 @@
 
 import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
-const displayType = ref<DashboardCreationDisplayType>('modal')
+const displayType = ref<DashboardCreationDisplayType>('')
 
 const changeDisplayType = (newDisplayType: DashboardCreationDisplayType) => {
   displayType.value = newDisplayType
@@ -21,6 +21,9 @@ const changeDisplayType = (newDisplayType: DashboardCreationDisplayType) => {
       </Button>
       <Button @click="changeDisplayType('panel')">
         Display Type: Panel
+      </Button>
+      <Button @click="changeDisplayType('')">
+        Hide
       </Button>
     </div>
   </div>
