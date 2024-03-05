@@ -65,17 +65,6 @@ var VDBSummaryTableColumns = struct {
 	VDBSummaryValidators,
 }
 
-func example(col VDBSummaryTableColumn) {
-	switch col {
-	case VDBSummaryTableColumns.Group:
-		// ...
-	case VDBSummaryTableColumns.EfficiencyDay:
-		// ...
-	case VDBSummaryTableColumns.EfficiencyWeek:
-	}
-
-}
-
 // ----------------
 // Validator Dashboard Rewards Table
 
