@@ -45,6 +45,11 @@ const selected = defineModel<boolean | undefined>({ required: true })
       :deep(.p-button-label) {
         @include fonts.subtitle_text;
       }
+
+      :deep(svg) {
+        width: 36px;
+        height: 36px;
+      }
     }
   }
 }
