@@ -138,14 +138,11 @@ func (d DummyService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimar
 }
 
 func (d DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
-	r := []t.SlotVizEpoch{}
-	var err error
-	for i := 0; i < 4; i++ {
-		epoch := t.SlotVizEpoch{}
-		err = commonFakeData(&epoch)
-		r = append(r, epoch)
-	}
-	return r, err
+	r := struct {
+		Epochs []t.SlotVizEpoch `faker:"slice_len=4"`
+	}{}
+	err := commonFakeData(&r)
+	return r.Epochs, err
 }
 
 func (d DummyService) GetValidatorDashboardSlotVizByPublicId(dashboardId t.VDBIdPublic) ([]t.SlotVizEpoch, error) {
