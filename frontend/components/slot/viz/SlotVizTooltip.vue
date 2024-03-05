@@ -128,15 +128,15 @@ const data = computed(() => {
 
   let stateLabel = ''
   if (slot.status === 'scheduled') {
-    stateLabel = hasDuties ? $t('slotViz.tooltip.status.scheduled.has_duties') : $t('slotViz.tooltip.status.scheduled.no_duties')
+    stateLabel = formatMultiPartSpan($t, `slotViz.tooltip.status.scheduled.${hasDuties ? 'has_duties' : 'no_duties'}`, [undefined, 'scheduled', undefined])
   } else if (hasFailedDuties && hasSuccessDuties) {
-    stateLabel = $t('slotViz.tooltip.status.duties_some')
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [undefined, 'some', undefined])
   } else if (hasFailedDuties) {
-    stateLabel = $t('slotViz.tooltip.status.duties_failed')
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_failed', [undefined, 'failed', undefined])
   } else if (hasSuccessDuties) {
-    stateLabel = $t('slotViz.tooltip.status.duties_success')
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_success', [undefined, 'success', undefined])
   } else {
-    stateLabel = $t('slotViz.tooltip.status.no_duties')
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.no_duties', [undefined, 'scheduled', undefined])
   }
 
   return {

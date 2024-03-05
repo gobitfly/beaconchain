@@ -55,10 +55,7 @@ export default defineNuxtConfig({
     fallback: 'dark' // fallback value if not system preference found
   },
   i18n: {
-    vueI18n: './i18n.config.ts',
-    compilation: {
-      strictMessage: false
-    }
+    vueI18n: './i18n.config.ts'
   },
   postcss: {
     plugins: {

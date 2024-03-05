@@ -82,13 +82,13 @@
       },
       "status": {
         "scheduled":{
-          "no_duties": "<span>You have <span class=\"scheduled\">no scheduled duties</span></span>",
-          "has_duties":"<span>You have <span class=\"scheduled\">scheduled duties</span></span>"
+          "no_duties":["You have", "no scheduled", "duties"],
+          "has_duties":["You have", "scheduled", "duties"]
         }, 
-        "no_duties": "<span>You had <span class=\"scheduled\">no</span> duties</span>",
-        "duties_some":"<span>You missed <span class=\"some\">some</span> duties</span>",
-        "duties_success":"<span>All of your duties were <span class=\"success\">successful</span></span>",
-        "duties_failed":"<span>All of your duties were <span class=\"failed\">missed</span></span>"      
+        "no_duties": ["You had", "no", "duties"],
+        "duties_some":["You missed", "some", "duties"],
+        "duties_success":["All of your duties were", "successful", ""],
+        "duties_failed": ["All of your duties were", "missed", ""]
       }
     }
   },
