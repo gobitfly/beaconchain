@@ -109,6 +109,7 @@
       "network": {
         "subtitle": "What network are your validators on?"
       },
+      "back": "Back",
       "continue": "Continue"
     },
     "validator": {

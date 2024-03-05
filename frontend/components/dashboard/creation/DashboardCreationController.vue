@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { type DisplayType, type State } from '~/types/dashboard/creation'
+import { type DashboardType, type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
 
 interface Props {
-  displayType: DisplayType;
+  displayType: DashboardCreationDisplayType;
 }
 const props = defineProps<Props>()
 
@@ -16,13 +16,17 @@ watch(() => props.displayType, () => {
 
 const modalVisibility = ref(false)
 
-const state = ref<State>('none')
-const changeState = (newState: State) => {
+const state = ref<DashboardCreationState>('none')
+const changeState = (newState: DashboardCreationState) => {
   state.value = newState
   if (newState === 'none') {
     modalVisibility.value = false
   }
 }
+
+const type = ref<DashboardType>('none')
+const name = ref<string>('')
+const network = ref<string>('')
 </script>
 
 <template>
@@ -30,6 +34,15 @@ const changeState = (newState: State) => {
     <h1>
       Dashboard Creation Controller
     </h1>
+    <div>
+      Type: {{ type }}
+    </div>
+    <div>
+      Name: {{ name }}
+    </div>
+    <div>
+      Network: {{ network }}
+    </div>
     Current State: {{ state }}
     <div class="button_container">
       <Button @click="changeState('none')">
@@ -44,16 +57,16 @@ const changeState = (newState: State) => {
     </div>
   </div>
   <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
-    <DashboardCreationNetworkMask v-if="state === 'network'" />
-    <DashboardCreationTypeMask v-else-if="state === 'type'" />
+    <DashboardCreationNetworkMask v-if="state === 'network'" v-model="network" />
+    <DashboardCreationTypeMask v-else-if="state === 'type'" v-model:type="type" v-model:name="name" />
   </BcDialog>
   <div v-else-if="displayType === 'panel'">
-    <DashboardCreationNetworkMask v-if="state === 'network'" />
-    <DashboardCreationTypeMask v-else-if="state === 'type'" />
+    <DashboardCreationNetworkMask v-if="state === 'network'" v-model="network" />
+    <DashboardCreationTypeMask v-else-if="state === 'type'" v-model:type="type" v-model:name="name" />
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
   .settings_container {
     padding: 10px;
 

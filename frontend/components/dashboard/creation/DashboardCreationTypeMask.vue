@@ -1,5 +1,13 @@
 <script lang="ts" setup>
+import { type DashboardType } from '~/types/dashboard/creation'
+import { IconAccount, IconValidator } from '#components'
+
 const { t: $t } = useI18n()
+
+const type = defineModel<DashboardType>('type', { required: true })
+const allTypes = ref([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
+
+const name = defineModel<string>('name', { required: true })
 </script>
 
 <template>
@@ -11,22 +19,22 @@ const { t: $t } = useI18n()
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
+      <BcToggleSingleBar v-model="type" :buttons="allTypes" />
       <div class="row_container">
-        <Button>{{ $t('dashboard.creation.type.accounts') }}</Button>
-        <Button>{{ $t('dashboard.creation.type.validators') }}</Button>
-      </div>
-      <div class="row_container">
-        <InputText :placeholder="$t('dashboard.creation.type.name')" />
-        <Button>{{ $t('dashboard.creation.continue') }}</Button>
+        <InputText v-model="name" :placeholder="$t('dashboard.creation.type.name')" class="input-field" />
+        <Button class="button">
+          {{ $t('dashboard.creation.continue') }}
+        </Button>
       </div>
     </div>
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
   .mask_container{
     width: 460px;
     height: 248px;
+    padding: var(--padding-large);
 
     .element_container{
       display: flex;
@@ -36,6 +44,14 @@ const { t: $t } = useI18n()
       .row_container{
         display: flex;
         gap: 10px;
+
+        input {
+            width: 320px;
+        }
+
+        button {
+            width: 90px;
+        }
       }
     }
   }
