@@ -37,7 +37,7 @@ export enum ResultType {
   StateBatches = 'state_batches',
   Contracts = 'contracts',
   Accounts = 'accounts',
-  Ens = 'ens_names',
+  EnsAddresses = 'ens_addresses',
   EnsOverview = 'ens_overview',
   Graffiti = 'graffiti',
   ValidatorsByIndex = 'validators_by_index',
@@ -90,8 +90,8 @@ interface TypeInfoFields {
   priority: number,
   belongsToAllNetworks: boolean,
   dataInSearchAheadResult : (keyof SearchAheadSingleResult)[], // the order of these field-names sets the order of the information displayed in the dropdown
-  queryParamIndex : number, // points to the field-name in the array above whose data will be understood by the back-end as a reference to a result
-  dropdownColumns : (string|undefined)[] // Static information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (dataInSearchAheadResult). The first column often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` (see above).
+  queryParamIndex : number, // points to the field-name in array `dataInSearchAheadResult` whose data will be understood by the back-end as a reference to a result
+  dropdownColumns : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (dataInSearchAheadResult). The first column often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -101,9 +101,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
+    dataInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and will fill array `dropdownColumns` (see below) with this information in that order.
     queryParamIndex: 0,
-    dropdownColumns: [undefined, undefined, '']
+    dropdownColumns: [undefined, undefined, ''] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
   },
   [ResultType.NFTs]: {
     title: 'NFT (ERC-721 & ERC-1155 token)',
@@ -215,7 +215,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     queryParamIndex: 0,
     dropdownColumns: ['', undefined, '']
   },
-  [ResultType.Ens]: {
+  [ResultType.EnsAddresses]: {
     title: 'ENS address',
     category: Category.Addresses,
     subCategory: SubCategory.Accounts,
@@ -346,23 +346,28 @@ export function getListOfCategories () : Category[] {
   return list
 }
 
+const listOfResultTypesAsDeclared : ResultType[] = []
+const listOfResultTypesPrioritized : ResultType[] = []
+// Returns all litterals in `ResultType` used to communicate with the API.
+// This function is fast on average: it computes the list only at the first call. Subsequent calls return the already computed list.
 export function getListOfResultTypes (sortByPriority : boolean) : ResultType[] {
-  const list : ResultType[] = []
+  if (listOfResultTypesAsDeclared.length === 0) {
+    for (const type in ResultType) {
+      const ty = type as keyof typeof ResultType
+      listOfResultTypesAsDeclared.push(ResultType[ty])
+      listOfResultTypesPrioritized.push(ResultType[ty])
+    }
+    listOfResultTypesPrioritized.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
+  }
 
-  for (const type in ResultType) {
-    list.push(ResultType[type as keyof typeof ResultType])
-  }
-  if (sortByPriority) {
-    list.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
-  }
-  return list
+  return sortByPriority ? listOfResultTypesPrioritized : listOfResultTypesAsDeclared
 }
 
 const searchableTypesPerCategory : Record<string, ResultType[]> = {}
 // Returns the list of types belonging to the given category.
 // This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
 export function getListOfResultTypesInCategory (category: Category, sortByPriority : boolean) : ResultType[] {
-  if (Object.keys(searchableTypesPerCategory).length === 0) {
+  if (!(category in searchableTypesPerCategory)) {
     for (const t of getListOfResultTypes(sortByPriority)) {
       const c = TypeInfo[t].category
       if (!searchableTypesPerCategory[c]) {

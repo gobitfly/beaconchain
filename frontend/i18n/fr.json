@@ -46,10 +46,12 @@
       "press_kit": "Dossier de presse"
     },
     "search_engine": {
+      "placeholder": "Cherchez dans la blockchain",
       "searching": "Recherche en cours...",
       "no_result_matches": "Aucun résultat ne correspond à",
       "your_input": "votre entrée.",
       "your_filters": "vos filtres",
+      "help": "Tapez quelque chose et sélectionnez les résultats qui vous intéressent au moyen des filtres ci-dessus.",
       "result_hidden": "résultat caché",
       "results_hidden": "résultats cachés",
       "by_your_filters": "par vos filtres",
