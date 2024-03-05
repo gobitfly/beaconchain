@@ -336,7 +336,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	groupId := checkGroupId(&err, q.Get("group_id"))
 	pagingParams := checkPagingParams(&err, q)
-	sortingParams := checkSort[enums.VDBManageValidatorsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBManageValidatorsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -545,7 +545,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[enums.VDBSummaryTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBSummaryColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -643,7 +643,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[enums.VDBRewardsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBRewardsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -743,7 +743,7 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	epoch := checkUint(&err, vars["epoch"], "epoch")
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[enums.VDBDutiesTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBDutiesColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -778,7 +778,7 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[enums.VDBBlocksTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBBlocksColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -945,7 +945,7 @@ func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Response
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, r.URL.Query())
-	sortingParams := checkSort[enums.VDBWithdrawalsTableColumn](&err, r)
+	sortingParams := checkSort[enums.VDBWithdrawalsColumn](&err, r)
 	if err != nil {
 		returnBadRequest(w, err)
 		return

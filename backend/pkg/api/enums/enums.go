@@ -13,12 +13,12 @@ type EnumFactory[T Enum] interface {
 // ----------------
 // Validator Dashboard Summary Table
 
-type VDBSummaryTableColumn int
+type VDBSummaryColumn int
 
-var _ EnumFactory[VDBSummaryTableColumn] = VDBSummaryTableColumn(0)
+var _ EnumFactory[VDBSummaryColumn] = VDBSummaryColumn(0)
 
 const (
-	VDBSummaryGroup VDBSummaryTableColumn = iota
+	VDBSummaryGroup VDBSummaryColumn = iota
 	VDBSummaryEfficiencyDay
 	VDBSummaryEfficiencyWeek
 	VDBSummaryEfficiencyMonth
@@ -26,13 +26,13 @@ const (
 	VDBSummaryValidators // Sort by count, not by index
 )
 
-func (c VDBSummaryTableColumn) Int() int {
+func (c VDBSummaryColumn) Int() int {
 	return int(c)
 }
 
-func (VDBSummaryTableColumn) NewFromString(s string) VDBSummaryTableColumn {
+func (VDBSummaryColumn) NewFromString(s string) VDBSummaryColumn {
 	switch s {
-	case "group":
+	case "group_id":
 		return VDBSummaryGroup
 	case "efficiency_day":
 		return VDBSummaryEfficiencyDay
@@ -45,17 +45,17 @@ func (VDBSummaryTableColumn) NewFromString(s string) VDBSummaryTableColumn {
 	case "validators":
 		return VDBSummaryValidators
 	default:
-		return VDBSummaryTableColumn(-1)
+		return VDBSummaryColumn(-1)
 	}
 }
 
-var VDBSummaryTableColumns = struct {
-	Group           VDBSummaryTableColumn
-	EfficiencyDay   VDBSummaryTableColumn
-	EfficiencyWeek  VDBSummaryTableColumn
-	EfficiencyMonth VDBSummaryTableColumn
-	EfficiencyTotal VDBSummaryTableColumn
-	Validators      VDBSummaryTableColumn
+var VDBSummaryColumns = struct {
+	Group           VDBSummaryColumn
+	EfficiencyDay   VDBSummaryColumn
+	EfficiencyWeek  VDBSummaryColumn
+	EfficiencyMonth VDBSummaryColumn
+	EfficiencyTotal VDBSummaryColumn
+	Validators      VDBSummaryColumn
 }{
 	VDBSummaryGroup,
 	VDBSummaryEfficiencyDay,
@@ -68,33 +68,33 @@ var VDBSummaryTableColumns = struct {
 // ----------------
 // Validator Dashboard Rewards Table
 
-type VDBRewardsTableColumn int
+type VDBRewardsColumn int
 
-var _ EnumFactory[VDBRewardsTableColumn] = VDBRewardsTableColumn(0)
+var _ EnumFactory[VDBRewardsColumn] = VDBRewardsColumn(0)
 
 const (
-	VDBRewardEpoch VDBRewardsTableColumn = iota
-	VDBRewardDuty                        // Sort by sum of percentages
+	VDBRewardEpoch VDBRewardsColumn = iota
+	VDBRewardDuty                   // Sort by sum of percentages
 )
 
-func (c VDBRewardsTableColumn) Int() int {
+func (c VDBRewardsColumn) Int() int {
 	return int(c)
 }
 
-func (VDBRewardsTableColumn) NewFromString(s string) VDBRewardsTableColumn {
+func (VDBRewardsColumn) NewFromString(s string) VDBRewardsColumn {
 	switch s {
 	case "epoch":
 		return VDBRewardEpoch
 	case "duty":
 		return VDBRewardDuty
 	default:
-		return VDBRewardsTableColumn(-1)
+		return VDBRewardsColumn(-1)
 	}
 }
 
-var VDBRewardsTableColumns = struct {
-	Epoch VDBRewardsTableColumn
-	Duty  VDBRewardsTableColumn
+var VDBRewardsColumns = struct {
+	Epoch VDBRewardsColumn
+	Duty  VDBRewardsColumn
 }{
 	VDBRewardEpoch,
 	VDBRewardDuty,
@@ -103,33 +103,33 @@ var VDBRewardsTableColumns = struct {
 // ----------------
 // Validator Dashboard Duties Table
 
-type VDBDutiesTableColumn int
+type VDBDutiesColumn int
 
-var _ EnumFactory[VDBDutiesTableColumn] = VDBDutiesTableColumn(0)
+var _ EnumFactory[VDBDutiesColumn] = VDBDutiesColumn(0)
 
 const (
-	VDBDutyValidator VDBDutiesTableColumn = iota
-	VDBDutyReward                         // Sort by sum of percentages
+	VDBDutyValidator VDBDutiesColumn = iota
+	VDBDutyReward                    // Sort by sum of percentages
 )
 
-func (c VDBDutiesTableColumn) Int() int {
+func (c VDBDutiesColumn) Int() int {
 	return int(c)
 }
 
-func (VDBDutiesTableColumn) NewFromString(s string) VDBDutiesTableColumn {
+func (VDBDutiesColumn) NewFromString(s string) VDBDutiesColumn {
 	switch s {
 	case "validator":
 		return VDBDutyValidator
 	case "reward":
 		return VDBDutyReward
 	default:
-		return VDBDutiesTableColumn(-1)
+		return VDBDutiesColumn(-1)
 	}
 }
 
-var VDBDutiesTableColumns = struct {
-	Validator VDBDutiesTableColumn
-	Reward    VDBDutiesTableColumn
+var VDBDutiesColumns = struct {
+	Validator VDBDutiesColumn
+	Reward    VDBDutiesColumn
 }{
 	VDBDutyValidator,
 	VDBDutyReward,
@@ -138,12 +138,12 @@ var VDBDutiesTableColumns = struct {
 // ----------------
 // Validator Dashboard Blocks Table
 
-type VDBBlocksTableColumn int
+type VDBBlocksColumn int
 
-var _ EnumFactory[VDBBlocksTableColumn] = VDBBlocksTableColumn(0)
+var _ EnumFactory[VDBBlocksColumn] = VDBBlocksColumn(0)
 
 const (
-	VDBBlockProposer VDBBlocksTableColumn = iota
+	VDBBlockProposer VDBBlocksColumn = iota
 	VDBBlockGroup
 	VDBBlockEpoch
 	VDBBlockSlot
@@ -153,15 +153,15 @@ const (
 	VDBBlockProposerReward
 )
 
-func (c VDBBlocksTableColumn) Int() int {
+func (c VDBBlocksColumn) Int() int {
 	return int(c)
 }
 
-func (VDBBlocksTableColumn) NewFromString(s string) VDBBlocksTableColumn {
+func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	switch s {
 	case "proposer":
 		return VDBBlockProposer
-	case "group":
+	case "group_id":
 		return VDBBlockGroup
 	case "epoch":
 		return VDBBlockEpoch
@@ -173,22 +173,22 @@ func (VDBBlocksTableColumn) NewFromString(s string) VDBBlocksTableColumn {
 		return VDBBlockAge
 	case "status":
 		return VDBBlockStatus
-	case "proposer_reward":
+	case "reward":
 		return VDBBlockProposerReward
 	default:
-		return VDBBlocksTableColumn(-1)
+		return VDBBlocksColumn(-1)
 	}
 }
 
-var VDBBlocksTableColumns = struct {
-	Proposer       VDBBlocksTableColumn
-	Group          VDBBlocksTableColumn
-	Epoch          VDBBlocksTableColumn
-	Slot           VDBBlocksTableColumn
-	Block          VDBBlocksTableColumn
-	Age            VDBBlocksTableColumn
-	Status         VDBBlocksTableColumn
-	ProposerReward VDBBlocksTableColumn
+var VDBBlocksColumns = struct {
+	Proposer       VDBBlocksColumn
+	Group          VDBBlocksColumn
+	Epoch          VDBBlocksColumn
+	Slot           VDBBlocksColumn
+	Block          VDBBlocksColumn
+	Age            VDBBlocksColumn
+	Status         VDBBlocksColumn
+	ProposerReward VDBBlocksColumn
 }{
 	VDBBlockProposer,
 	VDBBlockGroup,
@@ -203,12 +203,12 @@ var VDBBlocksTableColumns = struct {
 // ----------------
 // Validator Dashboard Withdrawals Table
 
-type VDBWithdrawalsTableColumn int
+type VDBWithdrawalsColumn int
 
-var _ EnumFactory[VDBWithdrawalsTableColumn] = VDBWithdrawalsTableColumn(0)
+var _ EnumFactory[VDBWithdrawalsColumn] = VDBWithdrawalsColumn(0)
 
 const (
-	VDBWithdrawalEpoch VDBWithdrawalsTableColumn = iota
+	VDBWithdrawalEpoch VDBWithdrawalsColumn = iota
 	VDBWithdrawalAge
 	VDBWithdrawalIndex
 	VDBWithdrawalGroup
@@ -216,11 +216,11 @@ const (
 	VDBWithdrawalAmount
 )
 
-func (c VDBWithdrawalsTableColumn) Int() int {
+func (c VDBWithdrawalsColumn) Int() int {
 	return int(c)
 }
 
-func (VDBWithdrawalsTableColumn) NewFromString(s string) VDBWithdrawalsTableColumn {
+func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 	switch s {
 	case "epoch":
 		return VDBWithdrawalEpoch
@@ -228,24 +228,24 @@ func (VDBWithdrawalsTableColumn) NewFromString(s string) VDBWithdrawalsTableColu
 		return VDBWithdrawalAge
 	case "index":
 		return VDBWithdrawalIndex
-	case "group":
+	case "group_id":
 		return VDBWithdrawalGroup
 	case "recipient":
 		return VDBWithdrawalRecipient
 	case "amount":
 		return VDBWithdrawalAmount
 	default:
-		return VDBWithdrawalsTableColumn(-1)
+		return VDBWithdrawalsColumn(-1)
 	}
 }
 
-var VDBWithdrawalsTableColumns = struct {
-	Epoch     VDBWithdrawalsTableColumn
-	Age       VDBWithdrawalsTableColumn
-	Index     VDBWithdrawalsTableColumn
-	Group     VDBWithdrawalsTableColumn
-	Recipient VDBWithdrawalsTableColumn
-	Amount    VDBWithdrawalsTableColumn
+var VDBWithdrawalsColumns = struct {
+	Epoch     VDBWithdrawalsColumn
+	Age       VDBWithdrawalsColumn
+	Index     VDBWithdrawalsColumn
+	Group     VDBWithdrawalsColumn
+	Recipient VDBWithdrawalsColumn
+	Amount    VDBWithdrawalsColumn
 }{
 	VDBWithdrawalEpoch,
 	VDBWithdrawalAge,
@@ -258,23 +258,23 @@ var VDBWithdrawalsTableColumns = struct {
 // ----------------
 // Validator Dashboard Manage Validators Table
 
-type VDBManageValidatorsTableColumn int
+type VDBManageValidatorsColumn int
 
-var _ EnumFactory[VDBManageValidatorsTableColumn] = VDBManageValidatorsTableColumn(0)
+var _ EnumFactory[VDBManageValidatorsColumn] = VDBManageValidatorsColumn(0)
 
 const (
-	VDBManageValidatorsIndex VDBManageValidatorsTableColumn = iota
+	VDBManageValidatorsIndex VDBManageValidatorsColumn = iota
 	VDBManageValidatorsPublicKey
 	VDBManageValidatorsBalance
 	VDBManageValidatorsStatus
 	VDBManageValidatorsWithdrawalCredential
 )
 
-func (c VDBManageValidatorsTableColumn) Int() int {
+func (c VDBManageValidatorsColumn) Int() int {
 	return int(c)
 }
 
-func (VDBManageValidatorsTableColumn) NewFromString(s string) VDBManageValidatorsTableColumn {
+func (VDBManageValidatorsColumn) NewFromString(s string) VDBManageValidatorsColumn {
 	switch s {
 	case "index":
 		return VDBManageValidatorsIndex
@@ -287,16 +287,16 @@ func (VDBManageValidatorsTableColumn) NewFromString(s string) VDBManageValidator
 	case "withdrawal_credential":
 		return VDBManageValidatorsWithdrawalCredential
 	default:
-		return VDBManageValidatorsTableColumn(-1)
+		return VDBManageValidatorsColumn(-1)
 	}
 }
 
-var VDBManageValidatorsTableColumns = struct {
-	Index                VDBManageValidatorsTableColumn
-	PublicKey            VDBManageValidatorsTableColumn
-	Balance              VDBManageValidatorsTableColumn
-	Status               VDBManageValidatorsTableColumn
-	WithdrawalCredential VDBManageValidatorsTableColumn
+var VDBManageValidatorsColumns = struct {
+	Index                VDBManageValidatorsColumn
+	PublicKey            VDBManageValidatorsColumn
+	Balance              VDBManageValidatorsColumn
+	Status               VDBManageValidatorsColumn
+	WithdrawalCredential VDBManageValidatorsColumn
 }{
 	VDBManageValidatorsIndex,
 	VDBManageValidatorsPublicKey,
