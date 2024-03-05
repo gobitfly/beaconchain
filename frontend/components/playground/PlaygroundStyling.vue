@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleMultiBar, IconSlotBlockProposal } from '#components'
+import { BcToggleMultiBar, BcToggleSingleBar, IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -23,6 +23,9 @@ const selected = ref(true)
 
 const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
+
+const selectedType = ref<string>('')
+const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
 
 </script>
 
@@ -80,6 +83,7 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
       </div>
     </TabPanel>
     <TabPanel header="Toggle">
+      <h1>Multi Toggle</h1>
       <div class="element_container">
         <div>
           isTable: {{ isTable }}
@@ -112,6 +116,13 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
             </template>
           </BcToggleMultiBar>
           Selected: {{ selectedList.join(', ') }}
+        </div>
+      </div>
+      <h1>Single Toggle</h1>
+      <div class="element_container">
+        <div>
+          selectedType: {{ selectedType }}
+          <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" :initial="allTypes[0].text" />
         </div>
       </div>
     </TabPanel>
