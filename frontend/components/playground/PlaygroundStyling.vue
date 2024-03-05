@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { IconSlotBlockProposal } from '#components'
+import { BcToggleMultiBar, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -103,14 +103,14 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
           <BcToggleButton v-model="selected" :icon="faTable" />
         </div>
         <div>
-          <BcToggleBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
+          <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
             <template #attestation>
               <IconSlotAttestation />
             </template>
             <template #sync>
               <IconSlotSync />
             </template>
-          </BcToggleBar>
+          </BcToggleMultiBar>
           Selected: {{ selectedList.join(', ') }}
         </div>
       </div>

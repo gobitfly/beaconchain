@@ -39,7 +39,7 @@ const icons: { component: Component, value: SlotVizCategories }[] = [
     </div>
     <div class="rows">
       <div class="row">
-        <BcToggleBar v-model="selectedCategoris" :icons="icons" />
+        <BcToggleMultiBar v-model="selectedCategoris" :icons="icons" />
       </div>
       <div v-for="row in props.data" :key="row.epoch" class="row">
         <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categoris="selectedCategoris" />

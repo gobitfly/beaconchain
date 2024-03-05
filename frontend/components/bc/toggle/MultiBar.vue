@@ -34,13 +34,13 @@ watch(modelValues, () => {
 
 <template>
   <div class="bc-togglebar">
-    <BcToggleButton v-for="icon in props.icons" :key="icon.value" v-model="modelValues[icon.value]" :icon="icon.icon">
+    <BcToggleMultibarButton v-for="icon in props.icons" :key="icon.value" v-model="modelValues[icon.value]" :icon="icon.icon">
       <template #icon>
         <slot :name="icon.value">
           <component :is="icon.component" />
         </slot>
       </template>
-    </BcToggleButton>
+    </BcToggleMultibarButton>
   </div>
 </template>
 
