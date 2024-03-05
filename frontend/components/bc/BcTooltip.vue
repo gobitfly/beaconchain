@@ -230,7 +230,7 @@ onUnmounted(() => {
     pointer-events: none;
 
     top: -10px;
-    left: 50%;
+    left: calc(50% - 5px);
     border-color: transparent transparent var(--tt-bg-color) transparent;
   }
 
@@ -247,7 +247,7 @@ onUnmounted(() => {
   &.top {
     &::after {
       top: 100%;
-      left: 50%;
+      left: calc(50% - 5px);
       border-color: var(--tt-bg-color) transparent transparent transparent;
     }
 

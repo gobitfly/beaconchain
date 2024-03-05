@@ -2,6 +2,11 @@
 
 :root {
   --expander-col-width: 53px;
+  --table-header-background: var(--grey-4);
+  &.dark-mode {
+
+    --table-header-background: var(--very-dark-grey);
+  }
 }
 
 .p-datatable {
@@ -25,8 +30,8 @@
       > th {
         text-align: left;
         color: var(--container-color);
-        background-color: var(--container-background);
-        font-weight: var(--standard_text_bold_font_weight);
+        background-color: var(--table-header-background);
+        font-weight: var(--standard_text_medium_font_weight);
         transition: box-shadow 0.2s;
 
         padding: 14px 7px;
@@ -130,19 +135,19 @@
         }
 
         > .p-column-title {
-          font-weight: var(--standard_text_bold_font_weight);
+          font-weight: var(--standard_text_medium_font_weight);
         }
 
       }
       &.bold > td,
       .bold > td,
       > td.bold{
-          font-weight: var(--standard_text_bold_font_weight);
+          font-weight: var(--standard_text_medium_font_weight);
       }
     }
   }
   &.bc-compact-table {
-    --table-background-color: var(--container-background);
+    --table-background-color: var(--table-header-background);
     .p-datatable-tbody {
       > tr {
         @include standard_text;
@@ -151,6 +156,7 @@
           text-align: left;
           border-width: 0 0 0 0;
           padding: 3px 7px;
+          height: 25px;
           &:first-child {
             padding-left: 7px;
           }
