@@ -68,7 +68,7 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
             Dashboard Link
           </NuxtLink>
         </Button>
-        <Button :disabled="true">
+        <Button disabled>
           Disabled
         </Button>
         <Button class="p-button-icon-only">
