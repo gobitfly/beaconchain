@@ -13,7 +13,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const selected = defineModel<string>({ required: true })
-selected.value = props.initial || ''
+selected.value = selected.value ? selected.value : (props.initial || '')
 
 const modelValues = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = value === props.initial
