@@ -10,10 +10,10 @@ const selected = defineModel<boolean | undefined>({ required: true })
 </script>
 
 <template>
-  <ToggleButton v-model="selected" class="bc-toggle" :on-label="text" :off-label="text">
+  <ToggleButton v-model="selected" class="bc-toggle" :on-label="props.text" :off-label="props.text">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
-        <FontAwesomeIcon v-if="icon" :icon="icon" />
+        <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
       </slot>
     </template>
   </ToggleButton>
