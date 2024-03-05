@@ -49,17 +49,22 @@
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
+      "and_more": "and {count} more",
       "proposal": {
-        "success": {
-          "main": "Block proposed",
+        "proposed": {
+          "main": "Block",
           "sub": "proposed"
         },
-        "failed": {
-          "main": "Block missed",
+        "missed": {
+          "main": "Block",
+          "sub": "missed"
+        },
+        "orphaned": {
+          "main": "Block",
           "sub": "missed"
         },
         "scheduled": {
-          "main": "Block scheduled",
+          "main": "Block",
           "sub": "will propose"
         }
       },
@@ -69,9 +74,25 @@
           "sub": "slashed"
         },
         "failed": {
-          "main": "You got Slashed",
+          "main": "You got slashed",
           "sub": "slashed"
         }
+      },
+      "network": {
+        "proposed": "Network proposed slot {slot}",
+        "missed": "Network missed slot {slot}",
+        "scheduled": "Slot {slot} is scheduled",
+        "orphaned": "Network orphaned slot {slot}"
+      },
+      "status": {
+        "scheduled":{
+          "no_duties":["You have", "no scheduled", "duties"],
+          "has_duties":["You have", "scheduled", "duties"]
+        }, 
+        "no_duties": ["You had", "no", "duties"],
+        "duties_some":["You missed", "some", "duties"],
+        "duties_success":["All of your duties were", "successful", ""],
+        "duties_failed": ["All of your duties were", "missed", ""]
       }
     }
   },
