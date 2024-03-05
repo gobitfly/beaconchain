@@ -407,6 +407,8 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 	minEpoch := headEpoch - 2
 	maxEpoch := headEpoch + 1
 
+	maxValidatorsInResponse := 6
+
 	dutiesInfo, releaseLock, err := services.GetCurrentDutiesInfo()
 	defer releaseLock() // important to unlock once done, otherwise data updater cant update the data
 	if err != nil {
@@ -485,19 +487,22 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 							syncsRef.Scheduled = &t.VDBSlotVizDuty{}
 						}
 						syncsRef.Scheduled.TotalCount++
-						syncsRef.Scheduled.Validators = append(syncsRef.Scheduled.Validators, validator)
+						if len(syncsRef.Scheduled.Validators) < maxValidatorsInResponse {
+							syncsRef.Scheduled.Validators = append(syncsRef.Scheduled.Validators, validator)
+						}
 					} else if _, ok := dutiesInfo.SlotSyncParticipated[slot][validator]; ok {
 						if syncsRef.Success == nil {
 							syncsRef.Success = &t.VDBSlotVizDuty{}
 						}
 						syncsRef.Success.TotalCount++
-						syncsRef.Success.Validators = append(syncsRef.Success.Validators, validator)
 					} else {
 						if syncsRef.Failed == nil {
 							syncsRef.Failed = &t.VDBSlotVizDuty{}
 						}
 						syncsRef.Failed.TotalCount++
-						syncsRef.Failed.Validators = append(syncsRef.Failed.Validators, validator)
+						if len(syncsRef.Failed.Validators) < maxValidatorsInResponse {
+							syncsRef.Failed.Validators = append(syncsRef.Failed.Validators, validator)
+						}
 					}
 				}
 			}
@@ -526,7 +531,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 							Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
 							DutyObject: validator,                               // Slashed validator
 						}
-						slashingsRef.Success.Slashings = append(slashingsRef.Success.Slashings, slashing)
+						if len(slashingsRef.Success.Slashings) < maxValidatorsInResponse {
+							slashingsRef.Success.Slashings = append(slashingsRef.Success.Slashings, slashing)
+						}
 					}
 				}
 			}
@@ -550,7 +557,9 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 					Validator:  dutiesInfo.PropAssignmentsForSlot[slot], // Slashing validator
 					DutyObject: validator,                               // Slashed validator
 				}
-				slashingsRef.Failed.Slashings = append(slashingsRef.Failed.Slashings, slashing)
+				if len(slashingsRef.Failed.Slashings) < maxValidatorsInResponse {
+					slashingsRef.Failed.Slashings = append(slashingsRef.Failed.Slashings, slashing)
+				}
 			}
 		}
 	}
@@ -578,19 +587,22 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrima
 					attestationsRef.Scheduled = &t.VDBSlotVizDuty{}
 				}
 				attestationsRef.Scheduled.TotalCount++
-				attestationsRef.Scheduled.Validators = append(attestationsRef.Scheduled.Validators, uint64(validator))
+				if len(attestationsRef.Scheduled.Validators) < maxValidatorsInResponse {
+					attestationsRef.Scheduled.Validators = append(attestationsRef.Scheduled.Validators, uint64(validator))
+				}
 			} else if duty {
 				if attestationsRef.Success == nil {
 					attestationsRef.Success = &t.VDBSlotVizDuty{}
 				}
 				attestationsRef.Success.TotalCount++
-				attestationsRef.Success.Validators = append(attestationsRef.Success.Validators, uint64(validator))
 			} else {
 				if attestationsRef.Failed == nil {
 					attestationsRef.Failed = &t.VDBSlotVizDuty{}
 				}
 				attestationsRef.Failed.TotalCount++
-				attestationsRef.Failed.Validators = append(attestationsRef.Failed.Validators, uint64(validator))
+				if len(attestationsRef.Failed.Validators) < maxValidatorsInResponse {
+					attestationsRef.Failed.Validators = append(attestationsRef.Failed.Validators, uint64(validator))
+				}
 			}
 		}
 	}
