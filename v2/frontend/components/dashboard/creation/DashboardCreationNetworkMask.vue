@@ -30,7 +30,7 @@ function onBack () {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.network.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="network" :buttons="allNetworks" />
+      <BcToggleSingleBar v-model="network" :buttons="allNetworks" :initial="network" />
       <div class="row_container">
         <Button @click="onBack()">
           {{ $t('dashboard.creation.back') }}
