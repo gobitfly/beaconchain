@@ -42,7 +42,7 @@ export interface StatusCount {
   success: number /* uint64 */;
   failed: number /* uint64 */;
 }
-export type ClElUnion =
+export type ClElUnion = 
     number /* float64 */ | string /* decimal.Decimal */;
 export interface ClElValue<T extends ClElUnion> {
   el: T;
@@ -73,12 +73,4 @@ export interface SearchResult {
 }
 export interface SearchResponse {
   data: SearchResult[];
-}
-export interface Dashboard {
-  id: string;
-  name: string;
-}
-export interface DashboardData {
-  validator_dashboards: Dashboard[];
-  account_dashboards: Dashboard[];
 }
