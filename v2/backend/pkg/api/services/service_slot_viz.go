@@ -100,7 +100,11 @@ func updateSlotVizData() error {
 
 				encodedRedisCachedEpochAssignments, err := db.PersistentRedisDbClient.Get(ctx, key).Result()
 				if err != nil {
-					return errors.Wrap(err, "error getting epoch assignments data")
+					if epoch == headEpoch+1 {
+						log.Infof("headEpoch + 1 assignments not yet available, epoch %d", epoch)
+						return nil
+					}
+					return errors.Wrap(err, fmt.Sprintf("error getting epoch assignments data for epoch %d", epoch))
 				}
 
 				var serializedAssignmentsData bytes.Buffer
