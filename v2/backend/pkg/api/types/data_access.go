@@ -11,10 +11,15 @@ type Sort[T enums.Enum] struct {
 }
 
 type VDBValidator struct {
-	Index   uint64 `json:"index"`
-	Version uint64 `json:"version"`
+	Index   uint64
+	Version uint64
 }
 
 type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
+
+type DashboardInfo struct {
+	Id     VDBIdPrimary // this must be the bigint id
+	UserId uint64
+}
