@@ -24,12 +24,12 @@ type VDBSlotVizStatus[T any] struct {
 }
 
 type VDBSlotVizSlot struct {
-	Slot         uint64                               `json:"slot"`
-	Status       string                               `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'" faker:"oneof: proposed, missed, scheduled, orphaned"`
-	Proposal     *VDBSlotVizTuple                     `json:"proposal,omitempty"`
-	Attestations VDBSlotVizStatus[VDBSlotVizDuty]     `json:"attestations"`
-	Sync         VDBSlotVizStatus[VDBSlotVizDuty]     `json:"sync"`
-	Slashing     VDBSlotVizStatus[VDBSlotVizSlashing] `json:"slashing"`
+	Slot         uint64                                `json:"slot"`
+	Status       string                                `json:"status" tstype:"'proposed' | 'missed' | 'scheduled' | 'orphaned'" faker:"oneof: proposed, missed, scheduled, orphaned"`
+	Proposal     *VDBSlotVizTuple                      `json:"proposal,omitempty"`
+	Attestations *VDBSlotVizStatus[VDBSlotVizDuty]     `json:"attestations,omitempty"`
+	Sync         *VDBSlotVizStatus[VDBSlotVizDuty]     `json:"sync,omitempty"`
+	Slashing     *VDBSlotVizStatus[VDBSlotVizSlashing] `json:"slashing,omitempty"`
 }
 type SlotVizEpoch struct {
 	Epoch    uint64           `json:"epoch"`
