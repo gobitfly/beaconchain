@@ -740,12 +740,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         </div>
       </div>
       <div v-if="inputted.length === 0" class="panel-of-results">
-        <div class="bottom-info">
+        <div class="info center">
           {{ $t('search_engine.help') }}
         </div>
       </div>
       <div v-else-if="waitingForSearchResults" class="panel-of-results">
-        <div class="bottom-info">
+        <div class="info center">
           {{ $t('search_engine.searching') }}
         </div>
       </div>
@@ -776,16 +776,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             </div>
           </div>
         </div>
-        <div class="bottom-info">
-          <span v-if="results.organized.howManyResultsIn == 0">
-            {{ $t('search_engine.no_result_matches') }}
-            {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
-          </span>
-          <span v-if="results.organized.howManyResultsOut > 0">
-            {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
-            {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
-              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
-          </span>
+        <div v-if="results.organized.howManyResultsIn == 0" class="info center">
+          {{ $t('search_engine.no_result_matches') }}
+          {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
+        </div>
+        <div v-if="results.organized.howManyResultsOut > 0" class="info bottom">
+          {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
+          {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
+            (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
         </div>
       </div>
     </div>
@@ -965,6 +963,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   max-height: 270px;  // the height of the filter section is subtracted
   right: 0px;
   overflow: auto;
+  @include fonts.standard_text;
 
   .network-container {
     display: flex;
@@ -981,10 +980,10 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         min-width: 0;
         right: 0px;
         @media (min-width: 600px) { // large screen
-          grid-template-columns: 64px 120px auto auto;
+          grid-template-columns: 64px 100px auto min-content;
         }
         @media (max-width: 600px) { // mobile
-          grid-template-columns: 40px 100px 190px;
+          grid-template-columns: 40px 100px auto;
         }
 
         .columns-icons {
@@ -999,7 +998,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           border: 1px solid rgba(0, 0, 0, 0.8);
           grid-column: 2;
           grid-row: 1;
-          overflow-wrap: break-word;
+          overflow-wrap: anywhere;
+          font-weight: var(--roboto-medium);
         }
         .columns-1and2 {
           display: flex;
@@ -1010,15 +1010,18 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           @media (max-width: 600px) { // mobile
             grid-row-end: span 2;
           }
+          font-weight: var(--roboto-medium);
           .columns-1 {
             display: flex;
-          min-width: 0;
-            overflow-wrap: break-word;
+            min-width: 11ch;
+            overflow-wrap: anywhere;
+            border: 1px solid red;
           }
           .columns-2 {
             display: flex;
-          min-width: 0;
-            overflow-wrap: break-word;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            border: 1px solid blue;
           }
         }
         .columns-category {
@@ -1041,14 +1044,21 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     }
   }
 
-  .bottom-info {
+  .info {
     width: 100%;
     @include fonts.standard_text;
     color: var(--text-color-disabled);
     justify-content: center;
     text-align: center;
     align-items: center;
-    margin-top: auto;
+    &.bottom {
+      margin-top: auto;
+    }
+    &.center {
+      margin-bottom: auto;
+      margin-top: auto;
+    }
   }
+
 }
 </style>
