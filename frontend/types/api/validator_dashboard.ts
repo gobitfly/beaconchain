@@ -227,6 +227,13 @@ export type InternalGetValidatorDashboardValidatorsResponse = ApiPagingResponse<
  * ------------------------------------------------------------
  * Misc.
  */
+export type VDBIdPrimary = number /* int */;
+export type VDBIdPublic = string;
+export type VDBIdValidatorSet = VDBValidator[];
+export interface VDBValidator {
+  index: number /* uint64 */;
+  version: number /* uint64 */;
+}
 export interface VDBPostReturnData {
   id: number /* uint64 */;
   user_id: number /* uint64 */;

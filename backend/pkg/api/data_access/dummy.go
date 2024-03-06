@@ -33,6 +33,12 @@ func (d DummyService) GetUserDashboards(userId uint64) (t.UserDashboardsData, er
 	return r, err
 }
 
+func (d DummyService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
+	r := []t.VDBValidator{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
 	r := t.VDBPostReturnData{}
 	err := commonFakeData(&r)
@@ -87,7 +93,7 @@ func (d DummyService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, 
 	return nil
 }
 
-func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
+func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err
@@ -117,7 +123,7 @@ func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.
 	return r, p, err
 }
 
-func (d DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error {
+func (d DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	return nil
 }
 
@@ -138,14 +144,11 @@ func (d DummyService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimar
 }
 
 func (d DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
-	r := []t.SlotVizEpoch{}
-	var err error
-	for i := 0; i < 4; i++ {
-		epoch := t.SlotVizEpoch{}
-		err = commonFakeData(&epoch)
-		r = append(r, epoch)
-	}
-	return r, err
+	r := struct {
+		Epochs []t.SlotVizEpoch `faker:"slice_len=4"`
+	}{}
+	err := commonFakeData(&r)
+	return r.Epochs, err
 }
 
 func (d DummyService) GetValidatorDashboardSlotVizByPublicId(dashboardId t.VDBIdPublic) ([]t.SlotVizEpoch, error) {
