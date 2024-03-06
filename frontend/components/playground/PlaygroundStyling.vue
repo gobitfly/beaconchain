@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleMultiBar, IconSlotBlockProposal } from '#components'
+import { BcToggleMultiBar, BcToggleMultibarButton, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -23,6 +23,9 @@ const selected = ref(true)
 
 const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
+
+const dropodownSelection = ref<string | undefined>()
+const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe' }]
 
 </script>
 
@@ -100,7 +103,7 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
 
         <div>
           Selected: {{ selected }}
-          <BcToggleButton v-model="selected" :icon="faTable" />
+          <BcToggleMultibarButton v-model="selected" :icon="faTable" />
         </div>
         <div>
           <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
@@ -116,9 +119,26 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
-      <Dropdown :options="['yes', 'no', 'maybe']" />
-      <Dropdown :options="['yes', 'no', 'maybe']" variant="filled" />
-      <Dropdown :options="['yes', 'no', 'maybe']" variant="no_border" />
+      <div class="element_container" style="background-color: darkred; padding: 5px;">
+        <Dropdown v-model="dropodownSelection" :options="dropdownList" option-value="value" option-label="label" placeholder="this is a place" />
+        <Dropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          variant="filled"
+          placeholder="for rock"
+        />
+        <Dropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          variant="no_border"
+          placeholder="and roll"
+        />
+        Selected: {{ dropodownSelection }}
+      </div>
     </TabPanel>
     <TabPanel header="Spinner">
       <Button @click="toggleLoading">
