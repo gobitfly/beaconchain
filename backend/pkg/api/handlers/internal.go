@@ -320,9 +320,14 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], false)
 	groupId := checkGroupId(&err, req.GroupId)
-	validators := checkValidatorArray(&err, req.Validators)
+	validatorArr := checkValidatorArray(&err, req.Validators)
 	if err != nil {
 		returnBadRequest(w, err)
+		return
+	}
+	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
+	if err != nil {
+		returnInternalServerError(w, err)
 		return
 	}
 
@@ -398,9 +403,14 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 	vars := mux.Vars(r)
 	q := r.URL.Query()
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], false)
-	validators := checkValidatorList(&err, q.Get("validators"))
+	validatorArr := checkValidatorList(&err, q.Get("validators"))
 	if err != nil {
 		returnBadRequest(w, err)
+		return
+	}
+	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
+	if err != nil {
+		returnInternalServerError(w, err)
 		return
 	}
 
