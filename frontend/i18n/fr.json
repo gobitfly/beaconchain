@@ -48,6 +48,8 @@
     "search_engine": {
       "placeholder": "Cherchez dans la blockchain",
       "searching": "Recherche en cours...",
+      "something_wrong": "Une erreur est survenue",
+      "try_again": "Essayez à nouveau dans quelques instants.",
       "no_result_matches": "Aucun résultat ne correspond à",
       "your_input": "votre entrée.",
       "your_filters": "vos filtres",

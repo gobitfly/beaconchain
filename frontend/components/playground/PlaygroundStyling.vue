@@ -120,14 +120,14 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
         Toggle loading
       </Button>
       <div class="element_container">
-        <BcLoadingSpinner :loading="loading" />
-        <BcLoadingSpinner :loading="loading" size="small" style="color: lightblue;" />
-        <BcLoadingSpinner :loading="loading" size="large" />
+        <BcLoadingSpinner :loading="true" />
+        <BcLoadingSpinner :loading="true" size="small" style="color: lightblue;" />
+        <BcLoadingSpinner :loading="true" size="large" />
         <div class="box">
-          <BcLoadingSpinner :loading="loading" alignment="center" />
+          <BcLoadingSpinner :loading="true" alignment="center" />
         </div>
         <div class="box">
-          <BcLoadingSpinner :loading="loading" size="full" />
+          <BcLoadingSpinner :loading="true" size="full" />
         </div>
       </div>
     </TabPanel>

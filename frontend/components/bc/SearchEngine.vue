@@ -49,6 +49,7 @@ const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
+const numberOfApiCallsWithoutResponse = ref(0)
 const showDropDown = ref(false)
 const populateDropDown = ref(true)
 const inputted = ref('')
@@ -87,6 +88,7 @@ function cleanUp () {
   lastKnownInput = ''
   inputted.value = ''
   waitingForSearchResults.value = false
+  numberOfApiCallsWithoutResponse.value = 0
   populateDropDown.value = false
   results.raw = { data: [] }
 }
@@ -132,9 +134,13 @@ onUnmounted(() => {
 // - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
 setInterval(() => {
   if (waitingForSearchResults.value) {
-    if (searchAhead()) {
+    if (!searchAhead()) {
+      numberOfApiCallsWithoutResponse.value++
+      // `waitingForSearchResults.value` remains true so we will try again in 2 seconds
+    } else {
       filterAndOrganizeResults()
       waitingForSearchResults.value = false
+      numberOfApiCallsWithoutResponse.value = 0
     }
   }
 },
@@ -168,6 +174,7 @@ function userFeelsLucky () {
     return
   }
   if (waitingForSearchResults.value) {
+    // the timer did not trigger a search yet, so we do it
     if (!searchAhead()) {
       return
     }
@@ -250,6 +257,10 @@ function searchAhead () : boolean {
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchableTypes[0] as string !== '-- to be removed --') {
     results.raw = simulateAPIresponse(inputted.value)
+    if (Math.random() < 1 / 2.5) {
+      // 40% of the time, we simulate an error (the timer will try again)
+      error = true
+    }
   } else { // *** END OF STUFF TO REMOVE ***
     fetch('/api/2/search', {
       method: 'POST',
@@ -745,17 +756,33 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         </div>
       </div>
       <div v-else-if="waitingForSearchResults" class="output-area">
-        <div class="info center">
+        <div v-if="numberOfApiCallsWithoutResponse < 3" class="info center">
           {{ $t('search_engine.searching') }}
+          <BcLoadingSpinner :loading="true" size="small" alignment="default" />
+        </div>
+        <div v-else class="info center">
+          {{ $t('search_engine.something_wrong') }}
+          <BcErrorIcon style="position:relative; top:2px; height:14px" />
+          <br>
+          {{ $t('search_engine.try_again') }}
         </div>
       </div>
       <div v-else-if="populateDropDown" class="output-area">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
           <div v-for="typ of network.types" :key="typ.type" class="type-container">
-            <div v-for="(suggestion, i) of typ.suggestion" :key="i" class="single-result" @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])">
-              <span class="columns-icons">
-                <IconTypeIcons :type="typ.type" class="type-icon" />
+            <div
+              v-for="(suggestion, i) of typ.suggestion"
+              :key="i"
+              class="single-result"
+              :class="barStyle"
+              @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
+            >
+              <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons">
+                <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
                 <IconNetworkIcons :chain-id="network.chainId" class="network-icon" />
+              </span>
+              <span v-else class="columns-icons">
+                <IconTypeIcons :type="typ.type" class="type-icon alone" />
               </span>
               <span class="columns-0">
                 {{ suggestion.columns[0] }}
@@ -977,16 +1004,22 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       .single-result {
         cursor: pointer;
         display: grid;
+        min-width: 0;
+        right: 0px;
+        padding-left: 2px;
+        padding-right: 2px;
+        padding-top: 7px;
+        padding-bottom: 7px;
         @media (min-width: 600px) { // large screen
           grid-template-columns: 40px 100px auto min-content;
+          &.gaudy {
+            padding-left: 4px;
+            padding-right: 4px;
+          }
         }
         @media (max-width: 600px) { // mobile
           grid-template-columns: 40px 100px auto;
         }
-        min-width: 0;
-        right: 0px;
-        padding-top: 7px;
-        padding-bottom: 7px;
         border-radius: var(--border-radius);
 
         &:hover {
@@ -1008,11 +1041,18 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           margin-bottom: auto;
           width: 30px;
           height: 36px;
+
           .type-icon {
-            position: relative;
-            display: inline;
-            top: 2px;
-            left: 2px;
+            &.not-alone {
+              display: inline;
+              position: relative;
+              top: 2px;
+            }
+            &.alone {
+             display: flex;
+             margin-top: auto;
+             margin-bottom: auto;
+            }
             width: 20px;
             max-height: 20px;
           }
@@ -1063,7 +1103,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             display: flex;
             margin-top: auto;
             margin-bottom: auto;
-            padding-right: 2px;
           }
           @media (max-width: 600px) { // mobile
             grid-column: 2;
@@ -1074,7 +1113,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
               float: right;
               margin-left: 8px;
             }
-            color: var(--text-color-disabled);
+            color: var(--drop-down-text-discreet);
           }
         }
       }
