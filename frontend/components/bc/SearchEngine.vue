@@ -45,7 +45,7 @@ const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
 const searchable = props.searchable as Category[]
 let searchableTypes : ResultType[] = []
 
-const PeriodOfDropDownUpdates = 500 /* TODO: change to 2000 for production !!!! */
+const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
 
 const waitingForSearchResults = ref(false)
@@ -739,23 +739,23 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           </span>
         </div>
       </div>
-      <div v-if="inputted.length === 0" class="panel-of-results">
+      <div v-if="inputted.length === 0" class="output-area">
         <div class="info center">
           {{ $t('search_engine.help') }}
         </div>
       </div>
-      <div v-else-if="waitingForSearchResults" class="panel-of-results">
+      <div v-else-if="waitingForSearchResults" class="output-area">
         <div class="info center">
           {{ $t('search_engine.searching') }}
         </div>
       </div>
-      <div v-else-if="populateDropDown" class="panel-of-results">
+      <div v-else-if="populateDropDown" class="output-area">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
           <div v-for="typ of network.types" :key="typ.type" class="type-container">
             <div v-for="(suggestion, i) of typ.suggestion" :key="i" class="single-result" @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])">
               <span class="columns-icons">
-                <IconTypeIcons :type="typ.type" />
-                <IconNetworkIcons :chain-id="network.chainId" />
+                <IconTypeIcons :type="typ.type" class="type-icon" />
+                <IconNetworkIcons :chain-id="network.chainId" class="network-icon" />
               </span>
               <span class="columns-0">
                 {{ suggestion.columns[0] }}
@@ -956,7 +956,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#drop-down .panel-of-results {
+#drop-down .output-area {
   display: flex;
   flex-direction: column;
   min-height: 128px;
@@ -977,36 +977,69 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       .single-result {
         cursor: pointer;
         display: grid;
-        min-width: 0;
-        right: 0px;
         @media (min-width: 600px) { // large screen
           grid-template-columns: 40px 100px auto min-content;
         }
         @media (max-width: 600px) { // mobile
           grid-template-columns: 40px 100px auto;
         }
+        min-width: 0;
+        right: 0px;
+        margin-bottom: 14px;
+        border-radius: 6px;
+
+        &:hover {
+          background-color: var(--dark-grey);
+        }
 
         .columns-icons {
+          position: relative;
           grid-column: 1;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
             grid-row-end: span 2;
           }
+          display: flex;
+          margin-top: auto;
+          margin-bottom: auto;
+          width: 30px;
+          height: 36px;
+          .type-icon {
+            position: relative;
+            display: inline;
+            top: 0px;
+            left: 0px;
+            width: 20px;
+            max-height: 20px;
+          }
+          .network-icon {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            height: 20px;
+            max-width:20px;
+          }
         }
         .columns-0 {
           grid-column: 2;
           grid-row: 1;
+          display: flex;
+          margin-top: auto;
+          margin-bottom: auto;
           overflow-wrap: anywhere;
           font-weight: var(--roboto-medium);
+          padding-right: 4px;
         }
         .columns-1and2 {
-          display: flex;
           min-width: 0;
           grid-column: 3;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
             grid-row-end: span 2;
           }
+          display: flex;
+          margin-top: auto;
+          margin-bottom: auto;
           font-weight: var(--roboto-medium);
           .columns-1 {
             display: flex;
@@ -1023,6 +1056,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           @media (min-width: 600px) { // large screen
             grid-column: 4;
             grid-row: 1;
+            display: flex;
+            margin-top: auto;
+            margin-bottom: auto;
           }
           @media (max-width: 600px) { // mobile
             grid-column: 2;
@@ -1055,6 +1091,5 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       margin-top: auto;
     }
   }
-
 }
 </style>

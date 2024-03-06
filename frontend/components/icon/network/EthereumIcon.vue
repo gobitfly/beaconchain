@@ -10,7 +10,7 @@ const ColorMap : Record<string, string[]> = {
 </script>
 
 <template>
-  <svg width="34" height="57" viewBox="0 0 34 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 34 57" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M16.9957 0L16.624 1.29887V38.9884L16.9957 39.3699L33.9901 29.0286L16.9957 0Z" :fill="ColorMap[props.backgroundTheme][0]" />
     <path d="M16.9954 0L0 29.0286L16.9954 39.3699V21.0765V0Z" :fill="ColorMap[props.backgroundTheme][1]" />
     <path d="M16.9958 42.6822L16.7861 42.9451V56.3708L16.9958 56.9999L34.0004 32.3467L16.9958 42.6822Z" :fill="ColorMap[props.backgroundTheme][2]" />
