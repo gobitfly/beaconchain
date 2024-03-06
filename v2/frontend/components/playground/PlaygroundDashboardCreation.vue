@@ -41,5 +41,4 @@ const changeDisplayType = (newDisplayType: DashboardCreationDisplayType) => {
       gap: 10px;
     }
   }
-
 </style>
