@@ -7,10 +7,8 @@
     version="1.1"
     x="0px"
     y="0px"
-    width="55"
-    height="55"
-    viewBox="0 0 2500 2500"
     style="enable-background:new 0 0 2500 2500;"
+    viewBox="0 0 2500 2500"
     xml:space="preserve"
   >
     <g id="Layer_x0020_1">

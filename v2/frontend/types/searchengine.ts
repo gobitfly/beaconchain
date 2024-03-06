@@ -103,7 +103,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and will fill array `dropdownColumns` (see below) with this information in that order.
     queryParamIndex: 0,
-    dropdownColumns: [undefined, undefined, ''] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
+    dropdownColumns: [undefined, '', undefined] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
   },
   [ResultType.NFTs]: {
     title: 'NFT (ERC-721 & ERC-1155 token)',
@@ -113,7 +113,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
     queryParamIndex: 0,
-    dropdownColumns: [undefined, undefined, '']
+    dropdownColumns: [undefined, '', undefined]
   },
   [ResultType.Epochs]: {
     title: 'Epoch',

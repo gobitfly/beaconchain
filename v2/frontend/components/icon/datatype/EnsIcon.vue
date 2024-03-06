@@ -6,10 +6,8 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     x="0px"
     y="0px"
-    width="17px"
-    height="18px"
-    viewBox="0 0 72.7 80.9"
     style="enable-background:new 0 0 72.7 80.9;"
+    viewBox="0 0 72.7 80.9"
     xml:space="preserve"
     fill="currentColor"
   >
