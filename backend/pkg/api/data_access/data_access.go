@@ -213,6 +213,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 }
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
+	// WORKING spletka
 	return d.dummy.CreateValidatorDashboard(userId, name, network)
 }
 
@@ -242,7 +243,7 @@ func (d DataAccessService) GetValidatorDashboardOverviewByValidators(validators 
 }
 
 func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.RemoveValidatorDashboard(dashboardId)
 }
 
@@ -252,17 +253,17 @@ func (d DataAccessService) RemoveValidatorDashboardByPublicId(dashboardId t.VDBI
 }
 
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (t.VDBOverviewGroup, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.CreateValidatorDashboardGroup(dashboardId, name)
 }
 
 func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.RemoveValidatorDashboardGroup(dashboardId, groupId)
 }
 
 func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 }
 
@@ -282,22 +283,22 @@ func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboard
 }
 
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.RemoveValidatorDashboardValidators(dashboardId, validators)
 }
 
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.CreateValidatorDashboardPublicId(dashboardId, name, showGroupNames)
 }
 
 func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.UpdateValidatorDashboardPublicId(dashboardId, publicDashboardId, name, showGroupNames)
 }
 
 func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string) error {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.RemoveValidatorDashboardPublicId(dashboardId, publicDashboardId)
 }
 
