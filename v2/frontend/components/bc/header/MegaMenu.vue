@@ -40,11 +40,11 @@ import {
   faBuildingColumns
 } from '@fortawesome/sharp-solid-svg-icons'
 
-import IconEthereumOverview from '~/components/icon/megaMenu/EthereumOverview.vue'
-import IconGnosisOverview from '~/components/icon/megaMenu/GnosisOverview.vue'
-import IconArbitrumOverview from '~/components/icon/megaMenu/ArbitrumOverview.vue'
-import IconBaseOverview from '~/components/icon/megaMenu/BaseOverview.vue'
-import IconOptimismOverview from '~/components/icon/megaMenu/OptimismOverview.vue'
+import EthereumMono from '~/components/icon/network/EthereumMono.vue'
+import GnosisMono from '~/components/icon/network/GnosisMono.vue'
+import ArbitrumMono from '~/components/icon/network/ArbitrumMono.vue'
+import BaseMono from '~/components/icon/network/BaseMono.vue'
+import OptimismMono from '~/components/icon/network/OptimismMono.vue'
 import IconEthermineStaking from '~/components/icon/megaMenu/EthermineStaking.vue'
 import IconEthStore from '~/components/icon/megaMenu/EthStore.vue'
 import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
@@ -66,7 +66,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: IconEthereumOverview,
+              svg: EthereumMono,
               url: '/'
             },
             {
@@ -338,7 +338,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: IconGnosisOverview,
+              svg: GnosisMono,
               url: '/'
             },
             {
@@ -556,7 +556,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: IconArbitrumOverview,
+              svg: ArbitrumMono,
               url: '/'
             },
             {
@@ -670,7 +670,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: IconBaseOverview,
+              svg: BaseMono,
               url: '/'
             },
             {
@@ -784,7 +784,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: IconOptimismOverview,
+              svg: OptimismMono,
               url: '/'
             },
             {
@@ -921,6 +921,7 @@ const items = [
   i {
     position: absolute;
     transform: translateY(-50%);
+    max-width: 16px;
   }
 }
 </style>
