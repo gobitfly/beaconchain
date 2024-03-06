@@ -525,7 +525,7 @@ func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardData
 
 	//Clear old partitions
 	//todo delete in aggregator, not here
-	for i := 0; ; i++ {
+	for i := 0; ; i += PartitionEpochWidth {
 		startOfPartition, endOfPartition := getPartitionRange(epoch - RetainEpochDuration - i)
 		finished, err := deleteEpochPartition(startOfPartition, endOfPartition)
 		if err != nil {
