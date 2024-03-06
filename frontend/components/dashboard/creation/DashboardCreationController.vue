@@ -22,7 +22,11 @@ watch(() => props.displayType, () => {
 })
 
 function onCreate () {
-  console.log(`Creating dashboard ${name.value} of type ${type.value} on network ${network.value}`)
+  if (type.value === 'account') {
+    console.log(`Creating ${type.value} dashboard ${name.value} via ${API_PATH.DASHBOARD_CREATE_ACCOUNT}`)
+  } else if (type.value === 'validator') {
+    console.log(`Creating ${type.value} dashboard ${name.value} on ${network.value} via ${API_PATH.DASHBOARD_CREATE_VALIDATOR}`)
+  }
 }
 
 const modalVisibility = ref(false)
