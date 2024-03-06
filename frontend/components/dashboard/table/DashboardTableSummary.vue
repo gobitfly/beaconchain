@@ -17,6 +17,7 @@ const { t: $t } = useI18n()
 const store = useValidatorDashboardSummaryStore()
 const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
+const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
@@ -32,11 +33,17 @@ const loadData = (query?: TableQueryParams) => {
   if (!query) {
     query = { limit: pageSize.value }
   }
-  getSummary(props.dashboardKey, query)
+  setQuery(query, true, true)
 }
 
 watch(() => props.dashboardKey, () => {
   loadData()
+}, { immediate: true })
+
+watch(query, (q) => {
+  if (q) {
+    getSummary(props.dashboardKey, q)
+  }
 }, { immediate: true })
 
 const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
