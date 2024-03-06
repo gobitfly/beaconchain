@@ -74,11 +74,3 @@ export interface SearchResult {
 export interface SearchResponse {
   data: SearchResult[];
 }
-export interface Dashboard {
-  id: string;
-  name: string;
-}
-export interface DashboardData {
-  validator_dashboards: Dashboard[];
-  account_dashboards: Dashboard[];
-}

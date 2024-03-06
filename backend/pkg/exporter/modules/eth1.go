@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -258,7 +259,7 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil && err != sql.ErrTxDone {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -397,7 +398,7 @@ func aggregateDeposits() error {
 			COUNT(CASE WHEN v.status = 'deposited' THEN 1 END) AS pendingcount,
 			COUNT(CASE WHEN v.status = 'exited' THEN 1 END) AS voluntary_exit_count
 		FROM (
-			SELECT 
+			SELECT
 				from_address,
 				publickey,
 				SUM(amount) AS amount,

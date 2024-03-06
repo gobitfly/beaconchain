@@ -115,13 +115,17 @@ const data = computed(() => {
 })
 
 </script>
+
 <template>
-  <BcTooltip v-if="data?.efficiency" position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
-    <div class="info_row">
-      <DashboardTableEfficiency :success="data.efficiency.status_count.success" :failed="data.efficiency.status_count.failed" />
+  <div v-if="data?.efficiency" class="info_row">
+    <DashboardTableEfficiency
+      :success="data.efficiency.status_count.success"
+      :failed="data.efficiency.status_count.failed"
+    />
+    <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
       <FontAwesomeIcon v-if="data.tooltip?.title" class="link" :icon="faInfoCircle" />
-    </div>
-  </BcTooltip>
+    </BcTooltip>
+  </div>
   <DashboardTableValidators
     v-else-if="data?.validators"
     :validators="data.validators"
@@ -129,94 +133,91 @@ const data = computed(() => {
     :context="data.context"
     :group-id="props.row.group_id"
   />
-  <BcTooltip
-    v-else-if="data?.attestationEfficiency"
-    position="top"
-    :text="data.tooltip?.text"
-    :title="data.tooltip?.title"
-  >
-    <div class="info_row">
-      <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
+  <div v-else-if="data?.attestationEfficiency" class="info_row">
+    <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
+    <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
-    </div>
-  </BcTooltip>
-  <BcTooltip v-else-if="data?.apr" position="top">
-    <div class="info_row">
-      <BcFormatPercent :percent="data.apr.total" />
+    </BcTooltip>
+  </div>
+  <div v-else-if="data?.apr" class="info_row">
+    <BcFormatPercent :percent="data.apr.total" />
+    <BcTooltip position="top">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
-    </div>
-    <template #tooltip>
-      <div class="row">
-        <b>{{ $t('common.execution_layer') }}:</b>
-        <BcFormatValue class="space_before" :value="data.apr.income.el" /> (
-        <BcFormatPercent :percent="data.apr.apr.el" />)
-      </div>
-      <div class="row">
-        <b>{{ $t('common.consensus_layer') }}:</b>
-        <BcFormatValue class="space_before" :value="data.apr.income.cl" /> (
-        <BcFormatPercent :percent="data.apr.apr.cl" />)
-      </div>
-    </template>
-  </BcTooltip>
-  <BcTooltip v-else-if="data?.luck" position="top">
-    <div class="info_row">
-      <span>
-        <FontAwesomeIcon :icon="faCube" />
-        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> / <FontAwesomeIcon :icon="faSync" />
-        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
-      </span>
+      <template #tooltip>
+        <div class="row">
+          <b>{{ $t('common.execution_layer') }}:</b>
+          <BcFormatValue class="space_before" :value="data.apr.income.el" /> (
+          <BcFormatPercent :percent="data.apr.apr.el" />)
+        </div>
+        <div class="row">
+          <b>{{ $t('common.consensus_layer') }}:</b>
+          <BcFormatValue class="space_before" :value="data.apr.income.cl" /> (
+          <BcFormatPercent :percent="data.apr.apr.cl" />)
+        </div>
+      </template>
+    </BcTooltip>
+  </div>
+  <div v-else-if="data?.luck" class="info_row">
+    <span>
+      <FontAwesomeIcon :icon="faCube" />
+      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> |
+      <FontAwesomeIcon :icon="faSync" />
+      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+    </span>
+    <BcTooltip position="top">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
-    </div>
-    <template #tooltip>
-      <div class="row">
-        <b>
-          {{ $t('dashboard.validator.tooltip.block_proposal') }}
-        </b>
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.luck') }}:
-        </b>
-        <BcFormatPercent :percent="data.luck.proposal.percent" />
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.expected') }}:
-        </b>
-        {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.average') }}:
-        </b>
-        {{ $t('common.every_day', {}, data.luck.proposal.average) }}
-      </div>
-      <br>
-      <div class="row next_chapter">
-        <b class="part">
-          {{ $t('dashboard.validator.tooltip.sync_committee') }}
-        </b>
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.luck') }}:
-        </b>
-        <BcFormatPercent :percent="data.luck.proposal.percent" />
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.expected') }}:
-        </b>
-        {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
-      </div>
-      <div class="row">
-        <b>
-          {{ $t('common.average') }}:
-        </b>
-        {{ $t('common.every_day', {}, data.luck.proposal.average) }}
-      </div>
-    </template>
-  </BcTooltip>
+      <template #tooltip>
+        <div class="row">
+          <b>
+            {{ $t('dashboard.validator.tooltip.block_proposal') }}
+          </b>
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.luck') }}:
+          </b>
+          <BcFormatPercent :percent="data.luck.proposal.percent" />
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.expected') }}:
+          </b>
+          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.average') }}:
+          </b>
+          {{ $t('common.every_day', {}, data.luck.proposal.average) }}
+        </div>
+        <br>
+        <div class="row next_chapter">
+          <b class="part">
+            {{ $t('dashboard.validator.tooltip.sync_committee') }}
+          </b>
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.luck') }}:
+          </b>
+          <BcFormatPercent :percent="data.luck.proposal.percent" />
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.expected') }}:
+          </b>
+          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
+        </div>
+        <div class="row">
+          <b>
+            {{ $t('common.average') }}:
+          </b>
+          {{ $t('common.every_day', {}, data.luck.proposal.average) }}
+        </div>
+      </template>
+    </BcTooltip>
+  </div>
+
   <BcFormatPercent v-else-if="data?.efficiencyTotal" :percent="data.efficiencyTotal.total" :color-break-point="80" />
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}

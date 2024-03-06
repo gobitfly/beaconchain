@@ -1,3 +1,5 @@
+// When updating values here, please keep in mind that you might have to updated utils/colors.ts too
+
 :root {
   --grey: #a5a5a5;
   --grey-1: #e9e9e9;
@@ -22,9 +24,9 @@
   --light-red: #d42127;
   --yellow: #ffd600;
   --primary-color: #f89811;
-  --primary-orange: #ffaa31;  
-  --primary-orange-hover: #ff951a;  
-  --primary-orange-pressed: #ffb346;  
+  --primary-orange: #ffaa31;
+  --primary-orange-hover: #ff951a;
+  --primary-orange-pressed: #ffb346;
 
   --primary-contrast-color: var(--grey-4);
 
@@ -53,11 +55,17 @@
 
   --searchbar-background: var(--light-grey);
   --searchbar-filter-unselected: var(--button-color-disabled);
+  --tooltip-background: var(--light-grey-2);
+  --tooltip-text-color: var(--light-black);
 
   --link-color: var(--blue);
 
   --negative-color: var(--light-red);
   --positive-color: var(--light-green);
+
+  --megamenu-panel-color: var(--light-grey);
+  --megamenu-text-color: var(--grey);
+  --megamenu-hover-color: var(--light-grey-3);
 
   &.dark-mode {
     --primary-color: var(--primary-orange);
@@ -88,10 +96,16 @@
 
     --searchbar-background: var(--light-black);
     --searchbar-filter-unselected: var(--light-grey);
+    --tooltip-background: var(--light-grey);
+    --tooltip-text-color: var(--light-black);
 
     --link-color: var(--light-blue);
 
     --negative-color: var(--flashy-red);
-    --positive-color: var(--flashy-green);
+    --positive-color: var(--green);
+
+    --megamenu-panel-color: var(--graphite);
+    --megamenu-text-color: var(--grey);
+    --megamenu-hover-color: var(--asphalt);
   }
 }

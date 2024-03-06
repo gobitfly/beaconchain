@@ -14,11 +14,10 @@ import {
   faCheckCircle,
   faNewspaper
 } from '@fortawesome/pro-solid-svg-icons'
+
+import { Target } from '~/types/links'
+
 const { t: $t } = useI18n()
-const enum Target {
-  Internal = '_self',
-  External = '_blank'
-}
 type Row = { title: string, links: [string, IconDefinition, string, Target][] }
 const columns: Row[] = [
   {

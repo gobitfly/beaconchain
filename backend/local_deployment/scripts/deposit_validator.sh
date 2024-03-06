@@ -5,7 +5,7 @@ clean_up () {
     ARG=$?
     rm -rf /tmp/deposit
     exit $ARG
-} 
+}
 trap clean_up EXIT
 
 while getopts a:b:e:i:m: flag

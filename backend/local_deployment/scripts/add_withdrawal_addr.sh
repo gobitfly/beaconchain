@@ -5,7 +5,7 @@ clean_up () {
     ARG=$?
     rm -rf /tmp/set_withdrawal_addr
     exit $ARG
-} 
+}
 trap clean_up EXIT
 
 while getopts a:b:i:m: flag
