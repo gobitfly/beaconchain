@@ -239,6 +239,8 @@
   "search_engine": {
     "placeholder": "Search the blockchain",
     "searching": "Searching...",
+    "something_wrong": "Something went wrong",
+    "try_again": "Try again in a few moments.",
     "no_result_matches": "No result matches",
     "your_input": " your input.",
     "your_filters": " your filters",
