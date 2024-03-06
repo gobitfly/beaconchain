@@ -33,10 +33,10 @@ const data = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use '~/assets/css/utils.scss';
 
 .efficiency {
-  @include main.truncate-text;
+  @include utils.truncate-text;
   display: block;
 
   .positive {

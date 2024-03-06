@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleMultiBar, BcToggleMultibarButton, IconSlotBlockProposal } from '#components'
+import { IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -25,7 +25,7 @@ const completeList = ref([{ value: 'attestation' }, { value: 'proposal', compone
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const dropodownSelection = ref<string | undefined>()
-const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe' }]
+const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
 
 </script>
 
@@ -49,6 +49,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       <br>
       <Button label="Close" @click="slotModalVisibility = false" />
     </div>
+
     <template #footer>
       Utilizing the footer slot for custom content
     </template>
@@ -95,6 +96,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
             <template #trueIcon>
               <IconSlotAttestation />
             </template>
+
             <template #falseIcon>
               <IconSlotBlockProposal />
             </template>
@@ -110,6 +112,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
             <template #attestation>
               <IconSlotAttestation />
             </template>
+
             <template #sync>
               <IconSlotSync />
             </template>
@@ -120,22 +123,23 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
     </TabPanel>
     <TabPanel header="Dropdown">
       <div class="element_container" style="background-color: darkred; padding: 5px;">
-        <Dropdown v-model="dropodownSelection" :options="dropdownList" option-value="value" option-label="label" placeholder="this is a place" />
-        <Dropdown
+        <BcDropdown
           v-model="dropodownSelection"
           :options="dropdownList"
           option-value="value"
           option-label="label"
-          variant="filled"
-          placeholder="for rock"
+          placeholder="for rock wtf this is a long placeholder"
+          panel-style="max-width: 100px"
+          style="max-width: 100px;"
         />
-        <Dropdown
+        <BcDropdown
           v-model="dropodownSelection"
           :options="dropdownList"
           option-value="value"
           option-label="label"
-          variant="no_border"
+          variant="table"
           placeholder="and roll"
+          style="width: 200px;"
         />
         Selected: {{ dropodownSelection }}
       </div>
@@ -172,4 +176,5 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
-}</style>
+}
+</style>

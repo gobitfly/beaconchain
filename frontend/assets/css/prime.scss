@@ -1,4 +1,5 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 @import "~/assets/css/prime_datatable.scss";
 @import "~/assets/css/prime_megamenu.scss";
 
@@ -209,24 +210,20 @@
 *  Dropdown
 * https://primevue.org/dropdown/
 * different Dropdown variant's:
-* - 'outlined' (=default) : no background, only border
-* - 'filled' : background + border
-* - 'no_border': no background and no border
+* - 'default' (=default) : default style for dropdown
+* - 'table' : dropdown style within a data table
 ***/
 
 .p-dropdown {
-  background: transparent;
+  background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   border-radius: var(--border-radius);
   padding: var(--padding);
 
-  &[variant="filled"] {
-    background: var(--input-background);
-  }
-  &[variant="no_border"] {
-    border-color: transparent;
+  &.table {
+    background: var(--background-color);
   }
 
   &:not(.p-disabled).p-focus {
@@ -264,15 +261,21 @@
   color: var(--input-active-text-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   transform: translateY(-1px);
+  &.table{
+    background: var(--background-color);
+  }
   .p-dropdown-items {
-    padding: var(--padding-small) 0;
+    padding: var(--padding-small);
     .p-dropdown-item {
-      padding: 2px var(--padding) 3px var(--padding);
+      @include utils.truncate-text;
+      padding: var(--padding-small) 4px;
+      border-radius: var(--border-radius);
       &.p-highlight:not(:hover) {
-        background: green; // TODO: replace with correct styles
+        background: var(--primary-color);
+        color: var(--primary-contrast-color);
       }
       &:hover {
-        background: blue; // TODO: replace with correct styles
+        background: var(--dropdown-background-hover);
       }
     }
   }

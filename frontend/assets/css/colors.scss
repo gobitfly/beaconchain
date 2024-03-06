@@ -65,6 +65,8 @@
   --megamenu-text-color: var(--grey);
   --megamenu-hover-color: var(--light-grey-3);
 
+  --dropdown-background-hover: var(--light-grey-3);
+
   &.dark-mode {
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
@@ -103,5 +105,7 @@
     --megamenu-panel-color: var(--graphite);
     --megamenu-text-color: var(--grey);
     --megamenu-hover-color: var(--asphalt);
+
+  --dropdown-background-hover: var(--dark-grey);
   }
 }
