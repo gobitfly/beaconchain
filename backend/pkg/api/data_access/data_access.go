@@ -697,7 +697,7 @@ func (d DataAccessService) GetValidatorDashboardElDepositsByPublicId(dashboardId
 }
 
 func (d DataAccessService) GetValidatorDashboardElDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardElDepositsByValidators(dashboardId, cursor, search, limit)
 }
 
@@ -712,7 +712,7 @@ func (d DataAccessService) GetValidatorDashboardClDepositsByPublicId(dashboardId
 }
 
 func (d DataAccessService) GetValidatorDashboardClDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardClDepositsByValidators(dashboardId, cursor, search, limit)
 }
 
