@@ -50,8 +50,10 @@ const network = ref<string>('')
     <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
   </BcDialog>
   <div v-else-if="displayType === 'panel'">
-    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
-    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
+    <div class="panel_container">
+      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
+      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
+    </div>
   </div>
 </template>
 
@@ -64,5 +66,9 @@ const network = ref<string>('')
       padding: 10px;
       gap: 10px;
     }
+  }
+
+  .panel_container {
+    padding: var(--padding-large);
   }
 </style>

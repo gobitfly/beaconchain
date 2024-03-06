@@ -45,10 +45,6 @@ function onContinue () {
 
 <style lang="scss" scoped>
   .mask_container{
-    width: 460px;
-    height: 248px;
-    padding: var(--padding-large);
-
     .element_container{
       display: flex;
       flex-direction: column;
