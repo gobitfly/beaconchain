@@ -2,7 +2,9 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -16,6 +18,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 )
 
 type DataAccessInterface interface {
@@ -710,7 +714,79 @@ func (d DataAccessService) GetValidatorDashboardDutiesByValidators(dashboardId t
 
 func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// WORKING Rami
-	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+	// TODO: Get the validators from the dashboardId
+	validators := make([]uint64, 100)
+	for i := uint64(0); i < uint64(len(validators)); i++ {
+		validators[i] = i
+	}
+	proposals := make([]struct {
+		Proposer uint64 `db:"proposer"`
+		// GroupId         uint64        `db:"proposer"`
+		Epoch  uint64        `db:"epoch"`
+		Slot   uint64        `db:"slot"`
+		Status uint64        `db:"status"`
+		Block  sql.NullInt64 `db:"exec_block_number"`
+		Mev    sql.NullInt64 `db:"mev_reward"`
+	}, 100)
+	validatorsPQArray := pq.Array(validators)
+
+	// TODO LEFT JOIN ON vdb_table (?)
+	err := d.ReaderDb.Select(proposals, `
+		SELECT
+			epoch,
+			slot,
+			status,
+			proposer,
+			COALESCE(exec_block_number, 0) AS exec_block_number,
+			relays_blocks.value AS mev_reward,
+		FROM blocks
+		WHERE proposer = ANY($1)
+		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+		ORDER BY slot ASC
+		`, validatorsPQArray)
+	if err != nil {
+		return nil, t.Paging{}, err
+	}
+
+	slotsNoRelay := make([]uint64, 0, len(proposals))
+	data := make([]t.VDBBlocksTableRow, len(proposals))
+	for i, proposal := range proposals {
+		data[i].Proposer = proposal.Proposer
+		// data[i].GroupId = proposal.GroupId
+		data[i].Epoch = proposal.Epoch
+		data[i].Slot = proposal.Slot
+		switch proposal.Status {
+		case 0:
+			data[i].Status = "scheduled"
+		case 1:
+			data[i].Status = "success"
+		case 2:
+			data[i].Status = "missed"
+		case 3:
+			data[i].Status = "orphaned"
+		default:
+			// invalid
+		}
+		if proposal.Block.Valid {
+			data[i].Block = uint64(proposal.Block.Int64)
+		}
+		if proposal.Mev.Valid {
+			data[i].Reward.El = decimal.NewFromInt(proposal.Mev.Int64)
+		} else {
+			slotsNoRelay[i] = proposal.Slot
+		}
+		/* blockReward, err := // wait for pkg/exporter/modules/dasboard_data.go:47 to be done
+		if err != nil {
+			return nil, t.Paging{}, err
+		}
+		data[i].Reward.Cl = blockReward.Total*/
+	}
+	// tx reward is in bt
+	blocksNoRelay, err := d.Bigtable.GetBlocksIndexedMultiple(slotsNoRelay, uint64(len(slotsNoRelay)))
+	for i, block := range blocksNoRelay {
+		data[i].Reward.El = decimal.NewFromBigInt(new(big.Int).SetBytes(block.TxReward), 0)
+	}
+	return data, t.Paging{}, err
 }
 
 func (d DataAccessService) GetValidatorDashboardBlocksByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
