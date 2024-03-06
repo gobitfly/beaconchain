@@ -35,20 +35,6 @@ const network = ref<string>('')
 </script>
 
 <template>
-  <div class="settings_container">
-    <h1>
-      Dashboard Creation Controller
-    </h1>
-    <div>
-      Type: {{ type }}
-    </div>
-    <div>
-      Name: {{ name }}
-    </div>
-    <div>
-      Network: {{ network }}
-    </div>
-  </div>
   <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
     <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
     <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
@@ -62,16 +48,6 @@ const network = ref<string>('')
 </template>
 
 <style lang="scss" scoped>
-  .settings_container {
-    padding: 10px;
-
-    .button_container {
-      display: flex;
-      padding: 10px;
-      gap: 10px;
-    }
-  }
-
   .panel_container {
     border: 1px solid var(--primary-orange);
     border-radius: var(--border-radius);
