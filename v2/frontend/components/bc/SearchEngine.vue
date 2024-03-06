@@ -985,11 +985,15 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         }
         min-width: 0;
         right: 0px;
-        margin-bottom: 14px;
-        border-radius: 6px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        border-radius: var(--border-radius);
 
         &:hover {
-          background-color: var(--dark-grey);
+          background-color: var(--dropdown-background-hover);
+        }
+        &:active {
+          background-color: var(--button-color-pressed);
         }
 
         .columns-icons {
@@ -1007,8 +1011,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           .type-icon {
             position: relative;
             display: inline;
-            top: 0px;
-            left: 0px;
+            top: 2px;
+            left: 2px;
             width: 20px;
             max-height: 20px;
           }
@@ -1059,6 +1063,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             display: flex;
             margin-top: auto;
             margin-bottom: auto;
+            padding-right: 2px;
           }
           @media (max-width: 600px) { // mobile
             grid-column: 2;
