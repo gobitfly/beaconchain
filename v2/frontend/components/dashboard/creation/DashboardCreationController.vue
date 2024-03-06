@@ -21,6 +21,10 @@ watch(() => props.displayType, () => {
   }
 })
 
+function onCreate () {
+  console.log(`Creating dashboard ${name.value} of type ${type.value} on network ${network.value}`)
+}
+
 const modalVisibility = ref(false)
 
 const state = ref<DashboardCreationState>('')
@@ -46,13 +50,13 @@ const network = ref<string>('')
     </div>
   </div>
   <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
-    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
-    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
+    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
+    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
   </BcDialog>
   <div v-else-if="displayType === 'panel'">
     <div class="panel_container">
-      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" />
-      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" />
+      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
+      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
     </div>
   </div>
 </template>
@@ -69,6 +73,9 @@ const network = ref<string>('')
   }
 
   .panel_container {
+    border: 1px solid var(--primary-orange);
+    border-radius: var(--border-radius);
+    max-width: 460px;
     padding: var(--padding-large);
   }
 </style>

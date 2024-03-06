@@ -10,13 +10,16 @@ const typeButtons = shallowRef([{ text: $t('dashboard.creation.type.accounts'), 
 
 const name = defineModel<string>('name', { required: true })
 
+const emit = defineEmits<{(e: 'create-pressed'): void }>()
+
 const continueDisabled = computed(() => {
+  // TODO: Verify name as specified in ticket
   return type.value === '' || name.value === ''
 })
 
 function onContinue () {
   if (type.value === 'account') {
-    state.value = ''
+    emit('create-pressed')
   } else {
     state.value = 'network'
   }
