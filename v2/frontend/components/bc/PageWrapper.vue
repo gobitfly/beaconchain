@@ -5,7 +5,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
 
 <template>
   <div class="page">
-    <BcMainHeader :is-home-page="props.isHomePage" />
+    <BcHeaderMainHeader :is-home-page="props.isHomePage" />
     <div class="content">
       <slot name="top" />
       <BcAdControl />
@@ -18,13 +18,14 @@ const props = defineProps({ isHomePage: { type: Boolean } })
 </template>
 
 <style lang="scss" scoped>
-.page{
+.page {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.content{
+
+.content {
   width: var(--content-width);
-  margin: var(--padding) var(--content-margin) var(--padding) var(--content-margin) ;
+  margin: var(--padding) var(--content-margin) var(--padding) var(--content-margin);
 }
 </style>

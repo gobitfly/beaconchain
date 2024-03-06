@@ -140,13 +140,15 @@ type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutie
 // ------------------------------------------------------------
 // Blocks Tab
 type VDBBlocksTableRow struct {
-	Proposer uint64                     `json:"proposer"`
-	GroupId  uint64                     `json:"group_id"`
-	Epoch    uint64                     `json:"epoch"`
-	Slot     uint64                     `json:"slot"`
-	Block    uint64                     `json:"block"`
-	Status   string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
-	Reward   ClElValue[decimal.Decimal] `json:"reward"`
+	Proposer        uint64                     `json:"proposer"`
+	GroupId         uint64                     `json:"group_id"`
+	Epoch           uint64                     `json:"epoch"`
+	Slot            uint64                     `json:"slot"`
+	Block           uint64                     `json:"block"`
+	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
+	RewardRecipient Address                    `json:"reward_recipient"`
+	Reward          ClElValue[decimal.Decimal] `json:"reward"`
+	Graffiti        string                     `json:"graffiti"`
 }
 type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTableRow]
 
@@ -235,7 +237,7 @@ type VDBManageValidatorsTableRow struct {
 type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManageValidatorsTableRow]
 
 // ------------------------------------------------------------
-// Misc. Responses
+// Misc.
 type VDBPostReturnData struct {
 	Id        uint64    `json:"id"`
 	UserID    uint64    `json:"user_id"`
@@ -249,12 +251,8 @@ type VDBPostValidatorsData struct {
 	GroupId   uint64 `json:"group_id"`
 }
 
-type VDBGetValidatorsData struct {
-	// TODO
-}
-
 type VDBPostPublicIdData struct {
-	AccessToken   string `json:"access_token"`
+	PublicId      string `json:"public_id"`
 	Name          string `json:"name"`
 	ShareSettings struct {
 		GroupNames bool `json:"group_names"`

@@ -1,7 +1,9 @@
 package modules
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -294,14 +296,9 @@ func contains(s []RocketpoolRewardTreeDownloadable, e uint64) bool {
 
 func (rp *RocketpoolExporter) Update(count int64) error {
 	var wg errgroup.Group
-	wg.Go(func() error {
-		if count == 0 || count%5 == 4 { // run download one iteration before we update nodes
-			return rp.DownloadMissingRewardTrees()
-		}
-		return nil
-	})
+	wg.Go(func() error { return rp.DownloadMissingRewardTrees() })
 	wg.Go(func() error { return rp.UpdateMinipools() })
-	wg.Go(func() error { return rp.UpdateNodes(count%5 == 0) })
+	wg.Go(func() error { return rp.UpdateNodes(true) })
 	wg.Go(func() error { return rp.UpdateDAOProposals() })
 	wg.Go(func() error { return rp.UpdateDAOMembers() })
 	wg.Go(func() error { return rp.UpdateNetworkStats() })
@@ -664,7 +661,7 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -708,16 +705,16 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		}
 		stmt := fmt.Sprintf(`
 			insert into rocketpool_minipools (
-				rocketpool_storage_address, address, pubkey, status, status_time, node_address, node_fee, 
+				rocketpool_storage_address, address, pubkey, status, status_time, node_address, node_fee,
 				deposit_type, penalty_count, node_deposit_balance, node_refund_balance,
 				user_deposit_balance, is_vacant, version
-			) values %s on conflict (rocketpool_storage_address, address) do update set 
-				pubkey = excluded.pubkey, 
-				status = excluded.status, 
-				status_time = excluded.status_time, 
-				node_address = excluded.node_address, 
-				node_fee = excluded.node_fee, 
-				deposit_type = excluded.deposit_type, 
+			) values %s on conflict (rocketpool_storage_address, address) do update set
+				pubkey = excluded.pubkey,
+				status = excluded.status,
+				status_time = excluded.status_time,
+				node_address = excluded.node_address,
+				node_fee = excluded.node_fee,
+				deposit_type = excluded.deposit_type,
 				penalty_count = excluded.penalty_count,
 				node_deposit_balance = excluded.node_deposit_balance,
 				node_refund_balance = excluded.node_refund_balance,
@@ -757,7 +754,7 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -804,25 +801,25 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 
 		stmt = fmt.Sprintf(`
 			insert into rocketpool_nodes (
-				rocketpool_storage_address, 
-				address, 
-				timezone_location, 
-				rpl_stake, 
-				min_rpl_stake, 
-				max_rpl_stake, 
-				rpl_cumulative_rewards, 
-				smoothing_pool_opted_in, 
-				claimed_smoothing_pool, 
-				unclaimed_smoothing_pool, 
+				rocketpool_storage_address,
+				address,
+				timezone_location,
+				rpl_stake,
+				min_rpl_stake,
+				max_rpl_stake,
+				rpl_cumulative_rewards,
+				smoothing_pool_opted_in,
+				claimed_smoothing_pool,
+				unclaimed_smoothing_pool,
 				unclaimed_rpl_rewards,
 				effective_rpl_stake,
 				deposit_credit
-			) 
-			values %s 
-			on conflict (rocketpool_storage_address, address) do update set 
-				rpl_stake = excluded.rpl_stake, 
-				min_rpl_stake = excluded.min_rpl_stake, 
-				max_rpl_stake = excluded.max_rpl_stake, 
+			)
+			values %s
+			on conflict (rocketpool_storage_address, address) do update set
+				rpl_stake = excluded.rpl_stake,
+				min_rpl_stake = excluded.min_rpl_stake,
+				max_rpl_stake = excluded.max_rpl_stake,
 				rpl_cumulative_rewards = excluded.rpl_cumulative_rewards,
 				smoothing_pool_opted_in = excluded.smoothing_pool_opted_in,
 				claimed_smoothing_pool = excluded.claimed_smoothing_pool,
@@ -858,7 +855,7 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -911,7 +908,7 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -989,7 +986,7 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1025,10 +1022,10 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 		}
 
 		stmt := fmt.Sprintf(`
-			insert into rocketpool_dao_proposals_member_votes (rocketpool_storage_address, id, member_address, voted, supported) 
-			values %s 
-			on conflict (rocketpool_storage_address, id, member_address) do update 
-				set voted = excluded.voted, 
+			insert into rocketpool_dao_proposals_member_votes (rocketpool_storage_address, id, member_address, voted, supported)
+			values %s
+			on conflict (rocketpool_storage_address, id, member_address) do update
+				set voted = excluded.voted,
 				supported = excluded.supported`, strings.Join(valueStrings, ","))
 		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
@@ -1062,7 +1059,7 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1153,7 +1150,7 @@ func (rp *RocketpoolExporter) TagValidators() error {
 	}
 	defer func() {
 		err := tx.Rollback()
-		if err != nil {
+		if err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Error(err, "error rolling back transaction", 0)
 		}
 	}()
@@ -1194,12 +1191,12 @@ func (rp *RocketpoolExporter) TagValidators() error {
 
 func (rp *RocketpoolExporter) SaveNetworkStats() error {
 	_, err := db.WriterDb.Exec(`
-		INSERT INTO rocketpool_network_stats 
+		INSERT INTO rocketpool_network_stats
 		(
-			ts, rpl_price, claim_interval_time, claim_interval_time_start, current_node_fee, current_node_demand, 
-			reth_supply, node_operator_rewards, reth_exchange_rate, node_count, minipool_count, odao_member_count, 
+			ts, rpl_price, claim_interval_time, claim_interval_time_start, current_node_fee, current_node_demand,
+			reth_supply, node_operator_rewards, reth_exchange_rate, node_count, minipool_count, odao_member_count,
 			total_eth_staking, total_eth_balance, effective_rpl_staked
-		) 
+		)
 		VALUES(
 			now(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
 			(SELECT sum(effective_rpl_stake) FROM rocketpool_nodes)

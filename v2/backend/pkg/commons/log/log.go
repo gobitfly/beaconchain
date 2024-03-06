@@ -22,6 +22,10 @@ func Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...F
 	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
 }
 
+func Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
+	logErrorInfo(err, callerSkip, additionalInfos...).Warn(errorMsg)
+}
+
 func Infof(format string, args ...interface{}) {
 	logrus.Infof(format, args...)
 }

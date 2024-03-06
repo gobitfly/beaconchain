@@ -1,15 +1,36 @@
 <script setup lang="ts">
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
+import { type SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
+import { IconSlotAttestation, IconSlotBlockProposal, IconSlotSlashing, IconSlotSync } from '#components'
 interface Props {
   data: SlotVizEpoch[]
 }
 const props = defineProps<Props>()
 
+const selectedCategoris = ref<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
+
+const icons: { component: Component, value: SlotVizCategories }[] = [
+  {
+    component: IconSlotBlockProposal,
+    value: 'proposal'
+  }, {
+    component: IconSlotAttestation,
+    value: 'attestation'
+  }, {
+    component: IconSlotSync,
+    value: 'sync'
+  }, {
+    component: IconSlotSlashing,
+    value: 'slashing'
+  }
+]
+
 </script>
 <template>
-  <div class="content">
+  <div id="slot-viz" class="content">
     <div class="rows">
+      <div class="row" />
       <div v-for="row in props.data" :key="row.epoch" class="row">
         <div class="epoch">
           {{ row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch) }}
@@ -17,8 +38,11 @@ const props = defineProps<Props>()
       </div>
     </div>
     <div class="rows">
+      <div class="row">
+        <BcToggleMultiBar v-model="selectedCategoris" :icons="icons" />
+      </div>
       <div v-for="row in props.data" :key="row.epoch" class="row">
-        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" />
+        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categoris="selectedCategoris" />
       </div>
     </div>
   </div>
@@ -33,7 +57,6 @@ const props = defineProps<Props>()
   gap: var(--padding);
   overflow-x: auto;
   overflow-y: hidden;
-  min-height: 180px;
   min-height: 180px;
   padding: var(--padding-large) var(--padding-large) var(--padding-large) 9px;
 
@@ -53,6 +76,9 @@ const props = defineProps<Props>()
       justify-content: flex-start;
       height: 30px;
       gap: var(--padding);
+      &:first-child{
+        height: 46px;
+      }
     }
   }
 }

@@ -14,6 +14,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/kelseyhightower/envconfig"
+
+	//nolint:depguard
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -341,6 +344,21 @@ func setCLConfig(cfg *types.Config) error {
 			return err
 		}
 
+		maxForkEpoch := uint64(18446744073709551615)
+
+		if jr.Data.AltairForkEpoch == nil {
+			jr.Data.AltairForkEpoch = &maxForkEpoch
+		}
+		if jr.Data.BellatrixForkEpoch == nil {
+			jr.Data.BellatrixForkEpoch = &maxForkEpoch
+		}
+		if jr.Data.CapellaForkEpoch == nil {
+			jr.Data.CapellaForkEpoch = &maxForkEpoch
+		}
+		if jr.Data.DenebForkEpoch == nil {
+			jr.Data.DenebForkEpoch = &maxForkEpoch
+		}
+
 		chainCfg := types.ClChainConfig{
 			PresetBase:                              jr.Data.PresetBase,
 			ConfigName:                              jr.Data.ConfigName,
@@ -352,13 +370,13 @@ func setCLConfig(cfg *types.Config) error {
 			GenesisForkVersion:                      jr.Data.GenesisForkVersion,
 			GenesisDelay:                            uint64(jr.Data.GenesisDelay),
 			AltairForkVersion:                       jr.Data.AltairForkVersion,
-			AltairForkEpoch:                         uint64(jr.Data.AltairForkEpoch),
+			AltairForkEpoch:                         *jr.Data.AltairForkEpoch,
 			BellatrixForkVersion:                    jr.Data.BellatrixForkVersion,
-			BellatrixForkEpoch:                      uint64(jr.Data.BellatrixForkEpoch),
+			BellatrixForkEpoch:                      *jr.Data.BellatrixForkEpoch,
 			CappellaForkVersion:                     jr.Data.CapellaForkVersion,
-			CappellaForkEpoch:                       uint64(jr.Data.CapellaForkEpoch),
+			CappellaForkEpoch:                       *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
-			DenebForkEpoch:                          uint64(jr.Data.DenebForkEpoch),
+			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
 			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),
 			SecondsPerEth1Block:                     uint64(jr.Data.SecondsPerEth1Block),
 			MinValidatorWithdrawabilityDelay:        uint64(jr.Data.MinValidatorWithdrawabilityDelay),
@@ -424,19 +442,6 @@ func setCLConfig(cfg *types.Config) error {
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
 		}
 
-		if jr.Data.AltairForkEpoch == 0 {
-			chainCfg.AltairForkEpoch = 18446744073709551615
-		}
-		if jr.Data.BellatrixForkEpoch == 0 {
-			chainCfg.BellatrixForkEpoch = 18446744073709551615
-		}
-		if jr.Data.CapellaForkEpoch == 0 {
-			chainCfg.CappellaForkEpoch = 18446744073709551615
-		}
-		if jr.Data.DenebForkEpoch == 0 {
-			chainCfg.DenebForkEpoch = 18446744073709551615
-		}
-
 		cfg.Chain.ClConfig = chainCfg
 
 		gtr, err := client.GetGenesis()
@@ -461,5 +466,11 @@ func setCLConfig(cfg *types.Config) error {
 		}
 		cfg.Chain.ClConfig = *chainConfig
 	}
+
+	// Set log level based on environment variable
+	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
 	return nil
 }

@@ -1,5 +1,7 @@
 @use "~/assets/css/fonts.scss";
 @import "~/assets/css/prime_datatable.scss";
+@import "~/assets/css/prime_megamenu.scss";
+
 // Button
 // https://primevue.org/button/
 .p-button {
@@ -14,6 +16,7 @@
 
   display: flex;
   justify-content: center;
+  align-items: center;
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 
@@ -43,7 +46,7 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  
+
   .p-dialog-header {
     color: var(--text-color);
     .p-dialog-title {
@@ -81,11 +84,11 @@
 
 // TabView
 // https://primevue.org/tabview/
-.p-tabview {  
+.p-tabview {
   .p-tabview-nav {
     li {
       margin-right: 0;
-    
+
       .p-tabview-nav-link {
         border: solid transparent 1px;
         border-top-right-radius: var(--border-radius);

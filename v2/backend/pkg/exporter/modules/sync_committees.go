@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -74,7 +76,7 @@ func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sql
 		}
 		defer func() {
 			err := tx.Rollback()
-			if err != nil {
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
@@ -91,7 +93,7 @@ func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sql
 	}
 	_, err = tx.Exec(
 		fmt.Sprintf(`
-			INSERT INTO sync_committees (period, validatorindex, committeeindex) 
+			INSERT INTO sync_committees (period, validatorindex, committeeindex)
 			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
 			strings.Join(valueIds, ",")),
 		valueArgs...)

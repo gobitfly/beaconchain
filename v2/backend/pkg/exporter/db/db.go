@@ -107,7 +107,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 
 	stmtDeposits, err := tx.Prepare(`
 		INSERT INTO blocks_deposits (block_slot, block_index, block_root, proof, publickey, withdrawalcredentials, amount, signature, valid_signature)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 
 	stmtBlobs, err := tx.Prepare(`
 		INSERT INTO blocks_blob_sidecars (block_slot, block_root, index, kzg_commitment, kzg_proof, blob_versioned_hash)
-		VALUES ($1, $2, $3, $4, $5, $6) 
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_root, index) DO NOTHING`)
 	if err != nil {
 		return err
@@ -760,25 +760,25 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 	_, err := tx.Exec(`
 		INSERT INTO epochs (
-			epoch, 
-			blockscount, 
-			proposerslashingscount, 
-			attesterslashingscount, 
-			attestationscount, 
+			epoch,
+			blockscount,
+			proposerslashingscount,
+			attesterslashingscount,
+			attestationscount,
 			depositscount,
 			withdrawalcount,
-			voluntaryexitscount, 
-			validatorscount, 
-			averagevalidatorbalance, 
+			voluntaryexitscount,
+			validatorscount,
+			averagevalidatorbalance,
 			totalvalidatorbalance,
-			eligibleether, 
-			globalparticipationrate, 
+			eligibleether,
+			globalparticipationrate,
 			votedether,
 			finalized
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
-		ON CONFLICT (epoch) DO UPDATE SET 
-			blockscount             = excluded.blockscount, 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		ON CONFLICT (epoch) DO UPDATE SET
+			blockscount             = excluded.blockscount,
 			proposerslashingscount  = excluded.proposerslashingscount,
 			attesterslashingscount  = excluded.attesterslashingscount,
 			attestationscount       = excluded.attestationscount,

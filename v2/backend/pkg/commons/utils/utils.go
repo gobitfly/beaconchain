@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -208,4 +209,22 @@ func SortedUniqueUint64(arr []uint64) []uint64 {
 	}
 
 	return result
+}
+
+func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validators []uint64) []uint64 {
+	participatingValidators := []uint64{}
+	for i := 0; i < len(syncAggregateBits)*8; i++ {
+		val := validators[i]
+		if BitAtVector(syncAggregateBits, i) {
+			participatingValidators = append(participatingValidators, val)
+		}
+	}
+	return participatingValidators
+}
+
+func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
+	elapsed := time.Since(start)
+	if elapsed < intendedMinWait {
+		time.Sleep(intendedMinWait - elapsed)
+	}
 }

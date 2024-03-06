@@ -97,7 +97,7 @@
   --big_text_font_family: var(--roboto-family);
   --big_text_font_size: 24px;
   --big_text_font_weight: var(--roboto-medium);
-  
+
   --big_text_label_font_family: var(--roboto-family);
   --big_text_label_font_size: 20px;
   --big_text_label_font_weight: var(--roboto-regular);
@@ -105,12 +105,18 @@
   --standard_text_font_family: var(--roboto-family);
   --standard_text_font_size: 14px;
   --standard_text_font_weight: var(--roboto-regular);
+  --standard_text_medium_font_weight: var(--roboto-medium);
   --standard_text_bold_font_weight: var(--roboto-bold);
-  
+
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 12px;
   --small_text_font_weight: var(--roboto-light);
   --small_text_bold_font_weight: var(--roboto-medium);
+
+  --tooltip_text_font_family: var(--inter-family);
+  --tooltip_text_font_size: 10px;
+  --tooltip_text_font_weight: var(--inter-light);
+  --tooltip_text_bold_font_weight: var(--inter-medium);
 
   --button_font_family: var(--roboto-family);
   --button_font_size: 14px;
@@ -166,7 +172,7 @@ h1 {
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
   font-weight: var(--small_text_font_weight);
-} 
+}
 
 .small_text{
   @include small_text
@@ -176,10 +182,30 @@ h1 {
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
   font-weight: var(--small_text_bold_font_weight);
-} 
+}
 
 .small_text_bold{
   @include small_text_bold
+}
+
+@mixin tooltip_text(){
+  font-family: var(--tooltip_text_font_family);
+  font-size: var(--tooltip_text_font_size);
+  font-weight: var(--tooltip_text_font_weight);
+}
+
+.tooltip_text{
+  @include tooltip_text
+}
+
+@mixin tooltip_text_bold(){
+  font-family: var(--tooltip_text_font_family);
+  font-size: var(--tooltip_text_font_size);
+  font-weight: var(--tooltip_text_bold_font_weight);
+}
+
+.tooltip_text_bold{
+  @include tooltip_text_bold
 }
 
 @mixin button_text(){
