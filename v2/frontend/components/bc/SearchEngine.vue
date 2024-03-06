@@ -24,7 +24,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['go'])
 
-interface OrganizedSingleResult {
+interface ResultSuggestion {
   columns: string[],
   queryParam: number, // index of the string given to the callback function `@go`
   closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
@@ -34,7 +34,7 @@ interface OrganizedResults {
     chainId: ChainIDs,
     types: {
       type: ResultType,
-      found: OrganizedSingleResult[]
+      suggestion: ResultSuggestion[]
     }[]
   }[]
 }
@@ -189,8 +189,8 @@ function userFeelsLucky () {
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one is array `type.found` (see the sorting done in `filterAnsdOrganizeResults()`)
-      possibilities.push({ closeness: type.found[0].closeness, network: network.chainId, type: type.type })
+      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestion` (see the sorting done in `filterAnsdOrganizeResults()`)
+      possibilities.push({ closeness: type.suggestion[0].closeness, network: network.chainId, type: type.type })
     }
   }
   // calling back parent's function in charge of making a choice
@@ -200,7 +200,7 @@ function userFeelsLucky () {
   const type = network?.types.find(ty => ty.type === picked.type)
   // calling back parent's function taking action with the result
   cleanUp()
-  emit('go', type?.found[0].columns[type?.found[0].queryParam], type?.type, network?.chainId)
+  emit('go', type?.suggestion[0].columns[type?.suggestion[0].queryParam], type?.type, network?.chainId)
 }
 
 function userClickedProposal (chain : ChainIDs, type : ResultType, what: string) {
@@ -294,7 +294,7 @@ function filterAndOrganizeResults () {
     const type = finding.type as ResultType
 
     // getting organized information from the finding
-    const toBeAdded = convertSearchAheadResultIntoOrganizedResult(finding)
+    const toBeAdded = convertSearchAheadResultIntoResultSuggestion(finding)
     if (toBeAdded.columns.length === 0) {
       continue
     }
@@ -329,11 +329,11 @@ function filterAndOrganizeResults () {
     if (existingType < 0) {
       existingType = -1 + place.networks[existingNetwork].types.push({
         type,
-        found: []
+        suggestion: []
       })
     }
     // now we can insert the finding at the right place in the organized results
-    place.networks[existingNetwork].types[existingType].found.push(toBeAdded)
+    place.networks[existingNetwork].types[existingType].suggestion.push(toBeAdded)
   }
 
   // This sorting orders the displayed results and is fundamental for function userFeelsLucky(). Do not alter the sorting without considering the needs of that function.
@@ -342,7 +342,7 @@ function filterAndOrganizeResults () {
     for (const network of place.networks) {
       network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority)
       for (const type of network.types) {
-        type.found.sort((a, b) => a.closeness - b.closeness)
+        type.suggestion.sort((a, b) => a.closeness - b.closeness)
       }
     }
   }
@@ -356,8 +356,8 @@ function filterAndOrganizeResults () {
 // The fields that the function read in the API response as well as the place they are displayed
 // in the drop-down are set in the object `TypeInfo` filled in types/searchengine.ts, by its properties
 // dataInSearchAheadResult (sets the fields to read and their order) and dropdownColumns (sets the columns to fill with that ordered data).
-function convertSearchAheadResultIntoOrganizedResult (apiResponseElement : SearchAheadSingleResult) : OrganizedSingleResult {
-  const emptyResult : OrganizedSingleResult = { columns: [], queryParam: -1, closeness: NaN }
+function convertSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion {
+  const emptyResult : ResultSuggestion = { columns: [], queryParam: -1, closeness: NaN }
 
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
@@ -752,20 +752,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       <div v-else-if="populateDropDown" class="panel-of-results">
         <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
           <div v-for="typ of network.types" :key="typ.type" class="type-container">
-            <div v-for="(found, i) of typ.found" :key="i" class="single-result" @click="userClickedProposal(network.chainId, typ.type, found.columns[found.queryParam])">
+            <div v-for="(suggestion, i) of typ.suggestion" :key="i" class="single-result" @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])">
               <span class="columns-icons">
                 <IconTypeIcons :type="typ.type" />
                 <IconNetworkIcons :chain-id="network.chainId" />
               </span>
               <span class="columns-0">
-                {{ found.columns[0] }}
+                {{ suggestion.columns[0] }}
               </span>
               <span class="columns-1and2">
-                <span class="columns-1">
-                  {{ found.columns[1] }}
+                <span v-if="suggestion.columns[1] !== ''" class="columns-1">
+                  {{ suggestion.columns[1] }}
                 </span>
                 <span class="columns-2">
-                  {{ found.columns[2] }}
+                  {{ suggestion.columns[2] }}
                 </span>
               </span>
               <span class="columns-category">
@@ -968,7 +968,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   .network-container {
     display: flex;
     flex-direction: column;
-    border-bottom: 0.5px dashed var(--light-grey-3);
+    //border-bottom: 0.5px dashed var(--light-grey-3);
     right: 0px;
     .type-container {
       display: flex;
@@ -980,14 +980,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         min-width: 0;
         right: 0px;
         @media (min-width: 600px) { // large screen
-          grid-template-columns: 64px 100px auto min-content;
+          grid-template-columns: 40px 100px auto min-content;
         }
         @media (max-width: 600px) { // mobile
           grid-template-columns: 40px 100px auto;
         }
 
         .columns-icons {
-          border: 1px solid rgba(0, 0, 0, 0.8);
           grid-column: 1;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
@@ -995,7 +994,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           }
         }
         .columns-0 {
-          border: 1px solid rgba(0, 0, 0, 0.8);
           grid-column: 2;
           grid-row: 1;
           overflow-wrap: anywhere;
@@ -1004,7 +1002,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         .columns-1and2 {
           display: flex;
           min-width: 0;
-          border: 1px solid rgba(0, 0, 0, 0.8);
           grid-column: 3;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
@@ -1013,15 +1010,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           font-weight: var(--roboto-medium);
           .columns-1 {
             display: flex;
-            min-width: 11ch;
-            overflow-wrap: anywhere;
-            border: 1px solid red;
+            overflow-wrap: break-word;
+            margin-right: 0.8ch;
           }
           .columns-2 {
             display: flex;
             min-width: 0;
             overflow-wrap: anywhere;
-            border: 1px solid blue;
           }
         }
         .columns-category {
@@ -1033,11 +1028,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             grid-column: 2;
             grid-row: 2;
           }
-          border: 1px solid rgba(0, 0, 0, 0.8);
           .category-label {
             @media (min-width: 600px) { // large screen
               float: right;
+              margin-left: 8px;
             }
+            color: var(--text-color-disabled);
           }
         }
       }

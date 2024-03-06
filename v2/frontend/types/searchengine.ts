@@ -173,7 +173,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'],
     queryParamIndex: 0,
-    dropdownColumns: ['', undefined, '']
+    dropdownColumns: ['', '', undefined]
   },
   [ResultType.TransactionBatches]: {
     title: 'Transaction batch',
@@ -203,7 +203,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
     queryParamIndex: 1,
-    dropdownColumns: [undefined, undefined, '']
+    dropdownColumns: [undefined, '', undefined]
   },
   [ResultType.Accounts]: {
     title: 'Account',
@@ -213,7 +213,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['hash_value'],
     queryParamIndex: 0,
-    dropdownColumns: ['', undefined, '']
+    dropdownColumns: ['', '', undefined]
   },
   [ResultType.EnsAddresses]: {
     title: 'ENS address',
@@ -223,7 +223,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     dataInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
     queryParamIndex: 0,
-    dropdownColumns: [undefined, undefined, '']
+    dropdownColumns: [undefined, '', undefined]
   },
   [ResultType.EnsOverview]: {
     title: 'Overview of ENS domain',
@@ -293,7 +293,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     dataInSearchAheadResult: ['hash_value'], // withdrawal credential
     queryParamIndex: 0,
-    dropdownColumns: ['Validator', undefined, '']
+    dropdownColumns: ['Validator', '', undefined]
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',
