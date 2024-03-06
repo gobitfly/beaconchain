@@ -8,12 +8,14 @@ const network = defineModel<string>('network', { required: true })
 const state = defineModel<DashboardCreationState>('state', { required: true })
 const allNetworks = shallowRef([{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }])
 
+const emit = defineEmits<{(e: 'create-pressed'): void }>()
+
 const continueDisabled = computed(() => {
   return network.value === ''
 })
 
 function onContinue () {
-  state.value = ''
+  emit('create-pressed')
 }
 
 function onBack () {
