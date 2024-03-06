@@ -43,7 +43,7 @@ const mapping: Record<string, MappingData> = {
     mock: true
   },
   [API_PATH.DASHBOARD_GROUPS]: {
-    path: '/api/i/users/me/dashboards',
+    path: '/users/me/dashboards',
     mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {

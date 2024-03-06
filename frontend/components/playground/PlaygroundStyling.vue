@@ -115,6 +115,11 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
         </div>
       </div>
     </TabPanel>
+    <TabPanel header="Dropdown">
+      <Dropdown :options="['yes', 'no', 'maybe']" />
+      <Dropdown :options="['yes', 'no', 'maybe']" variant="filled" />
+      <Dropdown :options="['yes', 'no', 'maybe']" variant="no_border" />
+    </TabPanel>
     <TabPanel header="Spinner">
       <Button @click="toggleLoading">
         Toggle loading
