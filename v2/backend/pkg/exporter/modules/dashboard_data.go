@@ -1,14 +1,24 @@
 package modules
 
 import (
+	"context"
 	"fmt"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 type dashboardData struct {
@@ -21,30 +31,102 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	}
 }
 
-func (d *dashboardData) Start(args []any) error {
-	epoch, ok := args[0].(int)
-	if !ok {
-		return errors.New("invalid argument")
+func (d *dashboardData) Init() error {
+	// todo aggregator
+	return nil
+}
+
+var onProcessingMutex = &sync.Mutex{}
+
+func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
+	onProcessingMutex.Lock()
+	defer onProcessingMutex.Unlock()
+
+	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
+	// An epoch becomes finalized once the next epoch gets justified
+	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
+	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
+	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	if err != nil {
+		return err
 	}
 
+	latestExported, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		return err
+	}
+
+	if latestExported != 0 {
+		if res.Data.Finalized.Epoch <= latestExported {
+			log.Infof("dashboard epoch data already exported for epoch %d", res.Data.Finalized.Epoch)
+			return nil
+		}
+
+		// todo think about backfilling process
+
+		// backfill if needed, skip backfilling older than RetainEpochDuration/3 since the time it would take to backfill exceeds the retention period anyway
+		// if res.Data.Finalized.Epoch-latestExported > 0 && res.Data.Finalized.Epoch-latestExported < RetainEpochDuration/3 {
+		// 	// backfill first
+		// 	log.Infof("backfilling dashboard epoch data from epoch %d to %d", latestExported+1, res.Data.Finalized.Epoch-1)
+		// 	for epoch := res.Data.Finalized.Epoch - 1; epoch > latestExported; epoch-- {
+		// 		err := d.exportEpochData(int(epoch))
+		// 		if err != nil {
+		// 			log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": epoch})
+		// 		}
+		// 	}
+		// }
+	}
+
+	err = d.exportEpochData(int(res.Data.Finalized.Epoch))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *dashboardData) GetName() string {
+	return "Dashboard-Data"
+}
+
+func (d *dashboardData) OnHead(event *constypes.StandardEventHeadResponse) error {
+	return nil
+}
+
+func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) error {
+	return nil
+}
+
+func (d *dashboardData) exportEpochData(epoch int) error {
 	spec, err := d.CL.GetSpec()
 	if err != nil {
 		return err
 	}
 
+	start := time.Now()
 	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
 	if data == nil {
 		return errors.New("can not get data")
 	}
+	log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(start))
 
+	start = time.Now()
 	domain, err := utils.GetSigningDomain()
 	if err != nil {
 		return err
 	}
 
-	process(data, domain)
+	result := process(data, domain)
+	log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
 
-	// todo store in db
+	start = time.Now()
+	err = WriteEpochData(epoch, result)
+	if err != nil {
+		return err
+	}
+	log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
+
+	log.Infof("successfully wrote dashboard epoch data for epoch %d", epoch)
 	return nil
 }
 
@@ -110,6 +192,10 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 		log.Infof("retrieving data for block at slot %d", slot)
 		block, err := d.CL.GetSlot(slot)
 		if err != nil {
+			httpErr, _ := network.SpecificError(err)
+			if httpErr != nil && httpErr.StatusCode == 404 {
+				continue // missed
+			}
 			log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
@@ -275,6 +361,171 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	return validatorsData
 }
 
+const PartitionEpochWidth = 3
+const RetainEpochDuration = 300 // in epochs
+
+func getPartitionRange(epoch int) (int, int) {
+	startOfPartition := epoch / PartitionEpochWidth * PartitionEpochWidth // inclusive
+	endOfPartition := startOfPartition + PartitionEpochWidth              // exclusive
+	return startOfPartition, endOfPartition
+}
+
+func WriteEpochData(epoch int, data []*validatorDashboardDataRow) error {
+
+	// Create table if needed
+	startOfPartition, endOfPartition := getPartitionRange(epoch)
+
+	err := createEpochPartition(startOfPartition, endOfPartition)
+	if err != nil {
+		return errors.Wrap(err, "failed to create epoch partition")
+	}
+
+	conn, err := db.AlloyWriter.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
+	}
+	defer conn.Close()
+
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+
+		pgxdecimal.Register(conn.TypeMap())
+		tx, err := conn.Begin(context.Background())
+
+		if err != nil {
+			return errors.Wrap(err, "error starting transaction")
+		}
+
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"dashboard_data_epoch"}, []string{
+			"validatorindex",
+			"epoch",
+			"attestations_source_reward",
+			"attestations_target_reward",
+			"attestations_head_reward",
+			"attestations_inactivity_reward",
+			"attestations_inclusion_reward",
+			"attestations_reward",
+			"attestations_ideal_source_reward",
+			"attestations_ideal_target_reward",
+			"attestations_ideal_head_reward",
+			"attestations_ideal_inactivity_reward",
+			"attestations_ideal_inclusion_reward",
+			"attestations_ideal_reward",
+			"blocks_scheduled",
+			"blocks_proposed",
+			"blocks_cl_reward",
+			"blocks_el_reward",
+			"sync_scheduled",
+			"sync_executed",
+			"sync_rewards",
+			"slashed",
+			"balance_start",
+			"balance_end",
+			"deposits_count",
+			"deposits_amount",
+			"withdrawals_count",
+			"withdrawals_amount",
+		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
+			return []interface{}{
+				data[i].Index,
+				epoch,
+				data[i].AttestationsSourceReward,
+				data[i].AttestationsTargetReward,
+				data[i].AttestationsHeadReward,
+				data[i].AttestationsInactivityReward,
+				data[i].AttestationsInclusionsReward,
+				data[i].AttestationReward,
+				data[i].AttestationsIdealSourceReward,
+				data[i].AttestationsIdealTargetReward,
+				data[i].AttestationsIdealHeadReward,
+				data[i].AttestationsIdealInactivityReward,
+				data[i].AttestationsIdealInclusionsReward,
+				data[i].AttestationIdealReward,
+				data[i].BlockScheduled,
+				data[i].BlocksProposed,
+				data[i].BlocksClReward,
+				data[i].BlocksElReward,
+				data[i].SyncScheduled,
+				data[i].SyncExecuted,
+				data[i].SyncReward,
+				data[i].Slashed,
+				data[i].BalanceStart,
+				data[i].BalanceEnd,
+				data[i].DepositsCount,
+				data[i].DepositsAmount,
+				data[i].WithdrawalsCount,
+				data[i].WithdrawalsAmount,
+			}, nil
+		}))
+
+		if err != nil {
+			return errors.Wrap(err, "error copying data")
+		}
+
+		err = tx.Commit(context.Background())
+		if err != nil {
+			return errors.Wrap(err, "error committing transaction")
+		}
+		return nil
+	})
+
+	//Clear old partitions
+	//todo delete in aggregator, not here
+	for i := 0; ; i++ {
+		startOfPartition, endOfPartition := getPartitionRange(epoch - RetainEpochDuration - i)
+		finished, err := deleteEpochPartition(startOfPartition, endOfPartition)
+		if err != nil {
+			return err
+		}
+
+		if finished {
+			break
+		}
+	}
+
+	return nil
+}
+
+func createEpochPartition(epochFrom, epochTo int) error {
+	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS dashboard_data_epoch_%d_%d 
+		PARTITION OF dashboard_data_epoch
+			FOR VALUES FROM (%[1]d) TO (%[2]d)
+		`,
+		epochFrom, epochTo,
+	))
+	return err
+}
+
+// Returns finished, error
+func deleteEpochPartition(epochFrom, epochTo int) (bool, error) {
+	st, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		DROP TABLE IF EXISTS dashboard_data_epoch_%d_%d
+		`,
+		epochFrom, epochTo,
+	))
+	if err != nil {
+		return false, err
+	}
+	rowsAffected, err := st.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if rowsAffected == 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func mustParseInt64(s string) int64 {
 	if s == "" {
 		return 0
@@ -286,19 +537,6 @@ func mustParseInt64(s string) int64 {
 	}
 	return r
 }
-
-// func mustParseInt(s string) int {
-// 	if s == "" {
-// 		return 0
-// 	}
-
-// 	r, err := strconv.ParseInt(s, 10, 32)
-
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return int(r)
-// }
 
 type validatorDashboardDataRow struct {
 	Index uint64
@@ -320,7 +558,7 @@ type validatorDashboardDataRow struct {
 	BlocksProposed int // done
 
 	BlocksClReward int64 // done
-	BlocksElReward int64
+	BlocksElReward decimal.Decimal
 
 	SyncScheduled int   // done
 	SyncExecuted  int   // done

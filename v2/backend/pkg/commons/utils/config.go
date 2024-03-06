@@ -337,7 +337,7 @@ func setCLConfig(cfg *types.Config) error {
 		// }
 	} else if cfg.Chain.ClConfigPath == "node" {
 		nodeEndpoint := fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node.Host, cfg.Indexer.Node.Port))
-		client := consapi.NewNodeDataRetriever(nodeEndpoint)
+		client := consapi.NewClient(nodeEndpoint)
 
 		jr, err := client.GetSpec()
 		if err != nil {

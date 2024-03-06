@@ -829,3 +829,12 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	}
 	return nil
 }
+
+func GetLatestDashboardEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(max(epoch), 0) FROM dashboard_data_epoch;")
+	if err != nil {
+		return 0, err
+	}
+	return epoch, nil
+}
