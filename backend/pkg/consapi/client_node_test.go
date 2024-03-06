@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	cl = consapi.NewNodeDataRetriever("http://localhost:32787")
+	cl = consapi.NewClient("http://localhost:32787")
 }
 
 func TestGetBlockHeader(t *testing.T) {
