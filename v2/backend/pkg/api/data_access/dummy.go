@@ -33,6 +33,12 @@ func (d DummyService) GetUserDashboards(userId uint64) (t.UserDashboardsData, er
 	return r, err
 }
 
+func (d DummyService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
+	r := []t.VDBValidator{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d DummyService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
 	r := t.VDBPostReturnData{}
 	err := commonFakeData(&r)
@@ -87,7 +93,7 @@ func (d DummyService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, 
 	return nil
 }
 
-func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []string) ([]t.VDBPostValidatorsData, error) {
+func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err
@@ -117,7 +123,7 @@ func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.
 	return r, p, err
 }
 
-func (d DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []string) error {
+func (d DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	return nil
 }
 
