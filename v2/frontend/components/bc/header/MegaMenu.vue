@@ -142,6 +142,7 @@ const items = [
             {
               label: $t('header.megamenu.run_a_validator'),
               svg: IconEthermineStaking,
+              width: 12,
               url: 'https://ethpool.org/',
               class: 'orange-box',
               target: Target.External
@@ -149,6 +150,7 @@ const items = [
             {
               label: $t('header.megamenu.eth_store'),
               svg: IconEthStore,
+              width: 12,
               url: '/ethstore'
             },
             {
@@ -228,6 +230,7 @@ const items = [
             {
               label: $t('header.megamenu.webhooks'),
               svg: IconWebhook,
+              width: 14,
               url: '/user/webhooks'
             },
             {
@@ -265,6 +268,7 @@ const items = [
             {
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
+              width: 16,
               url: 'https://eversteel.io/',
               class: 'orange-box',
               target: Target.External
@@ -472,6 +476,7 @@ const items = [
             {
               label: $t('header.megamenu.webhooks'),
               svg: IconWebhook,
+              width: 14,
               url: '/user/webhooks'
             },
             {
@@ -499,6 +504,7 @@ const items = [
             {
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
+              width: 16,
               url: 'https://eversteel.io/',
               class: 'orange-box',
               target: Target.External
@@ -597,6 +603,7 @@ const items = [
             {
               label: $t('header.megamenu.webhooks'),
               svg: IconWebhook,
+              width: 14,
               url: '/user/webhooks'
             },
             {
@@ -619,6 +626,7 @@ const items = [
             {
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
+              width: 16,
               url: 'https://eversteel.io/',
               class: 'orange-box',
               target: Target.External
@@ -712,6 +720,7 @@ const items = [
             {
               label: $t('header.megamenu.webhooks'),
               svg: IconWebhook,
+              width: 14,
               url: '/user/webhooks'
             },
             {
@@ -734,6 +743,7 @@ const items = [
             {
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
+              width: 16,
               url: 'https://eversteel.io/',
               class: 'orange-box',
               target: Target.External
@@ -827,6 +837,7 @@ const items = [
             {
               label: $t('header.megamenu.webhooks'),
               svg: IconWebhook,
+              width: 14,
               url: '/user/webhooks'
             },
             {
@@ -849,6 +860,7 @@ const items = [
             {
               label: $t('header.megamenu.eversteel'),
               svg: IconEversteel,
+              width: 16,
               url: 'https://eversteel.io/',
               class: 'orange-box',
               target: Target.External
