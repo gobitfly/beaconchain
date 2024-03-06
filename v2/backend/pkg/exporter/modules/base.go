@@ -25,11 +25,6 @@ type ModuleInterface interface {
 	OnChainReorg(*types.StandardEventChainReorg) error
 }
 
-type ModuleContext struct {
-	CL         consapi.Client
-	ConsClient *rpc.LighthouseClient
-}
-
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
@@ -194,4 +189,36 @@ func GetModuleContext() (ModuleContext, error) {
 	}
 
 	return moduleContext, nil
+}
+
+type ModuleContext struct {
+	CL         consapi.Client
+	ConsClient *rpc.LighthouseClient
+}
+
+type ModuleLog struct {
+	module ModuleInterface
+}
+
+func (m ModuleLog) Info(message string) {
+	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Infof(format string, args ...interface{}) {
+	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Error(err, errorMsg, callerSkip, additionalInfos...)
+}
+
+func (m ModuleLog) Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Warn(err, errorMsg, callerSkip, additionalInfos...)
+}
+
+func (m ModuleLog) Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Fatal(err, errorMsg, callerSkip, additionalInfos...)
 }

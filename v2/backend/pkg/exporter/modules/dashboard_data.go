@@ -9,7 +9,6 @@ import (
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -23,25 +22,77 @@ import (
 
 type dashboardData struct {
 	ModuleContext
+	log ModuleLog
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
-	return &dashboardData{
+	temp := &dashboardData{
 		ModuleContext: moduleContext,
 	}
+	temp.log = ModuleLog{module: temp}
+	return temp
 }
 
 func (d *dashboardData) Init() error {
+	go func() {
+		d.backfill()
+	}()
+
 	// todo aggregator
 	return nil
 }
 
-var onProcessingMutex = &sync.Mutex{}
+var backFillMutex = &sync.Mutex{}
+
+func (d *dashboardData) backfill() {
+	if !backFillMutex.TryLock() {
+		return
+	}
+	defer backFillMutex.Unlock()
+
+	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	if err != nil {
+		d.log.Error(err, "failed to get finalized checkpoint", 0)
+		return
+	}
+
+	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch)
+	if err != nil {
+		d.log.Error(err, "failed to get epoch gaps", 0)
+		return
+	}
+
+	if len(gaps) > 0 {
+		d.log.Infof("Epoch dashboard data gaps found, backfilling fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+
+		for _, gap := range gaps {
+			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
+			if gap < res.Data.Finalized.Epoch-RetainEpochDuration/2 {
+				continue
+			}
+
+			// just in case we ask again before exporting since some time may have been passed
+			hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
+			if err != nil {
+				d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
+				continue
+			}
+			if hasEpoch {
+				continue
+			}
+
+			d.log.Infof("backfilling epoch %d", gap)
+			err = d.exportEpochData(int(gap))
+			if err != nil {
+				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
+			}
+			d.log.Infof("backfill completed for epoch %d", gap)
+			time.Sleep(15 * time.Second)
+		}
+	}
+}
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
-	onProcessingMutex.Lock()
-	defer onProcessingMutex.Unlock()
-
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
@@ -58,29 +109,22 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 
 	if latestExported != 0 {
 		if res.Data.Finalized.Epoch <= latestExported {
-			log.Infof("dashboard epoch data already exported for epoch %d", res.Data.Finalized.Epoch)
+			d.log.Infof("dashboard epoch data already exported for epoch %d", res.Data.Finalized.Epoch)
 			return nil
 		}
-
-		// todo think about backfilling process
-
-		// backfill if needed, skip backfilling older than RetainEpochDuration/3 since the time it would take to backfill exceeds the retention period anyway
-		// if res.Data.Finalized.Epoch-latestExported > 0 && res.Data.Finalized.Epoch-latestExported < RetainEpochDuration/3 {
-		// 	// backfill first
-		// 	log.Infof("backfilling dashboard epoch data from epoch %d to %d", latestExported+1, res.Data.Finalized.Epoch-1)
-		// 	for epoch := res.Data.Finalized.Epoch - 1; epoch > latestExported; epoch-- {
-		// 		err := d.exportEpochData(int(epoch))
-		// 		if err != nil {
-		// 			log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": epoch})
-		// 		}
-		// 	}
-		// }
 	}
+
+	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
 
 	err = d.exportEpochData(int(res.Data.Finalized.Epoch))
 	if err != nil {
 		return err
 	}
+
+	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
+	// since the init backfill only fixes gaps at the start of exporter but does not fix
+	// gaps that occur while operating (for example node not available for a brief moment)
+	d.backfill()
 
 	return nil
 }
@@ -108,7 +152,7 @@ func (d *dashboardData) exportEpochData(epoch int) error {
 	if data == nil {
 		return errors.New("can not get data")
 	}
-	log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(start))
+	d.log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(start))
 
 	start = time.Now()
 	domain, err := utils.GetSigningDomain()
@@ -116,17 +160,17 @@ func (d *dashboardData) exportEpochData(epoch int) error {
 		return err
 	}
 
-	result := process(data, domain)
-	log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
+	result := d.process(data, domain)
+	d.log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
 
 	start = time.Now()
-	err = WriteEpochData(epoch, result)
+	err = d.writeEpochData(epoch, result)
 	if err != nil {
 		return err
 	}
-	log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
+	d.log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
 
-	log.Infof("successfully wrote dashboard epoch data for epoch %d", epoch)
+	d.log.Infof("successfully wrote dashboard epoch data for epoch %d", epoch)
 	return nil
 }
 
@@ -154,86 +198,86 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	result.syncCommitteeRewardData = make(map[int]*constypes.StandardSyncCommitteeRewardsResponse)
 
 	// retrieve the validator balances at the start of the epoch
-	log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
+	d.log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
 	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
 
 	if err != nil {
-		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
+		d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 		return nil
 	}
 
 	// retrieve proposer assignments for the epoch in order to attribute missed slots
-	log.Infof("retrieving proposer assignments")
+	d.log.Infof("retrieving proposer assignments")
 	result.proposerAssignments, err = d.CL.GetPropoalAssignments(epoch)
 	if err != nil {
-		log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
+		d.log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
 	// retrieve sync committee assignments for the epoch in order to attribute missed sync assignments
-	log.Infof("retrieving sync committee assignments")
+	d.log.Infof("retrieving sync committee assignments")
 	result.syncCommitteeAssignments, err = d.CL.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
 	if err != nil {
-		log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
+		d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
 	// attestation rewards
-	log.Infof("retrieving attestation rewards data")
+	d.log.Infof("retrieving attestation rewards data")
 	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
 
 	if err != nil {
-		log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
+		d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
 	// retrieve the data for all blocks that were proposed in this epoch
 	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
-		log.Infof("retrieving data for block at slot %d", slot)
+		d.log.Infof("retrieving data for block at slot %d", slot)
 		block, err := d.CL.GetSlot(slot)
 		if err != nil {
 			httpErr, _ := network.SpecificError(err)
 			if httpErr != nil && httpErr.StatusCode == 404 {
 				continue // missed
 			}
-			log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		if block.Data.Message.StateRoot == "" {
 			// todo better network handling, if 404 just log info, else log error
-			log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockData[slot] = block
 
 		blockReward, err := d.CL.GetPropoalRewards(slot)
 		if err != nil {
-			log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockRewardData[slot] = blockReward
 
 		syncRewards, err := d.CL.GetSyncRewards(slot)
 		if err != nil {
-			log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.syncCommitteeRewardData[slot] = syncRewards
 	}
 
 	// retrieve the validator balances at the end of the epoch
-	log.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
+	d.log.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
 	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
 
 	if err != nil {
-		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
+		d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 		return nil
 	}
 
 	return &result
 }
 
-func process(data *Data, domain []byte) []*validatorDashboardDataRow {
+func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
 	idealAttestationRewards := make(map[int64]int)
@@ -304,15 +348,15 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			}, domain)
 
 			if err != nil {
-				log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
+				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
 				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {
-					log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
+					d.log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
 				} else if _, ok := pubkeyToIndexMapStart[depositData.Data.Pubkey]; ok {
-					log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
+					d.log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
 				} else {
-					log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
+					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
 					continue
 				}
 			}
@@ -370,8 +414,7 @@ func getPartitionRange(epoch int) (int, int) {
 	return startOfPartition, endOfPartition
 }
 
-func WriteEpochData(epoch int, data []*validatorDashboardDataRow) error {
-
+func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardDataRow) error {
 	// Create table if needed
 	startOfPartition, endOfPartition := getPartitionRange(epoch)
 
@@ -399,7 +442,7 @@ func WriteEpochData(epoch int, data []*validatorDashboardDataRow) error {
 		defer func() {
 			err := tx.Rollback(context.Background())
 			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-				log.Error(err, "error rolling back transaction", 0)
+				d.log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
 
@@ -475,6 +518,10 @@ func WriteEpochData(epoch int, data []*validatorDashboardDataRow) error {
 		}
 		return nil
 	})
+
+	if err != nil {
+		return errors.Wrap(err, "error writing data")
+	}
 
 	//Clear old partitions
 	//todo delete in aggregator, not here

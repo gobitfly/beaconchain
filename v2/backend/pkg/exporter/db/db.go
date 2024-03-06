@@ -838,3 +838,44 @@ func GetLatestDashboardEpoch() (uint64, error) {
 	}
 	return epoch, nil
 }
+
+func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch FROM dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func GetDashboardEpochGaps(targetEpoch uint64) ([]uint64, error) {
+	var minEpoch uint64
+	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM dashboard_data_epoch;")
+	if err != nil {
+		return nil, err
+	}
+
+	var epochs []uint64
+	err = db.AlloyReader.Select(&epochs, `
+		WITH
+		epoch_range AS (
+			SELECT generate_series($1::bigint, $2::bigint) AS epoch
+		),
+		distinct_present_epochs AS (
+			SELECT DISTINCT epoch
+			FROM dashboard_data_epoch
+		)
+		SELECT epoch_range.epoch
+		FROM epoch_range
+		LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
+		WHERE distinct_present_epochs.epoch IS NULL
+		ORDER BY epoch_range.epoch
+	`, minEpoch, targetEpoch)
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
+}
