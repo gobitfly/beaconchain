@@ -6,7 +6,7 @@ const { t: $t } = useI18n()
 
 const type = defineModel<DashboardType>('type', { required: true })
 const state = defineModel<DashboardCreationState>('state', { required: true })
-const typeButtons = ref([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
+const typeButtons = shallowRef([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
 
 const name = defineModel<string>('name', { required: true })
 

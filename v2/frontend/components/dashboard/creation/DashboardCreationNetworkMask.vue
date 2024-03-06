@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { type DashboardCreationState } from '~/types/dashboard/creation'
-import { IconMegaMenuEthereumOverview, IconMegaMenuGnosisOverview } from '#components'
+import { IconNetworkEthereumMono, IconNetworkGnosisMono } from '#components'
 
 const { t: $t } = useI18n()
 
 const network = defineModel<string>('network', { required: true })
 const state = defineModel<DashboardCreationState>('state', { required: true })
-const allNetworks = ref([{ text: 'Ethereum', value: 'ethereum', component: IconMegaMenuEthereumOverview }, { text: 'Gnosis', value: 'gnosis', component: IconMegaMenuGnosisOverview }])
+const allNetworks = shallowRef([{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }])
 
 const continueDisabled = computed(() => {
   return network.value === ''
