@@ -188,12 +188,12 @@ func (d DataAccessService) CloseDataAccessService() {
 }
 
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (t.DashboardInfo, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardInfo(dashboardId)
 }
 
 func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (t.DashboardInfo, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardInfoByPublicId(publicDashboardId)
 }
 
