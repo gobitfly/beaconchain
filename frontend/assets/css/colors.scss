@@ -30,9 +30,8 @@
 
   --primary-contrast-color: var(--grey-4);
 
-  --scrollbar-track-color: var(--grey);
-  --scrollbar-thumb-color: var(--primary-color);
-  --scrollbar-thumb-hover-color: var(--primary-orange-hover);
+  --scrollbar-thumb-color: var(--dark-grey);
+  --scrollbar-thumb-hover-color: var(--grey);
 
   --background-color: var(--grey-1);
   --text-color: var(--light-black);
@@ -73,7 +72,7 @@
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
 
-    --scrollbar-track-color: var(--light-grey);
+    --scrollbar-thumb-color: var(--light-grey);
 
     --background-color: var(--almost-black);
 
