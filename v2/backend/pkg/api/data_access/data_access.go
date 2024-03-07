@@ -16,6 +16,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"golang.org/x/sync/errgroup"
 )
 
 type DataAccessInterface interface {
@@ -529,8 +531,81 @@ func (d DataAccessService) GetValidatorDashboardSlotVizByValidators(dashboardId 
 }
 
 func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
+	// TODO: Get the validators from the dashboardId, implement sorting, filtering & paging
+
+	setSize := int64(1000)
+	groupSize := int64(10)
+
+	validatorsMap := make(map[int64]bool, setSize)
+	validatorsGroupMap := make(map[int64]int64)
+
+	validatorsArray := make([]int64, 0, setSize)
+	for i := int64(0); i < setSize; i++ {
+		validatorsMap[i] = true
+		validatorsArray = append(validatorsArray, i)
+		validatorsGroupMap[i%groupSize] = i
+	}
+
+	ret := make(map[uint64]t.VDBSummaryTableRow) // map of group id to result row
+
+	// initialize one row for each group
+	for group := range validatorsGroupMap {
+		ret[uint64(group)] = t.VDBSummaryTableRow{}
+	}
+
+	// retrieve efficiency data for each time period
+	wg := errgroup.Group{}
+
+	wg.Go(func() error {
+
+		// refractor the function to allow for arbitrary time periods
+		var queryResult interface{}
+		query := `SELECT validatorindex,
+					attestations_source_reward,
+					attestations_target_reward,
+					attestations_head_reward,
+					attestations_inactivity_reward,
+					attestations_inclusion_reward,
+					attestations_reward,
+					attestations_ideal_source_reward,
+					attestations_ideal_target_reward,
+					attestations_ideal_head_reward,
+					attestations_ideal_inactivity_reward,
+					attestations_ideal_inclusion_reward,
+					attestations_ideal_reward,
+					blocks_scheduled,
+					blocks_proposed,
+					blocks_cl_reward,
+					blocks_el_reward,
+					sync_scheduled,
+					sync_executed,
+					sync_rewards,
+					slashed,
+					balance_start,
+					balance_end,
+					deposits_count,
+					deposits_amount,
+					withdrawals_count,
+					withdrawals_amount
+				FROM dashboard_data_24h
+				WHERE validatorindex IN ($1);`
+		err := db.AlloyReader.Select(&queryResult, query, pq.Int64Array(validatorsArray))
+
+		// now iterate over the results, and aggregate them into the respective groups
+
+		// then iterate over the groups and calculate the efficiency values
+		if err != nil {
+			return fmt.Errorf("error retrieving data for last 24h: %v", err)
+		}
+		return nil
+	})
+	err := wg.Wait()
+
+	if err != nil {
+		return nil, t.Paging{}, fmt.Errorf("error retrieving validator dashboard summary data: %v", err)
+	}
+
+	return ret, t.Paging{}, nil
 }
 
 func (d DataAccessService) GetValidatorDashboardSummaryByPublicId(dashboardId t.VDBIdPublic, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
