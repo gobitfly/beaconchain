@@ -41,19 +41,6 @@ func (d *dashboardData) Init() error {
 	return nil
 }
 
-var dayAggregateMutex = &sync.Mutex{}
-
-func (d *dashboardData) dayAggregate() {
-	dayAggregateMutex.Lock()
-	defer dayAggregateMutex.Unlock()
-
-	startTime := time.Now()
-	defer func() {
-		d.log.Infof("day aggregate took %v", time.Since(startTime))
-	}()
-
-}
-
 var rollingAggregateMutex = &sync.Mutex{}
 
 func (d *dashboardData) rolling24hAggregate() {
