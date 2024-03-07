@@ -3,6 +3,7 @@ import type { LoginResponse } from '~/types/user'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
@@ -42,6 +43,10 @@ const mapping: Record<string, MappingData> = {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true
+  },
+  [API_PATH.USER_DASHBOARDS]: {
+    path: '/users/me/dashboards',
+    mock: false
   },
   [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
     path: '/account-dashboards',

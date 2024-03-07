@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleMultiBar, BcToggleSingleBar, IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
+import { BcToggleSingleBar, IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -26,6 +26,9 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const selectedType = ref<string>('')
 const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
+
+const dropodownSelection = ref<string | undefined>()
+const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
 
 </script>
 
@@ -49,6 +52,7 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
       <br>
       <Button label="Close" @click="slotModalVisibility = false" />
     </div>
+
     <template #footer>
       Utilizing the footer slot for custom content
     </template>
@@ -82,6 +86,12 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
         <InputText placeholder="Disabled Input" disabled />
       </div>
     </TabPanel>
+    <TabPanel header="Checkbox">
+      <div class="element_container">
+        default checkbox: <Checkbox v-model="selected" :binary="true" />
+        disabled: <Checkbox disabled />
+      </div>
+    </TabPanel>
     <TabPanel header="Toggle">
       <h1>Multi Toggle</h1>
       <div class="element_container">
@@ -96,6 +106,7 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
             <template #trueIcon>
               <IconSlotAttestation />
             </template>
+
             <template #falseIcon>
               <IconSlotBlockProposal />
             </template>
@@ -104,13 +115,14 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
 
         <div>
           Selected: {{ selected }}
-          <BcToggleButton v-model="selected" :icon="faTable" />
+          <BcToggleMultibarButton v-model="selected" :icon="faTable" />
         </div>
         <div>
           <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
             <template #attestation>
               <IconSlotAttestation />
             </template>
+
             <template #sync>
               <IconSlotSync />
             </template>
@@ -124,6 +136,52 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
           selectedType: {{ selectedType }}
           <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" :initial="allTypes[0].text" />
         </div>
+      </div>
+    </TabPanel>
+    <TabPanel header="Dropdown">
+      <div class="element_container" style="background-color: darkred; padding: 5px;">
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          placeholder="for rock wtf this is a long placeholder"
+          panel-style="max-width: 100px"
+          style="max-width: 100px;"
+        />
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          variant="table"
+          placeholder="and roll"
+          style="width: 200px;"
+        />
+        Selected: {{ dropodownSelection }}
+      </div>
+    </TabPanel>
+    <TabPanel header="Dropdown">
+      <div class="element_container" style="background-color: darkred; padding: 5px;">
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          placeholder="for rock wtf this is a long placeholder"
+          panel-style="max-width: 100px"
+          style="max-width: 100px;"
+        />
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          variant="table"
+          placeholder="and roll"
+          style="width: 200px;"
+        />
+        Selected: {{ dropodownSelection }}
       </div>
     </TabPanel>
     <TabPanel header="Spinner">
@@ -158,4 +216,5 @@ const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAcco
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
-}</style>
+}
+</style>
