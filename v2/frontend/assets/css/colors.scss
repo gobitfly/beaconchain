@@ -34,6 +34,9 @@
   --primary-contrast-color: var(--grey-4);
   --primary-contrast-color-discreet: var(--light-grey-5);
 
+  --scrollbar-thumb-color: var(--dark-grey);
+  --scrollbar-thumb-hover-color: var(--grey);
+
   --background-color: var(--grey-1);
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
@@ -80,6 +83,8 @@
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
     --primary-contrast-color-discreet: var(--dark-grey);
+
+    --scrollbar-thumb-color: var(--light-grey);
 
     --background-color: var(--almost-black);
 
