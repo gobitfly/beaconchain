@@ -47,6 +47,7 @@ export enum ChainIDs {
   Chiado = 10200
 }
 
+// TODO: request it from the API
 export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
   if (sortByPriority) {

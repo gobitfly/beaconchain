@@ -1,5 +1,5 @@
 <template>
-  <svg width="55" height="55" viewBox="0 0 55 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 55 55" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g id="gnosis-gno-gno-logo 1" clip-path="url(#clip0_15611_285535)">
       <path id="Vector" d="M15.8267 32C17.3365 32 18.8094 31.4967 20 30.5759L10.426 21C8.11843 23.9833 8.67077 28.2801 11.6534 30.5882C12.8563 31.4967 14.317 32 15.8267 32Z" fill="currentColor" />
       <path id="Vector_2" d="M46 25.1733C46 23.6635 45.4967 22.1906 44.5759 21L35 30.574C37.9833 32.8816 42.2679 32.3292 44.5759 29.3466C45.4967 28.1559 46 26.683 46 25.1733Z" fill="currentColor" />
