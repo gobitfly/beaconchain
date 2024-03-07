@@ -45,11 +45,13 @@ const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
     path: '/account-dashboards',
-    mock: true
+    mock: true,
+    method: 'POST'
   },
   [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
     path: '/validator-dashboards',
-    mock: true
+    mock: true,
+    method: 'POST'
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',

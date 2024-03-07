@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { type DashboardType, type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
+import { type VDBPostReturnData } from '~/types/api/validator_dashboard'
 
 const displayType = defineModel<DashboardCreationDisplayType>({ required: true })
 const modalVisibility = ref(false)
@@ -30,12 +31,23 @@ watch(() => modalVisibility.value, () => {
   }
 })
 
-function onCreate () {
+async function onCreate () {
   if (type.value === 'account') {
-    console.log(`Creating ${type.value} dashboard ${name.value} via ${API_PATH.DASHBOARD_CREATE_ACCOUNT}`)
+    await useCustomFetch<undefined>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { // TODO: Use correct type once available
+      body: {
+        name: name.value
+      }
+    })
   } else if (type.value === 'validator') {
-    console.log(`Creating ${type.value} dashboard ${name.value} on ${network.value} via ${API_PATH.DASHBOARD_CREATE_VALIDATOR}`)
+    await useCustomFetch<VDBPostReturnData>(API_PATH.DASHBOARD_CREATE_VALIDATOR, {
+      body: {
+        name: name.value,
+        network: network.value
+      }
+    })
   }
+
+  displayType.value = ''
 }
 </script>
 
