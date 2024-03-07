@@ -5,6 +5,7 @@ import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow }
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -92,7 +93,7 @@ const setSearch = (value?: string) => {
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
-  if (row.group_id === -1) {
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
   }
 }

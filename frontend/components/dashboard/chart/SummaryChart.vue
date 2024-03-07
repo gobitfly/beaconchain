@@ -16,6 +16,7 @@ import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 import type { DashboardKey } from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 use([
   CanvasRenderer,
@@ -70,7 +71,7 @@ const option = computed(() => {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     chartData.value.series.forEach((element) => {
       let name = allGroups
-      if (element.id !== -1) {
+      if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
         const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
