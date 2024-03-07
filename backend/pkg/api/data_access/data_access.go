@@ -560,35 +560,14 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 
 		// refractor the function to allow for arbitrary time periods
 		var queryResult interface{}
-		query := `SELECT validatorindex,
-					attestations_source_reward,
-					attestations_target_reward,
-					attestations_head_reward,
-					attestations_inactivity_reward,
-					attestations_inclusion_reward,
-					attestations_reward,
-					attestations_ideal_source_reward,
-					attestations_ideal_target_reward,
-					attestations_ideal_head_reward,
-					attestations_ideal_inactivity_reward,
-					attestations_ideal_inclusion_reward,
-					attestations_ideal_reward,
-					blocks_scheduled,
-					blocks_proposed,
-					blocks_cl_reward,
-					blocks_el_reward,
-					sync_scheduled,
-					sync_executed,
-					sync_rewards,
-					slashed,
-					balance_start,
-					balance_end,
-					deposits_count,
-					deposits_amount,
-					withdrawals_count,
-					withdrawals_amount
-				FROM dashboard_data_24h
-				WHERE validatorindex IN ($1);`
+		query := `select group_id, (0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency), CASE WHEN slashed THEN 1 ELSE 0 END from (
+
+			select  validatorindex % 10 as group_id,
+				sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency, 
+				COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
+				COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency,
+				bool_or(slashed) AS slashed
+			FROM validator_dashboard_data_rolling_daily WHERE validatorindex < 1000 group by 1) as a;`
 		err := db.AlloyReader.Select(&queryResult, query, pq.Int64Array(validatorsArray))
 
 		// now iterate over the results, and aggregate them into the respective groups
