@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 const { getOverview } = useValidatorDashboardOverviewStore()
 await useAsyncData('validator_dashboard_overview', () => getOverview())
@@ -9,9 +10,9 @@ const store = useUserDashboardStore()
 const { getDashboards } = store
 
 const { dashboards } = storeToRefs(store)
-await useAsyncData('validator_dashboard_overview', () => getDashboards())
+await useAsyncData('validator_dashboards', () => getDashboards())
 
-const selectedGroupId = ref<number>(-1)
+const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
 </script>
 <template>

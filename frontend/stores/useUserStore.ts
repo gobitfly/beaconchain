@@ -15,7 +15,7 @@ export const useUserStore = defineStore('user-store', () => {
     })
   }
 
-  // Faking logged in User for now, if xUserId is set
+  // TODO: Faking logged in User for now, if xUserId is set
   const user = computed(() => {
     return xUserId ? { user_id: xUserId, user_name: `Test User [${xUserId}]` } : undefined
   })

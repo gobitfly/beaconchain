@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
   group: VDBOverviewGroup,
@@ -10,10 +11,10 @@ const props = defineProps<Props>()
 const { t: $t } = useI18n()
 
 const name = computed(() => {
-  if (props.group.id === -1) {
+  if (props.group.id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return $t('dashboard.group.selection.all')
   } else if (props.group.id === 0) {
-    return $t('dashboard.group.selection.default')
+    return props.group.name && props.group.name !== 'default' ? props.group.name : $t('dashboard.group.selection.default')
   }
 
   return props.group.name
@@ -21,11 +22,5 @@ const name = computed(() => {
 </script>
 
 <template>
-  <span><span>{{ name }}</span> <span v-if="group.id >= 0" class="id">(ID: {{ group.id }})</span></span>
+  <span><span>{{ name }}</span> <span v-if="group.id >= 0" class="discreet">(ID: {{ group.id }})</span></span>
 </template>
-
-<style lang="scss" scoped>
-.id{
-  color: var(--text-color-discreet);
-}
-</style>

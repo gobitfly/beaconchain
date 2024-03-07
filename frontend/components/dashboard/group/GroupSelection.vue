@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+
 interface Props {
   includeAll?: boolean,
 }
@@ -9,7 +11,7 @@ const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 const list = computed(() => {
   const groups = overview.value?.groups ?? []
   if (props.includeAll) {
-    return [{ id: -1, name: '' }].concat(groups)
+    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '' }].concat(groups)
   }
   return groups
 })

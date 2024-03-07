@@ -261,7 +261,7 @@
   color: var(--input-active-text-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
   transform: translateY(-1px);
-  &.table{
+  &.table {
     background: var(--background-color);
   }
   .p-dropdown-items {
@@ -270,12 +270,22 @@
       @include utils.truncate-text;
       padding: var(--padding-small) 4px;
       border-radius: var(--border-radius);
+      .discreet {
+        color: var(--text-color-discreet);
+      }
       &.p-highlight:not(:hover) {
-        background: var(--primary-color);
+        background: var(--list-highlight-background);
         color: var(--primary-contrast-color);
+        .discreet {
+          color: var(--primary-contrast-color-discreet);
+        }
       }
       &:hover {
-        background: var(--dropdown-background-hover);
+        background: var(--list-hover-background);
+        color: var(--list-hover-color);
+        .discreet {
+          color: var(--list-hover-descrete-color);
+        }
       }
     }
   }
