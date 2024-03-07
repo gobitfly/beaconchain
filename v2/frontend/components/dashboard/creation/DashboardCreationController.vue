@@ -52,10 +52,6 @@ async function onCreate () {
     newDashboardId = response.id || 1
   }
 
-  displayType.value = ''
-
-  // TODO
-  console.log('New dashboard ID:', newDashboardId)
   router.push(`/dashboard/${newDashboardId}`)
 }
 </script>
