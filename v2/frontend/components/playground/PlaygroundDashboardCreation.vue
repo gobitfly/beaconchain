@@ -27,7 +27,7 @@ const changeDisplayType = (newDisplayType: DashboardCreationDisplayType) => {
       </Button>
     </div>
   </div>
-  <DashboardCreationController :display-type="displayType" />
+  <DashboardCreationController v-model="displayType" />
 </template>
 
 <style lang="scss">
