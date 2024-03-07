@@ -832,7 +832,7 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 func GetLatestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(max(epoch), 0) FROM dashboard_data_epoch;")
+	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
 	if err != nil {
 		return 0, err
 	}
@@ -841,7 +841,7 @@ func GetLatestDashboardEpoch() (uint64, error) {
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM dashboard_data_epoch;")
+	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
 	if err != nil {
 		return 0, err
 	}
@@ -850,7 +850,7 @@ func GetOldestDashboardEpoch() (uint64, error) {
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT epoch FROM dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -862,7 +862,7 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 
 func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, error) {
 	var minEpoch uint64
-	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM dashboard_data_epoch;")
+	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
 	if err != nil {
 		return nil, err
 	}
@@ -879,7 +879,7 @@ func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, e
 		),
 		distinct_present_epochs AS (
 			SELECT DISTINCT epoch
-			FROM dashboard_data_epoch
+			FROM validator_dashboard_data_epoch
 		)
 		SELECT epoch_range.epoch
 		FROM epoch_range

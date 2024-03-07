@@ -35,10 +35,23 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
-		d.backfill()
+		d.backfillEpochData()
 	}()
 
 	return nil
+}
+
+var dayAggregateMutex = &sync.Mutex{}
+
+func (d *dashboardData) dayAggregate() {
+	dayAggregateMutex.Lock()
+	defer dayAggregateMutex.Unlock()
+
+	startTime := time.Now()
+	defer func() {
+		d.log.Infof("day aggregate took %v", time.Since(startTime))
+	}()
+
 }
 
 var rollingAggregateMutex = &sync.Mutex{}
@@ -86,10 +99,10 @@ func (d *dashboardData) rolling24hAggregate() {
 	_, err = tx.Exec(`
 		WITH
 			balance_starts as (
-				SELECT validatorindex, balance_start FROM dashboard_data_epoch WHERE epoch = $1
+				SELECT validatorindex, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
 			),
 			balance_ends as (
-				SELECT validatorindex, balance_end FROM dashboard_data_epoch WHERE epoch = $2
+				SELECT validatorindex, balance_end FROM validator_dashboard_data_epoch WHERE epoch = $2
 			),
 			aggregate as (
 				SELECT 
@@ -118,11 +131,11 @@ func (d *dashboardData) rolling24hAggregate() {
 					COALESCE(SUM(COALESCE(deposits_amount, 0)),0) as deposits_amount,
 					COALESCE(SUM(COALESCE(withdrawals_count, 0)),0) as withdrawals_count,
 					COALESCE(SUM(COALESCE(withdrawals_amount, 0)),0) as withdrawals_amount
-				FROM dashboard_data_epoch
+				FROM validator_dashboard_data_epoch
 				WHERE epoch > $1 AND epoch <= $2
 				GROUP BY validatorindex
 			)
-			INSERT INTO dashboard_data_rolling_24h (
+			INSERT INTO validator_dashboard_data_rolling_daily (
 				validatorindex,
 				attestations_source_reward,
 				attestations_target_reward,
@@ -209,7 +222,7 @@ func (d *dashboardData) rolling24hAggregate() {
 
 var backFillMutex = &sync.Mutex{}
 
-func (d *dashboardData) backfill() {
+func (d *dashboardData) backfillEpochData() {
 	if !backFillMutex.TryLock() {
 		return
 	}
@@ -289,7 +302,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
 	// since the init backfill only fixes gaps at the start of exporter but does not fix
 	// gaps that occur while operating (for example node not available for a brief moment)
-	d.backfill()
+	d.backfillEpochData()
 
 	d.rolling24hAggregate()
 
@@ -616,7 +629,7 @@ func (d *dashboardData) writeEpochData(epoch uint64, data []*validatorDashboardD
 			}
 		}()
 
-		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"dashboard_data_epoch"}, []string{
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"validator_dashboard_data_epoch"}, []string{
 			"validatorindex",
 			"epoch",
 			"attestations_source_reward",
@@ -698,8 +711,8 @@ func (d *dashboardData) writeEpochData(epoch uint64, data []*validatorDashboardD
 
 func createEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS dashboard_data_epoch_%d_%d 
-		PARTITION OF dashboard_data_epoch
+		CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch_%d_%d 
+		PARTITION OF validator_dashboard_data_epoch
 			FOR VALUES FROM (%[1]d) TO (%[2]d)
 		`,
 		epochFrom, epochTo,
@@ -710,7 +723,7 @@ func createEpochPartition(epochFrom, epochTo uint64) error {
 // Returns finished, error
 func deleteEpochPartition(epochFrom, epochTo uint64) (bool, error) {
 	st, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		DROP TABLE IF EXISTS dashboard_data_epoch_%d_%d
+		DROP TABLE IF EXISTS validator_dashboard_data_epoch_%d_%d
 		`,
 		epochFrom, epochTo,
 	))
