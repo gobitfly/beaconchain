@@ -73,6 +73,11 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
         </Button>
       </div>
     </TabPanel>
+    <TabPanel header="Scroll box">
+      <div class="scroll-box">
+        <div>Scroll me</div>
+      </div>
+    </TabPanel>
     <TabPanel header="Input">
       <div class="element_container">
         <InputText placeholder="Input" />
@@ -147,4 +152,17 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
-}</style>
+}
+
+.scroll-box{
+  width: 100px;
+  height: 100px;
+  overflow: auto;
+  div{
+    background-color: grey;
+    width: 200px;
+    height: 200px;
+  }
+}
+
+</style>

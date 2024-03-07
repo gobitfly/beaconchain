@@ -30,6 +30,10 @@
 
   --primary-contrast-color: var(--grey-4);
 
+  --scrollbar-track-color: var(--grey);
+  --scrollbar-thumb-color: var(--primary-color);
+  --scrollbar-thumb-hover-color: var(--primary-orange-hover);
+
   --background-color: var(--grey-1);
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
@@ -68,6 +72,8 @@
   &.dark-mode {
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
+
+    --scrollbar-track-color: var(--light-grey);
 
     --background-color: var(--almost-black);
 
