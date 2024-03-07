@@ -57,7 +57,7 @@ func (r *NodeClient) GetBlockHeaders(slot *uint64, parentRoot *any) (*types.Stan
 	return network.Get[types.StandardBeaconHeadersResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetSyncCommitteesAssignments(epoch int, stateID any) (*types.StandardSyncCommitteesResponse, error) {
+func (r *NodeClient) GetSyncCommitteesAssignments(epoch uint64, stateID any) (*types.StandardSyncCommitteesResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, epoch)
 	return network.Get[types.StandardSyncCommitteesResponse](r.httpClient, requestURL)
 }
@@ -97,7 +97,7 @@ func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingle
 	return network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalAssignments(epoch int) (*types.StandardProposerAssignmentsResponse, error) {
+func (r *NodeClient) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
 	return network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
 }

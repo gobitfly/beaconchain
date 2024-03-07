@@ -194,8 +194,8 @@ func (d *dashboardData) rolling24hAggregate() {
 	}
 
 	//Clear old partitions
-	for i := 0; ; i += PartitionEpochWidth {
-		startOfPartition, endOfPartition := getPartitionRange(int(currentEpoch) - RetainEpochDuration - i)
+	for i := uint64(0); ; i += PartitionEpochWidth {
+		startOfPartition, endOfPartition := getPartitionRange(currentEpoch - getRetentionEpochDuration() - i)
 		finished, err := deleteEpochPartition(startOfPartition, endOfPartition)
 		if err != nil {
 			d.log.Error(err, "failed to delete old epoch partition", 0)
@@ -221,7 +221,7 @@ func (d *dashboardData) backfill() {
 		return
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, RetainEpochDuration)
+	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, getRetentionEpochDuration())
 	if err != nil {
 		d.log.Error(err, "failed to get epoch gaps", 0)
 		return
@@ -232,7 +232,7 @@ func (d *dashboardData) backfill() {
 
 		for _, gap := range gaps {
 			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
-			if gap < res.Data.Finalized.Epoch-RetainEpochDuration/2 {
+			if gap < res.Data.Finalized.Epoch-getRetentionEpochDuration()/2 {
 				continue
 			}
 
@@ -247,7 +247,7 @@ func (d *dashboardData) backfill() {
 			}
 
 			d.log.Infof("backfilling epoch %d", gap)
-			err = d.exportEpochData(int(gap))
+			err = d.exportEpochData(gap)
 			if err != nil {
 				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
 			}
@@ -281,7 +281,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 
 	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
 
-	err = d.exportEpochData(int(res.Data.Finalized.Epoch))
+	err = d.exportEpochData(res.Data.Finalized.Epoch)
 	if err != nil {
 		return err
 	}
@@ -308,14 +308,14 @@ func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) e
 	return nil
 }
 
-func (d *dashboardData) exportEpochData(epoch int) error {
+func (d *dashboardData) exportEpochData(epoch uint64) error {
 	spec, err := d.CL.GetSpec()
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
+	data := d.getData(epoch, uint64(spec.Data.SlotsPerEpoch))
 	if data == nil {
 		return errors.New("can not get data")
 	}
@@ -347,12 +347,12 @@ type Data struct {
 	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
 	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
 	attestationRewards       *constypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[int]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData    map[int]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData  map[int]*constypes.StandardSyncCommitteeRewardsResponse
+	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
 }
 
-func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
+func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	var result Data
 	var err error
 
@@ -360,9 +360,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
 
-	result.beaconBlockData = make(map[int]*constypes.StandardBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[int]*constypes.StandardBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[int]*constypes.StandardSyncCommitteeRewardsResponse)
+	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
+	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
+	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse)
 
 	// retrieve the validator balances at the start of the epoch
 	d.log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
@@ -391,7 +391,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// attestation rewards
 	d.log.Infof("retrieving attestation rewards data")
-	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
+	result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
 
 	if err != nil {
 		d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
@@ -573,15 +573,18 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 }
 
 const PartitionEpochWidth = 3
-const RetainEpochDuration = 300 // in epochs
 
-func getPartitionRange(epoch int) (int, int) {
+func getRetentionEpochDuration() uint64 {
+	return uint64(float64(utils.EpochsPerDay()) * 1.3) // 30% buffer
+}
+
+func getPartitionRange(epoch uint64) (uint64, uint64) {
 	startOfPartition := epoch / PartitionEpochWidth * PartitionEpochWidth // inclusive
 	endOfPartition := startOfPartition + PartitionEpochWidth              // exclusive
 	return startOfPartition, endOfPartition
 }
 
-func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardDataRow) error {
+func (d *dashboardData) writeEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
 	// Create table if needed
 	startOfPartition, endOfPartition := getPartitionRange(epoch)
 
@@ -693,7 +696,7 @@ func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardData
 	return nil
 }
 
-func createEpochPartition(epochFrom, epochTo int) error {
+func createEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS dashboard_data_epoch_%d_%d 
 		PARTITION OF dashboard_data_epoch
@@ -705,7 +708,7 @@ func createEpochPartition(epochFrom, epochTo int) error {
 }
 
 // Returns finished, error
-func deleteEpochPartition(epochFrom, epochTo int) (bool, error) {
+func deleteEpochPartition(epochFrom, epochTo uint64) (bool, error) {
 	st, err := db.AlloyWriter.Exec(fmt.Sprintf(`
 		DROP TABLE IF EXISTS dashboard_data_epoch_%d_%d
 		`,
