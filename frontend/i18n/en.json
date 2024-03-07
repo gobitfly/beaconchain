@@ -102,7 +102,8 @@
       "selection": {
         "group": "Group",
         "all": "All groups",
-        "default": "Default"
+        "default": "Default",
+        "placeholder": "Select group"
       }
     },
     "validator": {

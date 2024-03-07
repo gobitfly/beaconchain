@@ -1,8 +1,17 @@
 <script setup lang="ts">
+interface Props {
+  includeAll?: boolean,
+}
+const props = defineProps<Props>()
+
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const list = computed(() => {
-  return [{ id: -1, name: '' }].concat(overview.value?.groups ?? [])
+  const groups = overview.value?.groups ?? []
+  if (props.includeAll) {
+    return [{ id: -1, name: '' }].concat(groups)
+  }
+  return groups
 })
 
 const selected = defineModel<number>({ required: true })
@@ -12,15 +21,25 @@ const selectedGroup = computed(() => {
 })
 
 </script>
+
 <template>
-  <BcDropdown v-model="selected" :options="list" option-value="id" option-label="name">
+  <BcDropdown
+    v-model="selected"
+    :options="list"
+    option-value="id"
+    option-label="name"
+    :placeholder="$t('dashboard.group.selection.placeholder')"
+  >
     <template v-if="selectedGroup" #value>
-      <span>{{ $t('dashboard.group.selection.group') }}: <DashboardGroupLabel :group="selectedGroup" /></span>
+      <span>{{ $t('dashboard.group.selection.group') }}:
+        <DashboardGroupLabel :group="selectedGroup" />
+      </span>
     </template>
+
     <template #option="slotProps">
       <DashboardGroupLabel :group="slotProps" />
     </template>
   </BcDropdown>
 </template>
-<style lang="scss" scoped>
-</style>
+
+<style lang="scss" scoped></style>

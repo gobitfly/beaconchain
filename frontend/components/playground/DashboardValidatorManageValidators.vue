@@ -17,6 +17,7 @@ const selectedGroupId = ref<number>(-1)
 <template>
   <div class="icon_holder">
     <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" />
+    <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" :include-all="true" />
     <div>{{ dashboards }}</div>
   </div>
 </template>
