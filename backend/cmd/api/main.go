@@ -10,8 +10,6 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/rs/cors"
 
-	"github.com/gobitfly/beaconchain/pkg/api/services"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -47,7 +45,7 @@ func main() {
 	if dummyApi {
 		dai = dataaccess.NewDummyService()
 	} else {
-		dai = InitServices(dataaccess.NewDataAccessService(cfg))
+		dai = dataaccess.NewDataAccessService(cfg)
 	}
 	defer dai.CloseDataAccessService()
 
@@ -62,14 +60,4 @@ func main() {
 	}
 	log.Infof("Serving on %s:%s", cfg.Frontend.Server.Host, cfg.Frontend.Server.Port)
 	log.Fatal(srv.ListenAndServe(), "Error while serving", 0)
-}
-
-func InitServices(das dataaccess.DataAccessService) dataaccess.DataAccessor {
-	db.ReaderDb = das.ReaderDb
-	db.WriterDb = das.WriterDb
-	db.PersistentRedisDbClient = das.PersistentRedisDbClient
-
-	go services.StartSlotVizDataService()
-
-	return das
 }

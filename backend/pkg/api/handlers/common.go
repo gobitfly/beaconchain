@@ -24,11 +24,11 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessor
+	da dataaccess.DataAccessor
 }
 
 func NewHandlerService(DataAccessor dataaccess.DataAccessor) HandlerService {
-	return HandlerService{dai: DataAccessor}
+	return HandlerService{da: DataAccessor}
 }
 
 // --------------------------------------
