@@ -75,5 +75,9 @@ async function onCreate () {
     border-radius: var(--border-radius);
     max-width: 460px;
     padding: var(--padding-large);
+
+    @media (max-width: 400px) {
+      padding: var(--padding);
+    }
   }
 </style>

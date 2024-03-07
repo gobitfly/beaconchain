@@ -57,7 +57,8 @@ function onContinue () {
         gap: 10px;
 
         input {
-            width: 320px;
+            min-width: 250px;
+            max-width: 320px;
         }
 
         button {
