@@ -35,16 +35,181 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
-		d.backfill()
+		d.backfillEpochData()
 	}()
 
-	// todo aggregator
 	return nil
+}
+
+var rollingAggregateMutex = &sync.Mutex{}
+
+func (d *dashboardData) rolling24hAggregate() {
+	rollingAggregateMutex.Lock()
+	defer rollingAggregateMutex.Unlock()
+
+	startTime := time.Now()
+	defer func() {
+		d.log.Infof("rolling 24h aggregate took %v", time.Since(startTime))
+	}()
+
+	epochsPerDay := utils.EpochsPerDay()
+
+	currentEpoch, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		d.log.Error(err, "failed to get latest dashboard epoch", 0)
+		return
+	}
+
+	oldestInDb, err := edb.GetOldestDashboardEpoch()
+	if err != nil {
+		d.log.Error(err, "failed to get oldest dashboard epoch", 0)
+		return
+	}
+
+	lowerBound := currentEpoch - epochsPerDay
+	if oldestInDb > lowerBound {
+		lowerBound = oldestInDb
+	}
+
+	tx, err := db.AlloyWriter.Beginx()
+	if err != nil {
+		d.log.Error(err, "failed to start transaction", 0)
+		return
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`DELETE FROM dashboard_data_rolling_24h`)
+	if err != nil {
+		d.log.Error(err, "failed to delete old rolling 24h aggregate", 0)
+	}
+
+	_, err = tx.Exec(`
+		WITH
+			balance_starts as (
+				SELECT validatorindex, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
+			),
+			balance_ends as (
+				SELECT validatorindex, balance_end FROM validator_dashboard_data_epoch WHERE epoch = $2
+			),
+			aggregate as (
+				SELECT 
+					validatorindex,
+					COALESCE(SUM(COALESCE(attestations_source_reward, 0)),0) as attestations_source_reward,
+					COALESCE(SUM(COALESCE(attestations_target_reward, 0)),0) as attestations_target_reward,
+					COALESCE(SUM(COALESCE(attestations_head_reward, 0)),0) as attestations_head_reward,
+					COALESCE(SUM(COALESCE(attestations_inactivity_reward, 0)),0) as attestations_inactivity_reward,
+					COALESCE(SUM(COALESCE(attestations_inclusion_reward, 0)),0) as attestations_inclusion_reward,
+					COALESCE(SUM(COALESCE(attestations_reward, 0)),0) as attestations_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_source_reward, 0)),0) as attestations_ideal_source_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_target_reward, 0)),0) as attestations_ideal_target_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_head_reward, 0)),0) as attestations_ideal_head_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_inactivity_reward, 0)),0) as attestations_ideal_inactivity_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_inclusion_reward, 0)),0) as attestations_ideal_inclusion_reward,
+					COALESCE(SUM(COALESCE(attestations_ideal_reward, 0)),0) as attestations_ideal_reward,
+					COALESCE(SUM(COALESCE(blocks_scheduled, 0)),0) as blocks_scheduled,
+					COALESCE(SUM(COALESCE(blocks_proposed, 0)),0) as blocks_proposed,
+					COALESCE(SUM(COALESCE(blocks_cl_reward, 0)),0) as blocks_cl_reward,
+					COALESCE(SUM(COALESCE(blocks_el_reward, 0)),0) as blocks_el_reward,
+					COALESCE(SUM(COALESCE(sync_scheduled, 0)),0) as sync_scheduled,
+					COALESCE(SUM(COALESCE(sync_executed, 0)),0) as sync_executed,
+					COALESCE(SUM(COALESCE(sync_rewards, 0)),0) as sync_rewards,
+					bool_or(slashed) as slashed,
+					COALESCE(SUM(COALESCE(deposits_count, 0)),0) as deposits_count,
+					COALESCE(SUM(COALESCE(deposits_amount, 0)),0) as deposits_amount,
+					COALESCE(SUM(COALESCE(withdrawals_count, 0)),0) as withdrawals_count,
+					COALESCE(SUM(COALESCE(withdrawals_amount, 0)),0) as withdrawals_amount
+				FROM validator_dashboard_data_epoch
+				WHERE epoch > $1 AND epoch <= $2
+				GROUP BY validatorindex
+			)
+			INSERT INTO validator_dashboard_data_rolling_daily (
+				validatorindex,
+				attestations_source_reward,
+				attestations_target_reward,
+				attestations_head_reward,
+				attestations_inactivity_reward,
+				attestations_inclusion_reward,
+				attestations_reward,
+				attestations_ideal_source_reward,
+				attestations_ideal_target_reward,
+				attestations_ideal_head_reward,
+				attestations_ideal_inactivity_reward,
+				attestations_ideal_inclusion_reward,
+				attestations_ideal_reward,
+				blocks_scheduled,
+				blocks_proposed,
+				blocks_cl_reward,
+				blocks_el_reward,
+				sync_scheduled,
+				sync_executed,
+				sync_rewards,
+				slashed,
+				balance_start,
+				balance_end,
+				deposits_count,
+				deposits_amount,
+				withdrawals_count,
+				withdrawals_amount
+			)
+			SELECT 
+				aggregate.validatorindex,
+				attestations_source_reward,
+				attestations_target_reward,
+				attestations_head_reward,
+				attestations_inactivity_reward,
+				attestations_inclusion_reward,
+				attestations_reward,
+				attestations_ideal_source_reward,
+				attestations_ideal_target_reward,
+				attestations_ideal_head_reward,
+				attestations_ideal_inactivity_reward,
+				attestations_ideal_inclusion_reward,
+				attestations_ideal_reward,
+				blocks_scheduled,
+				blocks_proposed,
+				blocks_cl_reward,
+				blocks_el_reward,
+				sync_scheduled,
+				sync_executed,
+				sync_rewards,
+				slashed,
+				COALESCE(balance_start, 0),
+				COALESCE(balance_end,0),
+				deposits_count,
+				deposits_amount,
+				withdrawals_count,
+				withdrawals_amount
+			FROM aggregate
+			LEFT JOIN balance_starts ON aggregate.validatorindex = balance_starts.validatorindex
+			LEFT JOIN balance_ends ON aggregate.validatorindex = balance_ends.validatorindex
+	`, lowerBound, currentEpoch)
+
+	if err != nil {
+		d.log.Error(err, "failed to insert rolling 24h aggregate", 0)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		d.log.Error(err, "failed to commit transaction", 0)
+	}
+
+	//Clear old partitions
+	for i := uint64(0); ; i += PartitionEpochWidth {
+		startOfPartition, endOfPartition := getPartitionRange(currentEpoch - getRetentionEpochDuration() - i)
+		finished, err := deleteEpochPartition(startOfPartition, endOfPartition)
+		if err != nil {
+			d.log.Error(err, "failed to delete old epoch partition", 0)
+		}
+
+		if finished {
+			break
+		}
+	}
 }
 
 var backFillMutex = &sync.Mutex{}
 
-func (d *dashboardData) backfill() {
+func (d *dashboardData) backfillEpochData() {
 	if !backFillMutex.TryLock() {
 		return
 	}
@@ -56,7 +221,7 @@ func (d *dashboardData) backfill() {
 		return
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch)
+	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, getRetentionEpochDuration())
 	if err != nil {
 		d.log.Error(err, "failed to get epoch gaps", 0)
 		return
@@ -67,7 +232,7 @@ func (d *dashboardData) backfill() {
 
 		for _, gap := range gaps {
 			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
-			if gap < res.Data.Finalized.Epoch-RetainEpochDuration/2 {
+			if gap < res.Data.Finalized.Epoch-getRetentionEpochDuration()/2 {
 				continue
 			}
 
@@ -82,7 +247,7 @@ func (d *dashboardData) backfill() {
 			}
 
 			d.log.Infof("backfilling epoch %d", gap)
-			err = d.exportEpochData(int(gap))
+			err = d.exportEpochData(gap)
 			if err != nil {
 				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
 			}
@@ -116,7 +281,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 
 	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
 
-	err = d.exportEpochData(int(res.Data.Finalized.Epoch))
+	err = d.exportEpochData(res.Data.Finalized.Epoch)
 	if err != nil {
 		return err
 	}
@@ -124,7 +289,9 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
 	// since the init backfill only fixes gaps at the start of exporter but does not fix
 	// gaps that occur while operating (for example node not available for a brief moment)
-	d.backfill()
+	d.backfillEpochData()
+
+	d.rolling24hAggregate()
 
 	return nil
 }
@@ -141,14 +308,14 @@ func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) e
 	return nil
 }
 
-func (d *dashboardData) exportEpochData(epoch int) error {
+func (d *dashboardData) exportEpochData(epoch uint64) error {
 	spec, err := d.CL.GetSpec()
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
+	data := d.getData(epoch, uint64(spec.Data.SlotsPerEpoch))
 	if data == nil {
 		return errors.New("can not get data")
 	}
@@ -180,12 +347,12 @@ type Data struct {
 	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
 	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
 	attestationRewards       *constypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[int]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData    map[int]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData  map[int]*constypes.StandardSyncCommitteeRewardsResponse
+	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
 }
 
-func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
+func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	var result Data
 	var err error
 
@@ -193,9 +360,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
 
-	result.beaconBlockData = make(map[int]*constypes.StandardBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[int]*constypes.StandardBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[int]*constypes.StandardSyncCommitteeRewardsResponse)
+	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
+	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
+	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse)
 
 	// retrieve the validator balances at the start of the epoch
 	d.log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
@@ -224,7 +391,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
 
 	// attestation rewards
 	d.log.Infof("retrieving attestation rewards data")
-	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
+	result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
 
 	if err != nil {
 		d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
@@ -406,15 +573,18 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 }
 
 const PartitionEpochWidth = 3
-const RetainEpochDuration = 300 // in epochs
 
-func getPartitionRange(epoch int) (int, int) {
+func getRetentionEpochDuration() uint64 {
+	return uint64(float64(utils.EpochsPerDay()) * 1.3) // 30% buffer
+}
+
+func getPartitionRange(epoch uint64) (uint64, uint64) {
 	startOfPartition := epoch / PartitionEpochWidth * PartitionEpochWidth // inclusive
 	endOfPartition := startOfPartition + PartitionEpochWidth              // exclusive
 	return startOfPartition, endOfPartition
 }
 
-func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardDataRow) error {
+func (d *dashboardData) writeEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
 	// Create table if needed
 	startOfPartition, endOfPartition := getPartitionRange(epoch)
 
@@ -446,7 +616,7 @@ func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardData
 			}
 		}()
 
-		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"dashboard_data_epoch"}, []string{
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"validator_dashboard_data_epoch"}, []string{
 			"validatorindex",
 			"epoch",
 			"attestations_source_reward",
@@ -477,7 +647,7 @@ func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardData
 			"withdrawals_amount",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
-				data[i].Index,
+				i,
 				epoch,
 				data[i].AttestationsSourceReward,
 				data[i].AttestationsTargetReward,
@@ -523,27 +693,13 @@ func (d *dashboardData) writeEpochData(epoch int, data []*validatorDashboardData
 		return errors.Wrap(err, "error writing data")
 	}
 
-	//Clear old partitions
-	//todo delete in aggregator, not here
-	for i := 0; ; i += PartitionEpochWidth {
-		startOfPartition, endOfPartition := getPartitionRange(epoch - RetainEpochDuration - i)
-		finished, err := deleteEpochPartition(startOfPartition, endOfPartition)
-		if err != nil {
-			return err
-		}
-
-		if finished {
-			break
-		}
-	}
-
 	return nil
 }
 
-func createEpochPartition(epochFrom, epochTo int) error {
+func createEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS dashboard_data_epoch_%d_%d 
-		PARTITION OF dashboard_data_epoch
+		CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch_%d_%d 
+		PARTITION OF validator_dashboard_data_epoch
 			FOR VALUES FROM (%[1]d) TO (%[2]d)
 		`,
 		epochFrom, epochTo,
@@ -552,9 +708,9 @@ func createEpochPartition(epochFrom, epochTo int) error {
 }
 
 // Returns finished, error
-func deleteEpochPartition(epochFrom, epochTo int) (bool, error) {
+func deleteEpochPartition(epochFrom, epochTo uint64) (bool, error) {
 	st, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		DROP TABLE IF EXISTS dashboard_data_epoch_%d_%d
+		DROP TABLE IF EXISTS validator_dashboard_data_epoch_%d_%d
 		`,
 		epochFrom, epochTo,
 	))
@@ -586,8 +742,6 @@ func mustParseInt64(s string) int64 {
 }
 
 type validatorDashboardDataRow struct {
-	Index uint64
-
 	AttestationsSourceReward          int64 //done
 	AttestationsTargetReward          int64 //done
 	AttestationsHeadReward            int64 //done
@@ -601,14 +755,14 @@ type validatorDashboardDataRow struct {
 	AttestationsIdealInclusionsReward int64 //done
 	AttestationIdealReward            int64 //done
 
-	BlockScheduled int // done
-	BlocksProposed int // done
+	BlockScheduled int8 // done
+	BlocksProposed int8 // done
 
 	BlocksClReward int64 // done
 	BlocksElReward decimal.Decimal
 
 	SyncScheduled int   // done
-	SyncExecuted  int   // done
+	SyncExecuted  int8  // done
 	SyncReward    int64 // done
 
 	Slashed bool // done
@@ -616,9 +770,9 @@ type validatorDashboardDataRow struct {
 	BalanceStart uint64 // done
 	BalanceEnd   uint64 // done
 
-	DepositsCount  int    // done
+	DepositsCount  int8   // done
 	DepositsAmount uint64 // done
 
-	WithdrawalsCount  int    // done
+	WithdrawalsCount  int8   // done
 	WithdrawalsAmount uint64 // done
 }
