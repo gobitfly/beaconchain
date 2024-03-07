@@ -15,7 +15,7 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dai dataaccess.DataAccessInterface) *mux.Router {
+func NewApiRouter(dai dataaccess.DataAccessor) *mux.Router {
 	handlerService := handlers.NewHandlerService(dai)
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()

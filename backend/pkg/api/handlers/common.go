@@ -24,11 +24,11 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessInterface
+	dai dataaccess.DataAccessor
 }
 
-func NewHandlerService(dataAccessInterface dataaccess.DataAccessInterface) HandlerService {
-	return HandlerService{dai: dataAccessInterface}
+func NewHandlerService(DataAccessor dataaccess.DataAccessor) HandlerService {
+	return HandlerService{dai: DataAccessor}
 }
 
 // --------------------------------------
@@ -195,31 +195,12 @@ func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) int
 		joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
 		return nil
 	}
-	validatorParams := strings.Split(string(decodedId), ",")
-	if len(validatorParams) > 20 {
+	validators := checkValidatorList(handlerErr, string(decodedId))
+	if len(validators) > 20 {
 		joinErr(handlerErr, "too many validators encoded in 'dashboard_id'")
 	}
-	validators := make([]types.VDBValidator, 0, len(validatorParams))
-	for _, v := range validatorParams {
-		splitParam := strings.Split(v, ":")
-		if len(splitParam) != 2 {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		index, err := strconv.ParseUint(splitParam[0], 10, 64)
-		if err != nil {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		version, err := strconv.ParseUint(splitParam[1], 10, 64)
-		if err != nil {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		validators = append(validators, types.VDBValidator{Index: index, Version: version})
-	}
 
-	return types.VDBIdValidatorSet(validators)
+	return validators
 }
 
 func checkGroupId(handlerErr *error, id string) uint64 {
@@ -386,6 +367,10 @@ func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
 }
 
+func returnForbidden(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusForbidden, err)
+}
+
 //nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
@@ -398,4 +383,10 @@ func returnConflict(w http.ResponseWriter, err error) {
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusInternalServerError, err)
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	// TODO @recy21 define error types in data access package
+	// TODO @LuccaBitfly handle specific data access errors
+	returnInternalServerError(w, err)
 }
