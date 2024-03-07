@@ -26,6 +26,7 @@ type MappingData = {
   noAuth?: boolean,
   mock?: boolean,
   legacy?: boolean
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' // 'GET' will be used as default
 }
 
 function addQueryParams (path: string, query?: PathValues) {
@@ -82,11 +83,13 @@ const mapping: Record<string, MappingData> = {
   },
   [API_PATH.LOGIN]: {
     path: '/login',
+    method: 'POST',
     noAuth: true,
     mock: true
   },
   [API_PATH.REFRESH_TOKEN]: {
     path: '/refreshToken',
+    method: 'POST',
     noAuth: true,
     mock: true
   }
@@ -111,14 +114,15 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
     baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
   }
 
+  const method = map.method || 'GET'
   if (pathName === API_PATH.LOGIN) {
-    const res = await $fetch<LoginResponse>(path, { ...options, baseURL })
+    const res = await $fetch<LoginResponse>(path, { method, ...options, baseURL })
     refreshToken.value = res.refresh_token
     accessToken.value = res.access_token
     return res as T
   } else if (!map.noAuth) {
     if (!accessToken.value && refreshToken.value) {
-      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { method: 'POST', body: { refresh_token: refreshToken.value } })
+      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { body: { refresh_token: refreshToken.value } })
       accessToken.value = res.access_token
     }
 
@@ -130,5 +134,6 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
       options.headers.append('X-User-Id', xUserId)
     }
   }
-  return await $fetch<T>(path, { ...options, baseURL })
+
+  return await $fetch<T>(path, { method, ...options, baseURL })
 }

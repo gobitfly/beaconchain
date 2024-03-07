@@ -8,8 +8,7 @@ export const useUserStore = defineStore('user-store', () => {
       body: {
         email,
         password
-      },
-      method: 'POST'
+      }
     })
   }
 
