@@ -132,10 +132,8 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       </div>
       <h1>Single Toggle</h1>
       <div class="element_container">
-        <div>
-          selectedType: {{ selectedType }}
-          <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" :initial="allTypes[0].text" />
-        </div>
+        selectedType: {{ selectedType }}
+        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" :initial="allTypes[0].text" class="single_bar_container" />
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
@@ -216,5 +214,9 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
+}
+
+.single_bar_container {
+  width: 600px
 }
 </style>
