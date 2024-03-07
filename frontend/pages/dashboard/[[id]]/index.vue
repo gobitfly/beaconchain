@@ -8,6 +8,8 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 
+import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
+
 const route = useRoute()
 
 const key = computed(() => {
@@ -17,16 +19,28 @@ const key = computed(() => {
   return route.params.id
 })
 
+const displayType = ref<DashboardCreationDisplayType>('') // TODO: Set to panel when no dashbaord is available
+
+const onAddDashboard = () => {
+  displayType.value = 'modal'
+}
+
 </script>
 
 <template>
   <BcPageWrapper>
     <template #top>
-      <div class="h1 dashboard_title">
-        {{ $t('dashboard.title') }}
+      <div class="header-container">
+        <div class="h1 dashboard-title">
+          {{ $t('dashboard.title') }}
+        </div>
+        <Button class="p-button-icon-only" @click="onAddDashboard">
+          <IconPlus alt="Plus icon" width="100%" height="100%" />
+        </Button>
       </div>
       <DashboardValidatorOverview class="overview" />
     </template>
+    <DashboardCreationController v-model="displayType" />
     <div>
       <DashboardValidatorSlotViz :dashboard-key="key" />
     </div>
@@ -73,11 +87,20 @@ const key = computed(() => {
 
 <style lang="scss" scoped>
 
-.content {
+.header-container {
+  display: flex;
+  justify-content: space-between;
+
+  .dashboard-title {
+    margin-bottom: var(--padding-large);
+  }
+}
+
+.overview {
   margin-bottom: var(--padding-large);
 }
 
-.dashboard_title, .overview{
+.content {
   margin-bottom: var(--padding-large);
 }
 

@@ -1,16 +1,19 @@
 <script lang="ts" setup>
 import { type DashboardType, type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
 
-interface Props {
-  displayType: DashboardCreationDisplayType;
-}
-const props = defineProps<Props>()
+const displayType = defineModel<DashboardCreationDisplayType>({ required: true })
+const modalVisibility = ref(false)
 
-watch(() => props.displayType, () => {
-  if (props.displayType === 'panel') {
+const state = ref<DashboardCreationState>('')
+const type = ref<DashboardType>('')
+const name = ref<string>('')
+const network = ref<string>('')
+
+watch(() => displayType.value, () => {
+  if (displayType.value === 'panel') {
     modalVisibility.value = false
     state.value = 'type'
-  } else if (props.displayType === 'modal') {
+  } else if (displayType.value === 'modal') {
     modalVisibility.value = true
     state.value = 'type'
   } else {
@@ -18,6 +21,12 @@ watch(() => props.displayType, () => {
     type.value = ''
     name.value = ''
     network.value = ''
+  }
+}, { immediate: true })
+
+watch(() => modalVisibility.value, () => {
+  if (modalVisibility.value === false) {
+    displayType.value = ''
   }
 })
 
@@ -28,14 +37,6 @@ function onCreate () {
     console.log(`Creating ${type.value} dashboard ${name.value} on ${network.value} via ${API_PATH.DASHBOARD_CREATE_VALIDATOR}`)
   }
 }
-
-const modalVisibility = ref(false)
-
-const state = ref<DashboardCreationState>('')
-
-const type = ref<DashboardType>('')
-const name = ref<string>('')
-const network = ref<string>('')
 </script>
 
 <template>
