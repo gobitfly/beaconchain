@@ -2,6 +2,8 @@
 import { type DashboardType, type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
 import { type VDBPostReturnData } from '~/types/api/validator_dashboard'
 
+const router = useRouter()
+
 const displayType = defineModel<DashboardCreationDisplayType>({ required: true })
 const modalVisibility = ref(false)
 
@@ -32,22 +34,29 @@ watch(() => modalVisibility.value, () => {
 })
 
 async function onCreate () {
+  let newDashboardId = -1
   if (type.value === 'account') {
     await useCustomFetch<undefined>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { // TODO: Use correct type once available
       body: {
         name: name.value
       }
     })
+    newDashboardId = 1
   } else if (type.value === 'validator') {
-    await useCustomFetch<VDBPostReturnData>(API_PATH.DASHBOARD_CREATE_VALIDATOR, {
+    const response = await useCustomFetch<VDBPostReturnData>(API_PATH.DASHBOARD_CREATE_VALIDATOR, {
       body: {
         name: name.value,
         network: network.value
       }
     })
+    newDashboardId = response.id || 1
   }
 
   displayType.value = ''
+
+  // TODO
+  console.log('New dashboard ID:', newDashboardId)
+  router.push(`/dashboard/${newDashboardId}`)
 }
 </script>
 
