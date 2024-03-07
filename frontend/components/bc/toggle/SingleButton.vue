@@ -47,8 +47,7 @@ const selected = defineModel<boolean | undefined>({ required: true })
       }
 
       :deep(svg) {
-        width: 36px;
-        height: 36px;
+        max-width: 36px;
       }
     }
   }
