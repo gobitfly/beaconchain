@@ -47,9 +47,6 @@ onMounted(async () => {
     </div>
 
     <TabView :lazy="true">
-      <TabPanel header="Dashboard Creation">
-        <PlaygroundDashboardCreation />
-      </TabPanel>
       <TabPanel header="Validator Subset Modal">
         <Button label="Open Modal" @click="modalVisibility = true" />
       </TabPanel>
