@@ -52,6 +52,8 @@ async function onCreate () {
     newDashboardId = response.id || 1
   }
 
+  displayType.value = ''
+
   router.push(`/dashboard/${newDashboardId}`)
 }
 </script>
