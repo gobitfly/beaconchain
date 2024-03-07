@@ -30,7 +30,7 @@ const selected = defineModel<boolean | undefined>({ required: true })
       gap: 11px;
 
       width: 100%;
-      height: 100px;
+      height: 100%;
       padding: 16px 0 15px 0;
       border: 1px var(--container-border-color) solid;
       border-radius: var(--border-radius);
