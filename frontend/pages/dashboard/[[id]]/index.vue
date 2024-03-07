@@ -24,7 +24,7 @@ function showDashboardCreation () {
 }
 
 onMounted(() => {
-  // TODO: Implement check if user does not have a single dashboard instead of the key check
+  // TODO: Implement check if user does not have a single dashboard instead of the key check once information is available
   if (key.value === '') {
     showDashboardCreation()
   }
