@@ -58,7 +58,7 @@ func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http
 	}
 	data, err := h.dai.GetUserDashboards(user.Id)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.ApiDataResponse[types.UserDashboardsData]{
@@ -155,7 +155,7 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 
 	data, err := h.dai.CreateValidatorDashboard(user.Id, name, network)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -175,19 +175,28 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 	var data types.VDBOverviewData
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
-		// TODO auth check
+		// TODO check if user is authorized for this dashboard
 		data, err = h.dai.GetValidatorDashboardOverview(dashboardId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardOverviewByPublicId(dashboardId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardOverviewByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardOverview(dashboardInfo.Id)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardOverviewByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
-
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardResponse{
@@ -217,12 +226,13 @@ func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, 
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
+	// TODO check if user is authorized for this dashboard
 	err = h.dai.RemoveValidatorDashboard(dashboardInfo.Id)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -257,13 +267,14 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
+	// TODO check if user is authorized for this dashboard
 	// TODO check group limit reached
 	data, err := h.dai.CreateValidatorDashboardGroup(dashboardInfo.Id, name)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -295,12 +306,13 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
+	// TODO check if user is authorized for this dashboard
 	err = h.dai.RemoveValidatorDashboardGroup(dashboardInfo.Id, groupId)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -327,7 +339,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	}
 	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -342,13 +354,14 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
+	// TODO check if user is authorized for this dashboard
 	// TODO check validator limit reached
 	data, err := h.dai.AddValidatorDashboardValidators(dashboardInfo.Id, groupId, validators)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -376,17 +389,28 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	var paging types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
+		// TODO check if user is authorized for this dashboard
 		data, paging, err = h.dai.GetValidatorDashboardValidators(dashboardId, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardValidatorsByPublicId(dashboardId, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardValidatorsByValidators(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardValidators(dashboardInfo.Id, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardValidatorsByValidators(validators, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -410,13 +434,14 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 	}
 	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
 	var dashboardInfo types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
+		// TODO check if user is authorized for this dashboard
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
 	case types.VDBIdPublic:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
@@ -425,12 +450,12 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	err = h.dai.RemoveValidatorDashboardValidators(dashboardInfo.Id, validators)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -470,12 +495,12 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardInfo.Id, name, req.ShareSettings.GroupNames)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -517,12 +542,12 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	data, err := h.dai.UpdateValidatorDashboardPublicId(dashboardInfo.Id, publicDashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -553,12 +578,12 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	err = h.dai.RemoveValidatorDashboardPublicId(dashboardInfo.Id, publicDashboardId)
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 
@@ -579,15 +604,25 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardSlotViz(dashboardId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardSlotVizByPublicId(dashboardId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardSlotVizByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardSlotViz(dashboardInfo.Id)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardSlotVizByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSlotVizResponse{
@@ -615,15 +650,25 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardSummary(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardSummaryByPublicId(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardSummaryByValidators(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardSummary(dashboardInfo.Id, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardSummaryByValidators(validators, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryResponse{
@@ -648,15 +693,25 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardGroupSummaryByPublicId(dashboardId, groupId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupSummaryByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupSummary(dashboardInfo.Id, groupId)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupSummaryByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupSummaryResponse{
@@ -679,15 +734,25 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardSummaryChart(dashboardId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardSummaryChartByPublicId(dashboardId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardSummaryChartByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardSummaryChart(dashboardInfo.Id)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardSummaryChartByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryChartResponse{
@@ -714,15 +779,25 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardRewards(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardRewardsByPublicId(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardRewardsByValidators(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardRewards(dashboardInfo.Id, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardRewardsByValidators(validators, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsResponse{
@@ -748,15 +823,25 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardGroupRewardsByPublicId(dashboardId, groupId, epoch)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupRewardsByValidators(dashboardId, epoch)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupRewards(dashboardInfo.Id, groupId, epoch)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupRewardsByValidators(validators, epoch)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupRewardsResponse{
@@ -779,15 +864,25 @@ func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respons
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardRewardsChart(dashboardId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardRewardsChartByPublicId(dashboardId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardRewardsChartByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardRewardsChart(dashboardInfo.Id)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardRewardsChartByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsChartResponse{
@@ -815,15 +910,25 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardDuties(dashboardId, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardDutiesByPublicId(dashboardId, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardDutiesByValidators(dashboardId, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardDuties(dashboardInfo.Id, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardDutiesByValidators(validators, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardDutiesResponse{
@@ -851,15 +956,25 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardBlocks(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardBlocksByPublicId(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardBlocksByValidators(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardBlocks(dashboardInfo.Id, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardBlocksByValidators(validators, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardBlocksResponse{
@@ -883,15 +998,25 @@ func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWrit
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardHeatmap(dashboardId)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardHeatmapByPublicId(dashboardId)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardHeatmapByValidators(dashboardId)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardHeatmap(dashboardInfo.Id)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardHeatmapByValidators(validators)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardHeatmapResponse{
@@ -916,15 +1041,25 @@ func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respons
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
 	case types.VDBIdPublic:
-		data, err = h.dai.GetValidatorDashboardGroupHeatmapByPublicId(dashboardId, groupId, epoch)
-	case types.VDBIdValidatorSet:
-		data, err = h.dai.GetValidatorDashboardGroupHeatmapByValidators(dashboardId, epoch)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupHeatmap(dashboardInfo.Id, groupId, epoch)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, err = h.dai.GetValidatorDashboardGroupHeatmapByValidators(validators, epoch)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
@@ -949,15 +1084,25 @@ func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w ht
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardElDeposits(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardElDepositsByPublicId(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardElDepositsByValidators(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardElDeposits(dashboardInfo.Id, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardElDepositsByValidators(validators, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardExecutionLayerDepositsResponse{
@@ -983,17 +1128,28 @@ func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w ht
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardClDeposits(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardClDepositsByPublicId(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardClDepositsByValidators(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardClDeposits(dashboardInfo.Id, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardClDepositsByValidators(validators, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
+
 	response := types.InternalGetValidatorDashboardConsensusLayerDepositsResponse{
 		Data:   data,
 		Paging: paging,
@@ -1019,15 +1175,25 @@ func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Response
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardWithdrawals(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	case types.VDBIdPublic:
-		data, paging, err = h.dai.GetValidatorDashboardWithdrawalsByPublicId(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
-	case types.VDBIdValidatorSet:
-		data, paging, err = h.dai.GetValidatorDashboardWithdrawalsByValidators(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+		dashboardInfo, infoErr := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if infoErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardWithdrawals(dashboardInfo.Id, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	case []string:
+		validators, convertErr := h.dai.GetValidatorsFromStrings(dashboardId)
+		if convertErr != nil {
+			handleError(w, err)
+			return
+		}
+		data, paging, err = h.dai.GetValidatorDashboardWithdrawalsByValidators(validators, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	default:
 		returnInternalServerError(w, errors.New(errorMsgParsingId))
 		return
 	}
 	if err != nil {
-		returnInternalServerError(w, err)
+		handleError(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{

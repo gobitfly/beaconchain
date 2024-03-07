@@ -98,6 +98,14 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "group": {
+      "selection": {
+        "group": "Group",
+        "all": "All groups",
+        "default": "Default",
+        "placeholder": "Select group"
+      }
+    },
     "validator": {
       "overview": {
         "your_online_validators": "Your Online Validators",

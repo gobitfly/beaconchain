@@ -7,6 +7,9 @@
   --light-grey: #f0f0f0;
   --light-grey-2: #dfdfdf;
   --light-grey-3: #d3d3d3;
+  --light-grey-4: #dddddd;
+  --light-grey-5: #eaeaea;
+  --light-grey-6: #a8a8a8;
   --dark-grey: #5c4e4e;
   --very-dark-grey: #362f32;
   --asphalt: #484f56;
@@ -29,6 +32,7 @@
   --primary-orange-pressed: #ffb346;
 
   --primary-contrast-color: var(--grey-4);
+  --primary-contrast-color-discreet: var(--light-grey-5);
 
   --scrollbar-thumb-color: var(--dark-grey);
   --scrollbar-thumb-hover-color: var(--grey);
@@ -37,13 +41,15 @@
   --text-color: var(--light-black);
   --text-color-inverted: var(--light-grey);
   --text-color-disabled: var(--grey);
-  --text-color-discreet: var(--grey);
+  --text-color-discreet: var(--dark-grey);
 
   --button-color-active: var(--primary-orange);
   --button-color-hover: var(--primary-orange-hover);
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
   --button-text-color-disabled: var(--grey-4);
+
+  --checkbox-background-color: var(--light-grey-4);
 
   --container-background: var(--grey-4);
   --container-color: var(--light-black);
@@ -68,9 +74,15 @@
   --megamenu-text-color: var(--grey);
   --megamenu-hover-color: var(--light-grey-3);
 
+  --list-highlight-background: var(--primary-orange-hover);
+  --list-hover-background: var(--light-grey-6);
+  --list-hover-color: var(--light-grey);
+  --list-hover-descrete-color: var(--light-grey-5);
+
   &.dark-mode {
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
+    --primary-contrast-color-discreet: var(--dark-grey);
 
     --scrollbar-thumb-color: var(--light-grey);
 
@@ -79,12 +91,15 @@
     --text-color: var(--light-grey);
     --text-color-inverted: var(--light-black);
     --text-color-disabled: var(--grey);
+    --text-color-discreet: var(--grey);
 
     --button-color-active: var(--primary-orange);
     --button-color-hover: var(--primary-orange-hover);
     --button-color-pressed: var(--primary-orange-pressed);
     --button-color-disabled: var(--grey);
     --button-text-color-disabled: var(--light-grey);
+
+    --checkbox-background-color: var(--light-grey);
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
@@ -108,5 +123,9 @@
     --megamenu-panel-color: var(--graphite);
     --megamenu-text-color: var(--grey);
     --megamenu-hover-color: var(--asphalt);
+
+    --list-highlight-background: var(--primary-orange);
+    --list-hover-background: var(--dark-grey);
+    --list-hover-descrete-color: var(--grey);
   }
 }
