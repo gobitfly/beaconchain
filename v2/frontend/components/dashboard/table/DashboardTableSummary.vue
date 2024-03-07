@@ -4,6 +4,8 @@ import SummaryChart from '../chart/SummaryChart.vue'
 import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -19,7 +21,7 @@ const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {
@@ -91,7 +93,7 @@ const setSearch = (value?: string) => {
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
-  if (row.group_id === -1) {
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
   }
 }
@@ -114,6 +116,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
+            :add-spacer="true"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

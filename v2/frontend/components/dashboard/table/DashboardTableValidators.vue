@@ -16,7 +16,7 @@ const props = defineProps<Props>()
 const modalVisibility = ref(false)
 
 const { t: $t } = useI18n()
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const openValidatorModal = () => {
   modalVisibility.value = true
@@ -61,7 +61,7 @@ const groupName = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use '~/assets/css/utils.scss';
 
 .validator_column {
   display: flex;
@@ -69,7 +69,7 @@ const groupName = computed(() => {
   align-items: center;
 
   .validators {
-    @include main.truncate-text;
+    @include utils.truncate-text;
 
     span:last-child {
       display: none;

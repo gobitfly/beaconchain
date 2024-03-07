@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { type OverviewTableData } from '~/types/dashboard/overview'
 import { totalElClNumbers } from '~/utils/bigMath'
 
@@ -10,10 +10,10 @@ const { converter } = useValue()
 const tPath = 'dashboard.validator.overview.'
 
 // TODO: implement dashboard switching
-const { getOverview } = useValidatorDashboardOverview()
+const { getOverview } = useValidatorDashboardOverviewStore()
 await useAsyncData('validator_dashboard_overview', () => getOverview())
 
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const dataList = computed(() => {
   const v = overview.value

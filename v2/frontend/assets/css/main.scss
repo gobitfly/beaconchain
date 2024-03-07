@@ -1,6 +1,7 @@
 @import "~/assets/css/colors.scss";
 @import "~/assets/css/variables.scss";
 @import "~/assets/css/fonts.scss";
+@import "~/assets/css/utils.scss";
 
 html {
   margin: 0;
@@ -38,12 +39,6 @@ a {
 
 .container {
   @include container;
-}
-
-@mixin truncate-text() {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .text-positive{
