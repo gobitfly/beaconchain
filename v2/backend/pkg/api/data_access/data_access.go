@@ -537,7 +537,7 @@ func (d DataAccessService) GetValidatorDashboardSlotVizByValidators(dashboardId 
 }
 
 func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, t.Paging, error) {
-	// TODO @recy21
+	// TODO @peter_bitfly
 	return d.dummy.GetValidatorDashboardSummary(dashboardId, cursor, sort, search, limit)
 }
 
@@ -552,7 +552,7 @@ func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId 
 }
 
 func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (t.VDBGroupSummaryData, error) {
-	// TODO @recy21
+	// TODO @peter_bitfly
 	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
 }
 
