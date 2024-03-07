@@ -52,6 +52,9 @@ onMounted(async () => {
       <TabPanel header="Summary">
         <PlaygroundDashboardValidatorSummary />
       </TabPanel>
+      <TabPanel header="Manage Validators">
+        <PlaygroundDashboardValidatorManageValidators />
+      </TabPanel>
     </TabView>
 
     <BcFooterMainFooter />
