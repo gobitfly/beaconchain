@@ -46,7 +46,8 @@ const searchable = props.searchable as Category[]
 let searchableTypes : ResultType[] = []
 
 const PeriodOfDropDownUpdates = 2000
-const APIcallTimeout = 1500 // should not exceed PeriodOfDropDownUpdates
+const APIcallTimeout = PeriodOfDropDownUpdates - 100 // 100 ms is the safety margin we give the browser to update the variable informing the timer that the API call succeeded
+const NumberOfApiCallAttemptsBeforeShowingError = 1 // TODO : in production, should be set to 2 or 3 (this low value is to test the handling of errors during development)
 
 const waitingForSearchResults = ref(false)
 const numberOfApiCallsWithoutResponse = ref(0)
@@ -257,8 +258,8 @@ function searchAhead () : boolean {
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchableTypes[0] as string !== '-- to be removed --') {
     results.raw = simulateAPIresponse(inputted.value)
-    if (Math.random() < 1 / 2.5) {
-      // 40% of the time, we simulate an error (the timer will try again)
+    if (Math.random() < 1 / 10) {
+      // 10% of the time, we simulate an error (the timer will try again)
       error = true
     }
   } else { // *** END OF STUFF TO REMOVE ***
@@ -691,126 +692,129 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
 </script>
 
 <template>
-  <div class="whole-engine" :class="barStyle">
-    <div id="input-and-button" ref="inputFieldAndButton">
-      <InputText
-        id="input-field"
-        v-model="inputted"
-        :class="barStyle"
-        type="text"
-        :placeholder="$t('search_engine.placeholder')"
-        @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
-        @focus="showDropDown = true"
-      />
-      <span
-        id="searchbutton"
-        :class="barStyle"
-        @click="userFeelsLucky()"
-      >
-        <FontAwesomeIcon :icon="faMagnifyingGlass" />
-      </span>
-    </div>
-    <div v-if="showDropDown" id="drop-down" ref="dropDown">
-      <div id="filter-area">
-        <div id="filter-networks">
-          <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
-          <MultiSelect
-            v-model="networkDropdownUserSelection"
-            :options="networkDropdownOptions"
-            option-value="name"
-            option-label="label"
-            placeholder="Networks:&nbsp;all"
-            :variant="'filled'"
-            display="comma"
-            :show-toggle-all="false"
-            :max-selected-labels="1"
-            :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
-            append-to="self"
-            @change="networkFilterHasChanged(); refreshDropDown()"
-            @click="(e : Event) => e.stopPropagation()"
-          />
-        </div>
-        <div id="filter-categories">
-          <span v-for="filter of Object.keys(userFilters.categories)" :key="filter">
-            <BcTooltip :text="filterHint(filter as Category)">
-              <label class="filter-button">
-                <input
-                  v-model="userFilters.categories[filter]"
-                  class="hiddencheckbox"
-                  :true-value="true"
-                  :false-value="false"
-                  type="checkbox"
-                  @change="categoryFilterHasChanged(); refreshDropDown()"
-                >
-                <span class="face">
-                  {{ CategoryInfo[filter as Category].filterLabel }}
-                </span>
-              </label>
-            </BcTooltip>
-          </span>
-        </div>
+  <div id="anchor" :class="barStyle">
+    <div id="whole-engine" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
+      <div id="input-and-button" ref="inputFieldAndButton" :class="barStyle">
+        <InputText
+          id="input-field"
+          v-model="inputted"
+          :class="barStyle"
+          type="text"
+          :placeholder="$t('search_engine.placeholder')"
+          @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
+          @focus="showDropDown = true"
+        />
+        <span
+          id="searchbutton"
+          :class="barStyle"
+          @click="userFeelsLucky()"
+        >
+          <FontAwesomeIcon :icon="faMagnifyingGlass" />
+        </span>
       </div>
-      <div v-if="inputted.length === 0" class="output-area">
-        <div class="info center">
-          {{ $t('search_engine.help') }}
-        </div>
-      </div>
-      <div v-else-if="waitingForSearchResults" class="output-area">
-        <div v-if="numberOfApiCallsWithoutResponse < 3" class="info center">
-          {{ $t('search_engine.searching') }}
-          <BcLoadingSpinner :loading="true" size="small" alignment="default" />
-        </div>
-        <div v-else class="info center">
-          {{ $t('search_engine.something_wrong') }}
-          <BcErrorIcon style="position:relative; top:2px; height:14px" />
-          <br>
-          {{ $t('search_engine.try_again') }}
-        </div>
-      </div>
-      <div v-else-if="populateDropDown" class="output-area">
-        <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
-          <div v-for="typ of network.types" :key="typ.type" class="type-container">
-            <div
-              v-for="(suggestion, i) of typ.suggestion"
-              :key="i"
-              class="single-result"
-              :class="barStyle"
-              @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
-            >
-              <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons">
-                <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
-                <IconNetworkIcons :chain-id="network.chainId" class="network-icon" />
-              </span>
-              <span v-else class="columns-icons">
-                <IconTypeIcons :type="typ.type" class="type-icon alone" />
-              </span>
-              <span class="columns-0">
-                {{ suggestion.columns[0] }}
-              </span>
-              <span class="columns-1and2">
-                <span v-if="suggestion.columns[1] !== ''" class="columns-1">
-                  {{ suggestion.columns[1] }}
-                </span>
-                <span class="columns-2">
-                  {{ suggestion.columns[2] }}
-                </span>
-              </span>
-              <span class="columns-category">
-                <span class="category-label">
-                  {{ CategoryInfo[TypeInfo[typ.type].category].filterLabel }}
-                </span>
-              </span>
-            </div>
+      <div v-if="showDropDown" id="drop-down" ref="dropDown" :class="barStyle">
+        <div id="separation" />
+        <div id="filter-area">
+          <div id="filter-networks">
+            <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
+            <MultiSelect
+              v-model="networkDropdownUserSelection"
+              :options="networkDropdownOptions"
+              option-value="name"
+              option-label="label"
+              placeholder="Networks:&nbsp;all"
+              :variant="'filled'"
+              display="comma"
+              :show-toggle-all="false"
+              :max-selected-labels="1"
+              :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
+              append-to="self"
+              @change="networkFilterHasChanged(); refreshDropDown()"
+              @click="(e : Event) => e.stopPropagation()"
+            />
+          </div>
+          <div id="filter-categories">
+            <span v-for="filter of Object.keys(userFilters.categories)" :key="filter">
+              <BcTooltip :text="filterHint(filter as Category)">
+                <label class="filter-button">
+                  <input
+                    v-model="userFilters.categories[filter]"
+                    class="hiddencheckbox"
+                    :true-value="true"
+                    :false-value="false"
+                    type="checkbox"
+                    @change="categoryFilterHasChanged(); refreshDropDown()"
+                  >
+                  <span class="face">
+                    {{ CategoryInfo[filter as Category].filterLabel }}
+                  </span>
+                </label>
+              </BcTooltip>
+            </span>
           </div>
         </div>
-        <div v-if="results.organized.howManyResultsIn == 0" class="info center">
-          {{ $t('search_engine.no_result_matches') }}
-          {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
+        <div v-if="inputted.length === 0" class="output-area">
+          <div class="info center">
+            {{ $t('search_engine.help') }}
+          </div>
         </div>
-        <div v-if="results.organized.howManyResultsOut > 0" class="info bottom">
-          {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
-          {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
-            (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
+        <div v-else-if="waitingForSearchResults" class="output-area">
+          <div v-if="numberOfApiCallsWithoutResponse < NumberOfApiCallAttemptsBeforeShowingError" class="info center">
+            {{ $t('search_engine.searching') }}
+            <BcLoadingSpinner :loading="true" size="small" alignment="default" />
+          </div>
+          <div v-else class="info center">
+            {{ $t('search_engine.something_wrong') }}
+            <BcErrorFace :inline="true" />
+            <br>
+            {{ $t('search_engine.try_again') }}
+          </div>
+        </div>
+        <div v-else-if="populateDropDown" class="output-area" :class="barStyle">
+          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
+            <div v-for="typ of network.types" :key="typ.type" class="type-container">
+              <div
+                v-for="(suggestion, i) of typ.suggestion"
+                :key="i"
+                class="single-result"
+                :class="barStyle"
+                @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
+              >
+                <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons">
+                  <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
+                  <IconNetworkIcons :chain-id="network.chainId" :coloured="true" class="network-icon" />
+                </span>
+                <span v-else class="columns-icons">
+                  <IconTypeIcons :type="typ.type" class="type-icon alone" />
+                </span>
+                <span class="columns-0">
+                  {{ suggestion.columns[0] }}
+                </span>
+                <span class="columns-1and2">
+                  <span v-if="suggestion.columns[1] !== ''" class="columns-1">
+                    {{ suggestion.columns[1] }}
+                  </span>
+                  <span class="columns-2">
+                    {{ suggestion.columns[2] }}
+                  </span>
+                </span>
+                <span class="columns-category">
+                  <span class="category-label" :class="barStyle">
+                    {{ CategoryInfo[TypeInfo[typ.type].category].filterLabel }}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div v-if="results.organized.howManyResultsIn == 0" class="info center">
+            {{ $t('search_engine.no_result_matches') }}
+            {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
+          </div>
+          <div v-if="results.organized.howManyResultsOut > 0" class="info bottom">
+            {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
+            {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
+              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
+          </div>
         </div>
       </div>
     </div>
@@ -821,31 +825,50 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-.whole-engine {
+#anchor {
   position: relative;
+  display: flex;
+  margin: auto;
+  height: v-bind(searchButtonSize);
   &.discreet {
-    @media (min-width: 600px) {
-      // large screen
+    @media (min-width: 600px) { // large screen
       width: 460px;
     }
-    @media (max-width: 600px) {
-      // mobile
+    @media (max-width: 600px) { // mobile
       width: 380px;
     }
   }
   &.gaudy {
-    @media (min-width: 600px) {
-      // large screen
+    @media (min-width: 600px) { // large screen
       width: 735px;
     }
-    @media (max-width: 600px) {
-      // mobile
+    @media (max-width: 600px) { // mobile
       width: 380px;
     }
   }
 }
 
-#input-and-button {
+#whole-engine {
+  @include main.container;
+  position: absolute;
+  z-index: 256;
+  left: 0px;
+  right: 0px;
+
+  &.discreet {
+    background-color: var(--searchbar-background-discreet);
+    border: none;
+    &.dropdown-is-opened {
+      border: 1px solid var(--searchbar-background-hover-discreet);
+    }
+  }
+  &.gaudy {
+    background-color: var(--searchbar-background-gaudy);
+    border: 1px solid var(--input-border-color);
+  }
+}
+
+#whole-engine #input-and-button {
   display: flex;
 
   #input-field {
@@ -853,17 +876,10 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     flex-grow: 1;
     left: 0;
     height: v-bind(searchButtonSize);
-    border-top-right-radius: 0px;
-    border-bottom-right-radius: 0px;
-    background-color: var(--searchbar-background);
-    color: var(--text-color);
+    border: none;
     box-shadow: none;
-    &.discreet {
-      border-color: var(--searchbar-background);
-    }
-    &.gaudy {
-      border-color: var(--input-border-color);
-    }
+    background-color: transparent;
+    color: var(--input-placeholder-text-color);
   }
   #searchbutton {
     display: flex;
@@ -872,22 +888,25 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     right: 0px;
     justify-content: center;
     align-items: center;
-    border-top-left-radius: 0px;
-    border-bottom-left-radius: 0px;
-    border-top-right-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
+    border-radius: var(--border-radius);  // important because the button appears when hovered
+    border: none;
+    background-color: transparent;
     cursor: pointer;
     &.discreet {
-      background-color: var(--searchbar-background);
       font-size: 15px;
       color: var(--input-placeholder-text-color);
+      &:hover {
+        background-color: var(--searchbar-background-hover-discreet);
+      }
+      &:active {
+        background-color: var(--button-color-pressed);
+      }
     }
     &.gaudy {
-      background-color: var(--button-color-active);
       font-size: 18px;
-      color: var(--grey-4);
+      color: var(--text-color);
       &:hover {
-        background-color: var(--button-color-hover);
+        background-color: var(--dropdown-background-hover);
       }
       &:active {
         background-color: var(--button-color-pressed);
@@ -896,19 +915,23 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#drop-down {
-  @include main.container;
-  position: absolute;
-  z-index: 256;
+#whole-engine #drop-down {
   left: 0;
-  right: v-bind(searchButtonSize);
-  background-color: var(--searchbar-background);
-  padding: 4px;
+  right: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-bottom: 4px;
+  #separation {
+    left: 11px;
+    right: 11px;
+    height: 1px;
+    background-color: var(--input-border-color);
+    margin-bottom: 10px;
+  }
 }
 
-#drop-down #filter-area {
+#whole-engine #drop-down #filter-area {
   display: flex;
-  padding-top: 4px;
   row-gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 8px;
@@ -943,10 +966,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
   .filter-button {
     @include fonts.small_text_bold;
-    @media (max-width: 600px) {
-      // mobile
-      letter-spacing: -0.3px;  // needed to fit all the buttons in one line
-    }
+
     .face{
       color: var(--primary-contrast-color);
       display: inline-block;
@@ -983,7 +1003,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#drop-down .output-area {
+#whole-engine #drop-down .output-area {
   display: flex;
   flex-direction: column;
   min-height: 128px;
@@ -991,11 +1011,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   right: 0px;
   overflow: auto;
   @include fonts.standard_text;
+  &.discreet {
+    color: var(--searchbar-text-discreet);
+  }
 
   .network-container {
     display: flex;
     flex-direction: column;
-    //border-bottom: 0.5px dashed var(--light-grey-3);
     right: 0px;
     .type-container {
       display: flex;
@@ -1023,10 +1045,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         border-radius: var(--border-radius);
 
         &:hover {
-          background-color: var(--dropdown-background-hover);
+          &.discreet {
+            background-color: var(--searchbar-background-hover-discreet);
+          }
+          &.gaudy {
+            background-color: var(--dropdown-background-hover);
+          }
         }
         &:active {
-          background-color: var(--button-color-pressed);
+          &.discreet {
+            background-color: var(--searchbar-background-pressed-discreet);
+          }
+          &.gaudy {
+            background-color: var(--button-color-pressed);
+          }
         }
 
         .columns-icons {
@@ -1113,7 +1145,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
               float: right;
               margin-left: 8px;
             }
-            color: var(--drop-down-text-discreet);
+            &.discreet {
+              color: var(--searchbar-text-detail-discreet);
+            }
+            &.gaudy {
+              color: var(--searchbar-text-detail-gaudy);
+            }
           }
         }
       }
