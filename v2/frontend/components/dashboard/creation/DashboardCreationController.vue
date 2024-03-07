@@ -4,33 +4,29 @@ import { type VDBPostReturnData } from '~/types/api/validator_dashboard'
 
 const router = useRouter()
 
-const displayType = defineModel<DashboardCreationDisplayType>({ required: true })
-const modalVisibility = ref(false)
+interface Props {
+  displayType: DashboardCreationDisplayType,
+}
+const props = defineProps<Props>()
+
+const visible = ref<boolean>(false)
 
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType>('')
 const name = ref<string>('')
 const network = ref<string>('')
 
-watch(() => displayType.value, () => {
-  if (displayType.value === 'panel') {
-    modalVisibility.value = false
-    state.value = 'type'
-  } else if (displayType.value === 'modal') {
-    modalVisibility.value = true
-    state.value = 'type'
-  } else {
-    state.value = ''
-    type.value = ''
-    name.value = ''
-    network.value = ''
-  }
-}, { immediate: true })
+function show () {
+  visible.value = true
 
-watch(() => modalVisibility.value, () => {
-  if (modalVisibility.value === false) {
-    displayType.value = ''
-  }
+  state.value = 'type'
+  type.value = ''
+  name.value = ''
+  network.value = ''
+}
+
+defineExpose({
+  show
 })
 
 async function onCreate () {
@@ -52,21 +48,23 @@ async function onCreate () {
     newDashboardId = response.id || 1
   }
 
-  displayType.value = ''
+  visible.value = false
 
   router.push(`/dashboard/${newDashboardId}`)
 }
 </script>
 
 <template>
-  <BcDialog v-if="displayType === 'modal'" v-model="modalVisibility">
-    <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
-    <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
-  </BcDialog>
-  <div v-else-if="displayType === 'panel'">
-    <div class="panel_container">
+  <div v-if="visible">
+    <BcDialog v-if="props.displayType === 'modal'" v-model="visible">
       <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
       <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
+    </BcDialog>
+    <div v-else-if="props.displayType === 'panel'">
+      <div class="panel_container">
+        <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
+        <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
+      </div>
     </div>
   </div>
 </template>
