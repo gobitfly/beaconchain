@@ -40,7 +40,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 
 	for i := 0; i < iterations; i++ {
 		dashboardID := int64(i)
-		err := CreateValDashboard(dashboardID, NetworkMainnet)
+		err := CreateValDashboard(dashboardID, NetworkMainnet, "")
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 
 		// -- Acc --
 
-		err = CreateAccDashboard(dashboardID)
+		err = CreateAccDashboard(dashboardID, "")
 		if err != nil {
 			return err
 		}
