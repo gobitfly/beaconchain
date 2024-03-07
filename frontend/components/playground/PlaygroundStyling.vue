@@ -79,6 +79,12 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
         <InputText placeholder="Disabled Input" disabled />
       </div>
     </TabPanel>
+    <TabPanel header="Checkbox">
+      <div class="element_container">
+        default checkbox: <Checkbox v-model="selected" :binary="true" />
+        disabled: <Checkbox disabled />
+      </div>
+    </TabPanel>
     <TabPanel header="Toggle">
       <div class="element_container">
         <div>

@@ -73,13 +73,14 @@ const rowClass = (data:SummaryRow) => {
 </script>
 <template>
   <div v-if="summary" class="table-container">
-    <DataTable
+    <BcTable
       v-for="(table, index) in data"
       :key="index"
       :row-class="rowClass"
       class="no-header bc-compact-table summary-details-table"
       :class="{ small: !isWideEnough }"
       :value="table"
+      :add-spacer="true"
     >
       <Column field="expansion-spacer" class="expansion-spacer">
         <template #body>
@@ -106,12 +107,7 @@ const rowClass = (data:SummaryRow) => {
           </template>
         </Column>
       </template>
-      <Column field="space_filler">
-        <template #body>
-          <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
-        </template>
-      </Column>
-    </DataTable>
+    </BcTable>
   </div>
   <div v-else>
     ... TODO: loading ...

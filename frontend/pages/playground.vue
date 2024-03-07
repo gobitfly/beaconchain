@@ -50,11 +50,8 @@ onMounted(async () => {
       <TabPanel header="Validator Subset Modal">
         <Button label="Open Modal" @click="modalVisibility = true" />
       </TabPanel>
-      <TabPanel header="Chart">
-        <PlaygroundCharts />
-      </TabPanel>
-      <TabPanel header="Icons">
-        <PlaygroundIcons />
+      <TabPanel header="Components">
+        <PlaygroundComponents />
       </TabPanel>
       <TabPanel header="Styling">
         <PlaygroundStyling />

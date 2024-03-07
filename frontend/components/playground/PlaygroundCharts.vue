@@ -1,10 +1,6 @@
-<script lang="ts" setup>
-import SummaryChart from '../dashboard/chart/SummaryChart.vue'
-</script>
-
 <template>
   <div class="chart-container">
-    <SummaryChart :dashboard-key="1" />
+    <DashboardChartSummaryChart :dashboard-key="1" />
   </div>
 </template>
 

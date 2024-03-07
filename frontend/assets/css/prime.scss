@@ -115,6 +115,35 @@
   }
 }
 
+// Checkbox
+// https://primevue.org/checkbox/
+.p-checkbox {
+  .p-checkbox-box {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--border-radius);
+    background: var(--checkbox-background-color);
+    &.p-highlight:not(:hover) {
+      background: var(--primary-color);
+      color: var(--primary-contrast-color);
+    }
+    &:hover {
+      background: var(--button-color-hover);
+      color: var(--primary-contrast-color);
+    }
+    &.p-disabled {
+      background: var(--button-color-disabled);
+    }
+    .p-checkbox-icon {
+      transition-duration: 0.2s;
+      .p-icon {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+}
+
 // Toast
 // https://primevue.org/toast/
 // TODO: apply our styles

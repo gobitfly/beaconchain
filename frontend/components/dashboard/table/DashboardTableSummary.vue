@@ -114,6 +114,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
+            :add-spacer="true"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
