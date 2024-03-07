@@ -36,7 +36,7 @@ function onContinue () {
       </div>
       <BcToggleSingleBar v-model="type" :buttons="typeButtons" :initial="type" />
       <div class="row_container">
-        <InputText v-model="name" :placeholder="$t('dashboard.creation.type.name')" class="input-field" />
+        <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
         <Button class="button" :disabled="continueDisabled" @click="onContinue()">
           {{ $t('dashboard.creation.continue') }}
         </Button>

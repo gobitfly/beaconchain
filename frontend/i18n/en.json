@@ -112,7 +112,7 @@
         "subtitle": "What would you like to monitor?",
         "accounts": "Accounts",
         "validators": "Validators",
-        "name": "Name"
+        "placeholder": "Name"
       },
       "network": {
         "subtitle": "What network are your validators on?"
