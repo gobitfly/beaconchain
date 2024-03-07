@@ -42,7 +42,7 @@ watch(selected, () => {
 </script>
 
 <template>
-  <div class="chart-container">
+  <div class="container">
     <BcTable
       v-model:selection="selected"
       data-key="id"
@@ -62,5 +62,10 @@ watch(selected, () => {
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
+.container {
+  display: fex;
+  gap: 20px;
+  padding: 20px;
+}
 </style>
