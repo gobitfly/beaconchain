@@ -7,8 +7,7 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
-
-import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardCreationController } from '#components'
 
 const route = useRoute()
 
@@ -19,35 +18,36 @@ const key = computed(() => {
   return route.params.id
 })
 
-// TODO: Set display type to panel if no dashboards exist for the current user
-const displayType = ref<DashboardCreationDisplayType>('')
-if (key.value === '') {
-  displayType.value = 'panel'
+const dashboardCreationController = ref<typeof DashboardCreationController>()
+function showDashboardCreation () {
+  dashboardCreationController.value?.show()
 }
 
-const onAddDashboard = () => {
-  displayType.value = 'modal'
-}
-
+onMounted(() => {
+  // TODO: Implement check if user does not have a single dashboard instead of the key check
+  if (key.value === '') {
+    showDashboardCreation()
+  }
+})
 </script>
 
 <template>
   <div v-if="key==''">
     <BcPageWrapper>
       <div class="panel-container">
-        <DashboardCreationController v-model="displayType" />
+        <DashboardCreationController ref="dashboardCreationController" :display-type="'panel'" />
       </div>
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardCreationController v-model="displayType" />
+    <DashboardCreationController ref="dashboardCreationController" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
         <div class="header-container">
           <div class="h1 dashboard-title">
             {{ $t('dashboard.title') }}
           </div>
-          <Button class="p-button-icon-only" @click="onAddDashboard">
+          <Button class="p-button-icon-only" @click="showDashboardCreation">
             <IconPlus alt="Plus icon" width="100%" height="100%" />
           </Button>
         </div>
