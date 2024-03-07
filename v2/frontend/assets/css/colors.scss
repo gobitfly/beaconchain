@@ -7,6 +7,7 @@
   --light-grey: #f0f0f0;
   --light-grey-2: #dfdfdf;
   --light-grey-3: #d3d3d3;
+  --light-grey-4: #dddddd;
   --light-grey-5: #eaeaea;
   --light-grey-6: #a8a8a8;
   --dark-grey: #5c4e4e;
@@ -44,6 +45,8 @@
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
   --button-text-color-disabled: var(--grey-4);
+
+  --checkbox-background-color: var(--light-grey-4);
 
   --container-background: var(--grey-4);
   --container-color: var(--light-black);
@@ -90,6 +93,8 @@
     --button-color-pressed: var(--primary-orange-pressed);
     --button-color-disabled: var(--grey);
     --button-text-color-disabled: var(--light-grey);
+
+    --checkbox-background-color: var(--light-grey);
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
