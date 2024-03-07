@@ -13,8 +13,7 @@ const name = defineModel<string>('name', { required: true })
 const emit = defineEmits<{(e: 'create-pressed'): void }>()
 
 const continueDisabled = computed(() => {
-  // TODO: Verify name as specified in ticket
-  return type.value === '' || name.value === ''
+  return type.value === '' || name.value === '' || name.value.length > 32
 })
 
 function onContinue () {
