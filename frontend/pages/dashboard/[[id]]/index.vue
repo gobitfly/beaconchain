@@ -19,7 +19,11 @@ const key = computed(() => {
   return route.params.id
 })
 
-const displayType = ref<DashboardCreationDisplayType>('') // TODO: Set to panel when no dashbaord is available
+// TODO: Set display type to panel if no dashboards exist for the current user
+const displayType = ref<DashboardCreationDisplayType>('')
+if (key.value === '') {
+  displayType.value = 'panel'
+}
 
 const onAddDashboard = () => {
   displayType.value = 'modal'
@@ -28,61 +32,70 @@ const onAddDashboard = () => {
 </script>
 
 <template>
-  <BcPageWrapper>
-    <template #top>
-      <div class="header-container">
-        <div class="h1 dashboard-title">
-          {{ $t('dashboard.title') }}
-        </div>
-        <Button class="p-button-icon-only" @click="onAddDashboard">
-          <IconPlus alt="Plus icon" width="100%" height="100%" />
-        </Button>
+  <div v-if="key==''">
+    <BcPageWrapper>
+      <div class="panel-container">
+        <DashboardCreationController v-model="displayType" />
       </div>
-      <DashboardValidatorOverview class="overview" />
-    </template>
+    </BcPageWrapper>
+  </div>
+  <div v-else>
     <DashboardCreationController v-model="displayType" />
-    <div>
-      <DashboardValidatorSlotViz :dashboard-key="key" />
-    </div>
-    <TabView lazy>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
-        </template>
-        <DashboardTableSummary :dashboard-key="key" />
-      </TabPanel>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
-        </template>
-        Rewards coming soon!
-      </TabPanel>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
-        </template>
-        Blocks coming soon!
-      </TabPanel>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
-        </template>
-        Heatmap coming soon!
-      </TabPanel>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
-        </template>
-        Deposits coming soon!
-      </TabPanel>
-      <TabPanel>
-        <template #header>
-          <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
-        </template>
-        Withdrawals coming soon!
-      </TabPanel>
-    </TabView>
-  </BcPageWrapper>
+    <BcPageWrapper>
+      <template #top>
+        <div class="header-container">
+          <div class="h1 dashboard-title">
+            {{ $t('dashboard.title') }}
+          </div>
+          <Button class="p-button-icon-only" @click="onAddDashboard">
+            <IconPlus alt="Plus icon" width="100%" height="100%" />
+          </Button>
+        </div>
+        <DashboardValidatorOverview class="overview" />
+      </template>
+      <div>
+        <DashboardValidatorSlotViz :dashboard-key="key" />
+      </div>
+      <TabView lazy>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
+          </template>
+          <DashboardTableSummary :dashboard-key="key" />
+        </TabPanel>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
+          </template>
+          Rewards coming soon!
+        </TabPanel>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
+          </template>
+          Blocks coming soon!
+        </TabPanel>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
+          </template>
+          Heatmap coming soon!
+        </TabPanel>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
+          </template>
+          Deposits coming soon!
+        </TabPanel>
+        <TabPanel>
+          <template #header>
+            <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
+          </template>
+          Withdrawals coming soon!
+        </TabPanel>
+      </TabView>
+    </BcPageWrapper>
+  </div>
 </template>
 
 <style lang="scss" scoped>
@@ -94,6 +107,11 @@ const onAddDashboard = () => {
   .dashboard-title {
     margin-bottom: var(--padding-large);
   }
+}
+
+.panel-container {
+  display: flex;
+  justify-content: center;
 }
 
 .overview {
