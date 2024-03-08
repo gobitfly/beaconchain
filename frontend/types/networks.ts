@@ -24,7 +24,18 @@
 
 import type { CryptoCurrency } from '~/types/currencies'
 
-export const enum ChainIDs {
+export enum ChainFamily {
+  Any = 'Any',
+  Ethereum = 'Ethereum',
+  Arbitrum = 'Arbitrum',
+  Optimism = 'Optimism',
+  Base = 'Base',
+  Gnosis = 'Gnosis'
+}
+
+export enum ChainIDs {
+  Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
+
   Ethereum = 1,
   Holesky = 17000,
   Sepolia = 11155111,
@@ -43,115 +54,161 @@ export const enum ChainIDs {
   Chiado = 10200
 }
 
+// TODO: request it from the API
+export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
+  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
+  if (sortByPriority) {
+    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+  }
+  return list
+}
+
 interface ChainInfoFields {
   name: string,
+  family: ChainFamily,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
-  path: string
+  path: string,
+  priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
+  [ChainIDs.Any]: {
+    name: 'Any',
+    family: ChainFamily.Any,
+    mainNet: ChainIDs.Any,
+    L1: ChainIDs.Any,
+    clCurrency: 'ETH',
+    elCurrency: 'ETH',
+    path: '/undefined',
+    priority: 0 // data belonging to all networks is displayed first by default
+  },
+
   [ChainIDs.Ethereum]: {
     name: 'Ethereum Mainnet',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/ethereum'
+    path: '/ethereum',
+    priority: 1
   },
   [ChainIDs.Holesky]: {
     name: 'Holesky Testnet',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/holesky'
+    path: '/holesky',
+    priority: 2
   },
   [ChainIDs.Sepolia]: {
     name: 'Sepolia Testnet',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/sepolia'
+    path: '/sepolia',
+    priority: 3
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
     name: 'Arbitrum One L2',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-one-ethereum'
+    path: '/arbitrum-one-ethereum',
+    priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
     name: 'Arbitrum Nova L2',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-nova-ethereum'
+    path: '/arbitrum-nova-ethereum',
+    priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
     name: 'Arbitrum One Sepolia Testnet',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/arbitrum-one-sepolia'
+    path: '/arbitrum-one-sepolia',
+    priority: 12
   },
 
   [ChainIDs.OptimismEthereum]: {
     name: 'Optimism L2',
+    family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/optimism-ethereum'
+    path: '/optimism-ethereum',
+    priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
     name: 'Optimism Sepolia Testnet',
+    family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/optimism-sepolia'
+    path: '/optimism-sepolia',
+    priority: 21
   },
 
   [ChainIDs.BaseEthereum]: {
     name: 'Base L2',
+    family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/base-ethereum'
+    path: '/base-ethereum',
+    priority: 30
   },
   [ChainIDs.BaseSepolia]: {
     name: 'Base Sepolia Testnet',
+    family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
-    path: '/base-sepolia'
+    path: '/base-sepolia',
+    priority: 31
   },
 
   [ChainIDs.Gnosis]: {
     name: 'Gnosis',
+    family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
-    path: '/gnosis'
+    path: '/gnosis',
+    priority: 40
   },
   [ChainIDs.Chiado]: {
     name: 'Gnosis Chiado Testnet',
+    family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
-    path: '/chiado'
+    path: '/chiado',
+    priority: 41
   }
 }
 
@@ -161,4 +218,18 @@ export function isMainNet (network: ChainIDs) : boolean {
 
 export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
+}
+
+export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
+  const list : ChainIDs[] = []
+
+  for (const id in ChainIDs) {
+    if (isNaN(Number(id))) {
+      list.push(ChainIDs[id as keyof typeof ChainIDs])
+    }
+  }
+  if (sortByPriority) {
+    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+  }
+  return list
 }
