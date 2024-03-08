@@ -77,6 +77,9 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         </Button>
       </div>
     </TabPanel>
+    <TabPanel header="Hashes">
+      <PlaygroundHashes />
+    </TabPanel>
     <TabPanel header="Scroll box">
       <div class="scroll-box">
         <div>Scroll me</div>
