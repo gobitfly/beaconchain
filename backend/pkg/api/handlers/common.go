@@ -273,6 +273,10 @@ func parseSortOrder(order string) (bool, error) {
 }
 
 func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.Sort[T] {
+	if sort == "" {
+		var c T
+		return []types.Sort[T]{{Column: c, Desc: false}}
+	}
 	sortQueries := strings.Split(sort, ",")
 	sorts := make([]types.Sort[T], 0, len(sortQueries))
 	for _, v := range sortQueries {

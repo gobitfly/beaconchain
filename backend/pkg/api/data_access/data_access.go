@@ -731,18 +731,19 @@ func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimar
 	validatorsPQArray := pq.Array(validators)
 
 	// TODO LEFT JOIN ON vdb_table (?)
-	err := d.ReaderDb.Select(proposals, `
+	err := d.ReaderDb.Select(&proposals, `
 		SELECT
 			epoch,
 			slot,
 			status,
 			proposer,
 			COALESCE(exec_block_number, 0) AS exec_block_number,
-			relays_blocks.value AS mev_reward,
+			relays_blocks.value AS mev_reward
 		FROM blocks
-		WHERE proposer = ANY($1)
 		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+		WHERE proposer = ANY($1)
 		ORDER BY slot ASC
+		LIMIT 100
 		`, validatorsPQArray)
 	if err != nil {
 		return nil, t.Paging{}, err
@@ -773,7 +774,7 @@ func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimar
 		if proposal.Mev.Valid {
 			data[i].Reward.El = decimal.NewFromInt(proposal.Mev.Int64)
 		} else {
-			slotsNoRelay[i] = proposal.Slot
+			slotsNoRelay = append(slotsNoRelay, proposal.Slot)
 		}
 		/* blockReward, err := // wait for pkg/exporter/modules/dasboard_data.go:47 to be done
 		if err != nil {

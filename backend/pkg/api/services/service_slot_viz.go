@@ -409,7 +409,10 @@ func getMaxValidatorDutiesInfoSlot() uint64 {
 	headEpoch := cache.LatestEpoch.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
-	minEpoch := headEpoch - 2
+	minEpoch := headEpoch
+	if minEpoch >= 2 {
+		minEpoch -= 2
+	}
 
 	/*
 		Why reduce minEpoch to headEpoch - 1 after first iteration?
