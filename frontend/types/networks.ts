@@ -24,7 +24,14 @@
 
 import type { CryptoCurrency } from '~/types/currencies'
 
-export type NetworkFamily = 'Any' | 'Ethereum' | 'Arbitrum' | 'Optimism' | 'Base' | 'Gnosis'
+export enum ChainFamily {
+  Any = 'Any',
+  Ethereum = 'Ethereum',
+  Arbitrum = 'Arbitrum',
+  Optimism = 'Optimism',
+  Base = 'Base',
+  Gnosis = 'Gnosis'
+}
 
 export enum ChainIDs {
   Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
@@ -58,7 +65,7 @@ export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainI
 
 interface ChainInfoFields {
   name: string,
-  family: NetworkFamily,
+  family: ChainFamily,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
@@ -70,7 +77,7 @@ interface ChainInfoFields {
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Any]: {
     name: 'Any',
-    family: 'Any',
+    family: ChainFamily.Any,
     mainNet: ChainIDs.Any,
     L1: ChainIDs.Any,
     clCurrency: 'ETH',
@@ -81,7 +88,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.Ethereum]: {
     name: 'Ethereum Mainnet',
-    family: 'Ethereum',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
@@ -91,7 +98,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.Holesky]: {
     name: 'Holesky Testnet',
-    family: 'Ethereum',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
@@ -101,7 +108,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.Sepolia]: {
     name: 'Sepolia Testnet',
-    family: 'Ethereum',
+    family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
@@ -112,7 +119,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.ArbitrumOneEthereum]: {
     name: 'Arbitrum One L2',
-    family: 'Arbitrum',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
@@ -122,7 +129,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
     name: 'Arbitrum Nova L2',
-    family: 'Arbitrum',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
@@ -132,7 +139,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.ArbitrumOneSepolia]: {
     name: 'Arbitrum One Sepolia Testnet',
-    family: 'Arbitrum',
+    family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
@@ -143,7 +150,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.OptimismEthereum]: {
     name: 'Optimism L2',
-    family: 'Optimism',
+    family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
@@ -153,7 +160,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.OptimismSepolia]: {
     name: 'Optimism Sepolia Testnet',
-    family: 'Optimism',
+    family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
@@ -164,7 +171,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.BaseEthereum]: {
     name: 'Base L2',
-    family: 'Base',
+    family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
@@ -174,7 +181,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.BaseSepolia]: {
     name: 'Base Sepolia Testnet',
-    family: 'Base',
+    family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
@@ -185,7 +192,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.Gnosis]: {
     name: 'Gnosis',
-    family: 'Gnosis',
+    family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
@@ -195,7 +202,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
   [ChainIDs.Chiado]: {
     name: 'Gnosis Chiado Testnet',
-    family: 'Gnosis',
+    family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',

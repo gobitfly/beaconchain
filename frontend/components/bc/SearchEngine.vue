@@ -782,7 +782,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
               >
                 <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons">
                   <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
-                  <IconNetworkIcons :chain-id="network.chainId" :coloured="true" class="network-icon" />
+                  <IconNetworkIcons :chain-id="network.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
                 </span>
                 <span v-else class="columns-icons">
                   <IconTypeIcons :type="typ.type" class="type-icon alone" />
@@ -1092,8 +1092,8 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             position: absolute;
             bottom: 0px;
             right: 0px;
+            width: 20px;
             height: 20px;
-            max-width:20px;
           }
         }
         .columns-0 {
