@@ -83,7 +83,7 @@ function copyToClipboard (): void {
   <div v-if="data" class="format-hash">
     <BcTooltip class="tt-container">
       <template v-if="!full || ens" #tooltip>
-        <div v-if="ens">
+        <div v-if="ens" class="ens-name">
           {{ ens }}
         </div>
         <div class="tt-hash">
@@ -143,5 +143,9 @@ function copyToClipboard (): void {
 
 .tt-hash {
   max-width: 300px;
+}
+
+.ens-name {
+  margin-bottom: var(--padding-small);
 }
 </style>
