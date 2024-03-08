@@ -9,6 +9,11 @@ const data = {
     },
     {
       type: 'address',
+      hash: '0xE276Bc378A527A8792B353cdCA5b5E53263DfB9e',
+      ens: 'thisIsAVerryLongEnsNameSoItShoulBeTruncated.ens'
+    },
+    {
+      type: 'address',
       hash: '0xE276Bc378A527A8792B353cdCA5b5E53263DfB9e'
     },
     {

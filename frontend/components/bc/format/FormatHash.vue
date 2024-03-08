@@ -7,8 +7,8 @@ import { warn } from 'vue'
 interface Props {
   hash?: string,
   ens?: string,
-  type?: 'address' | 'withdrawal_address' | 'public_key' | 'tx' | 'block_hash' | 'root'
-  full?: boolean,
+  type?: 'address' | 'withdrawal_address' | 'public_key' | 'tx' | 'block_hash' | 'root' // if none is provided the default format will be applied
+  full?: boolean, // if true the hash will not be truncated
   noLink?: boolean, // most of the time we want to render it as a link (if possible), but there might be cases where we don't
   noCopy?: boolean, // same as for the link
 }
@@ -22,10 +22,10 @@ const data = computed(() => {
   }
   const hash = props.hash
   const className = props.ens ? 'truncate-text' : props.full ? 'full' : 'parts'
-  let parts: { value: string, className?: string }[] = [] // [{ value: props.ens ? props.ens : '0x' }]
+  let parts: { value: string, className?: string }[] = []
   let link: string = ''
   if (props.ens) {
-    parts.push({ value: props.ens })
+    parts.push({ value: props.ens, className: 'truncate-text' })
   } else if (props.type === 'withdrawal_address') {
     const isSet = hash.startsWith('0x01')
     const color = isSet ? 'green' : 'orange'
@@ -80,52 +80,68 @@ function copyToClipboard (): void {
 
 </script>
 <template>
-  <BcTooltip v-if="data">
-    <template v-if="!full || ens" #tooltip>
-      <div v-if="ens">
-        {{ ens }}
-      </div>
-      <div class="tt-hash">
-        <BcFormatHash :hash="hash" :full="true" :no-link="true" :no-copy="true" :type="type" />
-      </div>
-    </template>
-    <span v-if="!data.link" :class="data.className">
-      <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
-        {{ part.value }}
+  <div v-if="data" class="format-hash">
+    <BcTooltip class="tt-container">
+      <template v-if="!full || ens" #tooltip>
+        <div v-if="ens">
+          {{ ens }}
+        </div>
+        <div class="tt-hash">
+          <BcFormatHash :hash="hash" :full="true" :no-link="true" :no-copy="true" :type="type" />
+        </div>
+      </template>
+      <span v-if="!data.link" :class="data.className">
+        <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
+          {{ part.value }}
+        </span>
       </span>
-    </span>
-    <NuxtLink v-else :to="data.link" class="link" :class="data.className">
-      <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
-        {{ part.value }}
-      </span>
-    </NuxtLink>
-  </BcTooltip>
-  <FontAwesomeIcon v-if="!props.noCopy" :icon="faCopy" class="copy" @click="copyToClipboard" />
+      <NuxtLink v-else :to="data.link" class="link" :class="data.className">
+        <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
+          {{ part.value }}
+        </span>
+      </NuxtLink>
+    </BcTooltip>
+    <FontAwesomeIcon v-if="!props.noCopy" :icon="faCopy" class="copy" @click="copyToClipboard" />
+  </div>
 </template>
 
 <style lang="scss" scoped>
+.format-hash {
+  &:has(.truncate-text) {
+    display: flex;
+  }
+
+  .tt-container {
+    &:has(.truncate-text) {
+      display: flex;
+      overflow: hidden;
+    }
+  }
+
+  .full {
+    word-wrap: break-word;
+  }
+
+  .prime {
+    color: var(--primary-color);
+  }
+
+  .green {
+    color: var(--green);
+  }
+
+  .orange {
+    color: var(--orange);
+  }
+
+  .copy {
+    margin-left: var(--padding);
+    cursor: pointer;
+  }
+
+}
+
 .tt-hash {
   max-width: 300px;
-}
-
-.full {
-  word-wrap: break-word;
-}
-
-.prime {
-  color: var(--primary-color);
-}
-
-.green {
-  color: var(--green);
-}
-
-.orange {
-  color: var(--orange);
-}
-
-.copy {
-  margin-left: var(--padding);
-  cursor: pointer;
 }
 </style>
