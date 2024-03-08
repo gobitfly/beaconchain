@@ -24,6 +24,18 @@ const props = defineProps({
 })
 const emit = defineEmits(['go'])
 
+enum States {
+  InputIsEmpty,
+  WaitingForResults,
+  ApiHasResponded,
+  Error
+}
+
+interface SearchState {
+  state : States,
+  numberOfApiCallsWithoutResponse : number
+}
+
 interface ResultSuggestion {
   columns: string[],
   queryParam: number, // index of the string given to the callback function `@go`
@@ -39,26 +51,27 @@ interface OrganizedResults {
   }[]
 }
 
+const PeriodOfDropDownUpdates = 2000
+const APIcallTimeout = PeriodOfDropDownUpdates - 100 // 100 ms is the safety margin we give the browser to update the variable informing the timer that the API call succeeded
+const NumberOfApiCallAttemptsBeforeShowingError = 1 // TODO : in production, should be set to 2 or 3 (this low value is to test the handling of errors during development)
+
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
 
 const searchable = props.searchable as Category[]
 let searchableTypes : ResultType[] = []
 
-const PeriodOfDropDownUpdates = 2000
-const APIcallTimeout = PeriodOfDropDownUpdates - 100 // 100 ms is the safety margin we give the browser to update the variable informing the timer that the API call succeeded
-const NumberOfApiCallAttemptsBeforeShowingError = 1 // TODO : in production, should be set to 2 or 3 (this low value is to test the handling of errors during development)
-
-const waitingForSearchResults = ref(false)
-const numberOfApiCallsWithoutResponse = ref(0)
-const showDropDown = ref(false)
-const populateDropDown = ref(true)
 const inputted = ref('')
 let lastKnownInput = ''
+const searchState = ref<SearchState>({
+  state: States.InputIsEmpty,
+  numberOfApiCallsWithoutResponse: 0
+})
+const showDropDown = ref<boolean>(false)
 const networkDropdownOptions : {name: string, label: string}[] = []
 const networkDropdownUserSelection = ref<string[]>([])
-const inputFieldAndButton = ref<HTMLDivElement>()
 const dropDown = ref<HTMLDivElement>()
+const inputFieldAndButton = ref<HTMLDivElement>()
 
 const results = {
   raw: { data: [] } as SearchAheadResult, // response of the API, without structure nor order
@@ -85,12 +98,16 @@ const userFilters = ref<UserFilters>({
   noCategoryIsSelected: true
 })
 
-function cleanUp () {
+function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
   inputted.value = ''
-  waitingForSearchResults.value = false
-  numberOfApiCallsWithoutResponse.value = 0
-  populateDropDown.value = false
+  searchState.value = {
+    state: States.InputIsEmpty,
+    numberOfApiCallsWithoutResponse: 0
+  }
+  if (closeDropDown) {
+    showDropDown.value = false // not equivalent to `showDropDown.value = !closeDropDown` because it must not be opened when it is already closed
+  }
   results.raw = { data: [] }
 }
 
@@ -130,18 +147,21 @@ onUnmounted(() => {
 // Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
 // was only for entries of size 1.
 // This less-than-2.5s-on-average delay arised from a Timeout Timer.
-// For the V2, I propose to work with a 2-second Interval Timer because:
+// For the V2, I propose to work with an Interval Timer because:
 // - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
-// - while offering the user an average waiting time of 1 second through the magic of statistics (better than V1).
+// - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
 setInterval(() => {
-  if (waitingForSearchResults.value) {
+  if (searchState.value.state === States.WaitingForResults) {
     if (!searchAhead()) {
-      numberOfApiCallsWithoutResponse.value++
-      // `waitingForSearchResults.value` remains true so we will try again in 2 seconds
+      // the communication with the API or the API failed
+      searchState.value.numberOfApiCallsWithoutResponse++
+      if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
+        searchState.value.state = States.Error
+      }
     } else {
       filterAndOrganizeResults()
-      waitingForSearchResults.value = false
-      numberOfApiCallsWithoutResponse.value = 0
+      searchState.value.numberOfApiCallsWithoutResponse = 0
+      searchState.value.state = States.ApiHasResponded
     }
   }
 },
@@ -163,10 +183,10 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp()
+    cleanUp(false)
   } else {
-    waitingForSearchResults.value = true
-    populateDropDown.value = true
+    searchState.value.state = States.WaitingForResults
+    searchState.value.numberOfApiCallsWithoutResponse = 0
   }
 }
 
@@ -174,15 +194,18 @@ function userFeelsLucky () {
   if (inputted.value.length === 0) {
     return
   }
-  if (waitingForSearchResults.value) {
-    // the timer did not trigger a search yet, so we do it
-    if (!searchAhead()) {
+  if (searchState.value.state === States.WaitingForResults) {
+    // the timer did not trigger a search yet, so we do it now
+    const OK = searchAhead()
+    if (!OK) {
       return
     }
   }
   filterAndOrganizeResults()
   if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
+    // nothing matching the input was found
     return
+    // TODO: show a modal or load a page saying that nothing was found?
   }
   // the priority is given to filtered-in results
   let toConsider : OrganizedResults
@@ -207,13 +230,13 @@ function userFeelsLucky () {
   const network = toConsider.networks.find(nw => nw.chainId === picked.network)
   const type = network?.types.find(ty => ty.type === picked.type)
   // calling back parent's function taking action with the result
-  cleanUp()
+  cleanUp(true)
   emit('go', type?.suggestion[0].columns[type?.suggestion[0].queryParam], type?.type, network?.chainId)
 }
 
 function userClickedProposal (chain : ChainIDs, type : ResultType, what: string) {
   // cleans up and calls back user's function
-  cleanUp()
+  cleanUp(true)
   emit('go', what, type, chain)
 }
 
@@ -239,9 +262,11 @@ function categoryFilterHasChanged () {
 }
 
 function refreshDropDown () {
-  populateDropDown.value = false
+  const restoredState = searchState.value.state
+
+  searchState.value.state = States.WaitingForResults
   filterAndOrganizeResults()
-  populateDropDown.value = true // this triggers Vue to refresh the list of results
+  searchState.value.state = restoredState // triggers Vue to refresh the drop-down
 }
 
 let searchAheadInProgress : boolean = false
@@ -753,24 +778,26 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             </span>
           </div>
         </div>
-        <div v-if="inputted.length === 0" class="output-area">
+        <div v-if="searchState.state === States.InputIsEmpty" class="output-area">
           <div class="info center">
             {{ $t('search_engine.help') }}
           </div>
         </div>
-        <div v-else-if="waitingForSearchResults" class="output-area">
-          <div v-if="numberOfApiCallsWithoutResponse < NumberOfApiCallAttemptsBeforeShowingError" class="info center">
+        <div v-else-if="searchState.state === States.WaitingForResults" class="output-area">
+          <div class="info center">
             {{ $t('search_engine.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
-          <div v-else class="info center">
+        </div>
+        <div v-else-if="searchState.state === States.Error" class="output-area">
+          <div class="info center">
             {{ $t('search_engine.something_wrong') }}
-            <BcErrorFace :inline="true" />
+            <IconErrorFace :inline="true" />
             <br>
             {{ $t('search_engine.try_again') }}
           </div>
         </div>
-        <div v-else-if="populateDropDown" class="output-area" :class="barStyle">
+        <div v-else-if="searchState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
             <div v-for="typ of network.types" :key="typ.type" class="type-container">
               <div
