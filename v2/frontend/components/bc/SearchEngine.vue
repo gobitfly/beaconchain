@@ -28,12 +28,13 @@ enum States {
   InputIsEmpty,
   WaitingForResults,
   ApiHasResponded,
-  Error
+  Error,
+  UpdateIncoming
 }
-
 interface SearchState {
   state : States,
-  numberOfApiCallsWithoutResponse : number
+  numberOfApiCallsWithoutResponse : number,
+  userFeelsLucky: boolean
 }
 
 interface ResultSuggestion {
@@ -53,7 +54,7 @@ interface OrganizedResults {
 
 const PeriodOfDropDownUpdates = 2000
 const APIcallTimeout = PeriodOfDropDownUpdates - 100 // 100 ms is the safety margin we give the browser to update the variable informing the timer that the API call succeeded
-const NumberOfApiCallAttemptsBeforeShowingError = 1 // TODO : in production, should be set to 2 or 3 (this low value is to test the handling of errors during development)
+const NumberOfApiCallAttemptsBeforeShowingError = 2
 
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
@@ -65,7 +66,8 @@ const inputted = ref('')
 let lastKnownInput = ''
 const searchState = ref<SearchState>({
   state: States.InputIsEmpty,
-  numberOfApiCallsWithoutResponse: 0
+  numberOfApiCallsWithoutResponse: 0,
+  userFeelsLucky: false
 })
 const showDropDown = ref<boolean>(false)
 const networkDropdownOptions : {name: string, label: string}[] = []
@@ -101,14 +103,21 @@ const userFilters = ref<UserFilters>({
 function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
   inputted.value = ''
-  searchState.value = {
-    state: States.InputIsEmpty,
-    numberOfApiCallsWithoutResponse: 0
-  }
+  resetSearchState()
   if (closeDropDown) {
     showDropDown.value = false // not equivalent to `showDropDown.value = !closeDropDown` because it must not be opened when it is already closed
   }
   results.raw = { data: [] }
+}
+
+function resetSearchState (state : States = States.InputIsEmpty) {
+  if (state === searchState.value.state) {
+    // makes sure that Vue re-renders the drop-down although the state does not change
+    searchState.value.state = States.UpdateIncoming
+  }
+  searchState.value.numberOfApiCallsWithoutResponse = 0
+  searchState.value.userFeelsLucky = false
+  searchState.value.state = state
 }
 
 onMounted(() => {
@@ -153,15 +162,18 @@ onUnmounted(() => {
 setInterval(() => {
   if (searchState.value.state === States.WaitingForResults) {
     if (!searchAhead()) {
-      // the communication with the API or the API failed
+      // the communication with the API failed or the API is down
       searchState.value.numberOfApiCallsWithoutResponse++
       if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
-        searchState.value.state = States.Error
+        resetSearchState(States.Error)
       }
     } else {
+      const callFunctionUserFeelsLucky = searchState.value.userFeelsLucky // this value must be retrieved now because of the call to resetSearchState() before it is used
       filterAndOrganizeResults()
-      searchState.value.numberOfApiCallsWithoutResponse = 0
-      searchState.value.state = States.ApiHasResponded
+      resetSearchState(States.ApiHasResponded)
+      if (callFunctionUserFeelsLucky) {
+        userFeelsLucky()
+      }
     }
   }
 },
@@ -185,27 +197,31 @@ function inputMightHaveChanged () {
   if (inputted.value.length === 0) {
     cleanUp(false)
   } else {
-    searchState.value.state = States.WaitingForResults
-    searchState.value.numberOfApiCallsWithoutResponse = 0
+    // we order a search (the timer will launch it)
+    resetSearchState(States.WaitingForResults)
   }
 }
 
 function userFeelsLucky () {
-  if (inputted.value.length === 0) {
+  if (searchState.value.state === States.InputIsEmpty) {
     return
   }
+  // if the previous API call failed and the user tries again with Enter or the search button
+  if (searchState.value.state === States.Error) {
+    // we order a new search (the timer will lanuch it)
+    resetSearchState(States.WaitingForResults)
+  }
+  // if we are waiting for a response from the API (because of inputMightHaveChanged() or because of the retry just above)
   if (searchState.value.state === States.WaitingForResults) {
-    // the timer did not trigger a search yet, so we do it now
-    const OK = searchAhead()
-    if (!OK) {
-      return
-    }
-  }
-  filterAndOrganizeResults()
-  if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
-    // nothing matching the input was found
+    // we ask the timer to call this function once (and if) the results are received
+    searchState.value.userFeelsLucky = true
+    // in the meantime, we do not proceed further
     return
-    // TODO: show a modal or load a page saying that nothing was found?
+  }
+
+  if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
+    // nothing matching the input has been found
+    return
   }
   // the priority is given to filtered-in results
   let toConsider : OrganizedResults
@@ -261,24 +277,10 @@ function categoryFilterHasChanged () {
   userFilters.value.noCategoryIsSelected = allButtonsOff
 }
 
-function refreshDropDown () {
-  const restoredState = searchState.value.state
-
-  searchState.value.state = States.WaitingForResults
-  filterAndOrganizeResults()
-  searchState.value.state = restoredState // triggers Vue to refresh the drop-down
-}
-
-let searchAheadInProgress : boolean = false
 // returns false if the API could not be reached or if it had a problem
 // returns true otherwise (so also true when no result matches the input)
 function searchAhead () : boolean {
   let error = false
-
-  if (searchAheadInProgress) {
-    return false
-  }
-  searchAheadInProgress = true
 
   // ********* SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
   if (searchableTypes[0] as string !== '-- to be removed --') {
@@ -312,7 +314,6 @@ function searchAhead () : boolean {
   if (error) {
     results.raw = { data: [] }
   }
-  searchAheadInProgress = false
   return !error
 }
 
@@ -479,6 +480,13 @@ function filterHint (category : Category) : string {
   }
 
   return hint
+}
+
+function refreshOutputArea () {
+  // updates the result lists with the latest API response and user filters
+  filterAndOrganizeResults()
+  // refreshes the output area in the drop-down
+  resetSearchState(searchState.value.state)
 }
 
 // ********* THIS FUNCTION SIMULATES AN API RESPONSE - TO BE REMOVED ONCE THE API IS IMPLEMENTED *********
@@ -738,7 +746,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         </span>
       </div>
       <div v-if="showDropDown" id="drop-down" ref="dropDown" :class="barStyle">
-        <div id="separation" />
+        <div id="separation" :class="barStyle" />
         <div id="filter-area">
           <div id="filter-networks">
             <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
@@ -754,7 +762,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
               :max-selected-labels="1"
               :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
               append-to="self"
-              @change="networkFilterHasChanged(); refreshDropDown()"
+              @change="networkFilterHasChanged(); refreshOutputArea()"
               @click="(e : Event) => e.stopPropagation()"
             />
           </div>
@@ -768,9 +776,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
                     :true-value="true"
                     :false-value="false"
                     type="checkbox"
-                    @change="categoryFilterHasChanged(); refreshDropDown()"
+                    @change="categoryFilterHasChanged(); refreshOutputArea()"
                   >
-                  <span class="face">
+                  <span class="face" :class="barStyle">
                     {{ CategoryInfo[filter as Category].filterLabel }}
                   </span>
                 </label>
@@ -778,28 +786,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             </span>
           </div>
         </div>
-        <div v-if="searchState.state === States.InputIsEmpty" class="output-area">
-          <div class="info center">
-            {{ $t('search_engine.help') }}
-          </div>
-        </div>
-        <div v-else-if="searchState.state === States.WaitingForResults" class="output-area">
-          <div class="info center">
-            {{ $t('search_engine.searching') }}
-            <BcLoadingSpinner :loading="true" size="small" alignment="default" />
-          </div>
-        </div>
-        <div v-else-if="searchState.state === States.Error" class="output-area">
-          <div class="info center">
-            {{ $t('search_engine.something_wrong') }}
-            <IconErrorFace :inline="true" />
-            <br>
-            {{ $t('search_engine.try_again') }}
-          </div>
-        </div>
-        <div v-else-if="searchState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
-          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container">
-            <div v-for="typ of network.types" :key="typ.type" class="type-container">
+        <div v-if="searchState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
+          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
+            <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
               <div
                 v-for="(suggestion, i) of typ.suggestion"
                 :key="i"
@@ -807,25 +796,30 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
                 :class="barStyle"
                 @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
               >
-                <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons">
+                <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons" :class="barStyle">
                   <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
                   <IconNetworkIcons :chain-id="network.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
                 </span>
-                <span v-else class="columns-icons">
+                <span v-else class="columns-icons" :class="barStyle">
                   <IconTypeIcons :type="typ.type" class="type-icon alone" />
                 </span>
-                <span class="columns-0">
+                <span class="columns-0" :class="barStyle">
                   {{ suggestion.columns[0] }}
                 </span>
-                <span class="columns-1and2">
-                  <span v-if="suggestion.columns[1] !== ''" class="columns-1">
+                <span class="columns-1and2" :class="barStyle">
+                  <span v-if="suggestion.columns[1] !== ''" class="columns-1" :class="barStyle">
                     {{ suggestion.columns[1] }}
                   </span>
-                  <span class="columns-2">
-                    {{ suggestion.columns[2] }}
+                  <span v-if="suggestion.columns[2] !== ''" class="columns-2" :class="[barStyle,(suggestion.columns[1] !== '')?'greyish':'']">
+                    <span v-if="TypeInfo[typ.type].dropdownColumns[1] === undefined">
+                      ({{ suggestion.columns[2] }})
+                    </span>
+                    <span v-else>
+                      {{ suggestion.columns[2] }}
+                    </span>
                   </span>
                 </span>
-                <span class="columns-category">
+                <span class="columns-category" :class="barStyle">
                   <span class="category-label" :class="barStyle">
                     {{ CategoryInfo[TypeInfo[typ.type].category].filterLabel }}
                   </span>
@@ -841,6 +835,21 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
             {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
               (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
+          </div>
+        </div>
+        <div v-else class="output-area" :class="barStyle">
+          <div v-if="searchState.state === States.InputIsEmpty" class="info center">
+            {{ $t('search_engine.help') }}
+          </div>
+          <div v-else-if="searchState.state === States.WaitingForResults" class="info center">
+            {{ $t('search_engine.searching') }}
+            <BcLoadingSpinner :loading="true" size="small" alignment="default" />
+          </div>
+          <div v-else-if="searchState.state === States.Error" class="info center">
+            {{ $t('search_engine.something_wrong') }}
+            <IconErrorFace :inline="true" />
+            <br>
+            {{ $t('search_engine.try_again') }}
           </div>
         </div>
       </div>
@@ -952,8 +961,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     left: 11px;
     right: 11px;
     height: 1px;
-    background-color: var(--input-border-color);
     margin-bottom: 10px;
+    &.discreet {
+      background-color: var(--searchbar-background-hover-discreet);
+    }
+    &.gaudy {
+      background-color: var(--input-border-color);
+    }
   }
 }
 
@@ -981,7 +995,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         .p-placeholder {
           border-top-left-radius: 10px;
           border-bottom-left-radius: 10px;
-          background: var(--searchbar-filter-unselected);
+          background: var(--searchbar-filter-unselected-gaudy);
         }
       }
       &.p-multiselect-panel {
@@ -995,7 +1009,6 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     @include fonts.small_text_bold;
 
     .face{
-      color: var(--primary-contrast-color);
       display: inline-block;
       border-radius: 10px;
       height: 17px;
@@ -1005,7 +1018,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
       text-align: center;
       margin-left: 6px;
       transition: 0.2s;
-      background-color: var(--searchbar-filter-unselected);
+      &.discreet {
+        color: var(--light-black);
+        background-color: var(--light-grey);
+      }
+      &.gaudy {
+        color: var(--primary-contrast-color);
+        background-color: var(--searchbar-filter-unselected-gaudy);
+      }
       &:hover {
         background-color: var(--light-grey-3);
       }
@@ -1060,10 +1080,13 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         padding-top: 7px;
         padding-bottom: 7px;
         @media (min-width: 600px) { // large screen
-          grid-template-columns: 40px 100px auto min-content;
           &.gaudy {
+            grid-template-columns: 40px 100px auto min-content;
             padding-left: 4px;
             padding-right: 4px;
+          }
+          &.discreet {
+            grid-template-columns: 40px 100px auto;
           }
         }
         @media (max-width: 600px) { // mobile
@@ -1093,6 +1116,9 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           grid-column: 1;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
+            grid-row-end: span 2;
+          }
+          &.discreet {
             grid-row-end: span 2;
           }
           display: flex;
@@ -1128,19 +1154,26 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           grid-row: 1;
           display: flex;
           margin-top: auto;
-          margin-bottom: auto;
+          &.gaudy {
+            margin-bottom: auto;
+          }
           overflow-wrap: anywhere;
           font-weight: var(--roboto-medium);
           padding-right: 4px;
         }
         .columns-1and2 {
-          min-width: 0;
+          display: flex;
           grid-column: 3;
           grid-row: 1;
           @media (max-width: 600px) { // mobile
             grid-row-end: span 2;
+            flex-direction: column;
           }
-          display: flex;
+          &.discreet {
+            grid-row-end: span 2;
+            flex-direction: column;
+          }
+          min-width: 0;
           margin-top: auto;
           margin-bottom: auto;
           font-weight: var(--roboto-medium);
@@ -1153,25 +1186,35 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             display: flex;
             min-width: 0;
             overflow-wrap: anywhere;
+            &.greyish.discreet {
+              color: var(--searchbar-text-detail-discreet);
+            }
+            &.greyish.gaudy {
+              color: var(--searchbar-text-detail-gaudy);
+            }
           }
         }
         .columns-category {
           @media (min-width: 600px) { // large screen
-            grid-column: 4;
-            grid-row: 1;
-            display: flex;
-            margin-top: auto;
-            margin-bottom: auto;
+            &.gaudy {
+              grid-column: 4;
+              grid-row: 1;
+              display: flex;
+              margin-top: auto;
+              margin-bottom: auto;
+              width: 6em;
+              justify-content: right;
+            }
+            &.discreet {
+              grid-column: 2;
+              grid-row: 2;
+            }
           }
           @media (max-width: 600px) { // mobile
             grid-column: 2;
             grid-row: 2;
           }
           .category-label {
-            @media (min-width: 600px) { // large screen
-              float: right;
-              margin-left: 8px;
-            }
             &.discreet {
               color: var(--searchbar-text-detail-discreet);
             }
@@ -1192,6 +1235,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
     text-align: center;
     align-items: center;
     &.bottom {
+      padding-top: 6px;
       margin-top: auto;
     }
     &.center {
