@@ -27,10 +27,10 @@ const selectedClass = computed(() => props.selected ? 'p-highlight' : '')
   &.p-button {
     &.p-togglebutton {
       display: flex;
+      flex-grow: 1;
       flex-direction: column;
       gap: 11px;
 
-      width: 100%;
       height: 100%;
       padding: 16px 0 15px 0;
       border: 1px var(--container-border-color) solid;
