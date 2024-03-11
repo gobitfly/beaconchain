@@ -43,7 +43,7 @@ func main() {
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
-	var dai dataaccess.DataAccessInterface
+	var dai dataaccess.DataAccessor
 	if dummyApi {
 		dai = dataaccess.NewDummyService()
 	} else {
@@ -52,7 +52,7 @@ func main() {
 	defer dai.CloseDataAccessService()
 
 	router := api.NewApiRouter(dai)
-	handler := cors.Default().Handler(router)
+	handler := cors.AllowAll().Handler(router)
 
 	srv := &http.Server{
 		Handler:      handler,
@@ -64,7 +64,7 @@ func main() {
 	log.Fatal(srv.ListenAndServe(), "Error while serving", 0)
 }
 
-func InitServices(das dataaccess.DataAccessService) dataaccess.DataAccessInterface {
+func InitServices(das dataaccess.DataAccessService) dataaccess.DataAccessor {
 	db.ReaderDb = das.ReaderDb
 	db.WriterDb = das.WriterDb
 	db.PersistentRedisDbClient = das.PersistentRedisDbClient
