@@ -8,16 +8,14 @@ interface Props {
     component?: Component,
     value: string
   }[],
-  initial?: string
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
 const props = defineProps<Props>()
 
 const selected = defineModel<string>({ required: true })
-selected.value = selected.value ? selected.value : (props.initial || '')
 
 const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
-  map[value] = value === props.initial
+  map[value] = value === selected.value
   return map
 }, {} as Record<string, boolean>))
 

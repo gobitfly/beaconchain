@@ -24,7 +24,7 @@ const selected = ref(true)
 const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
-const selectedType = ref<string>('')
+const selectedType = ref<string>('Validators')
 const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
 
 const dropodownSelection = ref<string | undefined>()
@@ -138,7 +138,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       <h1>Single Toggle</h1>
       <div class="element_container">
         selectedType: {{ selectedType }}
-        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" :initial="allTypes[0].text" class="single_bar_container" />
+        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" :allow-deselect="true" />
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
