@@ -2,7 +2,10 @@ package dataaccess
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
 
@@ -196,7 +200,7 @@ func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary)
 			id, 
 			user_id
 		FROM users_val_dashboards
-		where id = $1
+		WHERE id = $1
 	`, dashboardId)
 	return result, err
 }
@@ -210,15 +214,63 @@ func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId
 			uvd.user_id
 		FROM users_val_dashboards_sharing uvds
 		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
-		where uvds.public_id = $1
+		WHERE uvds.public_id = $1
 	`, publicDashboardId)
 	return result, err
 }
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
 func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorsFromStrings(validators)
+	validatorIdxs := pq.Int64Array{}
+	validatorPubkeys := pq.ByteaArray{}
+
+	// Split the validators into pubkey and index slices
+	for _, validator := range validators {
+		if utils.IsHash(validator) {
+			validator = strings.TrimPrefix(validator, "0x")
+			validatorPubkey, err := hex.DecodeString(validator)
+			if err != nil {
+				return nil, err
+			}
+			validatorPubkeys = append(validatorPubkeys, validatorPubkey)
+		} else if validatorIdx, parseErr := strconv.ParseUint(validator, 10, 31); parseErr == nil { // Limit to 31 bits to stay within math.MaxInt32
+			validatorIdxs = append(validatorIdxs, int64(validatorIdx))
+		} else {
+			return nil, fmt.Errorf("invalid validator index or pubkey: %s", validator)
+		}
+	}
+
+	// Query the database for the validators
+	validatorsFromIdxPubkey := []t.VDBValidator{}
+	err := d.ReaderDb.Select(&validatorsFromIdxPubkey, `
+		SELECT 
+			validator_index,
+			MAX(validator_index_version) as validator_index_version
+		FROM validators
+		WHERE validator_index = ANY($1)
+		GROUP BY validator_index
+		UNION
+		SELECT 
+			validator_index,
+			validator_index_version
+		FROM validators
+		WHERE pubkey = ANY($2)
+	`, validatorIdxs, validatorPubkeys)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map to remove potential duplicates
+	validatorMap := make(map[t.VDBValidator]bool)
+	for _, v := range validatorsFromIdxPubkey {
+		validatorMap[v] = true
+	}
+	result := make([]t.VDBValidator, 0, len(validatorMap))
+	for validator := range validatorMap {
+		result = append(result, validator)
+	}
+
+	return result, nil
 }
 
 func (d DataAccessService) GetUserDashboards(userId uint64) (t.UserDashboardsData, error) {
@@ -383,7 +435,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	result := []t.VDBPostValidatorsData{}
 
-	//Create a map to remove potential duplicates
+	// Create a map to remove potential duplicates
 	validatorMap := make(map[t.VDBValidator]bool)
 	for _, v := range validators {
 		validatorMap[v] = true
@@ -478,7 +530,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 }
 
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
-	//Create a map to remove potential duplicates
+	// Create a map to remove potential duplicates
 	validatorMap := make(map[t.VDBValidator]bool)
 	for _, v := range validators {
 		validatorMap[v] = true

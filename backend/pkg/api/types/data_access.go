@@ -11,8 +11,8 @@ type Sort[T enums.Enum] struct {
 }
 
 type VDBValidator struct {
-	Index   uint64
-	Version uint64
+	Index   uint64 `db:"validator_index"`
+	Version uint64 `db:"validator_index_version"`
 }
 
 type VDBIdPrimary int
