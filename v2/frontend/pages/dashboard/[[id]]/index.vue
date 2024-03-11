@@ -35,7 +35,7 @@ const key = computed(() => {
         <template #header>
           <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
         </template>
-        <DashboardTableSummary :dashboard-key="1" />
+        <DashboardTableSummary :dashboard-key="key" />
       </TabPanel>
       <TabPanel>
         <template #header>
