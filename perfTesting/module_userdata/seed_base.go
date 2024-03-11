@@ -98,7 +98,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareAll := rand.Intn(3) == 0
 
 		if share {
-			err = CreateValDashboardSharing(int64(i), shareAll)
+			err = CreateValDashboardSharing(int64(i), "", shareAll)
 			if err != nil {
 				return err
 			}
@@ -146,7 +146,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareNotes := rand.Intn(2) == 0
 
 		if share {
-			err = CreateAccDashboardSharing(int64(i), shareAll, shareNotes, `{"test": true}`)
+			err = CreateAccDashboardSharing(int64(i), "", shareAll, shareNotes, `{"test": true}`)
 			if err != nil {
 				return err
 			}
