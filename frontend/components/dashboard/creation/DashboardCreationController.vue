@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { type DashboardType, type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
+import { type DashboardType } from '~/types/dashboard'
+import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
 import { type VDBPostReturnData } from '~/types/api/validator_dashboard'
 
 const router = useRouter()
@@ -12,7 +13,7 @@ const props = defineProps<Props>()
 const visible = ref<boolean>(false)
 
 const state = ref<DashboardCreationState>('')
-const type = ref<DashboardType>('')
+const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
 const network = ref<string>('')
 

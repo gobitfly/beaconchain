@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { type DashboardCreationState, type DashboardType } from '~/types/dashboard/creation'
+import { type DashboardType } from '~/types/dashboard'
+import { type DashboardCreationState } from '~/types/dashboard/creation'
 import { IconAccount, IconValidator } from '#components'
 
 const { t: $t } = useI18n()
 
-const type = defineModel<DashboardType>('type', { required: true })
+const type = defineModel<DashboardType | ''>('type', { required: true })
 const state = defineModel<DashboardCreationState>('state', { required: true })
 const typeButtons = shallowRef([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
 
