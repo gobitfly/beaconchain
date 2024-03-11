@@ -9,24 +9,30 @@ interface Props {
     value: string
   }[],
   initial?: string
+  allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
 const props = defineProps<Props>()
 
 const selected = defineModel<string>({ required: true })
 selected.value = selected.value ? selected.value : (props.initial || '')
 
-const modelValues = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
+const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = value === props.initial
   return map
 }, {} as Record<string, boolean>))
 
 function onButtonClicked (value: string) {
-  for (const key in modelValues.value) {
-    if (key !== value) {
-      modelValues.value[key] = false
+  for (const key in values.value) {
+    if (key === value) {
+      if (values.value[key] && !props.allowDeselect) {
+        continue
+      }
+      values.value[key] = !values.value[key]
+    } else {
+      values.value[key] = false
     }
   }
-  selected.value = modelValues.value[value] ? value : ''
+  selected.value = values.value[value] ? value : ''
 }
 </script>
 
@@ -35,9 +41,9 @@ function onButtonClicked (value: string) {
     <BcToggleSingleButton
       v-for="button in props.buttons"
       :key="button.value"
-      v-model="modelValues[button.value]"
       :icon="button.icon"
       :text="button.text"
+      :selected="values[button.value]"
       @click="onButtonClicked(button.value)"
     >
       <template #icon>

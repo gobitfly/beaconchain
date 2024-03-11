@@ -4,13 +4,14 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   icon?: IconDefinition,
   text?: string
+  selected: boolean
 }
 const props = defineProps<Props>()
-const selected = defineModel<boolean | undefined>({ required: true })
+const selectedClass = computed(() => props.selected ? 'p-highlight' : '')
 </script>
 
 <template>
-  <ToggleButton v-model="selected" class="bc-toggle" :on-label="props.text" :off-label="props.text">
+  <ToggleButton class="bc-toggle" :class="selectedClass" :on-label="props.text" :off-label="props.text">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
         <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
