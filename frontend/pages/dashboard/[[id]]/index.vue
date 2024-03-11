@@ -25,7 +25,7 @@ const key = computed(() => {
       <div class="h1 dashboard_title">
         {{ $t('dashboard.title') }}
       </div>
-      <DashboardValidatorOverview class="overview" />
+      <DashboardValidatorOverview class="overview" :dashboard-key="key" />
     </template>
     <div>
       <DashboardValidatorSlotViz :dashboard-key="key" />
