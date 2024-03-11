@@ -691,7 +691,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 		TotalCount: uint64(len(retArr)),
 	}
 
-	return &retArr, paging, nil
+	return retArr, paging, nil
 }
 
 func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
