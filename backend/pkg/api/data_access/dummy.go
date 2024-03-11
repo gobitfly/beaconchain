@@ -40,10 +40,10 @@ func (d DummyService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VD
 	return &r, err
 }
 
-func (d DummyService) GetValidatorsFromStrings(validators []string) (*[]t.VDBValidator, error) {
+func (d DummyService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
 	r := []t.VDBValidator{}
 	err := commonFakeData(&r)
-	return &r, err
+	return r, err
 }
 
 func (d DummyService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
@@ -84,26 +84,26 @@ func (d DummyService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, 
 	return nil
 }
 
-func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) (*[]t.VDBPostValidatorsData, error) {
+func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
-	return &r, err
+	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) (*[]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	r := []t.VDBManageValidatorsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) (*[]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	r := []t.VDBManageValidatorsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
 func (d DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
@@ -126,34 +126,34 @@ func (d DummyService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimar
 	return nil
 }
 
-func (d DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) (*[]t.SlotVizEpoch, error) {
+func (d DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
 	r := struct {
 		Epochs []t.SlotVizEpoch `faker:"slice_len=4"`
 	}{}
 	err := commonFakeData(&r)
-	return &r.Epochs, err
+	return r.Epochs, err
 }
 
-func (d DummyService) GetValidatorDashboardSlotVizByValidators(dashboardId t.VDBIdValidatorSet) (*[]t.SlotVizEpoch, error) {
+func (d DummyService) GetValidatorDashboardSlotVizByValidators(dashboardId t.VDBIdValidatorSet) ([]t.SlotVizEpoch, error) {
 	r := []t.SlotVizEpoch{}
 	err := commonFakeData(&r)
-	return &r, err
+	return r, err
 }
 
-func (d DummyService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) (*[]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) (*[]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
 func (d DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryData, error) {
@@ -180,20 +180,20 @@ func (d DummyService) GetValidatorDashboardSummaryChartByValidators(dashboardId 
 	return &r, err
 }
 
-func (d DummyService) GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) (*[]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardRewards(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	r := []t.VDBRewardsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) (*[]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardRewardsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	r := []t.VDBRewardsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
 func (d DummyService) GetValidatorDashboardGroupRewards(dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.VDBGroupRewardsData, error) {
@@ -220,36 +220,36 @@ func (d DummyService) GetValidatorDashboardRewardsChartByValidators(dashboardId 
 	return &r, err
 }
 
-func (d DummyService) GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) (*[]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardDuties(dashboardId t.VDBIdPrimary, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	r := []t.VDBEpochDutiesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) (*[]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardDutiesByValidators(dashboardId t.VDBIdValidatorSet, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	r := []t.VDBEpochDutiesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) (*[]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) (*[]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardBlocksByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
 func (d DummyService) GetValidatorDashboardHeatmap(dashboardId t.VDBIdPrimary) (*t.VDBHeatmap, error) {
@@ -276,50 +276,50 @@ func (d DummyService) GetValidatorDashboardGroupHeatmapByValidators(dashboardId 
 	return &r, err
 }
 
-func (d DummyService) GetValidatorDashboardElDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) (*[]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardElDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	r := []t.VDBExecutionDepositsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardElDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) (*[]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardElDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	r := []t.VDBExecutionDepositsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardClDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) (*[]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardClDeposits(dashboardId t.VDBIdPrimary, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	r := []t.VDBConsensusDepositsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardClDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) (*[]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardClDepositsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	r := []t.VDBConsensusDepositsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) (*[]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	r := []t.VDBWithdrawalsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
 
-func (d DummyService) GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) (*[]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d DummyService) GetValidatorDashboardWithdrawalsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	r := []t.VDBWithdrawalsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
-	return &r, &p, err
+	return r, &p, err
 }
