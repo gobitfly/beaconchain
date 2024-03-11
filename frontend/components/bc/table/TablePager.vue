@@ -90,8 +90,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         <div class="item button" :disabled="data.page! >= data.lastPage!" @click="last">
           {{ $t('table.last') }}
         </div>
-        <!--TODO: implement dropdown styles-->
-        <Dropdown :model-value="props.pageSize" :options="pageSizes" @change="(event) => setPageSize(event.value)" />
+        <Dropdown
+          :model-value="props.pageSize"
+          :options="pageSizes"
+          class="table small"
+          @change="(event) => setPageSize(event.value)"
+        />
       </div>
       <div class="left-info">
         {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
@@ -107,10 +111,10 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       <div class="item button" :disabled="data.next_cursor" @click="emit('setCursor', data.next_cursor)">
         <IconChevron class="toggle" direction="right" />
       </div>
-      <!--TODO: implement dropdown styles-->
       <Dropdown
         :model-value="props.pageSize"
         :options="pageSizes"
+        class="table small"
         @change="(event) => setPageSize(event.value)"
       />
     </div>
@@ -143,6 +147,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   .pager {
     display: flex;
     gap: 3px;
+
+    .table{
+      @include main.container;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
 
     .item {
       @include main.container;
