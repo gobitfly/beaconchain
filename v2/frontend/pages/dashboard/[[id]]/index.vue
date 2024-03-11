@@ -112,6 +112,7 @@ onMounted(() => {
 .panel-container {
   display: flex;
   justify-content: center;
+  padding: 60px;
 }
 
 .overview {
