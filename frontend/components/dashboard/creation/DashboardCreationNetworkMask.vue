@@ -35,10 +35,10 @@ function onBack () {
       <BcToggleSingleBar v-model="network" :buttons="allNetworks" :initial="network" />
       <div class="row_container">
         <Button @click="onBack()">
-          {{ $t('dashboard.creation.back') }}
+          {{ $t('navigation.back') }}
         </Button>
         <Button :disabled="continueDisabled" @click="onContinue()">
-          {{ $t('dashboard.creation.continue') }}
+          {{ $t('navigation.continue') }}
         </Button>
       </div>
     </div>
