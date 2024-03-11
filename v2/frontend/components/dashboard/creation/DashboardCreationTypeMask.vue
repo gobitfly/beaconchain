@@ -17,16 +17,16 @@ const continueDisabled = computed(() => {
 </script>
 
 <template>
-  <div class="mask_container">
-    <div class="element_container">
+  <div class="mask-container">
+    <div class="element-container">
       <div class="big_text">
         {{ $t('dashboard.creation.title') }}
       </div>
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="type" :buttons="typeButtons" :initial="type" />
-      <div class="row_container">
+      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
+      <div class="row-container">
         <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
         <Button class="button" :disabled="continueDisabled" @click="emit('next')">
           {{ $t('navigation.continue') }}
@@ -37,19 +37,26 @@ const continueDisabled = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-  .mask_container{
-    .element_container{
+  .mask-container{
+    width: 100%;
+    .element-container{
       display: flex;
       flex-direction: column;
       gap: var(--padding);
 
-      .row_container{
+      .single-bar{
+        height: 100px;
+      }
+
+      .row-container{
         display: flex;
+        justify-content: flex-end;
         gap: var(--padding);
 
         input {
             min-width: 250px;
             max-width: 320px;
+            width: 100%;
         }
 
         button {
