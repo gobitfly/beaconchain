@@ -20,6 +20,6 @@ type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
 
 type DashboardInfo struct {
-	Id     VDBIdPrimary // this must be the bigint id
-	UserId uint64
+	Id     VDBIdPrimary `db:"id"` // this must be the bigint id
+	UserId uint64       `db:"user_id"`
 }
