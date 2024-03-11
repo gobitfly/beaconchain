@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"os"
 	"os/signal"
+	"reflect"
 	"runtime"
 	"sort"
 	"strconv"
@@ -14,6 +16,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
@@ -227,4 +231,52 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 	if elapsed < intendedMinWait {
 		time.Sleep(intendedMinWait - elapsed)
 	}
+}
+
+func DataStructure[T any](s []T) []interface{} {
+	ds := make([]interface{}, len(s))
+	for i, v := range s {
+		ds[i] = v
+	}
+
+	return ds
+}
+
+func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction enums.SortOrder) (*t.Paging, error) {
+	offsets := make([]t.PostgresOffsetColumn, len(columns))
+	if len(data) < 2 {
+		return nil, fmt.Errorf("cant generate paging for slice with less than 2 items")
+	}
+	li := len(data) - 1
+
+	for i, c := range columns {
+		offsets[i].ColumnName = c
+	}
+
+	// generate next cursor
+
+	for i, c := range columns {
+		offsets[i].Value = reflect.ValueOf(data[li]).FieldByName(c).Int()
+	}
+
+	next_cursor, err := t.PostgresCursor{Direction: direction, Offsets: offsets}.ToString()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate next_cursor: %s", err)
+	}
+
+	// generate prev cursor
+
+	for i, c := range columns {
+		offsets[i].Value = reflect.ValueOf(data[0]).FieldByName(c).Int()
+	}
+
+	prev_cursor, err := t.PostgresCursor{Direction: direction.Invert(), Offsets: offsets}.ToString()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate prev_cursor: %s", err)
+	}
+
+	return &t.Paging{
+		NextCursor: *next_cursor,
+		PrevCursor: *prev_cursor,
+	}, nil
 }
