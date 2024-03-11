@@ -57,7 +57,7 @@ onMounted(() => {
             <IconPlus alt="Plus icon" width="100%" height="100%" />
           </Button>
         </div>
-        <DashboardValidatorOverview class="overview" />
+        <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />

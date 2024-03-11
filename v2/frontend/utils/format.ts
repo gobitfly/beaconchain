@@ -68,7 +68,10 @@ export function commmifyLeft (value: string):string {
   return formatted
 }
 
-export function trim (value:string, maxDecimalCount: number, minDecimalCount?: number):string {
+export function trim (value:string | number, maxDecimalCount: number, minDecimalCount?: number):string {
+  if (typeof value !== 'string') {
+    value = `${value}`
+  }
   minDecimalCount = minDecimalCount === undefined ? maxDecimalCount : Math.min(minDecimalCount, maxDecimalCount)
   const split = value.split('.')
   let dec = (split[1] ?? '').substring(0, maxDecimalCount)
