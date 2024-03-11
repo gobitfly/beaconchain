@@ -16,6 +16,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	decimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/errgroup"
 )
@@ -699,8 +700,57 @@ func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId 
 }
 
 func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (t.VDBGroupSummaryData, error) {
-	// TODO @peter_bitfly
-	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId)
+
+	ret := t.VDBGroupSummaryData{}
+	wg := errgroup.Group{}
+
+	log.Infof("GetValidatorDashboardSummary called for dashboard %d", dashboardId)
+	// query := `select
+	// 		validator_index,
+	// 		sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
+	// 		COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
+	// 		COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+	// 		from users_val_dashboards_validators
+	// 	left join %[1]s on %[1]s.validatorindex = users_val_dashboards_validators.validator_index
+	// 	where dashboard_id = $1
+	// `
+
+	type queryResult struct {
+		ValidatorIndex                    uint32 `db:"validator_index"`
+		AttestationSourceReward           uint64 `db:"attestations_source_reward"`
+		AttestationTargetReward           uint64 `db:"attestations_target_reward"`
+		AttestationHeadtReward            uint64 `db:"attestations_head_reward"`
+		AttestationInactivitytReward      uint64 `db:"attestations_inactivity_reward"`
+		AttestationInclusionReward        uint64 `db:"attestations_inclusion_reward"`
+		AttestationReward                 uint64 `db:"attestations_reward"`
+		AttestationIdealSourceReward      uint64 `db:"attestations_ideal_source_reward"`
+		AttestationIdealTargetReward      uint64 `db:"attestations_ideal_target_reward"`
+		AttestationIdealHeadtReward       uint64 `db:"attestations_ideal_head_reward"`
+		AttestationIdealInactivitytReward uint64 `db:"attestations_ideal_inactivity_reward"`
+		AttestationIdealInclusionReward   uint64 `db:"attestations_ideal_inclusion_reward"`
+		AttestationIdealReward            uint64 `db:"attestations_ideal_reward"`
+
+		BlocksScheduled uint32          `db:"blocks_scheduled"`
+		BlocksProposed  uint32          `db:"blocks_proposed"`
+		BlocksClReward  uint64          `db:"blocks_cl_reward"`
+		BlocksElReward  decimal.Decimal `db:"blocks_el_reward"`
+
+		SyncScheduled uint32 `db:"sync_scheduled"`
+		SyncExecuted  uint32 `db:"sync_executed"`
+		SyncRewards   uint64 `db:"sync_rewards"`
+
+		Slashed bool `db:"slashed"`
+	}
+	wg.Go(func() error {
+		return nil
+	})
+	err := wg.Wait()
+
+	if err != nil {
+		return ret, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+	}
+
+	return ret, nil
 }
 
 func (d DataAccessService) GetValidatorDashboardGroupSummaryByValidators(dashboardId t.VDBIdValidatorSet) (t.VDBGroupSummaryData, error) {
