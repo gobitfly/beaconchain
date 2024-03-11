@@ -152,6 +152,9 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       @include main.container;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
+      &.p-overlay-open{
+        border-bottom-right-radius: 0;
+      }
     }
 
     .item {
