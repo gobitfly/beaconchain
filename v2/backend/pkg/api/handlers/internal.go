@@ -593,12 +593,13 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	q := r.URL.Query()
 	dashboardId := checkDashboardId(&err, vars["dashboard_id"], true)
 	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBSummaryColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
-		return
-	}
+	// sort := checkSort[enums.VDBSummaryColumn](&err, q.Get("sort"))
+	// if err != nil {
+	// 	returnBadRequest(w, err)
+	// 	return
+	// }
 
+	sort := []types.Sort[enums.VDBSummaryColumn]{}
 	var data []types.VDBSummaryTableRow
 	var paging types.Paging
 	switch dashboardId := dashboardId.(type) {
