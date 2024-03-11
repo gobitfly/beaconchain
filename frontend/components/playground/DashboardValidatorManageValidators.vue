@@ -4,7 +4,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 const { getOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('validator_dashboard_overview', () => getOverview())
+await useAsyncData('validator_dashboard_overview', () => getOverview(100))
 
 const store = useUserDashboardStore()
 const { getDashboards } = store
