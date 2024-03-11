@@ -700,7 +700,6 @@ func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId 
 }
 
 func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryData, error) {
-
 	ret := t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
