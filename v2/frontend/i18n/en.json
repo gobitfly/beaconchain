@@ -18,6 +18,10 @@
     "average": "Average",
     "index": "Index"
   },
+  "navigation": {
+    "back": "Back",
+    "continue": "Continue"
+  },
   "table": {
     "first": "First",
     "last": "Last",
@@ -116,9 +120,7 @@
       },
       "network": {
         "subtitle": "What network are your validators on?"
-      },
-      "back": "Back",
-      "continue": "Continue"
+      }
     },
     "validator": {
       "overview": {
