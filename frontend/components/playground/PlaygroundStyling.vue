@@ -189,7 +189,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   margin: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--padding);
 }
 
 .box {
