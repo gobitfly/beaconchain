@@ -92,7 +92,6 @@ async function createDashboard () {
   .panel-container {
     border: 1px solid var(--primary-orange);
     border-radius: var(--border-radius);
-    width: 100%;
     padding: var(--padding-large);
 
     @media (max-width: 400px) {
