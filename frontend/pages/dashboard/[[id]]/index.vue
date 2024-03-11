@@ -8,6 +8,7 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
+import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
 const route = useRoute()
 
@@ -18,15 +19,20 @@ const key = computed(() => {
   return route.params.id
 })
 
-const dashboardCreationController = ref<typeof DashboardCreationController>()
-function showDashboardCreation () {
-  dashboardCreationController.value?.show()
+const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
+const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
+function showDashboardCreation (type: DashboardCreationDisplayType) {
+  if (type === 'panel') {
+    dashboardCreationControllerPanel.value?.show()
+  } else {
+    dashboardCreationControllerModal.value?.show()
+  }
 }
 
 onMounted(() => {
   // TODO: Implement check if user does not have a single dashboard instead of the key check once information is available
   if (key.value === '') {
-    showDashboardCreation()
+    showDashboardCreation('panel')
   }
 })
 </script>
@@ -35,19 +41,19 @@ onMounted(() => {
   <div v-if="key==''">
     <BcPageWrapper>
       <div class="panel-container">
-        <DashboardCreationController ref="dashboardCreationController" :display-type="'panel'" />
+        <DashboardCreationController ref="dashboardCreationControllerPanel" :display-type="'panel'" />
       </div>
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardCreationController ref="dashboardCreationController" :display-type="'modal'" />
+    <DashboardCreationController ref="dashboardCreationControllerModal" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
         <div class="header-container">
           <div class="h1 dashboard-title">
             {{ $t('dashboard.title') }}
           </div>
-          <Button class="p-button-icon-only" @click="showDashboardCreation">
+          <Button class="p-button-icon-only" @click="showDashboardCreation('modal')">
             <IconPlus alt="Plus icon" width="100%" height="100%" />
           </Button>
         </div>
