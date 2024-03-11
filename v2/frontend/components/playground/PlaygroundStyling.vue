@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleSingleBar, IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
+import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
