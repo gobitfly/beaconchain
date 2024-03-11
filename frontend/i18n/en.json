@@ -18,6 +18,9 @@
     "average": "Average",
     "index": "Index"
   },
+  "navigation":{
+    "done": "Done"
+  },
   "table": {
     "first": "First",
     "last": "Last",
@@ -107,6 +110,11 @@
       }
     },
     "validator": {
+      "manage-validators": "Manage Validators",
+      "management":{
+        "title": "Manage",
+        "sub_title": "Add or remove validators from your dashboard"
+      },
       "overview": {
         "your_online_validators": "Your Online Validators",
         "total_efficiency": "Total Efficiency",
@@ -115,18 +123,22 @@
         "sync_committee_luck": "Sync C. Luck",
         "total_apr": "Total APR"
       },
+      "col": {
+        "index": "Index",
+        "public_key": "Public Key",
+        "balance": "Balance",
+        "withdrawal_credential": "Withdrawal Credential",
+        "group": "Group",
+        "efficiency_day": "Efficiency (24h)",
+        "efficiency_week": "Efficiency (7d)",
+        "efficiency_month": "Efficiency (31d)",
+        "efficiency_total": "Efficiency (All Time)",
+        "validators": "Validators"
+      },
       "summary": {
         "total_group_name": "Total Efficiency",
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
-        "col": {
-          "group": "Group",
-          "efficiency_day": "Efficiency (24h)",
-          "efficiency_week": "Efficiency (7d)",
-          "efficiency_month": "Efficiency (31d)",
-          "efficiency_total": "Efficiency (All Time)",
-          "validators": "Validators"
-        },
         "row": {
           "efficiency_total": "Efficiency",
           "attestations": "Attestations",

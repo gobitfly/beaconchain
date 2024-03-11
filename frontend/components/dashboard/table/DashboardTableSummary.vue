@@ -125,7 +125,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               field="group_id"
               :sortable="true"
               body-class="bold"
-              :header="$t('dashboard.validator.summary.col.group')"
+              :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
                 {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
@@ -135,7 +135,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               field="efficiency_day"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_day')"
+              :header="$t('dashboard.validator.col.efficiency_day')"
             >
               <template #body="slotProps">
                 <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
@@ -145,7 +145,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               v-if="colsVisible.efficiency_plus"
               field="efficiency_week"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_week')"
+              :header="$t('dashboard.validator.col.efficiency_week')"
             >
               <template #body="slotProps">
                 <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
@@ -155,7 +155,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               v-if="colsVisible.efficiency_plus"
               field="efficiency_month"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_month')"
+              :header="$t('dashboard.validator.col.efficiency_month')"
             >
               <template #body="slotProps">
                 <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
@@ -165,7 +165,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               v-if="colsVisible.efficiency_plus"
               field="efficiency_total"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_total')"
+              :header="$t('dashboard.validator.col.efficiency_total')"
             >
               <template #body="slotProps">
                 <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
@@ -175,7 +175,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               v-if="colsVisible.validator"
               class="validator_column"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.validators')"
+              :header="$t('dashboard.validator.col.validators')"
             >
               <template #body="slotProps">
                 <DashboardTableValidators

@@ -17,6 +17,8 @@ const key = computed(() => {
   return route.params.id
 })
 
+const manageValidatorsModalVisisble = ref(false)
+
 </script>
 
 <template>
@@ -27,6 +29,7 @@ const key = computed(() => {
       </div>
       <DashboardValidatorOverview class="overview" :dashboard-key="key" />
     </template>
+    <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
     <div>
       <DashboardValidatorSlotViz :dashboard-key="key" />
     </div>
@@ -68,6 +71,7 @@ const key = computed(() => {
         Withdrawals coming soon!
       </TabPanel>
     </TabView>
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
   </BcPageWrapper>
 </template>
 
