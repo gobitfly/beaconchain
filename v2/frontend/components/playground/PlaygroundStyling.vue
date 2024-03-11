@@ -164,29 +164,6 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         Selected: {{ dropodownSelection }}
       </div>
     </TabPanel>
-    <TabPanel header="Dropdown">
-      <div class="element_container" style="background-color: darkred; padding: 5px;">
-        <BcDropdown
-          v-model="dropodownSelection"
-          :options="dropdownList"
-          option-value="value"
-          option-label="label"
-          placeholder="for rock wtf this is a long placeholder"
-          panel-style="max-width: 100px"
-          style="max-width: 100px;"
-        />
-        <BcDropdown
-          v-model="dropodownSelection"
-          :options="dropdownList"
-          option-value="value"
-          option-label="label"
-          variant="table"
-          placeholder="and roll"
-          style="width: 200px;"
-        />
-        Selected: {{ dropodownSelection }}
-      </div>
-    </TabPanel>
     <TabPanel header="Spinner">
       <Button @click="toggleLoading">
         Toggle loading
