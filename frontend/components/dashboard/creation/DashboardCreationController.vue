@@ -30,7 +30,25 @@ defineExpose({
   show
 })
 
-async function onCreate () {
+function onNext () {
+  if (state.value === 'type') {
+    if (type.value === 'account') {
+      createDashboard()
+    } else {
+      state.value = 'network'
+    }
+  } else if (state.value === 'network') {
+    createDashboard()
+  }
+}
+
+function onBack () {
+  if (state.value === 'network') {
+    state.value = 'type'
+  }
+}
+
+async function createDashboard () {
   let newDashboardId = -1
   if (type.value === 'account') {
     await useCustomFetch<undefined>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { // TODO: Use correct type once available
@@ -58,13 +76,13 @@ async function onCreate () {
 <template>
   <div v-if="visible">
     <BcDialog v-if="props.displayType === 'modal'" v-model="visible">
-      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
-      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
+      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @next="onNext()" />
+      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @next="onNext()" @back="onBack()" />
     </BcDialog>
     <div v-else-if="props.displayType === 'panel'">
       <div class="panel_container">
-        <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @create-pressed="onCreate()" />
-        <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @create-pressed="onCreate()" />
+        <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @next="onNext()" />
+        <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @next="onNext()" @back="onBack()" />
       </div>
     </div>
   </div>
