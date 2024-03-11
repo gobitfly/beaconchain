@@ -300,17 +300,17 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdP
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBIdPrimary) ([]t.SlotVizEpoch, error) {
-	log.Infof("retrieving data for dashboard with id %d", dashboardId)
+	log.Infof("GetValidatorDashboardSlotViz called for dashboard %d", dashboardId)
 
-	// TODO: Get the validators from the dashboardId
-	setSize := uint32(1000)
+	var validatorsArray []uint32
+	err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+	if err != nil {
+		return nil, err
+	}
 
-	validatorsMap := make(map[uint32]bool, setSize)
-
-	validatorsArray := make([]uint32, 0, setSize)
-	for i := uint32(0); i < setSize; i++ {
-		validatorsMap[i] = true
-		validatorsArray = append(validatorsArray, i)
+	validatorsMap := make(map[uint32]bool, len(validatorsArray))
+	for _, validatorIndex := range validatorsArray {
+		validatorsMap[validatorIndex] = true
 	}
 
 	// Get min/max slot/epoch
