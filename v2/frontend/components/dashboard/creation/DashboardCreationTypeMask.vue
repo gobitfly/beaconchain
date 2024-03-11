@@ -1,29 +1,19 @@
 <script lang="ts" setup>
 import { type DashboardType } from '~/types/dashboard'
-import { type DashboardCreationState } from '~/types/dashboard/creation'
 import { IconAccount, IconValidator } from '#components'
 
 const { t: $t } = useI18n()
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-const state = defineModel<DashboardCreationState>('state', { required: true })
 const typeButtons = shallowRef([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
 
 const name = defineModel<string>('name', { required: true })
 
-const emit = defineEmits<{(e: 'create-pressed'): void }>()
+const emit = defineEmits<{(e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
   return type.value === '' || name.value === '' || name.value.length > 32
 })
-
-function onContinue () {
-  if (type.value === 'account') {
-    emit('create-pressed')
-  } else {
-    state.value = 'network'
-  }
-}
 </script>
 
 <template>
@@ -38,7 +28,7 @@ function onContinue () {
       <BcToggleSingleBar v-model="type" :buttons="typeButtons" :initial="type" />
       <div class="row_container">
         <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
-        <Button class="button" :disabled="continueDisabled" @click="onContinue()">
+        <Button class="button" :disabled="continueDisabled" @click="emit('next')">
           {{ $t('navigation.continue') }}
         </Button>
       </div>

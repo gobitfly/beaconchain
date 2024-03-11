@@ -1,26 +1,16 @@
 <script lang="ts" setup>
-import { type DashboardCreationState } from '~/types/dashboard/creation'
 import { IconNetworkEthereumMono, IconNetworkGnosisMono } from '#components'
 
 const { t: $t } = useI18n()
 
 const network = defineModel<string>('network', { required: true })
-const state = defineModel<DashboardCreationState>('state', { required: true })
 const allNetworks = shallowRef([{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }])
 
-const emit = defineEmits<{(e: 'create-pressed'): void }>()
+const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
 const continueDisabled = computed(() => {
   return network.value === ''
 })
-
-function onContinue () {
-  emit('create-pressed')
-}
-
-function onBack () {
-  state.value = 'type'
-}
 </script>
 
 <template>
@@ -34,10 +24,10 @@ function onBack () {
       </div>
       <BcToggleSingleBar v-model="network" :buttons="allNetworks" :initial="network" />
       <div class="row_container">
-        <Button @click="onBack()">
+        <Button @click="emit('back')">
           {{ $t('navigation.back') }}
         </Button>
-        <Button :disabled="continueDisabled" @click="onContinue()">
+        <Button :disabled="continueDisabled" @click="emit('next')">
           {{ $t('navigation.continue') }}
         </Button>
       </div>
