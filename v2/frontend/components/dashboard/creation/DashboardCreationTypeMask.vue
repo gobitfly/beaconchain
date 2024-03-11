@@ -51,11 +51,11 @@ function onContinue () {
     .element_container{
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: var(--padding);
 
       .row_container{
         display: flex;
-        gap: 10px;
+        gap: var(--padding);
 
         input {
             min-width: 250px;

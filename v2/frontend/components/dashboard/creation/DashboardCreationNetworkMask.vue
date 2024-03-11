@@ -50,12 +50,12 @@ function onBack () {
     .element_container{
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: var(--padding);
 
       .row_container{
         display: flex;
         justify-content: flex-end;
-        gap: 10px;
+        gap: var(--padding);
       }
 
       button {
