@@ -38,7 +38,7 @@ function onButtonClicked (value: string) {
 
 <template>
   <div class="bc-togglebar">
-    <BcToggleSingleButton
+    <BcToggleSingleBarButton
       v-for="button in props.buttons"
       :key="button.value"
       :icon="button.icon"
@@ -51,7 +51,7 @@ function onButtonClicked (value: string) {
           <component :is="button.component" />
         </slot>
       </template>
-    </BcToggleSingleButton>
+    </BcToggleSingleBarButton>
   </div>
 </template>
 
