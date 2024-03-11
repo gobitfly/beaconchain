@@ -14,16 +14,16 @@ const continueDisabled = computed(() => {
 </script>
 
 <template>
-  <div class="mask_container">
-    <div class="element_container">
+  <div class="mask-container">
+    <div class="element-container">
       <div class="big_text">
         {{ $t('dashboard.creation.title') }}
       </div>
       <div class="subtitle_text">
         {{ $t('dashboard.creation.network.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="network" :buttons="allNetworks" :initial="network" />
-      <div class="row_container">
+      <BcToggleSingleBar v-model="network" class="single-bar" :buttons="allNetworks" :initial="network" />
+      <div class="row-container">
         <Button @click="emit('back')">
           {{ $t('navigation.back') }}
         </Button>
@@ -36,13 +36,18 @@ const continueDisabled = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-  .mask_container{
-    .element_container{
+  .mask-container{
+    width: 100%;
+    .element-container{
       display: flex;
       flex-direction: column;
       gap: var(--padding);
 
-      .row_container{
+      .single-bar{
+        height: 100px;
+      }
+
+      .row-container{
         display: flex;
         justify-content: flex-end;
         gap: var(--padding);

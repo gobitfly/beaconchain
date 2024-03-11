@@ -40,13 +40,11 @@ onMounted(() => {
 <template>
   <div v-if="key==''">
     <BcPageWrapper>
-      <div class="panel-container">
-        <DashboardCreationController ref="dashboardCreationControllerPanel" :display-type="'panel'" />
-      </div>
+      <DashboardCreationController ref="dashboardCreationControllerPanel" class="panel-controller" :display-type="'panel'" />
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardCreationController ref="dashboardCreationControllerModal" :display-type="'modal'" />
+    <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
         <div class="header-container">
@@ -115,10 +113,15 @@ onMounted(() => {
   }
 }
 
-.panel-container {
+.panel-controller {
   display: flex;
   justify-content: center;
-  padding: 60px;
+  padding: 60px 0px;
+}
+
+:global(.modal_controller) {
+  max-width: 460px;
+  width: 100%;
 }
 
 .overview {
