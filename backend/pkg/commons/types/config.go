@@ -27,6 +27,24 @@ type Config struct {
 		MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"WRITER_DB_MAX_OPEN_CONNS"`
 		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"WRITER_DB_MAX_IDLE_CONNS"`
 	} `yaml:"writerDatabase"`
+	ReaderAlloyDatabase struct {
+		Username     string `yaml:"user" envconfig:"READER_DB_USERNAME"`
+		Password     string `yaml:"password" envconfig:"READER_DB_PASSWORD"`
+		Name         string `yaml:"name" envconfig:"READER_DB_NAME"`
+		Host         string `yaml:"host" envconfig:"READER_DB_HOST"`
+		Port         string `yaml:"port" envconfig:"READER_DB_PORT"`
+		MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"READER_DB_MAX_OPEN_CONNS"`
+		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"READER_DB_MAX_IDLE_CONNS"`
+	} `yaml:"readerAlloyDatabase"`
+	WriterAlloyDatabase struct {
+		Username     string `yaml:"user" envconfig:"WRITER_DB_USERNAME"`
+		Password     string `yaml:"password" envconfig:"WRITER_DB_PASSWORD"`
+		Name         string `yaml:"name" envconfig:"WRITER_DB_NAME"`
+		Host         string `yaml:"host" envconfig:"WRITER_DB_HOST"`
+		Port         string `yaml:"port" envconfig:"WRITER_DB_PORT"`
+		MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"WRITER_DB_MAX_OPEN_CONNS"`
+		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"WRITER_DB_MAX_IDLE_CONNS"`
+	} `yaml:"writerAlloyDatabase"`
 	Bigtable struct {
 		Project             string `yaml:"project" envconfig:"BIGTABLE_PROJECT"`
 		Instance            string `yaml:"instance" envconfig:"BIGTABLE_INSTANCE"`

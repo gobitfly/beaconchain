@@ -108,6 +108,9 @@ type DataAccessService struct {
 	WriterDb                *sqlx.DB
 	Bigtable                *db.Bigtable
 	PersistentRedisDbClient *redis.Client
+
+	WriterDbAlloyDb *sqlx.DB
+	ReaderDbAlloyDb *sqlx.DB
 }
 
 // ensure DataAccessService implements DataAccessInterface
@@ -145,6 +148,28 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 
 		dataAccessService.ReaderDb = db.ReaderDb
 		dataAccessService.WriterDb = db.WriterDb
+
+		db.MustInitVDBDB(&types.DatabaseConfig{
+			Username:     cfg.WriterAlloyDatabase.Username,
+			Password:     cfg.WriterAlloyDatabase.Password,
+			Name:         cfg.WriterAlloyDatabase.Name,
+			Host:         cfg.WriterAlloyDatabase.Host,
+			Port:         cfg.WriterAlloyDatabase.Port,
+			MaxOpenConns: cfg.WriterAlloyDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.WriterAlloyDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ReaderAlloyDatabase.Username,
+			Password:     cfg.ReaderAlloyDatabase.Password,
+			Name:         cfg.ReaderAlloyDatabase.Name,
+			Host:         cfg.ReaderAlloyDatabase.Host,
+			Port:         cfg.ReaderAlloyDatabase.Port,
+			MaxOpenConns: cfg.ReaderAlloyDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.ReaderAlloyDatabase.MaxIdleConns,
+		})
+
+		dataAccessService.ReaderDbAlloyDb = db.VDBReaderDB
+		dataAccessService.WriterDbAlloyDb = db.VDBWriterDB
+
 	}()
 
 	// Initialize the bigtable
@@ -714,24 +739,42 @@ func (d DataAccessService) GetValidatorDashboardDutiesByValidators(dashboardId t
 
 func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, t.Paging, error) {
 	// WORKING Rami
-	// TODO: Get the validators from the dashboardId
-	validators := make([]uint64, 100)
-	for i := uint64(0); i < uint64(len(validators)); i++ {
-		validators[i] = i
+	// TODO support cursors
+	// probably not worth converting arrays to maps map for max 100 valis per page (?)
+	validatorGroupInfo := make([]struct {
+		Index   uint64 `db:"validator_index"`
+		GroupId uint64 `db:"group_id"`
+	}, 0)
+
+	// TODO change those queries, that can't be efficient. The tables should really live in the same db so we can join on them
+	err := d.ReaderDbAlloyDb.Select(&validatorGroupInfo, `
+		SELECT
+			validator_index,
+			group_id
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+		SORT BY validator_index
+		`, dashboardId)
+	if err != nil {
+		return nil, t.Paging{}, err
+	}
+
+	validators := make([]uint64, len(validatorGroupInfo))
+	for i, vali := range validatorGroupInfo {
+		validators[i] = vali.Index
 	}
 	proposals := make([]struct {
-		Proposer uint64 `db:"proposer"`
-		// GroupId         uint64        `db:"proposer"`
-		Epoch  uint64        `db:"epoch"`
-		Slot   uint64        `db:"slot"`
-		Status uint64        `db:"status"`
-		Block  sql.NullInt64 `db:"exec_block_number"`
-		Mev    sql.NullInt64 `db:"mev_reward"`
-	}, 100)
-	validatorsPQArray := pq.Array(validators)
+		// GroupId  string
+		Proposer uint64        `db:"proposer"`
+		Epoch    uint64        `db:"epoch"`
+		Slot     uint64        `db:"slot"`
+		Status   uint64        `db:"status"`
+		Block    sql.NullInt64 `db:"exec_block_number"`
+		Mev      sql.NullInt64 `db:"mev_reward"`
+	}, 0)
 
-	// TODO LEFT JOIN ON vdb_table (?)
-	err := d.ReaderDb.Select(&proposals, `
+	// TODO rework, this seems to be very inefficient for larger validator sets
+	err = d.ReaderDb.Select(&proposals, `
 		SELECT
 			epoch,
 			slot,
@@ -743,17 +786,30 @@ func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimar
 		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
 		WHERE proposer = ANY($1)
 		ORDER BY slot ASC
-		LIMIT 100
-		`, validatorsPQArray)
+		LIMIT $2
+		`, pq.Array(validators), limit)
 	if err != nil {
 		return nil, t.Paging{}, err
 	}
 
-	slotsNoRelay := make([]uint64, 0, len(proposals))
+	blocksNoRelay := make([]uint64, 0, len(proposals))
 	data := make([]t.VDBBlocksTableRow, len(proposals))
+	for _, proposal := range proposals {
+		if proposal.Block.Valid && !proposal.Mev.Valid {
+			blocksNoRelay = append(blocksNoRelay, uint64(proposal.Block.Int64))
+		}
+	}
+	// (non-mev) tx reward is in bt
+	indexedBlocksNoRelay, err := d.Bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
+	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
 	for i, proposal := range proposals {
+		for j := 0; j >= 0; j++ {
+			if validatorGroupInfo[j].Index == proposal.Proposer {
+				data[i].GroupId = validatorGroupInfo[j].GroupId
+				break
+			}
+		}
 		data[i].Proposer = proposal.Proposer
-		// data[i].GroupId = proposal.GroupId
 		data[i].Epoch = proposal.Epoch
 		data[i].Slot = proposal.Slot
 		switch proposal.Status {
@@ -768,24 +824,27 @@ func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBIdPrimar
 		default:
 			// invalid
 		}
-		if proposal.Block.Valid {
-			data[i].Block = uint64(proposal.Block.Int64)
+		if !proposal.Block.Valid {
+			continue
 		}
+		data[i].Block = uint64(proposal.Block.Int64)
 		if proposal.Mev.Valid {
 			data[i].Reward.El = decimal.NewFromInt(proposal.Mev.Int64)
 		} else {
-			slotsNoRelay = append(slotsNoRelay, proposal.Slot)
+			// bt returns blocks sorted desc
+			for ; idxNoRelayBlocks >= 0; idxNoRelayBlocks-- {
+				if indexedBlocksNoRelay[idxNoRelayBlocks].Number == uint64(proposal.Block.Int64) {
+					data[i].Reward.El = decimal.NewFromBigInt(new(big.Int).SetBytes(indexedBlocksNoRelay[idxNoRelayBlocks].TxReward), 0)
+					break
+				}
+			}
 		}
-		/* blockReward, err := // wait for pkg/exporter/modules/dasboard_data.go:47 to be done
+		// TODO wait for CL rewards to be added around here pkg/exporter/modules/dasboard_data.go:47
+		/* blockReward, err :=
 		if err != nil {
 			return nil, t.Paging{}, err
 		}
 		data[i].Reward.Cl = blockReward.Total*/
-	}
-	// tx reward is in bt
-	blocksNoRelay, err := d.Bigtable.GetBlocksIndexedMultiple(slotsNoRelay, uint64(len(slotsNoRelay)))
-	for i, block := range blocksNoRelay {
-		data[i].Reward.El = decimal.NewFromBigInt(new(big.Int).SetBytes(block.TxReward), 0)
 	}
 	return data, t.Paging{}, err
 }
