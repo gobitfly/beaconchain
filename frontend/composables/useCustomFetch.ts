@@ -50,7 +50,7 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboardKey}/summary?',
