@@ -119,8 +119,4 @@ onMounted(() => {
   margin-bottom: var(--padding-large);
 }
 
-.content {
-  margin-bottom: var(--padding-large);
-}
-
 </style>
