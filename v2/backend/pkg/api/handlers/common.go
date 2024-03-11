@@ -239,7 +239,9 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 
 	if limitStr := q.Get("limit"); limitStr != "" {
 		limit, err := strconv.ParseUint(limitStr, 10, 64)
-		joinErr(handlerErr, err.Error())
+		if err != nil {
+			joinErr(handlerErr, err.Error())
+		}
 		paging.limit = min(limit, maxQueryLimit)
 	}
 
