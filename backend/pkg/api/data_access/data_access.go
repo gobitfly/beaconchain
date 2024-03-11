@@ -773,12 +773,13 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		WithdrawalsAmount uint64 `db:"withdrawals_amount"`
 	}
 
-	wg.Go(func() error {
+	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryColumn, error) {
+		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
-		err := db.AlloyReader.Select(&rows, fmt.Sprintf(query, "validator_dashboard_data_rolling_daily"), dashboardId, groupId)
+		err := db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		totalAttestationRewards := int64(0)
@@ -787,23 +788,75 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
 
-			ret.DetailsDay.Proposals.StatusCount.Success += uint64(row.BlocksProposed)
-			ret.DetailsDay.Proposals.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
+			data.Proposals.StatusCount.Success += uint64(row.BlocksProposed)
+			data.Proposals.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
 
-			ret.DetailsDay.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
-			ret.DetailsDay.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
+			if row.BlocksScheduled > 0 {
+				if data.Proposals.Validators == nil {
+					data.Proposals.Validators = make([]uint64, 0, 10)
+				}
+				data.Proposals.Validators = append(data.Proposals.Validators, uint64(row.ValidatorIndex))
+			}
+
+			data.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
+			data.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
+
+			if row.SyncScheduled > 0 {
+				if data.SyncCommittee.Validators == nil {
+					data.SyncCommittee.Validators = make([]uint64, 0, 10)
+				}
+				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, uint64(row.ValidatorIndex))
+			}
 
 			if row.Slashed {
-				ret.DetailsDay.Slashed.StatusCount.Failed++
+				data.Slashed.StatusCount.Failed++
+				if data.Slashed.Validators == nil {
+					data.Slashed.Validators = make([]uint64, 0, 10)
+					data.Slashed.Validators = append(data.Slashed.Validators, uint64(row.ValidatorIndex))
+				}
 			} else {
-				ret.DetailsDay.Slashed.StatusCount.Success++
+				data.Slashed.StatusCount.Success++
 			}
 		}
 
-		ret.DetailsDay.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-		if ret.DetailsDay.AttestationEfficiency < 0 {
-			ret.DetailsDay.AttestationEfficiency = 0
+		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
+		if data.AttestationEfficiency < 0 {
+			data.AttestationEfficiency = 0
 		}
+
+		return &data, nil
+	}
+
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId, groupId)
+		if err != nil {
+			return err
+		}
+		ret.DetailsDay = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
+		if err != nil {
+			return err
+		}
+		ret.DetailsWeek = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
+		if err != nil {
+			return err
+		}
+		ret.DetailsMonth = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
+		if err != nil {
+			return err
+		}
+		ret.DetailsTotal = *data
 		return nil
 	})
 	err := wg.Wait()
