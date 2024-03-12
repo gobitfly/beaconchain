@@ -250,10 +250,9 @@ func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction 
 
 	// generate next cursor
 
-	offsets := make([]t.PostgresOffsetColumn, len(columns))
-	for i, c := range columns {
-		offsets[i].ColumnName = c
-		offsets[i].Value = reflect.ValueOf(data[li]).FieldByName(c).Int()
+	offsets := make(map[string]int64)
+	for _, c := range columns {
+		offsets[c] = reflect.ValueOf(data[li]).FieldByName(c).Int()
 	}
 
 	next_cursor, err := t.PostgresCursor{Direction: direction, Offsets: offsets}.ToString()
@@ -263,8 +262,8 @@ func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction 
 
 	// generate prev cursor
 
-	for i, c := range columns {
-		offsets[i].Value = reflect.ValueOf(data[0]).FieldByName(c).Int()
+	for _, c := range columns {
+		offsets[c] = reflect.ValueOf(data[0]).FieldByName(c).Int()
 	}
 
 	prev_cursor, err := t.PostgresCursor{Direction: direction.Invert(), Offsets: offsets}.ToString()

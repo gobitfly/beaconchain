@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"golang.org/x/exp/maps"
 )
 
 // everything that goes in this file is for the data access layer only
@@ -30,14 +31,9 @@ type DashboardInfo struct {
 	UserId uint64
 }
 
-type PostgresOffsetColumn struct {
-	ColumnName string `json:"n"`
-	Value      int64  `json:"v"`
-}
-
 type PostgresCursor struct {
-	Direction enums.SortOrder        `json:"d"`
-	Offsets   []PostgresOffsetColumn `json:"o"`
+	Direction enums.SortOrder  `json:"d"`
+	Offsets   map[string]int64 `json:"o"`
 }
 
 func (p PostgresCursor) ToString() (*string, error) {
@@ -49,7 +45,7 @@ func (p PostgresCursor) ToString() (*string, error) {
 	return &encoded_str, nil
 }
 
-func (PostgresCursor) FromString(str string) (*PostgresCursor, error) {
+func (PostgresCursor) FromString(str string, columns []string) (*PostgresCursor, error) {
 	bin, err := base64.RawURLEncoding.DecodeString(str)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode string using base64: %w", err)
@@ -59,6 +55,17 @@ func (PostgresCursor) FromString(str string) (*PostgresCursor, error) {
 	err = json.Unmarshal(bin, &p)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal decoded base64 string: %w", err)
+	}
+
+	// verify column names to be safe
+	if len(p.Offsets) != len(columns) {
+		return nil, fmt.Errorf("wrong count of columns decoded from cursor (wanted %+q but got %+q)", len(columns), len(p.Offsets))
+	}
+
+	for i, c := range maps.Keys(p.Offsets) {
+		if c != columns[i] {
+			return nil, fmt.Errorf("cursor has incorrect column at location %v (got %s want %s)", i, c, columns[i])
+		}
 	}
 
 	return &p, nil
