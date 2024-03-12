@@ -269,7 +269,6 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 					}
 					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
 					result.attestationAssignments[k] = valIndexU64
-
 				}
 			}
 		}
