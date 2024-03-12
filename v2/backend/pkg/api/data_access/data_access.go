@@ -192,10 +192,10 @@ func (d DataAccessService) CloseDataAccessService() {
 	}
 }
 
-func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (t.DashboardInfo, error) {
-	result := t.DashboardInfo{}
+func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
+	result := &t.DashboardInfo{}
 
-	err := d.ReaderDb.Get(&result, `
+	err := d.ReaderDb.Get(result, `
 		SELECT 
 			id, 
 			user_id
@@ -205,10 +205,10 @@ func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary)
 	return result, err
 }
 
-func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (t.DashboardInfo, error) {
-	result := t.DashboardInfo{}
+func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
+	result := &t.DashboardInfo{}
 
-	err := d.ReaderDb.Get(&result, `
+	err := d.ReaderDb.Get(result, `
 		SELECT 
 			uvd.id,
 			uvd.user_id
@@ -278,30 +278,30 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsDa
 	return d.dummy.GetUserDashboards(userId)
 }
 
-func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (t.VDBPostReturnData, error) {
-	result := t.VDBPostReturnData{}
+func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
+	result := &t.VDBPostReturnData{}
 
 	const nameCharLimit = 50
 	const defaultGrpName = "default"
 
 	if len(name) > nameCharLimit {
-		return t.VDBPostReturnData{}, fmt.Errorf("validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+		return nil, fmt.Errorf("validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
 	}
 
 	tx, err := d.WriterDb.Beginx()
 	if err != nil {
-		return t.VDBPostReturnData{}, fmt.Errorf("error starting db transactions: %w", err)
+		return nil, fmt.Errorf("error starting db transactions: %w", err)
 	}
 	defer tx.Rollback()
 
 	// Create validator dashboard for user
-	err = tx.Get(&result, `
+	err = tx.Get(result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
 		RETURNING id, user_id, name, network, created_at
 	`, userId, network, name)
 	if err != nil {
-		return t.VDBPostReturnData{}, err
+		return nil, err
 	}
 
 	// Create a default group for the new dashboard
@@ -310,12 +310,12 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 			VALUES ($1, $2)
 	`, result.Id, defaultGrpName)
 	if err != nil {
-		return t.VDBPostReturnData{}, err
+		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return t.VDBPostReturnData{}, errors.Wrap(err, "error committing tx")
+		return nil, errors.Wrap(err, "error committing tx")
 	}
 
 	return result, nil
@@ -377,16 +377,16 @@ func (d DataAccessService) GetValidatorDashboardOverviewByValidators(validators 
 	return d.dummy.GetValidatorDashboardOverviewByValidators(validators)
 }
 
-func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (t.VDBOverviewGroup, error) {
-	result := t.VDBOverviewGroup{}
+func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
+	result := &t.VDBOverviewGroup{}
 
 	nameCharLimit := 50
 	if len(name) > nameCharLimit {
-		return result, fmt.Errorf("validator dashboard group name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+		return nil, fmt.Errorf("validator dashboard group name too long, max %d characters, given %d characters", nameCharLimit, len(name))
 	}
 
 	// Create a new group that has the smallest unique id possible
-	err := d.WriterDb.Get(&result, `
+	err := d.WriterDb.Get(result, `
 		WITH NextAvailableId AS (
 		    SELECT COALESCE(MIN(uvdg1.id) + 1, 0) AS next_id
 		    FROM users_val_dashboards_groups uvdg1
@@ -553,7 +553,7 @@ func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBI
 	return err
 }
 
-func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
@@ -563,15 +563,43 @@ func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboard
 	return d.dummy.GetValidatorDashboardValidatorsByValidators(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboardPublicId(dashboardId, name, showGroupNames)
-}
-
-func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (t.VDBPostPublicIdData, error) {
+func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	const nameCharLimit = 50
 	if len(name) > nameCharLimit {
-		return t.VDBPostPublicIdData{}, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+	}
+
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+	err := d.WriterDb.Get(&dbReturn, `
+		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
+			VALUES ($1, $2, $3)
+		RETURNING public_id, name, shared_groups
+	`, dashboardId, name, showGroupNames)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &t.VDBPostPublicIdData{
+		PublicId: dbReturn.PublicId,
+		Name:     dbReturn.Name,
+		ShareSettings: struct {
+			GroupNames bool `json:"group_names"`
+		}{
+			GroupNames: dbReturn.SharedGroups,
+		},
+	}
+
+	return result, nil
+}
+
+func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+	const nameCharLimit = 50
+	if len(name) > nameCharLimit {
+		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
 	}
 
 	dbReturn := struct {
@@ -587,10 +615,10 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdP
 		RETURNING public_id, name, shared_groups
 	`, name, showGroupNames, publicDashboardId)
 	if err != nil {
-		return t.VDBPostPublicIdData{}, err
+		return nil, err
 	}
 
-	result := t.VDBPostPublicIdData{
+	result := &t.VDBPostPublicIdData{
 		PublicId: dbReturn.PublicId,
 		Name:     dbReturn.Name,
 		ShareSettings: struct {
