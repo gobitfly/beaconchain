@@ -202,7 +202,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
-	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
+	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
 	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
