@@ -51,6 +51,10 @@ const (
 	defaultSortOrder           = sortOrderAscending
 	ethereum                   = "ethereum"
 	gnosis                     = "gnosis"
+	allowValidators            = true
+	forbidValidators           = false
+	allowEmpty                 = true
+	forbidEmpty                = false
 )
 
 type Paging struct {
@@ -168,43 +172,104 @@ func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
 	return nil
 }
 
-func checkUint(handlerErr *error, id, paramName string) uint64 {
-	id64, err := strconv.ParseUint(id, 10, 64)
+func checkInt(handlerErr *error, param, paramName string) int64 {
+	num, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
-		joinErr(handlerErr, fmt.Sprintf("given value '"+id+"' for parameter '"+paramName+"' is not a positive integer"))
+		joinErr(handlerErr, fmt.Sprintf("given value '"+param+"' for parameter '"+paramName+"' is not an integer"))
 	}
-	return id64
+	return num
 }
 
-func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) interface{} {
+func checkUint(handlerErr *error, param, paramName string) uint64 {
+	num, err := strconv.ParseUint(param, 10, 64)
+	if err != nil {
+		joinErr(handlerErr, fmt.Sprintf("given value '"+param+"' for parameter '"+paramName+"' is not a positive integer"))
+	}
+	return num
+}
+
+// parseDashboardId is a helper function to validate the string dashboard id param.
+func parseDashboardId(id string) (interface{}, error) {
+	var err error
 	if reNumber.MatchString(id) {
 		// given id is a normal id
-		return types.VDBIdPrimary(checkUint(handlerErr, id, "dashboard_id"))
+		id := checkUint(&err, id, "dashboard_id")
+		return id, err
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
-		return types.VDBIdPublic(id)
-	}
-	if !acceptValidatorSet {
-		joinErr(handlerErr, ("given value '" + id + "' for parameter 'dashboard_id' is not a valid id"))
-		return nil
+		return types.VDBIdPublic(id), nil
 	}
 	// given id must be an encoded set of validators
 	decodedId, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil {
-		joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-		return nil
+		return nil, errors.New("invalid format for parameter 'dashboard_id'")
 	}
-	validators := checkValidatorList(handlerErr, string(decodedId))
+	validators := checkValidatorList(&err, string(decodedId))
 	if len(validators) > 20 {
-		joinErr(handlerErr, "too many validators encoded in 'dashboard_id'")
+		return nil, errors.New("too many validators in the list, maximum is 20")
 	}
-
-	return validators
+	return validators, nil
 }
 
-func checkGroupId(handlerErr *error, id string) uint64 {
-	return checkUint(handlerErr, id, "groupId")
+// getDashboardId is a helper function to convert the dashboard id param to a VDBId.
+// precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
+func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+	switch dashboardId := dashboardIdParam.(type) {
+	case types.VDBIdPrimary:
+		return &types.VDBId{Id: dashboardId}, nil
+	case types.VDBIdPublic:
+		dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		if err != nil {
+			return nil, err
+		}
+		return &types.VDBId{Id: dashboardInfo.Id}, nil
+	case []string:
+		validators, err := h.dai.GetValidatorsFromStrings(dashboardId)
+		if err != nil {
+			return nil, err
+		}
+		return &types.VDBId{Validators: validators}, nil
+	}
+	return nil, errors.New(errorMsgParsingId)
+}
+
+// handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
+// it should be used as the last validation step for all internal dashboard handlers.
+func (h HandlerService) handleDashboardId(w http.ResponseWriter, param string) (*types.VDBId, error) {
+	// validate dashboard id param
+	dashboardIdParam, err := parseDashboardId(param)
+	if err != nil {
+		return nil, err
+	}
+	// convert to VDBId
+	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	if err != nil {
+		return nil, err
+	}
+	return dashboardId, nil
+}
+
+func checkDashboardPrimaryId(handlerErr *error, param string) types.VDBIdPrimary {
+	return types.VDBIdPrimary(checkUint(handlerErr, param, "dashboard_id"))
+}
+
+// checkGroupId validates the given group id and returns it as an int64.
+// If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
+func checkGroupId(handlerErr *error, param string, allowEmpty bool) int64 {
+	if param == "" && allowEmpty {
+		return types.AllGroups
+	}
+	return checkInt(handlerErr, param, "group_id")
+}
+
+// checkExistingGroupId validates if the given group id is not empty and a positive integer.
+func checkExistingGroupId(handlerErr *error, param string) int64 {
+	id := checkGroupId(handlerErr, param, forbidEmpty)
+	if id < 0 {
+		joinErr(handlerErr, "given value '"+param+"' for parameter 'group_id' is not a valid group id")
+	}
+	return id
 }
 
 func checkValidatorDashboardPublicId(handlerErr *error, publicId string) string {
