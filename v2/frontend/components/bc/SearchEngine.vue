@@ -290,7 +290,7 @@ function searchAhead () : boolean {
       error = true
     }
   } else { // *** END OF STUFF TO REMOVE ***
-    fetch('/api/2/search', {
+    fetch('/api/v2/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input: inputted.value, searchable: searchableTypes }),
