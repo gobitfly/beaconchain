@@ -752,6 +752,12 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		AttestationIdealInclusionReward   int64  `db:"attestations_ideal_inclusion_reward"`
 		AttestationIdealReward            int64  `db:"attestations_ideal_reward"`
 
+		AttestationsScheduled     int64 `db:"attestations_scheduled"`
+		AttestationsExecuted      int64 `db:"attestations_executed"`
+		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
+		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
+		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
+
 		BlocksScheduled uint32          `db:"blocks_scheduled"`
 		BlocksProposed  uint32          `db:"blocks_proposed"`
 		BlocksClReward  uint64          `db:"blocks_cl_reward"`
@@ -791,6 +797,18 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
+
+			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
+			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+
+			data.AttestationsSource.StatusCount.Success += uint64(row.AttestationSourceExecuted)
+			data.AttestationsSource.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+
+			data.AttestationsTarget.StatusCount.Success += uint64(row.AttestationTargetExecuted)
+			data.AttestationsTarget.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+
+			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
+			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
 
 			data.Proposals.StatusCount.Success += uint64(row.BlocksProposed)
 			data.Proposals.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
@@ -850,30 +868,30 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		ret.DetailsDay = *data
 		return nil
 	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
-		if err != nil {
-			return err
-		}
-		ret.DetailsWeek = *data
-		return nil
-	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
-		if err != nil {
-			return err
-		}
-		ret.DetailsMonth = *data
-		return nil
-	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
-		if err != nil {
-			return err
-		}
-		ret.DetailsTotal = *data
-		return nil
-	})
+	// wg.Go(func() error {
+	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	ret.DetailsWeek = *data
+	// 	return nil
+	// })
+	// wg.Go(func() error {
+	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	ret.DetailsMonth = *data
+	// 	return nil
+	// })
+	// wg.Go(func() error {
+	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	ret.DetailsTotal = *data
+	// 	return nil
+	// })
 	err := wg.Wait()
 
 	if err != nil {
