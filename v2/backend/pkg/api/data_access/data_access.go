@@ -221,13 +221,18 @@ func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
 func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	validatorIdxs := pq.Int64Array{}
-	validatorPubkeys := pq.ByteaArray{}
+	// Create a map to remove potential duplicates
+	validatorMap := make(map[string]bool)
+	for _, v := range validators {
+		v = strings.TrimPrefix(v, "0x")
+		validatorMap[v] = true
+	}
 
 	// Split the validators into pubkey and index slices
-	for _, validator := range validators {
+	validatorIdxs := pq.Int64Array{}
+	validatorPubkeys := pq.ByteaArray{}
+	for validator := range validatorMap {
 		if utils.IsHash(validator) {
-			validator = strings.TrimPrefix(validator, "0x")
 			validatorPubkey, err := hex.DecodeString(validator)
 			if err != nil {
 				return nil, err
@@ -240,7 +245,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 		}
 	}
 
-	// Query the database for the validators
+	// Query the database for the validators, those that are not found are ignored
 	validatorsFromIdxPubkey := []t.VDBValidator{}
 	err := d.ReaderDb.Select(&validatorsFromIdxPubkey, `
 		SELECT 
@@ -249,7 +254,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 		FROM validators
 		WHERE validator_index = ANY($1)
 		GROUP BY validator_index
-		UNION
+		UNION ALL
 		SELECT 
 			validator_index,
 			validator_index_version
@@ -260,13 +265,18 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 		return nil, err
 	}
 
-	// Create a map to remove potential duplicates
-	validatorMap := make(map[t.VDBValidator]bool)
-	for _, v := range validatorsFromIdxPubkey {
-		validatorMap[v] = true
+	// Return an error if not every validator was found
+	if len(validatorsFromIdxPubkey) != len(validatorMap) {
+		return nil, fmt.Errorf("not all validators were found")
 	}
-	result := make([]t.VDBValidator, 0, len(validatorMap))
-	for validator := range validatorMap {
+
+	// Create a map to remove potential duplicates
+	validatorResultMap := make(map[t.VDBValidator]bool)
+	for _, v := range validatorsFromIdxPubkey {
+		validatorResultMap[v] = true
+	}
+	result := make([]t.VDBValidator, 0, len(validatorResultMap))
+	for validator := range validatorResultMap {
 		result = append(result, validator)
 	}
 
@@ -410,11 +420,19 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	defer tx.Rollback()
 
 	// Delete the group
-	_, err = tx.Exec(`
+	result, err := tx.Exec(`
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
 	if err != nil {
 		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("error group %v does not exist", groupId)
 	}
 
 	// Delete all validators for the group
@@ -433,18 +451,35 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 }
 
 func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	if len(validators) == 0 {
+		// No validators to add
+		return nil, nil
+	}
+
 	result := []t.VDBPostValidatorsData{}
 
-	// Create a map to remove potential duplicates
-	validatorMap := make(map[t.VDBValidator]bool)
-	for _, v := range validators {
-		validatorMap[v] = true
+	// Check that the group exists in the dashboard
+	groupExists := false
+	err := d.ReaderDb.Get(&groupExists, `
+		SELECT EXISTS(
+			SELECT
+				dashboard_id,
+				id
+			FROM users_val_dashboards_groups
+			WHERE dashboard_id = $1 AND id = $2
+		)
+	`, dashboardId, groupId)
+	if err != nil {
+		return nil, err
+	}
+	if !groupExists {
+		return nil, fmt.Errorf("error group %v does not exist", groupId)
 	}
 
 	pubkeys := []struct {
 		ValidatorIndex        uint64 `db:"validator_index"`
 		ValidatorIndexVersion uint64 `db:"validator_index_version"`
-		Pubkey                string `db:"pubkey"`
+		Pubkey                []byte `db:"pubkey"`
 	}{}
 
 	addedValidators := []struct {
@@ -469,11 +504,11 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 			VALUES 
 	`
 
-	flattenedValidators := make([]interface{}, 0, len(validatorMap)*2)
-	for v := range validatorMap {
+	flattenedValidators := make([]interface{}, 0, len(validators)*2)
+	for idx, v := range validators {
 		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
-		pubkeysQuery += fmt.Sprintf("($%d, $%d), ", len(flattenedValidators)-1, len(flattenedValidators))
-		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d, $%d), ", len(flattenedValidators)+1, len(flattenedValidators)+2)
+		pubkeysQuery += fmt.Sprintf("($%d, $%d), ", idx*2+1, idx*2+2)
+		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d, $%d), ", idx*2+3, idx*2+4)
 	}
 	pubkeysQuery = pubkeysQuery[:len(pubkeysQuery)-2] + ")"             // remove trailing comma
 	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
@@ -490,15 +525,12 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 	`
 
 	// Find all the pubkeys
-	err := d.ReaderDb.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
+	err = d.ReaderDb.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
 	if err != nil {
 		return []t.VDBPostValidatorsData{}, err
 	}
 
-	if len(pubkeys) != len(validatorMap) {
-		return []t.VDBPostValidatorsData{}, fmt.Errorf("not all validators found")
-	}
-
+	// Add all the validators to the dashboard and group
 	addValidatorsArgsIntf := append([]interface{}{dashboardId, groupId}, flattenedValidators...)
 	err = d.WriterDb.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
@@ -509,7 +541,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 	for _, pubKeyInfo := range pubkeys {
 		pubkeysMap[t.VDBValidator{
 			Index:   pubKeyInfo.ValidatorIndex,
-			Version: pubKeyInfo.ValidatorIndexVersion}] = pubKeyInfo.Pubkey
+			Version: pubKeyInfo.ValidatorIndexVersion}] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
 	}
 
 	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
@@ -519,7 +551,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 			Version: addedValidatorInfo.ValidatorIndexVersion}] = addedValidatorInfo.GroupId
 	}
 
-	for validator := range validatorMap {
+	for _, validator := range validators {
 		result = append(result, t.VDBPostValidatorsData{
 			PublicKey: pubkeysMap[validator],
 			GroupId:   addedValidatorsMap[validator],
@@ -530,26 +562,32 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 }
 
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
-	// Create a map to remove potential duplicates
-	validatorMap := make(map[t.VDBValidator]bool)
-	for _, v := range validators {
-		validatorMap[v] = true
+	if len(validators) == 0 {
+		// Remove all validators for the dashboard
+		_, err := d.WriterDb.Exec(`
+			DELETE FROM users_val_dashboards_validators 
+			WHERE dashboard_id = $1
+		`, dashboardId)
+		return err
 	}
 
+	//Create the query to delete validators
 	deleteValidatorsQuery := `
 		DELETE FROM users_val_dashboards_validators
 		WHERE dashboard_id = $1 AND (validator_index, validator_index_version) IN (
 	`
 
-	flattenedValidators := make([]interface{}, 0, len(validatorMap)*2)
-	for v := range validatorMap {
+	flattenedValidators := make([]interface{}, 0, len(validators)*2)
+	for idx, v := range validators {
 		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
-		deleteValidatorsQuery += fmt.Sprintf("($%d, $%d), ", len(flattenedValidators), len(flattenedValidators)+1)
+		deleteValidatorsQuery += fmt.Sprintf("($%d, $%d), ", idx*2+2, idx*2+3)
 	}
 	deleteValidatorsQuery = deleteValidatorsQuery[:len(deleteValidatorsQuery)-2] + ")" // remove trailing comma
 
+	// Delete the validators
 	deleteValidatorsArgsIntf := append([]interface{}{dashboardId}, flattenedValidators...)
 	_, err := d.WriterDb.Exec(deleteValidatorsQuery, deleteValidatorsArgsIntf...)
+
 	return err
 }
 
@@ -583,15 +621,10 @@ func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdP
 		return nil, err
 	}
 
-	result := &t.VDBPostPublicIdData{
-		PublicId: dbReturn.PublicId,
-		Name:     dbReturn.Name,
-		ShareSettings: struct {
-			GroupNames bool `json:"group_names"`
-		}{
-			GroupNames: dbReturn.SharedGroups,
-		},
-	}
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
 
 	return result, nil
 }
@@ -618,15 +651,10 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdP
 		return nil, err
 	}
 
-	result := &t.VDBPostPublicIdData{
-		PublicId: dbReturn.PublicId,
-		Name:     dbReturn.Name,
-		ShareSettings: struct {
-			GroupNames bool `json:"group_names"`
-		}{
-			GroupNames: dbReturn.SharedGroups,
-		},
-	}
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
 
 	return result, nil
 }
