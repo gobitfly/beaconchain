@@ -831,21 +831,44 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 }
 
 func GetLatestDashboardEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
-	if err != nil {
-		return 0, err
-	}
-	return epoch, nil
+	var lastEpoch uint64
+	err := db.AlloyReader.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
+	return lastEpoch, err
 }
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
 	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
-	if err != nil {
-		return 0, err
-	}
-	return epoch, nil
+	return epoch, err
+}
+
+func GetLatestHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	return epoch, err
+}
+
+func Get24hOldHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1 - 1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly", utils.EpochsPerDay())
+	return epoch, err
+}
+
+func GetMinOldHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
+	return epoch, err
+}
+
+type LastHour struct {
+	EpochStart uint64 `db:"epoch_start"`
+	EpochEnd   uint64 `db:"epoch_end"`
+}
+
+func GetLastExportedHour() (*LastHour, error) {
+	var epoch LastHour
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	return &epoch, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
@@ -867,8 +890,8 @@ func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, e
 		return nil, err
 	}
 
-	if minEpoch == 0 {
-		minEpoch = targetEpoch - retainEpochDuration/2
+	if minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration {
+		minEpoch = targetEpoch - retainEpochDuration
 	}
 
 	var epochs []uint64
