@@ -18,6 +18,10 @@
     "average": "Average",
     "index": "Index"
   },
+  "navigation": {
+    "back": "Back",
+    "continue": "Continue"
+  },
   "table": {
     "first": "First",
     "last": "Last",
@@ -104,6 +108,18 @@
         "all": "All groups",
         "default": "Default",
         "placeholder": "Select group"
+      }
+    },
+    "creation": {
+      "title": "Add a new dashboard",
+      "type": {
+        "subtitle": "What would you like to monitor?",
+        "accounts": "Accounts",
+        "validators": "Validators",
+        "placeholder": "Name"
+      },
+      "network": {
+        "subtitle": "What network are your validators on?"
       }
     },
     "validator": {

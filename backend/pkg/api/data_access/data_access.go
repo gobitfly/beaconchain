@@ -226,7 +226,7 @@ func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
 func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorsFromStrings(validators)
 }
 

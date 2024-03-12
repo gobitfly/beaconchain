@@ -19,15 +19,17 @@
   flex-direction: column;
   left: 0;
   right: 0;
-  margin-top: 4px;
-  margin-bottom: 13px;
-  margin-left: 10px;
   @media (min-width: 600px) { // large screen
     justify-content: center;
   }
   @media (max-width: 600px) { // mobile
     justify-content: flex-start;
     width: 100%;
+  }
+  >div{
+    padding-top: 4px;
+    padding-bottom: 13px;
+    padding-left: 10px;
   }
 }
 
