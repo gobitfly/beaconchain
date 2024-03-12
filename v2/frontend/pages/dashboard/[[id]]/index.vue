@@ -47,14 +47,7 @@ onMounted(() => {
     <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
-        <div class="header-container">
-          <div class="h1 dashboard-title">
-            {{ $t('dashboard.title') }}
-          </div>
-          <Button class="p-button-icon-only" @click="showDashboardCreation('modal')">
-            <IconPlus alt="Plus icon" width="100%" height="100%" />
-          </Button>
-        </div>
+        <DashboardHeader @show-creation="showDashboardCreation('modal')" />
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
       <div>
@@ -103,15 +96,6 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-
-.header-container {
-  display: flex;
-  justify-content: space-between;
-
-  .dashboard-title {
-    margin-bottom: var(--padding-large);
-  }
-}
 
 .panel-controller {
   display: flex;
