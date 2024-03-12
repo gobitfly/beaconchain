@@ -88,8 +88,6 @@ github.com/aws/smithy-go v1.20.0 h1:6+kZsCXZwKxZS9RfISnPc4EXlHoyAkm2hPuM8X2BrrQ=
 github.com/aws/smithy-go v1.20.0/go.mod h1:uo5RKksAl4PzhqaAbjd4rLgFoq5koTsQKYuGe7dklGc=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
 github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
-github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df h1:GSoSVRLoBaFpOOds6QyY1L8AX7uoY+Ln3BHc22W40X0=
-github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df/go.mod h1:hiVxq5OP2bUGBRNS3Z/bt/reCLFNbdcST6gISi1fiOM=
 github.com/bazelbuild/rules_go v0.23.2 h1:Wxu7JjqnF78cKZbsBsARLSXx/jlGaSLCnUV3mTlyHvM=
 github.com/bazelbuild/rules_go v0.23.2/go.mod h1:MC23Dc/wkXEyk3Wpq6lCqz0ZAYOZDw2DR5y3N1q2i7M=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
@@ -101,6 +99,7 @@ github.com/bits-and-blooms/bitset v1.10.0 h1:ePXTeiPEazB5+opbv5fr8umg2R/1NlzgDsy
 github.com/bits-and-blooms/bitset v1.10.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
+github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4YnC6+E63dPcxHo2sUxDIu8g3QgEJdRY=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/btcsuite/btcd v0.23.4 h1:IzV6qqkfwbItOS/sg/aDfPDsjPP8twrCOE2R93hxMlQ=
@@ -283,8 +282,8 @@ github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg78
 github.com/go-yaml/yaml v2.1.0+incompatible/go.mod h1:w2MrLa16VYP0jy6N7M5kHaCkaLENm+P+Tv+MfurjSw0=
 github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7 h1:qAEBlj4j25sJjsj5CQraL94rY9jyPIjCZ+hlu84n5l0=
 github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7/go.mod h1:JrFv2uq5i+p6yEoRSHralEV139HkPV0wBjZZHWb4he8=
-github.com/gobitfly/eth.store v0.0.0-20240118141903-7564127582b6 h1:kh4UQiyiWIM63uwGEovVZwzrMxq7C9DKATC9aatzzX8=
-github.com/gobitfly/eth.store v0.0.0-20240118141903-7564127582b6/go.mod h1:1PLeTVRw8Rpmi0o/kRuoJEXOXecZRqSjoAxEMbj+usA=
+github.com/gobitfly/eth.store v0.0.0-20240312111708-b43f13990280 h1:zHl4a19bwoa3ccAS3fdUEBC0TkEj5r0spPiVJAzURRc=
+github.com/gobitfly/eth.store v0.0.0-20240312111708-b43f13990280/go.mod h1:1PLeTVRw8Rpmi0o/kRuoJEXOXecZRqSjoAxEMbj+usA=
 github.com/gobitfly/prysm/v3 v3.0.0-20230216184552-2f3f1e8190d5 h1:8kVoXCPhDwSjaGlKzBVQeE8n49k6jZumBGiP26FHNy0=
 github.com/gobitfly/prysm/v3 v3.0.0-20230216184552-2f3f1e8190d5/go.mod h1:+v+em7rOykPs93APGWCX/95/3uxU8bSVmbZ4+YNJzdA=
 github.com/gobitfly/rocketpool-go v0.0.0-20240105082836-5bb7c83a2d08 h1:I13XIFeS55BwDegvWFJm3Vc14a1pN7m6Q0L+grbKp50=
@@ -807,8 +806,6 @@ github.com/spaolacci/murmur3 v1.1.0 h1:7c1g84S4BPRrfL5Xrdp6fOJ206sU9y293DDHaoy0b
 github.com/spaolacci/murmur3 v1.1.0/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/status-im/keycard-go v0.2.0 h1:QDLFswOQu1r5jsycloeQh3bVU8n/NatHHaZobtDnDzA=
 github.com/status-im/keycard-go v0.2.0/go.mod h1:wlp8ZLbsmrF6g6WjugPAx+IzoLrkdf9+mHxBEeo3Hbg=
-github.com/streamonkey/size v0.0.1 h1:EekmLGamtdYhhnILsrtg8vFn0riRcTmF4A62xq6HThU=
-github.com/streamonkey/size v0.0.1/go.mod h1:0pz0OLVpcT12gGr0krZz5wga3IgAheGuRu9qOyUR/HE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
