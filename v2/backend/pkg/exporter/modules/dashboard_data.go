@@ -279,7 +279,6 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 					}
 				}
 			}
-
 		}
 		d.log.Infof("attestation assignment lowest slot: %d, highest slot: %d (len: %v)", lowestSlot, highestSlot, len(result.attestationAssignments))
 		return nil
@@ -468,7 +467,7 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 					if !found { // This should never happen!
 						//validator_index = 0
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
-						d.log.Infof("not found key: %v (len %V)", utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i), len(data.attestationAssignments))
+						d.log.Infof("not found key: %v (len %v)", utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i), len(data.attestationAssignments))
 						continue
 					}
 					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
