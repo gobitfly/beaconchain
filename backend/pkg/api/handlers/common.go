@@ -51,8 +51,6 @@ const (
 	defaultSortOrder           = sortOrderAscending
 	ethereum                   = "ethereum"
 	gnosis                     = "gnosis"
-	allowValidators            = true
-	forbidValidators           = false
 	allowEmpty                 = true
 	forbidEmpty                = false
 )
