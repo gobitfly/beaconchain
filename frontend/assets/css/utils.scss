@@ -7,3 +7,19 @@
 .truncate-text{
   @include truncate-text;
 }
+
+.pointer { 
+  cursor: pointer;
+}
+
+.dots-before {
+  &:before{
+    content: '\2026'
+  }
+}
+
+.dots-after {
+  &:after{
+    content: '\2026'
+  }
+}
