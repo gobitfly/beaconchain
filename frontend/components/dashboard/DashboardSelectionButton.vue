@@ -16,7 +16,7 @@ const props = defineProps<Props>()
   <div v-if="props.type=='notifications'">
     {{ $t('dashboard.notifications') }}
   </div>
-  <div v-else>
+  <div v-else-if="dashboards">
     <Button v-for="dashboard in dashboards" :key="dashboard.id" class="p-button-text" :label="dashboard.name" />
   </div>
 </template>
