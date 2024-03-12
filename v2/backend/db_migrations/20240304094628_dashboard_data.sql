@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     withdrawals_count smallint,
     withdrawals_amount BIGINT,
     inclusion_delay_sum smallint,
-    sync_chance decimal(8, 7), -- slots_per_epochs / sum(active_validators)
-    block_chance decimal(8, 7), -- size_of_sync / number_of_active_validators * slots_per_sync_period
+    sync_chance decimal(8, 7), 
+    block_chance decimal(8, 7), 
     attestations_scheduled smallint,
     attestations_executed smallint,
     attestation_head_executed smallint,
