@@ -545,7 +545,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 			COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
 			COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
 			from users_val_dashboards_validators 
-		left join %[1]s on %[1]s.validatorindex = users_val_dashboards_validators.validator_index
+		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where dashboard_id = $1
 		group by 1
 	) as a;`
@@ -705,7 +705,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 	log.Infof("GetValidatorDashboardGroupSummary called for dashboard %d with group id %v", dashboardId, groupId)
 	query := `select
-			validator_index,
+			users_val_dashboards_validators.validator_index,
 			attestations_source_reward,
 			attestations_target_reward,
 			attestations_head_reward,
@@ -733,7 +733,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			withdrawals_count,
 			withdrawals_amount
 			from users_val_dashboards_validators
-		left join %[1]s on %[1]s.validatorindex = users_val_dashboards_validators.validator_index
+		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where dashboard_id = $1 and group_id = $2
 	`
 
@@ -763,14 +763,14 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		Slashed bool `db:"slashed"`
 
-		BalanceStart uint64 `db:"balance_start"`
-		BalanceEnd   uint64 `db:"balance_end"`
+		BalanceStart int64 `db:"balance_start"`
+		BalanceEnd   int64 `db:"balance_end"`
 
 		DepositsCount  uint32 `db:"deposits_count"`
-		DepositsAmount uint64 `db:"deposits_amount"`
+		DepositsAmount int64  `db:"deposits_amount"`
 
 		WithdrawalsCount  uint32 `db:"withdrawals_count"`
-		WithdrawalsAmount uint64 `db:"withdrawals_amount"`
+		WithdrawalsAmount int64  `db:"withdrawals_amount"`
 	}
 
 	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryColumn, error) {
@@ -784,6 +784,10 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		totalAttestationRewards := int64(0)
 		totalIdealAttestationRewards := int64(0)
+		totalStartBalance := int64(0)
+		totalEndBalance := int64(0)
+		totalDeposits := int64(0)
+		totalWithdrawals := int64(0)
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
@@ -817,7 +821,18 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			} else {
 				data.Slashed.StatusCount.Success++
 			}
+
+			totalStartBalance += row.BalanceStart
+			totalEndBalance += row.BalanceEnd
+			totalDeposits += row.DepositsAmount
+			totalWithdrawals += row.WithdrawalsAmount
 		}
+
+		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
+		apr := float64(reward) / 32e9 * 100
+
+		data.Apr.Cl = apr
+		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
 		if data.AttestationEfficiency < 0 {
