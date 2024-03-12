@@ -24,7 +24,7 @@ func newEpochToHourAggregator(d *dashboardData) *epochToHourAggregator {
 	}
 }
 
-// Assumes to gaps in epochs
+// Assumes no gaps in epochs
 func (d *epochToHourAggregator) aggregate1h() {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -117,7 +117,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 		return err
 	}
 
-	d.log.Infof("aggregating 1h, startEpoch :%d endEpoch: %d", epochStart, epochEnd)
+	d.log.Infof("aggregating 1h, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
 
 	_, err = tx.Exec(`
 		WITH
