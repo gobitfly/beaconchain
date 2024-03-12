@@ -218,6 +218,10 @@ func (m ModuleLog) Warn(err error, errorMsg interface{}, callerSkip int, additio
 	log.Warn(err, errorMsg, callerSkip, additionalInfos...)
 }
 
+func (m ModuleLog) Warnf(format string, args ...interface{}) {
+	log.WarnWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
 func (m ModuleLog) Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
 	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
 	log.Fatal(err, errorMsg, callerSkip, additionalInfos...)
