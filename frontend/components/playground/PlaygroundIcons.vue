@@ -40,8 +40,9 @@
   margin: 10px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  gap: 10px;
+  overflow: auto;
+  gap: var(--padding);
   height: 100px;
+  width: 200px;
 }
 </style>

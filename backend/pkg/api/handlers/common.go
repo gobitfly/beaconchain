@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,19 +17,17 @@ import (
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
-	b64 "encoding/base64"
-
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessInterface
+	dai dataaccess.DataAccessor
 }
 
-func NewHandlerService(dataAccessInterface dataaccess.DataAccessInterface) HandlerService {
-	return HandlerService{dai: dataAccessInterface}
+func NewHandlerService(DataAccessor dataaccess.DataAccessor) HandlerService {
+	return HandlerService{dai: DataAccessor}
 }
 
 // --------------------------------------
@@ -39,7 +38,7 @@ var (
 	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPubkey = regexp.MustCompile(`^[0-9a-fA-F]{96}$`)
+	reValidatorPubkey = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reCursor          = regexp.MustCompile(`^[0-9a-fA-F]*$`)
 )
 
@@ -89,12 +88,14 @@ func checkName(handlerErr *error, name string, minLength int) string {
 
 func checkMultipleRegex(handlerErr *error, regexes []*regexp.Regexp, params []string, paramName string) []string {
 	results := make([]string, len(params))
-	for i, param := range params {
+OUTER:
+	for _, param := range params {
 		for _, regex := range regexes {
-			checkRegex(handlerErr, regex, param, paramName)
+			if regex.MatchString(param) {
+				continue OUTER
+			}
 		}
-		// might want to change this later
-		results[i] = params[i]
+		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter '%s' has incorrect format", param, paramName))
 	}
 	return results
 }
@@ -190,36 +191,17 @@ func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) int
 		return nil
 	}
 	// given id must be an encoded set of validators
-	decodedId, err := b64.StdEncoding.DecodeString(id)
+	decodedId, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil {
 		joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
 		return nil
 	}
-	validatorParams := strings.Split(string(decodedId), ",")
-	if len(validatorParams) > 20 {
+	validators := checkValidatorList(handlerErr, string(decodedId))
+	if len(validators) > 20 {
 		joinErr(handlerErr, "too many validators encoded in 'dashboard_id'")
 	}
-	validators := make([]types.VDBValidator, 0, len(validatorParams))
-	for _, v := range validatorParams {
-		splitParam := strings.Split(v, ":")
-		if len(splitParam) != 2 {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		index, err := strconv.ParseUint(splitParam[0], 10, 64)
-		if err != nil {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		version, err := strconv.ParseUint(splitParam[1], 10, 64)
-		if err != nil {
-			joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
-			return nil
-		}
-		validators = append(validators, types.VDBValidator{Index: index, Version: version})
-	}
 
-	return types.VDBIdValidatorSet(validators)
+	return validators
 }
 
 func checkGroupId(handlerErr *error, id string) uint64 {
@@ -273,6 +255,10 @@ func parseSortOrder(order string) (bool, error) {
 }
 
 func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.Sort[T] {
+	if sort == "" {
+		var c T
+		return []types.Sort[T]{{Column: c, Desc: false}}
+	}
 	sortQueries := strings.Split(sort, ",")
 	sorts := make([]types.Sort[T], 0, len(sortQueries))
 	for _, v := range sortQueries {
@@ -387,6 +373,11 @@ func returnUnauthorized(w http.ResponseWriter, err error) {
 }
 
 //nolint:unused
+func returnForbidden(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusForbidden, err)
+}
+
+//nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
@@ -398,4 +389,10 @@ func returnConflict(w http.ResponseWriter, err error) {
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusInternalServerError, err)
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	// TODO @recy21 define error types in data access package
+	// TODO @LuccaBitfly handle specific data access errors
+	returnInternalServerError(w, err)
 }

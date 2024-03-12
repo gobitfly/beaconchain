@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { BcToggleMultiBar, IconSlotBlockProposal } from '#components'
+import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -23,6 +23,12 @@ const selected = ref(true)
 
 const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
+
+const selectedType = ref<string>('Validators')
+const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
+
+const dropodownSelection = ref<string | undefined>()
+const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
 
 </script>
 
@@ -46,6 +52,7 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
       <br>
       <Button label="Close" @click="slotModalVisibility = false" />
     </div>
+
     <template #footer>
       Utilizing the footer slot for custom content
     </template>
@@ -65,12 +72,17 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
             Dashboard Link
           </NuxtLink>
         </Button>
-        <Button :disabled="true">
+        <Button disabled>
           Disabled
         </Button>
         <Button class="p-button-icon-only">
           <IconPlus alt="Plus icon" width="100%" height="100%" />
         </Button>
+      </div>
+    </TabPanel>
+    <TabPanel header="Scroll box">
+      <div class="scroll-box">
+        <div>Scroll me</div>
       </div>
     </TabPanel>
     <TabPanel header="Input">
@@ -79,7 +91,14 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
         <InputText placeholder="Disabled Input" disabled />
       </div>
     </TabPanel>
+    <TabPanel header="Checkbox">
+      <div class="element_container">
+        default checkbox: <Checkbox v-model="selected" :binary="true" />
+        disabled: <Checkbox disabled />
+      </div>
+    </TabPanel>
     <TabPanel header="Toggle">
+      <h1>Multi Toggle</h1>
       <div class="element_container">
         <div>
           isTable: {{ isTable }}
@@ -92,6 +111,7 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
             <template #trueIcon>
               <IconSlotAttestation />
             </template>
+
             <template #falseIcon>
               <IconSlotBlockProposal />
             </template>
@@ -100,19 +120,48 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
 
         <div>
           Selected: {{ selected }}
-          <BcToggleButton v-model="selected" :icon="faTable" />
+          <BcToggleMultiBarButton v-model="selected" :icon="faTable" />
         </div>
         <div>
           <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
             <template #attestation>
               <IconSlotAttestation />
             </template>
+
             <template #sync>
               <IconSlotSync />
             </template>
           </BcToggleMultiBar>
           Selected: {{ selectedList.join(', ') }}
         </div>
+      </div>
+      <h1>Single Toggle</h1>
+      <div class="element_container">
+        selectedType: {{ selectedType }}
+        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" :allow-deselect="true" />
+      </div>
+    </TabPanel>
+    <TabPanel header="Dropdown">
+      <div class="element_container" style="background-color: darkred; padding: 5px;">
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          placeholder="for rock wtf this is a long placeholder"
+          panel-style="max-width: 100px"
+          style="max-width: 100px;"
+        />
+        <BcDropdown
+          v-model="dropodownSelection"
+          :options="dropdownList"
+          option-value="value"
+          option-label="label"
+          variant="table"
+          placeholder="and roll"
+          style="width: 200px;"
+        />
+        Selected: {{ dropodownSelection }}
       </div>
     </TabPanel>
     <TabPanel header="Spinner">
@@ -140,11 +189,27 @@ const selectedList = ref<string[]>(['attestation', 'proposal'])
   margin: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--padding);
 }
 
 .box {
   width: 200px;
   height: 200px;
   background-color: antiquewhite;
-}</style>
+}
+
+.scroll-box{
+  width: 100px;
+  height: 100px;
+  overflow: auto;
+  div{
+    background-color: grey;
+    width: 200px;
+    height: 200px;
+  }
+}
+
+.single_bar_container {
+  width: 600px
+}
+</style>

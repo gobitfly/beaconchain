@@ -1,9 +1,11 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
-// import { defu } from 'defu'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  USER_DASHBOARDS = '/user/dashboards',
+  DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
+  DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -25,6 +27,7 @@ type MappingData = {
   noAuth?: boolean,
   mock?: boolean,
   legacy?: boolean
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' // 'GET' will be used as default
 }
 
 function addQueryParams (path: string, query?: PathValues) {
@@ -41,25 +44,39 @@ const mapping: Record<string, MappingData> = {
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true
   },
+  [API_PATH.USER_DASHBOARDS]: {
+    path: '/users/me/dashboards',
+    mock: false
+  },
+  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
+    path: '/account-dashboards',
+    mock: true,
+    method: 'POST'
+  },
+  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
+    path: '/validator-dashboards',
+    mock: true,
+    method: 'POST'
+  },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboardKey}/summary?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/summary-chart?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
     path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
@@ -73,11 +90,13 @@ const mapping: Record<string, MappingData> = {
   },
   [API_PATH.LOGIN]: {
     path: '/login',
+    method: 'POST',
     noAuth: true,
     mock: true
   },
   [API_PATH.REFRESH_TOKEN]: {
     path: '/refreshToken',
+    method: 'POST',
     noAuth: true,
     mock: true
   }
@@ -102,14 +121,15 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
     baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
   }
 
+  const method = map.method || 'GET'
   if (pathName === API_PATH.LOGIN) {
-    const res = await $fetch<LoginResponse>(path, { ...options, baseURL })
+    const res = await $fetch<LoginResponse>(path, { method, ...options, baseURL })
     refreshToken.value = res.refresh_token
     accessToken.value = res.access_token
     return res as T
   } else if (!map.noAuth) {
     if (!accessToken.value && refreshToken.value) {
-      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { method: 'POST', body: { refresh_token: refreshToken.value } })
+      const res = await useCustomFetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { body: { refresh_token: refreshToken.value } })
       accessToken.value = res.access_token
     }
 
@@ -121,5 +141,6 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
       options.headers.append('X-User-Id', xUserId)
     }
   }
-  return await $fetch<T>(path, { ...options, baseURL })
+
+  return await $fetch<T>(path, { method, ...options, baseURL })
 }
