@@ -119,6 +119,14 @@ const checkScrollListener = (add: boolean) => {
   }
 }
 
+watch(() => [props.title, props.text], () => {
+  if (isOpen.value) {
+    requestAnimationFrame(() => {
+      setPosition()
+    })
+  }
+})
+
 onMounted(() => {
   document.addEventListener('click', doHide)
   document.addEventListener('scroll', doHide)
