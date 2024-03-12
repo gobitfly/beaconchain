@@ -498,12 +498,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]
 	return slotVizEpochs, nil
 }
 
-func (d DataAccessService) GetValidatorDashboardSlotVizByValidators(dashboardId t.VDBIdValidatorSet) ([]t.SlotVizEpoch, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardSlotVizByValidators(dashboardId)
-}
-
-func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrimary, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	// TODO: implement sorting, filtering & paging
 	ret := make(map[uint64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
@@ -511,7 +506,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardSummary called for dashboard %d", dashboardId)
+	log.Infof("GetValidatorDashboardSummary called for dashboard %d", dashboardId.Id)
 	query := `select group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
 		select 
 			group_id,
@@ -537,7 +532,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 
 		var queryResult []validatorsPerGroup
 
-		err := db.AlloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId)
+		err := db.AlloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 		}
@@ -562,7 +557,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 
 	wg.Go(func() error {
 		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_daily"), dashboardId)
+		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_daily"), dashboardId.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for last 24h: %v", err)
 		}
@@ -584,7 +579,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 	})
 	wg.Go(func() error {
 		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_weekly"), dashboardId)
+		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_weekly"), dashboardId.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for last 24h: %v", err)
 		}
@@ -605,7 +600,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 	})
 	wg.Go(func() error {
 		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_monthly"), dashboardId)
+		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_monthly"), dashboardId.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for last 24h: %v", err)
 		}
@@ -626,7 +621,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 	})
 	wg.Go(func() error {
 		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), dashboardId)
+		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), dashboardId.Id)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for last 24h: %v", err)
 		}
@@ -668,12 +663,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBIdPrima
 	return retArr, paging, nil
 }
 
-func (d DataAccessService) GetValidatorDashboardSummaryByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardSummaryByValidators(dashboardId, cursor, sort, search, limit)
-}
-
-func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryData, error) {
+func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
 	ret := t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
@@ -758,7 +748,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		WithdrawalsAmount int64  `db:"withdrawals_amount"`
 	}
 
-	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId uint64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		err := db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
@@ -837,7 +827,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId, groupId)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId)
 		if err != nil {
 			return err
 		}
