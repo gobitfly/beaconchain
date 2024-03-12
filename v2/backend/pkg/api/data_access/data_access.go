@@ -366,11 +366,6 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	return d.dummy.GetValidatorDashboardOverview(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardOverviewByValidators(validators t.VDBIdValidatorSet) (*t.VDBOverviewData, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardOverviewByValidators(validators)
-}
-
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
 	result := &t.VDBOverviewGroup{}
 
@@ -434,7 +429,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	return nil
 }
 
-func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil
@@ -580,11 +575,6 @@ func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, 
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardValidatorsByValidators(dashboardId t.VDBIdValidatorSet, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardValidatorsByValidators(dashboardId, cursor, sort, search, limit)
-}
-
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	const nameCharLimit = 50
 	if len(name) > nameCharLimit {
@@ -613,7 +603,7 @@ func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdP
 	return result, nil
 }
 
-func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	const nameCharLimit = 50
 	if len(name) > nameCharLimit {
 		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
@@ -643,7 +633,7 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(dashboardId t.VDBIdP
 	return result, nil
 }
 
-func (d DataAccessService) RemoveValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, publicDashboardId string) error {
+func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
 	_, err := d.WriterDb.Exec(`
 		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
 	`, publicDashboardId)
