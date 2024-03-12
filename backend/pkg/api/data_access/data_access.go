@@ -718,6 +718,11 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			attestations_ideal_inactivity_reward,
 			attestations_ideal_inclusion_reward,
 			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
 			blocks_scheduled,
 			blocks_proposed,
 			blocks_cl_reward,
@@ -806,9 +811,6 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 			data.AttestationsTarget.StatusCount.Success += uint64(row.AttestationTargetExecuted)
 			data.AttestationsTarget.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
-
-			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
-			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
 
 			data.Proposals.StatusCount.Success += uint64(row.BlocksProposed)
 			data.Proposals.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
