@@ -236,7 +236,7 @@ func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDB
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h HandlerService) handleDashboardId(w http.ResponseWriter, param string) (*types.VDBId, error) {
+func (h HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
