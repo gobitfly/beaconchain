@@ -13,7 +13,8 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
-  REFRESH_TOKEN = '/refreshToken'
+  REFRESH_TOKEN = '/refreshToken',
+  SEARCH = '/search'
 }
 
 const pathNames = Object.values(API_PATH)
@@ -96,6 +97,12 @@ const mapping: Record<string, MappingData> = {
   },
   [API_PATH.REFRESH_TOKEN]: {
     path: '/refreshToken',
+    method: 'POST',
+    noAuth: true,
+    mock: true
+  },
+  [API_PATH.SEARCH]: {
+    path: '/search',
     method: 'POST',
     noAuth: true,
     mock: true
