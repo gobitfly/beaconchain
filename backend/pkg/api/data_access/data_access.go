@@ -667,7 +667,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	ret := t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardGroupSummary called for dashboard %d with group id %v", dashboardId, groupId)
+	log.Infof("GetValidatorDashboardGroupSummary called for dashboard %d with group id %v", dashboardId.Id, groupId)
 	query := `select
 			users_val_dashboards_validators.validator_index,
 			attestations_source_reward,
