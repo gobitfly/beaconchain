@@ -940,7 +940,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 	for i, attestation := range parsedBlock.Message.Body.Attestations {
 		a := &types.Attestation{
-			AggregationBits: utils.MustParseHex(attestation.AggregationBits),
+			AggregationBits: attestation.AggregationBits,
 			Attesters:       []uint64{},
 			Data: &types.AttestationData{
 				Slot:            attestation.Data.Slot,
