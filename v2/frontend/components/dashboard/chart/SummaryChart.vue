@@ -88,7 +88,9 @@ const option = computed(() => {
   return {
     grid: {
       containLabel: true,
-      top: 10
+      top: 10,
+      left: '5%',
+      right: '5%'
     },
     xAxis: {
       type: 'category',
