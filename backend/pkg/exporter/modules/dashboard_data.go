@@ -251,10 +251,8 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	errGroup.Go(func() error {
 		// retrieve the attestation committees
 		start := time.Now()
-
-		lowestSlot := 999999999999
-		highestSlot := 0
-		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		// As of dencun you can attest up until the end of the following epoch
+		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-2*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
 			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
 				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"epoch": epoch})
@@ -271,16 +269,11 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 					}
 					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
 					result.attestationAssignments[k] = valIndexU64
-					if int(committee.Slot) < lowestSlot {
-						lowestSlot = int(committee.Slot)
-					}
-					if int(committee.Slot) > highestSlot {
-						highestSlot = int(committee.Slot)
-					}
+
 				}
 			}
 		}
-		d.log.Infof("attestation assignment lowest slot: %d, highest slot: %d (len: %v)", lowestSlot, highestSlot, len(result.attestationAssignments))
+
 		return nil
 	})
 
@@ -467,7 +460,6 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 					if !found { // This should never happen!
 						//validator_index = 0
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
-						d.log.Infof("not found key: %v (len %v)", utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i), len(data.attestationAssignments))
 						continue
 					}
 					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
