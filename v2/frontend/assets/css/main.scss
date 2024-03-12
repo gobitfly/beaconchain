@@ -1,6 +1,7 @@
 @import "~/assets/css/colors.scss";
 @import "~/assets/css/variables.scss";
 @import "~/assets/css/fonts.scss";
+@import "~/assets/css/utils.scss";
 
 html {
   margin: 0;
@@ -40,16 +41,48 @@ a {
   @include container;
 }
 
-@mixin truncate-text() {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.text-positive {
+  color: var(--positive-color);
 }
 
-.text-positive{
-  color: var(--positive-color)
+.text-negative {
+  color: var(--negative-color);
 }
 
-.text-negative{
-  color: var(--negative-color)
+/***
+  * Scrollbar styling
+***/
+* {
+
+  /* width */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-color);
+  }
+
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover-color);
+  }
+
+  /* Firefox has only limited customistion. Which should also work on Safari */
+  /* this style only set the default color for the track and thumb, unfortunatly we cant change the drag color */
+    scrollbar-color: var(--scrollbar-thumb-color) transaprent;
+    scrollbar-width: thin;
+
+    /* but for chrome we must remove this styles otherwise the above styles are not working correctly */
+    @supports (-webkit-appearance:none){
+      scrollbar-color: unset;
+      scrollbar-width: unset;
+    }
 }

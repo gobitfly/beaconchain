@@ -18,6 +18,10 @@
     "average": "Average",
     "index": "Index"
   },
+  "navigation": {
+    "back": "Back",
+    "continue": "Continue"
+  },
   "table": {
     "first": "First",
     "last": "Last",
@@ -98,6 +102,26 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "group": {
+      "selection": {
+        "group": "Group",
+        "all": "All groups",
+        "default": "Default",
+        "placeholder": "Select group"
+      }
+    },
+    "creation": {
+      "title": "Add a new dashboard",
+      "type": {
+        "subtitle": "What would you like to monitor?",
+        "accounts": "Accounts",
+        "validators": "Validators",
+        "placeholder": "Name"
+      },
+      "network": {
+        "subtitle": "What network are your validators on?"
+      }
+    },
     "validator": {
       "overview": {
         "your_online_validators": "Your Online Validators",

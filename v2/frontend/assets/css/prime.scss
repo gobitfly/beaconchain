@@ -1,4 +1,5 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 @import "~/assets/css/prime_datatable.scss";
 @import "~/assets/css/prime_megamenu.scss";
 
@@ -112,6 +113,35 @@
   .p-tabview-panels {
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
+  }
+}
+
+// Checkbox
+// https://primevue.org/checkbox/
+.p-checkbox {
+  .p-checkbox-box {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--border-radius);
+    background: var(--checkbox-background-color);
+    &.p-highlight:not(:hover) {
+      background: var(--primary-color);
+      color: var(--primary-contrast-color);
+    }
+    &:hover {
+      background: var(--button-color-hover);
+      color: var(--primary-contrast-color);
+    }
+    &.p-disabled {
+      background: var(--button-color-disabled);
+    }
+    .p-checkbox-icon {
+      transition-duration: 0.2s;
+      .p-icon {
+        width: 14px;
+        height: 14px;
+      }
+    }
   }
 }
 
@@ -283,4 +313,94 @@
   color: #374151;
   background: #ffffff;
   font-weight: 700;
+/***
+*  Dropdown
+* https://primevue.org/dropdown/
+* different Dropdown variant's:
+* - 'default' (=default) : default style for dropdown
+* - 'table' : dropdown style within a data table
+***/
+
+.p-dropdown {
+  background: var(--input-background);
+  border: 1px solid var(--input-border-color);
+  color: var(--input-active-text-color);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  border-radius: var(--border-radius);
+  padding: var(--padding);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  &.small {
+    padding: var(--padding-small) var(--padding);
+  }
+
+  &.table {
+    background: var(--background-color);
+  }
+
+  &:not(.p-disabled).p-focus {
+    outline: 0 none;
+    outline-offset: 0;
+  }
+  &.p-overlay-open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .p-dropdown-label {
+    background: transparent;
+    border: 0 none;
+    padding: 0;
+    &.p-placeholder {
+      color: var(--input-placeholder-text-color);
+    }
+    &:focus,
+    &:enabled:focus {
+      outline: 0 none;
+      box-shadow: none;
+    }
+  }
+  .p-dropdown-trigger {
+    margin-left: var(--padding);
+    background: transparent;
+    border-top-right-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+  }
+}
+
+.p-dropdown-panel {
+  background: var(--input-background);
+  border: 1px solid var(--input-border-color);
+  color: var(--input-active-text-color);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  transform: translateY(-1px);
+  &.table {
+    background: var(--background-color);
+  }
+  .p-dropdown-items {
+    padding: var(--padding-small);
+    .p-dropdown-item {
+      @include utils.truncate-text;
+      padding: var(--padding-small) 4px;
+      border-radius: var(--border-radius);
+      .discreet {
+        color: var(--text-color-discreet);
+      }
+      &.p-highlight:not(:hover) {
+        background: var(--list-highlight-background);
+        color: var(--primary-contrast-color);
+        .discreet {
+          color: var(--primary-contrast-color-discreet);
+        }
+      }
+      &:hover {
+        background: var(--list-hover-background);
+        color: var(--list-hover-color);
+        .discreet {
+          color: var(--list-hover-descrete-color);
+        }
+      }
+    }
+  }
 }

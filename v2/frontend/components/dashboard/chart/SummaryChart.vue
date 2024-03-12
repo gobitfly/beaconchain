@@ -13,9 +13,10 @@ import {
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
-import { useValidatorDashboardOverview } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 import type { DashboardKey } from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 use([
   CanvasRenderer,
@@ -39,7 +40,7 @@ watch(props, () => {
   getDashboardSummaryChart(props.dashboardKey)
 }, { immediate: true })
 
-const { overview } = storeToRefs(useValidatorDashboardOverview())
+const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
@@ -70,7 +71,7 @@ const option = computed(() => {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     chartData.value.series.forEach((element) => {
       let name = allGroups
-      if (element.id !== -1) {
+      if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
         const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
