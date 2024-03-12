@@ -106,6 +106,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "notifications": "Notifications",
     "group": {
       "selection": {
         "group": "Group",
