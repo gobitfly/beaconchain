@@ -29,7 +29,10 @@
   },
   "validator_state": {
     "active": "active",
+    "deposited": "deposited",
+    "inactive": "inactive",
     "pending": "pending",
+    "exiting": "exiting",
     "exited": "exited",
     "slashed": "slashed"
   },

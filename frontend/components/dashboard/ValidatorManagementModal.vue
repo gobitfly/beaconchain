@@ -145,6 +145,15 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
               </template>
             </Column>
             <Column
+              field="status"
+              :sortable="true"
+              :header="$t('dashboard.validator.col.balance')"
+            >
+              <template #body="slotProps">
+                <ValidatorTableStatus :status="slotProps.data.status" :position="1" />
+              </template>
+            </Column>
+            <Column
               field="withdrawal_credential"
               :sortable="true"
               :header="$t('dashboard.validator.col.withdrawal_credential')"
