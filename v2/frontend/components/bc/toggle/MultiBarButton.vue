@@ -26,7 +26,7 @@ const icon = computed(() => {
   </ToggleButton>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .bc-toggle {
   &.p-button {
     &.p-togglebutton {
@@ -42,7 +42,7 @@ const icon = computed(() => {
       }
 
       // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
-      .p-button-label {
+      :deep(.p-button-label) {
         display: none;
       }
     }

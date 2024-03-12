@@ -1,10 +1,11 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
-// import { defu } from 'defu'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER_DASHBOARDS = '/user/dashboards',
+  DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
+  DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -46,6 +47,16 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.USER_DASHBOARDS]: {
     path: '/users/me/dashboards',
     mock: false
+  },
+  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
+    path: '/account-dashboards',
+    mock: true,
+    method: 'POST'
+  },
+  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
+    path: '/validator-dashboards',
+    mock: true,
+    method: 'POST'
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
