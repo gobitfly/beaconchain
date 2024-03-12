@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -186,6 +187,9 @@ func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary)
 		FROM users_val_dashboards
 		WHERE id = $1
 	`, dashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with id %d not found, err: %w", dashboardId, err)
+	}
 	return result, err
 }
 
@@ -200,11 +204,18 @@ func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId
 		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
 		WHERE uvds.public_id = $1
 	`, publicDashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with public id %s not found, err: %w", publicDashboardId, err)
+	}
 	return result, err
 }
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
 func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
+	if len(validators) == 0 {
+		return nil, nil
+	}
+
 	// Create a map to remove potential duplicates
 	validatorMap := make(map[string]bool)
 	for _, v := range validators {
@@ -251,7 +262,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 
 	// Return an error if not every validator was found
 	if len(validatorsFromIdxPubkey) != len(validatorMap) {
-		return nil, fmt.Errorf("not all validators were found")
+		return nil, fmt.Errorf("not all validators from strings were found")
 	}
 
 	// Create a map to remove potential duplicates
@@ -284,7 +295,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 
 	tx, err := d.WriterDb.Beginx()
 	if err != nil {
-		return nil, fmt.Errorf("error starting db transactions: %w", err)
+		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -309,7 +320,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, errors.Wrap(err, "error committing tx")
+		return nil, errors.Wrap(err, "error committing tx to create a validator dashboard")
 	}
 
 	return result, nil
@@ -318,7 +329,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
 	tx, err := d.WriterDb.Beginx()
 	if err != nil {
-		return fmt.Errorf("error starting db transactions: %w", err)
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -356,7 +367,7 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 
 	err = tx.Commit()
 	if err != nil {
-		return errors.Wrap(err, "error committing tx")
+		return errors.Wrap(err, "error committing tx to remove a validator dashboard")
 	}
 	return nil
 }
@@ -394,7 +405,7 @@ func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrim
 func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
 	tx, err := d.WriterDb.Beginx()
 	if err != nil {
-		return fmt.Errorf("error starting db transactions: %w", err)
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -411,7 +422,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("error group %v does not exist", groupId)
+		return fmt.Errorf("error group %v does not exist, cannot remove it", groupId)
 	}
 
 	// Delete all validators for the group
@@ -424,7 +435,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 
 	err = tx.Commit()
 	if err != nil {
-		return errors.Wrap(err, "error committing tx")
+		return errors.Wrap(err, "error committing tx to remove a validator dashboard group")
 	}
 	return nil
 }
@@ -452,7 +463,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 		return nil, err
 	}
 	if !groupExists {
-		return nil, fmt.Errorf("error group %v does not exist", groupId)
+		return nil, fmt.Errorf("error group %v does not exist, cannot add validator to it", groupId)
 	}
 
 	pubkeys := []struct {
@@ -506,14 +517,14 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 	// Find all the pubkeys
 	err = d.ReaderDb.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
 	if err != nil {
-		return []t.VDBPostValidatorsData{}, err
+		return nil, err
 	}
 
 	// Add all the validators to the dashboard and group
 	addValidatorsArgsIntf := append([]interface{}{dashboardId, groupId}, flattenedValidators...)
 	err = d.WriterDb.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
-		return []t.VDBPostValidatorsData{}, err
+		return nil, err
 	}
 
 	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
