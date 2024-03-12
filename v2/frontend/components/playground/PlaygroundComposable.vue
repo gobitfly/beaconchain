@@ -55,6 +55,6 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
   margin: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--padding);
 }
 </style>
