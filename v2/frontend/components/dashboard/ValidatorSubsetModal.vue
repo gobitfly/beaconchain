@@ -38,7 +38,7 @@ const caption = computed(() => {
       text = $t('dashboard.validator.summary.row.sync')
       break
     case 'slashings':
-      text = $t('dashboard.validator.summary.row.slashings')
+      text = $t('dashboard.validator.summary.row.slashed')
       break
     case 'proposal':
       text = $t('dashboard.validator.summary.row.proposals')
