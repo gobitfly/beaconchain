@@ -12,6 +12,7 @@ import (
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -95,6 +96,9 @@ func (d *dashboardData) backfillEpochData() {
 
 			time.Sleep(15 * time.Second)
 		}
+	} else {
+		d.epochToHour.aggregate1h()
+		d.hourToDay.rolling24hAggregate()
 	}
 	d.log.Infof("backfill finished")
 }
@@ -131,11 +135,8 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
 	// since the init backfill only fixes gaps at the start of exporter but does not fix
 	// gaps that occur while operating (for example node not available for a brief moment)
+	// backfill will aggregate on demand
 	d.backfillEpochData()
-
-	d.epochToHour.aggregate1h()
-
-	d.hourToDay.rolling24hAggregate()
 
 	return nil
 }
@@ -192,6 +193,7 @@ type Data struct {
 	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
 	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
 	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
+	attestationAssignments   map[string]uint64
 }
 
 func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
@@ -205,6 +207,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
 	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
 	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse)
+	result.attestationAssignments = make(map[string]uint64)
 
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(3)
@@ -242,6 +245,43 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 			return nil
 		}
 		d.log.Infof("retrieved sync committee assignments in %v", time.Since(start))
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		// retrieve the attestation committees
+		start := time.Now()
+
+		lowestSlot := 999999999999
+		highestSlot := 0
+		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
+			if err != nil {
+				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"epoch": epoch})
+				return nil
+			}
+			d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
+
+			for _, committee := range data.Data {
+				for i, valIndex := range committee.Validators {
+					valIndexU64, err := strconv.ParseUint(valIndex, 10, 64)
+					if err != nil {
+						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"epoch": committee.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch, "committee": committee.Index, "index": i, "valIndex": valIndex})
+						continue
+					}
+					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
+					result.attestationAssignments[k] = valIndexU64
+					if int(committee.Slot) < lowestSlot {
+						lowestSlot = int(committee.Slot)
+					}
+					if int(committee.Slot) > highestSlot {
+						highestSlot = int(committee.Slot)
+					}
+				}
+			}
+
+		}
+		d.log.Infof("attestation assignment lowest slot: %d, highest slot: %d (len: %v)", lowestSlot, highestSlot, len(result.attestationAssignments))
 		return nil
 	})
 
@@ -418,13 +458,28 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 			validatorsData[validator_index].WithdrawalsAmount += withdrawal.Amount
 			validatorsData[validator_index].WithdrawalsCount++
 		}
+
+		for _, attestation := range block.Data.Message.Body.Attestations {
+			aggregationBits := bitfield.Bitlist(attestation.AggregationBits)
+
+			for i := uint64(0); i < aggregationBits.Len(); i++ {
+				if aggregationBits.BitAt(i) {
+					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
+					if !found { // This should never happen!
+						//validator_index = 0
+						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
+						d.log.Infof("not found key: %v (len %V)", utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i), len(data.attestationAssignments))
+						continue
+					}
+					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
+				}
+			}
+		}
 	}
 
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
 		validator_index := attestationReward.ValidatorIndex
-
-		validatorsData[validator_index].InclusionDelaySum += attestationReward.InclusionDelay
 
 		validatorsData[validator_index].AttestationsHeadReward = attestationReward.Head
 		validatorsData[validator_index].AttestationsSourceReward = attestationReward.Source
