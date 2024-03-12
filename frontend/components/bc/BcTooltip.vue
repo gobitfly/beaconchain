@@ -7,6 +7,7 @@ interface Props {
   layout?: 'dark' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean,
+  tooltipClass?: string,
   scrollContainer?: string // query selector for scrollable parent container
 }
 
@@ -118,6 +119,14 @@ const checkScrollListener = (add: boolean) => {
   }
 }
 
+watch(() => [props.title, props.text], () => {
+  if (isOpen.value) {
+    requestAnimationFrame(() => {
+      setPosition()
+    })
+  }
+})
+
 onMounted(() => {
   document.addEventListener('click', doHide)
   document.addEventListener('scroll', doHide)
@@ -145,7 +154,7 @@ onUnmounted(() => {
   >
     <slot />
     <Teleport v-if="isOpen" to="body">
-      <div class="bc-tooltip-wrapper" :style="pos">
+      <div class="bc-tooltip-wrapper" :style="pos" :class="tooltipClass">
         <div
           ref="bcTooltip"
           class="bc-tooltip"
@@ -203,7 +212,6 @@ onUnmounted(() => {
   transition: opacity 1s;
   text-align: center;
   padding: 9px 12px;
-  min-width: 120px;
   border-radius: var(--border-radius);
   color: var(--tt-color);
   background: var(--tt-bg-color);
