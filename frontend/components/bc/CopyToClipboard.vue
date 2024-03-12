@@ -30,7 +30,13 @@ function copyToClipboard (): void {
 
 </script>
 <template>
-  <BcTooltip v-if="props.value" :text="tooltip" position="top">
+  <BcTooltip v-if="props.value" :text="tooltip" position="top" tooltip-class="tooltip">
     <FontAwesomeIcon :icon="faCopy" class="pointer" @click="copyToClipboard" />
   </BcTooltip>
 </template>
+
+<style>
+.tooltip{
+  min-width: max-content;
+}
+</style>

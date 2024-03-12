@@ -15,7 +15,7 @@ const data = computed(() => {
     return
   }
   const hash = props.hash
-  const className = props.full ? 'full' : props.ens ? 'truncate-text' : 'parts'
+  const className = props.full ? 'full' : props.ens ? 'truncate-text' : ''
   let parts: { value: string, className?: string }[] = []
   let link: string = ''
   if (props.ens) {
