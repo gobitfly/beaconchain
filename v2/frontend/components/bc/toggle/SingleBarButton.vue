@@ -7,11 +7,10 @@ interface Props {
   selected: boolean
 }
 const props = defineProps<Props>()
-const selectedClass = computed(() => props.selected ? 'p-highlight' : '')
 </script>
 
 <template>
-  <ToggleButton class="bc-toggle" :class="selectedClass" :on-label="props.text" :off-label="props.text">
+  <ToggleButton class="bc-toggle" :model-value="props.selected" :on-label="props.text" :off-label="props.text">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
         <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
