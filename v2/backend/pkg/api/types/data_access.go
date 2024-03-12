@@ -43,7 +43,7 @@ type PostgresCursor struct {
 func (p PostgresCursor) ToString() (*string, error) {
 	bin, err := json.Marshal(p)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal PostgresCursor as json: %s", err)
+		return nil, fmt.Errorf("failed to marshal PostgresCursor as json: %w", err)
 	}
 	encoded_str := base64.RawURLEncoding.EncodeToString(bin)
 	return &encoded_str, nil
@@ -51,14 +51,15 @@ func (p PostgresCursor) ToString() (*string, error) {
 
 func (PostgresCursor) FromString(str string) (*PostgresCursor, error) {
 	bin, err := base64.RawURLEncoding.DecodeString(str)
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode string using base64: %s", err)
+		return nil, fmt.Errorf("failed to decode string using base64: %w", err)
 	}
+
 	p := PostgresCursor{}
 	err = json.Unmarshal(bin, &p)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal decoded base64 string: %s", err)
+		return nil, fmt.Errorf("failed to unmarshal decoded base64 string: %w", err)
 	}
+
 	return &p, nil
 }
