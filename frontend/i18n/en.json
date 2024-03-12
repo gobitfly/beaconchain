@@ -18,6 +18,10 @@
     "average": "Average",
     "index": "Index"
   },
+  "clipboard": {
+    "copy": "Copy to clipboard",
+    "copied": "Copied!"
+  },
   "navigation": {
     "back": "Back",
     "continue": "Continue"

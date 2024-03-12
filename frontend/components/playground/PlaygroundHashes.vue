@@ -10,18 +10,18 @@ const data = {
     {
       type: 'address',
       hash: '0xE276Bc378A527A8792B353cdCA5b5E53263DfB9e',
-      ens: 'thisIsAVerryLongEnsNameSoItShoulBeTruncated.ens'
+      ens: 'thisIsAVerryLongEnsNameSoItShoulBeTruncatedthisIsAVerryLongEnsNameSoItShoulBeTruncated.ens'
     },
     {
       type: 'address',
       hash: '0xE276Bc378A527A8792B353cdCA5b5E53263DfB9e'
     },
     {
-      type: 'withdrawal_address',
+      type: 'withdrawal_credentials',
       hash: '0x010000000000000000000000e276bc378a527a8792b353cdca5b5e53263dfb9e'
     },
     {
-      type: 'withdrawal_address',
+      type: 'withdrawal_credentials',
       hash: '0x0094ddaa84a9dce074b5abaa0e939402029a4d3f5f9eea57986583630353ea49'
     },
     {

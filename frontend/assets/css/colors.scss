@@ -26,7 +26,8 @@
   --flashy-red: #f3454a;
   --light-red: #d42127;
   --yellow: #ffd600;
-  --orange: #f8c988;
+  --light-orange: #e77f27;
+  --orange: #f7a35c;
   --primary-color: #f89811;
   --primary-orange: #ffaa31;
   --primary-orange-hover: #ff951a;
@@ -70,6 +71,7 @@
 
   --negative-color: var(--light-red);
   --positive-color: var(--light-green);
+  --orange-color: var(--light-orange);
 
   --megamenu-panel-color: var(--light-grey);
   --megamenu-text-color: var(--grey);
@@ -120,6 +122,7 @@
 
     --negative-color: var(--flashy-red);
     --positive-color: var(--green);
+    --orange-color: var(--orange);
 
     --megamenu-panel-color: var(--graphite);
     --megamenu-text-color: var(--grey);
