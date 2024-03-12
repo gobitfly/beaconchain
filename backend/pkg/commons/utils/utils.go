@@ -243,25 +243,22 @@ func DataStructure[T any](s []T) []interface{} {
 }
 
 func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction enums.SortOrder) (*t.Paging, error) {
-	offsets := make([]t.PostgresOffsetColumn, len(columns))
-	if len(data) < 2 {
-		return nil, fmt.Errorf("cant generate paging for slice with less than 2 items")
-	}
 	li := len(data) - 1
-
-	for i, c := range columns {
-		offsets[i].ColumnName = c
+	if li < 0 {
+		return nil, fmt.Errorf("cant generate paging for slice with less than 2 items")
 	}
 
 	// generate next cursor
 
+	offsets := make([]t.PostgresOffsetColumn, len(columns))
 	for i, c := range columns {
+		offsets[i].ColumnName = c
 		offsets[i].Value = reflect.ValueOf(data[li]).FieldByName(c).Int()
 	}
 
 	next_cursor, err := t.PostgresCursor{Direction: direction, Offsets: offsets}.ToString()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate next_cursor: %s", err)
+		return nil, fmt.Errorf("failed to generate next_cursor: %w", err)
 	}
 
 	// generate prev cursor
@@ -272,7 +269,7 @@ func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction 
 
 	prev_cursor, err := t.PostgresCursor{Direction: direction.Invert(), Offsets: offsets}.ToString()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate prev_cursor: %s", err)
+		return nil, fmt.Errorf("failed to generate prev_cursor: %w", err)
 	}
 
 	return &t.Paging{
