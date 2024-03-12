@@ -9,6 +9,10 @@ import (
 
 type ValidatorStatus string
 
+func (s ValidatorStatus) IsActive() bool {
+	return s == ActiveOngoing || s == ActiveExiting || s == ActiveSlashed || s == Active
+}
+
 type bytesHexStr []byte
 
 func (s *bytesHexStr) UnmarshalText(b []byte) error {
