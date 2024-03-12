@@ -250,6 +250,13 @@
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   border-radius: var(--border-radius);
   padding: var(--padding);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  &.small {
+    padding: var(--padding-small) var(--padding);
+  }
 
   &.table {
     background: var(--background-color);

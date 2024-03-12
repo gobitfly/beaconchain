@@ -108,7 +108,7 @@ const data = computed(() => {
   } else if (props.property === 'attestation_avg_incl_dist') {
     return {
       simple: {
-        value: col.attestation_avg_incl_dist
+        value: trim(col.attestation_avg_incl_dist, 2, 2)
       }
     }
   }

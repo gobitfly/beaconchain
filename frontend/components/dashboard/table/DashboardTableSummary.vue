@@ -202,7 +202,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
 <style lang="scss" scoped>
 :deep(.summary_table) {
-  --col-width: 220px;
+  --col-width: 216px;
 
   td:has(.validator_column) {
     width: var(--col-width);

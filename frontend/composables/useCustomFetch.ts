@@ -1,10 +1,11 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
-// import { defu } from 'defu'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER_DASHBOARDS = '/user/dashboards',
+  DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
+  DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -47,25 +48,35 @@ const mapping: Record<string, MappingData> = {
     path: '/users/me/dashboards',
     mock: false
   },
+  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
+    path: '/account-dashboards',
+    mock: true,
+    method: 'POST'
+  },
+  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
+    path: '/validator-dashboards',
+    mock: true,
+    method: 'POST'
+  },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboardKey}/summary?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/summary-chart?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
     path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
