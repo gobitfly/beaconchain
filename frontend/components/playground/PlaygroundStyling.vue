@@ -5,7 +5,7 @@ import {
 import {
   faChartColumn
 } from '@fortawesome/pro-regular-svg-icons'
-import { IconSlotBlockProposal } from '#components'
+import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -23,6 +23,9 @@ const selected = ref(true)
 
 const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
+
+const selectedType = ref<string>('Validators')
+const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
@@ -69,13 +72,16 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
             Dashboard Link
           </NuxtLink>
         </Button>
-        <Button :disabled="true">
+        <Button disabled>
           Disabled
         </Button>
         <Button class="p-button-icon-only">
           <IconPlus alt="Plus icon" width="100%" height="100%" />
         </Button>
       </div>
+    </TabPanel>
+    <TabPanel header="Hashes">
+      <PlaygroundHashes />
     </TabPanel>
     <TabPanel header="Scroll box">
       <div class="scroll-box">
@@ -95,6 +101,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       </div>
     </TabPanel>
     <TabPanel header="Toggle">
+      <h1>Multi Toggle</h1>
       <div class="element_container">
         <div>
           isTable: {{ isTable }}
@@ -116,7 +123,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
 
         <div>
           Selected: {{ selected }}
-          <BcToggleMultibarButton v-model="selected" :icon="faTable" />
+          <BcToggleMultiBarButton v-model="selected" :icon="faTable" />
         </div>
         <div>
           <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
@@ -130,6 +137,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           </BcToggleMultiBar>
           Selected: {{ selectedList.join(', ') }}
         </div>
+      </div>
+      <h1>Single Toggle</h1>
+      <div class="element_container">
+        selectedType: {{ selectedType }}
+        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" :allow-deselect="true" />
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
@@ -180,7 +192,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   margin: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--padding);
 }
 
 .box {
@@ -200,4 +212,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   }
 }
 
+.single_bar_container {
+  width: 600px
+}
 </style>

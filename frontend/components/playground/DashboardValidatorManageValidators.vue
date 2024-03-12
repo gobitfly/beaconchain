@@ -52,7 +52,7 @@ const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
   margin: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--padding);
 }
 
 .status-holder{
