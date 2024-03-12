@@ -87,7 +87,6 @@ func checkName(handlerErr *error, name string, minLength int) string {
 }
 
 func checkMultipleRegex(handlerErr *error, regexes []*regexp.Regexp, params []string, paramName string) []string {
-	results := make([]string, len(params))
 OUTER:
 	for _, param := range params {
 		for _, regex := range regexes {
@@ -97,7 +96,7 @@ OUTER:
 		}
 		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter '%s' has incorrect format", param, paramName))
 	}
-	return results
+	return params
 }
 
 func checkNameNotEmpty(handlerErr *error, name string) string {
