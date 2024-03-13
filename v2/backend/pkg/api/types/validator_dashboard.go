@@ -229,7 +229,7 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof:'deposited', 'pending', 'online', 'offline', 'exited', 'slashed'"`
+	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof: deposited, pending, online, offline, exited, slashed"`
 	QueuePosition        uint64          `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }
