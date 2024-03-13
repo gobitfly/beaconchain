@@ -5,11 +5,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/gob"
-	"errors"
+	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"fmt"
 	"strconv"
@@ -41,7 +43,12 @@ func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 
 var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64
 
-func (d *slotExporterData) Start(args []any) (err error) {
+var processSlotMutex = &sync.Mutex{}
+
+func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
+	processSlotMutex.Lock() // only process one slot at a time
+	defer processSlotMutex.Unlock()
+
 	latestEpoch, latestSlot, finalizedEpoch, latestProposed = 0, 0, 0, 0
 	// cache handling
 	defer func() {
@@ -84,12 +91,7 @@ func (d *slotExporterData) Start(args []any) (err error) {
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	if d.FirstRun {
 		// get all slots we currently have in the database
@@ -275,6 +277,8 @@ func (d *slotExporterData) Start(args []any) (err error) {
 
 	latestEpoch = utils.EpochOfSlot(head.HeadSlot)
 	latestSlot = head.HeadSlot
+
+	services.ReportStatus("slotExporter", "Running", nil)
 
 	return nil
 }
@@ -534,4 +538,20 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		}, "! export of slot completed")
 
 	return nil
+}
+
+func (d *slotExporterData) Init() error {
+	return nil
+}
+
+func (d *slotExporterData) GetName() string {
+	return "Slot-Exporter"
+}
+
+func (d *slotExporterData) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
+	return nil // nop
+}
+
+func (d *slotExporterData) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
+	return nil // nop
 }

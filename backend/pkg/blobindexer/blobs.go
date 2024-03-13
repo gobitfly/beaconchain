@@ -61,7 +61,7 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 		runningMu:  &sync.Mutex{},
 		clEndpoint: "http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port,
 		cache:      freecache.NewCache(1024 * 1024),
-		cl:         consapi.NewNodeDataRetriever("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
+		cl:         consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
 	}
 	return bi, nil
 }

@@ -1,9 +1,7 @@
 package modules
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -659,12 +657,7 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 	nArgs := 14
 	valueStringsArr := make([]string, nArgs)
 	for i := range valueStringsArr {
@@ -752,12 +745,7 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	nArgs := 13
 
@@ -853,12 +841,7 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 	log.Infof("saving %v rocketpool reward trees", len(rp.RocketpoolRewardTreesDownloadQueue))
 
 	for _, rewardTree := range rp.RocketpoolRewardTreesDownloadQueue {
@@ -906,12 +889,7 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	nArgs := 18
 	valueStringsArr := make([]string, nArgs)
@@ -984,12 +962,7 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	nArgs := 5
 	valueStringsArr := make([]string, nArgs)
@@ -1057,12 +1030,7 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	nArgs := 8
 	valueStringsArr := make([]string, nArgs)
@@ -1148,12 +1116,7 @@ func (rp *RocketpoolExporter) TagValidators() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	data := make([]*RocketpoolMinipool, len(rp.MinipoolsByAddress))
 	i := 0
