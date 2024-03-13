@@ -5,7 +5,7 @@ import { IconAccount, IconValidator } from '#components'
 const { t: $t } = useI18n()
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-const typeButtons = shallowRef([{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }])
+const typeButtons = [{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }]
 
 const name = defineModel<string>('name', { required: true })
 
