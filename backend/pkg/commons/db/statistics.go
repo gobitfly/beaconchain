@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -1789,12 +1788,7 @@ func WriteGraffitiStatisticsForDay(day int64) error {
 	if err != nil {
 		return fmt.Errorf("error starting db tx in WriteGraffitiStatisticsForDay: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	// \x are missed blocks
 	// \x0000000000000000000000000000000000000000000000000000000000000000 are empty graffities
