@@ -164,7 +164,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	}
 	lc.assignmentsCacheMux.Unlock()
 
-	parsedProposerResponse, err := lc.cl.GetPropoalAssignments(int(epoch))
+	parsedProposerResponse, err := lc.cl.GetPropoalAssignments(epoch)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving proposer duties for epoch %v: %w", epoch, err)
 	}
@@ -236,7 +236,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 // GetEpochProposerAssignments will get the epoch proposer assignments from Lighthouse RPC api
 // Deprecated: use cl retriever GetPropoalAssignments
 func (lc *LighthouseClient) GetEpochProposerAssignments(epoch uint64) (*constypes.StandardProposerAssignmentsResponse, error) {
-	return lc.cl.GetPropoalAssignments(int(epoch))
+	return lc.cl.GetPropoalAssignments(epoch)
 }
 
 func (lc *LighthouseClient) GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error) {
@@ -940,7 +940,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 	for i, attestation := range parsedBlock.Message.Body.Attestations {
 		a := &types.Attestation{
-			AggregationBits: utils.MustParseHex(attestation.AggregationBits),
+			AggregationBits: attestation.AggregationBits,
 			Attesters:       []uint64{},
 			Data: &types.AttestationData{
 				Slot:            attestation.Data.Slot,
@@ -1080,7 +1080,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 }
 
 func (lc *LighthouseClient) GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error) {
-	parsedSyncCommittees, err := lc.cl.GetSyncCommitteesAssignments(int(epoch), stateID)
+	parsedSyncCommittees, err := lc.cl.GetSyncCommitteesAssignments(epoch, stateID)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving sync_committees for epoch %v (state: %v): %w", epoch, stateID, err)
 	}

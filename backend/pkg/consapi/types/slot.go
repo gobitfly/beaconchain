@@ -101,7 +101,7 @@ type AttesterSlashing struct {
 }
 
 type Attestation struct {
-	AggregationBits string      `json:"aggregation_bits"`
+	AggregationBits bytesHexStr `json:"aggregation_bits"`
 	Signature       bytesHexStr `json:"signature"`
 	Data            struct {
 		Slot            uint64 `json:"slot,string"`

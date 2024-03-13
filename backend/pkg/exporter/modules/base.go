@@ -1,50 +1,54 @@
 package modules
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type ModuleInterface interface {
-	Start(args []any) error
-}
+	Init() error
+	GetName() string // Used for logging
 
-type ModuleContext struct {
-	CL         consapi.Client
-	ConsClient *rpc.LighthouseClient
+	// !Do not block in this functions for an extended period of time!
+	OnHead(*types.StandardEventHeadResponse) error
+	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error
+	OnChainReorg(*types.StandardEventChainReorg) error
 }
 
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
 func StartAll(context ModuleContext) {
-	go networkLivenessUpdater(context.ConsClient)
-	go eth1DepositsExporter()
-	go genesisDepositsExporter(context.ConsClient)
-	go syncCommitteesExporter(context.ConsClient)
-	go syncCommitteesCountExporter()
-	if utils.Config.SSVExporter.Enabled {
-		go ssvExporter()
-	}
-	if utils.Config.RocketpoolExporter.Enabled {
-		go rocketpoolExporter()
-	}
+	if !utils.Config.JustV2 {
+		go networkLivenessUpdater(context.ConsClient)
+		go eth1DepositsExporter()
+		go genesisDepositsExporter(context.ConsClient)
+		go syncCommitteesExporter(context.ConsClient)
+		go syncCommitteesCountExporter()
+		if utils.Config.SSVExporter.Enabled {
+			go ssvExporter()
+		}
+		if utils.Config.RocketpoolExporter.Enabled {
+			go rocketpoolExporter()
+		}
 
-	if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
-		go UpdatePubkeyTag()
-	}
+		if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
+			go UpdatePubkeyTag()
+		}
 
-	if utils.Config.MevBoostRelayExporter.Enabled {
-		go mevBoostRelaysExporter()
+		if utils.Config.MevBoostRelayExporter.Enabled {
+			go mevBoostRelaysExporter()
+		}
 	}
 	// wait until the beacon-node is available
 	for {
@@ -57,33 +61,108 @@ func StartAll(context ModuleContext) {
 		time.Sleep(time.Second * 10)
 	}
 
-	firstRun := true
+	// start subscription modules
 
-	slotExporter := NewSlotExporter(context)
+	modules := []ModuleInterface{
+		NewDashboardDataModule(context),
+	}
 
-	res := context.CL.GetEvents([]types.EventTopic{types.EventHead})
+	if !utils.Config.JustV2 {
+		modules = append(modules, NewSlotExporter(context))
+	}
 
-	for event := range res {
+	startSubscriptionModules(&context, modules)
+}
+
+func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
+	goPool := &errgroup.Group{}
+
+	log.Infof("initialising exporter modules")
+
+	// Initialize modules
+	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
+		return module.Init()
+	})
+
+	err := goPool.Wait()
+	if err != nil {
+		log.Fatal(err, "error initializing modules", 0)
+		return
+	}
+
+	eventPool := &errgroup.Group{}
+	eventPool.SetLimit(16)
+
+	log.Infof("subscribing to node events")
+
+	// subscribe to node events and notify modules
+	events := context.CL.GetEvents([]types.EventTopic{
+		types.EventHead,
+		types.EventFinalizedCheckpoint,
+		types.EventChainReorg,
+	})
+
+	for event := range events {
 		if event.Error != nil {
 			log.Error(event.Error, "error getting event", 0)
+			continue
 		}
 
-		if event.Event == types.EventHead {
-			err := slotExporter.Start(nil)
+		switch event.Event {
+		case types.EventHead:
+			res, err := event.Head()
 			if err != nil {
-				log.Error(err, "error during slot export run", 0)
-			} else if err == nil && firstRun {
-				firstRun = false
+				log.Error(err, "error getting head event", 0)
+				continue
 			}
+			log.InfoWithFields(
+				log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
+				"notifying exporter modules about new head",
+			)
+			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+				return module.OnHead(res)
+			})
 
-			log.Infof("update run completed")
-			services.ReportStatus("slotExporter", "Running", nil)
+		case types.EventFinalizedCheckpoint:
+			res, err := event.FinalizedCheckpoint()
+			if err != nil {
+				log.Error(err, "error getting finalized checkpoint event", 0)
+				continue
+			}
+			log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
+			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+				return module.OnFinalizedCheckpoint(res)
+			})
+
+		case types.EventChainReorg:
+			res, err := event.ChainReorg()
+			if err != nil {
+				log.Error(err, "error getting chain reorg event", 0)
+				continue
+			}
+			log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
+			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+				return module.OnChainReorg(res)
+			})
 		}
 	}
 }
 
+func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
+	for _, module := range modules {
+		module := module
+		goPool.Go(func() error {
+			err := f(module)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
+			}
+			return nil
+		})
+	}
+}
+
 func GetModuleContext() (ModuleContext, error) {
-	cl := consapi.NewNodeDataRetriever("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
+	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
 	spec, err := cl.GetSpec()
 	if err != nil {
@@ -110,4 +189,40 @@ func GetModuleContext() (ModuleContext, error) {
 	}
 
 	return moduleContext, nil
+}
+
+type ModuleContext struct {
+	CL         consapi.Client
+	ConsClient *rpc.LighthouseClient
+}
+
+type ModuleLog struct {
+	module ModuleInterface
+}
+
+func (m ModuleLog) Info(message string) {
+	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Infof(format string, args ...interface{}) {
+	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Error(err, errorMsg, callerSkip, additionalInfos...)
+}
+
+func (m ModuleLog) Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Warn(err, errorMsg, callerSkip, additionalInfos...)
+}
+
+func (m ModuleLog) Warnf(format string, args ...interface{}) {
+	log.WarnWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
+	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
+	log.Fatal(err, errorMsg, callerSkip, additionalInfos...)
 }
