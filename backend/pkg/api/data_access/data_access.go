@@ -882,7 +882,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
 		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
-		data.AttestationAvgInclDist = float64(totalInclusionDelaySum) / (float64(data.AttestationsHead.StatusCount.Failed) + float64(data.AttestationsHead.StatusCount.Success))
+		data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/(float64(data.AttestationsHead.StatusCount.Failed)+float64(data.AttestationsHead.StatusCount.Success))
 
 		return &data, nil
 	}
