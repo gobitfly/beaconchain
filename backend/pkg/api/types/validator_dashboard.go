@@ -75,10 +75,10 @@ type VDBGroupSummaryColumn struct {
 	Luck Luck `json:"luck"`
 }
 type VDBGroupSummaryData struct {
-	DetailsDay   VDBGroupSummaryColumn `json:"details_day"`
-	DetailsWeek  VDBGroupSummaryColumn `json:"details_week"`
-	DetailsMonth VDBGroupSummaryColumn `json:"details_month"`
-	DetailsTotal VDBGroupSummaryColumn `json:"details_total"`
+	Last24h VDBGroupSummaryColumn `json:"last_24h"`
+	Last7d  VDBGroupSummaryColumn `json:"last_7d"`
+	Last31d VDBGroupSummaryColumn `json:"last_31d"`
+	AllTime VDBGroupSummaryColumn `json:"all_time"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
