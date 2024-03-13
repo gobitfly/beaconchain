@@ -54,15 +54,6 @@ export enum ChainIDs {
   Chiado = 10200
 }
 
-// TODO: request it from the API
-export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
-  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
-  if (sortByPriority) {
-    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
-  }
-  return list
-}
-
 interface ChainInfoFields {
   name: string,
   family: ChainFamily,
@@ -220,6 +211,15 @@ export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
 }
 
+// TODO: request it from the API
+export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
+  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
+  if (sortByPriority) {
+    sortListOfChainIDs(list)
+  }
+  return list
+}
+
 export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list : ChainIDs[] = []
 
@@ -229,7 +229,11 @@ export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
     }
   }
   if (sortByPriority) {
-    list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+    sortListOfChainIDs(list)
   }
   return list
+}
+
+function sortListOfChainIDs (list : ChainIDs[]) {
+  list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
 }

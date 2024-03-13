@@ -86,3 +86,17 @@ a {
       scrollbar-width: unset;
     }
 }
+
+// To make a SVG monochromatic, assign it to the class `monochromatic`.
+// It will work if you replace every `fill="#..."` in the SVG with `class="colorX shape"` or `class="colorX background"` (with X depending on the color and as high as the number of colors)
+// and, in the <style> section of the SVG, you define every `.colorX {fill: #...}` accordingly.
+svg{
+  &.monochromatic {
+    .shape {
+      fill: currentColor;
+    }
+    .background {
+      fill: none;
+    }
+  }
+}
