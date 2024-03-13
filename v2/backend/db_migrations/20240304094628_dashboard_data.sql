@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     attestation_head_executed smallint,
     attestation_source_executed smallint,
     attestation_target_executed smallint,
+    optimal_inclusion_delay_sum smallint,
     primary key (validator_index, epoch)
 ) PARTITION BY range (epoch);
 
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
     attestation_head_executed int,
     attestation_source_executed int,
     attestation_target_executed int,
+    optimal_inclusion_delay_sum int,
     primary key (validator_index)
 );
 
@@ -121,6 +123,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     attestation_head_executed smallint,
     attestation_source_executed smallint,
     attestation_target_executed smallint,
+    optimal_inclusion_delay_sum int,
     primary key (epoch_start, epoch_end, validator_index)
 ) PARTITION BY range(epoch_start);
 

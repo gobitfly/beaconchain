@@ -112,6 +112,7 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 			"attestation_head_executed",
 			"attestation_source_executed",
 			"attestation_target_executed",
+			"optimal_inclusion_delay_sum",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
 				i,
@@ -150,6 +151,7 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].AttestationHeadExecuted,
 				data[i].AttestationSourceExecuted,
 				data[i].AttestationTargetExecuted,
+				data[i].OptimalInclusionDelay,
 			}, nil
 		}))
 

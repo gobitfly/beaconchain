@@ -54,14 +54,6 @@ func (d *hourToDayAggregator) rolling24hAggregate() {
 		d.log.Error(err, "failed to delete old rolling 24h aggregate", 0)
 	}
 
-	/*
-			attestations_scheduled smallint,
-		    attestations_executed smallint,
-		    attestation_head_executed smallint,
-		    attestation_source_executed smallint,
-		    attestation_target_executed smallint,
-	*/
-
 	_, err = tx.Exec(`
 		WITH
 			balance_starts as (
@@ -104,7 +96,8 @@ func (d *hourToDayAggregator) rolling24hAggregate() {
 					COALESCE(SUM(COALESCE(attestations_executed, 0)),0) as attestations_executed,
 					COALESCE(SUM(COALESCE(attestation_head_executed, 0)),0) as attestation_head_executed,
 					COALESCE(SUM(COALESCE(attestation_source_executed, 0)),0) as attestation_source_executed,
-					COALESCE(SUM(COALESCE(attestation_target_executed, 0)),0) as attestation_target_executed
+					COALESCE(SUM(COALESCE(attestation_target_executed, 0)),0) as attestation_target_executed,
+					COALESCE(SUM(COALESCE(optimal_inclusion_delay_sum, 0)),0) as optimal_inclusion_delay_sum
 				FROM validator_dashboard_data_hourly
 				WHERE epoch_start >= $2 AND epoch_start <= $1
 				GROUP BY validator_index
@@ -144,7 +137,8 @@ func (d *hourToDayAggregator) rolling24hAggregate() {
 				attestations_executed,
 				attestation_head_executed,
 				attestation_source_executed,
-				attestation_target_executed
+				attestation_target_executed,
+				optimal_inclusion_delay_sum
 			)
 			SELECT 
 				aggregate.validator_index,
@@ -181,7 +175,8 @@ func (d *hourToDayAggregator) rolling24hAggregate() {
 				attestations_executed,
 				attestation_head_executed,
 				attestation_source_executed,
-				attestation_target_executed
+				attestation_target_executed,
+				optimal_inclusion_delay_sum
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
