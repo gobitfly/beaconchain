@@ -5,7 +5,6 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { warn } from 'vue'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
