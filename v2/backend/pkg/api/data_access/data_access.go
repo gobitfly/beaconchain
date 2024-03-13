@@ -649,11 +649,6 @@ func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBI
 	return err
 }
 
-func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
-}
-
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	const nameCharLimit = 50
 	if len(name) > nameCharLimit {
