@@ -887,9 +887,11 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
 #whole-engine {
   @include main.container;
   position: absolute;
-  z-index: 256;
   left: 0px;
   right: 0px;
+  &.dropdown-is-opened {
+    z-index: 256;
+  }
 
   &.discreet {
     background-color: var(--searchbar-background-discreet);
@@ -1111,7 +1113,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           }
         }
 
-        .columns-icons {border: 1px solid red;
+        .columns-icons {
           position: relative;
           grid-column: 1;
           grid-row: 1;
@@ -1128,12 +1130,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           height: 36px;
 
           .type-icon {
-            &.not-alone { border: 1px solid blue;
+            &.not-alone {
               display: inline;
               position: relative;
               top: 2px;
             }
-            &.alone { border: 1px solid blue;
+            &.alone {
              display: flex;
              margin-top: auto;
              margin-bottom: auto;
@@ -1141,7 +1143,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             width: 20px;
             max-height: 20px;
           }
-          .network-icon {border: 1px solid blue;
+          .network-icon {
             position: absolute;
             bottom: 0px;
             right: 0px;
