@@ -10,7 +10,7 @@ const props = defineProps<Props>()
 
 const selectedCategoris = shallowRef<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
 
-const icons = shallowRef<{ component: Component, value: SlotVizCategories }[]>([
+const icons:{ component: Component, value: SlotVizCategories }[] = [
   {
     component: IconSlotBlockProposal,
     value: 'proposal'
@@ -24,7 +24,7 @@ const icons = shallowRef<{ component: Component, value: SlotVizCategories }[]>([
     component: IconSlotSlashing,
     value: 'slashing'
   }
-])
+]
 
 </script>
 <template>
