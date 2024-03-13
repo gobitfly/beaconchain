@@ -192,7 +192,7 @@ func parseDashboardId(id string) (interface{}, error) {
 	if reNumber.MatchString(id) {
 		// given id is a normal id
 		id := checkUint(&err, id, "dashboard_id")
-		return id, err
+		return types.VDBIdPrimary(id), err
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
