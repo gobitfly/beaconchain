@@ -324,7 +324,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 	if err != nil {
 		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	// Create validator dashboard for user
 	err = tx.Get(result, `
@@ -358,7 +358,7 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	// Delete the dashboard
 	_, err = tx.Exec(`
@@ -434,7 +434,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	// Delete the group
 	result, err := tx.Exec(`
