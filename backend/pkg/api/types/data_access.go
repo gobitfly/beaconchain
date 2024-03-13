@@ -24,13 +24,13 @@ type VDBId struct {
 }
 
 type VDBValidator struct {
-	Index   uint64
-	Version uint64
+	Index   uint64 `db:"validator_index"`
+	Version uint64 `db:"validator_index_version"`
 }
 
 type DashboardInfo struct {
-	Id     VDBIdPrimary // this must be the bigint id
-	UserId uint64
+	Id     VDBIdPrimary `db:"id"` // this must be the bigint id
+	UserId uint64       `db:"user_id"`
 }
 
 type CursorLike interface {

@@ -3,8 +3,11 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	isort "sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +21,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -76,6 +81,8 @@ type DataAccessService struct {
 
 	ReaderDb                *sqlx.DB
 	WriterDb                *sqlx.DB
+	AlloyReader             *sqlx.DB
+	AlloyWriter             *sqlx.DB
 	Bigtable                *db.Bigtable
 	PersistentRedisDbClient *redis.Client
 }
@@ -139,6 +146,9 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 			SSL:          cfg.AlloyReader.SSL,
 		})
+
+		dataAccessService.AlloyReader = db.AlloyReader
+		dataAccessService.AlloyWriter = db.AlloyWriter
 	}()
 
 	// Initialize the bigtable
@@ -194,25 +204,116 @@ func (d DataAccessService) CloseDataAccessService() {
 	if d.WriterDb != nil {
 		d.WriterDb.Close()
 	}
+	if d.AlloyReader != nil {
+		d.AlloyReader.Close()
+	}
+	if d.AlloyWriter != nil {
+		d.AlloyWriter.Close()
+	}
 	if d.Bigtable != nil {
 		d.Bigtable.Close()
 	}
 }
 
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardInfo(dashboardId)
+	result := &t.DashboardInfo{}
+
+	err := d.AlloyReader.Get(result, `
+		SELECT 
+			id, 
+			user_id
+		FROM users_val_dashboards
+		WHERE id = $1
+	`, dashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with id %d not found, err: %w", dashboardId, err)
+	}
+	return result, err
 }
 
 func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardInfoByPublicId(publicDashboardId)
+	result := &t.DashboardInfo{}
+
+	err := d.AlloyReader.Get(result, `
+		SELECT 
+			uvd.id,
+			uvd.user_id
+		FROM users_val_dashboards_sharing uvds
+		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
+		WHERE uvds.public_id = $1
+	`, publicDashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with public id %s not found, err: %w", publicDashboardId, err)
+	}
+	return result, err
 }
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
 func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorsFromStrings(validators)
+	if len(validators) == 0 {
+		return nil, nil
+	}
+
+	// Create a map to remove potential duplicates
+	validatorMap := make(map[string]bool)
+	for _, v := range validators {
+		v = strings.TrimPrefix(v, "0x")
+		validatorMap[v] = true
+	}
+
+	// Split the validators into pubkey and index slices
+	validatorIdxs := pq.Int64Array{}
+	validatorPubkeys := pq.ByteaArray{}
+	for validator := range validatorMap {
+		if utils.IsHash(validator) {
+			validatorPubkey, err := hex.DecodeString(validator)
+			if err != nil {
+				return nil, err
+			}
+			validatorPubkeys = append(validatorPubkeys, validatorPubkey)
+		} else if validatorIdx, parseErr := strconv.ParseUint(validator, 10, 31); parseErr == nil { // Limit to 31 bits to stay within math.MaxInt32
+			validatorIdxs = append(validatorIdxs, int64(validatorIdx))
+		} else {
+			return nil, fmt.Errorf("invalid validator index or pubkey: %s", validator)
+		}
+	}
+
+	// Query the database for the validators
+	validatorsFromIdxPubkey := []t.VDBValidator{}
+	err := d.AlloyReader.Select(&validatorsFromIdxPubkey, `
+		SELECT 
+			validator_index,
+			MAX(validator_index_version) as validator_index_version
+		FROM validators
+		WHERE validator_index = ANY($1)
+		GROUP BY validator_index
+		UNION ALL
+		SELECT 
+			validator_index,
+			validator_index_version
+		FROM validators
+		WHERE pubkey = ANY($2)
+	`, validatorIdxs, validatorPubkeys)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return an error if not every validator was found
+	if len(validatorsFromIdxPubkey) != len(validatorMap) {
+		return nil, fmt.Errorf("not all validators from strings were found")
+	}
+
+	// Create a map to remove potential duplicates
+	validatorResultMap := make(map[t.VDBValidator]bool)
+	for _, v := range validatorsFromIdxPubkey {
+		validatorResultMap[v] = true
+	}
+	result := make([]t.VDBValidator, 0, len(validatorResultMap))
+	for validator := range validatorResultMap {
+		result = append(result, validator)
+	}
+
+	return result, nil
 }
 
 func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
@@ -246,8 +347,92 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsDa
 }
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboard(userId, name, network)
+	result := &t.VDBPostReturnData{}
+
+	const nameCharLimit = 50
+	const defaultGrpName = "default"
+
+	if len(name) > nameCharLimit {
+		return nil, fmt.Errorf("validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+	}
+
+	tx, err := d.AlloyWriter.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Create validator dashboard for user
+	err = tx.Get(result, `
+		INSERT INTO users_val_dashboards (user_id, network, name)
+			VALUES ($1, $2, $3)
+		RETURNING id, user_id, name, network, created_at
+	`, userId, network, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a default group for the new dashboard
+	_, err = tx.Exec(`
+		INSERT INTO users_val_dashboards_groups (dashboard_id, name)
+			VALUES ($1, $2)
+	`, result.Id, defaultGrpName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to create a validator dashboard: %w", err)
+	}
+
+	return result, nil
+}
+
+func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
+	tx, err := d.AlloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Delete the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards WHERE id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all groups for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all validators for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all shared dashboards for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
+	}
+	return nil
 }
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
@@ -255,24 +440,68 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	return d.dummy.GetValidatorDashboardOverview(dashboardId)
 }
 
-func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboard(dashboardId)
-}
-
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboardGroup(dashboardId, name)
+	result := &t.VDBOverviewGroup{}
+
+	nameCharLimit := 50
+	if len(name) > nameCharLimit {
+		return nil, fmt.Errorf("validator dashboard group name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+	}
+
+	// Create a new group that has the smallest unique id possible
+	err := d.AlloyWriter.Get(result, `
+		WITH NextAvailableId AS (
+		    SELECT COALESCE(MIN(uvdg1.id) + 1, 0) AS next_id
+		    FROM users_val_dashboards_groups uvdg1
+		    LEFT JOIN users_val_dashboards_groups uvdg2 ON uvdg1.id + 1 = uvdg2.id AND uvdg1.dashboard_id = uvdg2.dashboard_id
+		    WHERE uvdg1.dashboard_id = $1 AND uvdg2.id IS NULL
+		)
+		INSERT INTO users_val_dashboards_groups (id, dashboard_id, name)
+			SELECT next_id, $1, $2
+		FROM NextAvailableId
+		RETURNING id, name
+	`, dashboardId, name)
+
+	return result, err
 }
 
 func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardGroup(dashboardId, groupId)
-}
+	tx, err := d.AlloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
+	}
+	defer utils.Rollback(tx)
 
-func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-	// WORKING spletka
-	return d.dummy.AddValidatorDashboardValidators(dashboardId, groupId, validators)
+	// Delete the group
+	result, err := tx.Exec(`
+		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
+	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	// Check if the group was deleted
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("error group %v does not exist, cannot remove it", groupId)
+	}
+
+	// Delete all validators for the group
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2
+	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
+	}
+	return nil
 }
 
 func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
@@ -280,24 +509,230 @@ func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, 
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
+func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	if len(validators) == 0 {
+		// No validators to add
+		return nil, nil
+	}
+
+	// Check that the group exists in the dashboard
+	groupExists := false
+	err := d.AlloyReader.Get(&groupExists, `
+		SELECT EXISTS(
+			SELECT
+				dashboard_id,
+				id
+			FROM users_val_dashboards_groups
+			WHERE dashboard_id = $1 AND id = $2
+		)
+	`, dashboardId, groupId)
+	if err != nil {
+		return nil, err
+	}
+	if !groupExists {
+		return nil, fmt.Errorf("error group %v does not exist, cannot add validators to it", groupId)
+	}
+
+	pubkeys := []struct {
+		ValidatorIndex        uint64 `db:"validator_index"`
+		ValidatorIndexVersion uint64 `db:"validator_index_version"`
+		Pubkey                []byte `db:"pubkey"`
+	}{}
+
+	addedValidators := []struct {
+		ValidatorIndex        uint64 `db:"validator_index"`
+		ValidatorIndexVersion uint64 `db:"validator_index_version"`
+		GroupId               uint64 `db:"group_id"`
+	}{}
+
+	// Query to find the pubkey for each validator index and version pair
+	pubkeysQuery := `
+		SELECT
+			validator_index,
+			validator_index_version,
+			pubkey
+		FROM validators
+		WHERE (validator_index, validator_index_version) IN (
+	`
+
+	// Query to add the validator and version pairs to the dashboard and group
+	addValidatorsQuery := `
+		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index, validator_index_version)
+			VALUES 
+	`
+
+	flattenedValidators := make([]interface{}, 0, len(validators)*2)
+	for idx, v := range validators {
+		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
+		pubkeysQuery += fmt.Sprintf("($%d, $%d), ", idx*2+1, idx*2+2)
+		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d, $%d), ", idx*2+3, idx*2+4)
+	}
+	pubkeysQuery = pubkeysQuery[:len(pubkeysQuery)-2] + ")"             // remove trailing comma
+	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
+
+	// If a validator is already in the dashboard, update the group
+	// If the validator is already in that group nothing changes but we will include it in the result anyway
+	addValidatorsQuery += `
+		ON CONFLICT (dashboard_id, validator_index, validator_index_version) DO UPDATE SET 
+			dashboard_id = EXCLUDED.dashboard_id,
+			group_id = EXCLUDED.group_id,
+			validator_index = EXCLUDED.validator_index,
+			validator_index_version = EXCLUDED.validator_index_version
+		RETURNING validator_index, validator_index_version, group_id
+	`
+
+	// Find all the pubkeys
+	err = d.AlloyReader.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add all the validators to the dashboard and group
+	addValidatorsArgsIntf := append([]interface{}{dashboardId, groupId}, flattenedValidators...)
+	err = d.AlloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine the pubkeys and group ids for the result
+	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
+	for _, pubKeyInfo := range pubkeys {
+		pubkeysMap[t.VDBValidator{
+			Index:   pubKeyInfo.ValidatorIndex,
+			Version: pubKeyInfo.ValidatorIndexVersion}] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
+	}
+
+	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
+	for _, addedValidatorInfo := range addedValidators {
+		addedValidatorsMap[t.VDBValidator{
+			Index:   addedValidatorInfo.ValidatorIndex,
+			Version: addedValidatorInfo.ValidatorIndexVersion}] = addedValidatorInfo.GroupId
+	}
+
+	result := []t.VDBPostValidatorsData{}
+	for _, validator := range validators {
+		result = append(result, t.VDBPostValidatorsData{
+			PublicKey: pubkeysMap[validator],
+			GroupId:   addedValidatorsMap[validator],
+		})
+	}
+
+	return result, nil
+}
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardValidators(dashboardId, validators)
+	if len(validators) == 0 {
+		// Remove all validators for the dashboard
+		_, err := d.AlloyWriter.Exec(`
+			DELETE FROM users_val_dashboards_validators 
+			WHERE dashboard_id = $1
+		`, dashboardId)
+		return err
+	}
+
+	//Create the query to delete validators
+	deleteValidatorsQuery := `
+		DELETE FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND (validator_index, validator_index_version) IN (
+	`
+
+	flattenedValidators := make([]interface{}, 0, len(validators)*2)
+	for idx, v := range validators {
+		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
+		deleteValidatorsQuery += fmt.Sprintf("($%d, $%d), ", idx*2+2, idx*2+3)
+	}
+	deleteValidatorsQuery = deleteValidatorsQuery[:len(deleteValidatorsQuery)-2] + ")" // remove trailing comma
+
+	// Delete the validators
+	deleteValidatorsArgsIntf := append([]interface{}{dashboardId}, flattenedValidators...)
+	_, err := d.AlloyWriter.Exec(deleteValidatorsQuery, deleteValidatorsArgsIntf...)
+
+	return err
 }
 
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboardPublicId(dashboardId, name, showGroupNames)
+	const nameCharLimit = 50
+	if len(name) > nameCharLimit {
+		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+	}
+
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+
+	// Create the public validator dashboard, multiple entries for the same dashboard are possible
+	err := d.AlloyWriter.Get(&dbReturn, `
+		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
+			VALUES ($1, $2, $3)
+		RETURNING public_id, name, shared_groups
+	`, dashboardId, name, showGroupNames)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+
+	return result, nil
 }
 
 func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	// WORKING spletka
-	return d.dummy.UpdateValidatorDashboardPublicId(publicDashboardId, name, showGroupNames)
+	const nameCharLimit = 50
+	if len(name) > nameCharLimit {
+		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
+	}
+
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+
+	// Update the name and settings of the public validator dashboard
+	err := d.AlloyWriter.Get(&dbReturn, `
+		UPDATE users_val_dashboards_sharing SET
+			name = $1,
+			shared_groups = $2
+		WHERE public_id = $3
+		RETURNING public_id, name, shared_groups
+	`, name, showGroupNames, publicDashboardId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("public dashboard id %v does not exist, cannot update it", publicDashboardId)
+		}
+		return nil, err
+	}
+
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+
+	return result, nil
 }
 
 func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardPublicId(publicDashboardId)
+	// Delete the public validator dashboard
+	result, err := d.AlloyWriter.Exec(`
+		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
+	`, publicDashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Check if the public validator dashboard was deleted
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("error public dashboard id %v does not exist, cannot remove it", publicDashboardId)
+	}
+
+	return err
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
