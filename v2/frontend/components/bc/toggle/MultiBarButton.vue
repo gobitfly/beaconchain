@@ -17,7 +17,7 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <ToggleButton v-model="selected" class="bc-toggle" on-label="" off-icon="">
+  <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
         <FontAwesomeIcon v-if="icon" :icon="icon" />
