@@ -276,7 +276,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 }
 
 func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
