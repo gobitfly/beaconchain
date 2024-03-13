@@ -904,12 +904,12 @@ func (d DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId
 }
 
 func (d DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardElDeposits(dashboardId, cursor, search, limit)
 }
 
 func (d DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardClDeposits(dashboardId, cursor, search, limit)
 }
 
