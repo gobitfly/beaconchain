@@ -1,7 +1,7 @@
-export const SummaryDetails = ['details_day', 'details_week', 'details_month', 'details_total'] as const
+export const SummaryDetails = ['last_24h', 'last_7d', 'last_31d', 'all_time'] as const
 export type SummaryDetail = typeof SummaryDetails[number]
 
-export const SummaryDetailsEfficiencyProps = ['attestation_head', 'attestation_source', 'attestation_target', 'sync', 'proposals', 'slashed'] as const
+export const SummaryDetailsEfficiencyProps = ['attestations_head', 'attestations_source', 'attestations_target', 'sync', 'proposals', 'slashed'] as const
 export type SummaryDetailsEfficiencyProp = typeof SummaryDetailsEfficiencyProps[number]
 
 export const SummaryDetailsEfficiencyValidatorProps = ['validators_sync', 'validators_proposal', 'validators_slashings', 'validators_attestation'] as const
@@ -13,7 +13,7 @@ export type SummaryDetailsEfficiencyLuckProp = typeof SummaryDetailsEfficiencyLu
 export const SummaryDetailsEfficiencyCustomProps = ['attestation_total'] as const
 export type SummaryDetailsEfficiencyCustomProp = typeof SummaryDetailsEfficiencyCustomProps[number]
 
-export const SummaryDetailsEfficiencySpecialProps = ['efficiency_total', 'apr', 'luck', 'attestation_avg_incl_dist', 'attestation_efficiency'] as const
+export const SummaryDetailsEfficiencySpecialProps = ['efficiency_all_time', 'apr', 'luck', 'attestation_avg_incl_dist', 'attestation_efficiency'] as const
 export type SummaryDetailsEfficiencySpecialProp = typeof SummaryDetailsEfficiencySpecialProps[number]
 
 export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpecialProp | SummaryDetailsEfficiencyProp | SummaryDetailsEfficiencyCustomProp | SummaryDetailsEfficiencyLuckProp | SummaryDetailsEfficiencyValidatorProp

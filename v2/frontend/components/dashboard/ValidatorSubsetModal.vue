@@ -49,13 +49,13 @@ const caption = computed(() => {
   }
 
   switch (props.timeFrame) {
-    case 'details_day':
-      return text + ' ' + $t('statistics.day')
-    case 'details_week':
-      return text + ' ' + $t('statistics.week')
-    case 'details_month':
-      return text + ' ' + $t('statistics.month')
-    case 'details_total':
+    case 'last_24h':
+      return text + ' ' + $t('statistics.last_24h')
+    case 'last_7d':
+      return text + ' ' + $t('statistics.last_7d')
+    case 'last_31d':
+      return text + ' ' + $t('statistics.last_31d')
+    case 'all_time':
       return text + ' ' + $t('statistics.all')
   }
   return text
