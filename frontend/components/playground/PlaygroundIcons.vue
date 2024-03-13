@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getListOfChainIDs, ChainIDs } from '~/types/networks'
 </script>
 
 <template>
@@ -33,6 +34,20 @@
       <IconSlotSync /> Slot Sync
     </div>
   </div>
+  <div>
+    Monochromous:
+    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
+      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="false" :harmonize-perceived-size="false" class="network-icon" />
+    </span>
+    <br>Colored:
+    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
+      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="true" :harmonize-perceived-size="false" class="network-icon" />
+    </span>
+    <br>Harmonious:
+    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
+      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+    </span>
+  </div>
 </template>
 
 <style lang="scss" scoped>
@@ -44,5 +59,16 @@
   gap: 10px;
   height: 100px;
   width: 200px;
+}
+
+.network-icon-cont {
+ /* display: flex;
+  width: 300px;
+  height: 300px;*/
+}
+.network-icon {
+  display: flex;
+  width: 50px;
+  height: 50px;
 }
 </style>

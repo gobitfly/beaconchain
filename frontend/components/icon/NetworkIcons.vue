@@ -7,49 +7,30 @@ const props = defineProps({
 })
 
 const family = ChainInfo[props.chainId as ChainIDs].family
-const harmonizationClass = props.harmonizePerceivedSize ? family : ''
+const sizing = props.harmonizePerceivedSize ? family : 'do-not-adjust-size'
+const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
 </script>
 
 <template>
-  <span>
-    <span v-if="family === ChainFamily.Any" />
-    <span v-else-if="props.colored" class="container" :class="harmonizationClass">
-      <IconNetworkEthereumMulti v-if="family === ChainFamily.Ethereum" />
-      <IconNetworkArbitrumMulti v-else-if="family === ChainFamily.Arbitrum" />
-      <IconNetworkOptimismMulti v-else-if="family === ChainFamily.Optimism" />
-      <IconNetworkBaseMulti v-else-if="family === ChainFamily.Base" />
-      <IconNetworkGnosisMulti v-else-if="family === ChainFamily.Gnosis" />
-    </span>
-    <span v-else class="container" :class="harmonizationClass">
-      <IconNetworkEthereumMono v-if="family === ChainFamily.Ethereum" />
-      <IconNetworkArbitrumMono v-else-if="family === ChainFamily.Arbitrum" />
-      <IconNetworkOptimismMono v-else-if="family === ChainFamily.Optimism" />
-      <IconNetworkBaseMono v-else-if="family === ChainFamily.Base" />
-      <IconNetworkGnosisMono v-else-if="family === ChainFamily.Gnosis" />
-    </span>
-  </span>
+  <IconNetworkEthereumColored v-if="family === ChainFamily.Ethereum" :class="[coloring, sizing]" />
+  <IconNetworkArbitrumColored v-else-if="family === ChainFamily.Arbitrum" :class="[coloring, sizing]" />
+  <IconNetworkOptimismColored v-else-if="family === ChainFamily.Optimism" :class="[coloring, sizing]" />
+  <IconNetworkBaseColored v-else-if="family === ChainFamily.Base" :class="[coloring, sizing]" />
+  <IconNetworkGnosisColored v-else-if="family === ChainFamily.Gnosis" :class="[coloring, sizing]" />
 </template>
 
 <style lang="scss" scoped>
-.container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  border: none;
-  max-height: 100%;
-}
-
 // the following classes are used only if props `harmonize-perceived-size` has been set to true
 
 .Ethereum { // due to its height, the logo looks bigger than the others
-  width: 90%;
+  position: relative;
+  display: flex;
   margin: auto;
+  height: 90%;
 }
 
 .Arbitrum {  // due to the round border in its design, the logo looks smaller than the others
   position: relative;
   width: 110%;
-  left: -1px; // this shift is important when the icon is small and without visible consequence when it is big
 }
 </style>

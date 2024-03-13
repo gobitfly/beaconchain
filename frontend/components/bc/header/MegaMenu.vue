@@ -40,11 +40,11 @@ import {
   faBuildingColumns
 } from '@fortawesome/sharp-solid-svg-icons'
 
-import EthereumMono from '~/components/icon/network/EthereumMono.vue'
-import GnosisMono from '~/components/icon/network/GnosisMono.vue'
-import ArbitrumMono from '~/components/icon/network/ArbitrumMono.vue'
-import BaseMono from '~/components/icon/network/BaseMono.vue'
-import OptimismMono from '~/components/icon/network/OptimismMono.vue'
+import EthereumMono from '~/components/icon/network/EthereumColored.vue'
+import GnosisMono from '~/components/icon/network/GnosisColored.vue'
+import ArbitrumMono from '~/components/icon/network/ArbitrumColored.vue'
+import BaseMono from '~/components/icon/network/BaseColored.vue'
+import OptimismMono from '~/components/icon/network/OptimismColored.vue'
 import IconEthermineStaking from '~/components/icon/megaMenu/EthermineStaking.vue'
 import IconEthStore from '~/components/icon/megaMenu/EthStore.vue'
 import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
@@ -905,7 +905,7 @@ const items = [
   <MegaMenu :model="items" :breakpoint="minFullViewWidth">
     <template #itemicon="{ item }">
       <span v-if="item.svg || item.icon" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
-        <component :is="item.svg" v-if="item.svg" />
+        <component :is="item.svg" v-if="item.svg" class="monochromatic" />
         <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
       </span>
     </template>
