@@ -36,9 +36,9 @@
   "validator_state": {
     "active": "active",
     "deposited": "deposited",
-    "inactive": "inactive",
+    "online": "online",
+    "offline": "offline",
     "pending": "pending",
-    "exiting": "exiting",
     "exited": "exited",
     "slashed": "slashed"
   },

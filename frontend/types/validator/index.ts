@@ -1,1 +1,3 @@
-export type ValidatorStatus = 'deposited' | 'pending' | 'active' | 'inactive' | 'slashed' | 'exiting' | 'exited'
+import type { VDBManageValidatorsTableRow } from '../api/validator_dashboard'
+
+export type ValidatorStatus = VDBManageValidatorsTableRow['status']

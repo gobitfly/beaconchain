@@ -21,19 +21,16 @@ const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
   </div>
   <div class="status-holder">
     <div class="status">
-      <ValidatorTableStatus status="active" />
+      <ValidatorTableStatus status="online" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="deposited" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="inactive" />
+      <ValidatorTableStatus status="offline" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="pending" :position="12345" />
-    </div>
-    <div class="status">
-      <ValidatorTableStatus status="exiting" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="exited" />

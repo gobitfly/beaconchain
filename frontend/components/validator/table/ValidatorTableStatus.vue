@@ -30,15 +30,14 @@ const props = defineProps<Props>()
     text-transform: capitalize;
   }
 
-  .active{
+  .online{
     color: var(--positive-color);
   }
   .deposited,
   .pending {
     color: var(--orange-color);
   }
-  .inactive,
-  .exiting,
+  .offline,
   .exited,
   .slashed{
     color: var(--negative-color);
