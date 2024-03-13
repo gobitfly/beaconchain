@@ -576,13 +576,13 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 			switch tableName {
 			case "validator_dashboard_data_rolling_daily":
-				ret[result.GroupId].EfficiencyDay = result.Efficiency
+				ret[result.GroupId].EfficiencyLast24h = result.Efficiency
 			case "validator_dashboard_data_rolling_weekly":
-				ret[result.GroupId].EfficiencyWeek = result.Efficiency
+				ret[result.GroupId].EfficiencyLast7d = result.Efficiency
 			case "validator_dashboard_data_rolling_monthly":
-				ret[result.GroupId].EfficiencyMonth = result.Efficiency
+				ret[result.GroupId].EfficiencyLast31d = result.Efficiency
 			case "validator_dashboard_data_rolling_total":
-				ret[result.GroupId].EfficiencyTotal = result.Efficiency
+				ret[result.GroupId].EfficiencyAllTime = result.Efficiency
 			default:
 				log.Fatal(fmt.Errorf("invalid table name"), "", 0)
 			}
@@ -827,7 +827,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		if err != nil {
 			return err
 		}
-		ret.DetailsDay = *data
+		ret.Last24h = *data
 		return nil
 	})
 	// wg.Go(func() error {
