@@ -56,7 +56,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   display: flex;
   flex-direction: column;
   overflow: auto;
-  gap: 10px;
+  gap: var(--padding);
   height: 100px;
   width: 200px;
 }

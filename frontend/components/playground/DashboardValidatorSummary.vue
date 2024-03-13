@@ -2,7 +2,7 @@
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const { getOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('validator_dashboard_overview', () => getOverview())
+await useAsyncData('validator_dashboard_overview', () => getOverview(100))
 
 </script>
 <template>

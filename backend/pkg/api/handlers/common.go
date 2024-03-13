@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,8 +16,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
-
-	b64 "encoding/base64"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -39,7 +38,7 @@ var (
 	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPubkey = regexp.MustCompile(`^[0-9a-fA-F]{96}$`)
+	reValidatorPubkey = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reCursor          = regexp.MustCompile(`^[0-9a-fA-F]*$`)
 )
 
@@ -89,12 +88,14 @@ func checkName(handlerErr *error, name string, minLength int) string {
 
 func checkMultipleRegex(handlerErr *error, regexes []*regexp.Regexp, params []string, paramName string) []string {
 	results := make([]string, len(params))
-	for i, param := range params {
+OUTER:
+	for _, param := range params {
 		for _, regex := range regexes {
-			checkRegex(handlerErr, regex, param, paramName)
+			if regex.MatchString(param) {
+				continue OUTER
+			}
 		}
-		// might want to change this later
-		results[i] = params[i]
+		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter '%s' has incorrect format", param, paramName))
 	}
 	return results
 }
@@ -190,7 +191,7 @@ func checkDashboardId(handlerErr *error, id string, acceptValidatorSet bool) int
 		return nil
 	}
 	// given id must be an encoded set of validators
-	decodedId, err := b64.StdEncoding.DecodeString(id)
+	decodedId, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil {
 		joinErr(handlerErr, "invalid format for parameter 'dashboard_id'")
 		return nil
@@ -254,6 +255,10 @@ func parseSortOrder(order string) (bool, error) {
 }
 
 func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.Sort[T] {
+	if sort == "" {
+		var c T
+		return []types.Sort[T]{{Column: c, Desc: false}}
+	}
 	sortQueries := strings.Split(sort, ",")
 	sorts := make([]types.Sort[T], 0, len(sortQueries))
 	for _, v := range sortQueries {
