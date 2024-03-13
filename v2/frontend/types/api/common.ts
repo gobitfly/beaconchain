@@ -49,11 +49,11 @@ export interface ClElValue<T extends ClElUnion> {
   cl: T;
 }
 export interface PeriodicClElValues<T extends ClElUnion> {
-  total: ClElValue<T>;
-  day: ClElValue<T>;
-  week: ClElValue<T>;
-  month: ClElValue<T>;
-  year: ClElValue<T>;
+  all_time: ClElValue<T>;
+  last_24h: ClElValue<T>;
+  last_7d: ClElValue<T>;
+  last_31d: ClElValue<T>;
+  last_365d: ClElValue<T>;
 }
 export interface ChartSeries<T extends number /* int */ | string> {
   id: T; // id may be a string or an int

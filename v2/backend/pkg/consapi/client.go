@@ -21,7 +21,7 @@ type ClientInt interface {
 	GetValidator(validatorID, stateID any) (*types.StandardSingleValidatorsResponse, error)
 
 	// /eth/v1/validator/duties/proposer/{epoch}
-	GetPropoalAssignments(epoch int) (*types.StandardProposerAssignmentsResponse, error)
+	GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error)
 
 	// /eth/v1/beacon/rewards/blocks/{block_id}
 	GetPropoalRewards(blockID any) (*types.StandardBlockRewardsResponse, error)
@@ -33,7 +33,7 @@ type ClientInt interface {
 	GetAttestationRewards(epoch uint64) (*types.StandardAttestationRewardsResponse, error)
 
 	// /eth/v1/beacon/states/{state_id}/sync_committees
-	GetSyncCommitteesAssignments(epoch int, stateID any) (*types.StandardSyncCommitteesResponse, error)
+	GetSyncCommitteesAssignments(epoch uint64, stateID any) (*types.StandardSyncCommitteesResponse, error)
 
 	// /eth/v1/config/spec
 	GetSpec() (*types.StandardSpecResponse, error)

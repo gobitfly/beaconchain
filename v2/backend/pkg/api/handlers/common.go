@@ -193,7 +193,7 @@ func parseDashboardId(id string) (interface{}, error) {
 	if reNumber.MatchString(id) {
 		// given id is a normal id
 		id := checkUint(&err, id, "dashboard_id")
-		return id, err
+		return types.VDBIdPrimary(id), err
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
@@ -216,13 +216,13 @@ func parseDashboardId(id string) (interface{}, error) {
 func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
-		return &types.VDBId{Id: dashboardId}, nil
+		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
 		dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
 		if err != nil {
 			return nil, err
 		}
-		return &types.VDBId{Id: dashboardInfo.Id}, nil
+		return &types.VDBId{Id: dashboardInfo.Id, Validators: nil}, nil
 	case []string:
 		validators, err := h.dai.GetValidatorsFromStrings(dashboardId)
 		if err != nil {
@@ -284,7 +284,9 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 
 	if limitStr := q.Get("limit"); limitStr != "" {
 		limit, err := strconv.ParseUint(limitStr, 10, 64)
-		joinErr(handlerErr, err.Error())
+		if err != nil {
+			joinErr(handlerErr, err.Error())
+		}
 		paging.limit = min(limit, maxQueryLimit)
 	}
 
