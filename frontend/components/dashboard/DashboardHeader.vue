@@ -3,10 +3,38 @@ import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 const store = useUserDashboardStore()
 const { getDashboards } = store
 
-const { dashboards } = storeToRefs(store)
+// const { dashboards } = storeToRefs(store)
 await useAsyncData('validator_dashboards', () => getDashboards()) // TODO: This is called here and in DashboardValidatorManageValidators.vue. Should just be called once?
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
+
+const items = ref([
+  {
+    label: 'Selected Validators', // Caption of the button
+    items: [
+      {
+        label: 'Best Validators'
+      },
+      {
+        label: 'Worst Validators'
+      }
+    ]
+  },
+  {
+    label: 'Selected Accounts', // Caption of the button
+    items: [
+      {
+        label: 'Best Accounts'
+      },
+      {
+        label: 'Worst Accounts'
+      }
+    ]
+  },
+  {
+    label: 'Notifications'
+  }
+])
 
 </script>
 
@@ -16,9 +44,7 @@ const emit = defineEmits<{(e: 'showCreation'): void }>()
       {{ $t('dashboard.title') }}
     </div>
     <div class="dashboard-buttons">
-      <DashboardSelectionButton type="validator" :dashboards="dashboards?.validator_dashboards" />
-      <DashboardSelectionButton type="account" :dashboards="dashboards?.account_dashboards" />
-      <DashboardSelectionButton type="notifications" />
+      <Menubar :model="items" />
       <Button class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>
