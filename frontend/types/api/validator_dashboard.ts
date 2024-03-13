@@ -96,9 +96,9 @@ export interface VDBGroupRewardsDetails {
   income: string /* decimal.Decimal */;
 }
 export interface VDBGroupRewardsData {
-  attestation_source: VDBGroupRewardsDetails;
-  attestation_target: VDBGroupRewardsDetails;
-  attestation_head: VDBGroupRewardsDetails;
+  attestations_source: VDBGroupRewardsDetails;
+  attestations_target: VDBGroupRewardsDetails;
+  attestations_head: VDBGroupRewardsDetails;
   sync: VDBGroupRewardsDetails;
   slashing: VDBGroupRewardsDetails;
   proposal: VDBGroupRewardsDetails;
@@ -115,9 +115,9 @@ export interface VDBEpochDutiesItem {
 }
 export interface VDBEpochDutiesTableRow {
   validator: number /* uint64 */;
-  attestation_source: VDBEpochDutiesItem;
-  attestation_target: VDBEpochDutiesItem;
-  attestation_head: VDBEpochDutiesItem;
+  attestations_source: VDBEpochDutiesItem;
+  attestations_target: VDBEpochDutiesItem;
+  attestations_head: VDBEpochDutiesItem;
   proposal: VDBEpochDutiesItem;
   sync: VDBEpochDutiesItem;
   slashing: VDBEpochDutiesItem;
@@ -163,9 +163,9 @@ export interface VDBHeatmapTooltipData {
   proposers: VDBHeatmapTooltipDuty[];
   syncs: VDBHeatmapTooltipDuty[];
   slashings: VDBHeatmapTooltipDuty[];
-  attestation_head: StatusCount;
-  attestation_source: StatusCount;
-  attestation_target: StatusCount;
+  attestations_head: StatusCount;
+  attestations_source: StatusCount;
+  attestations_target: StatusCount;
   attestation_income: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<VDBHeatmapTooltipData>;
