@@ -211,10 +211,6 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       position: relative;
       height: unset;
     }
-
-    .current-page {
-      display: none;
-    }
   }
 }
 </style>
