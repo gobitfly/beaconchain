@@ -1,10 +1,8 @@
 package modules
 
 import (
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -101,12 +99,7 @@ func saveSSV(res *SSVExporterResponse) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	// for now make sure to correct wrongly marked validators
 	for {
