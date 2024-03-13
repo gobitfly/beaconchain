@@ -1111,7 +1111,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           }
         }
 
-        .columns-icons {
+        .columns-icons {border: 1px solid red;
           position: relative;
           grid-column: 1;
           grid-row: 1;
@@ -1128,12 +1128,12 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           height: 36px;
 
           .type-icon {
-            &.not-alone {
+            &.not-alone { border: 1px solid blue;
               display: inline;
               position: relative;
               top: 2px;
             }
-            &.alone {
+            &.alone { border: 1px solid blue;
              display: flex;
              margin-top: auto;
              margin-bottom: auto;
@@ -1141,7 +1141,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             width: 20px;
             max-height: 20px;
           }
-          .network-icon {
+          .network-icon {border: 1px solid blue;
             position: absolute;
             bottom: 0px;
             right: 0px;
