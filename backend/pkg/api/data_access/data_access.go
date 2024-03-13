@@ -81,6 +81,8 @@ type DataAccessService struct {
 
 	ReaderDb                *sqlx.DB
 	WriterDb                *sqlx.DB
+	AlloyReader             *sqlx.DB
+	AlloyWriter             *sqlx.DB
 	Bigtable                *db.Bigtable
 	PersistentRedisDbClient *redis.Client
 }
@@ -144,6 +146,9 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 			SSL:          cfg.AlloyReader.SSL,
 		})
+
+		dataAccessService.AlloyReader = db.AlloyReader
+		dataAccessService.AlloyWriter = db.AlloyWriter
 	}()
 
 	// Initialize the bigtable
@@ -199,6 +204,12 @@ func (d DataAccessService) CloseDataAccessService() {
 	if d.WriterDb != nil {
 		d.WriterDb.Close()
 	}
+	if d.AlloyReader != nil {
+		d.AlloyReader.Close()
+	}
+	if d.AlloyWriter != nil {
+		d.AlloyWriter.Close()
+	}
 	if d.Bigtable != nil {
 		d.Bigtable.Close()
 	}
@@ -207,7 +218,7 @@ func (d DataAccessService) CloseDataAccessService() {
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
-	err := d.ReaderDb.Get(result, `
+	err := d.AlloyReader.Get(result, `
 		SELECT 
 			id, 
 			user_id
@@ -223,7 +234,7 @@ func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary)
 func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
-	err := d.ReaderDb.Get(result, `
+	err := d.AlloyReader.Get(result, `
 		SELECT 
 			uvd.id,
 			uvd.user_id
@@ -269,7 +280,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 
 	// Query the database for the validators
 	validatorsFromIdxPubkey := []t.VDBValidator{}
-	err := d.ReaderDb.Select(&validatorsFromIdxPubkey, `
+	err := d.AlloyReader.Select(&validatorsFromIdxPubkey, `
 		SELECT 
 			validator_index,
 			MAX(validator_index_version) as validator_index_version
@@ -320,7 +331,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 		return nil, fmt.Errorf("validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
 	}
 
-	tx, err := d.WriterDb.Beginx()
+	tx, err := d.AlloyWriter.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
 	}
@@ -354,7 +365,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 }
 
 func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
-	tx, err := d.WriterDb.Beginx()
+	tx, err := d.AlloyWriter.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
 	}
@@ -413,7 +424,7 @@ func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	}
 
 	// Create a new group that has the smallest unique id possible
-	err := d.WriterDb.Get(result, `
+	err := d.AlloyWriter.Get(result, `
 		WITH NextAvailableId AS (
 		    SELECT COALESCE(MIN(uvdg1.id) + 1, 0) AS next_id
 		    FROM users_val_dashboards_groups uvdg1
@@ -430,7 +441,7 @@ func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrim
 }
 
 func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
-	tx, err := d.WriterDb.Beginx()
+	tx, err := d.AlloyWriter.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
 	}
@@ -476,7 +487,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 
 	// Check that the group exists in the dashboard
 	groupExists := false
-	err := d.ReaderDb.Get(&groupExists, `
+	err := d.AlloyReader.Get(&groupExists, `
 		SELECT EXISTS(
 			SELECT
 				dashboard_id,
@@ -541,14 +552,14 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 	`
 
 	// Find all the pubkeys
-	err = d.ReaderDb.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
+	err = d.AlloyReader.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add all the validators to the dashboard and group
 	addValidatorsArgsIntf := append([]interface{}{dashboardId, groupId}, flattenedValidators...)
-	err = d.WriterDb.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	err = d.AlloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +593,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
 		// Remove all validators for the dashboard
-		_, err := d.WriterDb.Exec(`
+		_, err := d.AlloyWriter.Exec(`
 			DELETE FROM users_val_dashboards_validators 
 			WHERE dashboard_id = $1
 		`, dashboardId)
@@ -604,7 +615,7 @@ func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBI
 
 	// Delete the validators
 	deleteValidatorsArgsIntf := append([]interface{}{dashboardId}, flattenedValidators...)
-	_, err := d.WriterDb.Exec(deleteValidatorsQuery, deleteValidatorsArgsIntf...)
+	_, err := d.AlloyWriter.Exec(deleteValidatorsQuery, deleteValidatorsArgsIntf...)
 
 	return err
 }
@@ -627,7 +638,7 @@ func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdP
 	}{}
 
 	// Create the public validator dashboard, multiple entries for the same dashboard are possible
-	err := d.WriterDb.Get(&dbReturn, `
+	err := d.AlloyWriter.Get(&dbReturn, `
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
 			VALUES ($1, $2, $3)
 		RETURNING public_id, name, shared_groups
@@ -657,7 +668,7 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId st
 	}{}
 
 	// Update the name and settings of the public validator dashboard
-	err := d.WriterDb.Get(&dbReturn, `
+	err := d.AlloyWriter.Get(&dbReturn, `
 		UPDATE users_val_dashboards_sharing SET
 			name = $1,
 			shared_groups = $2
@@ -681,7 +692,7 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId st
 
 func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
 	// Delete the public validator dashboard
-	result, err := d.WriterDb.Exec(`
+	result, err := d.AlloyWriter.Exec(`
 		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
 	`, publicDashboardId)
 	if err != nil {
