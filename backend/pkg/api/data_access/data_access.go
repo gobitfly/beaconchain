@@ -277,7 +277,7 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId st
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
 	var validatorsArray []uint32
 	if len(dashboardId.Validators) == 0 {
-		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
 		if err != nil {
 			return nil, err
 		}
