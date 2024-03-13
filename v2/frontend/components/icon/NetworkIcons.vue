@@ -45,7 +45,7 @@ const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
 // Based on empirical trials an errors with author's brain, works better on a dark background.
 
 .Ethereum {
-  height: 100%;
+  height: 110%;
 }
 
 .Arbitrum {
