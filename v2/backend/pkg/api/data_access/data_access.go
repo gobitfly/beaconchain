@@ -511,8 +511,6 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardSummary called for dashboard %v", dashboardId)
-
 	validators := make([]uint64, 0)
 	if len(dashboardId.Validators) > 0 {
 		for _, validator := range dashboardId.Validators {
@@ -696,8 +694,11 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			deposits_count,
 			deposits_amount,
 			withdrawals_count,
-			withdrawals_amount
-			from users_val_dashboards_validators
+			withdrawals_amount,
+			sync_chance,
+			block_chance,
+			inclusion_delay_sum
+		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
 	` //  OR %[1]s.validator_index = ANY($3)
@@ -742,6 +743,11 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		WithdrawalsCount  uint32 `db:"withdrawals_count"`
 		WithdrawalsAmount int64  `db:"withdrawals_amount"`
+
+		SyncChance  float64 `db:"sync_chance"`
+		BlockChance float64 `db:"block_chance"`
+
+		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
 	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64) (*t.VDBGroupSummaryColumn, error) {
@@ -759,6 +765,10 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		totalEndBalance := int64(0)
 		totalDeposits := int64(0)
 		totalWithdrawals := int64(0)
+		totalSyncChance := float64(0)
+		totalBlockChance := float64(0)
+		totalInclusionDelaySum := int64(0)
+
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
@@ -806,6 +816,9 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalEndBalance += row.BalanceEnd
 			totalDeposits += row.DepositsAmount
 			totalWithdrawals += row.WithdrawalsAmount
+			totalSyncChance += row.SyncChance
+			totalBlockChance += row.BlockChance
+			totalInclusionDelaySum += row.InclusionDelaySum
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
@@ -818,6 +831,10 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		if data.AttestationEfficiency < 0 {
 			data.AttestationEfficiency = 0
 		}
+
+		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
+		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		data.AttestationAvgInclDist = float64(totalInclusionDelaySum) / (float64(data.AttestationsHead.StatusCount.Failed) + float64(data.AttestationsHead.StatusCount.Success))
 
 		return &data, nil
 	}
