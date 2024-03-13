@@ -39,7 +39,8 @@ var (
 	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPubkey = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
-	reCursor          = regexp.MustCompile(`^[0-9a-fA-F]*$`)
+	reCursor          = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
+
 )
 
 const (
