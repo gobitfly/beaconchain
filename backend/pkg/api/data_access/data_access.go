@@ -215,8 +215,33 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 }
 
 func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
-	// WORKING spletka
-	return d.dummy.GetUserDashboards(userId)
+	result := &t.UserDashboardsData{}
+
+	// Get the validator dashboards
+	err := db.AlloyReader.Select(&result.ValidatorDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_val_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the account dashboards
+	err = db.AlloyReader.Select(&result.AccountDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_acc_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
@@ -971,12 +996,12 @@ func (d DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId
 }
 
 func (d DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardElDeposits(dashboardId, cursor, search, limit)
 }
 
 func (d DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardClDeposits(dashboardId, cursor, search, limit)
 }
 
