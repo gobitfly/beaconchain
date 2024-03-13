@@ -12,25 +12,37 @@ const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
 </script>
 
 <template>
-  <IconNetworkEthereumColored v-if="family === ChainFamily.Ethereum" :class="[coloring, sizing]" />
-  <IconNetworkArbitrumColored v-else-if="family === ChainFamily.Arbitrum" :class="[coloring, sizing]" />
-  <IconNetworkOptimismColored v-else-if="family === ChainFamily.Optimism" :class="[coloring, sizing]" />
-  <IconNetworkBaseColored v-else-if="family === ChainFamily.Base" :class="[coloring, sizing]" />
-  <IconNetworkGnosisColored v-else-if="family === ChainFamily.Gnosis" :class="[coloring, sizing]" />
+  <span>
+    <span class="container" :class="sizing">
+      <IconNetworkEthereumColored v-if="family === ChainFamily.Ethereum" :class="coloring" />
+      <IconNetworkArbitrumColored v-else-if="family === ChainFamily.Arbitrum" :class="[coloring, sizing]" />
+      <IconNetworkOptimismColored v-else-if="family === ChainFamily.Optimism" :class="[coloring, sizing]" />
+      <IconNetworkBaseColored v-else-if="family === ChainFamily.Base" :class="[coloring, sizing]" />
+      <IconNetworkGnosisColored v-else-if="family === ChainFamily.Gnosis" :class="[coloring, sizing]" />
+    </span>
+  </span>
 </template>
 
 <style lang="scss" scoped>
-// the following classes are used only if props `harmonize-perceived-size` has been set to true
-
-.Ethereum { // due to its height, the logo looks bigger than the others
-  position: relative;
+.container {
   display: flex;
+  max-height: 100%;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+}
+// The following classes are used only if props `harmonize-perceived-size` has been set to true.
+// It correct what a human brain perceives, to give the feeling that all icons have a similar size (maybe a matter of surface area).
+// Based on empirical trials an errors with author's brain.
+
+.Ethereum {
   margin: auto;
-  height: 90%;
+  width: 85%;
 }
 
-.Arbitrum {  // due to the round border in its design, the logo looks smaller than the others
+.Arbitrum {
   position: relative;
-  width: 110%;
+  width: 105%;
 }
 </style>
