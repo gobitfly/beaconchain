@@ -529,7 +529,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 		SyncEfficiency        float64 `db:"sync_efficiency"`
 	}
 
-	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) error {
+	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) (map[uint64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
@@ -543,7 +543,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			) as a;`
 			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		} else {
 			query := `select group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
@@ -559,15 +559,15 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			) as a;`
 			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		}
 
-		retMux.Lock()
+		data := make(map[uint64]float64)
 		for _, result := range queryResult {
 			efficiency := float64(0)
 
-			if result.ProposerEfficiency == -2 && result.SyncEfficiency == -2 {
+			if result.ProposerEfficiency == 1 && result.SyncEfficiency == 1 {
 				efficiency = result.AttestationEfficiency * 100.0
 			} else {
 				efficiency = ((54.0 / 64.0 * result.AttestationEfficiency) + (8.0 / 64.0 * result.ProposerEfficiency) + (2.0 / 64.0 * result.SyncEfficiency)) * 100.0
@@ -576,26 +576,9 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				efficiency = 0
 			}
 
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-			ret[result.GroupId].GroupId = result.GroupId
-
-			switch tableName {
-			case "validator_dashboard_data_rolling_daily":
-				ret[result.GroupId].EfficiencyLast24h = efficiency
-			case "validator_dashboard_data_rolling_weekly":
-				ret[result.GroupId].EfficiencyLast7d = efficiency
-			case "validator_dashboard_data_rolling_monthly":
-				ret[result.GroupId].EfficiencyLast31d = efficiency
-			case "validator_dashboard_data_rolling_total":
-				ret[result.GroupId].EfficiencyAllTime = efficiency
-			default:
-				log.Fatal(fmt.Errorf("invalid table name"), "", 0)
-			}
+			data[result.GroupId] = efficiency
 		}
-		retMux.Unlock()
-		return nil
+		return data, nil
 	}
 
 	if len(validators) == 0 { // retrieve the validators & groups from the dashboard table
@@ -632,16 +615,72 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	}
 
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].EfficiencyLast24h = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].EfficiencyLast24h = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].EfficiencyLast24h = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].EfficiencyLast24h = efficiency
+		}
+		return nil
 	})
 	err := wg.Wait()
 
@@ -843,7 +882,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
 		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
-		data.AttestationAvgInclDist = float64(totalInclusionDelaySum) / (float64(data.AttestationsHead.StatusCount.Failed) + float64(data.AttestationsHead.StatusCount.Success))
+		data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/(float64(data.AttestationsHead.StatusCount.Failed)+float64(data.AttestationsHead.StatusCount.Success))
 
 		return &data, nil
 	}
