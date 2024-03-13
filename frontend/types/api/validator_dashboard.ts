@@ -67,10 +67,10 @@ export interface VDBGroupSummaryColumn {
   luck: Luck;
 }
 export interface VDBGroupSummaryData {
-  details_day: VDBGroupSummaryColumn;
-  details_week: VDBGroupSummaryColumn;
-  details_month: VDBGroupSummaryColumn;
-  details_total: VDBGroupSummaryColumn;
+  last_24h: VDBGroupSummaryColumn;
+  last_7d: VDBGroupSummaryColumn;
+  last_31d: VDBGroupSummaryColumn;
+  all_time: VDBGroupSummaryColumn;
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */>>; // line chart, series id is group id, no stack
