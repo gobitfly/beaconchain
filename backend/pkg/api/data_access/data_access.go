@@ -511,8 +511,6 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardSummary called for dashboard %v", dashboardId)
-
 	validators := make([]uint64, 0)
 	if len(dashboardId.Validators) > 0 {
 		for _, validator := range dashboardId.Validators {
