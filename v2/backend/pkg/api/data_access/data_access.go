@@ -602,7 +602,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && result.SyncEfficiency.Valid {
 				efficiency = ((62.0 / 64.0 * result.AttestationEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
 			} else {
-				efficiency = ((54.0 / 64.0 * result.AttestationEfficiency.Float64) + (8.0 / 64.0 * result.ProposerEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
+				efficiency = (((54.0 / 64.0) * result.AttestationEfficiency.Float64) + ((8.0 / 64.0) * result.ProposerEfficiency.Float64) + ((2.0 / 64.0) * result.SyncEfficiency.Float64)) * 100.0
 			}
 
 			if efficiency < 0 {
@@ -677,7 +677,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast24h = efficiency
+			ret[groupId].EfficiencyLast7d = efficiency
 		}
 		return nil
 	})
@@ -694,7 +694,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast24h = efficiency
+			ret[groupId].EfficiencyLast31d = efficiency
 		}
 		return nil
 	})
@@ -711,7 +711,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast24h = efficiency
+			ret[groupId].EfficiencyAllTime = efficiency
 		}
 		return nil
 	})
