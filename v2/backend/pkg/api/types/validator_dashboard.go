@@ -44,25 +44,24 @@ type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 type VDBSummaryTableRow struct {
 	GroupId uint64 `json:"group_id"`
 
-	EfficiencyDay   float64 `json:"efficiency_day"`
-	EfficiencyWeek  float64 `json:"efficiency_week"`
-	EfficiencyMonth float64 `json:"efficiency_month"`
-	EfficiencyTotal float64 `json:"efficiency_total"`
+	EfficiencyLast24h float64 `json:"efficiency_last_24h"`
+	EfficiencyLast7d  float64 `json:"efficiency_last_7d"`
+	EfficiencyLast31d float64 `json:"efficiency_last_31d"`
+	EfficiencyAllTime float64 `json:"efficiency_all_time"`
 
 	Validators []uint64 `json:"validators"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
 type VDBGroupSummaryColumnItem struct {
-	StatusCount StatusCount     `json:"status_count"`
-	Earned      decimal.Decimal `json:"earned"`
-	Penalty     decimal.Decimal `json:"penalty"`
-	Validators  []uint64        `json:"validators,omitempty"`
+	StatusCount StatusCount `json:"status_count"`
+	Validators  []uint64    `json:"validators,omitempty"`
 }
 type VDBGroupSummaryColumn struct {
-	AttestationsHead       VDBGroupSummaryColumnItem `json:"attestation_head"`
-	AttestationsSource     VDBGroupSummaryColumnItem `json:"attestation_source"`
-	AttestationsTarget     VDBGroupSummaryColumnItem `json:"attestation_target"`
+	AttestationsHead       VDBGroupSummaryColumnItem `json:"attestations_head"`
+	AttestationsSource     VDBGroupSummaryColumnItem `json:"attestations_source"`
+	AttestationsTarget     VDBGroupSummaryColumnItem `json:"attestations_target"`
+	AttestationCount       StatusCount               `json:"attestation_count"`
 	AttestationEfficiency  float64                   `json:"attestation_efficiency"`
 	AttestationAvgInclDist float64                   `json:"attestation_avg_incl_dist"`
 
@@ -76,10 +75,10 @@ type VDBGroupSummaryColumn struct {
 	Luck Luck `json:"luck"`
 }
 type VDBGroupSummaryData struct {
-	DetailsDay   VDBGroupSummaryColumn `json:"details_day"`
-	DetailsWeek  VDBGroupSummaryColumn `json:"details_week"`
-	DetailsMonth VDBGroupSummaryColumn `json:"details_month"`
-	DetailsTotal VDBGroupSummaryColumn `json:"details_total"`
+	Last24h VDBGroupSummaryColumn `json:"last_24h"`
+	Last7d  VDBGroupSummaryColumn `json:"last_7d"`
+	Last31d VDBGroupSummaryColumn `json:"last_31d"`
+	AllTime VDBGroupSummaryColumn `json:"all_time"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
@@ -230,7 +229,8 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status"`
+	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof: deposited, pending, online, offline, exited, slashed"`
+	QueuePosition        uint64          `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }
 

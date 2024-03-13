@@ -304,3 +304,30 @@ var VDBManageValidatorsColumns = struct {
 	VDBManageValidatorsStatus,
 	VDBManageValidatorsWithdrawalCredential,
 }
+
+// ----------------
+// Postgres sort direction enum
+// SortOrder represents the sorting order, either ascending or descending.
+type SortOrder int
+
+// Constants for the sorting order.
+const (
+	ASC SortOrder = iota
+	DESC
+)
+
+// String method converts SortOrder to string representation.
+func (s SortOrder) String() string {
+	if s == ASC {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+// Invert method inverts the sorting order.
+func (s SortOrder) Invert() SortOrder {
+	if s == ASC {
+		return DESC
+	}
+	return ASC
+}

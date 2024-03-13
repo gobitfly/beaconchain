@@ -4,7 +4,7 @@ import { IconNetworkEthereumMono, IconNetworkGnosisMono } from '#components'
 const { t: $t } = useI18n()
 
 const network = defineModel<string>('network', { required: true })
-const allNetworks = shallowRef([{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }])
+const allNetworks = [{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }]
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 

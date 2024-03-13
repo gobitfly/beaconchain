@@ -1,7 +1,7 @@
 {
   "data": {
-    "details_day": {
-      "attestation_head": {
+    "last_24h": {
+      "attestations_head": {
         "status_count": {
           "success": 121,
           "failed": 32
@@ -10,7 +10,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_source": {
+      "attestations_source": {
         "status_count": {
           "success": 122,
           "failed": 32
@@ -19,7 +19,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23, 5432, 2309, 333, 22, 111]
       },
-      "attestation_target": {
+      "attestations_target": {
         "status_count": {
           "success": 0,
           "failed": 32
@@ -27,6 +27,10 @@
         "earned": "11300000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_count": {
+          "success": 50,
+          "failed": 32
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
@@ -78,8 +82,8 @@
         }
       }
     },
-    "details_week": {
-      "attestation_head": {
+    "last_7d": {
+      "attestations_head": {
         "status_count": {
           "success": 223,
           "failed": 32
@@ -88,7 +92,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_source": {
+      "attestations_source": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -97,7 +101,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_target": {
+      "attestations_target": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -105,6 +109,10 @@
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_count": {
+          "success": 150,
+          "failed": 0
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
@@ -156,8 +164,8 @@
         }
       }
     },
-    "details_month": {
-      "attestation_head": {
+    "last_31d": {
+      "attestations_head": {
         "status_count": {
           "success": 323,
           "failed": 32
@@ -166,7 +174,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_source": {
+      "attestations_source": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -175,7 +183,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_target": {
+      "attestations_target": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -183,6 +191,10 @@
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_count": {
+          "success": 0,
+          "failed": 32
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
@@ -234,8 +246,8 @@
         }
       }
     },
-    "details_total": {
-      "attestation_head": {
+    "all_time": {
+      "attestations_head": {
         "status_count": {
           "success": 423,
           "failed": 32
@@ -244,7 +256,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_source": {
+      "attestations_source": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -253,7 +265,7 @@
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
-      "attestation_target": {
+      "attestations_target": {
         "status_count": {
           "success": 123,
           "failed": 32
@@ -261,6 +273,10 @@
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
+      },
+      "attestation_count": {
+          "success": 5111,
+          "failed": 3223
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
