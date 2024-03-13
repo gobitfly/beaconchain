@@ -122,7 +122,7 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
               :header="$t('dashboard.validator.col.public_key')"
             >
               <template #body="slotProps">
-                <span>{{ slotProps.data.public_key }}</span>
+                <BcFormatHash :hash="slotProps.data.public_key" type="public_key" />
               </template>
             </Column>
             <Column
@@ -147,7 +147,7 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
             <Column
               field="status"
               :sortable="true"
-              :header="$t('dashboard.validator.col.balance')"
+              :header="$t('dashboard.validator.col.status')"
             >
               <template #body="slotProps">
                 <ValidatorTableStatus :status="slotProps.data.status" :position="1" />
@@ -159,7 +159,7 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.withdrawal_credential }}
+                <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
               </template>
             </Column>
             <Column

@@ -9,16 +9,18 @@ interface Props {
   status: ValidatorStatus,
   position?: number
 }
-const props = defineProps<Props>()
+defineProps<Props>()
 
 </script>
 <template>
   <div class="wrapper">
     <span class="status">
-      {{ $t(`validator_state.${props.status}`) }}
+      <!--TODO: remove .replaceAll once backend data is fixed-->
+      {{ $t(`validator_state.${status.replaceAll('\'', '')}`) }}
       <span v-if="position"> #{{ position }}</span>
     </span>
-    <FontAwesomeIcon :icon="faPowerOff" :class="status" />
+    <!--TODO: remove .replaceAll once backend data is fixed-->
+    <FontAwesomeIcon :icon="faPowerOff" :class="status.replaceAll('\'', '')" />
   </div>
 </template>
 <style lang="scss" scoped>
