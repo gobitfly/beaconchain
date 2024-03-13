@@ -631,7 +631,9 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			retMux.Lock()
 			for _, result := range queryResult {
 				if ret[result.GroupId] == nil {
-					ret[result.GroupId] = &t.VDBSummaryTableRow{}
+					ret[result.GroupId] = &t.VDBSummaryTableRow{
+						GroupId: result.GroupId,
+					}
 				}
 
 				if ret[result.GroupId].Validators == nil {
