@@ -318,6 +318,7 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		NextCursor: next_cursor,
 		PrevCursor: prev_cursor,
 	}, nil
+}
 
 func GetEpochOffsetGenesis() uint64 {
 	// get an offset that can be used to offset all epochs to align with UTC 00:00 time.
@@ -325,3 +326,4 @@ func GetEpochOffsetGenesis() uint64 {
 	genesisTs := Config.Chain.GenesisTimestamp
 	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
 	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+}
