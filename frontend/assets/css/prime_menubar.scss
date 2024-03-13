@@ -1,11 +1,18 @@
+@use "~/assets/css/fonts.scss";
+
 .p-menubar {
+  @include fonts.standard_text;
+
   padding: 0 var(--padding);
   color: var(--text-color);
 
   // root element
   .p-menubar-root-list
-  {
-     > .p-menuitem {
+  {  
+    gap: 10px;
+
+    > .p-menuitem {
+      min-width: 140px; // TODO
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
@@ -13,7 +20,7 @@
         border-radius: 0px;
 
         .p-menuitem-link {
-          padding: 5px 10px 2px 10px;
+          padding: 10px 10px 8px 10px;
           
           .p-menuitem-text {
             color: var(--text-color);
@@ -23,20 +30,11 @@
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
         background: var(--list-hover-background);
-
-        // root element, text hover
-        .p-menuitem-link .p-menuitem-text {
-          //color: var(--button-color-hover);
-        }
       }
     }
   }
 
   .p-menuitem > .p-menuitem-content {
-    color: purple; // TODO: ?
-    transition: box-shadow 0.2s;
-    border-radius: 0;
-
     // dropdown arrow in root element
     .p-menuitem-link {
       color: var(--text-color); // TODO: requires an active state to set this to primary color
@@ -49,24 +47,6 @@
       }
     }
   }
-  
-  // root element when a child is hovered/selected
-  .p-menuitem.p-highlight > .p-menuitem-content {
-    //color: var(--button-color-hover);
-    //background: purple;
-
-    // root element when the dropdown is open
-    .p-menuitem-link .p-menuitem-text {
-      //color: var(--button-color-hover);
-    }
-  }
-
-  // background of the root element when its dropdown is open
-  /*
-  .p-menuitem.p-highlight.p-focus > .p-menuitem-content {
-    background: rgba(16, 185, 129, 0.24);
-  }
-  */
 
   // root element when its option is selected (and its hovered child?)
   .p-menuitem:not(.p-highlight):not(.p-disabled).p-focus > .p-menuitem-content {
@@ -82,11 +62,6 @@
   // hover of menuitem
   .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
     background: var(--list-hover-background);
-
-    // hover of menuitem text
-    .p-menuitem-link .p-menuitem-text {
-      //color: var(--button-color-hover);
-    }
   }
 
   .p-submenu-list {
@@ -94,10 +69,10 @@
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    min-width: 12.5rem; // TODO
+    min-width: 140px; // TODO
 
-    .p-menuitem-separator {
-      border-top: 1px solid pink; // TODO: ?
+    .p-menuitem {
+      padding: 16px 10px 15px 15px;
     }
   }
 }
