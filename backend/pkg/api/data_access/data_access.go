@@ -240,7 +240,7 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 		}
 	}
 
-	// Query the database for the validators, those that are not found are ignored
+	// Query the database for the validators
 	validatorsFromIdxPubkey := []t.VDBValidator{}
 	err := d.ReaderDb.Select(&validatorsFromIdxPubkey, `
 		SELECT 
@@ -417,6 +417,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 		return err
 	}
 
+	// Check if the group was deleted
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
@@ -446,8 +447,6 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 		return nil, nil
 	}
 
-	result := []t.VDBPostValidatorsData{}
-
 	// Check that the group exists in the dashboard
 	groupExists := false
 	err := d.ReaderDb.Get(&groupExists, `
@@ -463,7 +462,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 		return nil, err
 	}
 	if !groupExists {
-		return nil, fmt.Errorf("error group %v does not exist, cannot add validator to it", groupId)
+		return nil, fmt.Errorf("error group %v does not exist, cannot add validators to it", groupId)
 	}
 
 	pubkeys := []struct {
@@ -527,6 +526,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 		return nil, err
 	}
 
+	// Combine the pubkeys and group ids for the result
 	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
 	for _, pubKeyInfo := range pubkeys {
 		pubkeysMap[t.VDBValidator{
@@ -541,6 +541,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 			Version: addedValidatorInfo.ValidatorIndexVersion}] = addedValidatorInfo.GroupId
 	}
 
+	result := []t.VDBPostValidatorsData{}
 	for _, validator := range validators {
 		result = append(result, t.VDBPostValidatorsData{
 			PublicKey: pubkeysMap[validator],
@@ -597,6 +598,8 @@ func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdP
 		Name         string `db:"name"`
 		SharedGroups bool   `db:"shared_groups"`
 	}{}
+
+	// Create the public validator dashboard, multiple entries for the same dashboard are possible
 	err := d.WriterDb.Get(&dbReturn, `
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
 			VALUES ($1, $2, $3)
@@ -625,6 +628,8 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId st
 		Name         string `db:"name"`
 		SharedGroups bool   `db:"shared_groups"`
 	}{}
+
+	// Update the name and settings of the public validator dashboard
 	err := d.WriterDb.Get(&dbReturn, `
 		UPDATE users_val_dashboards_sharing SET
 			name = $1,
@@ -633,6 +638,9 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId st
 		RETURNING public_id, name, shared_groups
 	`, name, showGroupNames, publicDashboardId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("public dashboard id %v does not exist, cannot update it", publicDashboardId)
+		}
 		return nil, err
 	}
 
@@ -645,9 +653,22 @@ func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId st
 }
 
 func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
-	_, err := d.WriterDb.Exec(`
+	// Delete the public validator dashboard
+	result, err := d.WriterDb.Exec(`
 		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
 	`, publicDashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Check if the public validator dashboard was deleted
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("error public dashboard id %v does not exist, cannot remove it", publicDashboardId)
+	}
 
 	return err
 }
