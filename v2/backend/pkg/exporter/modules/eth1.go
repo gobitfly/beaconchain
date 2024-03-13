@@ -3,7 +3,6 @@ package modules
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -253,16 +252,11 @@ func fetchEth1Deposits(fromBlock, toBlock uint64) (depositsToSave []*types.Eth1D
 }
 
 func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
-	tx, err := db.WriterDb.Begin()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (
