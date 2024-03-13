@@ -1,0 +1,85 @@
+// container for the complete menubar
+.p-menubar {
+  padding: 0 var(--padding);
+  color: var(--text-color);
+}
+// root element, alyways
+.p-menubar .p-menubar-root-list > .p-menuitem {
+  border: 1px solid var(--container-border-color);
+  border-radius: var(--border-radius);
+}
+.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content {
+  border-radius: 0px;
+}
+// root element, background
+.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
+  padding: 5px 10px 2px 10px;
+}
+// root element, text
+.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link .p-menuitem-text {
+  color: var(--text-color);
+}
+// root element, background on hover
+.p-menubar .p-menubar-root-list > .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+  background: var(--list-hover-background);
+}
+// root element, text hover
+.p-menubar .p-menubar-root-list > .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover .p-menuitem-link .p-menuitem-text {
+  //color: var(--button-color-hover);
+}
+.p-menubar .p-menuitem > .p-menuitem-content {
+  color: purple;
+  transition: box-shadow 0.2s;
+  border-radius: 0;
+}
+// dropdown arrow in root element
+.p-menubar .p-menuitem > .p-menuitem-content .p-menuitem-link {
+  color: var(--text-color); // TODO: requires an active state to set this to primary color
+  padding: 11px 10px 10px 10px; // TODO: Does not work?
+  user-select: none;
+}
+// dropdown child elements
+.p-menubar .p-menuitem > .p-menuitem-content .p-menuitem-link .p-menuitem-text {
+  color: var(--text-color);
+}
+// root element when a child is hovered/selected
+.p-menubar .p-menuitem.p-highlight > .p-menuitem-content {
+  //color: var(--button-color-hover);
+  //background: purple;
+}
+// root element when the dropdown is open
+.p-menubar .p-menuitem.p-highlight > .p-menuitem-content .p-menuitem-link .p-menuitem-text {
+  //color: var(--button-color-hover);
+}
+// background of the root element when its dropdown is open
+/*
+.p-menubar .p-menuitem.p-highlight.p-focus > .p-menuitem-content {
+  background: rgba(16, 185, 129, 0.24);
+}
+*/
+// root element when its option is selected (and its hovered child?)
+.p-menubar .p-menuitem:not(.p-highlight):not(.p-disabled).p-focus > .p-menuitem-content {
+  border: 1px solid var(--primary-color);
+}
+// root element when its option is selected
+.p-menubar .p-menuitem:not(.p-highlight):not(.p-disabled).p-focus > .p-menuitem-content .p-menuitem-link .p-menuitem-text {
+  color: var(--primary-color);
+}
+// hover of menuitem
+.p-menubar .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+  background: var(--list-hover-background);
+}
+// hover of menuitem text
+.p-menubar .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover .p-menuitem-link .p-menuitem-text {
+  //color: var(--button-color-hover);
+}
+.p-menubar .p-submenu-list {
+  margin-top: var(--padding-tiny);
+  background: var(--background-color);
+  border: 1px solid var(--container-border-color);
+  border-radius: var(--border-radius);
+  min-width: 12.5rem; // TODO
+}
+.p-menubar .p-submenu-list .p-menuitem-separator {
+  border-top: 1px solid pink;
+}
