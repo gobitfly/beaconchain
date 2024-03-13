@@ -5,6 +5,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
+import { warn } from 'vue'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
@@ -16,6 +17,8 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const { width } = useWindowSize()
+
 const visible = defineModel<boolean>()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
@@ -26,6 +29,13 @@ const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
+const selected = ref<VDBManageValidatorsTableRow[]>()
+
+const size = computed(() => {
+  return {
+    expandable: width.value < 960
+  }
+})
 
 const onClose = () => {
   visible.value = false
@@ -98,14 +108,14 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
+            v-model:selection="selected"
             :data="data"
             data-key="group_id"
-            :expandable="true"
+            :expandable="size.expandable"
             selection-mode="multiple"
             class="management-table"
             :cursor="cursor"
             :page-size="pageSize"
-            :add-spacer="true"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -200,6 +210,23 @@ const removeRow = (row:VDBManageValidatorsTableRow) => {
 :global(.validator-managment-modal-container .bc-table-header) {
   height: unset;
   padding: var(--padding) 0;
+}
+
+/* TODO: set width for each col independently */
+.management-table {
+  --col-width: 160px;
+  :deep(td) {
+    &:not(.expander):not(:selection):not(:last-child) {
+      max-width: var(--col-width);
+      width: var(--col-width);
+    }
+  }
+  :deep(th) {
+    &:not(.expander):not(:selection):not(:last-child) {
+      max-width: var(--col-width);
+      width: var(--col-width);
+    }
+  }
 }
 
 .management-table {
