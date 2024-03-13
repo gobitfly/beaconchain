@@ -853,6 +853,9 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
 
+			data.AttestationCount.Success += uint64(row.AttestationsExecuted)
+			data.AttestationCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsExecuted)
+
 			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
 			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
 
@@ -902,8 +905,9 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		apr := float64(reward) / 32e9 * 100
+		apr := float64(reward) / float64(32e9) * 100.0
 
+		log.Infof("apr: %v, totalEndBalance: %v, totalWithdrawals: %v, totalStartBalance: %v, totalDeposits: %v", apr, totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		data.Apr.Cl = apr
 		data.Apr.El = 0
 
