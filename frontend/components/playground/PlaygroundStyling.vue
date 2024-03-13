@@ -21,11 +21,11 @@ const toggleLoading = () => {
 
 const selected = ref(true)
 
-const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
+const completeList = shallowRef([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const selectedType = ref<string>('Validators')
-const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
+const allTypes = shallowRef([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
