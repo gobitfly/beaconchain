@@ -275,12 +275,17 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId st
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
-	log.Infof("retrieving data for dashboard with id %d", dashboardId)
-
 	var validatorsArray []uint32
-	err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
-	if err != nil {
-		return nil, err
+	if len(dashboardId.Validators) == 0 {
+		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
+		for _, validator := range dashboardId.Validators {
+			validatorsArray = append(validatorsArray, uint32(validator.Index))
+		}
 	}
 
 	validatorsMap := make(map[uint32]bool, len(validatorsArray))
@@ -506,60 +511,56 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardSummary called for dashboard %d", dashboardId.Id)
-	query := `select group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
-		select 
-			group_id,
-			sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
-			COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
-			COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
-			from users_val_dashboards_validators 
-		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-		where dashboard_id = $1
-		group by 1
-	) as a;`
+	log.Infof("GetValidatorDashboardSummary called for dashboard %v", dashboardId)
+
+	validators := make([]uint64, 0)
+	if len(dashboardId.Validators) > 0 {
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+
+		ret[0] = &t.VDBSummaryTableRow{
+			Validators: append([]uint64{}, validators...),
+		}
+	}
 
 	type queryResult struct {
 		GroupId    uint64  `db:"group_id"`
 		Efficiency float64 `db:"efficiency"`
 	}
 
-	wg.Go(func() error {
-		type validatorsPerGroup struct {
-			GroupId        uint64 `db:"group_id"`
-			ValidatorIndex uint64 `db:"validator_index"`
-		}
-
-		var queryResult []validatorsPerGroup
-
-		err := db.AlloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
-		if err != nil {
-			return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
-		}
-
-		retMux.Lock()
-		for _, result := range queryResult {
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-
-			if ret[result.GroupId].Validators == nil {
-				ret[result.GroupId].Validators = make([]uint64, 0, 10)
-			}
-
-			if len(ret[result.GroupId].Validators) < 10 {
-				ret[result.GroupId].Validators = append(ret[result.GroupId].Validators, result.ValidatorIndex)
-			}
-		}
-		retMux.Unlock()
-		return nil
-	})
-
-	wg.Go(func() error {
+	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) error {
 		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_daily"), dashboardId.Id)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for last 24h: %v", err)
+
+		if len(validatorList) > 0 {
+			query := `select 0 AS group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+				select 
+					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
+					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
+					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+					from  %[1]s
+				where validator_index = ANY($1)
+			) as a;`
+			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
+			if err != nil {
+				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			}
+		} else {
+			query := `select group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+				select 
+					group_id,
+					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
+					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
+					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+					from users_val_dashboards_validators 
+				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
+				where dashboard_id = $1
+				group by 1
+			) as a;`
+			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
+			if err != nil {
+				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			}
 		}
 
 		retMux.Lock()
@@ -572,73 +573,68 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[result.GroupId] = &t.VDBSummaryTableRow{}
 			}
 			ret[result.GroupId].GroupId = result.GroupId
-			ret[result.GroupId].EfficiencyDay = result.Efficiency
+
+			switch tableName {
+			case "validator_dashboard_data_rolling_daily":
+				ret[result.GroupId].EfficiencyDay = result.Efficiency
+			case "validator_dashboard_data_rolling_weekly":
+				ret[result.GroupId].EfficiencyWeek = result.Efficiency
+			case "validator_dashboard_data_rolling_monthly":
+				ret[result.GroupId].EfficiencyMonth = result.Efficiency
+			case "validator_dashboard_data_rolling_total":
+				ret[result.GroupId].EfficiencyTotal = result.Efficiency
+			default:
+				log.Fatal(fmt.Errorf("invalid table name"), "", 0)
+			}
 		}
 		retMux.Unlock()
 		return nil
+	}
+
+	if len(validators) == 0 { // retrieve the validators & groups from the dashboard table
+		wg.Go(func() error {
+			type validatorsPerGroup struct {
+				GroupId        uint64 `db:"group_id"`
+				ValidatorIndex uint64 `db:"validator_index"`
+			}
+
+			var queryResult []validatorsPerGroup
+
+			err := db.AlloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
+			if err != nil {
+				return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
+			}
+
+			retMux.Lock()
+			for _, result := range queryResult {
+				if ret[result.GroupId] == nil {
+					ret[result.GroupId] = &t.VDBSummaryTableRow{}
+				}
+
+				if ret[result.GroupId].Validators == nil {
+					ret[result.GroupId].Validators = make([]uint64, 0, 10)
+				}
+
+				if len(ret[result.GroupId].Validators) < 10 {
+					ret[result.GroupId].Validators = append(ret[result.GroupId].Validators, result.ValidatorIndex)
+				}
+			}
+			retMux.Unlock()
+			return nil
+		})
+	}
+
+	wg.Go(func() error {
+		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
 	})
 	wg.Go(func() error {
-		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_weekly"), dashboardId.Id)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for last 24h: %v", err)
-		}
-
-		retMux.Lock()
-		for _, result := range queryResult {
-			if result.Efficiency < 0 {
-				result.Efficiency = 0
-			}
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-			ret[result.GroupId].GroupId = result.GroupId
-			ret[result.GroupId].EfficiencyWeek = result.Efficiency
-		}
-		retMux.Unlock()
-		return nil
+		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
 	})
 	wg.Go(func() error {
-		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_monthly"), dashboardId.Id)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for last 24h: %v", err)
-		}
-
-		retMux.Lock()
-		for _, result := range queryResult {
-			if result.Efficiency < 0 {
-				result.Efficiency = 0
-			}
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-			ret[result.GroupId].GroupId = result.GroupId
-			ret[result.GroupId].EfficiencyMonth = result.Efficiency
-		}
-		retMux.Unlock()
-		return nil
+		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
 	})
 	wg.Go(func() error {
-		var queryResult []queryResult
-		err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), dashboardId.Id)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for last 24h: %v", err)
-		}
-
-		retMux.Lock()
-		for _, result := range queryResult {
-			if result.Efficiency < 0 {
-				result.Efficiency = 0
-			}
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-			ret[result.GroupId].GroupId = result.GroupId
-			ret[result.GroupId].EfficiencyTotal = result.Efficiency
-		}
-		retMux.Unlock()
-		return nil
+		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
 	})
 	err := wg.Wait()
 
@@ -703,8 +699,8 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			withdrawals_amount
 			from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-		where dashboard_id = $1 and group_id = $2
-	`
+		where (dashboard_id = $1 and group_id = $2)
+	` //  OR %[1]s.validator_index = ANY($3)
 
 	type queryResult struct {
 		ValidatorIndex                    uint32 `db:"validator_index"`
