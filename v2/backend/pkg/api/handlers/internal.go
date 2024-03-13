@@ -62,7 +62,7 @@ func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http
 		return
 	}
 	response := types.ApiDataResponse[types.UserDashboardsData]{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -172,7 +172,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		returnBadRequest(w, err)
 		return
 	}
-	var data types.VDBOverviewData
+	var data *types.VDBOverviewData
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		// TODO check if user is authorized for this dashboard
@@ -200,7 +200,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 		return
 	}
 	response := types.InternalGetValidatorDashboardResponse{
-		Data: data,
+		Data: *data,
 	}
 
 	returnOk(w, response)
@@ -215,7 +215,7 @@ func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, 
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -256,7 +256,7 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -295,7 +295,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -343,7 +343,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -386,7 +386,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	}
 
 	var data []types.VDBManageValidatorsTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		// TODO check if user is authorized for this dashboard
@@ -416,7 +416,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 
 	response := types.InternalGetValidatorDashboardValidatorsResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -438,7 +438,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		// TODO check if user is authorized for this dashboard
@@ -484,7 +484,7 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 
 	//TODO check public id limit reached
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -531,7 +531,7 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -567,7 +567,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 		return
 	}
 
-	var dashboardInfo types.DashboardInfo
+	var dashboardInfo *types.DashboardInfo
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		dashboardInfo, err = h.dai.GetValidatorDashboardInfo(dashboardId)
@@ -645,7 +645,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	}
 
 	var data []types.VDBSummaryTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardSummary(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
@@ -673,7 +673,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	}
 	response := types.InternalGetValidatorDashboardSummaryResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -688,7 +688,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 		return
 	}
 
-	var data types.VDBGroupSummaryData
+	var data *types.VDBGroupSummaryData
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupSummary(dashboardId, groupId)
@@ -715,7 +715,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupSummaryResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -729,7 +729,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 		return
 	}
 
-	var data types.ChartData[int]
+	var data *types.ChartData[int]
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardSummaryChart(dashboardId)
@@ -756,7 +756,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryChartResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -774,7 +774,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	}
 
 	var data []types.VDBRewardsTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardRewards(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
@@ -802,7 +802,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	}
 	response := types.InternalGetValidatorDashboardRewardsResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -818,7 +818,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 		return
 	}
 
-	var data types.VDBGroupRewardsData
+	var data *types.VDBGroupRewardsData
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
@@ -845,7 +845,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupRewardsResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -859,7 +859,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respons
 		return
 	}
 
-	var data types.ChartData[int]
+	var data *types.ChartData[int]
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardRewardsChart(dashboardId)
@@ -886,7 +886,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respons
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsChartResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -905,7 +905,7 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	}
 
 	var data []types.VDBEpochDutiesTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardDuties(dashboardId, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
@@ -933,7 +933,7 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	}
 	response := types.InternalGetValidatorDashboardDutiesResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -951,7 +951,7 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	}
 
 	var data []types.VDBBlocksTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardBlocks(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
@@ -979,7 +979,7 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	}
 	response := types.InternalGetValidatorDashboardBlocksResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -993,7 +993,7 @@ func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWrit
 		return
 	}
 
-	var data types.VDBHeatmap
+	var data *types.VDBHeatmap
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardHeatmap(dashboardId)
@@ -1020,7 +1020,7 @@ func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWrit
 		return
 	}
 	response := types.InternalGetValidatorDashboardHeatmapResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -1036,7 +1036,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respons
 		return
 	}
 
-	var data types.VDBHeatmapTooltipData
+	var data *types.VDBHeatmapTooltipData
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, err = h.dai.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
@@ -1063,7 +1063,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respons
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
-		Data: data,
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -1079,7 +1079,7 @@ func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w ht
 	}
 
 	var data []types.VDBExecutionDepositsTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardElDeposits(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
@@ -1107,7 +1107,7 @@ func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w ht
 	}
 	response := types.InternalGetValidatorDashboardExecutionLayerDepositsResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -1123,7 +1123,7 @@ func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w ht
 	}
 
 	var data []types.VDBConsensusDepositsTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardClDeposits(dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
@@ -1152,7 +1152,7 @@ func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w ht
 
 	response := types.InternalGetValidatorDashboardConsensusLayerDepositsResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }
@@ -1170,7 +1170,7 @@ func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Response
 	}
 
 	var data []types.VDBWithdrawalsTableRow
-	var paging types.Paging
+	var paging *types.Paging
 	switch dashboardId := dashboardId.(type) {
 	case types.VDBIdPrimary:
 		data, paging, err = h.dai.GetValidatorDashboardWithdrawals(dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
@@ -1198,7 +1198,7 @@ func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Response
 	}
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{
 		Data:   data,
-		Paging: paging,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }

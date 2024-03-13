@@ -24,9 +24,12 @@ export const setQuerySort = (sort?: DataTableSortEvent, query?: TableQueryParams
     if (!query) {
       query = {}
     }
-    query.sort = sort?.multiSortMeta.map((obj) => {
-      return `${obj.field}:${obj.order === -1 ? 'asc' : 'desc'}`
-    }).join(',')
+    query = {
+      ...query,
+      sort: sort?.multiSortMeta.map((obj) => {
+        return `${obj.field}:${obj.order === -1 ? 'asc' : 'desc'}`
+      }).join(',')
+    }
   }
   return query
 }
