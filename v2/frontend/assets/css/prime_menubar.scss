@@ -6,13 +6,12 @@
   padding: 0 var(--padding);
   color: var(--text-color);
 
-  // root element
   .p-menubar-root-list
   {  
     gap: 10px;
 
     > .p-menuitem {
-      min-width: 140px; // TODO
+      min-width: 140px; // TODO: Smarter handling
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
@@ -35,31 +34,26 @@
   }
 
   .p-menuitem > .p-menuitem-content {
-    // dropdown arrow in root element
     .p-menuitem-link {
       color: var(--text-color); // TODO: requires an active state to set this to primary color
       padding: 11px 10px 10px 10px; // TODO: Does not work?
       user-select: none;
 
-      // dropdown child elements
       .p-menuitem-text {
         color: var(--text-color);
       }
     }
   }
 
-  // root element when its option is selected (and its hovered child?)
   .p-menuitem:not(.p-highlight):not(.p-disabled).p-focus > .p-menuitem-content {
     border: 1px solid var(--primary-color); // TODO: Border cannot really be here as it is just another border within the root element
     border-radius: var(--border-radius);
 
-    // root element when its option is selected
     .p-menuitem-link .p-menuitem-text {
       color: var(--primary-color);
     }
   }
 
-  // hover of menuitem
   .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
     background: var(--list-hover-background);
   }
@@ -69,10 +63,14 @@
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    min-width: 140px; // TODO
+    min-width: 140px; // TODO: Smarter handling
 
     .p-menuitem {
       padding: 16px 10px 15px 15px;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid var(--container-border-color);
+      }
     }
   }
 }
