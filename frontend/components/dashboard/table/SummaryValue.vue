@@ -38,10 +38,7 @@ const data = computed(() => {
   if (props.property === 'attestation_total') {
     return {
       efficiency: {
-        status_count: {
-          success: col.attestation_head.status_count.success + col.attestation_source.status_count.success + col.attestation_target.status_count.success,
-          failed: col.attestation_head.status_count.failed + col.attestation_source.status_count.failed + col.attestation_target.status_count.failed
-        }
+        status_count: col.attestation_count
       }
     }
   } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
@@ -54,7 +51,7 @@ const data = computed(() => {
     let validators: number[] = []
     let context: DashboardValidatorContext = 'attestation'
     if (props.property === 'validators_attestation') {
-      validators = union(col.attestation_head.validators, col.attestation_source.validators, col.attestation_target.validators)
+      validators = union(col.attestations_head.validators, col.attestations_source.validators, col.attestations_target.validators)
     } else if (props.property === 'validators_proposal') {
       validators = col.proposals.validators ?? []
       context = 'proposal'
@@ -87,17 +84,17 @@ const data = computed(() => {
     return {
       luck: col.luck
     }
-  } else if (props.property === 'efficiency_total') {
-    let efficiencyTotal = props.row.efficiency_day
+  } else if (props.property === 'efficiency_all_time') {
+    let efficiencyTotal = props.row.efficiency_last_24h
     switch (props.detail) {
-      case 'details_month':
-        efficiencyTotal = props.row.efficiency_month
+      case 'last_31d':
+        efficiencyTotal = props.row.efficiency_last_31d
         break
-      case 'details_week':
-        efficiencyTotal = props.row.efficiency_week
+      case 'last_7d':
+        efficiencyTotal = props.row.efficiency_last_7d
         break
-      case 'details_total':
-        efficiencyTotal = props.row.efficiency_total
+      case 'all_time':
+        efficiencyTotal = props.row.efficiency_all_time
         break
     }
     return {
