@@ -133,42 +133,42 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <Column
-              field="efficiency_day"
+              field="efficiency_last_24h"
               :sortable="true"
-              :header="$t('dashboard.validator.col.efficiency_day')"
+              :header="$t('dashboard.validator.col.efficiency_last_24h')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency_last_24h" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_week"
+              field="efficiency_last_7d"
               :sortable="true"
-              :header="$t('dashboard.validator.col.efficiency_week')"
+              :header="$t('dashboard.validator.col.efficiency_last_7d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency_last_7d" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_month"
+              field="efficiency_last_31d"
               :sortable="true"
-              :header="$t('dashboard.validator.col.efficiency_month')"
+              :header="$t('dashboard.validator.col.efficiency_last_31d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency_last_31d" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_total"
+              field="efficiency_all_time"
               :sortable="true"
-              :header="$t('dashboard.validator.col.efficiency_total')"
+              :header="$t('dashboard.validator.col.efficiency_all_time')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency_all_time" :color-break-point="80" />
               </template>
             </Column>
             <Column

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"math"
 	"math/big"
 	"os"
 	"os/signal"
@@ -227,4 +228,12 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 	if elapsed < intendedMinWait {
 		time.Sleep(intendedMinWait - elapsed)
 	}
+}
+
+func GetEpochOffsetGenesis() uint64 {
+	// get an offset that can be used to offset all epochs to align with UTC 00:00 time.
+	// the offset can be used to get the first epoch of a utc day
+	genesisTs := Config.Chain.GenesisTimestamp
+	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
+	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
 }

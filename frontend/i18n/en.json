@@ -49,10 +49,10 @@
     "scheduled": "Scheduled"
   },
   "statistics": {
-    "day": "24h",
-    "week": "7d",
-    "month": "31d",
-    "year": "365d",
+    "last_24h": "24h",
+    "last_7d": "7d",
+    "last_31d": "31d",
+    "last_365d": "365d",
     "total": "All Time",
     "all": "All Time"
   },
@@ -150,10 +150,10 @@
         "balance": "Balance",
         "withdrawal_credential": "Withdrawal Credential",
         "group": "Group",
-        "efficiency_day": "Efficiency (24h)",
-        "efficiency_week": "Efficiency (7d)",
-        "efficiency_month": "Efficiency (31d)",
-        "efficiency_total": "Efficiency (All Time)",
+        "efficiency_last_24h": "Efficiency (24h)",
+        "efficiency_last_7d": "Efficiency (7d)",
+        "efficiency_last_31d": "Efficiency (31d)",
+        "efficiency_all_time": "Efficiency (All Time)",
         "validators": "Validators"
       },
       "summary": {
@@ -161,12 +161,12 @@
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
         "row": {
-          "efficiency_total": "Efficiency",
+          "efficiency_all_time": "Efficiency",
           "attestations": "Attestations",
           "attestation_total": "Total Attestations",
-          "attestation_head": "Head",
-          "attestation_source": "Source",
-          "attestation_target": "Target",
+          "attestations_head": "Head",
+          "attestations_source": "Source",
+          "attestations_target": "Target",
           "attestation_efficiency": "Att. Efficiency",
           "attestation_avg_incl_dist": "Avg. Incl. Distance",
           "sync": "Sync Committee",
