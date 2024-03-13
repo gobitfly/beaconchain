@@ -3,7 +3,9 @@ package utils
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
@@ -242,37 +244,77 @@ func DataStructure[T any](s []T) []interface{} {
 	return ds
 }
 
-func NewPostgresPagingFromSlice(data []interface{}, columns []string, direction enums.SortOrder) (*t.Paging, error) {
+func CursorToString[T t.CursorLike](cursor T) (string, error) {
+	bin, err := json.Marshal(cursor)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal CursorLike as json: %w", err)
+	}
+	encoded_str := base64.RawURLEncoding.EncodeToString(bin)
+	return encoded_str, nil
+}
+
+func StringToCursor[T t.CursorLike](str string) (T, error) {
+	var cursor T
+	bin, err := base64.RawURLEncoding.DecodeString(str)
+	if err != nil {
+		return cursor, fmt.Errorf("failed to decode string using base64: %w", err)
+	}
+
+	d := json.NewDecoder(bytes.NewReader(bin))
+	d.DisallowUnknownFields() // this optimistically prevents parsing a cursor into a wrong type
+	err = d.Decode(&cursor)
+	if err != nil {
+		return cursor, fmt.Errorf("failed to unmarshal decoded base64 string: %w", err)
+	}
+
+	return cursor, nil
+}
+
+func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortOrder) (*t.Paging, error) {
 	li := len(data) - 1
 	if li < 0 {
 		return nil, fmt.Errorf("cant generate paging for slice with less than 2 items")
 	}
 
-	// generate next cursor
+	var cursor T
+	fields := reflect.Indirect(reflect.ValueOf(cursor)).Type()
+	columns := make([]string, 0)
 
-	offsets := make(map[string]int64)
-	for _, c := range columns {
-		offsets[c] = reflect.ValueOf(data[li]).FieldByName(c).Int()
+	// extract cursor attributes which act as columns
+	for i := 0; i < fields.NumField(); i++ {
+		n := fields.Field(i).Name
+		if n == "GenericCursor" {
+			continue
+		}
+		columns = append(columns, n)
 	}
 
-	next_cursor, err := t.PostgresCursor{Direction: direction, Offsets: offsets}.ToString()
+	// generate next cursor
+	for _, c := range columns {
+		// extract value from data interface. think of it as v := data[li].Column
+		v := reflect.ValueOf(data[li]).FieldByName(c).Int()
+		// store value in target. think of it as cursor.Column = v
+		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+	}
+
+	next_cursor, err := CursorToString[T](cursor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate next_cursor: %w", err)
 	}
 
 	// generate prev cursor
-
 	for _, c := range columns {
-		offsets[c] = reflect.ValueOf(data[0]).FieldByName(c).Int()
+		v := reflect.ValueOf(data[0]).FieldByName(c).Int()
+		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
 	}
 
-	prev_cursor, err := t.PostgresCursor{Direction: direction.Invert(), Offsets: offsets}.ToString()
+	prev_cursor, err := CursorToString[T](cursor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate prev_cursor: %w", err)
 	}
 
 	return &t.Paging{
-		NextCursor: *next_cursor,
-		PrevCursor: *prev_cursor,
+		NextCursor: next_cursor,
+		PrevCursor: prev_cursor,
 	}, nil
 }
