@@ -19,4 +19,3 @@ const look = props.inline ? 'inline' : 'default'
   height:14px;
 }
 </style>
-
