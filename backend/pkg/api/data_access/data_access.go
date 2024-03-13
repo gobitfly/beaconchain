@@ -358,7 +358,7 @@ func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, 
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, errors.Wrap(err, "error committing tx to create a validator dashboard")
+		return nil, fmt.Errorf("error committing tx to create a validator dashboard: %w", err)
 	}
 
 	return result, nil
@@ -405,7 +405,7 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 
 	err = tx.Commit()
 	if err != nil {
-		return errors.Wrap(err, "error committing tx to remove a validator dashboard")
+		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
 	}
 	return nil
 }
@@ -474,7 +474,7 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 
 	err = tx.Commit()
 	if err != nil {
-		return errors.Wrap(err, "error committing tx to remove a validator dashboard group")
+		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
 	}
 	return nil
 }
