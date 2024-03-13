@@ -81,7 +81,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         <div class="item button" :disabled="!currentOffset" @click="prev">
           <IconChevron class="toggle" direction="left" />
         </div>
-        <div class="item">
+        <div class="item current-page">
           {{ data.page }} {{ $t('table.of') }} {{ data.lastPage }}
         </div>
         <div class="item button" :disabled="data.page! >= data.lastPage!" @click="next">
@@ -148,11 +148,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
     display: flex;
     gap: 3px;
 
-    .table{
+    .table {
       @include main.container;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
-      &.p-overlay-open{
+
+      &.p-overlay-open {
         border-bottom-right-radius: 0;
       }
     }
@@ -192,6 +193,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       &:last-child {
         border-top-right-radius: var(--border-radius);
         border-bottom-right-radius: var(--border-radius);
+      }
+
+      @media screen and (max-width: 1399px) {
+        &.current-page {
+          display: none;
+        }
       }
     }
   }
