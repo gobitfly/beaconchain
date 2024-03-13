@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	isort "sort"
 	"sync"
@@ -548,10 +549,10 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	}
 
 	type queryResult struct {
-		GroupId               uint64  `db:"group_id"`
-		AttestationEfficiency float64 `db:"attestation_efficiency"`
-		ProposerEfficiency    float64 `db:"proposer_efficiency"`
-		SyncEfficiency        float64 `db:"sync_efficiency"`
+		GroupId               uint64          `db:"group_id"`
+		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
 
 	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) (map[uint64]float64, error) {
@@ -560,9 +561,9 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 		if len(validatorList) > 0 {
 			query := `select 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
-					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
-					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
-					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 					from  %[1]s
 				where validator_index = ANY($1)
 			) as a;`
@@ -574,9 +575,9 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			query := `select group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
 					group_id,
-					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
-					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
-					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 					from users_val_dashboards_validators 
 				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 				where dashboard_id = $1
@@ -592,11 +593,18 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 		for _, result := range queryResult {
 			efficiency := float64(0)
 
-			if result.ProposerEfficiency == 1 && result.SyncEfficiency == 1 {
-				efficiency = result.AttestationEfficiency * 100.0
+			if !result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
+				efficiency = 0
+			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
+				efficiency = result.AttestationEfficiency.Float64 * 100.0
+			} else if result.AttestationEfficiency.Valid && result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
+				efficiency = ((56.0 / 64.0 * result.AttestationEfficiency.Float64) + (8.0 / 64.0 * result.ProposerEfficiency.Float64)) * 100.0
+			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && result.SyncEfficiency.Valid {
+				efficiency = ((62.0 / 64.0 * result.AttestationEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
 			} else {
-				efficiency = ((54.0 / 64.0 * result.AttestationEfficiency) + (8.0 / 64.0 * result.ProposerEfficiency) + (2.0 / 64.0 * result.SyncEfficiency)) * 100.0
+				efficiency = ((54.0 / 64.0 * result.AttestationEfficiency.Float64) + (8.0 / 64.0 * result.ProposerEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
 			}
+
 			if efficiency < 0 {
 				efficiency = 0
 			}
@@ -734,7 +742,6 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	ret := t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardGroupSummary called for dashboard %d with group id %v", dashboardId.Id, groupId)
 	query := `select
 			users_val_dashboards_validators.validator_index,
 			attestations_source_reward,
