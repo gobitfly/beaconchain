@@ -17,6 +17,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var missedSlots map[uint64]bool
+var missedSlotMutex = &sync.RWMutex{}
+
 type dashboardData struct {
 	ModuleContext
 	log           ModuleLog
@@ -47,22 +50,23 @@ func (d *dashboardData) Init() error {
 
 var backFillMutex = &sync.Mutex{}
 
-func (d *dashboardData) backfillEpochData() {
+// returns false if there is already an active backfill happening, otherwise returns true
+func (d *dashboardData) backfillEpochData() bool {
 	if !backFillMutex.TryLock() {
-		return
+		return false
 	}
 	defer backFillMutex.Unlock()
 
 	res, err := d.CL.GetFinalityCheckpoints("finalized")
 	if err != nil {
 		d.log.Error(err, "failed to get finalized checkpoint", 0)
-		return
+		return true
 	}
 
 	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, d.epochWriter.getRetentionEpochDuration())
 	if err != nil {
 		d.log.Error(err, "failed to get epoch gaps", 0)
-		return
+		return true
 	}
 
 	if len(gaps) > 0 {
@@ -96,11 +100,9 @@ func (d *dashboardData) backfillEpochData() {
 
 			time.Sleep(15 * time.Second)
 		}
-	} else {
-		d.epochToHour.aggregate1h()
-		d.hourToDay.rolling24hAggregate()
 	}
 	d.log.Infof("backfill finished")
+	return true
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
@@ -135,8 +137,11 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
 	// since the init backfill only fixes gaps at the start of exporter but does not fix
 	// gaps that occur while operating (for example node not available for a brief moment)
-	// backfill will aggregate on demand
-	d.backfillEpochData()
+	// aggregate if backfill is not running in parallel elsewhere
+	if d.backfillEpochData() {
+		d.epochToHour.aggregate1h()
+		d.hourToDay.rolling24hAggregate()
+	}
 
 	return nil
 }
@@ -153,6 +158,17 @@ func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) e
 	return nil
 }
 
+func (d *dashboardData) ExportEpochDataNonSequential(epoch uint64) error {
+	missedSlotMutex.Lock()
+	missedSlots = nil
+	missedSlotMutex.Unlock()
+	return d.ExportEpochData(epoch)
+}
+
+/*
+Use this function when sequentially getting data of new epochs, for example in the exporter.
+For random non sequential epoch data use ExportEpochDataNonSequential
+*/
 func (d *dashboardData) ExportEpochData(epoch uint64) error {
 	totalStart := time.Now()
 	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
@@ -252,19 +268,18 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 		// retrieve the attestation committees
 		start := time.Now()
 		// As of dencun you can attest up until the end of the following epoch
-		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-2*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
 			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
-				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"epoch": epoch})
+				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": slot})
 				return nil
 			}
-			d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
 
 			for _, committee := range data.Data {
 				for i, valIndex := range committee.Validators {
 					valIndexU64, err := strconv.ParseUint(valIndex, 10, 64)
 					if err != nil {
-						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"epoch": committee.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch, "committee": committee.Index, "index": i, "valIndex": valIndex})
+						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"slot": committee.Slot, "committee": committee.Index, "index": i})
 						continue
 					}
 					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
@@ -272,7 +287,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 				}
 			}
 		}
-
+		d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
 		return nil
 	})
 
@@ -305,6 +320,27 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 		return nil
 	}
 
+	missedSlotMutex.Lock()
+	if missedSlots == nil {
+		missedSlots = make(map[uint64]bool)
+		if firstSlotOfEpoch > slotsPerEpoch { // handle case for first epoch
+			// get missed slots of last epoch for optimal inclusion distance
+			for slot := firstSlotOfEpoch - slotsPerEpoch; slot <= lastSlotOfEpoch-slotsPerEpoch; slot++ {
+				_, err := d.CL.GetSlot(slot)
+				if err != nil {
+					httpErr, _ := network.SpecificError(err)
+					if httpErr != nil && httpErr.StatusCode == 404 {
+						missedSlots[slot] = true
+						continue // missed
+					}
+					d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+					continue
+				}
+			}
+		}
+	}
+	missedSlotMutex.Unlock()
+
 	// retrieve the data for all blocks that were proposed in this epoch
 	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
 		//d.log.Infof("retrieving data for block at slot %d", slot)
@@ -312,6 +348,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 		if err != nil {
 			httpErr, _ := network.SpecificError(err)
 			if httpErr != nil && httpErr.StatusCode == 404 {
+				missedSlotMutex.Lock()
+				missedSlots[slot] = true
+				missedSlotMutex.Unlock()
 				continue // missed
 			}
 			d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
@@ -338,6 +377,20 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 		}
 		result.syncCommitteeRewardData[slot] = syncRewards
 	}
+
+	// clean up old missed slots
+	missedSlotMutex.Lock()
+	if len(missedSlots) > 0 {
+		newMissedSlots := make(map[uint64]bool, 0)
+		for slot := range missedSlots {
+			if slot < firstSlotOfEpoch-slotsPerEpoch {
+				continue
+			}
+			newMissedSlots[slot] = true
+		}
+		missedSlots = newMissedSlots
+	}
+	missedSlotMutex.Unlock()
 
 	return &result
 }
@@ -457,11 +510,23 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 				if aggregationBits.BitAt(i) {
 					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
 					if !found { // This should never happen!
-						//validator_index = 0
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
 						continue
 					}
 					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
+
+					optimalInclusionDistance := 0
+					missedSlotMutex.RLock()
+					for i := attestation.Data.Slot + 1; i < block.Data.Message.Slot; i++ {
+						if _, ok := missedSlots[i]; ok {
+							optimalInclusionDistance++
+						} else {
+							break
+						}
+					}
+					missedSlotMutex.RUnlock()
+
+					validatorsData[validator_index].OptimalInclusionDelay = int64(optimalInclusionDistance)
 				}
 			}
 		}
@@ -566,6 +631,6 @@ type validatorDashboardDataRow struct {
 	WithdrawalsCount  int8   // done
 	WithdrawalsAmount uint64 // done
 
-	InclusionDelaySum int64 // done
-
+	InclusionDelaySum     int64 // done
+	OptimalInclusionDelay int64 // done
 }

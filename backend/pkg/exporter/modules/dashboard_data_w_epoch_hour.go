@@ -161,7 +161,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 					COALESCE(SUM(COALESCE(attestations_executed, 0)),0) as attestations_executed,
 					COALESCE(SUM(COALESCE(attestation_head_executed, 0)),0) as attestation_head_executed,
 					COALESCE(SUM(COALESCE(attestation_source_executed, 0)),0) as attestation_source_executed,
-					COALESCE(SUM(COALESCE(attestation_target_executed, 0)),0) as attestation_target_executed
+					COALESCE(SUM(COALESCE(attestation_target_executed, 0)),0) as attestation_target_executed,
+					COALESCE(SUM(COALESCE(optimal_inclusion_delay_sum, 0)),0) as optimal_inclusion_delay_sum
 				FROM validator_dashboard_data_epoch
 				WHERE epoch >= $1 AND epoch < $2
 				GROUP BY validator_index
@@ -203,7 +204,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestations_executed,
 				attestation_head_executed,
 				attestation_source_executed,
-				attestation_target_executed
+				attestation_target_executed,
+				optimal_inclusion_delay_sum
 			)
 			SELECT 
 				$1,
@@ -242,7 +244,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestations_executed,
 				attestation_head_executed,
 				attestation_source_executed,
-				attestation_target_executed
+				attestation_target_executed,
+				optimal_inclusion_delay_sum
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
@@ -280,7 +283,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestations_executed = EXCLUDED.attestations_executed,
 				attestation_head_executed = EXCLUDED.attestation_head_executed,
 				attestation_source_executed = EXCLUDED.attestation_source_executed,
-				attestation_target_executed = EXCLUDED.attestation_target_executed
+				attestation_target_executed = EXCLUDED.attestation_target_executed,
+				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum
 	`, epochStart, epochEnd)
 
 	if err != nil {
