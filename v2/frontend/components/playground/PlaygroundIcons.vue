@@ -36,17 +36,32 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   </div>
   <div>
     Monochromous:
-    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
-      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="false" :harmonize-perceived-size="false" class="network-icon" />
-    </span>
+    <IconNetworkIcons
+      v-for="id of getListOfChainIDs(false)"
+      :key="id"
+      :chain-id="id as ChainIDs"
+      :colored="false"
+      :harmonize-perceived-size="false"
+      class="network-icon"
+    />
     <br>Colored:
-    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
-      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="true" :harmonize-perceived-size="false" class="network-icon" />
-    </span>
+    <IconNetworkIcons
+      v-for="id of getListOfChainIDs(false)"
+      :key="id"
+      :chain-id="id as ChainIDs"
+      :colored="true"
+      :harmonize-perceived-size="false"
+      class="network-icon"
+    />
     <br>Harmonious:
-    <span v-for="id of getListOfChainIDs(false)" :key="id" class="network-icon-cont">
-      <IconNetworkIcons :chain-id="id as ChainIDs" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
-    </span>
+    <IconNetworkIcons
+      v-for="id of getListOfChainIDs(false)"
+      :key="id"
+      :chain-id="id as ChainIDs"
+      :colored="true"
+      :harmonize-perceived-size="true"
+      class="network-icon"
+    />
   </div>
 </template>
 
@@ -61,14 +76,8 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   width: 200px;
 }
 
-.network-icon-cont {
- /* display: flex;
-  width: 300px;
-  height: 300px;*/
-}
 .network-icon {
-  display: flex;
-  width: 50px;
-  height: 50px;
+  height: 40px;
+  width: 40px;
 }
 </style>
