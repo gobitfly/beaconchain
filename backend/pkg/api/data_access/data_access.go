@@ -276,7 +276,7 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId st
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
 	var validatorsArray []uint32
-	if len(dashboardId.Validators) == 0 {
+	if dashboardId.Validators == nil {
 		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
 		if err != nil {
 			return nil, err
@@ -512,7 +512,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	wg := errgroup.Group{}
 
 	validators := make([]uint64, 0)
-	if len(dashboardId.Validators) > 0 {
+	if dashboardId.Validators != nil {
 		for _, validator := range dashboardId.Validators {
 			validators = append(validators, validator.Index)
 		}
@@ -523,15 +523,17 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	}
 
 	type queryResult struct {
-		GroupId    uint64  `db:"group_id"`
-		Efficiency float64 `db:"efficiency"`
+		GroupId               uint64  `db:"group_id"`
+		AttestationEfficiency float64 `db:"attestation_efficiency"`
+		ProposerEfficiency    float64 `db:"proposer_efficiency"`
+		SyncEfficiency        float64 `db:"sync_efficiency"`
 	}
 
 	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) error {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
-			query := `select 0 AS group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+			query := `select 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
 					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
 					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
@@ -544,7 +546,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		} else {
-			query := `select group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+			query := `select group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
 					group_id,
 					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
@@ -563,8 +565,15 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 		retMux.Lock()
 		for _, result := range queryResult {
-			if result.Efficiency < 0 {
-				result.Efficiency = 0
+			efficiency := float64(0)
+
+			if result.ProposerEfficiency == -2 && result.SyncEfficiency == -2 {
+				efficiency = result.AttestationEfficiency * 100.0
+			} else {
+				efficiency = ((54.0 / 64.0 * result.AttestationEfficiency) + (8.0 / 64.0 * result.ProposerEfficiency) + (2.0 / 64.0 * result.SyncEfficiency)) * 100.0
+			}
+			if efficiency < 0 {
+				efficiency = 0
 			}
 
 			if ret[result.GroupId] == nil {
@@ -574,13 +583,13 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 			switch tableName {
 			case "validator_dashboard_data_rolling_daily":
-				ret[result.GroupId].EfficiencyDay = result.Efficiency
+				ret[result.GroupId].EfficiencyDay = efficiency
 			case "validator_dashboard_data_rolling_weekly":
-				ret[result.GroupId].EfficiencyWeek = result.Efficiency
+				ret[result.GroupId].EfficiencyWeek = efficiency
 			case "validator_dashboard_data_rolling_monthly":
-				ret[result.GroupId].EfficiencyMonth = result.Efficiency
+				ret[result.GroupId].EfficiencyMonth = efficiency
 			case "validator_dashboard_data_rolling_total":
-				ret[result.GroupId].EfficiencyTotal = result.Efficiency
+				ret[result.GroupId].EfficiencyTotal = efficiency
 			default:
 				log.Fatal(fmt.Errorf("invalid table name"), "", 0)
 			}
