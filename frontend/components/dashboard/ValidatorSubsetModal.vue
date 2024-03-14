@@ -4,6 +4,7 @@ import {
   faCopy
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
 
 const { t: $t } = useI18n()
@@ -15,22 +16,36 @@ interface Props {
   groupName?: string, // overruled by dashboardName
   validators: number[],
 }
-const props = defineProps<Props>()
+const props = ref<Props>()
 
 const visible = defineModel<boolean>()
-const shownValidators = ref<number[]>(props.validators)
+const shownValidators = ref<number[]>([])
+const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
 
-const header = computed(() => {
-  if (props.groupName) {
-    return $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
+const setHeader = (props?: Props) => {
+  if (dialogRef?.value?.options) {
+    dialogRef.value.options.props!.header = props?.groupName
+      ? $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
+      : $t('dashboard.title') + (props?.dashboardName ? ` "${props?.dashboardName}"` : '')
   }
+}
 
-  return $t('dashboard.title') + (props.dashboardName ? ` "${props.dashboardName}"` : '')
+onMounted(() => {
+  if (dialogRef?.value?.options) {
+    if (!dialogRef.value.options.props) {
+      dialogRef.value.options.props = {}
+    }
+    dialogRef.value.options.props.dismissableMask = true
+    dialogRef.value.options.props.modal = true
+  }
+  props.value = dialogRef?.value?.data
+  shownValidators.value = props.value?.validators ?? []
+  setHeader(props.value)
 })
 
 const caption = computed(() => {
   let text = 'Validators'
-  switch (props.context) {
+  switch (props.value?.context) {
     case 'attestation':
       text = $t('dashboard.validator.summary.row.attestations')
       break
@@ -48,7 +63,7 @@ const caption = computed(() => {
       break
   }
 
-  switch (props.timeFrame) {
+  switch (props.value?.timeFrame) {
     case 'last_24h':
       return text + ' ' + $t('statistics.last_24h')
     case 'last_7d':
@@ -63,21 +78,21 @@ const caption = computed(() => {
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
-    shownValidators.value = props.validators
+    shownValidators.value = props.value?.validators ?? []
     return
   }
 
   shownValidators.value = []
 
   const index = parseInt(filter)
-  if (props.validators.includes(index)) {
+  if (props.value?.validators?.includes(index)) {
     shownValidators.value = [index]
   }
 }
 
 watch(visible, (value) => {
   if (!value) {
-    shownValidators.value = props.validators
+    shownValidators.value = props.value?.validators ?? []
   }
 })
 
@@ -101,7 +116,7 @@ function copyValidatorsToClipboard (): void {
 </script>
 
 <template>
-  <BcDialog v-model="visible" :header="header" class="validator_subset_modal_container">
+  <div class="validator_subset_modal_container xyz">
     <div class="top_line_container">
       <span class="subtitle_text">
         {{ caption }}
@@ -119,22 +134,23 @@ function copyValidatorsToClipboard (): void {
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
       <FontAwesomeIcon :icon="faCopy" />
     </Button>
-  </BcDialog>
+  </div>
 </template>
 
 <style lang="scss" scoped>
- :global(.validator_subset_modal_container) {
-    width: 450px;
-    height: 569px;
+.validator_subset_modal_container {
+  width: 410px;
+  height: 489px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+
+  @media screen and (max-width: 500px) {
+    width: unset;
+    height: unset;
   }
 
-  :global(.validator_subset_modal_container .p-dialog-content) {
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-  }
-
-  :global(.validator_subset_modal_container .p-dialog-content .copy_button) {
+  .copy_button {
     position: absolute;
     bottom: calc(var(--padding-large) + var(--padding));
     right: calc(var(--padding-large) + var(--padding));
@@ -166,4 +182,5 @@ function copyValidatorsToClipboard (): void {
       display: none;
     }
   }
+}
 </style>

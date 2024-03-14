@@ -24,7 +24,9 @@
   },
   "navigation": {
     "back": "Back",
-    "continue": "Continue"
+    "continue": "Continue",
+    "yes": "Yes",
+    "no": "No"
   },
   "table": {
     "first": "First",
