@@ -5,7 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/gob"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -14,9 +17,6 @@ import (
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -443,8 +443,45 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				}
 				return nil
 			})
-		}
 
+			// store validator mapping in redis
+			g.Go(func() error {
+				// generate mapping
+				RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
+					Epoch:   types.Epoch(epoch),
+					Mapping: make(map[uint64]*types.CachedValidator, 0),
+				}
+
+				for _, v := range block.Validators {
+					RedisCachedValidatorsMapping.Mapping[v.Index] = &types.CachedValidator{
+						ActivationEpoch:   types.Epoch(v.ActivationEpoch),
+						WithdrawableEpoch: types.Epoch(v.WithdrawableEpoch),
+						PublicKey:         v.PublicKey,
+					}
+				}
+
+				// gob struct
+				start := time.Now()
+				var serializedValidatorMapping bytes.Buffer
+				enc := gob.NewEncoder(&serializedValidatorMapping)
+				err := enc.Encode(RedisCachedValidatorsMapping)
+				if err != nil {
+					return fmt.Errorf("error serializing validator mapping to gob for epoch %v: %w", epoch, err)
+				}
+				log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
+
+				// load into redis
+				start = time.Now()
+				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
+				log.Infof("writing validator mappping to redis with no TTL")
+				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedValidatorMapping.Bytes(), 0).Err()
+				if err != nil {
+					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
+				}
+				log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
+				return nil
+			})
+		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {
 			g.Go(func() error {
