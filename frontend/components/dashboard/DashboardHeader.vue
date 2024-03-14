@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type Menubar from 'primevue/menubar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 const { t: $t } = useI18n()
 const store = useUserDashboardStore()
@@ -9,24 +10,24 @@ await useAsyncData('validator_dashboards', () => getDashboards()) // TODO: This 
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
-const items = computed(() => {
-  interface DashboardButton {
-    label: string;
-    active: boolean;
-    items?: {
-        label: string;
-        active: boolean;
-    }[];
-  }
+interface MenuBarButton {
+  label: string;
+  active: boolean;
+}
 
+interface MenuBarEntry extends MenuBarButton {
+  items?: MenuBarButton[];
+}
+
+const items = computed(() => {
   // TODO: Test code, should get dashboard key
   const currentDashboardId = '3'
 
-  const dashboardsButtons: DashboardButton[] = []
+  const dashboardsButtons: MenuBarEntry[] = []
 
   // TODO: Duplicated code for validators and accounts button
   // Mobile requires special handling, once this is implemented, check whether duplicated code can be reduced
-  let items = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId }))
+  let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
   let active = false
   items?.forEach((item) => {
     if (item.active) {
@@ -41,7 +42,7 @@ const items = computed(() => {
     })
   }
 
-  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId }))
+  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
   active = false
   items?.forEach((item) => {
     if (item.active) {
