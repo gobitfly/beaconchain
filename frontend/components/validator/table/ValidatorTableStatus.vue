@@ -7,14 +7,15 @@ import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
   status: ValidatorStatus,
-  position?: number
+  position?: number,
+  hideLabel?: boolean
 }
 defineProps<Props>()
 
 </script>
 <template>
   <div class="wrapper">
-    <span class="status">
+    <span v-if="!hideLabel" class="status">
       <!--TODO: remove .replaceAll once backend data is fixed-->
       {{ $t(`validator_state.${status.replaceAll('\'', '')}`) }}
       <span v-if="position"> #{{ position }}</span>

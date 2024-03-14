@@ -16,7 +16,8 @@
     "every_day": "Every day | Every {count} days",
     "id": "ID",
     "average": "Average",
-    "index": "Index"
+    "index": "Index",
+    "edit": "Edit"
   },
   "clipboard": {
     "copy": "Copy to clipboard",
@@ -134,7 +135,8 @@
       "manage-validators": "Manage Validators",
       "management":{
         "title": "Manage",
-        "sub_title": "Add or remove validators from your dashboard"
+        "sub_title": "Add or remove validators from your dashboard",
+        "validators_added": "validators added"
       },
       "overview": {
         "your_online_validators": "Your Online Validators",
