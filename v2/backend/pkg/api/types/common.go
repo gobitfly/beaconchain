@@ -63,11 +63,11 @@ type ClElValue[T ClElUnion] struct {
 }
 
 type PeriodicClElValues[T ClElUnion] struct {
-	Total ClElValue[T] `json:"total"`
-	Day   ClElValue[T] `json:"day"`
-	Week  ClElValue[T] `json:"week"`
-	Month ClElValue[T] `json:"month"`
-	Year  ClElValue[T] `json:"year"`
+	AllTime  ClElValue[T] `json:"all_time"`
+	Last24h  ClElValue[T] `json:"last_24h"`
+	Last7d   ClElValue[T] `json:"last_7d"`
+	Last31d  ClElValue[T] `json:"last_31d"`
+	Last365d ClElValue[T] `json:"last_365d"`
 }
 
 type ChartSeries[T int | string] struct {

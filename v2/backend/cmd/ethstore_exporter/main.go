@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
+	ethstore "github.com/gobitfly/eth.store"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -26,6 +27,9 @@ func main() {
 	versionFlag := flag.Bool("version", false, "Show version and exit")
 	dayToReexport := flag.Int64("day", -1, "Day to reexport")
 	daysToReexport := flag.String("days", "", "Days to reexport")
+	receiptsModeStr := flag.String("receipts-mode", "single", "single or batch")
+	concurrency := flag.Int("concurrency", 1, "concurrency level to use (1 for no concurrency)")
+	debugLevel := flag.Uint64("debug-level", 0, "debug level to use for eth.store calculation output")
 	flag.Parse()
 
 	if *versionFlag {
@@ -84,6 +88,14 @@ func main() {
 		endDayReexport = *dayToReexport
 	}
 
-	modules.StartEthStoreExporter(*bnAddress, *enAddress, *updateInterval, *errorInterval, *sleepInterval, startDayReexport, endDayReexport)
+	receiptsMode := ethstore.RECEIPTS_MODE_SINGLE
+
+	if *receiptsModeStr == "batch" {
+		receiptsMode = ethstore.RECEIPTS_MODE_BATCH
+	}
+
+	ethstore.SetDebugLevel(*debugLevel)
+	log.Infof("using receipts mode %s (%d)", *receiptsModeStr, receiptsMode)
+	modules.StartEthStoreExporter(*bnAddress, *enAddress, *updateInterval, *errorInterval, *sleepInterval, startDayReexport, endDayReexport, *concurrency, receiptsMode)
 	log.Infof("exiting...")
 }

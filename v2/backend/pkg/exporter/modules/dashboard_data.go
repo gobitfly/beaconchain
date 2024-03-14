@@ -3,48 +3,184 @@ package modules
 import (
 	"fmt"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 type dashboardData struct {
 	ModuleContext
+	log           ModuleLog
+	signingDomain []byte
+	epochWriter   *epochWriter
+	epochToHour   *epochToHourAggregator
+	hourToDay     *hourToDayAggregator
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
-	return &dashboardData{
+	temp := &dashboardData{
 		ModuleContext: moduleContext,
 	}
+	temp.log = ModuleLog{module: temp}
+	temp.epochWriter = newEpochWriter(temp)
+	temp.epochToHour = newEpochToHourAggregator(temp)
+	temp.hourToDay = newHourToDayAggregator(temp)
+	return temp
 }
 
-func (d *dashboardData) Start(args []any) error {
-	epoch, ok := args[0].(int)
-	if !ok {
-		return errors.New("invalid argument")
+func (d *dashboardData) Init() error {
+	go func() {
+		d.backfillEpochData()
+	}()
+
+	return nil
+}
+
+var backFillMutex = &sync.Mutex{}
+
+func (d *dashboardData) backfillEpochData() {
+	if !backFillMutex.TryLock() {
+		return
+	}
+	defer backFillMutex.Unlock()
+
+	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	if err != nil {
+		d.log.Error(err, "failed to get finalized checkpoint", 0)
+		return
 	}
 
-	spec, err := d.CL.GetSpec()
+	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, d.epochWriter.getRetentionEpochDuration())
+	if err != nil {
+		d.log.Error(err, "failed to get epoch gaps", 0)
+		return
+	}
+
+	if len(gaps) > 0 {
+		d.log.Infof("Epoch dashboard data gaps found, backfilling fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+
+		for _, gap := range gaps {
+			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
+			if gap < res.Data.Finalized.Epoch-d.epochWriter.getRetentionEpochDuration() {
+				continue
+			}
+
+			// just in case we ask again before exporting since some time may have been passed
+			hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
+			if err != nil {
+				d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
+				continue
+			}
+			if hasEpoch {
+				continue
+			}
+
+			d.log.Infof("backfilling epoch %d", gap)
+			err = d.ExportEpochData(gap)
+			if err != nil {
+				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
+			}
+			d.log.Infof("backfill completed for epoch %d", gap)
+
+			d.epochToHour.aggregate1h()
+			d.hourToDay.rolling24hAggregate()
+
+			time.Sleep(15 * time.Second)
+		}
+	} else {
+		d.epochToHour.aggregate1h()
+		d.hourToDay.rolling24hAggregate()
+	}
+	d.log.Infof("backfill finished")
+}
+
+func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
+	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
+	// An epoch becomes finalized once the next epoch gets justified
+	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
+	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
+	res, err := d.CL.GetFinalityCheckpoints("finalized")
 	if err != nil {
 		return err
 	}
 
-	data := d.getData(epoch, int(spec.Data.SlotsPerEpoch))
+	latestExported, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		return err
+	}
+
+	if latestExported != 0 {
+		if res.Data.Finalized.Epoch <= latestExported {
+			d.log.Infof("dashboard epoch data already exported for epoch %d", res.Data.Finalized.Epoch)
+			return nil
+		}
+	}
+
+	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
+
+	err = d.ExportEpochData(res.Data.Finalized.Epoch)
+	if err != nil {
+		return err
+	}
+
+	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
+	// since the init backfill only fixes gaps at the start of exporter but does not fix
+	// gaps that occur while operating (for example node not available for a brief moment)
+	// backfill will aggregate on demand
+	d.backfillEpochData()
+
+	return nil
+}
+
+func (d *dashboardData) GetName() string {
+	return "Dashboard-Data"
+}
+
+func (d *dashboardData) OnHead(event *constypes.StandardEventHeadResponse) error {
+	return nil
+}
+
+func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) error {
+	return nil
+}
+
+func (d *dashboardData) ExportEpochData(epoch uint64) error {
+	totalStart := time.Now()
+	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if data == nil {
 		return errors.New("can not get data")
 	}
+	d.log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(totalStart))
 
-	domain, err := utils.GetSigningDomain()
+	start := time.Now()
+	if d.signingDomain == nil {
+		domain, err := utils.GetSigningDomain()
+		if err != nil {
+			return err
+		}
+		d.signingDomain = domain
+	}
+
+	result := d.process(data, d.signingDomain)
+	d.log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
+
+	start = time.Now()
+	err := d.epochWriter.writeEpochData(epoch, result)
 	if err != nil {
 		return err
 	}
+	d.log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
 
-	process(data, domain)
-
-	// todo store in db
+	d.log.Infof("successfully wrote dashboard epoch data for epoch %d in %v", epoch, time.Since(totalStart))
 	return nil
 }
 
@@ -54,100 +190,159 @@ type Data struct {
 	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
 	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
 	attestationRewards       *constypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[int]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData    map[int]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData  map[int]*constypes.StandardSyncCommitteeRewardsResponse
+	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
+	attestationAssignments   map[string]uint64
 }
 
-func (d *dashboardData) getData(epoch, slotsPerEpoch int) *Data {
+func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	var result Data
 	var err error
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
-	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch
+	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
-	result.beaconBlockData = make(map[int]*constypes.StandardBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[int]*constypes.StandardBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[int]*constypes.StandardSyncCommitteeRewardsResponse)
+	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
+	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
+	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse)
+	result.attestationAssignments = make(map[string]uint64)
 
-	// retrieve the validator balances at the start of the epoch
-	log.Infof("retrieving start balances using state at slot %d", firstSlotOfPreviousEpoch)
-	result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+	errGroup := &errgroup.Group{}
+	errGroup.SetLimit(3)
 
-	if err != nil {
-		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
+	errGroup.Go(func() error {
+		// retrieve the validator balances at the start of the epoch
+		start := time.Now()
+		result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+		if err != nil {
+			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
+			return err
+		}
+		d.log.Infof("retrieved start balances using state at slot %d in %v", firstSlotOfPreviousEpoch, time.Since(start))
 		return nil
-	}
+	})
 
-	// retrieve proposer assignments for the epoch in order to attribute missed slots
-	log.Infof("retrieving proposer assignments")
-	result.proposerAssignments, err = d.CL.GetPropoalAssignments(epoch)
-	if err != nil {
-		log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
+	errGroup.Go(func() error {
+		// retrieve proposer assignments for the epoch in order to attribute missed slots
+		start := time.Now()
+		result.proposerAssignments, err = d.CL.GetPropoalAssignments(epoch)
+		if err != nil {
+			d.log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
+			return err
+		}
+		d.log.Infof("retrieved proposer assignments in %v", time.Since(start))
 		return nil
-	}
+	})
 
-	// retrieve sync committee assignments for the epoch in order to attribute missed sync assignments
-	log.Infof("retrieving sync committee assignments")
-	result.syncCommitteeAssignments, err = d.CL.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
-	if err != nil {
-		log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
+	errGroup.Go(func() error {
+		// retrieve sync committee assignments for the epoch in order to attribute missed sync assignments
+		start := time.Now()
+		result.syncCommitteeAssignments, err = d.CL.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
+		if err != nil {
+			d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
+			return nil
+		}
+		d.log.Infof("retrieved sync committee assignments in %v", time.Since(start))
 		return nil
-	}
+	})
 
-	// attestation rewards
-	log.Infof("retrieving attestation rewards data")
-	result.attestationRewards, err = d.CL.GetAttestationRewards(uint64(epoch))
+	errGroup.Go(func() error {
+		// retrieve the attestation committees
+		start := time.Now()
+		// As of dencun you can attest up until the end of the following epoch
+		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-2*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
+			if err != nil {
+				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"epoch": epoch})
+				return nil
+			}
+			d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
 
+			for _, committee := range data.Data {
+				for i, valIndex := range committee.Validators {
+					valIndexU64, err := strconv.ParseUint(valIndex, 10, 64)
+					if err != nil {
+						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"epoch": committee.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch, "committee": committee.Index, "index": i, "valIndex": valIndex})
+						continue
+					}
+					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
+					result.attestationAssignments[k] = valIndexU64
+				}
+			}
+		}
+
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		// attestation rewards
+		start := time.Now()
+		result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
+		if err != nil {
+			d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
+			return nil
+		}
+		d.log.Infof("retrieved attestation rewards data in %v", time.Since(start))
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		// retrieve the validator balances at the end of the epoch
+		start := time.Now()
+		result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
+		if err != nil {
+			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
+			return nil
+		}
+		d.log.Infof("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
+		return nil
+	})
+
+	err = errGroup.Wait()
 	if err != nil {
-		log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 		return nil
 	}
 
 	// retrieve the data for all blocks that were proposed in this epoch
 	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
-		log.Infof("retrieving data for block at slot %d", slot)
+		//d.log.Infof("retrieving data for block at slot %d", slot)
 		block, err := d.CL.GetSlot(slot)
 		if err != nil {
-			log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			httpErr, _ := network.SpecificError(err)
+			if httpErr != nil && httpErr.StatusCode == 404 {
+				continue // missed
+			}
+			d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		if block.Data.Message.StateRoot == "" {
 			// todo better network handling, if 404 just log info, else log error
-			log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockData[slot] = block
 
 		blockReward, err := d.CL.GetPropoalRewards(slot)
 		if err != nil {
-			log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.beaconBlockRewardData[slot] = blockReward
 
 		syncRewards, err := d.CL.GetSyncRewards(slot)
 		if err != nil {
-			log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
+			d.log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
 			continue
 		}
 		result.syncCommitteeRewardData[slot] = syncRewards
 	}
 
-	// retrieve the validator balances at the end of the epoch
-	log.Infof("retrieving end balances using state at slot %d", lastSlotOfEpoch)
-	result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
-
-	if err != nil {
-		log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
-		return nil
-	}
-
 	return &result
 }
 
-func process(data *Data, domain []byte) []*validatorDashboardDataRow {
+func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
 	idealAttestationRewards := make(map[int64]int)
@@ -157,17 +352,29 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 
 	pubkeyToIndexMapEnd := make(map[string]int64)
 	pubkeyToIndexMapStart := make(map[string]int64)
+	activeCount := 0
 	// write start & end balances and slashed status
 	for i := 0; i < len(validatorsData); i++ {
 		validatorsData[i] = &validatorDashboardDataRow{}
 		if i < len(data.startBalances.Data) {
 			validatorsData[i].BalanceStart = data.startBalances.Data[i].Balance
 			pubkeyToIndexMapStart[data.startBalances.Data[i].Validator.Pubkey] = int64(i)
+
+			if data.startBalances.Data[i].Status.IsActive() {
+				activeCount++
+				validatorsData[i].AttestationsScheduled = 1
+			}
 		}
 		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
 
 		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
+	}
+
+	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	for validator_index := range validatorsData {
+		validatorsData[validator_index].SyncChance = float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(activeCount) / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
+		validatorsData[validator_index].BlockChance = float64(utils.Config.Chain.ClConfig.SlotsPerEpoch) / float64(activeCount)
 	}
 
 	// write scheduled block data
@@ -189,12 +396,12 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 	// write sync committee reward data & sync committee execution stats
 	for _, rewards := range data.syncCommitteeRewardData {
 		for _, reward := range rewards.Data {
-			validatorIndex := reward.ValidatorIndex
+			validator_index := reward.ValidatorIndex
 			syncReward := reward.Reward
-			validatorsData[validatorIndex].SyncReward += syncReward
+			validatorsData[validator_index].SyncReward += syncReward
 
 			if syncReward > 0 {
-				validatorsData[validatorIndex].SyncExecuted++
+				validatorsData[validator_index].SyncExecuted++
 			}
 		}
 	}
@@ -218,58 +425,87 @@ func process(data *Data, domain []byte) []*validatorDashboardDataRow {
 			}, domain)
 
 			if err != nil {
-				log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
+				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
 				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {
-					log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
+					d.log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
 				} else if _, ok := pubkeyToIndexMapStart[depositData.Data.Pubkey]; ok {
-					log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
+					d.log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
 				} else {
-					log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
+					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
 					continue
 				}
 			}
 
-			validatorIndex := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
+			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
 
-			validatorsData[validatorIndex].DepositsAmount += depositData.Data.Amount
-			validatorsData[validatorIndex].DepositsCount++
+			validatorsData[validator_index].DepositsAmount += depositData.Data.Amount
+			validatorsData[validator_index].DepositsCount++
 		}
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
-			validatorIndex := withdrawal.ValidatorIndex
-			validatorsData[validatorIndex].WithdrawalsAmount += withdrawal.Amount
-			validatorsData[validatorIndex].WithdrawalsCount++
+			validator_index := withdrawal.ValidatorIndex
+			validatorsData[validator_index].WithdrawalsAmount += withdrawal.Amount
+			validatorsData[validator_index].WithdrawalsCount++
+		}
+
+		for _, attestation := range block.Data.Message.Body.Attestations {
+			aggregationBits := bitfield.Bitlist(attestation.AggregationBits)
+
+			for i := uint64(0); i < aggregationBits.Len(); i++ {
+				if aggregationBits.BitAt(i) {
+					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
+					if !found { // This should never happen!
+						//validator_index = 0
+						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
+						continue
+					}
+					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
+				}
+			}
 		}
 	}
 
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
-		validatorIndex := attestationReward.ValidatorIndex
+		validator_index := attestationReward.ValidatorIndex
 
-		validatorsData[validatorIndex].AttestationsHeadReward = attestationReward.Head
-		validatorsData[validatorIndex].AttestationsSourceReward = attestationReward.Source
-		validatorsData[validatorIndex].AttestationsTargetReward = attestationReward.Target
-		validatorsData[validatorIndex].AttestationsInactivityReward = attestationReward.Inactivity
-		validatorsData[validatorIndex].AttestationsInclusionsReward = attestationReward.InclusionDelay
-		validatorsData[validatorIndex].AttestationReward = validatorsData[validatorIndex].AttestationsHeadReward +
-			validatorsData[validatorIndex].AttestationsSourceReward +
-			validatorsData[validatorIndex].AttestationsTargetReward +
-			validatorsData[validatorIndex].AttestationsInactivityReward +
-			validatorsData[validatorIndex].AttestationsInclusionsReward
-		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validatorIndex].Validator.EffectiveBalance)]]
-		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
-		validatorsData[validatorIndex].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
-		validatorsData[validatorIndex].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
-		validatorsData[validatorIndex].AttestationsIdealInactivityReward = idealRewardsOfValidator.Inactivity
-		validatorsData[validatorIndex].AttestationsIdealInclusionsReward = idealRewardsOfValidator.InclusionDelay
+		validatorsData[validator_index].AttestationsHeadReward = attestationReward.Head
+		validatorsData[validator_index].AttestationsSourceReward = attestationReward.Source
+		validatorsData[validator_index].AttestationsTargetReward = attestationReward.Target
+		validatorsData[validator_index].AttestationsInactivityReward = attestationReward.Inactivity
+		validatorsData[validator_index].AttestationsInclusionsReward = attestationReward.InclusionDelay
+		validatorsData[validator_index].AttestationReward = validatorsData[validator_index].AttestationsHeadReward +
+			validatorsData[validator_index].AttestationsSourceReward +
+			validatorsData[validator_index].AttestationsTargetReward +
+			validatorsData[validator_index].AttestationsInactivityReward +
+			validatorsData[validator_index].AttestationsInclusionsReward
+		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validator_index].Validator.EffectiveBalance)]]
+		validatorsData[validator_index].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
+		validatorsData[validator_index].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
+		validatorsData[validator_index].AttestationsIdealSourceReward = idealRewardsOfValidator.Source
+		validatorsData[validator_index].AttestationsIdealInactivityReward = idealRewardsOfValidator.Inactivity
+		validatorsData[validator_index].AttestationsIdealInclusionsReward = idealRewardsOfValidator.InclusionDelay
 
-		validatorsData[validatorIndex].AttestationIdealReward = validatorsData[validatorIndex].AttestationsIdealHeadReward +
-			validatorsData[validatorIndex].AttestationsIdealSourceReward +
-			validatorsData[validatorIndex].AttestationsIdealTargetReward +
-			validatorsData[validatorIndex].AttestationsIdealInactivityReward +
-			validatorsData[validatorIndex].AttestationsIdealInclusionsReward
+		validatorsData[validator_index].AttestationIdealReward = validatorsData[validator_index].AttestationsIdealHeadReward +
+			validatorsData[validator_index].AttestationsIdealSourceReward +
+			validatorsData[validator_index].AttestationsIdealTargetReward +
+			validatorsData[validator_index].AttestationsIdealInactivityReward +
+			validatorsData[validator_index].AttestationsIdealInclusionsReward
+
+		if attestationReward.Head > 0 {
+			validatorsData[validator_index].AttestationHeadExecuted = 1
+			validatorsData[validator_index].AttestationsExecuted = 1
+		}
+		if attestationReward.Source > 0 {
+			validatorsData[validator_index].AttestationSourceExecuted = 1
+			validatorsData[validator_index].AttestationsExecuted = 1
+		}
+		if attestationReward.Target > 0 {
+			validatorsData[validator_index].AttestationTargetExecuted = 1
+			validatorsData[validator_index].AttestationsExecuted = 1
+		}
 	}
 
 	return validatorsData
@@ -287,22 +523,7 @@ func mustParseInt64(s string) int64 {
 	return r
 }
 
-// func mustParseInt(s string) int {
-// 	if s == "" {
-// 		return 0
-// 	}
-
-// 	r, err := strconv.ParseInt(s, 10, 32)
-
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return int(r)
-// }
-
 type validatorDashboardDataRow struct {
-	Index uint64
-
 	AttestationsSourceReward          int64 //done
 	AttestationsTargetReward          int64 //done
 	AttestationsHeadReward            int64 //done
@@ -316,24 +537,35 @@ type validatorDashboardDataRow struct {
 	AttestationsIdealInclusionsReward int64 //done
 	AttestationIdealReward            int64 //done
 
-	BlockScheduled int // done
-	BlocksProposed int // done
+	AttestationsScheduled     int8 //done
+	AttestationsExecuted      int8 //done
+	AttestationHeadExecuted   int8 //done
+	AttestationSourceExecuted int8 //done
+	AttestationTargetExecuted int8 //done
+
+	BlockScheduled int8    // done
+	BlocksProposed int8    // done
+	BlockChance    float64 // done
 
 	BlocksClReward int64 // done
-	BlocksElReward int64
+	BlocksElReward decimal.Decimal
 
-	SyncScheduled int   // done
-	SyncExecuted  int   // done
-	SyncReward    int64 // done
+	SyncScheduled int     // done
+	SyncExecuted  int8    // done
+	SyncReward    int64   // done
+	SyncChance    float64 // done
 
 	Slashed bool // done
 
 	BalanceStart uint64 // done
 	BalanceEnd   uint64 // done
 
-	DepositsCount  int    // done
+	DepositsCount  int8   // done
 	DepositsAmount uint64 // done
 
-	WithdrawalsCount  int    // done
+	WithdrawalsCount  int8   // done
 	WithdrawalsAmount uint64 // done
+
+	InclusionDelaySum int64 // done
+
 }

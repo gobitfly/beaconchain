@@ -41,23 +41,22 @@ export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewD
  */
 export interface VDBSummaryTableRow {
   group_id: number /* uint64 */;
-  efficiency_day: number /* float64 */;
-  efficiency_week: number /* float64 */;
-  efficiency_month: number /* float64 */;
-  efficiency_total: number /* float64 */;
+  efficiency_last_24h: number /* float64 */;
+  efficiency_last_7d: number /* float64 */;
+  efficiency_last_31d: number /* float64 */;
+  efficiency_all_time: number /* float64 */;
   validators: number /* uint64 */[];
 }
 export type InternalGetValidatorDashboardSummaryResponse = ApiPagingResponse<VDBSummaryTableRow>;
 export interface VDBGroupSummaryColumnItem {
   status_count: StatusCount;
-  earned: string /* decimal.Decimal */;
-  penalty: string /* decimal.Decimal */;
   validators?: number /* uint64 */[];
 }
 export interface VDBGroupSummaryColumn {
-  attestation_head: VDBGroupSummaryColumnItem;
-  attestation_source: VDBGroupSummaryColumnItem;
-  attestation_target: VDBGroupSummaryColumnItem;
+  attestations_head: VDBGroupSummaryColumnItem;
+  attestations_source: VDBGroupSummaryColumnItem;
+  attestations_target: VDBGroupSummaryColumnItem;
+  attestation_count: StatusCount;
   attestation_efficiency: number /* float64 */;
   attestation_avg_incl_dist: number /* float64 */;
   sync: VDBGroupSummaryColumnItem;
@@ -68,10 +67,10 @@ export interface VDBGroupSummaryColumn {
   luck: Luck;
 }
 export interface VDBGroupSummaryData {
-  details_day: VDBGroupSummaryColumn;
-  details_week: VDBGroupSummaryColumn;
-  details_month: VDBGroupSummaryColumn;
-  details_total: VDBGroupSummaryColumn;
+  last_24h: VDBGroupSummaryColumn;
+  last_7d: VDBGroupSummaryColumn;
+  last_31d: VDBGroupSummaryColumn;
+  all_time: VDBGroupSummaryColumn;
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */>>; // line chart, series id is group id, no stack
@@ -97,9 +96,9 @@ export interface VDBGroupRewardsDetails {
   income: string /* decimal.Decimal */;
 }
 export interface VDBGroupRewardsData {
-  attestation_source: VDBGroupRewardsDetails;
-  attestation_target: VDBGroupRewardsDetails;
-  attestation_head: VDBGroupRewardsDetails;
+  attestations_source: VDBGroupRewardsDetails;
+  attestations_target: VDBGroupRewardsDetails;
+  attestations_head: VDBGroupRewardsDetails;
   sync: VDBGroupRewardsDetails;
   slashing: VDBGroupRewardsDetails;
   proposal: VDBGroupRewardsDetails;
@@ -116,9 +115,9 @@ export interface VDBEpochDutiesItem {
 }
 export interface VDBEpochDutiesTableRow {
   validator: number /* uint64 */;
-  attestation_source: VDBEpochDutiesItem;
-  attestation_target: VDBEpochDutiesItem;
-  attestation_head: VDBEpochDutiesItem;
+  attestations_source: VDBEpochDutiesItem;
+  attestations_target: VDBEpochDutiesItem;
+  attestations_head: VDBEpochDutiesItem;
   proposal: VDBEpochDutiesItem;
   sync: VDBEpochDutiesItem;
   slashing: VDBEpochDutiesItem;
@@ -164,9 +163,9 @@ export interface VDBHeatmapTooltipData {
   proposers: VDBHeatmapTooltipDuty[];
   syncs: VDBHeatmapTooltipDuty[];
   slashings: VDBHeatmapTooltipDuty[];
-  attestation_head: StatusCount;
-  attestation_source: StatusCount;
-  attestation_target: StatusCount;
+  attestations_head: StatusCount;
+  attestations_source: StatusCount;
+  attestations_target: StatusCount;
   attestation_income: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<VDBHeatmapTooltipData>;
@@ -219,7 +218,8 @@ export interface VDBManageValidatorsTableRow {
   public_key: PubKey;
   group_id: number /* uint64 */;
   balance: string /* decimal.Decimal */;
-  status: string;
+  status: 'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed';
+  queue_position?: number /* uint64 */;
   withdrawal_credential: Hash;
 }
 export type InternalGetValidatorDashboardValidatorsResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
@@ -227,13 +227,6 @@ export type InternalGetValidatorDashboardValidatorsResponse = ApiPagingResponse<
  * ------------------------------------------------------------
  * Misc.
  */
-export type VDBIdPrimary = number /* int */;
-export type VDBIdPublic = string;
-export type VDBIdValidatorSet = VDBValidator[];
-export interface VDBValidator {
-  index: number /* uint64 */;
-  version: number /* uint64 */;
-}
 export interface VDBPostReturnData {
   id: number /* uint64 */;
   user_id: number /* uint64 */;
