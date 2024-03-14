@@ -2029,7 +2029,7 @@ func GetLastExportedStatisticDay() (uint64, error) {
 }
 
 // GetValidatorIncomePerformance gets all rewards of a validator in WEI for 1d, 7d, 365d and total
-func GetValidatorIncomePerformance(validators []uint64, incomePerformance *types.ValidatorIncomePerformance) error {
+func GetValidatorIncomePerformance(validators []uint32, incomePerformance *types.ValidatorIncomePerformance) error {
 	validatorsPQArray := pq.Array(validators)
 	return ReaderDb.Get(incomePerformance, `
 		SELECT
