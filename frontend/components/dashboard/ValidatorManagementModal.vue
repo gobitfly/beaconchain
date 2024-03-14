@@ -4,6 +4,9 @@ import {
   faEdit,
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faGem
+} from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
@@ -145,7 +148,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 
             <Column field="public_key" :sortable="!size.expandable" :header="$t('dashboard.validator.col.public_key')">
               <template #body="slotProps">
-                <BcFormatHash :hash="slotProps.data.public_key" type="public_key" />
+                <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
               </template>
             </Column>
             <Column
@@ -246,6 +249,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
             <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
+          <FontAwesomeIcon :icon="faGem" class="gem" />
         </div>
         <Button :label="$t('navigation.done')" @click="onClose" />
       </div>
@@ -319,6 +323,29 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   align-items: center;
   margin-top: var(--padding);
   gap: var(--padding);
+
+  .left {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-small);
+
+    .labels {
+      display: flex;
+      gap: var(--padding-small);
+
+      @media (max-width: 959px) {
+        flex-direction: column;
+      }
+    }
+
+    .gem {
+      color: var(--primary-color);
+    }
+  }
+}
+
+.public-key {
+  width: 134px;
 }
 
 .edit-icon {
@@ -338,6 +365,10 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     .edit-label {
       display: none;
     }
+  }
+
+  .public-key {
+    width: unset;
   }
 
   .action-col {
