@@ -1,0 +1,24 @@
+{
+  "data": {
+    "validator_dashboards": [
+      {
+        "id": "1",
+        "name": "Lighthouse Validators"
+      },
+      {
+        "id": "2",
+        "name": "Prysm Validators"
+      }
+    ],
+    "account_dashboards": [
+      {
+        "id": "3",
+        "name": "Hardware Wallets"
+      },
+      {
+        "id": "4",
+        "name": "Hot Wallets"
+      }
+    ]
+  }
+}
