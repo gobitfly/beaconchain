@@ -39,8 +39,8 @@
     border-radius: var(--border-radius);
 
     .p-menuitem {
-      padding: 10px 5px;
       border-radius: var(--border-radius);
+      padding: 10px 5px;
 
       &:not(:has(.p-active)) {
         color: var(--text-color);
@@ -51,7 +51,15 @@
       }
 
       &:not(:last-child) {
-        border-bottom: 1px solid var(--container-border-color);
+        margin-bottom: 10px;
+        :after{
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: -5px;
+          width: 100%;
+          border-bottom: 1px solid var(--container-border-color);
+        }
       }
     }
   }
