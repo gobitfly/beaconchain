@@ -21,38 +21,38 @@ interface MenuBarEntry extends MenuBarButton {
 
 const items = computed(() => {
   // TODO: Test code, should get dashboard key
-  const currentDashboardId = '3'
+  const currentDashboardId = '2'
 
   const dashboardsButtons: MenuBarEntry[] = []
 
   // TODO: Duplicated code for validators and accounts button
   // Mobile requires special handling, once this is implemented, check whether duplicated code can be reduced
   let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
-  let active = false
+  let activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {
-      active = true
+      activeLabel = item.label
     }
   })
   if ((items?.length ?? 0) > 0) {
     dashboardsButtons.push({
-      label: 'Validators',
-      active,
+      label: activeLabel !== '' ? activeLabel : items[0].label,
+      active: activeLabel !== '',
       items
     })
   }
 
   items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
-  active = false
+  activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {
-      active = true
+      activeLabel = item.label
     }
   })
   if ((items?.length ?? 0) > 0) {
     dashboardsButtons.push({
-      label: 'Accounts',
-      active,
+      label: activeLabel !== '' ? activeLabel : items[0].label,
+      active: activeLabel !== '',
       items
     })
   }
