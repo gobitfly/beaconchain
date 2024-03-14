@@ -13,6 +13,7 @@ const emit = defineEmits<{(e: 'showCreation'): void }>()
 interface MenuBarButton {
   label: string;
   active: boolean;
+  route?: string;
 }
 
 interface MenuBarEntry extends MenuBarButton {
@@ -28,7 +29,7 @@ const items = computed(() => {
 
   // TODO: Duplicated code for validators and accounts button
   // Mobile requires special handling, once this is implemented, check whether duplicated code can be reduced
-  let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
+  let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId, route: `/dashboard/${id}` })) ?? []
   let activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {
@@ -44,7 +45,7 @@ const items = computed(() => {
     })
   }
 
-  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId })) ?? []
+  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId, route: `/dashboard/${id}` })) ?? []
   activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {
@@ -63,7 +64,8 @@ const items = computed(() => {
   dashboardsButtons.push({
     label: $t('dashboard.notifications'),
     active: false, // TODO: Active handling missing
-    dropdown: false
+    dropdown: false,
+    route: '/notifications'
   })
 
   return dashboardsButtons
@@ -79,7 +81,13 @@ const items = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :model="items">
         <template #item="{ item }">
-          <span class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
+          <NuxtLink v-if="item.route" :to="item.route">
+            <span class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
+              <span class="text">{{ item.label }}</span>
+              <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
+            </span>
+          </NuxtLink>
+          <span v-else class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
           </span>
