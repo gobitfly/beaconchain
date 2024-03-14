@@ -11,20 +11,22 @@
     gap: 10px;
 
     > .p-menuitem {
-      min-width: 140px; // TODO: Smarter handling
+      width: 130px; // TODO: Smarter handling?
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
       > .p-menuitem-content {
-        border-radius: 0px;
-
+        padding: 10px 10px 6px 10px;
+        
         .p-menuitem-link {
-          padding: 10px 10px 8px 10px;
-          
-          .p-menuitem-text {
-            color: var(--text-color);
-          }
+          padding: 0;
+          justify-content: space-between;
         }
+      }
+
+      &.p-focus { // TODO: Will have to work with own impementation like p-activem Set text color and icon color here as well
+        border: 1px solid var(--primary-color);
+        border-radius: var(--border-radius);
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
@@ -33,40 +35,21 @@
     }
   }
 
-  .p-menuitem > .p-menuitem-content {
-    .p-menuitem-link {
-      color: var(--text-color); // TODO: requires an active state to set this to primary color
-      padding: 11px 10px 10px 10px; // TODO: Does not work?
-      user-select: none;
-
-      .p-menuitem-text {
-        color: var(--text-color);
-      }
-    }
-  }
-
-  .p-menuitem:not(.p-highlight):not(.p-disabled).p-focus > .p-menuitem-content {
-    border: 1px solid var(--primary-color); // TODO: Border cannot really be here as it is just another border within the root element
-    border-radius: var(--border-radius);
-
-    .p-menuitem-link .p-menuitem-text {
-      color: var(--primary-color);
-    }
-  }
-
-  .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
-    background: var(--list-hover-background);
-  }
-
   .p-submenu-list {
     margin-top: var(--padding-tiny);
+    padding: var(--padding);
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    min-width: 140px; // TODO: Smarter handling
+    min-width: 130px; // TODO: Smarter handling
 
     .p-menuitem {
-      padding: 16px 10px 15px 15px;
+      padding: 10px 5px;
+      border-radius: var(--border-radius);
+
+      &:not(.p-highlight):not(.p-disabled):hover {
+        background: var(--list-hover-background);
+      }
 
       &:not(:last-child) {
         border-bottom: 1px solid var(--container-border-color);
