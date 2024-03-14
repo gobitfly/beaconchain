@@ -38,7 +38,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   <div>
     <h2>Network icons</h2>
     <div>Monochromous:</div>
-    <IconIconNetwork
+    <IconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
@@ -47,7 +47,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
       class="icon-size"
     />
     <div>Colored:</div>
-    <IconIconNetwork
+    <IconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
@@ -56,7 +56,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
       class="icon-size"
     />
     <div>Harmonized sizes (for example Ethereum looks less skinny compared to the others):</div>
-    <IconIconNetwork
+    <IconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
