@@ -34,34 +34,63 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
       <IconSlotSync /> Slot Sync
     </div>
   </div>
+
   <div>
+    <h2>Network icons</h2>
     <div>Monochromous:</div>
-    <IconNetworkIcons
+    <IconIconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="false"
       :harmonize-perceived-size="false"
-      class="network-icon"
+      class="icon-size"
     />
     <div>Colored:</div>
-    <IconNetworkIcons
+    <IconIconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="true"
       :harmonize-perceived-size="false"
-      class="network-icon"
+      class="icon-size"
     />
     <div>Harmonized sizes (for example Ethereum looks less skinny compared to the others):</div>
-    <IconNetworkIcons
+    <IconIconNetwork
       v-for="id of getListOfChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="true"
       :harmonize-perceived-size="true"
-      class="network-icon"
+      class="icon-size"
     />
+  </div>
+  <div>
+    <h2>Loading issues:</h2>
+    Example when props `inline` is true: "Something went wrong <IconErrorFace /> Please try again later."
+    <br>
+    Example for a 404 page (not inline):
+    <div class="container">
+      <br>
+      <div>Error 404</div>
+      <br>
+      <IconErrorFace :inline="false" width="30%" />
+    </div>
+  </div>
+  <div>
+    <h2>Data types:</h2>
+    <IconDatatypeTokenIcon class="icon-size" />
+    <IconDatatypeNftIcon class="icon-size" />
+    <IconDatatypeEpochIcon class="icon-size" />
+    <IconDatatypeBlockIcon class="icon-size" />
+    <IconDatatypeTransactionIcon class="icon-size" />
+    <IconDatatypeBatchIcon class="icon-size" />
+    <IconDatatypeContractIcon class="icon-size" />
+    <IconDatatypeAccountIcon class="icon-size" />
+    <IconDatatypeEnsIcon class="icon-size" style="color:red" />
+    <IconDatatypeEnsIcon class="icon-size" style="color:blue" />
+    <IconDatatypeGraffitoIcon class="icon-size" />
+    <IconDatatypeValidatorIcon class="icon-size" />
   </div>
 </template>
 
@@ -76,8 +105,14 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   width: 200px;
 }
 
-.network-icon {
+.icon-size {
   height: 40px;
   width: 40px;
+}
+
+.container {
+  width: 500px;
+  height: 300px;
+  text-align: center;
 }
 </style>
