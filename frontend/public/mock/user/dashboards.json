@@ -7,17 +7,33 @@
       },
       {
         "id": "2",
-        "name": "Mine"
+        "name": "Prysm"
+      },
+      {
+        "id": "3",
+        "name": "Validators from my friend"
+      },
+      {
+        "id": "4",
+        "name": "The other validators"
       }
     ],
     "account_dashboards": [
       {
-        "id": "3",
-        "name": "Hardware Wallets for maximum security"
+        "id": "5",
+        "name": "Hardware Wallets"
       },
       {
-        "id": "4",
+        "id": "6",
         "name": "Hot Wallets"
+      },
+      {
+        "id": "7",
+        "name": "My friend's wallets"
+      },
+      {
+        "id": "8",
+        "name": "The other wallets"
       }
     ] 
   }
