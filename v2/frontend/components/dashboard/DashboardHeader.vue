@@ -12,27 +12,53 @@ const emit = defineEmits<{(e: 'showCreation'): void }>()
 const items = computed(() => {
   interface DashboardButton {
     label: string;
+    active: boolean;
     items?: {
         label: string;
+        active: boolean;
     }[];
   }
 
+  // TODO: Test code, should get dashboard key
+  const currentDashboardId = '3'
+
   const dashboardsButtons: DashboardButton[] = []
 
-  let items = dashboards.value?.validator_dashboards.map(({ name }) => ({ label: name }))
-  dashboardsButtons.push({
-    label: 'Validators',
-    items
+  // TODO: Duplicated code for validators and accounts button
+  // Mobile requires special handling, once this is implemented, check whether duplicated code can be reduced
+  let items = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId }))
+  let active = false
+  items?.forEach((item) => {
+    if (item.active) {
+      active = true
+    }
   })
+  if ((items?.length ?? 0) > 0) {
+    dashboardsButtons.push({
+      label: 'Validators',
+      active,
+      items
+    })
+  }
 
-  items = dashboards.value?.account_dashboards.map(({ name }) => ({ label: name }))
-  dashboardsButtons.push({
-    label: 'Accounts',
-    items
+  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId }))
+  active = false
+  items?.forEach((item) => {
+    if (item.active) {
+      active = true
+    }
   })
+  if ((items?.length ?? 0) > 0) {
+    dashboardsButtons.push({
+      label: 'Accounts',
+      active,
+      items
+    })
+  }
 
   dashboardsButtons.push({
-    label: $t('dashboard.notifications')
+    label: $t('dashboard.notifications'),
+    active: false // TODO: Active handling missing
   })
 
   return dashboardsButtons
@@ -46,7 +72,14 @@ const items = computed(() => {
       {{ $t('dashboard.title') }}
     </div>
     <div class="dashboard-buttons">
-      <Menubar :model="items" />
+      <Menubar :model="items">
+        <template #item="{ item }">
+          <span :class="item.active ? 'p-active' : ''">
+            {{ item.label }}
+            <!--TODO: Dropdown icon-->
+          </span>
+        </template>
+      </Menubar>
       <Button class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>

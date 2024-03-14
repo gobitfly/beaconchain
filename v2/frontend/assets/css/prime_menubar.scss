@@ -16,6 +16,12 @@
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
+      &:has(.p-active) {
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        border-radius: var(--border-radius);
+      }
+
       > .p-menuitem-content {
         padding: 10px 10px 6px 10px;
         
@@ -23,11 +29,6 @@
           padding: 0;
           justify-content: space-between;
         }
-      }
-
-      &.p-focus { // TODO: Will have to work with own impementation like p-activem Set text color and icon color here as well
-        border: 1px solid var(--primary-color);
-        border-radius: var(--border-radius);
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
@@ -47,6 +48,10 @@
     .p-menuitem {
       padding: 10px 5px;
       border-radius: var(--border-radius);
+
+      &:not(:has(.p-active)) {
+        color: var(--text-color);
+      }
 
       &:not(.p-highlight):not(.p-disabled):hover {
         background: var(--list-hover-background);
