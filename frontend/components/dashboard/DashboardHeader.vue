@@ -4,7 +4,7 @@ import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { DashboardKey } from '~/types/dashboard'
 
 interface Props {
-  dashboardKey: DashboardKey
+  dashboardKey?: DashboardKey // optional because it's not available for notifications
 }
 const props = defineProps<Props>()
 
@@ -67,7 +67,7 @@ const items = computed(() => {
 
   dashboardsButtons.push({
     label: $t('dashboard.notifications'),
-    active: false, // TODO: Active handling missing
+    active: props.dashboardKey === undefined,
     dropdown: false,
     route: '/notifications'
   })
