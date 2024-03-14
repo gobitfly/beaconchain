@@ -69,6 +69,7 @@ func InitServices(das *dataaccess.DataAccessService) dataaccess.DataAccessor {
 	db.PersistentRedisDbClient = das.PersistentRedisDbClient
 
 	go services.StartSlotVizDataService()
+	go services.StartIndexMappingService()
 
 	return das
 }
