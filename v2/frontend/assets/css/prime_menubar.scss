@@ -17,12 +17,12 @@
 
       &:has(.p-active) {
         color: var(--primary-color);
-        border: 1px solid var(--primary-color);
-        border-radius: var(--border-radius);
+        border-color: var(--primary-color);
       }
 
       > .p-menuitem-content {
         padding: 10px 10px 6px 10px;
+        border-radius: var(--border-radius);
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
