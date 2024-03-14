@@ -73,16 +73,14 @@ const items = computed(() => {
       {{ $t('dashboard.title') }}
     </div>
     <div class="dashboard-buttons">
-      <div class="dashboard-navigation">
-        <Menubar :model="items">
-          <template #item="{ item }">
-            <span :class="item.active ? 'p-active' : ''">
-              {{ item.label }}
+      <Menubar :model="items">
+        <template #item="{ item }">
+          <span :class="item.active ? 'p-active' : ''">
+            {{ item.label }}
             <!--TODO: Dropdown icon-->
-            </span>
-          </template>
-        </Menubar>
-      </div>
+          </span>
+        </template>
+      </Menubar>
       <Button class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>
@@ -105,8 +103,8 @@ const items = computed(() => {
     align-items: center;
     gap: var(--padding);
 
-    .dashboard-navigation {
-      width: calc((3 * 130px) + (2 * var(--padding)));
+    :deep(.p-menubar-root-list > .p-menuitem) {
+      width: 130px;
     }
   }
 }
