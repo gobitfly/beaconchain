@@ -1,6 +1,13 @@
 <script lang="ts" setup>
 import type Menubar from 'primevue/menubar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
+import type { DashboardKey } from '~/types/dashboard'
+
+interface Props {
+  dashboardKey: DashboardKey
+}
+const props = defineProps<Props>()
+
 const { t: $t } = useI18n()
 const store = useUserDashboardStore()
 const { getDashboards } = store
@@ -22,14 +29,11 @@ interface MenuBarEntry extends MenuBarButton {
 }
 
 const items = computed(() => {
-  // TODO: Test code, should get dashboard key
-  const currentDashboardId = '2'
-
   const dashboardsButtons: MenuBarEntry[] = []
 
   // TODO: Duplicated code for validators and accounts button
   // Mobile requires special handling, once this is implemented, check whether duplicated code can be reduced
-  let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId, route: `/dashboard/${id}` })) ?? []
+  let items: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
   let activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {
@@ -45,7 +49,7 @@ const items = computed(() => {
     })
   }
 
-  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === currentDashboardId, route: `/dashboard/${id}` })) ?? []
+  items = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
   activeLabel = ''
   items?.forEach((item) => {
     if (item.active) {

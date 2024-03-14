@@ -47,7 +47,7 @@ onMounted(() => {
     <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreation('modal')" />
+        <DashboardHeader :dashboard-key="key" @show-creation="showDashboardCreation('modal')" />
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
       <div>
