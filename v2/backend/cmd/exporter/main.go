@@ -40,25 +40,55 @@ func main() {
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	wg := &sync.WaitGroup{}
+	if !cfg.JustV2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			db.MustInitDB(&types.DatabaseConfig{
+				Username:     cfg.WriterDatabase.Username,
+				Password:     cfg.WriterDatabase.Password,
+				Name:         cfg.WriterDatabase.Name,
+				Host:         cfg.WriterDatabase.Host,
+				Port:         cfg.WriterDatabase.Port,
+				MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+				SSL:          cfg.WriterDatabase.SSL,
+			}, &types.DatabaseConfig{
+				Username:     cfg.ReaderDatabase.Username,
+				Password:     cfg.ReaderDatabase.Password,
+				Name:         cfg.ReaderDatabase.Name,
+				Host:         cfg.ReaderDatabase.Host,
+				Port:         cfg.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+				SSL:          cfg.ReaderDatabase.SSL,
+			})
+		}()
+	} else {
+		log.Warnf("------- EXPORTER RUNNING IN V2 ONLY MODE ------")
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.WriterDatabase.Username,
-			Password:     cfg.WriterDatabase.Password,
-			Name:         cfg.WriterDatabase.Name,
-			Host:         cfg.WriterDatabase.Host,
-			Port:         cfg.WriterDatabase.Port,
-			MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+		db.MustInitAlloyDb(&types.DatabaseConfig{
+			Username:     cfg.AlloyWriter.Username,
+			Password:     cfg.AlloyWriter.Password,
+			Name:         cfg.AlloyWriter.Name,
+			Host:         cfg.AlloyWriter.Host,
+			Port:         cfg.AlloyWriter.Port,
+			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
+			SSL:          cfg.AlloyWriter.SSL,
 		}, &types.DatabaseConfig{
-			Username:     cfg.ReaderDatabase.Username,
-			Password:     cfg.ReaderDatabase.Password,
-			Name:         cfg.ReaderDatabase.Name,
-			Host:         cfg.ReaderDatabase.Host,
-			Port:         cfg.ReaderDatabase.Port,
-			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+			Username:     cfg.AlloyReader.Username,
+			Password:     cfg.AlloyReader.Password,
+			Name:         cfg.AlloyReader.Name,
+			Host:         cfg.AlloyReader.Host,
+			Port:         cfg.AlloyReader.Port,
+			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
+			SSL:          cfg.AlloyReader.SSL,
 		})
 	}()
 
@@ -133,8 +163,12 @@ func main() {
 		log.Fatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)
 	}
 
-	defer db.ReaderDb.Close()
-	defer db.WriterDb.Close()
+	if !cfg.JustV2 {
+		defer db.ReaderDb.Close()
+		defer db.WriterDb.Close()
+	}
+	defer db.AlloyReader.Close()
+	defer db.AlloyWriter.Close()
 	defer db.BigtableClient.Close()
 
 	context, err := modules.GetModuleContext()
@@ -142,7 +176,10 @@ func main() {
 		log.Fatal(err, "error getting module context", 0)
 	}
 
-	go services.StartHistoricPriceService()
+	if !cfg.JustV2 {
+		go services.StartHistoricPriceService()
+	}
+
 	go modules.StartAll(context)
 
 	// Keep the program alive until Ctrl+C is pressed

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	"math"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -195,12 +195,7 @@ func tableRenaming(currentTableName, destinationTableName string, numberOfPartit
 	if err != nil {
 		return errors.Wrap(err, "error starting transaction")
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	// Sanity check same day height
 	err = sanityCheckIsSameExportedDay(tx, destinationTableName)
