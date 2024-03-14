@@ -215,6 +215,26 @@ func (d DataAccessService) CloseDataAccessService() {
 	}
 }
 
+//////////////////// 		Helper functions
+
+func getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
+	var validatorsArray []uint32
+	if len(dashboardId.Validators) == 0 {
+		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
+		for _, validator := range dashboardId.Validators {
+			validatorsArray = append(validatorsArray, uint32(validator.Index))
+		}
+	}
+	return validatorsArray, nil
+}
+
+//////////////////// 		Data Access
+
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
@@ -437,7 +457,108 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
 	// WORKING Rami
-	return d.dummy.GetValidatorDashboardOverview(dashboardId)
+	validators, err := getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	qry := `SELECT
+		status AS statename, COUNT(*) AS statecount
+	FROM
+		validators
+	WHERE
+		validatorindex = ANY($1)
+	GROUP BY
+		status`
+	var currentStateCounts []*struct {
+		Name  string `db:"statename"`
+		Count uint64 `db:"statecount"`
+	}
+	err = db.ReaderDb.Select(&currentStateCounts, qry, validators)
+	if err != nil {
+		// utils.Log(err, "error retrieving validators data", 0)
+		return nil, err
+	}
+	data := t.VDBOverviewData{}
+	for _, state := range currentStateCounts {
+		data.Validators.Total += state.Count
+		switch state.Name {
+		case "active_online":
+			data.Validators.Active += state.Count
+		case "pending":
+			data.Validators.Pending += state.Count
+		case "slashing_online":
+			data.Validators.Slashed += state.Count
+		case "exiting_online":
+			data.Validators.Exited += state.Count
+		}
+	}
+	data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
+
+	income := types.ValidatorIncomePerformance{}
+	err = db.GetValidatorIncomePerformance(validators, &income)
+	if err != nil {
+		return nil, err
+	}
+	data.Rewards.Last24h.El = income.ElIncomeWei1d
+	data.Rewards.Last24h.Cl = income.ClIncomeWei1d
+	data.Rewards.Last7d.El = income.ElIncomeWei7d
+	data.Rewards.Last7d.Cl = income.ClIncomeWei7d
+	data.Rewards.Last31d.El = income.ElIncomeWei31d
+	data.Rewards.Last31d.Cl = income.ClIncomeWei31d
+	data.Rewards.Last365d.El = income.ElIncomeWei365d
+	data.Rewards.Last365d.Cl = income.ClIncomeWei365d
+	data.Rewards.AllTime.El = income.ElIncomeWeiTotal
+	data.Rewards.AllTime.Cl = income.ClIncomeWeiTotal
+	// TODO Efficiency - only need "total efficiency" or fill all fields?
+
+	qry = `SELECT
+			sync_chance
+			sync_scheduled
+			block_chance
+			blocks_scheduled
+		FROM validator_dashboard_data_rolling_total
+		WHERE validator_index = ANY($1)`
+	var res []struct {
+		SyncChance      float64 `db:"sync_chance"`
+		SyncScheduled   int32   `db:"sync_scheduled"`
+		BlockChance     float64 `db:"block_chance"`
+		BlocksScheduled int32   `db:"blocks_scheduled"`
+	}
+	err = db.AlloyReader.Select(&res, qry, validators)
+	if err != nil {
+		return nil, err
+	}
+	totalSyncChance := float64(0)
+	totalSyncs := int32(0)
+	totalBlockChance := float64(0)
+	totalBlocks := int32(0)
+	// TODO prob can aggregate these values in query, need permissions for testing
+	for _, r := range res {
+		totalSyncChance += r.SyncChance
+		totalSyncs += r.SyncScheduled
+		totalBlockChance += r.BlockChance
+		totalBlocks += r.BlocksScheduled
+	}
+	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
+	// But waiting for Peter implementation of apr calc
+	data.Luck.Proposal.Percent = float64(totalBlocks) / totalBlockChance * 100
+	data.Luck.Sync.Percent = float64(totalSyncs) / totalSyncChance * 100
+
+	var queryResult []struct {
+		Id   uint32 `db:"id"`
+		Name string `db:"name"`
+	}
+	err = db.AlloyReader.Select(&queryResult, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, res := range queryResult {
+		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
+	}
+
+	return &data, nil
 }
 
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
@@ -736,17 +857,9 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId st
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
-	var validatorsArray []uint32
-	if dashboardId.Validators == nil {
-		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
-		for _, validator := range dashboardId.Validators {
-			validatorsArray = append(validatorsArray, uint32(validator.Index))
-		}
+	validatorsArray, err := getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, err
 	}
 
 	validatorsMap := make(map[uint32]bool, len(validatorsArray))
