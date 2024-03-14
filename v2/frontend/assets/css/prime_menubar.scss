@@ -1,14 +1,15 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.standard_text;
 
-  padding: 0 var(--padding);
   color: var(--text-color);
   user-select: none;
 
   .p-menubar-root-list
-  {  
+  {
+    flex-wrap: nowrap;
     gap: 10px;
 
     > .p-menuitem {
@@ -43,7 +44,6 @@
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
-    min-width: 130px; // TODO: Smarter handling
 
     .p-menuitem {
       padding: 10px 5px;
@@ -61,5 +61,9 @@
         border-bottom: 1px solid var(--container-border-color);
       }
     }
+  }
+
+  .p-menuitem-content {
+    @include utils.truncate-text;
   }
 }

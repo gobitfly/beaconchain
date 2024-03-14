@@ -73,14 +73,16 @@ const items = computed(() => {
       {{ $t('dashboard.title') }}
     </div>
     <div class="dashboard-buttons">
-      <Menubar :model="items">
-        <template #item="{ item }">
-          <span :class="item.active ? 'p-active' : ''">
-            {{ item.label }}
+      <div class="dashboard-navigation">
+        <Menubar :model="items">
+          <template #item="{ item }">
+            <span :class="item.active ? 'p-active' : ''">
+              {{ item.label }}
             <!--TODO: Dropdown icon-->
-          </span>
-        </template>
-      </Menubar>
+            </span>
+          </template>
+        </Menubar>
+      </div>
       <Button class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>
@@ -91,6 +93,7 @@ const items = computed(() => {
 <style lang="scss" scoped>
 .header-container {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
 
   .dashboard-title {
@@ -99,7 +102,12 @@ const items = computed(() => {
 
   .dashboard-buttons {
     display: flex;
+    align-items: center;
     gap: var(--padding);
+
+    .dashboard-navigation {
+      width: calc((3 * 130px) + (2 * var(--padding)));
+    }
   }
 }
 </style>
