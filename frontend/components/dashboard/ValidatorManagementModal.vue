@@ -242,8 +242,10 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     <template #footer>
       <div class="footer">
         <div class="left">
-          <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
-          <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
+          <div class="labels">
+            <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
+            <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
+          </div>
         </div>
         <Button :label="$t('navigation.done')" @click="onClose" />
       </div>
