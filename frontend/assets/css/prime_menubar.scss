@@ -1,5 +1,4 @@
 @use "~/assets/css/fonts.scss";
-@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.standard_text;
@@ -24,11 +23,6 @@
 
       > .p-menuitem-content {
         padding: 10px 10px 6px 10px;
-        
-        .p-menuitem-link {
-          padding: 0;
-          justify-content: space-between;
-        }
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
@@ -60,9 +54,5 @@
         border-bottom: 1px solid var(--container-border-color);
       }
     }
-  }
-
-  .p-menuitem-content {
-    @include utils.truncate-text;
   }
 }
