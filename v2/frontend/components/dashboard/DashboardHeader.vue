@@ -16,6 +16,7 @@ interface MenuBarButton {
 }
 
 interface MenuBarEntry extends MenuBarButton {
+  dropdown: boolean;
   items?: MenuBarButton[];
 }
 
@@ -38,6 +39,7 @@ const items = computed(() => {
     dashboardsButtons.push({
       label: activeLabel !== '' ? activeLabel : items[0].label,
       active: activeLabel !== '',
+      dropdown: items.length > 1,
       items
     })
   }
@@ -53,13 +55,15 @@ const items = computed(() => {
     dashboardsButtons.push({
       label: activeLabel !== '' ? activeLabel : items[0].label,
       active: activeLabel !== '',
+      dropdown: items.length > 1,
       items
     })
   }
 
   dashboardsButtons.push({
     label: $t('dashboard.notifications'),
-    active: false // TODO: Active handling missing
+    active: false, // TODO: Active handling missing
+    dropdown: false
   })
 
   return dashboardsButtons
@@ -75,9 +79,9 @@ const items = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :model="items">
         <template #item="{ item }">
-          <span :class="item.active ? 'p-active' : ''">
-            {{ item.label }}
-            <!--TODO: Dropdown icon-->
+          <span class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
+            <span class="text">{{ item.label }}</span>
+            <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
           </span>
         </template>
       </Menubar>
@@ -89,6 +93,8 @@ const items = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/utils.scss";
+
 .header-container {
   display: flex;
   align-items: flex-start;
@@ -102,6 +108,24 @@ const items = computed(() => {
     display: flex;
     align-items: center;
     gap: var(--padding);
+
+    .button-content{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .text {
+        @include utils.truncate-text;
+      }
+
+      .toggle {
+        flex-shrink: 0;
+      }
+
+      .pointer {
+        cursor: pointer;
+      }
+    }
 
     :deep(.p-menubar-root-list > .p-menuitem) {
       width: 130px;
