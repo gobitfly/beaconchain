@@ -21,11 +21,11 @@ const toggleLoading = () => {
 
 const selected = ref(true)
 
-const completeList = ref([{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }])
+const completeList = [{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }]
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const selectedType = ref<string>('Validators')
-const allTypes = ref([{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }])
+const allTypes = [{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }]
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
@@ -79,6 +79,9 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           <IconPlus alt="Plus icon" width="100%" height="100%" />
         </Button>
       </div>
+    </TabPanel>
+    <TabPanel header="Hashes">
+      <PlaygroundHashes />
     </TabPanel>
     <TabPanel header="Scroll box">
       <div class="scroll-box">

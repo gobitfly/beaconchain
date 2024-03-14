@@ -37,6 +37,9 @@ var DBPGX *pgxpool.Conn
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
 
+var AlloyReader *sqlx.DB
+var AlloyWriter *sqlx.DB
+
 var PersistentRedisDbClient *redis.Client
 
 var FarFutureEpoch = uint64(18446744073709551615)
@@ -89,8 +92,13 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
+	sslMode := "disable"
+	if writer.SSL {
+		sslMode = "require"
+	}
+
 	log.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
-	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name))
+	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslMode))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
@@ -105,8 +113,13 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		return dbConnWriter, dbConnWriter
 	}
 
+	sslMode = "disable"
+	if reader.SSL {
+		sslMode = "require"
+	}
+
 	log.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
-	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name))
+	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslMode))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
@@ -121,6 +134,10 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 
 func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
 	WriterDb, ReaderDb = mustInitDB(writer, reader)
+}
+
+func MustInitAlloyDb(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
+	AlloyWriter, AlloyReader = mustInitDB(writer, reader)
 }
 
 func ApplyEmbeddedDbSchema(version int64) error {
@@ -550,16 +567,11 @@ func UpdateCanonicalBlocks(startEpoch, endEpoch uint64, blocks []*types.MinimalB
 		metrics.TaskDuration.WithLabelValues("db_update_canonical_blocks").Observe(time.Since(start).Seconds())
 	}()
 
-	tx, err := WriterDb.Begin()
+	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	lastSlotNumber := uint64(0)
 	for _, block := range blocks {
@@ -590,16 +602,11 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 		return nil
 	}
 
-	tx, err := WriterDb.Begin()
+	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	canonBlocks := make(pq.ByteaArray, 0)
 	orphanedBlocks := make(pq.ByteaArray, 0)
@@ -1657,16 +1664,11 @@ func InsertAdConfigurations(adConfig types.AdConfig) error {
 
 // update exisiting ad configuration
 func UpdateAdConfiguration(adConfig types.AdConfig) error {
-	tx, err := WriterDb.Begin()
+	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 	_, err = tx.Exec(`
 		UPDATE ad_configurations SET
 			template_id = $2,
@@ -1699,12 +1701,7 @@ func DeleteAdConfiguration(id string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	// delete ad configuration
 	_, err = WriterDb.Exec(`

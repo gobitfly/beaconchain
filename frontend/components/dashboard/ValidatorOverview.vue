@@ -61,19 +61,19 @@ const dataList = computed(() => {
   ]
   efficiency.value = { label: formatPercent(v.efficiency.total) }
 
-  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.total), { addPlus: true })
+  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.all_time), { addPlus: true })
   const statsLabels = [
-    { label: `(${$t('statistics.day')})` },
-    { label: `(${$t('statistics.week')})` },
-    { label: `(${$t('statistics.month')})` },
-    { label: `(${$t('statistics.year')})` }
+    { label: `(${$t('statistics.last_24h')})` },
+    { label: `(${$t('statistics.last_7d')})` },
+    { label: `(${$t('statistics.last_31d')})` },
+    { label: `(${$t('statistics.last_365d')})` }
   ]
   rewards.additonalValues = [
     [
-      converter.value.weiToValue(totalElCl(v.rewards.day), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.week), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.month), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.year), { addPlus: true })
+      converter.value.weiToValue(totalElCl(v.rewards.last_24h), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.last_31d), { addPlus: true }),
+      converter.value.weiToValue(totalElCl(v.rewards.last_365d), { addPlus: true })
     ], statsLabels
   ]
 
@@ -86,13 +86,13 @@ const dataList = computed(() => {
       { label: $t(`${tPath}sync_committee_luck`) }
     ]
   ]
-  apr.value = { label: formatPercent(totalElClNumbers(v.apr.total)) }
+  apr.value = { label: formatPercent(totalElClNumbers(v.apr.all_time)) }
   apr.additonalValues = [
     [
-      { label: formatPercent(totalElClNumbers(v.apr.day)) },
-      { label: formatPercent(totalElClNumbers(v.apr.week)) },
-      { label: formatPercent(totalElClNumbers(v.apr.month)) },
-      { label: formatPercent(totalElClNumbers(v.apr.year)) }
+      { label: formatPercent(totalElClNumbers(v.apr.last_24h)) },
+      { label: formatPercent(totalElClNumbers(v.apr.last_7d)) },
+      { label: formatPercent(totalElClNumbers(v.apr.last_31d)) },
+      { label: formatPercent(totalElClNumbers(v.apr.last_365d)) }
     ], statsLabels
   ]
   return list
