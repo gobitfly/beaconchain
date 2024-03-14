@@ -24,8 +24,8 @@ type VDBOverviewEfficiency struct {
 }
 
 type VDBOverviewGroup struct {
-	Id   uint64 `json:"id"`
-	Name string `json:"name"`
+	Id   uint64 `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 type VDBOverviewData struct {
@@ -229,7 +229,7 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof:'deposited', 'pending', 'online', 'offline', 'exited', 'slashed'"`
+	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof: deposited, pending, online, offline, exited, slashed"`
 	QueuePosition        uint64          `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }
@@ -239,11 +239,11 @@ type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManage
 // ------------------------------------------------------------
 // Misc.
 type VDBPostReturnData struct {
-	Id        uint64    `json:"id"`
-	UserID    uint64    `json:"user_id"`
-	Name      string    `json:"name"`
-	Network   uint64    `json:"network"`
-	CreatedAt time.Time `json:"created_at"`
+	Id        uint64    `db:"id" json:"id"`
+	UserID    uint64    `db:"user_id" json:"user_id"`
+	Name      string    `db:"name" json:"name"`
+	Network   uint64    `db:"network" json:"network"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
 type VDBPostValidatorsData struct {
