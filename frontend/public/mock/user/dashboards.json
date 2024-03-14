@@ -13,12 +13,12 @@
     "account_dashboards": [
       {
         "id": "3",
-        "name": "Hardware Wallets"
+        "name": "Hardware Wallets for maximum security"
       },
       {
         "id": "4",
         "name": "Hot Wallets"
       }
-    ]
+    ] 
   }
 }
