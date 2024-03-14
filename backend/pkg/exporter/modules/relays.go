@@ -3,7 +3,6 @@ package modules
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -160,17 +159,12 @@ func exportRelayBlocks(r types.Relay) error {
 }
 
 func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bound uint64) error {
-	tx, err := db.WriterDb.Begin()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		log.Error(err, "failed to start db transaction", 0)
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	var min_slot uint64
 	if low_bound > 10 {

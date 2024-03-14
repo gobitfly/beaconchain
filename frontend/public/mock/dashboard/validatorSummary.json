@@ -5,66 +5,66 @@
   "data": [
     {
       "group_id": -1,
-      "efficiency_day": 81.02,
-      "efficiency_week": 82.52,
-      "efficiency_month": 82.28,
-      "efficiency_total": 92.06,
+      "efficiency_last_24h": 81.02,
+      "efficiency_last_7d": 82.52,
+      "efficiency_last_31d": 82.28,
+      "efficiency_all_time": 92.06,
       "validators":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,101,102,103,104,105,106,107,108,109,110,123,456,653,789,1024,1234,2048,5678,7253,29533,124584,212455,324323,459393,462852,501249,515359,525356,530363,538953,553539,642533,875390,875391,875392,875393,875394,875395,875396,875397,875398,875399,875400,875401,875402,875403,91234]
     },
     {
       "group_id": 0,
-      "efficiency_day": 100,
-      "efficiency_week": 100,
-      "efficiency_month": 100,
-      "efficiency_total": 100,
+      "efficiency_last_24h": 100,
+      "efficiency_last_7d": 100,
+      "efficiency_last_31d": 100,
+      "efficiency_all_time": 100,
       "validators": [1, 123, 456, 789, 1234, 5678, 91234]
     },
     {
       "group_id": 1,
-      "efficiency_day": 80.13,
-      "efficiency_week": 85.42,
-      "efficiency_month": 85.61,
-      "efficiency_total": 86.24,
+      "efficiency_last_24h": 80.13,
+      "efficiency_last_7d": 85.42,
+      "efficiency_last_31d": 85.61,
+      "efficiency_all_time": 86.24,
       "validators": [124584, 324323, 459393, 462852, 501249, 515359, 525356, 553539]
     },
     {
       "group_id": 2,
-      "efficiency_day": 75.001,
-      "efficiency_week": 82.53,
-      "efficiency_month": 81.96,
-      "efficiency_total": 79.33,
+      "efficiency_last_24h": 75.001,
+      "efficiency_last_7d": 82.53,
+      "efficiency_last_31d": 81.96,
+      "efficiency_all_time": 79.33,
       "validators": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     },
     {
       "group_id": 3,
-      "efficiency_day": 5.9,
-      "efficiency_week": 4.62,
-      "efficiency_month": 6.15,
-      "efficiency_total": 5.55,
+      "efficiency_last_24h": 5.9,
+      "efficiency_last_7d": 4.62,
+      "efficiency_last_31d": 6.15,
+      "efficiency_all_time": 5.55,
       "validators": [101, 102, 103, 104, 105, 106, 107, 108, 109, 110]
     },
     {
       "group_id": 4,
-      "efficiency_day": 98.15,
-      "efficiency_week": 99.41,
-      "efficiency_month": 98.62,
-      "efficiency_total": 98.00,
+      "efficiency_last_24h": 98.15,
+      "efficiency_last_7d": 99.41,
+      "efficiency_last_31d": 98.62,
+      "efficiency_all_time": 98.00,
       "validators": [653, 7253, 29533, 212455, 530363, 538953, 642533]
     },
     {
       "group_id": 5,
-      "efficiency_day": 50.00,
-      "efficiency_week": 50.00,
-      "efficiency_month": 50.00,
-      "efficiency_total": 50.00,
+      "efficiency_last_24h": 50.00,
+      "efficiency_last_7d": 50.00,
+      "efficiency_last_31d": 50.00,
+      "efficiency_all_time": 50.00,
       "validators": [1024, 2048]
     },
     {
       "group_id": 6,
-      "efficiency_day": 94.2,
-      "efficiency_week": 93.4,
-      "efficiency_month": 92.5,
-      "efficiency_total": 91.6,
+      "efficiency_last_24h": 94.2,
+      "efficiency_last_7d": 93.4,
+      "efficiency_last_31d": 92.5,
+      "efficiency_all_time": 91.6,
       "validators": [875390, 875391, 875392, 875393, 875394, 875395, 875396, 875397, 875398, 875399, 875400, 875401, 875402, 875403]
     }
   ]

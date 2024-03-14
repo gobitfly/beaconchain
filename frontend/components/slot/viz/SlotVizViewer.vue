@@ -8,9 +8,9 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const selectedCategoris = ref<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
+const selectedCategoris = shallowRef<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
 
-const icons: { component: Component, value: SlotVizCategories }[] = [
+const icons:{ component: Component, value: SlotVizCategories }[] = [
   {
     component: IconSlotBlockProposal,
     value: 'proposal'

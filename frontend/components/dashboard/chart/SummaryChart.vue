@@ -86,7 +86,12 @@ const option = computed(() => {
   }
 
   return {
-    height: 400,
+    grid: {
+      containLabel: true,
+      top: 10,
+      left: '5%',
+      right: '5%'
+    },
     xAxis: {
       type: 'category',
       data: chartData.value?.categories,
@@ -108,7 +113,7 @@ const option = computed(() => {
       name: $t('dashboard.validator.summary.chart.efficiency'),
       nameLocation: 'center',
       nameTextStyle: {
-        padding: [0, 0, 35, 0]
+        padding: [0, 0, 30, 0]
       },
       type: 'value',
       minInterval: 50,
@@ -134,7 +139,7 @@ const option = computed(() => {
     legend: {
       type: 'scroll',
       orient: 'horizontal',
-      bottom: 65,
+      bottom: 40,
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
@@ -187,7 +192,4 @@ const option = computed(() => {
 </template>
 
 <style lang="scss">
-  .chart-container {
-    background-color: var(--container-background);
-  }
 </style>

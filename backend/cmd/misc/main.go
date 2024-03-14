@@ -116,7 +116,7 @@ func main() {
 		log.Fatal(err, "error initializing bigtable", 0)
 	}
 
-	cl := consapi.NewNodeDataRetriever("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
+	cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
 	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 	if !ok {
 		log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
@@ -667,12 +667,7 @@ func migrateAppPurchases(appStoreSecret string) error {
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	// Delete marked as duplicate, though the duplicate reject reason is not always set - mainly missing on historical data
 	_, err = tx.Exec("DELETE FROM users_app_subscriptions WHERE store = 'ios-appstore' AND reject_reason = 'duplicate';")
@@ -848,16 +843,11 @@ func fixExecTransactionsCount() error {
 
 	log.Infof("dbUpdates: %v", len(dbUpdates))
 
-	tx, err := db.WriterDb.Begin()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting db transactions: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	for b := 0; b < len(dbUpdates); b += int(batchSize) {
 		start := b
@@ -871,7 +861,6 @@ func fixExecTransactionsCount() error {
 			valueStrings = append(valueStrings, fmt.Sprintf("(%v,%v)", v.BlockNumber, v.ExecTxsCount))
 		}
 
-		//nolint:gosec
 		stmt := fmt.Sprintf(`
 			update blocks as a set exec_transactions_count = b.exec_transactions_count
 			from (values %s) as b(exec_block_number, exec_transactions_count)
@@ -1284,12 +1273,7 @@ func updateAPIKey(user uint64) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	_, err = tx.Exec(`UPDATE api_statistics set apikey = $1 where apikey = $2`, apiKey, u.OldKey)
 	if err != nil {
@@ -1867,12 +1851,7 @@ func UpdateValidatorStatisticsSyncData(day uint64, dryRun bool) error {
 	if err != nil {
 		return fmt.Errorf("error retrieving raw sql connection: %w", err)
 	}
-	defer func() {
-		err := tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(err, "error rolling back transaction", 0)
-		}
-	}()
+	defer utils.Rollback(tx)
 
 	log.Infof("updating statistics data into the validator_stats table %v | %v", len(onlySyncCommitteeValidatorData), len(validatorData))
 

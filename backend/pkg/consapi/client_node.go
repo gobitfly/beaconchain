@@ -12,13 +12,21 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/utils"
 )
 
-func NewNodeDataRetriever(endpoint string) Client {
+func NewClient(endpoint string) Client {
+	return NewClientWithConfig(endpoint, nil)
+}
+
+func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Timeout: 500 * time.Second,
+		}
+	}
+
 	retriever := Client{
 		ClientInt: &NodeClient{
-			Endpoint: endpoint,
-			httpClient: &http.Client{
-				Timeout: 350 * time.Second,
-			},
+			Endpoint:   endpoint,
+			httpClient: httpClient,
 		},
 	}
 	return retriever
@@ -49,7 +57,7 @@ func (r *NodeClient) GetBlockHeaders(slot *uint64, parentRoot *any) (*types.Stan
 	return network.Get[types.StandardBeaconHeadersResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetSyncCommitteesAssignments(epoch int, stateID any) (*types.StandardSyncCommitteesResponse, error) {
+func (r *NodeClient) GetSyncCommitteesAssignments(epoch uint64, stateID any) (*types.StandardSyncCommitteesResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, epoch)
 	return network.Get[types.StandardSyncCommitteesResponse](r.httpClient, requestURL)
 }
@@ -89,7 +97,7 @@ func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingle
 	return network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalAssignments(epoch int) (*types.StandardProposerAssignmentsResponse, error) {
+func (r *NodeClient) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
 	return network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
 }
@@ -101,12 +109,12 @@ func (r *NodeClient) GetPropoalRewards(blockID any) (*types.StandardBlockRewards
 
 func (r *NodeClient) GetSyncRewards(blockID any) (*types.StandardSyncCommitteeRewardsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/sync_committee/%v", r.Endpoint, blockID)
-	return network.Get[types.StandardSyncCommitteeRewardsResponse](r.httpClient, requestURL)
+	return network.Post[types.StandardSyncCommitteeRewardsResponse](r.httpClient, requestURL)
 }
 
 func (r *NodeClient) GetAttestationRewards(epoch uint64) (*types.StandardAttestationRewardsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/%v", r.Endpoint, epoch)
-	return network.Get[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
+	return network.Post[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
 }
 
 func (r *NodeClient) GetBlobSidecars(blockID any) (*types.StandardBlobSidecarsResponse, error) {

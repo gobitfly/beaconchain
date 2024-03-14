@@ -829,3 +829,89 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	}
 	return nil
 }
+
+func GetLatestDashboardEpoch() (uint64, error) {
+	var lastEpoch uint64
+	err := db.AlloyReader.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
+	return lastEpoch, err
+}
+
+func GetOldestDashboardEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
+	return epoch, err
+}
+
+func GetLatestHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	return epoch, err
+}
+
+func Get24hOldHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1 - 1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly", utils.EpochsPerDay())
+	return epoch, err
+}
+
+func GetMinOldHourlyEpoch() (uint64, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
+	return epoch, err
+}
+
+type LastHour struct {
+	EpochStart uint64 `db:"epoch_start"`
+	EpochEnd   uint64 `db:"epoch_end"`
+}
+
+func GetLastExportedHour() (*LastHour, error) {
+	var epoch LastHour
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	return &epoch, err
+}
+
+func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
+	var epoch uint64
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, error) {
+	var minEpoch uint64
+	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
+	if err != nil {
+		return nil, err
+	}
+
+	if minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration {
+		minEpoch = targetEpoch - retainEpochDuration
+	}
+
+	var epochs []uint64
+	err = db.AlloyReader.Select(&epochs, `
+		WITH
+		epoch_range AS (
+			SELECT generate_series($1::bigint, $2::bigint) AS epoch
+		),
+		distinct_present_epochs AS (
+			SELECT DISTINCT epoch
+			FROM validator_dashboard_data_epoch
+		)
+		SELECT epoch_range.epoch
+		FROM epoch_range
+		LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
+		WHERE distinct_present_epochs.epoch IS NULL
+		ORDER BY epoch_range.epoch
+	`, minEpoch, targetEpoch)
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
+}
