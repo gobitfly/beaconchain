@@ -27,6 +27,7 @@ type dashboardData struct {
 	epochWriter   *epochWriter
 	epochToHour   *epochToHourAggregator
 	hourToDay     *hourToDayAggregator
+	dayToWeek     *dayToWeeklyAggregator
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
@@ -37,6 +38,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	temp.epochWriter = newEpochWriter(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
 	temp.hourToDay = newHourToDayAggregator(temp)
+	temp.dayToWeek = newDayToWeeklyAggregator(temp)
 	return temp
 }
 
@@ -95,17 +97,31 @@ func (d *dashboardData) backfillEpochData() bool {
 			}
 			d.log.Infof("backfill completed for epoch %d", gap)
 
-			d.epochToHour.aggregate1h()
-			d.hourToDay.rolling24hAggregate()
-
-			time.Sleep(15 * time.Second)
+			d.aggregate()
 		}
 	}
 	d.log.Infof("backfill finished")
 	return true
 }
 
+// called every epoch so far
+func (d *dashboardData) aggregate() {
+	start := time.Now()
+	defer func() {
+		d.log.Infof("all of aggregation took %v", time.Since(start))
+	}()
+
+	// TODO decide what to aggregate how often
+	d.epochToHour.aggregate1h()
+	d.hourToDay.dayAggregate()
+	d.dayToWeek.rolling7dAggregate()
+	d.dayToWeek.rolling31dAggregate()
+}
+
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
+	// TODO: dont export head epochs as long as backfill is not finished, makes the code simpler and easier to understand
+	// and reduced complex edge cases
+
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
@@ -139,8 +155,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// gaps that occur while operating (for example node not available for a brief moment)
 	// aggregate if backfill is not running in parallel elsewhere
 	if d.backfillEpochData() {
-		d.epochToHour.aggregate1h()
-		d.hourToDay.rolling24hAggregate()
+		d.aggregate()
 	}
 
 	return nil
@@ -226,7 +241,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	result.attestationAssignments = make(map[string]uint64)
 
 	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(3)
+	errGroup.SetLimit(4)
 
 	errGroup.Go(func() error {
 		// retrieve the validator balances at the start of the epoch
@@ -572,6 +587,8 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 			validatorsData[validator_index].AttestationsExecuted = 1
 		}
 	}
+
+	// TODO: el reward data
 
 	return validatorsData
 }

@@ -842,15 +842,9 @@ func GetOldestDashboardEpoch() (uint64, error) {
 	return epoch, err
 }
 
-func GetLatestHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
-	return epoch, err
-}
-
 func Get24hOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1 - 1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly", utils.EpochsPerDay())
+	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly where epoch_start >= $1", utils.EpochsPerDay())
 	return epoch, err
 }
 
@@ -865,10 +859,28 @@ type LastHour struct {
 	EpochEnd   uint64 `db:"epoch_end"`
 }
 
+type LastDay struct {
+	Day        time.Time `db:"day"`
+	EpochStart uint64    `db:"epoch_start"`
+	EpochEnd   uint64    `db:"epoch_end"`
+}
+
 func GetLastExportedHour() (*LastHour, error) {
 	var epoch LastHour
 	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
 	return &epoch, err
+}
+
+func GetLastExportedDay() (*LastDay, error) {
+	var epoch LastDay
+	err := db.AlloyReader.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
+	return &epoch, err
+}
+
+func GetXDayOldDay(dayOffset int) (time.Time, error) {
+	var day time.Time
+	err := db.AlloyReader.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset))
+	return day, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
