@@ -2,7 +2,12 @@
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import { ref, onMounted, inject } from 'vue'
 
-const question = ref<string>('')
+interface Props {
+  question?: string
+  noLabel?: string
+  yesLabel?: string
+}
+const props = ref<Props>({})
 const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
 
 onMounted(() => {
@@ -13,7 +18,7 @@ onMounted(() => {
     dialogRef.value.options.props.dismissableMask = true
     dialogRef.value.options.props.modal = true
   }
-  question.value = dialogRef?.value.data.question
+  props.value = dialogRef?.value.data
 })
 
 const closeDialog = (response: boolean) => {
@@ -24,11 +29,11 @@ const closeDialog = (response: boolean) => {
 <template>
   <div class="content">
     <div class="question">
-      {{ question }}
+      {{ props.question }}
     </div>
     <div class="footer">
-      <Button type="button" :label="$t('navigation.no')" @click="closeDialog(false)" />
-      <Button type="button" :label="$t('navigation.yes')" @click="closeDialog(true)" />
+      <Button type="button" :label="props.noLabel || $t('navigation.no')" @click="closeDialog(false)" />
+      <Button type="button" :label="props.yesLabel || $t('navigation.yes')" @click="closeDialog(true)" />
     </div>
   </div>
 </template>

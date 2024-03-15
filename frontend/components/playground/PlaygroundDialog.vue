@@ -10,24 +10,41 @@ function onClose (answer: boolean) {
   )
 }
 
-const openQuestion = () => {
+const openQuestion = (yesLabel?: string, noLabel?: string) => {
   dialog.open(BcDialogConfirm, {
     props: {
       header: 'My super question'
     },
     onClose: response => onClose(response?.data),
     data: {
-      question: 'Are you ready to rumble?'
+      question: 'Are you ready to rumble, or do you have second thoughts?',
+      yesLabel,
+      noLabel
     }
   })
 }
 </script>
 
 <template>
-  <Button @click="openQuestion">
-    Open Question
-  </Button>
+  <div class="container">
+    <Button @click="openQuestion()">
+      Open Question
+    </Button>
+    <Button @click="openQuestion('Are you sure')">
+      Open Question sure?
+    </Button>
+    <Button @click="openQuestion(undefined, 'cancel')">
+      Open Question cancel?
+    </Button>
+  </div>
 </template>
 
 <style lang="scss" scoped>
+.container{
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
+  padding: 10px;
+}
 </style>
