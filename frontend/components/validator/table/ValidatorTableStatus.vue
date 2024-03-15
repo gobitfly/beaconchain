@@ -18,7 +18,7 @@ defineProps<Props>()
     <span v-if="!hideLabel" class="status">
       <!--TODO: remove .replaceAll once backend data is fixed-->
       {{ $t(`validator_state.${status.replaceAll('\'', '')}`) }}
-      <span v-if="position"> #{{ position }}</span>
+      <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
     <!--TODO: remove .replaceAll once backend data is fixed-->
     <FontAwesomeIcon :icon="faPowerOff" :class="status.replaceAll('\'', '')" />
@@ -29,8 +29,10 @@ defineProps<Props>()
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--padding-small);
   .status{
     text-transform: capitalize;
+    text-wrap: nowrap;
   }
 
   .online{
