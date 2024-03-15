@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -187,6 +188,11 @@ func checkUint(handlerErr *error, param, paramName string) uint64 {
 	return num
 }
 
+type validatorSet struct {
+	Indexes    []uint64
+	PublicKeys [][]byte
+}
+
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
 	var err error
@@ -204,11 +210,11 @@ func parseDashboardId(id string) (interface{}, error) {
 	if err != nil {
 		return nil, errors.New("invalid format for parameter 'dashboard_id'")
 	}
-	validators := checkValidatorList(&err, string(decodedId))
-	if len(validators) > 20 {
+	indexes, publicKeys := checkValidatorList(&err, string(decodedId))
+	if len(indexes)+len(publicKeys) > 20 {
 		return nil, errors.New("too many validators in the list, maximum is 20")
 	}
-	return validators, nil
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, err
 }
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
@@ -223,8 +229,8 @@ func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDB
 			return nil, err
 		}
 		return &types.VDBId{Id: dashboardInfo.Id, Validators: nil}, nil
-	case []string:
-		validators, err := h.dai.GetValidatorsFromStrings(dashboardId)
+	case validatorSet:
+		validators, err := h.dai.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -349,12 +355,27 @@ func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.S
 	return sorts
 }
 
-func checkValidatorList(handlerErr *error, validators string) []string {
+func checkValidatorList(handlerErr *error, validators string) ([]uint64, [][]byte) {
 	return checkValidatorArray(handlerErr, strings.Split(validators, ","))
 }
 
-func checkValidatorArray(handlerErr *error, validators []string) []string {
-	return checkMultipleRegex(handlerErr, []*regexp.Regexp{reNumber, reValidatorPubkey}, validators, "validators")
+func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, [][]byte) {
+	var indexes []uint64
+	var publicKeys [][]byte
+	for _, v := range validators {
+		if reNumber.MatchString(v) {
+			indexes = append(indexes, checkUint(handlerErr, v, "validators"))
+		} else if reValidatorPubkey.MatchString(v) {
+			bytes, err := hex.DecodeString(v[2:])
+			if err != nil {
+				joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+			}
+			publicKeys = append(publicKeys, bytes)
+		} else {
+			joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+		}
+	}
+	return indexes, publicKeys
 }
 
 func checkNetwork(handlerErr *error, network string) uint64 {
@@ -442,7 +463,6 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
-//nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
