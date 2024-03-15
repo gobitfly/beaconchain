@@ -24,7 +24,10 @@ const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
       <ValidatorTableStatus status="online" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="deposited" />
+      <ValidatorTableStatus status="exiting" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="withdrawn" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="offline" />

@@ -36,11 +36,12 @@
   },
   "validator_state": {
     "active": "active",
-    "deposited": "deposited",
+    "withdrawn": "withdrawn",
     "online": "online",
     "offline": "offline",
     "pending": "pending",
     "exited": "exited",
+    "exiting": "exiting",
     "slashed": "slashed"
   },
   "slot_state": {

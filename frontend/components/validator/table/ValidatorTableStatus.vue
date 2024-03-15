@@ -38,10 +38,11 @@ defineProps<Props>()
   .online{
     color: var(--positive-color);
   }
-  .deposited,
   .pending {
     color: var(--orange-color);
   }
+  .exiting,
+  .withdrawn,
   .offline,
   .exited,
   .slashed{
