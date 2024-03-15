@@ -245,6 +245,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     <template #footer>
       <div class="footer">
         <div class="left">
+          <!-- TODO: Create a component to handle the 'upgrade to premium' account logic -->
           <div class="labels">
             <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
@@ -297,6 +298,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: hidden;
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;
