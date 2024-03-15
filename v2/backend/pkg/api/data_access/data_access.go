@@ -349,12 +349,7 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsDa
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 
-	const nameCharLimit = 50
 	const defaultGrpName = "default"
-
-	if len(name) > nameCharLimit {
-		return nil, fmt.Errorf("validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
-	}
 
 	tx, err := d.AlloyWriter.Beginx()
 	if err != nil {
@@ -442,11 +437,6 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
 	result := &t.VDBOverviewGroup{}
-
-	nameCharLimit := 50
-	if len(name) > nameCharLimit {
-		return nil, fmt.Errorf("validator dashboard group name too long, max %d characters, given %d characters", nameCharLimit, len(name))
-	}
 
 	// Create a new group that has the smallest unique id possible
 	err := d.AlloyWriter.Get(result, `
@@ -650,11 +640,6 @@ func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBI
 }
 
 func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	const nameCharLimit = 50
-	if len(name) > nameCharLimit {
-		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
-	}
-
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
@@ -680,11 +665,6 @@ func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdP
 }
 
 func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	const nameCharLimit = 50
-	if len(name) > nameCharLimit {
-		return nil, fmt.Errorf("public validator dashboard name too long, max %d characters, given %d characters", nameCharLimit, len(name))
-	}
-
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
