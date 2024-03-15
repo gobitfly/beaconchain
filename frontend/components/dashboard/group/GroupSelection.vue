@@ -16,7 +16,7 @@ const list = computed(() => {
   return groups
 })
 
-const selected = defineModel<number>({ required: true })
+const selected = defineModel<number | undefined>({ required: true })
 
 const selectedGroup = computed(() => {
   return list.value.find(item => item.id === selected.value)
