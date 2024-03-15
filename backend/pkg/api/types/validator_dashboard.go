@@ -107,13 +107,13 @@ type VDBGroupRewardsDetails struct {
 	Income      decimal.Decimal `json:"income"`
 }
 type VDBGroupRewardsData struct {
-	AttestationSource VDBGroupRewardsDetails `json:"attestation_source"`
-	AttestationTarget VDBGroupRewardsDetails `json:"attestation_target"`
-	AttestationHead   VDBGroupRewardsDetails `json:"attestation_head"`
-	Sync              VDBGroupRewardsDetails `json:"sync"`
-	Slashing          VDBGroupRewardsDetails `json:"slashing"`
-	Proposal          VDBGroupRewardsDetails `json:"proposal"`
-	ProposalElReward  decimal.Decimal        `json:"proposal_el_reward"`
+	AttestationsSource VDBGroupRewardsDetails `json:"attestations_source"`
+	AttestationsTarget VDBGroupRewardsDetails `json:"attestations_target"`
+	AttestationsHead   VDBGroupRewardsDetails `json:"attestations_head"`
+	Sync               VDBGroupRewardsDetails `json:"sync"`
+	Slashing           VDBGroupRewardsDetails `json:"slashing"`
+	Proposal           VDBGroupRewardsDetails `json:"proposal"`
+	ProposalElReward   decimal.Decimal        `json:"proposal_el_reward"`
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
@@ -127,12 +127,12 @@ type VDBEpochDutiesItem struct {
 type VDBEpochDutiesTableRow struct {
 	Validator uint64 `json:"validator"`
 
-	AttestationSource VDBEpochDutiesItem `json:"attestation_source"`
-	AttestationTarget VDBEpochDutiesItem `json:"attestation_target"`
-	AttestationHead   VDBEpochDutiesItem `json:"attestation_head"`
-	Proposal          VDBEpochDutiesItem `json:"proposal"`
-	Sync              VDBEpochDutiesItem `json:"sync"`
-	Slashing          VDBEpochDutiesItem `json:"slashing"`
+	AttestationsSource VDBEpochDutiesItem `json:"attestations_source"`
+	AttestationsTarget VDBEpochDutiesItem `json:"attestations_target"`
+	AttestationsHead   VDBEpochDutiesItem `json:"attestations_head"`
+	Proposal           VDBEpochDutiesItem `json:"proposal"`
+	Sync               VDBEpochDutiesItem `json:"sync"`
+	Slashing           VDBEpochDutiesItem `json:"slashing"`
 }
 type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
@@ -176,10 +176,10 @@ type VDBHeatmapTooltipData struct {
 	Syncs     []VDBHeatmapTooltipDuty `json:"syncs"`
 	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
 
-	AttestationHead   StatusCount     `json:"attestation_head"`
-	AttestationSource StatusCount     `json:"attestation_source"`
-	AttestationTarget StatusCount     `json:"attestation_target"`
-	AttestationIncome decimal.Decimal `json:"attestation_income"`
+	AttestationsHead   StatusCount     `json:"attestations_head"`
+	AttestationsSource StatusCount     `json:"attestations_source"`
+	AttestationsTarget StatusCount     `json:"attestations_target"`
+	AttestationIncome  decimal.Decimal `json:"attestation_income"`
 }
 type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatmapTooltipData]
 
@@ -229,7 +229,7 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof: deposited, pending, online, offline, exited, slashed"`
+	Status               string          `json:"status" tstype:"'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn'" faker:"oneof: pending, online, offline, exiting, exited, slashed, withdrawn"`
 	QueuePosition        uint64          `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }
