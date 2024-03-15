@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"fmt"
 	"sync"
 	"time"
@@ -15,7 +16,8 @@ type epochToHourAggregator struct {
 	mutex *sync.Mutex
 }
 
-const HourAggregateWidth = 9
+const HourAggregateWidth = 9    // todo gnosis
+const hourRetentionBuffer = 2.0 // change to 1.6
 
 func newEpochToHourAggregator(d *dashboardData) *epochToHourAggregator {
 	return &epochToHourAggregator{
@@ -35,8 +37,9 @@ func (d *epochToHourAggregator) aggregate1h() {
 	}()
 
 	lastHourExported, err := edb.GetLastExportedHour()
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		d.log.Error(err, "failed to get latest dashboard hourly epoch", 0)
+		return
 	}
 
 	currentEpoch, err := edb.GetLatestDashboardEpoch()
@@ -53,6 +56,10 @@ func (d *epochToHourAggregator) aggregate1h() {
 
 	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += HourAggregateWidth {
 		boundsStart, boundsEnd := d.getHourAggregateBounds(epoch)
+		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
+			d.log.Infof("skipping updating last hour entry since it is complete")
+			continue
+		}
 
 		err = d.aggregate1hSpecific(boundsStart, boundsEnd)
 		if err != nil {
@@ -75,8 +82,6 @@ func (d *epochToHourAggregator) GetHourPartitionRange(epoch uint64) (uint64, uin
 	endOfPartition := startOfPartition + PartitionEpochWidth*HourAggregateWidth                                       // exclusive
 	return startOfPartition, endOfPartition
 }
-
-const hourRetentionBuffer = 3.0 // change to 1.6
 
 func (d *epochToHourAggregator) getHourRetentionDurationEpochs() uint64 {
 	return utils.EpochsPerDay() * hourRetentionBuffer
@@ -121,11 +126,14 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 
 	_, err = tx.Exec(`
 		WITH
+			end_epoch as (
+				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch < $2 AND epoch >= $1
+			),
 			balance_starts as (
 				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
 			),
 			balance_ends as (
-				SELECT validator_index, balance_end FROM validator_dashboard_data_epoch WHERE epoch = $2 - 1
+				SELECT validator_index, balance_end FROM validator_dashboard_data_epoch WHERE epoch = (SELECT epoch FROM end_epoch)
 			),
 			aggregate as (
 				SELECT 
@@ -209,7 +217,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 			)
 			SELECT 
 				$1,
-				$2,
+				(SELECT epoch FROM end_epoch) as epoch,
 				aggregate.validator_index,
 				attestations_source_reward,
 				attestations_target_reward,
@@ -249,7 +257,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
-			ON CONFLICT (epoch_start, epoch_end, validator_index) DO UPDATE SET
+			ON CONFLICT (epoch_start, validator_index) DO UPDATE SET
 				attestations_source_reward = EXCLUDED.attestations_source_reward,
 				attestations_target_reward = EXCLUDED.attestations_target_reward,
 				attestations_head_reward = EXCLUDED.attestations_head_reward,
@@ -284,7 +292,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestation_head_executed = EXCLUDED.attestation_head_executed,
 				attestation_source_executed = EXCLUDED.attestation_source_executed,
 				attestation_target_executed = EXCLUDED.attestation_target_executed,
-				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum
+				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum,
+				epoch_end = EXCLUDED.epoch_end
 	`, epochStart, epochEnd)
 
 	if err != nil {
