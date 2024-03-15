@@ -238,7 +238,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		return
 	}
 	// TODO check if user is authorized for this dashboard
-	groupExists, err := h.dai.GetValidatorDashboardGroupExits(dashboardId, uint64(groupId))
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
 		handleError(w, err)
 		return
@@ -277,7 +277,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	if groupId == types.AllGroups {
 		groupId = types.DefaultGroupId
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExits(dashboardId, uint64(groupId))
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
 		handleError(w, err)
 		return

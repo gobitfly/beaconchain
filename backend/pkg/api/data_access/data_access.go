@@ -41,7 +41,7 @@ type DataAccessor interface {
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
-	GetValidatorDashboardGroupExits(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
+	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
@@ -472,7 +472,7 @@ func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, 
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupExits(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
+func (d DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	groupExists := false
 	err := d.AlloyReader.Get(&groupExists, `
 		SELECT EXISTS(

@@ -78,7 +78,7 @@ func (d DummyService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, 
 	return nil
 }
 
-func (d DummyService) GetValidatorDashboardGroupExits(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
+func (d DummyService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	return true, nil
 }
 
