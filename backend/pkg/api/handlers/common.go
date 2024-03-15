@@ -90,6 +90,10 @@ func checkName(handlerErr *error, name string, minLength int) string {
 	return checkRegex(handlerErr, reName, name, "name")
 }
 
+func checkNameNotEmpty(handlerErr *error, name string) string {
+	return checkName(handlerErr, name, 1)
+}
+
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
 func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
