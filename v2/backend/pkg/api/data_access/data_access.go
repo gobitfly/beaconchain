@@ -233,6 +233,28 @@ func getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
 	return validatorsArray, nil
 }
 
+func calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {
+	efficiency := float64(0)
+
+	if !attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = 0
+	} else if attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = attestationEff.Float64 * 100.0
+	} else if attestationEff.Valid && proposalEff.Valid && !syncEff.Valid {
+		efficiency = ((56.0 / 64.0 * attestationEff.Float64) + (8.0 / 64.0 * proposalEff.Float64)) * 100.0
+	} else if attestationEff.Valid && !proposalEff.Valid && syncEff.Valid {
+		efficiency = ((62.0 / 64.0 * attestationEff.Float64) + (2.0 / 64.0 * syncEff.Float64)) * 100.0
+	} else {
+		efficiency = (((54.0 / 64.0) * attestationEff.Float64) + ((8.0 / 64.0) * proposalEff.Float64) + ((2.0 / 64.0) * syncEff.Float64)) * 100.0
+	}
+
+	if efficiency < 0 {
+		efficiency = 0
+	}
+
+	return efficiency
+}
+
 //////////////////// 		Data Access
 
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
@@ -456,31 +478,36 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 }
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
-	// WORKING Rami
 	validators, err := getDashboardValidators(dashboardId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
+	data := t.VDBOverviewData{}
+
+	var queryResultGroups []struct {
+		Id   uint32 `db:"id"`
+		Name string `db:"name"`
+	}
+	err = db.AlloyReader.Select(&queryResultGroups, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validator dashboard groups from dashboard id: %v", err)
+	}
+	for _, res := range queryResultGroups {
+		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
 	}
 
-	qry := `SELECT
-		status AS statename, COUNT(*) AS statecount
-	FROM
-		validators
-	WHERE
-		validatorindex = ANY($1)
-	GROUP BY
-		status`
-	var currentStateCounts []*struct {
+	query := `SELECT status AS statename, COUNT(*) AS statecount
+	FROM validators WHERE validatorindex = ANY($1)
+	GROUP BY status`
+	var queryResultValidators []*struct {
 		Name  string `db:"statename"`
 		Count uint64 `db:"statecount"`
 	}
-	err = db.ReaderDb.Select(&currentStateCounts, qry, validators)
+	err = db.ReaderDb.Select(&queryResultValidators, query, validators)
 	if err != nil {
-		// utils.Log(err, "error retrieving validators data", 0)
-		return nil, err
+		return nil, fmt.Errorf("error retrieving validators data: %v", err)
 	}
-	data := t.VDBOverviewData{}
-	for _, state := range currentStateCounts {
+	for _, state := range queryResultValidators {
 		data.Validators.Total += state.Count
 		switch state.Name {
 		case "active_online":
@@ -494,6 +521,27 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 		}
 	}
 	data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
+
+	query = `SELECT 
+		SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+		from validator_dashboard_data_rolling_total
+		where validator_index = ANY($1)
+	) as a;`
+	var queryResultEfficiency struct {
+		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+	}
+	err = db.AlloyReader.Select(&queryResultEfficiency, query, validators)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving total efficiency data: %v", err)
+	}
+	data.Efficiency.Attestation = queryResultEfficiency.AttestationEfficiency.Float64
+	data.Efficiency.Proposal = queryResultEfficiency.ProposerEfficiency.Float64
+	data.Efficiency.Sync = queryResultEfficiency.SyncEfficiency.Float64
+	data.Efficiency.Total = calculateTotalEfficiency(queryResultEfficiency.AttestationEfficiency, queryResultEfficiency.ProposerEfficiency, queryResultEfficiency.SyncEfficiency)
 
 	income := types.ValidatorIncomePerformance{}
 	err = db.GetValidatorIncomePerformance(validators, &income)
@@ -510,53 +558,30 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	data.Rewards.Last365d.Cl = income.ClIncomeWei365d
 	data.Rewards.AllTime.El = income.ElIncomeWeiTotal
 	data.Rewards.AllTime.Cl = income.ClIncomeWeiTotal
-	// TODO Efficiency - only need "total efficiency" or fill all fields?
 
-	qry = `SELECT
-			sync_chance
-			sync_scheduled
-			block_chance
-			blocks_scheduled
+	query = `SELECT
+			SUM(sync_chance) AS sync_chance,
+			SUM(sync_scheduled)::decimal AS sync_scheduled,
+			SUM(block_chance)::decimal AS block_chance,
+			SUM(blocks_scheduled)::decimal AS blocks_scheduled
 		FROM validator_dashboard_data_rolling_total
 		WHERE validator_index = ANY($1)`
-	var res []struct {
+	var queryResultLuck struct {
 		SyncChance      float64 `db:"sync_chance"`
 		SyncScheduled   int32   `db:"sync_scheduled"`
 		BlockChance     float64 `db:"block_chance"`
 		BlocksScheduled int32   `db:"blocks_scheduled"`
 	}
-	err = db.AlloyReader.Select(&res, qry, validators)
+	err = db.AlloyReader.Select(&queryResultLuck, query, validators)
 	if err != nil {
 		return nil, err
 	}
-	totalSyncChance := float64(0)
-	totalSyncs := int32(0)
-	totalBlockChance := float64(0)
-	totalBlocks := int32(0)
-	// TODO prob can aggregate these values in query, need permissions for testing
-	for _, r := range res {
-		totalSyncChance += r.SyncChance
-		totalSyncs += r.SyncScheduled
-		totalBlockChance += r.BlockChance
-		totalBlocks += r.BlocksScheduled
-	}
+	data.Luck.Proposal.Percent = float64(queryResultLuck.BlocksScheduled) / queryResultLuck.BlockChance * 100
+	data.Luck.Sync.Percent = float64(queryResultLuck.SyncScheduled) / queryResultLuck.SyncChance * 100
+
 	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
 	// But waiting for Peter implementation of apr calc
-	data.Luck.Proposal.Percent = float64(totalBlocks) / totalBlockChance * 100
-	data.Luck.Sync.Percent = float64(totalSyncs) / totalSyncChance * 100
-
-	var queryResult []struct {
-		Id   uint32 `db:"id"`
-		Name string `db:"name"`
-	}
-	err = db.AlloyReader.Select(&queryResult, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, res := range queryResult {
-		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
-	}
+	// same for expected/average luck
 
 	return &data, nil
 }
@@ -1139,25 +1164,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 		data := make(map[uint64]float64)
 		for _, result := range queryResult {
-			efficiency := float64(0)
-
-			if !result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = 0
-			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = result.AttestationEfficiency.Float64 * 100.0
-			} else if result.AttestationEfficiency.Valid && result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = ((56.0 / 64.0 * result.AttestationEfficiency.Float64) + (8.0 / 64.0 * result.ProposerEfficiency.Float64)) * 100.0
-			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && result.SyncEfficiency.Valid {
-				efficiency = ((62.0 / 64.0 * result.AttestationEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
-			} else {
-				efficiency = (((54.0 / 64.0) * result.AttestationEfficiency.Float64) + ((8.0 / 64.0) * result.ProposerEfficiency.Float64) + ((2.0 / 64.0) * result.SyncEfficiency.Float64)) * 100.0
-			}
-
-			if efficiency < 0 {
-				efficiency = 0
-			}
-
-			data[result.GroupId] = efficiency
+			data[result.GroupId] = calculateTotalEfficiency(result.AttestationEfficiency, result.ProposerEfficiency, result.SyncEfficiency)
 		}
 		return data, nil
 	}
