@@ -218,7 +218,7 @@ export interface VDBManageValidatorsTableRow {
   public_key: PubKey;
   group_id: number /* uint64 */;
   balance: string /* decimal.Decimal */;
-  status: 'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed';
+  status: 'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn';
   queue_position?: number /* uint64 */;
   withdrawal_credential: Hash;
 }
