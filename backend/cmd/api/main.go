@@ -51,7 +51,7 @@ func main() {
 	}
 	defer dai.CloseDataAccessService()
 
-	router := api.NewApiRouter(dai)
+	router := api.NewApiRouter(dai, cfg)
 	handler := cors.AllowAll().Handler(router)
 
 	srv := &http.Server{
