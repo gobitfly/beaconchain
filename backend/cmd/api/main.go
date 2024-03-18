@@ -8,7 +8,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
-	"github.com/rs/cors"
 
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -51,11 +50,11 @@ func main() {
 	}
 	defer dai.CloseDataAccessService()
 
-	router := api.NewApiRouter(dai)
-	handler := cors.AllowAll().Handler(router)
+	router := api.NewApiRouter(dai, cfg)
+	router.Use(api.CorsMiddleware, api.GetAuthMiddleware)
 
 	srv := &http.Server{
-		Handler:      handler,
+		Handler:      router,
 		Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
