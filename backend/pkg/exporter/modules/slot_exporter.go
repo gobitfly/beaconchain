@@ -449,14 +449,14 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				// generate mapping
 				RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
 					Epoch:   types.Epoch(epoch),
-					Mapping: make(map[uint64]*types.CachedValidator, 0),
+					Mapping: make([]*types.CachedValidator, len(block.Validators)),
 				}
 
 				for _, v := range block.Validators {
 					RedisCachedValidatorsMapping.Mapping[v.Index] = &types.CachedValidator{
+						PublicKey:         v.PublicKey,
 						ActivationEpoch:   types.Epoch(v.ActivationEpoch),
 						WithdrawableEpoch: types.Epoch(v.WithdrawableEpoch),
-						PublicKey:         v.PublicKey,
 					}
 				}
 
