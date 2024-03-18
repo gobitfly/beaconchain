@@ -33,7 +33,7 @@ func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == "OPTIONS" {
+			if r.Method == http.MethodOptions {
 				next.ServeHTTP(w, r)
 				return
 			}
