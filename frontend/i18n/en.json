@@ -25,6 +25,7 @@
   "navigation": {
     "back": "Back",
     "continue": "Continue",
+    "dismiss": "Dismiss",
     "yes": "Yes",
     "no": "No",
     "save": "Save"
@@ -34,6 +35,12 @@
     "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}"
+  },
+  "premium": {
+    "title": "beaconcha.in Premium",
+    "description":"Monitoring without limits on web and mobile.",
+    "subscribe":"Subscribe to Premium",
+    "unlock":"Unlock Full Features"
   },
   "validator_state": {
     "active": "active",
