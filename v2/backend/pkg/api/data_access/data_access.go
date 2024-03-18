@@ -220,7 +220,7 @@ func (d DataAccessService) CloseDataAccessService() {
 func getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
 	var validatorsArray []uint32
 	if len(dashboardId.Validators) == 0 {
-		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -488,7 +488,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 		Id   uint32 `db:"id"`
 		Name string `db:"name"`
 	}
-	err = db.AlloyReader.Select(&queryResultGroups, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId)
+	err = db.AlloyReader.Select(&queryResultGroups, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard groups from dashboard id: %v", err)
 	}
@@ -499,7 +499,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	query := `SELECT status AS statename, COUNT(*) AS statecount
 	FROM validators WHERE validatorindex = ANY($1)
 	GROUP BY status`
-	var queryResultValidators []*struct {
+	var queryResultValidators []struct {
 		Name  string `db:"statename"`
 		Count uint64 `db:"statecount"`
 	}
@@ -527,37 +527,53 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 		from validator_dashboard_data_rolling_total
-		where validator_index = ANY($1)
-	) as a;`
+		where validator_index = ANY($1)`
 	var queryResultEfficiency struct {
 		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
 		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
 		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
-	err = db.AlloyReader.Select(&queryResultEfficiency, query, validators)
+	err = db.AlloyReader.Get(&queryResultEfficiency, query, validators)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving total efficiency data: %v", err)
 	}
-	data.Efficiency.Attestation = queryResultEfficiency.AttestationEfficiency.Float64
-	data.Efficiency.Proposal = queryResultEfficiency.ProposerEfficiency.Float64
-	data.Efficiency.Sync = queryResultEfficiency.SyncEfficiency.Float64
+	data.Efficiency.Attestation = max(0, queryResultEfficiency.AttestationEfficiency.Float64)
+	data.Efficiency.Proposal = max(0, queryResultEfficiency.ProposerEfficiency.Float64)
+	data.Efficiency.Sync = max(0, queryResultEfficiency.SyncEfficiency.Float64)
 	data.Efficiency.Total = calculateTotalEfficiency(queryResultEfficiency.AttestationEfficiency, queryResultEfficiency.ProposerEfficiency, queryResultEfficiency.SyncEfficiency)
 
-	income := types.ValidatorIncomePerformance{}
-	err = db.GetValidatorIncomePerformance(validators, &income)
-	if err != nil {
-		return nil, err
+	retrieveElClRewards := func(tableName string, r *t.ClElValue[decimal.Decimal]) error {
+		query = `select
+			SUM(balance_start) AS balance_start,
+			SUM(balance_end) AS balance_end,
+			SUM(deposits_amount) AS deposits_amount,
+			SUM(withdrawals_amount) AS withdrawals_amount,
+			SUM(blocks_el_reward) AS blocks_el_reward
+		from %[1]s
+		where validator_index = ANY($1)
+		`
+		var queryResultRewards struct {
+			BalanceStart      int64 `db:"balance_start"`
+			BalanceEnd        int64 `db:"balance_end"`
+			DepositsAmount    int64 `db:"deposits_amount"`
+			WithdrawalsAmount int64 `db:"withdrawals_amount"`
+			BlocksElReward    int64 `db:"blocks_el_reward"`
+		}
+		err = db.AlloyReader.Get(&queryResultRewards, fmt.Sprintf(query, tableName), validators)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+		}
+		r.El = decimal.NewFromInt(queryResultRewards.BlocksElReward)
+		r.Cl = decimal.NewFromInt(queryResultRewards.BalanceEnd + queryResultRewards.WithdrawalsAmount - queryResultRewards.BalanceStart - queryResultRewards.DepositsAmount)
+		return nil
 	}
-	data.Rewards.Last24h.El = income.ElIncomeWei1d
-	data.Rewards.Last24h.Cl = income.ClIncomeWei1d
-	data.Rewards.Last7d.El = income.ElIncomeWei7d
-	data.Rewards.Last7d.Cl = income.ClIncomeWei7d
-	data.Rewards.Last31d.El = income.ElIncomeWei31d
-	data.Rewards.Last31d.Cl = income.ClIncomeWei31d
-	data.Rewards.Last365d.El = income.ElIncomeWei365d
-	data.Rewards.Last365d.Cl = income.ClIncomeWei365d
-	data.Rewards.AllTime.El = income.ElIncomeWeiTotal
-	data.Rewards.AllTime.Cl = income.ClIncomeWeiTotal
+
+	err = retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
+	err = retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
+	err = retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last31d)
+	// WIP, table doesn't exist yet
+	// err = retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
+	err = retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
 
 	query = `SELECT
 			SUM(sync_chance) AS sync_chance,
