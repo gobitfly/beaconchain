@@ -51,7 +51,7 @@
   .p-dialog-header {
     color: var(--text-color);
     .p-dialog-title {
-      @include fonts.big_text;
+      @include fonts.dialog_header;
     }
   }
   &.p-dialog-header-hidden {
