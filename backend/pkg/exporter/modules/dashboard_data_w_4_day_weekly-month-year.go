@@ -9,6 +9,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/pkg/errors"
 )
 
 type dayToWeeklyAggregator struct {
@@ -23,15 +24,19 @@ func newDayToWeeklyAggregator(d *dashboardData) *dayToWeeklyAggregator {
 	}
 }
 
-func (d *dayToWeeklyAggregator) rolling7dAggregate() {
-	d.rollingXdAggregate(7, "validator_dashboard_data_rolling_weekly")
+func (d *dayToWeeklyAggregator) rolling7dAggregate() error {
+	return d.rollingXdAggregate(7, "validator_dashboard_data_rolling_weekly")
 }
 
-func (d *dayToWeeklyAggregator) rolling31dAggregate() {
-	d.rollingXdAggregate(31, "validator_dashboard_data_rolling_monthly")
+func (d *dayToWeeklyAggregator) rolling31dAggregate() error {
+	return d.rollingXdAggregate(31, "validator_dashboard_data_rolling_monthly")
 }
 
-func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) {
+func (d *dayToWeeklyAggregator) rolling365dAggregate() error {
+	return d.rollingXdAggregate(365, "validator_dashboard_data_rolling_yearly")
+}
+
+func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -42,30 +47,26 @@ func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) {
 
 	latestDayBounds, err := edb.GetLastExportedDay()
 	if err != nil && err != sql.ErrNoRows {
-		d.log.Error(err, "failed to get latest dashboard epoch", 0)
-		return
+		return errors.Wrap(err, "failed to get latest exported day")
 	}
 	latestDay := latestDayBounds.Day
 
 	weekOldDay, err := edb.GetXDayOldDay(days)
 	if err != nil {
-		d.log.Error(err, fmt.Sprintf("failed to get %dd old dashboard epoch", days), 0)
-		return
+		return errors.Wrap(err, "failed to get old day")
 	}
 
 	d.log.Infof("latestDay: %v, oldDay: %v", latestDay, weekOldDay)
 
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
-		d.log.Error(err, "failed to start transaction", 0)
-		return
+		return errors.Wrap(err, "failed to start transaction")
 	}
 	defer utils.Rollback(tx)
 
 	_, err = tx.Exec(fmt.Sprintf(`TRUNCATE %s`, tableName))
 	if err != nil {
-		d.log.Error(err, fmt.Sprintf("failed to delete old rolling %dd aggregate", days), 0)
-		return
+		return errors.Wrap(err, "failed to delete old rolling aggregate")
 	}
 
 	_, err = tx.Exec(fmt.Sprintf(`
@@ -79,39 +80,39 @@ func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) {
 			aggregate as (
 				SELECT 
 					validator_index,
-					COALESCE(SUM(COALESCE(attestations_source_reward, 0)),0) as attestations_source_reward,
-					COALESCE(SUM(COALESCE(attestations_target_reward, 0)),0) as attestations_target_reward,
-					COALESCE(SUM(COALESCE(attestations_head_reward, 0)),0) as attestations_head_reward,
-					COALESCE(SUM(COALESCE(attestations_inactivity_reward, 0)),0) as attestations_inactivity_reward,
-					COALESCE(SUM(COALESCE(attestations_inclusion_reward, 0)),0) as attestations_inclusion_reward,
-					COALESCE(SUM(COALESCE(attestations_reward, 0)),0) as attestations_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_source_reward, 0)),0) as attestations_ideal_source_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_target_reward, 0)),0) as attestations_ideal_target_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_head_reward, 0)),0) as attestations_ideal_head_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_inactivity_reward, 0)),0) as attestations_ideal_inactivity_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_inclusion_reward, 0)),0) as attestations_ideal_inclusion_reward,
-					COALESCE(SUM(COALESCE(attestations_ideal_reward, 0)),0) as attestations_ideal_reward,
-					COALESCE(SUM(COALESCE(blocks_scheduled, 0)),0) as blocks_scheduled,
-					COALESCE(SUM(COALESCE(blocks_proposed, 0)),0) as blocks_proposed,
-					COALESCE(SUM(COALESCE(blocks_cl_reward, 0)),0) as blocks_cl_reward,
-					COALESCE(SUM(COALESCE(blocks_el_reward, 0)),0) as blocks_el_reward,
-					COALESCE(SUM(COALESCE(sync_scheduled, 0)),0) as sync_scheduled,
-					COALESCE(SUM(COALESCE(sync_executed, 0)),0) as sync_executed,
-					COALESCE(SUM(COALESCE(sync_rewards, 0)),0) as sync_rewards,
+					SUM(attestations_source_reward) as attestations_source_reward,
+					SUM(attestations_target_reward) as attestations_target_reward,
+					SUM(attestations_head_reward) as attestations_head_reward,
+					SUM(attestations_inactivity_reward) as attestations_inactivity_reward,
+					SUM(attestations_inclusion_reward) as attestations_inclusion_reward,
+					SUM(attestations_reward) as attestations_reward,
+					SUM(attestations_ideal_source_reward) as attestations_ideal_source_reward,
+					SUM(attestations_ideal_target_reward) as attestations_ideal_target_reward,
+					SUM(attestations_ideal_head_reward) as attestations_ideal_head_reward,
+					SUM(attestations_ideal_inactivity_reward) as attestations_ideal_inactivity_reward,
+					SUM(attestations_ideal_inclusion_reward) as attestations_ideal_inclusion_reward,
+					SUM(attestations_ideal_reward) as attestations_ideal_reward,
+					SUM(blocks_scheduled) as blocks_scheduled,
+					SUM(blocks_proposed) as blocks_proposed,
+					SUM(blocks_cl_reward) as blocks_cl_reward,
+					SUM(blocks_el_reward) as blocks_el_reward,
+					SUM(sync_scheduled) as sync_scheduled,
+					SUM(sync_executed) as sync_executed,
+					SUM(sync_rewards) as sync_rewards,
 					bool_or(slashed) as slashed,
-					COALESCE(SUM(COALESCE(deposits_count, 0)),0) as deposits_count,
-					COALESCE(SUM(COALESCE(deposits_amount, 0)),0) as deposits_amount,
-					COALESCE(SUM(COALESCE(withdrawals_count, 0)),0) as withdrawals_count,
-					COALESCE(SUM(COALESCE(withdrawals_amount, 0)),0) as withdrawals_amount,
-					COALESCE(SUM(COALESCE(inclusion_delay_sum, 0)),0) as inclusion_delay_sum,
-					COALESCE(SUM(COALESCE(sync_chance, 0)),0) as sync_chance,
-					COALESCE(SUM(COALESCE(block_chance, 0)),0) as block_chance,
-					COALESCE(SUM(COALESCE(attestations_scheduled, 0)),0) as attestations_scheduled,
-					COALESCE(SUM(COALESCE(attestations_executed, 0)),0) as attestations_executed,
-					COALESCE(SUM(COALESCE(attestation_head_executed, 0)),0) as attestation_head_executed,
-					COALESCE(SUM(COALESCE(attestation_source_executed, 0)),0) as attestation_source_executed,
-					COALESCE(SUM(COALESCE(attestation_target_executed, 0)),0) as attestation_target_executed,
-					COALESCE(SUM(COALESCE(optimal_inclusion_delay_sum, 0)),0) as optimal_inclusion_delay_sum
+					SUM(deposits_count) as deposits_count,
+					SUM(deposits_amount) as deposits_amount,
+					SUM(withdrawals_count) as withdrawals_count,
+					SUM(withdrawals_amount) as withdrawals_amount,
+					SUM(inclusion_delay_sum) as inclusion_delay_sum,
+					SUM(sync_chance) as sync_chance,
+					SUM(block_chance) as block_chance,
+					SUM(attestations_scheduled) as attestations_scheduled,
+					SUM(attestations_executed) as attestations_executed,
+					SUM(attestation_head_executed) as attestation_head_executed,
+					SUM(attestation_source_executed) as attestation_source_executed,
+					SUM(attestation_target_executed) as attestation_target_executed,
+					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum
 				FROM validator_dashboard_data_daily
 				WHERE day >= $1 AND day <= $2
 				GROUP BY validator_index
@@ -176,8 +177,8 @@ func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) {
 				sync_executed,
 				sync_rewards,
 				slashed,
-				COALESCE(balance_start, 0),
-				COALESCE(balance_end,0),
+				balance_start,
+				balance_end,
 				deposits_count,
 				deposits_amount,
 				withdrawals_count,
@@ -197,13 +198,13 @@ func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) {
 	`, tableName), weekOldDay, latestDay)
 
 	if err != nil {
-		d.log.Error(err, fmt.Sprintf("failed to insert rolling %dd aggregate", days), 0)
-		return
+		return errors.Wrap(err, "failed to insert rolling aggregate")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		d.log.Error(err, "failed to commit transaction", 0)
-		return
+		return errors.Wrap(err, "failed to commit transaction")
 	}
+
+	return nil
 }

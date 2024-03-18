@@ -865,6 +865,12 @@ type LastDay struct {
 	EpochEnd   uint64    `db:"epoch_end"`
 }
 
+func GetLastExportedTotalEpoch() (*LastHour, error) {
+	var epoch LastHour
+	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_rolling_total ORDER BY epoch_start DESC LIMIT 1")
+	return &epoch, err
+}
+
 func GetLastExportedHour() (*LastHour, error) {
 	var epoch LastHour
 	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")

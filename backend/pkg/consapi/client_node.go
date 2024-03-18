@@ -142,7 +142,7 @@ func (r *NodeClient) GetGenesis() (*types.StandardGenesisResponse, error) {
 func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventResponse {
 	joinedTopics := strings.Join(utils.ConvertToStringSlice(topics), ",")
 	requestURL := fmt.Sprintf("%s/eth/v1/events?topics=%v", r.Endpoint, joinedTopics)
-	responseCh := make(chan *types.EventResponse, 10)
+	responseCh := make(chan *types.EventResponse, 64)
 
 	go func() {
 		stream, err := eventsource.Subscribe(requestURL, "")
