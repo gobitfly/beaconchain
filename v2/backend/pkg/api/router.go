@@ -6,6 +6,7 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -24,25 +25,34 @@ func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 
 	addRoutes(handlerService, publicRouter, internalRouter)
 
-	router.Use(GetAuthMiddleware(cfg.ApiKeySecret))
-
 	return router
 }
 
 // TODO replace with proper auth
-func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			header := r.Header.Get("Authorization")
-			query := r.URL.Query().Get("api_key")
+func GetAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		query := r.URL.Query().Get("api_key")
 
-			if header != "Bearer "+apiKey && query != apiKey {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+		if header != "Bearer "+utils.Config.ApiKeySecret && query != utils.Config.ApiKeySecret {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
@@ -190,10 +200,10 @@ func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Rou
 	}
 	for _, endpoint := range endpoints {
 		if endpoint.PublicHandler != nil {
-			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method)
+			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)
 		}
 		if endpoint.InternalHander != nil {
-			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method)
+			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
 		}
 	}
 }
