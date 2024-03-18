@@ -37,9 +37,8 @@ const closeDialog = (groupId?: number) => {
     </div>
     <div class="footer">
       <b v-if="data.totalValidators"> {{ $t('dashboard.group.selection.dialog.validators-selected', {
-        count:
-          data.selectedValidators, total: data.totalValidators
-      }) }}</b>
+        total: data.totalValidators
+      }, data.selectedValidators ?? 0 ) }}</b>
       <Button
         :disabled="data.groupId === undefined"
         type="button"

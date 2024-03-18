@@ -125,7 +125,7 @@
         "dialog": {
           "title": "Edit Groups",
           "assign-group": "Assign to group",
-          "validators-selected": "{count}/{total} validators selected"
+          "validators-selected": "1/{total} validator selected | {count}/{total} validators selected"
 
         }
       }

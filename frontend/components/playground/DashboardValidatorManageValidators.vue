@@ -31,7 +31,7 @@ const openGroupSelection = (withPreselection: boolean) => {
     onClose: response => onClose(response?.data),
     data: {
       groupId: withPreselection ? overview.value?.groups?.[0]?.id : undefined,
-      selectedValidators: 10,
+      selectedValidators: withPreselection ? 1 : 10,
       totalValidators: 123
     }
   })

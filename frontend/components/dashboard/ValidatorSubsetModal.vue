@@ -4,7 +4,6 @@ import {
   faCopy
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
 
 const { t: $t } = useI18n()
@@ -16,32 +15,21 @@ interface Props {
   groupName?: string, // overruled by dashboardName
   validators: number[],
 }
-const props = ref<Props>()
+const { props, setHeader } = useBcDialog<Props>()
 
 const visible = defineModel<boolean>()
 const shownValidators = ref<number[]>([])
-const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
 
-const setHeader = (props?: Props) => {
-  if (dialogRef?.value?.options) {
-    dialogRef.value.options.props!.header = props?.groupName
-      ? $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
-      : $t('dashboard.title') + (props?.dashboardName ? ` "${props?.dashboardName}"` : '')
+watch(props, (p) => {
+  if (p) {
+    shownValidators.value = p.validators
+    setHeader(
+      p?.groupName
+        ? $t('dashboard.validator.summary.col.group') + ` "${p.groupName}"`
+        : $t('dashboard.title') + (p.dashboardName ? ` "${p.dashboardName}"` : '')
+    )
   }
-}
-
-onMounted(() => {
-  if (dialogRef?.value?.options) {
-    if (!dialogRef.value.options.props) {
-      dialogRef.value.options.props = {}
-    }
-    dialogRef.value.options.props.dismissableMask = true
-    dialogRef.value.options.props.modal = true
-  }
-  props.value = dialogRef?.value?.data
-  shownValidators.value = props.value?.validators ?? []
-  setHeader(props.value)
-})
+}, { immediate: true })
 
 const caption = computed(() => {
   let text = 'Validators'

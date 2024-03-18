@@ -1,25 +1,11 @@
 <script setup lang="ts">
-import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
-import { ref, onMounted, inject } from 'vue'
 
 interface Props {
   question?: string
   noLabel?: string
   yesLabel?: string
 }
-const props = ref<Props>({})
-const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
-
-onMounted(() => {
-  if (dialogRef?.value?.options) {
-    if (!dialogRef.value.options.props) {
-      dialogRef.value.options.props = {}
-    }
-    dialogRef.value.options.props.dismissableMask = true
-    dialogRef.value.options.props.modal = true
-  }
-  props.value = dialogRef?.value.data
-})
+const { props, dialogRef } = useBcDialog<Props>()
 
 const closeDialog = (response: boolean) => {
   dialogRef?.value.close(response)
@@ -29,11 +15,11 @@ const closeDialog = (response: boolean) => {
 <template>
   <div class="content">
     <div class="question">
-      {{ props.question }}
+      {{ props?.question }}
     </div>
     <div class="footer">
-      <Button type="button" :label="props.noLabel || $t('navigation.no')" @click="closeDialog(false)" />
-      <Button type="button" :label="props.yesLabel || $t('navigation.yes')" @click="closeDialog(true)" />
+      <Button type="button" :label="props?.noLabel || $t('navigation.no')" @click="closeDialog(false)" />
+      <Button type="button" :label="props?.yesLabel || $t('navigation.yes')" @click="closeDialog(true)" />
     </div>
   </div>
 </template>
