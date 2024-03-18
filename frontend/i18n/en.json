@@ -26,13 +26,20 @@
   "navigation": {
     "back": "Back",
     "continue": "Continue",
-    "done": "Done"
+    "done": "Done",
+    "dismiss": "Dismiss"
   },
   "table": {
     "first": "First",
     "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}"
+  },
+  "premium": {
+    "title": "beaconcha.in Premium",
+    "description":"Monitoring without limits on web and mobile.",
+    "subscribe":"Subscribe to Premium",
+    "unlock":"Unlock Full Features"
   },
   "validator_state": {
     "active": "active",

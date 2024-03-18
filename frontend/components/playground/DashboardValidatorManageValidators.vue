@@ -16,6 +16,8 @@ const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 </script>
 <template>
   <div class="icon-holder">
+    <div>Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" /></div>
+    <div>This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" /></div>
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />
   </div>
