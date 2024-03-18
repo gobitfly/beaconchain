@@ -4,6 +4,12 @@ import {
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
+interface Props {
+  description?: string,
+  dismissLabel?: string
+}
+defineProps<Props>()
+
 const visible = ref<boolean>()
 
 </script>
@@ -19,15 +25,15 @@ const visible = ref<boolean>()
           class: 'premium-header'
         }
       }"
-      class="validator-managment-modal-container"
+      class="bc-premium-gem-dialog"
     >
       <div class="text">
-        {{ $t('premium.description') }}
+        {{ description || $t('premium.description') }}
       </div>
       <template #footer>
         <div class="footer">
           <div class="dismiss" @click="visible = false">
-            {{ $t('navigation.dismiss') }}
+            {{ dismissLabel || $t('navigation.dismiss') }}
           </div>
           <NuxtLink to="/premium/subscription">
             <Button :label="$t('premium.unlock')" />
@@ -39,6 +45,9 @@ const visible = ref<boolean>()
 </template>
 
 <style lang="scss" scoped>
+:global(.bc-premium-gem-dialog) {
+   width: 620px;
+ }
 .dismiss {
   cursor: pointer;
   color: var(--text-color-disabled);
