@@ -512,6 +512,38 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 	returnOk(w, response)
 }
 
+func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	groupId := checkGroupId(&err, r.URL.Query().Get("group_id"), allowEmpty)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	q := r.URL.Query()
+	var period enums.TimePeriod
+	var duty enums.ValidatorDuty
+	period = period.NewFromString(q.Get("period"))
+	duty = duty.NewFromString(q.Get("duty"))
+
+	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardValidatorIndicesResponse{
+		Data: data,
+	}
+
+	returnOk(w, response)
+
+}
+
 func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
