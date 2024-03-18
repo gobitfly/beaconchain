@@ -197,19 +197,19 @@ const data = computed(() => {
           <b>
             {{ $t('common.luck') }}:
           </b>
-          <BcFormatPercent :percent="data.luck.proposal.percent" />
+          <BcFormatPercent :percent="data.luck.sync.percent" />
         </div>
         <div class="row">
           <b>
             {{ $t('common.expected') }}:
           </b>
-          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
+          {{ $t('common.in_day', {}, data.luck.sync.expected) }}
         </div>
         <div class="row">
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_day', {}, data.luck.proposal.average) }}
+          {{ $t('common.every_day', {}, data.luck.sync.average) }}
         </div>
       </template>
     </BcTooltip>
