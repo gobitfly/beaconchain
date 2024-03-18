@@ -1429,14 +1429,14 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		ret.Last31d = *data
 		return nil
 	})
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.AllTime = *data
-	// 	return nil
-	// })
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.AllTime = *data
+		return nil
+	})
 	err := wg.Wait()
 
 	if err != nil {
