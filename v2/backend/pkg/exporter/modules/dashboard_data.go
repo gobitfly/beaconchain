@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"sync"
@@ -25,9 +26,10 @@ type dashboardData struct {
 	log           ModuleLog
 	signingDomain []byte
 	epochWriter   *epochWriter
+	epochToTotal  *epochToTotalAggregator
 	epochToHour   *epochToHourAggregator
 	hourToDay     *hourToDayAggregator
-	dayToWeek     *dayToWeeklyAggregator
+	dayTo         *dayToWeeklyAggregator
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
@@ -36,9 +38,10 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	}
 	temp.log = ModuleLog{module: temp}
 	temp.epochWriter = newEpochWriter(temp)
+	temp.epochToTotal = newEpochToTotalAggregator(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
 	temp.hourToDay = newHourToDayAggregator(temp)
-	temp.dayToWeek = newDayToWeeklyAggregator(temp)
+	temp.dayTo = newDayToWeeklyAggregator(temp)
 	return temp
 }
 
@@ -97,7 +100,10 @@ func (d *dashboardData) backfillEpochData() bool {
 			}
 			d.log.Infof("backfill completed for epoch %d", gap)
 
-			d.aggregate()
+			err = d.aggregatePerEpoch()
+			if err != nil {
+				d.log.Error(err, "failed to aggregate", 0)
+			}
 		}
 	}
 	d.log.Infof("backfill finished")
@@ -105,17 +111,64 @@ func (d *dashboardData) backfillEpochData() bool {
 }
 
 // called every epoch so far
-func (d *dashboardData) aggregate() {
+func (d *dashboardData) aggregatePerEpoch() error {
 	start := time.Now()
 	defer func() {
 		d.log.Infof("all of aggregation took %v", time.Since(start))
 	}()
 
-	// TODO decide what to aggregate how often
-	d.epochToHour.aggregate1h()
-	d.hourToDay.dayAggregate()
-	d.dayToWeek.rolling7dAggregate()
-	d.dayToWeek.rolling31dAggregate()
+	// Used Epoch Data
+	{
+		// important to do this before hour aggregate as hour aggregate deletes old epochs
+		err := d.epochToTotal.aggregateTotal()
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate total")
+		}
+
+		err = d.epochToHour.aggregate1hAndClearOld()
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 1h")
+		}
+	}
+
+	err := d.hourToDay.dayAggregateAndClearOld()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate day")
+	}
+
+	// -- Below are considered for a slightly slower interval but are here for now --
+	err = d.dayTo.rolling7dAggregate()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate 7d")
+	}
+
+	err = d.dayTo.rolling31dAggregate()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate 31d")
+	}
+
+	// TODO REMOVE
+	err = d.aggregateHeavy()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate heavy")
+	}
+
+	return nil
+}
+
+// should not be called frequent due to the high amount of data
+func (d *dashboardData) aggregateHeavy() error {
+	start := time.Now()
+	defer func() {
+		d.log.Infof("all of aggregation (heavy) took %v", time.Since(start))
+	}()
+
+	err := d.dayTo.rolling365dAggregate()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate 365d")
+	}
+
+	return nil
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
@@ -155,7 +208,10 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// gaps that occur while operating (for example node not available for a brief moment)
 	// aggregate if backfill is not running in parallel elsewhere
 	if d.backfillEpochData() {
-		d.aggregate()
+		err = d.aggregatePerEpoch()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -430,13 +486,22 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 
 			if data.startBalances.Data[i].Status.IsActive() {
 				activeCount++
-				validatorsData[i].AttestationsScheduled = 1
+				validatorsData[i].AttestationsScheduled = sql.NullInt16{Int16: 1, Valid: true}
 			}
 		}
 		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
 
 		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
+
+		// validatorsData[i].InclusionDelaySum = sql.NullInt64{Valid: false}
+		// validatorsData[i].BlockScheduled = sql.NullInt16{Int16: 0, Valid: false}
+		// validatorsData[i].SyncScheduled = sql.NullInt32{Int32: 0, Valid: false}
+		// validatorsData[i].BlocksClReward = sql.NullInt64{Int64: 0, Valid: false}
+		// validatorsData[i].SyncExecuted = sql.NullInt32{Int32: 0, Valid: false}
+		// validatorsData[i].BlocksProposed = sql.NullInt16{Int16: 0, Valid: false}
+		// validatorsData[i].DepositsCount = sql.NullInt16{Int16: 0, Valid: false}
+		// validatorsData[i].WithdrawalsCount = sql.NullInt16{Int16: 0, Valid: false}
 	}
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
@@ -448,17 +513,20 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 	// write scheduled block data
 	for _, proposerAssignment := range data.proposerAssignments.Data {
 		proposerIndex := proposerAssignment.ValidatorIndex
-		validatorsData[proposerIndex].BlockScheduled++
+		validatorsData[proposerIndex].BlockScheduled.Int16++
+		validatorsData[proposerIndex].BlockScheduled.Valid = true
 	}
 
 	// write scheduled sync committee data
 	for _, validator := range data.syncCommitteeAssignments.Data.Validators {
-		validatorsData[mustParseInt64(validator)].SyncScheduled = len(data.beaconBlockData) // take into account missed slots
+		validatorsData[mustParseInt64(validator)].SyncScheduled.Int32 = int32(len(data.beaconBlockData)) // take into account missed slots
+		validatorsData[mustParseInt64(validator)].SyncScheduled.Valid = true
 	}
 
 	// write proposer rewards data
 	for _, reward := range data.beaconBlockRewardData {
-		validatorsData[reward.Data.ProposerIndex].BlocksClReward += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
+		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Int64 += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
+		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Valid = true
 	}
 
 	// write sync committee reward data & sync committee execution stats
@@ -466,17 +534,20 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 		for _, reward := range rewards.Data {
 			validator_index := reward.ValidatorIndex
 			syncReward := reward.Reward
-			validatorsData[validator_index].SyncReward += syncReward
+			validatorsData[validator_index].SyncReward.Int64 += syncReward
+			validatorsData[validator_index].SyncReward.Valid = true
 
 			if syncReward > 0 {
-				validatorsData[validator_index].SyncExecuted++
+				validatorsData[validator_index].SyncExecuted.Int32++
+				validatorsData[validator_index].SyncExecuted.Valid = true
 			}
 		}
 	}
 
 	// write block specific data
 	for _, block := range data.beaconBlockData {
-		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed++
+		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Int16++
+		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Valid = true
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
 			// TODO: properly verify that deposit is valid:
@@ -496,7 +567,7 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
-				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {
+				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount.Int16 > 0 {
 					d.log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
 				} else if _, ok := pubkeyToIndexMapStart[depositData.Data.Pubkey]; ok {
 					d.log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
@@ -508,14 +579,20 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 
 			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
 
-			validatorsData[validator_index].DepositsAmount += depositData.Data.Amount
-			validatorsData[validator_index].DepositsCount++
+			validatorsData[validator_index].DepositsAmount.Int64 += int64(depositData.Data.Amount)
+			validatorsData[validator_index].DepositsAmount.Valid = true
+
+			validatorsData[validator_index].DepositsCount.Int16++
+			validatorsData[validator_index].DepositsCount.Valid = true
 		}
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
 			validator_index := withdrawal.ValidatorIndex
-			validatorsData[validator_index].WithdrawalsAmount += withdrawal.Amount
-			validatorsData[validator_index].WithdrawalsCount++
+			validatorsData[validator_index].WithdrawalsAmount.Int64 += int64(withdrawal.Amount)
+			validatorsData[validator_index].WithdrawalsAmount.Valid = true
+
+			validatorsData[validator_index].WithdrawalsCount.Int16++
+			validatorsData[validator_index].WithdrawalsCount.Valid = true
 		}
 
 		for _, attestation := range block.Data.Message.Body.Attestations {
@@ -528,7 +605,10 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
 						continue
 					}
-					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
+					validatorsData[validator_index].InclusionDelaySum = sql.NullInt64{
+						Int64: int64(block.Data.Message.Slot - attestation.Data.Slot - 1),
+						Valid: true,
+					}
 
 					optimalInclusionDistance := 0
 					missedSlotMutex.RLock()
@@ -551,40 +631,38 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
 		validator_index := attestationReward.ValidatorIndex
 
-		validatorsData[validator_index].AttestationsHeadReward = attestationReward.Head
-		validatorsData[validator_index].AttestationsSourceReward = attestationReward.Source
-		validatorsData[validator_index].AttestationsTargetReward = attestationReward.Target
-		validatorsData[validator_index].AttestationsInactivityReward = attestationReward.Inactivity
-		validatorsData[validator_index].AttestationsInclusionsReward = attestationReward.InclusionDelay
-		validatorsData[validator_index].AttestationReward = validatorsData[validator_index].AttestationsHeadReward +
-			validatorsData[validator_index].AttestationsSourceReward +
-			validatorsData[validator_index].AttestationsTargetReward +
-			validatorsData[validator_index].AttestationsInactivityReward +
-			validatorsData[validator_index].AttestationsInclusionsReward
+		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt64{Int64: attestationReward.Head, Valid: true}
+		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt64{Int64: attestationReward.Source, Valid: true}
+		validatorsData[validator_index].AttestationsTargetReward = sql.NullInt64{Int64: attestationReward.Target, Valid: true}
+		validatorsData[validator_index].AttestationsInactivityReward = sql.NullInt64{Int64: attestationReward.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsInclusionsReward = sql.NullInt64{Int64: attestationReward.InclusionDelay, Valid: true}
+		validatorsData[validator_index].AttestationReward = sql.NullInt64{
+			Int64: attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay,
+			Valid: true,
+		}
 		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validator_index].Validator.EffectiveBalance)]]
-		validatorsData[validator_index].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
-		validatorsData[validator_index].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
-		validatorsData[validator_index].AttestationsIdealSourceReward = idealRewardsOfValidator.Source
-		validatorsData[validator_index].AttestationsIdealInactivityReward = idealRewardsOfValidator.Inactivity
-		validatorsData[validator_index].AttestationsIdealInclusionsReward = idealRewardsOfValidator.InclusionDelay
+		validatorsData[validator_index].AttestationsIdealHeadReward = sql.NullInt64{Int64: idealRewardsOfValidator.Head, Valid: true}
+		validatorsData[validator_index].AttestationsIdealTargetReward = sql.NullInt64{Int64: idealRewardsOfValidator.Target, Valid: true}
+		validatorsData[validator_index].AttestationsIdealSourceReward = sql.NullInt64{Int64: idealRewardsOfValidator.Source, Valid: true}
+		validatorsData[validator_index].AttestationsIdealInactivityReward = sql.NullInt64{Int64: idealRewardsOfValidator.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsIdealInclusionsReward = sql.NullInt64{Int64: idealRewardsOfValidator.InclusionDelay, Valid: true}
 
-		validatorsData[validator_index].AttestationIdealReward = validatorsData[validator_index].AttestationsIdealHeadReward +
-			validatorsData[validator_index].AttestationsIdealSourceReward +
-			validatorsData[validator_index].AttestationsIdealTargetReward +
-			validatorsData[validator_index].AttestationsIdealInactivityReward +
-			validatorsData[validator_index].AttestationsIdealInclusionsReward
+		validatorsData[validator_index].AttestationIdealReward = sql.NullInt64{
+			Int64: idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay,
+			Valid: true,
+		}
 
 		if attestationReward.Head > 0 {
-			validatorsData[validator_index].AttestationHeadExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationHeadExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
 		}
 		if attestationReward.Source > 0 {
-			validatorsData[validator_index].AttestationSourceExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationSourceExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
 		}
 		if attestationReward.Target > 0 {
-			validatorsData[validator_index].AttestationTargetExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationTargetExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
 		}
 	}
 
@@ -606,48 +684,48 @@ func mustParseInt64(s string) int64 {
 }
 
 type validatorDashboardDataRow struct {
-	AttestationsSourceReward          int64 //done
-	AttestationsTargetReward          int64 //done
-	AttestationsHeadReward            int64 //done
-	AttestationsInactivityReward      int64 //done
-	AttestationsInclusionsReward      int64 //done
-	AttestationReward                 int64 //done
-	AttestationsIdealSourceReward     int64 //done
-	AttestationsIdealTargetReward     int64 //done
-	AttestationsIdealHeadReward       int64 //done
-	AttestationsIdealInactivityReward int64 //done
-	AttestationsIdealInclusionsReward int64 //done
-	AttestationIdealReward            int64 //done
+	AttestationsSourceReward          sql.NullInt64 //done
+	AttestationsTargetReward          sql.NullInt64 //done
+	AttestationsHeadReward            sql.NullInt64 //done
+	AttestationsInactivityReward      sql.NullInt64 //done
+	AttestationsInclusionsReward      sql.NullInt64 //done
+	AttestationReward                 sql.NullInt64 //done
+	AttestationsIdealSourceReward     sql.NullInt64 //done
+	AttestationsIdealTargetReward     sql.NullInt64 //done
+	AttestationsIdealHeadReward       sql.NullInt64 //done
+	AttestationsIdealInactivityReward sql.NullInt64 //done
+	AttestationsIdealInclusionsReward sql.NullInt64 //done
+	AttestationIdealReward            sql.NullInt64 //done
 
-	AttestationsScheduled     int8 //done
-	AttestationsExecuted      int8 //done
-	AttestationHeadExecuted   int8 //done
-	AttestationSourceExecuted int8 //done
-	AttestationTargetExecuted int8 //done
+	AttestationsScheduled     sql.NullInt16 //done
+	AttestationsExecuted      sql.NullInt16 //done
+	AttestationHeadExecuted   sql.NullInt16 //done
+	AttestationSourceExecuted sql.NullInt16 //done
+	AttestationTargetExecuted sql.NullInt16 //done
 
-	BlockScheduled int8    // done
-	BlocksProposed int8    // done
-	BlockChance    float64 // done
+	BlockScheduled sql.NullInt16 // done
+	BlocksProposed sql.NullInt16 // done
+	BlockChance    float64       // done
 
-	BlocksClReward int64 // done
+	BlocksClReward sql.NullInt64 // done
 	BlocksElReward decimal.Decimal
 
-	SyncScheduled int     // done
-	SyncExecuted  int8    // done
-	SyncReward    int64   // done
-	SyncChance    float64 // done
+	SyncScheduled sql.NullInt32 // done
+	SyncExecuted  sql.NullInt32 // done
+	SyncReward    sql.NullInt64 // done
+	SyncChance    float64       // done
 
 	Slashed bool // done
 
 	BalanceStart uint64 // done
 	BalanceEnd   uint64 // done
 
-	DepositsCount  int8   // done
-	DepositsAmount uint64 // done
+	DepositsCount  sql.NullInt16 // done
+	DepositsAmount sql.NullInt64 // done
 
-	WithdrawalsCount  int8   // done
-	WithdrawalsAmount uint64 // done
+	WithdrawalsCount  sql.NullInt16 // done
+	WithdrawalsAmount sql.NullInt64 // done
 
-	InclusionDelaySum     int64 // done
-	OptimalInclusionDelay int64 // done
+	InclusionDelaySum     sql.NullInt64 // done
+	OptimalInclusionDelay int64         // done
 }
