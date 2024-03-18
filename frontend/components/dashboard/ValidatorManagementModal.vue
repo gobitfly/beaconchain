@@ -4,9 +4,6 @@ import {
   faEdit,
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
-import {
-  faGem
-} from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
@@ -101,6 +98,8 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   // If multiple are selected ask if he wnats to remove all selected
   alert(`remove val ${row.index}`)
 }
+
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= (overview.value?.validators?.total ?? 0))
 
 </script>
 
@@ -246,11 +245,11 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
       <div class="footer">
         <div class="left">
           <!-- TODO: Create a component to handle the 'upgrade to premium' account logic -->
-          <div class="labels">
+          <div class="labels" :class="{premiumLimit}">
             <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
-          <FontAwesomeIcon :icon="faGem" class="gem" />
+          <BcPremiumGem />
         </div>
         <Button :label="$t('navigation.done')" @click="onClose" />
       </div>
@@ -334,6 +333,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     .labels {
       display: flex;
       gap: var(--padding-small);
+      &.premiumLimit{
+        color: var(--negative-color);
+      }
 
       @media (max-width: 959px) {
         flex-direction: column;
