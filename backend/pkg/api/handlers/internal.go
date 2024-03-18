@@ -336,16 +336,16 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
-	var indexes []uint64
+	var indices []uint64
 	var publicKeys [][]byte
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
-		indexes, publicKeys = checkValidatorList(&err, validatorsParam)
+		indices, publicKeys = checkValidatorList(&err, validatorsParam)
 		if err != nil {
 			returnBadRequest(w, err)
 			return
 		}
 	}
-	validators, err := h.dai.GetValidatorsFromSlices(indexes, publicKeys)
+	validators, err := h.dai.GetValidatorsFromSlices(indices, publicKeys)
 	if err != nil {
 		handleError(w, err)
 		return

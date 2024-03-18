@@ -436,20 +436,11 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	defer utils.Rollback(tx)
 
 	// Delete the group
-	result, err := tx.Exec(`
+	_, err = tx.Exec(`
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
 	if err != nil {
 		return err
-	}
-
-	// Check if the group was deleted
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("error group %v does not exist, cannot remove it", groupId)
 	}
 
 	// Delete all validators for the group
