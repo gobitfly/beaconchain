@@ -541,7 +541,6 @@ func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Res
 	}
 
 	returnOk(w, response)
-
 }
 
 func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
