@@ -50,8 +50,9 @@ const visible = ref<boolean>()
 }
 
 .text {
-  font-size: var(--big_text_label_font_size);
-  font-weight: var(-big_text_label_bold_font_weight);
+  font-family: var(--subtitle_font_family);
+  font-weight: var(--subtitle_font_weight);
+  font-size: var(--subtitle_font_size);
   padding: 15px 0 28px 0;
 }
 
