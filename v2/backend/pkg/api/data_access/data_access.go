@@ -1320,6 +1320,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		totalSyncChance := float64(0)
 		totalBlockChance := float64(0)
 		totalInclusionDelaySum := int64(0)
+		totalInclusionDelayDivisor := uint64(0)
 
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
@@ -1374,6 +1375,10 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalSyncChance += row.SyncChance
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
+
+			if row.InclusionDelaySum > 0 {
+				totalInclusionDelayDivisor += data.AttestationsHead.StatusCount.Failed + data.AttestationsHead.StatusCount.Success
+			}
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
@@ -1392,7 +1397,11 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
 		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
-		data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/(float64(data.AttestationsHead.StatusCount.Failed)+float64(data.AttestationsHead.StatusCount.Success))
+		if totalInclusionDelayDivisor > 0 {
+			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
+		} else {
+			data.AttestationAvgInclDist = 0
+		}
 
 		return &data, nil
 	}
