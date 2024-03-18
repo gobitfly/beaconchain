@@ -1320,7 +1320,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		totalSyncChance := float64(0)
 		totalBlockChance := float64(0)
 		totalInclusionDelaySum := int64(0)
-		totalInclusionDelayDivisor := uint64(0)
+		totalInclusionDelayDivisor := int64(0)
 
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
@@ -1377,7 +1377,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalInclusionDelaySum += row.InclusionDelaySum
 
 			if row.InclusionDelaySum > 0 {
-				totalInclusionDelayDivisor += data.AttestationsHead.StatusCount.Failed + data.AttestationsHead.StatusCount.Success
+				totalInclusionDelayDivisor += row.AttestationsScheduled
 			}
 		}
 
