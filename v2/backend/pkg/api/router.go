@@ -36,7 +36,7 @@ func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
 			header := r.Header.Get("Authorization")
 			query := r.URL.Query().Get("api_key")
 
-			if header != "Bearer "+apiKey || query != apiKey {
+			if header != "Bearer "+apiKey && query != apiKey {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
