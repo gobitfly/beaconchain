@@ -1384,7 +1384,6 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
 		apr := (float64(reward) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
 
-		log.Infof("apr: %v, totalEndBalance: %v, totalWithdrawals: %v, totalStartBalance: %v, totalDeposits: %v", apr, totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		data.Apr.Cl = apr
 		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
 
@@ -1414,28 +1413,28 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		ret.Last24h = *data
 		return nil
 	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last7d = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last31d = *data
+		return nil
+	})
 	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
+	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
 	// 	if err != nil {
 	// 		return err
 	// 	}
-	// 	ret.DetailsWeek = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsMonth = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsTotal = *data
+	// 	ret.AllTime = *data
 	// 	return nil
 	// })
 	err := wg.Wait()
