@@ -45,7 +45,7 @@
       "status": "Statut du site",
       "press_kit": "Dossier de presse"
     },
-    "search_engine": {
+    "search_bar": {
       "placeholder": "Cherchez dans la blockchain",
       "searching": "Recherche en cours...",
       "something_wrong": "Une erreur est survenue",

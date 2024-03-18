@@ -10,7 +10,7 @@ const { latest } = storeToRefs(useLatestStateStore())
   <div class="header top">
     <div class="content">
       <div>Current Epoch: {{ latest?.currentEpoch }}</div>
-      <BcMainSearchBar v-if="!props.isHomePage" location="header" />
+      <BcSearchbarGeneral v-if="!props.isHomePage" location="header" />
       <NuxtLink to="/login">
         Login
       </NuxtLink>
