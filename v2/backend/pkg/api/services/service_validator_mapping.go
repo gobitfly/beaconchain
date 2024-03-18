@@ -44,7 +44,7 @@ func StartIndexMappingService() {
 	}
 }
 
-func initValidatorMapping(data *types.RedisCachedValidatorsMapping) error {
+func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 	log.Infof("initializing validator mapping")
 	l := len(data.Mapping)
 
@@ -70,11 +70,9 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) error {
 	}
 	currentValidatorMapping = &c
 	lastValidatorIndex = l - 1
-
-	return nil
 }
 
-func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) error {
+func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 	log.Infof("quick updating validator mapping")
 
 	for i, v := range data.Mapping {
@@ -95,7 +93,6 @@ func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) error
 		currentValidatorMapping.ValidatorMetadata[i].ActivationEpoch = v.ActivationEpoch
 		currentValidatorMapping.ValidatorMetadata[i].WithdrawableEpoch = v.WithdrawableEpoch
 	}
-	return nil
 }
 
 func updateValidatorMapping() error {
