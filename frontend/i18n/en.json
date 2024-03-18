@@ -264,7 +264,7 @@
     "status": "Site Status",
     "press_kit": "Press Kit"
   },
-  "search_engine": {
+  "search_bar": {
     "placeholder": "Search the blockchain",
     "searching": "Searching...",
     "something_wrong": "Something went wrong",

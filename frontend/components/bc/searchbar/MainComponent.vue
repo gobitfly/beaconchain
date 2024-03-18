@@ -13,13 +13,13 @@ import {
   type SearchAheadResult,
   type SearchBarStyle,
   type Matching
-} from '~/types/searchengine'
+} from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
 const props = defineProps({
   searchable: { type: Array, required: true }, // list of categories that the bar can search in
-  barStyle: { type: String, required: true }, // look of the bar ('discreet' for small, 'gaudy'  for big)
+  barStyle: { type: String, required: true }, // look of the bar ('discreet', 'gaudy' or 'embedded')
   pickByDefault: { type: Function, required: true } // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
 })
 const emit = defineEmits(['go'])
@@ -144,7 +144,7 @@ onMounted(() => {
   networkDropdownUserSelection.value = [] // deselects all options
   networkFilterHasChanged()
 
-  // listens to clicks outside the search engine
+  // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
 
@@ -392,7 +392,7 @@ function filterAndOrganizeResults () {
 // simpler to handle by the code of the search bar (not only for displaying).
 // If the result element from the API is somehow unexpected, then the function returns an empty array.
 // The fields that the function read in the API response as well as the place they are displayed
-// in the drop-down are set in the object `TypeInfo` filled in types/searchengine.ts, by its properties
+// in the drop-down are set in the object `TypeInfo` filled in types/searchbar.ts, by its properties
 // dataInSearchAheadResult (sets the fields to read and their order) and dropdownColumns (sets the columns to fill with that ordered data).
 function convertSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion {
   const emptyResult : ResultSuggestion = { columns: [], queryParam: -1, closeness: NaN }
@@ -468,14 +468,20 @@ function resemblanceWithInput (str2 : string) : number {
 }
 
 function filterHint (category : Category) : string {
-  let hint : string
-  const list = getListOfResultTypesInCategory(category, false)
+  let hint = $t('search_bar.shows') + ' '
 
-  hint = $t('search_engine.shows') + ' ' + (list.length === 1 ? $t('search_engine.this_type') : $t('search_engine.these_types')) + ' '
-  for (let i = 0; i < list.length; i++) {
-    hint += TypeInfo[list[i]].title
-    if (i < list.length - 1) {
-      hint += ', '
+  if (category === Category.Validators) {
+    hint += $t('search_bar.this_type') + ' '
+    hint += 'Validator'
+  } else {
+    const list = getListOfResultTypesInCategory(category, false)
+
+    hint += (list.length === 1 ? $t('search_bar.this_type') : $t('search_bar.these_types')) + ' '
+    for (let i = 0; i < list.length; i++) {
+      hint += TypeInfo[list[i]].title
+      if (i < list.length - 1) {
+        hint += ', '
+      }
     }
   }
 
@@ -726,14 +732,14 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
 
 <template>
   <div id="anchor" :class="barStyle">
-    <div id="whole-engine" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
+    <div id="whole-component" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
       <div id="input-and-button" ref="inputFieldAndButton" :class="barStyle">
         <InputText
           id="input-field"
           v-model="inputted"
           :class="barStyle"
           type="text"
-          :placeholder="$t('search_engine.placeholder')"
+          :placeholder="$t('search_bar.placeholder')"
           @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
           @focus="showDropDown = true"
         />
@@ -797,26 +803,22 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
                 @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
               >
                 <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons" :class="barStyle">
-                  <IconTypeIcons :type="typ.type" class="type-icon not-alone" />
-                  <IconNetworkIcons :chain-id="network.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+                  <BcSearchbarTypeIcons :type="typ.type" class="type-icon not-alone" />
+                  <IconNetwork :chain-id="network.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
                 </span>
                 <span v-else class="columns-icons" :class="barStyle">
-                  <IconTypeIcons :type="typ.type" class="type-icon alone" />
+                  <BcSearchbarTypeIcons :type="typ.type" class="type-icon alone" />
                 </span>
                 <span class="columns-0" :class="barStyle">
-                  {{ suggestion.columns[0] }}
+                  <BcSearchbarMiddleEllipsis>{{ suggestion.columns[0] }}</BcSearchbarMiddleEllipsis>
                 </span>
                 <span class="columns-1and2" :class="barStyle">
                   <span v-if="suggestion.columns[1] !== ''" class="columns-1" :class="barStyle">
-                    {{ suggestion.columns[1] }}
+                    <BcSearchbarMiddleEllipsis>{{ suggestion.columns[1] }}</BcSearchbarMiddleEllipsis>
                   </span>
                   <span v-if="suggestion.columns[2] !== ''" class="columns-2" :class="[barStyle,(suggestion.columns[1] !== '')?'greyish':'']">
-                    <span v-if="TypeInfo[typ.type].dropdownColumns[1] === undefined">
-                      ({{ suggestion.columns[2] }})
-                    </span>
-                    <span v-else>
-                      {{ suggestion.columns[2] }}
-                    </span>
+                    <BcSearchbarMiddleEllipsis v-if="TypeInfo[typ.type].dropdownColumns[1] === undefined" :width-is-fixed="true">({{ suggestion.columns[2] }})</BcSearchbarMiddleEllipsis>
+                    <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.columns[2] }}</BcSearchbarMiddleEllipsis>
                   </span>
                 </span>
                 <span class="columns-category" :class="barStyle">
@@ -828,28 +830,28 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             </div>
           </div>
           <div v-if="results.organized.howManyResultsIn == 0" class="info center">
-            {{ $t('search_engine.no_result_matches') }}
-            {{ results.organized.howManyResultsOut > 0 ? $t('search_engine.your_filters') : $t('search_engine.your_input') }}
+            {{ $t('search_bar.no_result_matches') }}
+            {{ results.organized.howManyResultsOut > 0 ? $t('search_bar.your_filters') : $t('search_bar.your_input') }}
           </div>
           <div v-if="results.organized.howManyResultsOut > 0" class="info bottom">
             {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
-            {{ (results.organized.howManyResultsOut == 1 ? $t('search_engine.result_hidden') : $t('search_engine.results_hidden')) +
-              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_engine.by_your_filters')) }}
+            {{ (results.organized.howManyResultsOut == 1 ? $t('search_bar.result_hidden') : $t('search_bar.results_hidden')) +
+              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_bar.by_your_filters')) }}
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
           <div v-if="searchState.state === States.InputIsEmpty" class="info center">
-            {{ $t('search_engine.help') }}
+            {{ $t('search_bar.help') }}
           </div>
           <div v-else-if="searchState.state === States.WaitingForResults" class="info center">
-            {{ $t('search_engine.searching') }}
+            {{ $t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
           <div v-else-if="searchState.state === States.Error" class="info center">
-            {{ $t('search_engine.something_wrong') }}
+            {{ $t('search_bar.something_wrong') }}
             <IconErrorFace :inline="true" />
             <br>
-            {{ $t('search_engine.try_again') }}
+            {{ $t('search_bar.try_again') }}
           </div>
         </div>
       </div>
@@ -884,7 +886,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#whole-engine {
+#whole-component {
   @include main.container;
   position: absolute;
   left: 0px;
@@ -906,7 +908,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#whole-engine #input-and-button {
+#whole-component #input-and-button {
   display: flex;
 
   #input-field {
@@ -953,7 +955,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#whole-engine #drop-down {
+#whole-component #drop-down {
   left: 0;
   right: 0;
   padding-left: 4px;
@@ -973,7 +975,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#whole-engine #drop-down #filter-area {
+#whole-component #drop-down #filter-area {
   display: flex;
   row-gap: 8px;
   flex-wrap: wrap;
@@ -1052,7 +1054,7 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
   }
 }
 
-#whole-engine #drop-down .output-area {
+#whole-component #drop-down .output-area {
   display: flex;
   flex-direction: column;
   min-height: 128px;
@@ -1077,22 +1079,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         display: grid;
         min-width: 0;
         right: 0px;
-        padding-left: 2px;
-        padding-right: 2px;
         padding-top: 7px;
         padding-bottom: 7px;
         @media (min-width: 600px) { // large screen
           &.gaudy {
-            grid-template-columns: 40px 100px auto min-content;
+            grid-template-columns: 40px 106px 488px auto;
             padding-left: 4px;
             padding-right: 4px;
           }
           &.discreet {
-            grid-template-columns: 40px 100px auto;
+            grid-template-columns: 40px 106px 298px;
           }
         }
         @media (max-width: 600px) { // mobile
-          grid-template-columns: 40px 100px auto;
+          grid-template-columns: 40px 106px 218px;
         }
         border-radius: var(--border-radius);
 
@@ -1154,19 +1154,20 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
         .columns-0 {
           grid-column: 2;
           grid-row: 1;
-          display: flex;
+          display: inline-block;
+          position: relative;
           margin-top: auto;
           &.gaudy {
             margin-bottom: auto;
           }
-          overflow-wrap: anywhere;
+          margin-right: 14px;
+          left: 0px;
           font-weight: var(--roboto-medium);
-          padding-right: 4px;
         }
         .columns-1and2 {
-          display: flex;
           grid-column: 3;
           grid-row: 1;
+          display: flex;
           @media (max-width: 600px) { // mobile
             grid-row-end: span 2;
             flex-direction: column;
@@ -1175,19 +1176,24 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
             grid-row-end: span 2;
             flex-direction: column;
           }
-          min-width: 0;
+          position: relative;
           margin-top: auto;
           margin-bottom: auto;
+          left: 0px;
           font-weight: var(--roboto-medium);
+          white-space: nowrap;
+
           .columns-1 {
             display: flex;
-            overflow-wrap: break-word;
+            flex-shrink: 2;
+            position: relative;
             margin-right: 0.8ch;
           }
           .columns-2 {
             display: flex;
-            min-width: 0;
-            overflow-wrap: anywhere;
+            position: relative;
+            flex-grow: 2;
+            flex-shrink: 1;
             &.greyish.discreet {
               color: var(--searchbar-text-detail-discreet);
             }
@@ -1197,15 +1203,17 @@ function simulateAPIresponse (searched : string) : SearchAheadResult {
           }
         }
         .columns-category {
+          display: block;
           @media (min-width: 600px) { // large screen
             &.gaudy {
               grid-column: 4;
               grid-row: 1;
-              display: flex;
               margin-top: auto;
               margin-bottom: auto;
-              width: 6em;
+              margin-right: 2px;
+              float: right;
               justify-content: right;
+              text-align: right;
             }
             &.discreet {
               grid-column: 2;

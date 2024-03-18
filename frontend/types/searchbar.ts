@@ -1,6 +1,6 @@
 import { ChainIDs } from '~/types/networks'
 
-export type SearchBarStyle = 'discreet' | 'gaudy'
+export type SearchBarStyle = 'discreet' | 'gaudy' | 'embedded'
 
 export enum Category {
   Tokens = 'tokens',
@@ -63,7 +63,7 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Validators]: { filterLabel: 'Validators' }
 }
 
-// The parameter of the callback function that you give to SearchEngine.vue's props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
+// The parameter of the callback function that you give to <BcSearchbarMainComponent>'s props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
 export interface Matching {
   closeness: number, // if different results of this type exist on the network, only the best closeness is recorded here
   network: ChainIDs,
@@ -106,7 +106,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     dropdownColumns: [undefined, '', undefined] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
   },
   [ResultType.NFTs]: {
-    title: 'NFT (ERC-721 & ERC-1155 token)',
+    title: 'ERC-721 & ERC-1155 token (NFT)',
     category: Category.NFTs,
     subCategory: SubCategory.NFTs,
     priority: 4,

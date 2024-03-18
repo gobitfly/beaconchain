@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ResultType, SubCategory, TypeInfo } from '~/types/searchengine'
+import { ResultType, SubCategory, TypeInfo } from '~/types/searchbar'
 
 const props = defineProps({
   type: { type: String, required: true }
