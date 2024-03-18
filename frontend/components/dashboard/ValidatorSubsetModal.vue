@@ -104,7 +104,7 @@ function copyValidatorsToClipboard (): void {
 </script>
 
 <template>
-  <div class="validator_subset_modal_container xyz">
+  <div class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
         {{ caption }}
