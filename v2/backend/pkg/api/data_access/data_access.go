@@ -482,122 +482,155 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
 	}
+	wg := errgroup.Group{}
 	data := t.VDBOverviewData{}
 
-	var queryResultGroups []struct {
-		Id   uint32 `db:"id"`
-		Name string `db:"name"`
-	}
-	err = db.AlloyReader.Select(&queryResultGroups, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId.Id)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard groups from dashboard id: %v", err)
-	}
-	for _, res := range queryResultGroups {
-		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
+	// Groups
+	if len(dashboardId.Validators) == 0 {
+		// should have valid primary id
+		wg.Go(func() error {
+			var queryResult []struct {
+				Id   uint32 `db:"id"`
+				Name string `db:"name"`
+			}
+			if err := db.AlloyReader.Select(&queryResult, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId.Id); err != nil {
+				return err
+			}
+			for _, res := range queryResult {
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
+			}
+			return nil
+		})
 	}
 
-	query := `SELECT status AS statename, COUNT(*) AS statecount
-	FROM validators WHERE validatorindex = ANY($1)
-	GROUP BY status`
-	var queryResultValidators []struct {
-		Name  string `db:"statename"`
-		Count uint64 `db:"statecount"`
-	}
-	err = db.ReaderDb.Select(&queryResultValidators, query, validators)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators data: %v", err)
-	}
-	for _, state := range queryResultValidators {
-		data.Validators.Total += state.Count
-		switch state.Name {
-		case "active_online":
-			data.Validators.Active += state.Count
-		case "pending":
-			data.Validators.Pending += state.Count
-		case "slashing_online":
-			data.Validators.Slashed += state.Count
-		case "exiting_online":
-			data.Validators.Exited += state.Count
+	// Validator Status
+	wg.Go(func() error {
+		query := `SELECT status AS statename, COUNT(*) AS statecount
+		FROM validators
+		WHERE validatorindex = ANY($1)
+		GROUP BY status`
+		var queryResult []struct {
+			Name  string `db:"statename"`
+			Count uint64 `db:"statecount"`
 		}
-	}
-	data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
-
-	query = `SELECT 
-		SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-		from validator_dashboard_data_rolling_total
-		where validator_index = ANY($1)`
-	var queryResultEfficiency struct {
-		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
-		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
-		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
-	}
-	err = db.AlloyReader.Get(&queryResultEfficiency, query, validators)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving total efficiency data: %v", err)
-	}
-	data.Efficiency.Attestation = max(0, queryResultEfficiency.AttestationEfficiency.Float64)
-	data.Efficiency.Proposal = max(0, queryResultEfficiency.ProposerEfficiency.Float64)
-	data.Efficiency.Sync = max(0, queryResultEfficiency.SyncEfficiency.Float64)
-	data.Efficiency.Total = calculateTotalEfficiency(queryResultEfficiency.AttestationEfficiency, queryResultEfficiency.ProposerEfficiency, queryResultEfficiency.SyncEfficiency)
-
-	retrieveElClRewards := func(tableName string, r *t.ClElValue[decimal.Decimal]) error {
-		query = `select
-			SUM(balance_start) AS balance_start,
-			SUM(balance_end) AS balance_end,
-			SUM(deposits_amount) AS deposits_amount,
-			SUM(withdrawals_amount) AS withdrawals_amount,
-			SUM(blocks_el_reward) AS blocks_el_reward
-		from %[1]s
-		where validator_index = ANY($1)
-		`
-		var queryResultRewards struct {
-			BalanceStart      int64 `db:"balance_start"`
-			BalanceEnd        int64 `db:"balance_end"`
-			DepositsAmount    int64 `db:"deposits_amount"`
-			WithdrawalsAmount int64 `db:"withdrawals_amount"`
-			BlocksElReward    int64 `db:"blocks_el_reward"`
-		}
-		err = db.AlloyReader.Get(&queryResultRewards, fmt.Sprintf(query, tableName), validators)
+		err = db.ReaderDb.Select(&queryResult, query, validators)
 		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
-		r.El = decimal.NewFromInt(queryResultRewards.BlocksElReward)
-		r.Cl = decimal.NewFromInt(queryResultRewards.BalanceEnd + queryResultRewards.WithdrawalsAmount - queryResultRewards.BalanceStart - queryResultRewards.DepositsAmount)
+		for _, state := range queryResult {
+			data.Validators.Total += state.Count
+			switch state.Name {
+			case "active_online":
+				data.Validators.Active += state.Count
+			case "pending":
+				data.Validators.Pending += state.Count
+			case "slashing_online":
+				data.Validators.Slashed += state.Count
+			case "exiting_online":
+				data.Validators.Exited += state.Count
+			}
+		}
+		data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
 		return nil
+	})
+
+	// Efficiency
+	wg.Go(func() error {
+		query := `SELECT 
+			SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+			from validator_dashboard_data_rolling_total
+			where validator_index = ANY($1)`
+		var queryResult struct {
+			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+		}
+		err = db.AlloyReader.Get(&queryResult, query, validators)
+		if err != nil {
+			return fmt.Errorf("error retrieving total efficiency data: %v", err)
+		}
+		data.Efficiency.Attestation = max(0, queryResult.AttestationEfficiency.Float64*100)
+		data.Efficiency.Proposal = max(0, queryResult.ProposerEfficiency.Float64*100)
+		data.Efficiency.Sync = max(0, queryResult.SyncEfficiency.Float64*100)
+		data.Efficiency.Total = calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+		return nil
+	})
+
+	// Rewards
+	retrieveElClRewards := func(tableName string, r *t.ClElValue[decimal.Decimal]) {
+		wg.Go(func() error {
+			query := `select
+				SUM(balance_start) AS balance_start,
+				SUM(balance_end) AS balance_end,
+				SUM(deposits_amount) AS deposits_amount,
+				SUM(withdrawals_amount) AS withdrawals_amount,
+				SUM(blocks_el_reward) AS blocks_el_reward
+			from %[1]s
+			where validator_index = ANY($1)
+			`
+			var queryResult struct {
+				BalanceStart      sql.NullInt64 `db:"balance_start"`
+				BalanceEnd        sql.NullInt64 `db:"balance_end"`
+				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
+				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
+				BlocksElReward    sql.NullInt64 `db:"blocks_el_reward"`
+			}
+			err = db.AlloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), validators)
+			if err != nil {
+				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			}
+			r.El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
+			r.Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64)
+			return nil
+		})
 	}
 
-	err = retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
-	err = retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
-	err = retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last31d)
+	retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
+	retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
+	retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last31d)
 	// WIP, table doesn't exist yet
-	// err = retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
-	err = retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
+	// retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
+	retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
+	// TODO combine the 3 calls to validator_dashboard_data_rolling_total into one (rewards, efficiency, luck/apr)
 
-	query = `SELECT
-			SUM(sync_chance) AS sync_chance,
-			SUM(sync_scheduled)::decimal AS sync_scheduled,
-			SUM(block_chance)::decimal AS block_chance,
-			SUM(blocks_scheduled)::decimal AS blocks_scheduled
-		FROM validator_dashboard_data_rolling_total
-		WHERE validator_index = ANY($1)`
-	var queryResultLuck struct {
-		SyncChance      float64 `db:"sync_chance"`
-		SyncScheduled   int32   `db:"sync_scheduled"`
-		BlockChance     float64 `db:"block_chance"`
-		BlocksScheduled int32   `db:"blocks_scheduled"`
-	}
-	err = db.AlloyReader.Select(&queryResultLuck, query, validators)
+	// Luck, Apr
+	wg.Go(func() error {
+		query := `SELECT
+				SUM(sync_chance)::decimal AS sync_chance,
+				SUM(sync_scheduled)::decimal AS sync_scheduled,
+				SUM(block_chance)::decimal AS block_chance,
+				SUM(blocks_scheduled)::decimal AS blocks_scheduled
+			FROM validator_dashboard_data_rolling_total
+			WHERE validator_index = ANY($1)`
+		var queryResult struct {
+			SyncChance      sql.NullFloat64 `db:"sync_chance"`
+			SyncScheduled   sql.NullInt32   `db:"sync_scheduled"`
+			BlockChance     sql.NullFloat64 `db:"block_chance"`
+			BlocksScheduled sql.NullInt32   `db:"blocks_scheduled"`
+		}
+		err = db.AlloyReader.Get(&queryResult, query, validators)
+		if err != nil {
+			return err
+		}
+		if queryResult.BlockChance.Valid {
+			data.Luck.Proposal.Percent = float64(queryResult.BlocksScheduled.Int32) / queryResult.BlockChance.Float64 * 100
+		}
+		if queryResult.SyncChance.Valid {
+			data.Luck.Sync.Percent = float64(queryResult.SyncScheduled.Int32) / queryResult.SyncChance.Float64 * 100
+		}
+
+		// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
+		// But waiting for Peter implementation of apr calc
+		// same for expected/average luck
+		return nil
+	})
+
+	err = wg.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
 	}
-	data.Luck.Proposal.Percent = float64(queryResultLuck.BlocksScheduled) / queryResultLuck.BlockChance * 100
-	data.Luck.Sync.Percent = float64(queryResultLuck.SyncScheduled) / queryResultLuck.SyncChance * 100
-
-	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
-	// But waiting for Peter implementation of apr calc
-	// same for expected/average luck
 
 	return &data, nil
 }
