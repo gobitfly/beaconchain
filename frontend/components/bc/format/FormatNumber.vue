@@ -4,7 +4,7 @@ interface Props {
   value?: number | string,
   minDecimals?: number, // defaults to 0
   maxDecimals?: number, // defaults to 2
-  default?: number | string // used it value is not defined
+  default?: number | string // used if value is not defined
 }
 const props = defineProps<Props>()
 
