@@ -19,12 +19,7 @@ import (
 type ValidatorMapping struct {
 	ValidatorPubkeys  []string
 	ValidatorIndices  map[string]*uint64
-	ValidatorMetadata []*ValidatorMetadata
-}
-
-type ValidatorMetadata struct {
-	ActivationEpoch   types.Epoch
-	WithdrawableEpoch types.Epoch
+	ValidatorMetadata []*types.CachedValidator
 }
 
 var currentValidatorMapping *ValidatorMapping
@@ -51,7 +46,7 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 	c := ValidatorMapping{}
 	c.ValidatorIndices = make(map[string]*uint64)
 	c.ValidatorPubkeys = make([]string, l)
-	c.ValidatorMetadata = make([]*ValidatorMetadata, l)
+	c.ValidatorMetadata = make([]*types.CachedValidator, l)
 
 	for i, v := range data.Mapping {
 		if i == l {
@@ -63,10 +58,7 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 
 		c.ValidatorPubkeys[i] = b
 		c.ValidatorIndices[b] = &j
-		c.ValidatorMetadata[i] = &ValidatorMetadata{
-			ActivationEpoch:   v.ActivationEpoch,
-			WithdrawableEpoch: v.WithdrawableEpoch,
-		}
+		c.ValidatorMetadata[i] = v
 	}
 	currentValidatorMapping = &c
 	lastValidatorIndex = l - 1
@@ -82,10 +74,7 @@ func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 
 			currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
 			currentValidatorMapping.ValidatorIndices[b] = &j
-			currentValidatorMapping.ValidatorMetadata = append(currentValidatorMapping.ValidatorMetadata, &ValidatorMetadata{
-				ActivationEpoch:   v.ActivationEpoch,
-				WithdrawableEpoch: v.WithdrawableEpoch,
-			})
+			currentValidatorMapping.ValidatorMetadata = append(currentValidatorMapping.ValidatorMetadata, v)
 
 			lastValidatorIndex = i
 			continue
