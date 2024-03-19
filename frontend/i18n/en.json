@@ -32,6 +32,10 @@
     "no": "No",
     "save": "Save"
   },
+  "error": {
+    "multiple_times": "The error {error} happend {count} times",
+    "ws_error": "Webservice error"
+  },
   "table": {
     "first": "First",
     "last": "Last",
