@@ -110,7 +110,7 @@ const items = computed(() => {
       <Menubar :model="items" breakpoint="0px">
         <template #item="{ item }">
           <NuxtLink v-if="item.route" :to="item.route">
-            <span class="button-content" :class="{'p-active': item.active, 'pointer': item.dropdown, 'class': item.class}">
+            <span class="button-content" :class="[item.class, {'p-active': item.active, 'pointer': item.dropdown}]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
