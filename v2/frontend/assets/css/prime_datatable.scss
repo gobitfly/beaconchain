@@ -46,6 +46,7 @@
           font-family: var(--inter-family);
           font-weight: var(--inter-medium);
           font-size: 18px;
+          white-space: nowrap;
           &:before {
             content: "\2191";
             color: var(--text-color-disabled);

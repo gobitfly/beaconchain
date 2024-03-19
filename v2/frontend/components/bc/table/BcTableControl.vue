@@ -8,7 +8,7 @@ import {
 
 interface Props {
   title?: string,
-  searchPlaceholder?:string,
+  searchPlaceholder?: string,
 }
 const props = defineProps<Props>()
 
@@ -26,32 +26,41 @@ const onInput = (value: string) => {
     <div class="bc-table-header">
       <div class="side">
         <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" />
-        <slot id="header-left" />
+        <slot name="header-left" />
       </div>
       <div v-if="props.title" class="h1">
         {{ props.title }}
       </div>
       <div class="side right">
-        <slot id="header-right" />
-        <BcContentFilter v-if="props.searchPlaceholder && tableIsShown" :search-placeholder="props.searchPlaceholder" @filter-changed="onInput" />
+        <slot name="header-right" />
+        <BcContentFilter
+          v-if="props.searchPlaceholder && tableIsShown"
+          :search-placeholder="props.searchPlaceholder"
+          @filter-changed="onInput"
+        />
       </div>
     </div>
   </slot>
+  <slot name="bc-table-sub-header" />
   <slot v-if="tableIsShown" name="table" />
   <slot v-else name="chart" />
 </template>
 
 <style lang="scss" scoped>
-.bc-table-header{
+.bc-table-header {
   height: 70px;
   padding: 0 var(--padding-large);
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  .side{
-    width: 180px;
-    &.right{
+
+  .side {
+    &+h1 {
+      width: 180px;
+    }
+
+    &.right {
       display: flex;
       justify-content: flex-end;
     }
