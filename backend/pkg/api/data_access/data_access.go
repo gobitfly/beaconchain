@@ -1465,7 +1465,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, aprDivisor int, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		var err error
@@ -1551,7 +1551,8 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		apr := (float64(reward) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
+		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
+		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
 
 		data.Apr.Cl = apr
 		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
@@ -1575,7 +1576,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", 1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -1583,7 +1584,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", 7, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -1591,7 +1592,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 31, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -1599,7 +1600,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", 1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
