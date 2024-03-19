@@ -89,7 +89,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
     <IconDatatypeAccountIcon class="icon-size" />
     <IconDatatypeEnsIcon class="icon-size" style="color:red" />
     <IconDatatypeEnsIcon class="icon-size" style="color:blue" />
-    <IconDatatypeGraffitoIcon class="icon-size" />
+    <IconDatatypeGraffitiIcon class="icon-size" />
     <IconDatatypeValidatorIcon class="icon-size" />
   </div>
 </template>
