@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -58,7 +58,7 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 			break
 		}
 
-		b := hex.EncodeToString(v.PublicKey)
+		b := hexutil.Encode(v.PublicKey)
 		j := uint64(i)
 
 		c.ValidatorPubkeys[i] = b
@@ -77,7 +77,7 @@ func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 
 	for i, v := range data.Mapping {
 		if i > lastValidatorIndex {
-			b := hex.EncodeToString(v.PublicKey)
+			b := hexutil.Encode(v.PublicKey)
 			j := uint64(i)
 
 			currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
