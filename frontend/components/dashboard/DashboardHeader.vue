@@ -47,22 +47,36 @@ const items = computed(() => {
     }
   }
 
+  const sortedItems: MenuBarButton[][] = []
+
   const validatorItems: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  const sortedItems: MenuBarButton[][] = [validatorItems]
+  if (validatorItems.length > 0) {
+    sortedItems.push(validatorItems)
+  }
 
   const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  if (buttonCount === 3) {
-    sortedItems.push(accountItems)
-  } else {
-    sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
-    sortedItems[0] = sortedItems[0].concat(accountItems)
+  if (accountItems.length > 0) {
+    if (buttonCount === 3) {
+      sortedItems.push(accountItems)
+    } else {
+      if (sortedItems.length === 0) {
+        sortedItems.push([])
+      } else {
+        sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
+      }
+      sortedItems[0] = sortedItems[0].concat(accountItems)
+    }
   }
 
   const notificationItem: MenuBarButton = { label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }
   if (buttonCount > 1) {
     sortedItems.push([notificationItem])
   } else {
-    sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
+    if (sortedItems.length === 0) {
+      sortedItems.push([])
+    } else {
+      sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
+    }
     sortedItems[0] = sortedItems[0].concat([notificationItem])
   }
 
@@ -78,7 +92,8 @@ const items = computed(() => {
       label: activeLabel !== '' ? activeLabel : items[0].label,
       active: activeLabel !== '',
       dropdown: items.length > 1,
-      items
+      route: items.length === 1 ? items[0].route : undefined,
+      items: items.length > 1 ? items : undefined
     })
   }
 
