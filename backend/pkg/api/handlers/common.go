@@ -408,11 +408,11 @@ func getUser(r *http.Request) (User, error) {
 //   Response handling
 
 func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	if response == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Error(err, "error writing response", 0, nil)
 	}
