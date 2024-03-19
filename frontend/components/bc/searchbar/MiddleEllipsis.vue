@@ -5,32 +5,38 @@
 
 /*
   Because the text is not shortened by the CSS engine, we must search for the text length that fits the best the container without overflowing.
-  This search involves trials and errors: several iterations with different text lengths are done for every instance of this component on the page.
-  Therefore we must absolutely find the right length as quickly as possible and try the different lengths without causing flikering nor blurry effects.
+  This search involves trials and errors: different text lengths are tried for every instance of this component on the page.
+  Therefore we must absolutely find the right length as quickly as possible and try the different lengths without causing flikering nor blurry effects with the component and its neighbors.
   Here is the strategy that I suggest to fulfill those constraints:
-  1a. If the parent has not fixed a width, let the browser write in a span the full text passed in the slot and, if it overflows, let it clip it and set the component width
+  1a. If the parent has not fixed a width, let the browser write in a span the full text passed in the slot and, if it overflows, let it clip it after it set the component width
       with the official rules of HTML&CSS.
-  1b. Or, if the parent signals that it has fixed a width, empty the span. We empty the span because "fixing a width" can be done loosely:
-      When the content overflows and the width has been fixed loosely by the parent (for example with `flex-grow`), the component might still grow larger than its container.
-  2.  Measure the size of the component.
-  3.  Make the content invisible to avoid flickering and blurry effects during the search.
-  4.  Run a dichotomic search (in O(log n)) in the span, to find the largest text that we can fit within the ideal size that we measured.
-      Guide the search by influencing it with the approximate size of the text that might fit, calculated by combining the width of the text, the text length and the component width.
+  1b. Or, if the parent signals that it has fixed the width, empty the span. We empty the span because "fixing a width" can be done loosely:
+      when the content overflows and the width has been fixed loosely by the parent (for example with `flex-grow`), the component might still grow larger than its container.
+  2.  Measure the width of the component: this is our target width. We want to find the longest text possible within the target.
+  3a. Make the content invisible to avoid flickering and blurry effects during the search.
+  3b. Force the component width to the target width. This makes sure that the neighbor components will not be pulled and pushed repetitively while we try different text lengths (that also speeds us up).
+  4.  Run a dichotomic search (in O(log n)) in the span, to find the largest text that we can fit within the target.
+      Guide the search by influencing it with the approximate length of the text that might fit, calculated by combining the width of the text, the text length and the component width.
       This guidance speeds up significantly the search: my tests (hashes in the search bar) show that we iterate 3 times on average versus 7 times with a pure dichotomy.
-  5.  Once the optimal text size in found, remove transparency.
+      Of course, if the original text is smaller than the target, 0 iteration happens.
+  5.  Unfix the component width to recover its original dynamic settings and make the component visible.
 */
 
 enum FrameWidthMode {
-  AdaptiveInParent = 'frame-adaptive-in-parent',
-  FixedInParent = 'frame-fixed-in-parent'
+  AdaptiveInParent = 'frame-adaptivewidth-in-parent',
+  FixedInParent = 'frame-fixedwidth-in-parent',
+  FixedHere = 'frame-forcedwidth-here'
 }
 
 const props = defineProps({ widthIsFixed: { type: Boolean, default: false } })
 const frameSpan = ref<HTMLSpanElement>()
 const contentSpan = ref<HTMLSpanElement>()
+
 const contentVisibility = ref<string>('hidden')
+const frameWidthMode = ref<FrameWidthMode>(getOriginalFrameWidthMode())
+let frameWidthIfForced = ''
+
 let originalText = ''
-const frameWidthMode = props.widthIsFixed ? FrameWidthMode.FixedInParent : FrameWidthMode.AdaptiveInParent
 
 onMounted(() => {
   originalText = getSpanText()
@@ -41,7 +47,7 @@ function searchForIdealLength () {
   setSpanVisibility(false)
 
   // The following lines measure the maximum width that the component is authorized to take and store this information in `targetWidth`
-  if (frameWidthMode === FrameWidthMode.FixedInParent) {
+  if (frameWidthMode.value === FrameWidthMode.FixedInParent) {
     setSpanText('') // we do this to make sure that we will measure the width desired by the parent, the component does not grow larger than that.
   } else {
     setSpanText(originalText) // if the parent signals that it did not fix a width, we leave the text in the span to let the browser find a width following HTML and CSS rules (the parent must have set a max-width)
@@ -54,6 +60,7 @@ function searchForIdealLength () {
   let maxLength = originalText.length
 
   if (maxWidth > targetWidth) {
+    setFrameWidth(targetWidth) // to avoid pulling and pushing repetitively neighbor components while we try different text lengths
     let minWidth = 0
     let minLength = 0
 
@@ -81,6 +88,8 @@ function searchForIdealLength () {
       }
       setSpanText(shortenText(lengthToTry))
     }
+
+    setFrameWidth(undefined)
   }
 
   setSpanVisibility(true)
@@ -120,6 +129,19 @@ function getSpanWidth (whichOne : Ref<HTMLSpanElement | undefined>) : number {
   }
   return whichOne.value.clientWidth
 }
+
+function setFrameWidth (size : number | undefined) {
+  if (size === undefined) {
+    frameWidthMode.value = getOriginalFrameWidthMode()
+  } else {
+    frameWidthIfForced = String(size) + 'px'
+    frameWidthMode.value = FrameWidthMode.FixedHere
+  }
+}
+
+function getOriginalFrameWidthMode () : FrameWidthMode {
+  return props.widthIsFixed ? FrameWidthMode.FixedInParent : FrameWidthMode.AdaptiveInParent
+}
 </script>
 
 <template>
@@ -135,12 +157,16 @@ function getSpanWidth (whichOne : Ref<HTMLSpanElement | undefined>) : number {
   overflow: clip;
 }
 
-.frame-adaptive-in-parent {
+.frame-adaptivewidth-in-parent {
   max-width: 100%;
 }
 
-.frame-fixed-in-parent {
+.frame-fixedwidth-in-parent {
   width: 100%;
+}
+
+.frame-forcedwidth-here {
+  width: v-bind(frameWidthIfForced)
 }
 
 .content {
