@@ -237,6 +237,10 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		returnBadRequest(w, err)
 		return
 	}
+	if groupId == types.DefaultGroupId {
+		returnBadRequest(w, errors.New("cannot delete default group"))
+		return
+	}
 	// TODO check if user is authorized for this dashboard
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
