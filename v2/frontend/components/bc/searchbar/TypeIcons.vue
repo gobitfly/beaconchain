@@ -19,6 +19,6 @@ const subCategory = TypeInfo[props.type as ResultType].subCategory
   <IconDatatypeContractIcon v-else-if="subCategory === SubCategory.Contracts" />
   <IconDatatypeAccountIcon v-else-if="subCategory === SubCategory.Accounts" />
   <IconDatatypeEnsIcon v-else-if="subCategory === SubCategory.EnsSystem" />
-  <IconDatatypeGraffitoIcon v-else-if="subCategory === SubCategory.Graffiti" />
+  <IconDatatypeGraffitiIcon v-else-if="subCategory === SubCategory.Graffiti" />
   <IconDatatypeValidatorIcon v-else-if="subCategory === SubCategory.Validators" />
 </template>
