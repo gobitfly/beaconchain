@@ -67,14 +67,14 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
   </div>
   <div>
     <h2>Loading issues:</h2>
-    Example when props `inline` is true: "Something went wrong <IconErrorFace /> Please try again later."
+    Example when props `inline` is true: "Something went wrong <IconErrorFace :inline="true" /> Please try again later."
     <br>
     Example for a 404 page (not inline):
     <div class="container">
       <br>
       <div>Error 404</div>
       <br>
-      <IconErrorFace :inline="false" width="30%" />
+      <IconErrorFace width="30%" />
     </div>
   </div>
   <div>
