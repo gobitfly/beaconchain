@@ -16,25 +16,18 @@ type VDBOverviewValidators struct {
 	Slashed uint64 `json:"slashed"`
 }
 
-type VDBOverviewEfficiency struct {
-	Total       float64 `json:"total"`
-	Attestation float64 `json:"attestation"`
-	Proposal    float64 `json:"proposal"`
-	Sync        float64 `json:"sync"`
-}
-
 type VDBOverviewGroup struct {
 	Id   uint64 `db:"id" json:"id"`
 	Name string `db:"name" json:"name"`
 }
 
 type VDBOverviewData struct {
-	Groups     []VDBOverviewGroup                  `json:"groups"`
-	Validators VDBOverviewValidators               `json:"validators"`
-	Efficiency VDBOverviewEfficiency               `json:"efficiency"`
-	Rewards    PeriodicClElValues[decimal.Decimal] `json:"rewards"`
-	Luck       Luck                                `json:"luck"`
-	Apr        PeriodicClElValues[float64]         `json:"apr"`
+	Groups     []VDBOverviewGroup                         `json:"groups"`
+	Validators VDBOverviewValidators                      `json:"validators"`
+	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
+	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
+	Apr        PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	Luck       Luck                                       `json:"luck"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
@@ -42,14 +35,9 @@ type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 // ------------------------------------------------------------
 // Summary Tab
 type VDBSummaryTableRow struct {
-	GroupId uint64 `json:"group_id"`
-
-	EfficiencyLast24h float64 `json:"efficiency_last_24h"`
-	EfficiencyLast7d  float64 `json:"efficiency_last_7d"`
-	EfficiencyLast31d float64 `json:"efficiency_last_31d"`
-	EfficiencyAllTime float64 `json:"efficiency_all_time"`
-
-	Validators []uint64 `json:"validators"`
+	GroupId    uint64                  `json:"group_id"`
+	Efficiency PeriodicValues[float64] `json:"efficiency"`
+	Validators []uint64                `json:"validators"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
@@ -77,7 +65,7 @@ type VDBGroupSummaryColumn struct {
 type VDBGroupSummaryData struct {
 	Last24h VDBGroupSummaryColumn `json:"last_24h"`
 	Last7d  VDBGroupSummaryColumn `json:"last_7d"`
-	Last31d VDBGroupSummaryColumn `json:"last_31d"`
+	Last30d VDBGroupSummaryColumn `json:"last_30d"`
 	AllTime VDBGroupSummaryColumn `json:"all_time"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]

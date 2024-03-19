@@ -546,10 +546,15 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 		if err != nil {
 			return fmt.Errorf("error retrieving total efficiency data: %v", err)
 		}
-		data.Efficiency.Attestation = max(0, queryResult.AttestationEfficiency.Float64*100)
-		data.Efficiency.Proposal = max(0, queryResult.ProposerEfficiency.Float64*100)
-		data.Efficiency.Sync = max(0, queryResult.SyncEfficiency.Float64*100)
-		data.Efficiency.Total = calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+		/*
+			// This is not shown anymore, idk if this is still needed anywhere, otherwise:
+			// TODO @recy21 remove comment block
+			data.Efficiency.Attestation = max(0, queryResult.AttestationEfficiency.Float64*100)
+			data.Efficiency.Proposal = max(0, queryResult.ProposerEfficiency.Float64*100)
+			data.Efficiency.Sync = max(0, queryResult.SyncEfficiency.Float64*100)
+		*/
+		// TODO @recy21 fill efficiency for other time periods
+		data.Efficiency.AllTime = calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
 		return nil
 	})
 
@@ -584,7 +589,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 
 	retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
 	retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
-	retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last31d)
+	retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last30d)
 	// WIP, table doesn't exist yet
 	// retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
 	retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
@@ -1246,7 +1251,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast24h = efficiency
+			ret[groupId].Efficiency.Last24h = efficiency
 		}
 		return nil
 	})
@@ -1263,7 +1268,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast7d = efficiency
+			ret[groupId].Efficiency.Last7d = efficiency
 		}
 		return nil
 	})
@@ -1280,7 +1285,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyLast31d = efficiency
+			ret[groupId].Efficiency.Last30d = efficiency
 		}
 		return nil
 	})
@@ -1297,7 +1302,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
 
-			ret[groupId].EfficiencyAllTime = efficiency
+			ret[groupId].Efficiency.AllTime = efficiency
 		}
 		return nil
 	})
@@ -1595,7 +1600,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		if err != nil {
 			return err
 		}
-		ret.Last31d = *data
+		ret.Last30d = *data
 		return nil
 	})
 	// wg.Go(func() error {
