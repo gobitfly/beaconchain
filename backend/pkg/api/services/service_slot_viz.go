@@ -243,7 +243,7 @@ func updateSlotVizData() error {
 				for _, row := range attSlashings {
 					inter := intersect.Simple(row.Attestestation1Indices, row.Attestestation2Indices)
 					if len(inter) == 0 {
-						log.Warn(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
+						log.WarnWithStackTrace(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
 					}
 					for _, v := range inter {
 						slashedValidators = append(slashedValidators, uint64(v.(int64)))
