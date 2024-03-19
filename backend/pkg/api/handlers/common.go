@@ -76,7 +76,7 @@ func joinErr(err *error, message string) {
 
 func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string) string {
 	if !regex.MatchString(param) {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter ' `+paramName+` has incorrect format`, param))
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter '`+paramName+`' has incorrect format`, param))
 	}
 	return param
 }
@@ -84,8 +84,10 @@ func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string
 func checkName(handlerErr *error, name string, minLength int) string {
 	if len(name) < minLength {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too short, minimum length is %d`, name, minLength))
+		return name
 	} else if len(name) > 50 {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too long, maximum length is %d`, name, maxNameLength))
+		return name
 	}
 	return checkRegex(handlerErr, reName, name, "name")
 }
@@ -369,8 +371,8 @@ func checkNetwork(handlerErr *error, network string) uint64 {
 	// try parsing as uint64
 	networkId, err := strconv.ParseUint(network, 10, 64)
 	if err != nil {
-		// TODO string try to match network name
-		joinErr(handlerErr, fmt.Sprintf("invalid network id: %s", network))
+		// TODO try to match string with network name
+		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter 'network' is not a valid network id", network))
 	}
 	return networkId
 }
