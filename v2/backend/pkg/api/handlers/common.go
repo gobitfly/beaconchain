@@ -297,13 +297,21 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 	return paging
 }
 
-func parseSortColumn[T enums.EnumFactory[T]](column string) (T, error) {
+func parseEnum[T enums.EnumFactory[T]](enum string, name string) (T, error) {
 	var c T
-	col := c.NewFromString(column)
+	col := c.NewFromString(enum)
 	if col.Int() == -1 {
-		return col, errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+		return col, errors.New("given value '" + enum + "' for parameter '" + name + "' is not a valid value")
 	}
 	return col, nil
+}
+
+func checkEnum[T enums.EnumFactory[T]](handlerErr *error, enum string, name string) T {
+	col, err := parseEnum[T](enum, name)
+	if err != nil {
+		joinErr(handlerErr, err.Error())
+	}
+	return col
 }
 
 func parseSortOrder(order string) (bool, error) {
@@ -335,7 +343,7 @@ func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.S
 		if len(sortSplit) == 1 {
 			sortSplit = append(sortSplit, "")
 		}
-		sort, err := parseSortColumn[T](sortSplit[0])
+		sort, err := parseEnum[T](sortSplit[0], "sort")
 		if err != nil {
 			joinErr(handlerErr, err.Error())
 			return sorts
