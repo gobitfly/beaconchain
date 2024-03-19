@@ -10,8 +10,8 @@ import type { PeriodicValues, ClElValue, Luck, ApiDataResponse, ApiPagingRespons
  * Overview
  */
 export interface VDBOverviewValidators {
-  total: number /* uint64 */;
-  active: number /* uint64 */;
+  online: number /* uint64 */;
+  offline: number /* uint64 */;
   pending: number /* uint64 */;
   exited: number /* uint64 */;
   slashed: number /* uint64 */;
