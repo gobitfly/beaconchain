@@ -60,6 +60,12 @@
           width: 100%;
           border-bottom: 1px solid var(--container-border-color);
         }
+        &.p-big-separator {
+          :after{
+            border-bottom-width: 3px;
+            bottom: -6px;
+          }
+        }
       }
     }
   }
