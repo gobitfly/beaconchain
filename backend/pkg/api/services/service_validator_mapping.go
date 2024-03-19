@@ -13,6 +13,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/klauspost/pgzip"
 	"github.com/pkg/errors"
 )
 
@@ -91,16 +92,30 @@ func updateValidatorMapping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
-	encoded, err := db.PersistentRedisDbClient.Get(ctx, key).Bytes()
+	compressed, err := db.PersistentRedisDbClient.Get(ctx, key).Bytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get compressed validator mapping from db")
 	}
 	log.Infof("reading validator mapping from redis done, took %s", time.Since(start))
 
+	// decompress
+	start = time.Now()
+	compressedBuffer := bytes.NewBuffer(compressed)
+	var decompressedBuffer bytes.Buffer
+	w, err := pgzip.NewReaderN(compressedBuffer, 1_000_000, 10)
+	defer w.Close()
+	if err != nil {
+		return errors.Wrap(err, "failed to create pgzip reader")
+	}
+	_, err = w.WriteTo(&decompressedBuffer)
+	if err != nil {
+		return errors.Wrap(err, "failed to decompress validator mapping from redis")
+	}
+	log.Debugf("decompressing validator mapping using pgzip took %s", time.Since(start))
+
 	// ungob
 	start = time.Now()
-	buf := bytes.NewBuffer(encoded)
-	dec := gob.NewDecoder(buf)
+	dec := gob.NewDecoder(&decompressedBuffer)
 	err = dec.Decode(&validatorMapping)
 	if err != nil {
 		return errors.Wrap(err, "error decoding assignments data")
