@@ -1,49 +1,47 @@
 <script setup lang="ts">
-import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted } from 'vue'
 
 interface Props {
   groupId?: number
   selectedValidators?: number
   totalValidators?: number
 }
-const data = ref<Props>({})
+const { props, setHeader, dialogRef } = useBcDialog<Props>()
 const { t: $t } = useI18n()
 
-const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
+const selectedGroupId = ref<number>()
 
 onMounted(() => {
-  if (dialogRef?.value?.options) {
-    if (!dialogRef.value.options.props) {
-      dialogRef.value.options.props = {}
-    }
-    dialogRef.value.options.props.dismissableMask = true
-    dialogRef.value.options.props.modal = true
-    dialogRef.value.options.props.header = $t('dashboard.group.selection.dialog.title')
-  }
-  data.value = dialogRef?.value.data
+  setHeader($t('dashboard.group.selection.dialog.title'))
 })
 
 const closeDialog = (groupId?: number) => {
   dialogRef?.value.close(groupId)
 }
+
+watch(() => props.value?.groupId, (groupId) => {
+  if (groupId !== undefined) {
+    selectedGroupId.value = groupId
+  }
+})
+
 </script>
 
 <template>
   <div class="content">
     <div class="form">
       {{ $t('dashboard.group.selection.dialog.assign-group') }}
-      <DashboardGroupSelection v-model="data.groupId" class="group-selection" />
+      <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
     </div>
     <div class="footer">
-      <b v-if="data.totalValidators"> {{ $t('dashboard.group.selection.dialog.validators-selected', {
-        total: data.totalValidators
-      }, data.selectedValidators ?? 0 ) }}</b>
+      <b v-if="props?.totalValidators"> {{ $t('dashboard.group.selection.dialog.validators-selected', {
+        total: props.totalValidators
+      }, props.selectedValidators ?? 0 ) }}</b>
       <Button
-        :disabled="data.groupId === undefined"
+        :disabled="props?.groupId === undefined"
         type="button"
         :label="$t('navigation.save')"
-        @click="closeDialog(data.groupId)"
+        @click="closeDialog(selectedGroupId)"
       />
     </div>
   </div>
