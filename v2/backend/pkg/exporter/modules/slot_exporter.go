@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/klauspost/pgzip"
 
 	"fmt"
 
@@ -473,11 +474,20 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				}
 				log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
 
+				// compress using pgzip
+				start = time.Now()
+				var b bytes.Buffer
+				w, _ := pgzip.NewWriterLevel(&b, pgzip.BestCompression)
+				w.SetConcurrency(10_00_000, 10)
+				w.Write(serializedValidatorMapping.Bytes())
+				w.Close()
+				log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
+
 				// load into redis
 				start = time.Now()
 				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
 				log.Infof("writing validator mappping to redis with no TTL")
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedValidatorMapping.Bytes(), 0).Err()
+				err = db.PersistentRedisDbClient.Set(context.Background(), key, b.Bytes(), 0).Err()
 				if err != nil {
 					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
 				}
