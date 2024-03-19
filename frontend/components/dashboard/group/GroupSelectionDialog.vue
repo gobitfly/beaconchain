@@ -38,7 +38,7 @@ watch(() => props.value?.groupId, (groupId) => {
         total: props.totalValidators
       }, props.selectedValidators ?? 0 ) }}</b>
       <Button
-        :disabled="props?.groupId === undefined"
+        :disabled="selectedGroupId === undefined"
         type="button"
         :label="$t('navigation.save')"
         @click="closeDialog(selectedGroupId)"
