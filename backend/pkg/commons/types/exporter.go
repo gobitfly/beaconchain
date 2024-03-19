@@ -686,9 +686,12 @@ type RedisCachedEpochRewards struct {
 	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }
 type CachedValidator struct {
-	PublicKey         []byte
-	ActivationEpoch   Epoch
-	WithdrawableEpoch Epoch
+	PublicKey             []byte
+	ActivationEpoch       Epoch
+	WithdrawableEpoch     Epoch
+	Status                string
+	WithdrawalCredentials []byte
+	Balance               uint64
 }
 
 type RedisCachedValidatorsMapping struct {
