@@ -16,7 +16,9 @@ const visible = ref<boolean>()
 
 <template>
   <BcTooltip :text="$t('premium.subscribe')">
-    <FontAwesomeIcon :icon="faGem" class="gem" @click.stop.prevent="visible = true" />
+    <div @click.stop.prevent="visible = true">
+      <FontAwesomeIcon :icon="faGem" class="gem" />
+    </div>
     <BcDialog
       v-model="visible"
       :header="$t('premium.title')"

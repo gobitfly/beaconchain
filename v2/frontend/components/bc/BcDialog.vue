@@ -32,15 +32,3 @@ const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
     </template>
   </Dialog>
 </template>
-
-<style lang="scss" scoped>
-  :global(.modal_container) {
-    min-width: 375px;
-  }
-
-  @media (max-width: 430px) {
-    :global(.modal_container) {
-      margin-bottom: 0;
-    }
-  }
-</style>
