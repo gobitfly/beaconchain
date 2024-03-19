@@ -49,7 +49,7 @@ const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
 }
 
 .Arbitrum {
-  height: 95%;
+  height: 90%;
 }
 
 .Optimism {
