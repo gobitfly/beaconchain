@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faInfoCircle
+} from '@fortawesome/pro-regular-svg-icons'
 import { type OverviewTableData } from '~/types/dashboard/overview'
 interface Props {
   data: OverviewTableData
@@ -24,6 +28,18 @@ const props = defineProps<Props>()
           {{ addValue.label }}
         </BcTooltip>
       </div>
+    </div>
+    <div v-if="props.data.infos" class="info">
+      <BcTooltip>
+        <FontAwesomeIcon :icon="faInfoCircle" />
+        <template #tooltip>
+          <div>
+            <div v-for="info in props.data.infos" :key="info.label">
+              <div><b class="info-label">{{ info.label }}:</b> {{ info.value }}</div>
+            </div>
+          </div>
+        </template>
+      </BcTooltip>
     </div>
   </div>
 </template>
@@ -52,5 +68,9 @@ const props = defineProps<Props>()
     }
   }
 
+}
+
+.info {
+  margin-left: var(--padding);
 }
 </style>

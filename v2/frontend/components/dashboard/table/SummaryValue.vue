@@ -85,16 +85,16 @@ const data = computed(() => {
       luck: col.luck
     }
   } else if (props.property === 'efficiency_all_time') {
-    let efficiencyTotal = props.row.efficiency_last_24h
+    let efficiencyTotal = props.row.efficiency.all_time
     switch (props.detail) {
-      case 'last_31d':
-        efficiencyTotal = props.row.efficiency_last_31d
+      case 'last_30d':
+        efficiencyTotal = props.row.efficiency.last_30d
         break
       case 'last_7d':
-        efficiencyTotal = props.row.efficiency_last_7d
+        efficiencyTotal = props.row.efficiency.last_7d
         break
-      case 'all_time':
-        efficiencyTotal = props.row.efficiency_all_time
+      case 'last_24h':
+        efficiencyTotal = props.row.efficiency.last_24h
         break
     }
     return {

@@ -56,8 +56,8 @@ const caption = computed(() => {
       return text + ' ' + $t('statistics.last_24h')
     case 'last_7d':
       return text + ' ' + $t('statistics.last_7d')
-    case 'last_31d':
-      return text + ' ' + $t('statistics.last_31d')
+    case 'last_30d':
+      return text + ' ' + $t('statistics.last_30d')
     case 'all_time':
       return text + ' ' + $t('statistics.all')
   }
