@@ -341,19 +341,17 @@ const (
 	AllTime TimePeriod = iota
 	Last24h
 	Last7d
-	Last31d
+	Last30d
 )
 
 func (t TimePeriod) NewFromString(s string) TimePeriod {
 	switch s {
-	case "all":
-		return AllTime
 	case "24h":
 		return Last24h
 	case "7d":
 		return Last7d
 	case "31d":
-		return Last31d
+		return Last30d
 	default:
 		return AllTime
 	}
@@ -363,12 +361,12 @@ var TimePeriods = struct {
 	AllTime TimePeriod
 	Last24h TimePeriod
 	Last7d  TimePeriod
-	Last31d TimePeriod
+	Last30d TimePeriod
 }{
 	AllTime,
 	Last24h,
 	Last7d,
-	Last31d,
+	Last30d,
 }
 
 type ValidatorDuty int
