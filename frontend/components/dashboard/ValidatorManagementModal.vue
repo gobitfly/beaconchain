@@ -99,7 +99,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   alert(`remove val ${row.index}`)
 }
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= (overview.value?.validators?.total ?? 0))
+const total = computed(() => addUpValues(overview.value?.validators))
+
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= total.value)
 
 </script>
 
@@ -245,8 +247,8 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= (o
       <div class="footer">
         <div class="left">
           <!-- TODO: Create a component to handle the 'upgrade to premium' account logic -->
-          <div class="labels" :class="{premiumLimit}">
-            <span>{{ data?.paging?.total_count ?? 0 }}/{{ overview?.validators?.total }}</span>
+          <div v-if="total" class="labels" :class="{premiumLimit}">
+            <span>{{ data?.paging?.total_count ?? 0 }}/{{ total }}</span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />

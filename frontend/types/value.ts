@@ -14,3 +14,5 @@ export type ExtendedLabel = {
   label: string | number
   fullLabel?: string
 }
+
+export type PeriodicValuesKey = 'last_24h' | 'last_7d' | 'last_30d' | 'all_time'

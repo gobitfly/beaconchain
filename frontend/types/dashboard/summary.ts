@@ -1,4 +1,4 @@
-export const SummaryDetails = ['last_24h', 'last_7d', 'last_31d', 'all_time'] as const
+export const SummaryDetails = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
 export type SummaryDetail = typeof SummaryDetails[number]
 
 export const SummaryDetailsEfficiencyProps = ['attestations_head', 'attestations_source', 'attestations_target', 'sync', 'proposals', 'slashed'] as const

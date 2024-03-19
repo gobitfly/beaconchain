@@ -1,8 +1,10 @@
 <script setup lang="ts">
 
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import type { ClElValue } from '~/types/api/common'
 import type { DashboardKey } from '~/types/dashboard'
 import { type OverviewTableData } from '~/types/dashboard/overview'
+import type { PeriodicValuesKey } from '~/types/value'
 import { totalElClNumbers } from '~/utils/bigMath'
 
 interface Props {
@@ -25,28 +27,41 @@ watch(() => props.dashboardKey, () => {
 
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
+const formatInfoValue = (value: string | number): string | number => {
+  if (typeof value === 'string') {
+    return converter.value.weiToValue(value, { fixedDecimalCount: 4 }).label
+  }
+  return formatPercent(value as number)
+}
+
+const createInfo = (key: string, value: ClElValue<number | string>) => {
+  const clValue = formatInfoValue(value.cl)
+  const elValue = formatInfoValue(value.el)
+  return {
+    label: $t(`statistics.${key}`),
+    value: `${clValue} (CL) ${elValue} (EL)`
+  }
+}
+
 const dataList = computed(() => {
   const v = overview.value
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`)
   }
   const efficiency: OverviewTableData = {
-    label: $t(`${tPath}total_efficiency`)
+    label: $t(`${tPath}7d_efficiency`)
   }
   const rewards: OverviewTableData = {
-    label: $t(`${tPath}total_rewards`)
-  }
-  const luck: OverviewTableData = {
-    label: $t(`${tPath}proposal_luck`)
+    label: $t(`${tPath}7d_rewards`)
   }
   const apr: OverviewTableData = {
-    label: $t(`${tPath}total_apr`)
+    label: $t(`${tPath}7d_apr`)
   }
-  const list: OverviewTableData[] = [active, efficiency, rewards, luck, apr]
+  const list: OverviewTableData[] = [active, efficiency, rewards, apr]
   if (!v) {
     return list
   }
-  active.value = { label: `${v.validators.active}/${v.validators.total}` }
+  active.value = { label: `${v.validators.online}/${v.validators.offline}` }
   active.additonalValues = [
     [
       { label: v.validators.pending ?? 0 },
@@ -59,42 +74,16 @@ const dataList = computed(() => {
       { label: $t('validator_state.slashed') }
     ]
   ]
-  efficiency.value = { label: formatPercent(v.efficiency.total) }
+  const keys: PeriodicValuesKey[] = ['last_24h', 'last_7d', 'last_30d', 'all_time']
 
-  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.all_time), { addPlus: true })
-  const statsLabels = [
-    { label: `(${$t('statistics.last_24h')})` },
-    { label: `(${$t('statistics.last_7d')})` },
-    { label: `(${$t('statistics.last_31d')})` },
-    { label: `(${$t('statistics.last_365d')})` }
-  ]
-  rewards.additonalValues = [
-    [
-      converter.value.weiToValue(totalElCl(v.rewards.last_24h), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_31d), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_365d), { addPlus: true })
-    ], statsLabels
-  ]
+  efficiency.value = { label: formatPercent(v.efficiency.last_7d) }
+  efficiency.infos = keys.map(k => ({ label: $t(`statistics.${k}`), value: formatInfoValue(v.efficiency[k]) }))
 
-  luck.value = { label: formatPercent(v.luck.proposal.percent) }
-  luck.additonalValues = [
-    [
-      { label: formatPercent(v.luck.sync.percent) }
-    ],
-    [
-      { label: $t(`${tPath}sync_committee_luck`) }
-    ]
-  ]
-  apr.value = { label: formatPercent(totalElClNumbers(v.apr.all_time)) }
-  apr.additonalValues = [
-    [
-      { label: formatPercent(totalElClNumbers(v.apr.last_24h)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_7d)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_31d)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_365d)) }
-    ], statsLabels
-  ]
+  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true })
+  rewards.infos = keys.map(k => createInfo(k, v.rewards[k]))
+
+  apr.value = { label: formatPercent(totalElClNumbers(v.apr.last_7d)) }
+  apr.infos = keys.map(k => createInfo(k, v.apr[k]))
   return list
 })
 
