@@ -23,6 +23,7 @@ interface MenuBarButton {
   label: string;
   active: boolean;
   route?: string;
+  class?: string;
 }
 
 interface MenuBarEntry extends MenuBarButton {
@@ -43,20 +44,21 @@ const items = computed(() => {
   }
 
   const validatorItems: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  const notificationItem: MenuBarButton = { label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }
-
   const sortedItems: MenuBarButton[][] = [validatorItems]
 
+  const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
   if (buttonCount === 3) {
     sortedItems.push(accountItems)
   } else {
+    sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
     sortedItems[0] = sortedItems[0].concat(accountItems)
   }
 
+  const notificationItem: MenuBarButton = { label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }
   if (buttonCount > 1) {
     sortedItems.push([notificationItem])
   } else {
+    sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
     sortedItems[0] = sortedItems[0].concat([notificationItem])
   }
 
@@ -78,7 +80,6 @@ const items = computed(() => {
 
   return dashboardsButtons
 })
-
 </script>
 
 <template>
@@ -90,7 +91,7 @@ const items = computed(() => {
       <Menubar :model="items" breakpoint="0px">
         <template #item="{ item }">
           <NuxtLink v-if="item.route" :to="item.route">
-            <span class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
+            <span class="button-content" :class="{'p-active': item.active, 'pointer': item.dropdown, 'class': item.class}">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
