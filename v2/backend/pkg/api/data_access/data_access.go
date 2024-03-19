@@ -513,10 +513,11 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
 		for _, state := range queryResult {
-			data.Validators.Total += state.Count
 			switch state.Name {
 			case "active_online":
-				data.Validators.Active += state.Count
+				data.Validators.Online += state.Count
+			case "active_offline":
+				data.Validators.Offline += state.Count
 			case "pending":
 				data.Validators.Pending += state.Count
 			case "slashing_online":
@@ -525,7 +526,8 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 				data.Validators.Exited += state.Count
 			}
 		}
-		data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
+		// TODO @remoterami maybe remove this if it's not used
+		//data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
 		return nil
 	})
 

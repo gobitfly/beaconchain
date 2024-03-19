@@ -9,8 +9,8 @@ import (
 // ------------------------------------------------------------
 // Overview
 type VDBOverviewValidators struct {
-	Total   uint64 `json:"total"`
-	Active  uint64 `json:"active"`
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
 	Pending uint64 `json:"pending"`
 	Exited  uint64 `json:"exited"`
 	Slashed uint64 `json:"slashed"`
