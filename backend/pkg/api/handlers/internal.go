@@ -525,10 +525,12 @@ func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Res
 		return
 	}
 	q := r.URL.Query()
-	var period enums.TimePeriod
-	var duty enums.ValidatorDuty
-	period = period.NewFromString(q.Get("period"))
-	duty = duty.NewFromString(q.Get("duty"))
+	period := checkEnum[enums.TimePeriod](&err, q.Get("period"), "period")
+	duty := checkEnum[enums.ValidatorDuty](&err, q.Get("duty"), "duty")
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
 
 	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
 	if err != nil {

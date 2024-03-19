@@ -344,8 +344,14 @@ const (
 	Last30d
 )
 
-func (t TimePeriod) NewFromString(s string) TimePeriod {
+func (t TimePeriod) Int() int {
+	return int(t)
+}
+
+func (TimePeriod) NewFromString(s string) TimePeriod {
 	switch s {
+	case "", "all_time":
+		return AllTime
 	case "24h":
 		return Last24h
 	case "7d":
@@ -353,7 +359,7 @@ func (t TimePeriod) NewFromString(s string) TimePeriod {
 	case "31d":
 		return Last30d
 	default:
-		return AllTime
+		return TimePeriod(-1)
 	}
 }
 
@@ -378,8 +384,14 @@ const (
 	DutySlashed
 )
 
-func (d ValidatorDuty) NewFromString(s string) ValidatorDuty {
+func (d ValidatorDuty) Int() int {
+	return int(d)
+}
+
+func (ValidatorDuty) NewFromString(s string) ValidatorDuty {
 	switch s {
+	case "":
+		return DutyNone
 	case "sync":
 		return DutySync
 	case "proposal":
@@ -387,7 +399,7 @@ func (d ValidatorDuty) NewFromString(s string) ValidatorDuty {
 	case "slashed":
 		return DutySlashed
 	default:
-		return DutyNone
+		return ValidatorDuty(-1)
 	}
 }
 
