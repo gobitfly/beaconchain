@@ -25,7 +25,7 @@ watch(props, (p) => {
     shownValidators.value = p.validators
     setHeader(
       p?.groupName
-        ? $t('dashboard.validator.summary.col.group') + ` "${p.groupName}"`
+        ? $t('dashboard.validator.col.group') + ` "${p.groupName}"`
         : $t('dashboard.title') + (p.dashboardName ? ` "${p.dashboardName}"` : '')
     )
   }
@@ -47,7 +47,7 @@ const caption = computed(() => {
       text = $t('dashboard.validator.summary.row.proposals')
       break
     case 'group':
-      text = $t('dashboard.validator.summary.col.validators')
+      text = $t('dashboard.validator.col.validators')
       break
   }
 

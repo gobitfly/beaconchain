@@ -6,6 +6,7 @@ export enum API_PATH {
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
+  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -39,6 +40,11 @@ function addQueryParams (path: string, query?: PathValues) {
 }
 
 const mapping: Record<string, MappingData> = {
+  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
+    path: 'validator-dashboards/{dashboard_id}/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validators`,
+    mock: false
+  },
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
