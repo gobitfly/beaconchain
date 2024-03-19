@@ -32,6 +32,10 @@ interface MenuBarEntry extends MenuBarButton {
 }
 
 const items = computed(() => {
+  if (dashboards.value === undefined) {
+    return []
+  }
+
   const dashboardsButtons: MenuBarEntry[] = []
 
   let buttonCount = 3 // [validator], [accounts], [notifications]
