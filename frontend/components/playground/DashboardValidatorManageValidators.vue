@@ -9,30 +9,62 @@ await useAsyncData('validator_dashboard_overview', () => getOverview(100))
 const store = useUserDashboardStore()
 const { getDashboards } = store
 
-const { dashboards } = storeToRefs(store)
 await useAsyncData('validator_dashboards', () => getDashboards())
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
 </script>
 <template>
-  <div class="icon_holder">
+  <div class="icon-holder">
     <div>Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" /></div>
     <div>This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" /></div>
-    <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" />
-    <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" :include-all="true" />
-    <div>{{ dashboards }}</div>
+    <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
+    <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />
+  </div>
+  <div class="status-holder">
+    <div class="status">
+      <ValidatorTableStatus status="online" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exiting" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="withdrawn" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="offline" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="pending" :position="12345" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exited" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="slashed" />
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.group_selection{
+.group-selection{
   width: 200px;
 }
-.icon_holder {
+.icon-holder {
   margin: 10px;
   display: flex;
   flex-direction: column;
   gap: var(--padding);
+}
+
+.status-holder{
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px;
+  .status{
+    width: 140px;
+    padding: 5px;
+    border: 1px solid black;
+  }
 }
 </style>
