@@ -66,6 +66,12 @@ const setPageSize = (value: number) => {
   emit('setPageSize', value)
 }
 
+watch(() => props.expandable, (expandable) => {
+  if (!expandable) {
+    toggleAll(true)
+  }
+})
+
 </script>
 
 <template>

@@ -6,6 +6,7 @@ export enum API_PATH {
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
+  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -39,6 +40,11 @@ function addQueryParams (path: string, query?: PathValues) {
 }
 
 const mapping: Record<string, MappingData> = {
+  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
+    path: 'validator-dashboards/{dashboard_id}/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validators`,
+    mock: false
+  },
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
@@ -113,7 +119,7 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
   }
 
   const url = useRequestURL()
-  const { public: { apiClient, legacyApiClient, xUserId }, private: pConfig } = useRuntimeConfig()
+  const { public: { apiClient, legacyApiClient, xUserId, apiKey }, private: pConfig } = useRuntimeConfig()
   const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
   let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
@@ -136,9 +142,16 @@ export async function useCustomFetch<T> (pathName: PathName, options: NitroFetch
     if (accessToken.value) {
       options.headers = new Headers({})
       options.headers.append('Authorization', `Bearer ${accessToken.value}`)
-    } else if (xUserId) {
+    } else if (apiKey) {
       options.headers = new Headers({})
-      options.headers.append('X-User-Id', xUserId)
+      options.headers.append('Authorization', `Bearer ${apiKey}`)
+    }
+
+    if (xUserId) {
+      if (!options.headers) {
+        options.headers = new Headers({ })
+      }
+      (options.headers as Headers).append('X-User-Id', xUserId)
     }
   }
 

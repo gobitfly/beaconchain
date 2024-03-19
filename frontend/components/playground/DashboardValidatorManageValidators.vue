@@ -1,36 +1,97 @@
 <script setup lang="ts">
+import { DashboardGroupSelectionDialog } from '#components'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const { getOverview } = useValidatorDashboardOverviewStore()
+const overviewStore = useValidatorDashboardOverviewStore()
+const { getOverview } = overviewStore
 await useAsyncData('validator_dashboard_overview', () => getOverview(100))
+const { overview } = storeToRefs(overviewStore)
 
 const store = useUserDashboardStore()
 const { getDashboards } = store
 
-const { dashboards } = storeToRefs(store)
 await useAsyncData('validator_dashboards', () => getDashboards())
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
+const dialog = useDialog()
+
+function onClose (groupId: boolean) {
+  setTimeout(() => {
+    alert('new group: ' + groupId)
+  }, 100
+  )
+}
+
+const openGroupSelection = (withPreselection: boolean) => {
+  dialog.open(DashboardGroupSelectionDialog, {
+    onClose: response => onClose(response?.data),
+    data: {
+      groupId: withPreselection ? overview.value?.groups?.[0]?.id : undefined,
+      selectedValidators: withPreselection ? 1 : 10,
+      totalValidators: 123
+    }
+  })
+}
+
 </script>
 <template>
+  <div class="icon-holder">
+    <div>Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" /></div>
+    <div>This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" /></div>
+    <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
+    <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />
+  </div>
+  <div class="status-holder">
+    <div class="status">
+      <ValidatorTableStatus status="online" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exiting" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="withdrawn" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="offline" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="pending" :position="12345" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exited" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="slashed" />
+    </div>
+  </div>
   <div class="icon_holder">
-    <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" />
-    <DashboardGroupSelection v-model="selectedGroupId" class="group_selection" :include-all="true" />
-    <div>{{ dashboards }}</div>
+    <Button class="group_selection" label="Open Group Selection preselected" @click="openGroupSelection(true)" />
+    <Button class="group_selection" label="Open Group Selection" @click="openGroupSelection(false)" />
   </div>
 </template>
 
 <style lang="scss" scoped>
-.group_selection{
+.group-selection{
   width: 200px;
 }
-.icon_holder {
+.icon-holder {
   margin: 10px;
   display: flex;
   flex-direction: column;
   gap: var(--padding);
+}
+
+.status-holder{
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px;
+  .status{
+    width: 140px;
+    padding: 5px;
+    border: 1px solid black;
+  }
 }
 </style>

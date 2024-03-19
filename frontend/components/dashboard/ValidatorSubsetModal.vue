@@ -15,22 +15,25 @@ interface Props {
   groupName?: string, // overruled by dashboardName
   validators: number[],
 }
-const props = defineProps<Props>()
+const { props, setHeader } = useBcDialog<Props>()
 
 const visible = defineModel<boolean>()
-const shownValidators = ref<number[]>(props.validators)
+const shownValidators = ref<number[]>([])
 
-const header = computed(() => {
-  if (props.groupName) {
-    return $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
+watch(props, (p) => {
+  if (p) {
+    shownValidators.value = p.validators
+    setHeader(
+      p?.groupName
+        ? $t('dashboard.validator.col.group') + ` "${p.groupName}"`
+        : $t('dashboard.title') + (p.dashboardName ? ` "${p.dashboardName}"` : '')
+    )
   }
-
-  return $t('dashboard.title') + (props.dashboardName ? ` "${props.dashboardName}"` : '')
-})
+}, { immediate: true })
 
 const caption = computed(() => {
   let text = 'Validators'
-  switch (props.context) {
+  switch (props.value?.context) {
     case 'attestation':
       text = $t('dashboard.validator.summary.row.attestations')
       break
@@ -44,11 +47,11 @@ const caption = computed(() => {
       text = $t('dashboard.validator.summary.row.proposals')
       break
     case 'group':
-      text = $t('dashboard.validator.summary.col.validators')
+      text = $t('dashboard.validator.col.validators')
       break
   }
 
-  switch (props.timeFrame) {
+  switch (props.value?.timeFrame) {
     case 'last_24h':
       return text + ' ' + $t('statistics.last_24h')
     case 'last_7d':
@@ -63,21 +66,21 @@ const caption = computed(() => {
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
-    shownValidators.value = props.validators
+    shownValidators.value = props.value?.validators ?? []
     return
   }
 
   shownValidators.value = []
 
   const index = parseInt(filter)
-  if (props.validators.includes(index)) {
+  if (props.value?.validators?.includes(index)) {
     shownValidators.value = [index]
   }
 }
 
 watch(visible, (value) => {
   if (!value) {
-    shownValidators.value = props.validators
+    shownValidators.value = props.value?.validators ?? []
   }
 })
 
@@ -101,7 +104,7 @@ function copyValidatorsToClipboard (): void {
 </script>
 
 <template>
-  <BcDialog v-model="visible" :header="header" class="validator_subset_modal_container">
+  <div class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
         {{ caption }}
@@ -119,22 +122,23 @@ function copyValidatorsToClipboard (): void {
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
       <FontAwesomeIcon :icon="faCopy" />
     </Button>
-  </BcDialog>
+  </div>
 </template>
 
 <style lang="scss" scoped>
- :global(.validator_subset_modal_container) {
-    width: 450px;
-    height: 569px;
+.validator_subset_modal_container {
+  width: 410px;
+  height: 489px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+
+  @media screen and (max-width: 500px) {
+    width: unset;
+    height: unset;
   }
 
-  :global(.validator_subset_modal_container .p-dialog-content) {
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-  }
-
-  :global(.validator_subset_modal_container .p-dialog-content .copy_button) {
+  .copy_button {
     position: absolute;
     bottom: calc(var(--padding-large) + var(--padding));
     right: calc(var(--padding-large) + var(--padding));
@@ -166,4 +170,5 @@ function copyValidatorsToClipboard (): void {
       display: none;
     }
   }
+}
 </style>

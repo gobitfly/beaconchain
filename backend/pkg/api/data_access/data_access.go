@@ -213,6 +213,48 @@ func (d DataAccessService) CloseDataAccessService() {
 	}
 }
 
+//////////////////// 		Helper functions
+
+func getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
+	var validatorsArray []uint32
+	if len(dashboardId.Validators) == 0 {
+		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
+		for _, validator := range dashboardId.Validators {
+			validatorsArray = append(validatorsArray, uint32(validator.Index))
+		}
+	}
+	return validatorsArray, nil
+}
+
+func calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {
+	efficiency := float64(0)
+
+	if !attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = 0
+	} else if attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = attestationEff.Float64 * 100.0
+	} else if attestationEff.Valid && proposalEff.Valid && !syncEff.Valid {
+		efficiency = ((56.0 / 64.0 * attestationEff.Float64) + (8.0 / 64.0 * proposalEff.Float64)) * 100.0
+	} else if attestationEff.Valid && !proposalEff.Valid && syncEff.Valid {
+		efficiency = ((62.0 / 64.0 * attestationEff.Float64) + (2.0 / 64.0 * syncEff.Float64)) * 100.0
+	} else {
+		efficiency = (((54.0 / 64.0) * attestationEff.Float64) + ((8.0 / 64.0) * proposalEff.Float64) + ((2.0 / 64.0) * syncEff.Float64)) * 100.0
+	}
+
+	if efficiency < 0 {
+		efficiency = 0
+	}
+
+	return efficiency
+}
+
+//////////////////// 		Data Access
+
 func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
@@ -404,8 +446,161 @@ func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) 
 }
 
 func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
-	// WORKING Rami
-	return d.dummy.GetValidatorDashboardOverview(dashboardId)
+	validators, err := getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
+	wg := errgroup.Group{}
+	data := t.VDBOverviewData{}
+
+	// Groups
+	if len(dashboardId.Validators) == 0 {
+		// should have valid primary id
+		wg.Go(func() error {
+			var queryResult []struct {
+				Id   uint32 `db:"id"`
+				Name string `db:"name"`
+			}
+			if err := db.AlloyReader.Select(&queryResult, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId.Id); err != nil {
+				return err
+			}
+			for _, res := range queryResult {
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
+			}
+			return nil
+		})
+	}
+
+	// Validator Status
+	wg.Go(func() error {
+		query := `SELECT status AS statename, COUNT(*) AS statecount
+		FROM validators
+		WHERE validatorindex = ANY($1)
+		GROUP BY status`
+		var queryResult []struct {
+			Name  string `db:"statename"`
+			Count uint64 `db:"statecount"`
+		}
+		err = db.ReaderDb.Select(&queryResult, query, validators)
+		if err != nil {
+			return fmt.Errorf("error retrieving validators data: %v", err)
+		}
+		for _, state := range queryResult {
+			data.Validators.Total += state.Count
+			switch state.Name {
+			case "active_online":
+				data.Validators.Active += state.Count
+			case "pending":
+				data.Validators.Pending += state.Count
+			case "slashing_online":
+				data.Validators.Slashed += state.Count
+			case "exiting_online":
+				data.Validators.Exited += state.Count
+			}
+		}
+		data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
+		return nil
+	})
+
+	// Efficiency
+	wg.Go(func() error {
+		query := `SELECT 
+			SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+			from validator_dashboard_data_rolling_total
+			where validator_index = ANY($1)`
+		var queryResult struct {
+			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+		}
+		err = db.AlloyReader.Get(&queryResult, query, validators)
+		if err != nil {
+			return fmt.Errorf("error retrieving total efficiency data: %v", err)
+		}
+		data.Efficiency.Attestation = max(0, queryResult.AttestationEfficiency.Float64*100)
+		data.Efficiency.Proposal = max(0, queryResult.ProposerEfficiency.Float64*100)
+		data.Efficiency.Sync = max(0, queryResult.SyncEfficiency.Float64*100)
+		data.Efficiency.Total = calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+		return nil
+	})
+
+	// Rewards
+	retrieveElClRewards := func(tableName string, r *t.ClElValue[decimal.Decimal]) {
+		wg.Go(func() error {
+			query := `select
+				SUM(balance_start) AS balance_start,
+				SUM(balance_end) AS balance_end,
+				SUM(deposits_amount) AS deposits_amount,
+				SUM(withdrawals_amount) AS withdrawals_amount,
+				SUM(blocks_el_reward) AS blocks_el_reward
+			from %[1]s
+			where validator_index = ANY($1)
+			`
+			var queryResult struct {
+				BalanceStart      sql.NullInt64 `db:"balance_start"`
+				BalanceEnd        sql.NullInt64 `db:"balance_end"`
+				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
+				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
+				BlocksElReward    sql.NullInt64 `db:"blocks_el_reward"`
+			}
+			err = db.AlloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), validators)
+			if err != nil {
+				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			}
+			r.El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
+			r.Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64)
+			return nil
+		})
+	}
+
+	retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
+	retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
+	retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last31d)
+	// WIP, table doesn't exist yet
+	// retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
+	retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
+	// TODO combine the 3 calls to validator_dashboard_data_rolling_total into one (rewards, efficiency, luck/apr)
+
+	// Luck, Apr
+	wg.Go(func() error {
+		query := `SELECT
+				SUM(sync_chance)::decimal AS sync_chance,
+				SUM(sync_scheduled)::decimal AS sync_scheduled,
+				SUM(block_chance)::decimal AS block_chance,
+				SUM(blocks_scheduled)::decimal AS blocks_scheduled
+			FROM validator_dashboard_data_rolling_total
+			WHERE validator_index = ANY($1)`
+		var queryResult struct {
+			SyncChance      sql.NullFloat64 `db:"sync_chance"`
+			SyncScheduled   sql.NullInt32   `db:"sync_scheduled"`
+			BlockChance     sql.NullFloat64 `db:"block_chance"`
+			BlocksScheduled sql.NullInt32   `db:"blocks_scheduled"`
+		}
+		err = db.AlloyReader.Get(&queryResult, query, validators)
+		if err != nil {
+			return err
+		}
+		if queryResult.BlockChance.Valid {
+			data.Luck.Proposal.Percent = float64(queryResult.BlocksScheduled.Int32) / queryResult.BlockChance.Float64 * 100
+		}
+		if queryResult.SyncChance.Valid {
+			data.Luck.Sync.Percent = float64(queryResult.SyncScheduled.Int32) / queryResult.SyncChance.Float64 * 100
+		}
+
+		// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
+		// But waiting for Peter implementation of apr calc
+		// same for expected/average luck
+		return nil
+	})
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
+	}
+
+	return &data, nil
 }
 
 func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
@@ -676,17 +871,9 @@ func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId st
 }
 
 func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
-	var validatorsArray []uint32
-	if dashboardId.Validators == nil {
-		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
-		for _, validator := range dashboardId.Validators {
-			validatorsArray = append(validatorsArray, uint32(validator.Index))
-		}
+	validatorsArray, err := getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, err
 	}
 
 	validatorsMap := make(map[uint32]bool, len(validatorsArray))
@@ -966,25 +1153,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 		data := make(map[uint64]float64)
 		for _, result := range queryResult {
-			efficiency := float64(0)
-
-			if !result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = 0
-			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = result.AttestationEfficiency.Float64 * 100.0
-			} else if result.AttestationEfficiency.Valid && result.ProposerEfficiency.Valid && !result.SyncEfficiency.Valid {
-				efficiency = ((56.0 / 64.0 * result.AttestationEfficiency.Float64) + (8.0 / 64.0 * result.ProposerEfficiency.Float64)) * 100.0
-			} else if result.AttestationEfficiency.Valid && !result.ProposerEfficiency.Valid && result.SyncEfficiency.Valid {
-				efficiency = ((62.0 / 64.0 * result.AttestationEfficiency.Float64) + (2.0 / 64.0 * result.SyncEfficiency.Float64)) * 100.0
-			} else {
-				efficiency = (((54.0 / 64.0) * result.AttestationEfficiency.Float64) + ((8.0 / 64.0) * result.ProposerEfficiency.Float64) + ((2.0 / 64.0) * result.SyncEfficiency.Float64)) * 100.0
-			}
-
-			if efficiency < 0 {
-				efficiency = 0
-			}
-
-			data[result.GroupId] = efficiency
+			data[result.GroupId] = calculateTotalEfficiency(result.AttestationEfficiency, result.ProposerEfficiency, result.SyncEfficiency)
 		}
 		return data, nil
 	}
@@ -1158,7 +1327,56 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
-	` //  OR %[1]s.validator_index = ANY($3)
+		`
+
+	if dashboardId.Validators != nil {
+		query = `select
+			validator_index,
+			attestations_source_reward,
+			attestations_target_reward,
+			attestations_head_reward,
+			attestations_inactivity_reward,
+			attestations_inclusion_reward,
+			attestations_reward,
+			attestations_ideal_source_reward,
+			attestations_ideal_target_reward,
+			attestations_ideal_head_reward,
+			attestations_ideal_inactivity_reward,
+			attestations_ideal_inclusion_reward,
+			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
+			blocks_scheduled,
+			blocks_proposed,
+			blocks_cl_reward,
+			blocks_el_reward,
+			sync_scheduled,
+			sync_executed,
+			sync_rewards,
+			slashed,
+			balance_start,
+			balance_end,
+			deposits_count,
+			deposits_amount,
+			withdrawals_count,
+			withdrawals_amount,
+			sync_chance,
+			block_chance,
+			inclusion_delay_sum
+		from %[1]s
+		where %[1]s.validator_index = ANY($1)
+	`
+	}
+
+	validators := make([]uint64, 0)
+	if dashboardId.Validators != nil {
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+	}
 
 	type queryResult struct {
 		ValidatorIndex                    uint32 `db:"validator_index"`
@@ -1188,7 +1406,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		SyncScheduled uint32 `db:"sync_scheduled"`
 		SyncExecuted  uint32 `db:"sync_executed"`
-		SyncRewards   uint64 `db:"sync_rewards"`
+		SyncRewards   int64  `db:"sync_rewards"`
 
 		Slashed bool `db:"slashed"`
 
@@ -1207,10 +1425,16 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
-		err := db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+		var err error
+
+		if len(validators) > 0 {
+			err = db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), validators)
+		} else {
+			err = db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+		}
 
 		if err != nil {
 			return nil, err
@@ -1225,6 +1449,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		totalSyncChance := float64(0)
 		totalBlockChance := float64(0)
 		totalInclusionDelaySum := int64(0)
+		totalInclusionDelayDivisor := int64(0)
 
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
@@ -1279,13 +1504,18 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalSyncChance += row.SyncChance
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
+
+			if row.InclusionDelaySum > 0 {
+				totalInclusionDelayDivisor += row.AttestationsScheduled
+			}
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		apr := float64(reward) / float64(32e9) * 100.0
+		apr := (float64(reward) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
 
-		log.Infof("apr: %v, totalEndBalance: %v, totalWithdrawals: %v, totalStartBalance: %v, totalDeposits: %v", apr, totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		data.Apr.Cl = apr
+		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
+
 		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
@@ -1295,41 +1525,45 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
 		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
-		data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/(float64(data.AttestationsHead.StatusCount.Failed)+float64(data.AttestationsHead.StatusCount.Success))
+		if totalInclusionDelayDivisor > 0 {
+			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
+		} else {
+			data.AttestationAvgInclDist = 0
+		}
 
 		return &data, nil
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
 		ret.Last24h = *data
 		return nil
 	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last7d = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last31d = *data
+		return nil
+	})
 	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
+	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
 	// 	if err != nil {
 	// 		return err
 	// 	}
-	// 	ret.DetailsWeek = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsMonth = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsTotal = *data
+	// 	ret.AllTime = *data
 	// 	return nil
 	// })
 	err := wg.Wait()
