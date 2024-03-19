@@ -22,7 +22,7 @@ const shownValidators = ref<number[]>(props.validators)
 
 const header = computed(() => {
   if (props.groupName) {
-    return $t('dashboard.validator.summary.col.group') + ` "${props.groupName}"`
+    return $t('dashboard.validator.col.group') + ` "${props.groupName}"`
   }
 
   return $t('dashboard.title') + (props.dashboardName ? ` "${props.dashboardName}"` : '')
@@ -44,7 +44,7 @@ const caption = computed(() => {
       text = $t('dashboard.validator.summary.row.proposals')
       break
     case 'group':
-      text = $t('dashboard.validator.summary.col.validators')
+      text = $t('dashboard.validator.col.validators')
       break
   }
 
