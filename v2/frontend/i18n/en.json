@@ -27,7 +27,10 @@
     "back": "Back",
     "continue": "Continue",
     "done": "Done",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save"
   },
   "table": {
     "first": "First",
@@ -124,7 +127,13 @@
         "group": "Group",
         "all": "All groups",
         "default": "Default",
-        "placeholder": "Select group"
+        "placeholder": "Select group", 
+        "dialog": {
+          "title": "Edit Groups",
+          "assign-group": "Assign to group",
+          "validators-selected": "1/{total} validator selected | {count}/{total} validators selected"
+
+        }
       }
     },
     "creation": {

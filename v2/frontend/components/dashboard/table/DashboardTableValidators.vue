@@ -4,6 +4,7 @@ import {
   faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
+import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
   validators: number[],
@@ -13,13 +14,20 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const modalVisibility = ref(false)
-
 const { t: $t } = useI18n()
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
+const dialog = useDialog()
+
 const openValidatorModal = () => {
-  modalVisibility.value = true
+  dialog.open(DashboardValidatorSubsetModal, {
+    data: {
+      context: props.context,
+      timeFrame: props.timeFrame,
+      groupName: groupName.value,
+      validators: props.validators
+    }
+  })
 }
 
 const groupName = computed(() => {
@@ -49,13 +57,6 @@ const groupName = computed(() => {
       class="link popout"
       :icon="faArrowUpRightFromSquare"
       @click="openValidatorModal"
-    />
-    <DashboardValidatorSubsetModal
-      v-model="modalVisibility"
-      :context="props.context"
-      :time-frame="props.timeFrame"
-      :group-name="groupName"
-      :validators="props.validators"
     />
   </div>
 </template>
