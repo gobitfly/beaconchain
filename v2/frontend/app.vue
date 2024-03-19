@@ -19,6 +19,7 @@ useWindowSizeProvider()
 <template>
   <div class="min-h-full">
     <NuxtPage />
+    <DynamicDialog />
   </div>
 </template>
 
