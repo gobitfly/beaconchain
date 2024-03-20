@@ -12,6 +12,7 @@
     gap: var(--padding);
 
     > .p-menuitem {
+      background: var(--list-background);
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
