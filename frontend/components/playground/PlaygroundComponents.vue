@@ -1,3 +1,6 @@
+import PlaygroundSearchbarValidators from './PlaygroundSearchbarValidators.vue';
+
+import PlaygroundSearchbarAccounts from './PlaygroundSearchbarAccounts.vue';
 <template>
   <TabView lazy>
     <TabPanel header="Table">
@@ -8,6 +11,9 @@
     </TabPanel>
     <TabPanel header="Icons">
       <PlaygroundIcons />
+    </TabPanel>
+    <TabPanel header="Search bars">
+      <PlaygroundEmbeddedSearchbars />
     </TabPanel>
   </TabView>
 </template>

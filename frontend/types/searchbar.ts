@@ -63,7 +63,7 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Validators]: { filterLabel: 'Validators' }
 }
 
-// The parameter of the callback function that you give to <BcSearchbarMainComponent>'s props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
+// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
 export interface Matching {
   closeness: number, // if different results of this type exist on the network, only the best closeness is recorded here
   network: ChainIDs,
