@@ -6,7 +6,6 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -29,17 +28,19 @@ func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 }
 
 // TODO replace with proper auth
-func GetAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		query := r.URL.Query().Get("api_key")
+func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			query := r.URL.Query().Get("api_key")
 
-		if header != "Bearer "+utils.Config.ApiKeySecret && query != utils.Config.ApiKeySecret {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+			if header != "Bearer "+apiKey && query != apiKey {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func CorsMiddleware(next http.Handler) http.Handler {
