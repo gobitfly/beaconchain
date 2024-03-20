@@ -49,12 +49,12 @@ const items = computed(() => {
 
   const sortedItems: MenuBarButton[][] = []
 
-  const validatorItems: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
+  const validatorItems: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
   if (validatorItems.length > 0) {
     sortedItems.push(validatorItems)
   }
 
-  const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
+  const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
   if (accountItems.length > 0) {
     if (buttonCount === 3) {
       sortedItems.push(accountItems)
