@@ -464,10 +464,14 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						Status:                v.Status,
 						WithdrawalCredentials: v.WithdrawalCredentials,
 						Balance:               v.Balance,
+						EffectiveBalance:      v.EffectiveBalance,
 						Slashed:               v.Slashed,
 					}
 					if v.ActivationEpoch != db.FarFutureEpoch {
 						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
+					}
+					if v.ActivationEligibilityEpoch != db.FarFutureEpoch {
+						r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
 					}
 					if v.ExitEpoch != db.FarFutureEpoch {
 						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}

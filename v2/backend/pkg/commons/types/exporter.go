@@ -690,15 +690,17 @@ type QueuesMetadata struct {
 }
 
 type CachedValidator struct {
-	PublicKey             []byte
-	ActivationEpoch       sql.NullInt64
-	ExitEpoch             sql.NullInt64
-	WithdrawableEpoch     sql.NullInt64
-	Status                string
-	WithdrawalCredentials []byte
-	Balance               uint64
-	Slashed               bool
-	Queues                QueuesMetadata
+	PublicKey                  []byte
+	ActivationEligibilityEpoch sql.NullInt64
+	ActivationEpoch            sql.NullInt64
+	ExitEpoch                  sql.NullInt64
+	WithdrawableEpoch          sql.NullInt64
+	Status                     string
+	WithdrawalCredentials      []byte
+	Balance                    uint64
+	EffectiveBalance           uint64
+	Slashed                    bool
+	Queues                     QueuesMetadata
 }
 
 type RedisCachedValidatorsMapping struct {
