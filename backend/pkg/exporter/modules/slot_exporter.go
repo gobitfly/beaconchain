@@ -511,8 +511,11 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				start = time.Now()
 				var b bytes.Buffer
 				w, _ := pgzip.NewWriterLevel(&b, pgzip.BestCompression)
-				w.SetConcurrency(10_00_000, 10)
-				w.Write(serializedValidatorMapping.Bytes())
+				_ = w.SetConcurrency(5_00_000, 10)
+				_, err = w.Write(serializedValidatorMapping.Bytes())
+				if err != nil {
+					return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
+				}
 				w.Close()
 				log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
 
