@@ -122,6 +122,8 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "validator_dashboard": "Validator Dashboard",
+    "account_dashboard": "Account Dashboard",
     "notifications": "Notifications",
     "group": {
       "selection": {
@@ -133,7 +135,6 @@
           "title": "Edit Groups",
           "assign-group": "Assign to group",
           "validators-selected": "1/{total} validator selected | {count}/{total} validators selected"
-
         }
       }
     },
