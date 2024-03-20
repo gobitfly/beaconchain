@@ -27,8 +27,8 @@ type HandlerService struct {
 	dai dataaccess.DataAccessor
 }
 
-func NewHandlerService(DataAccessor dataaccess.DataAccessor) HandlerService {
-	return HandlerService{dai: DataAccessor}
+func NewHandlerService(DataAccessor dataaccess.DataAccessor) *HandlerService {
+	return &HandlerService{dai: DataAccessor}
 }
 
 // --------------------------------------
@@ -208,7 +208,7 @@ func parseDashboardId(id string) (interface{}, error) {
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
@@ -230,7 +230,7 @@ func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDB
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {

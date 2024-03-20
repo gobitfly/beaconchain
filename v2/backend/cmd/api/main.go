@@ -8,8 +8,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
-
 	"github.com/gobitfly/beaconchain/pkg/api/services"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -63,7 +63,7 @@ func main() {
 	log.Fatal(srv.ListenAndServe(), "Error while serving", 0)
 }
 
-func InitServices(das dataaccess.DataAccessService) dataaccess.DataAccessor {
+func InitServices(das *dataaccess.DataAccessService) dataaccess.DataAccessor {
 	db.ReaderDb = das.ReaderDb
 	db.WriterDb = das.WriterDb
 	db.PersistentRedisDbClient = das.PersistentRedisDbClient
