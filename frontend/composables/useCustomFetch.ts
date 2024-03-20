@@ -1,6 +1,8 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
 
+const APIcallTimeout = 30 * 1000 // 30 seconds
+
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER_DASHBOARDS = '/user/dashboards',
@@ -13,7 +15,8 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
-  REFRESH_TOKEN = '/refreshToken'
+  REFRESH_TOKEN = '/refreshToken',
+  SEARCH = '/search'
 }
 
 const pathNames = Object.values(API_PATH)
@@ -21,11 +24,16 @@ type PathName = typeof pathNames[number]
 
 export type PathValues = Record<string, string | number>
 
+interface MockFunction {
+  (body?: Record<string, any>, param?: PathValues, query?: PathValues) : any
+}
+
 type MappingData = {
   path: string,
   getPath?: (values?: PathValues) => string,
   noAuth?: boolean,
   mock?: boolean,
+  mockFunction?: MockFunction,
   legacy?: boolean
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' // 'GET' will be used as default
 }
@@ -103,13 +111,19 @@ const mapping: Record<string, MappingData> = {
 }
 
 export async function useCustomFetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues): Promise<T> {
-  // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
+  // TODO : the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
   const refreshToken = useCookie('refreshToken')
   const accessToken = useCookie('accessToken')
 
   const map = mapping[pathName]
   if (!map) {
     throw new Error(`path ${pathName} not found`)
+  }
+
+  options.signal = AbortSignal.timeout(APIcallTimeout)
+
+  if (map.mockFunction !== undefined && map.mock) {
+    return map.mockFunction(options.body as Record<string, any>, pathValues, query) as T
   }
 
   const url = useRequestURL()
