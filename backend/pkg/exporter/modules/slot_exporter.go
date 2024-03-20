@@ -5,10 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/gob"
+	"sort"
 	"strconv"
 	"strings"
-	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -492,7 +491,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				for _, a := range keys {
 					// don't need to sort as we our validator array is indeed in order
 					for _, vi := range activationMapping[a] {
-						RedisCachedValidatorsMapping.Mapping[vi].Queues.Activation = &struct{ Index int64 }{Index: i}
+						RedisCachedValidatorsMapping.Mapping[vi].Queues.ActivationIndex = sql.NullInt64{Int64: i, Valid: true}
 						i++
 					}
 				}
