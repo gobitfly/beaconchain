@@ -9,7 +9,7 @@
   .p-menubar-root-list
   {
     flex-wrap: nowrap;
-    gap: 10px;
+    gap: var(--padding);
 
     > .p-menuitem {
       border: 1px solid var(--container-border-color);
@@ -21,7 +21,7 @@
       }
 
       > .p-menuitem-content {
-        padding: 10px 10px 6px 10px;
+        padding: var(--padding) var(--padding) 6px var(--padding);
         border-radius: var(--border-radius);
       }
 
@@ -40,7 +40,7 @@
 
     .p-menuitem {
       border-radius: var(--border-radius);
-      padding: 10px 5px;
+      padding: var(--padding) var(--padding-small);
 
       &:not(:has(.p-active)) {
         color: var(--text-color);
@@ -51,7 +51,7 @@
       }
 
       &:not(:last-child) {
-        margin-bottom: 10px;
+        margin-bottom: var(--padding);
         :after{
           content: "";
           position: absolute;
