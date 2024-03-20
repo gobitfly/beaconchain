@@ -156,10 +156,15 @@ const data = computed(() => {
   </div>
   <div v-else-if="data?.luck" class="info_row">
     <span>
-      <FontAwesomeIcon :icon="faCube" />
-      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> |
-      <FontAwesomeIcon :icon="faSync" />
-      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faCube" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" />
+      </span>
+      <span> | </span>
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faSync" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      </span>
     </span>
     <BcTooltip position="top">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />

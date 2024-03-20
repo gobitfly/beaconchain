@@ -16,19 +16,16 @@ const data = computed(() => {
 </script>
 <template>
   <span class="efficiency">
-    <span class="positive">{{ props.success }}</span>
+    <BcFormatNumber class="positive" :value="props.success " />
     <span class="slash"> / </span>
-    <span :class="data.failedClass">{{ props.failed }}
-      <BcFormatPercent
-        class="percent"
-        :base="data.sum"
-        :value="props.success"
-        :fixed="undefined"
-        :color-break-point="80"
-        :full-on-empty-base="true"
-      />
-    </span>
-
+    <BcFormatNumber :class="data.failedClass" :value="props.failed " /> <BcFormatPercent
+      class="percent"
+      :base="data.sum"
+      :value="props.success"
+      :fixed="undefined"
+      :color-break-point="80"
+      :full-on-empty-base="true"
+    />
   </span>
 </template>
 
@@ -36,8 +33,6 @@ const data = computed(() => {
 @use '~/assets/css/utils.scss';
 
 .efficiency {
-  @include utils.truncate-text;
-  display: block;
 
   .positive {
     color: var(--positive-color);
