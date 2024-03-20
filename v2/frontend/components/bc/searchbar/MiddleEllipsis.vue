@@ -99,6 +99,9 @@ function shortenText (maxLength : number) : string {
   if (originalText.length <= maxLength) {
     return originalText
   }
+  if (maxLength <= 0) {
+    return ''
+  }
 
   const midL = Math.floor(maxLength / 2)
   const roomForEllipsis = 1 - (maxLength % 2)

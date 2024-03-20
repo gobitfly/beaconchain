@@ -99,7 +99,7 @@ function redirectToRelevantPage (wanted : string, type : ResultType, chain : Cha
 </script>
 
 <template>
-  <BcSearchbarMainComponent
+  <BcSearchbarMain
     :searchable="[Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators]"
     :bar-style="searchBarStyle"
     :pick-by-default="pickSomethingByDefault"
