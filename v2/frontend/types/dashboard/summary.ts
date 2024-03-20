@@ -1,5 +1,4 @@
-export const SummaryDetails = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
-export type SummaryDetail = typeof SummaryDetails[number]
+import type { TimeFrame } from '@/types/value'
 
 export const SummaryDetailsEfficiencyProps = ['attestations_head', 'attestations_source', 'attestations_target', 'sync', 'proposals', 'slashed'] as const
 export type SummaryDetailsEfficiencyProp = typeof SummaryDetailsEfficiencyProps[number]
@@ -20,4 +19,4 @@ export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpeci
 
 export type DashboardValidatorContext = 'dashboard' | 'group' | 'attestation' | 'sync' | 'slashings' | 'proposal'
 
-export type SummaryRow = { details: SummaryDetail[], prop: SummaryDetailsEfficiencyCombinedProp, title: string}
+export type SummaryRow = { details: TimeFrame[], prop: SummaryDetailsEfficiencyCombinedProp, title: string}
