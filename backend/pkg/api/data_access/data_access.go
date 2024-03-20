@@ -3,11 +3,8 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	isort "sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +28,7 @@ type DataAccessor interface {
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
 
-	GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error)
+	GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error)
 
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 
@@ -44,6 +41,7 @@ type DataAccessor interface {
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
+	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
@@ -291,38 +289,14 @@ func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId
 }
 
 // param validators: slice of validator public keys or indices, a index should resolve to the newest index version
-func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	if len(validators) == 0 {
+func (d DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
+	if len(indices) == 0 && len(publicKeys) == 0 {
 		return nil, nil
 	}
 
-	// Create a map to remove potential duplicates
-	validatorMap := make(map[string]bool)
-	for _, v := range validators {
-		v = strings.TrimPrefix(v, "0x")
-		validatorMap[v] = true
-	}
-
-	// Split the validators into pubkey and index slices
-	validatorIdxs := pq.Int64Array{}
-	validatorPubkeys := pq.ByteaArray{}
-	for validator := range validatorMap {
-		if utils.IsHash(validator) {
-			validatorPubkey, err := hex.DecodeString(validator)
-			if err != nil {
-				return nil, err
-			}
-			validatorPubkeys = append(validatorPubkeys, validatorPubkey)
-		} else if validatorIdx, parseErr := strconv.ParseUint(validator, 10, 31); parseErr == nil { // Limit to 31 bits to stay within math.MaxInt32
-			validatorIdxs = append(validatorIdxs, int64(validatorIdx))
-		} else {
-			return nil, fmt.Errorf("invalid validator index or pubkey: %s", validator)
-		}
-	}
-
 	// Query the database for the validators
-	validatorsFromIdxPubkey := []t.VDBValidator{}
-	err := d.AlloyReader.Select(&validatorsFromIdxPubkey, `
+	validators := []t.VDBValidator{}
+	err := d.AlloyReader.Select(&validators, `
 		SELECT 
 			validator_index,
 			MAX(validator_index_version) as validator_index_version
@@ -335,19 +309,19 @@ func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VD
 			validator_index_version
 		FROM validators
 		WHERE pubkey = ANY($2)
-	`, validatorIdxs, validatorPubkeys)
+	`, pq.Array(indices), pq.ByteaArray(publicKeys))
 	if err != nil {
 		return nil, err
 	}
 
 	// Return an error if not every validator was found
-	if len(validatorsFromIdxPubkey) != len(validatorMap) {
+	if len(validators) != len(indices)+len(publicKeys) {
 		return nil, fmt.Errorf("not all validators from strings were found")
 	}
 
 	// Create a map to remove potential duplicates
 	validatorResultMap := make(map[t.VDBValidator]bool)
-	for _, v := range validatorsFromIdxPubkey {
+	for _, v := range validators {
 		validatorResultMap[v] = true
 	}
 	result := make([]t.VDBValidator, 0, len(validatorResultMap))
@@ -390,7 +364,6 @@ func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsDa
 
 func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
-
 	const defaultGrpName = "default"
 
 	tx, err := d.AlloyWriter.Beginx()
@@ -658,20 +631,11 @@ func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrim
 	defer utils.Rollback(tx)
 
 	// Delete the group
-	result, err := tx.Exec(`
+	_, err = tx.Exec(`
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
 	if err != nil {
 		return err
-	}
-
-	// Check if the group was deleted
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("error group %v does not exist, cannot remove it", groupId)
 	}
 
 	// Delete all validators for the group
@@ -694,13 +658,7 @@ func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, 
 	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-	if len(validators) == 0 {
-		// No validators to add
-		return nil, nil
-	}
-
-	// Check that the group exists in the dashboard
+func (d DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	groupExists := false
 	err := d.AlloyReader.Get(&groupExists, `
 		SELECT EXISTS(
@@ -711,11 +669,13 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 			WHERE dashboard_id = $1 AND id = $2
 		)
 	`, dashboardId, groupId)
-	if err != nil {
-		return nil, err
-	}
-	if !groupExists {
-		return nil, fmt.Errorf("error group %v does not exist, cannot add validators to it", groupId)
+	return groupExists, err
+}
+
+func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	if len(validators) == 0 {
+		// No validators to add
+		return nil, nil
 	}
 
 	pubkeys := []struct {
@@ -767,7 +727,7 @@ func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPr
 	`
 
 	// Find all the pubkeys
-	err = d.AlloyReader.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
+	err := d.AlloyReader.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
 	if err != nil {
 		return nil, err
 	}
