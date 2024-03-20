@@ -27,7 +27,6 @@ type VDBOverviewData struct {
 	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
 	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr        PeriodicValues[ClElValue[float64]]         `json:"apr"`
-	Luck       Luck                                       `json:"luck"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
