@@ -598,7 +598,8 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	// TODO combine the 3 calls to validator_dashboard_data_rolling_total into one (rewards, efficiency, luck/apr)
 
 	// Luck, Apr
-	wg.Go(func() error {
+	// TODO @recy21 luck was removed from the UI, so this is not needed anymore, but we need to implement APR
+	/* wg.Go(func() error {
 		query := `SELECT
 				SUM(sync_chance)::decimal AS sync_chance,
 				SUM(sync_scheduled)::decimal AS sync_scheduled,
@@ -627,7 +628,7 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 		// But waiting for Peter implementation of apr calc
 		// same for expected/average luck
 		return nil
-	})
+	}) */
 
 	err = wg.Wait()
 	if err != nil {
