@@ -1587,7 +1587,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
-	// TODO @recy21
+	// WORKING spletka
 	// fetch ALL validator indices for the given dashboardId and given filters
 
 	// if duty == enums.ValidatorDuties.None THEN ignore period
