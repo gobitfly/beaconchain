@@ -39,12 +39,10 @@ const items = computed(() => {
   const dashboardsButtons: MenuBarEntry[] = []
 
   let buttonCount = 3 // [validator], [accounts], [notifications]
-  if (width.value < 680) {
-    if (width.value < 550) {
-      buttonCount = 1 // [validator, accounts, notifications]
-    } else {
-      buttonCount = 2 // [validator, accounts], [notifications]
-    }
+  if (width.value < 540) {
+    buttonCount = 1 // [validator, accounts, notifications]
+  } else if (width.value < 680) {
+    buttonCount = 2 // [validator, accounts], [notifications]
   }
 
   const sortedItems: MenuBarButton[][] = []
