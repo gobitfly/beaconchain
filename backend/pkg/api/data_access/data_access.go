@@ -514,20 +514,28 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 		}
 		for _, state := range queryResult {
 			switch state.Name {
+			case "exiting_online":
+				fallthrough
+			case "slashing_online":
+				fallthrough
 			case "active_online":
 				data.Validators.Online += state.Count
+			case "exiting_offline":
+				fallthrough
+			case "slashing_offline":
+				fallthrough
 			case "active_offline":
 				data.Validators.Offline += state.Count
+			case "deposited":
+				fallthrough
 			case "pending":
 				data.Validators.Pending += state.Count
-			case "slashing_online":
+			case "slashed":
 				data.Validators.Slashed += state.Count
-			case "exiting_online":
+			case "exited":
 				data.Validators.Exited += state.Count
 			}
 		}
-		// TODO @remoterami maybe remove this if it's not used
-		//data.Validators.Active += data.Validators.Pending + data.Validators.Slashed + data.Validators.Exited
 		return nil
 	})
 
@@ -592,8 +600,6 @@ func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*
 	retrieveElClRewards("validator_dashboard_data_rolling_daily", &data.Rewards.Last24h)
 	retrieveElClRewards("validator_dashboard_data_rolling_weekly", &data.Rewards.Last7d)
 	retrieveElClRewards("validator_dashboard_data_rolling_monthly", &data.Rewards.Last30d)
-	// WIP, table doesn't exist yet
-	// retrieveElClRewards("validator_dashboard_data_rolling_yearly", &data.Rewards.Last365d)
 	retrieveElClRewards("validator_dashboard_data_rolling_total", &data.Rewards.AllTime)
 	// TODO combine the 3 calls to validator_dashboard_data_rolling_total into one (rewards, efficiency, luck/apr)
 
