@@ -33,7 +33,7 @@
     "save": "Save"
   },
   "error": {
-    "multiple_times": "The error {error} happend {count} times",
+    "multiple_times": "The error {error} happened {count} times",
     "ws_error": "Webservice error"
   },
   "table": {

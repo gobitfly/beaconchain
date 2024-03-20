@@ -109,13 +109,12 @@ const mapping: Record<string, MappingData> = {
 }
 export function useCustomFetch () {
   const refreshToken = useCookie('refreshToken')
+  // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
   const accessToken = useCookie('accessToken')
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues): Promise<T> {
-  // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
-
     const map = mapping[pathName]
     if (!map) {
       throw new Error(`path ${pathName} not found`)
@@ -161,7 +160,7 @@ export function useCustomFetch () {
     try {
       return await $fetch<T>(path, { method, ...options, baseURL })
     } catch (e: any) {
-      showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${baseURL}${path}` })
+      showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
       throw (e)
     }
   }
