@@ -180,7 +180,6 @@ func insertValidatorsTable(start, count, maxValidatorIndex, pendingAfter int64) 
 	stmt, err := tx.Prepare(pq.CopyIn("validators",
 		"validator_index",
 		"pubkey",
-		"validator_index_version",
 	))
 	if err != nil {
 		return err
@@ -248,7 +247,6 @@ func insertValidatorsDashboard(dashboard, group, start, count, maxValidatorIndex
 		"validator_index",
 		"dashboard_id",
 		"group_id",
-		"validator_index_version",
 	))
 	if err != nil {
 		return err

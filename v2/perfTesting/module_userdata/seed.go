@@ -32,7 +32,7 @@ func CreateValDashboardGroup(id, dashboard_id int64, name string) error {
 
 func CreateValDashboardValidator(dashboard_id, group_id, validator_index int64) error {
 	_, err := db.DB.Exec(`
-		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index, validator_index_version) VALUES ($1, $2, $3, 1)
+		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index) VALUES ($1, $2, $3)
 	`, dashboard_id, group_id, validator_index)
 	return err
 }
@@ -99,8 +99,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			dashboard_id 				BIGINT 		NOT NULL,
 			group_id 					SMALLINT 	NOT NULL,
 			validator_index     		BIGINT      NOT NULL,
-    		validator_index_version     SMALLINT    NOT NULL, -- version will be 0 for pending validators, 1 for normal one and 1-x for reused one (where x is the times the index was reused)
-			primary key (dashboard_id, validator_index, validator_index_version)
+    		primary key (dashboard_id, validator_index)
 		);
 
 		DROP TABLE IF EXISTS users_val_dashboards_sharing;
@@ -115,9 +114,8 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 		DROP TABLE IF EXISTS validators;
 		CREATE TABLE IF NOT EXISTS validators ( -- minimal only, columns missing
 			validator_index SERIAL NOT NULL, -- only serial if version is 0 (pending validator), otherwise will be the beaconchain validator index
-			validator_index_version SMALLINT NOT NULL,
 			pubkey bytea NOT NULL,
-			PRIMARY KEY (validator_index, validator_index_version)
+			PRIMARY KEY (validator_index)
 		);
 
 		-- Account Dashboard
