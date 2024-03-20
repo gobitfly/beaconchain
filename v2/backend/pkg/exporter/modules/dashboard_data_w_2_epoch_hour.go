@@ -17,8 +17,11 @@ type epochToHourAggregator struct {
 	mutex *sync.Mutex
 }
 
-const HourAggregateWidth = 9    // todo gnosis
-const hourRetentionBuffer = 2.0 // change to 1.6
+const hourRetentionBuffer = 2.0
+
+func getHourAggregateWidth() uint64 {
+	return utils.EpochsPerDay() / 24
+}
 
 func newEpochToHourAggregator(d *dashboardData) *epochToHourAggregator {
 	return &epochToHourAggregator{
@@ -42,19 +45,19 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 		return errors.Wrap(err, "failed to get latest dashboard hourly epoch")
 	}
 
-	currentEpoch, err := edb.GetLatestDashboardEpoch()
+	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	differenceToCurrentEpoch := currentEpoch - lastHourExported.EpochEnd
+	differenceToCurrentEpoch := currentExportedEpoch - lastHourExported.EpochEnd
 
 	if differenceToCurrentEpoch > d.getHourRetentionDurationEpochs() {
 		d.log.Warnf("difference to current epoch is larger than retention duration, skipping for now: %v", differenceToCurrentEpoch)
 		return nil
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(currentEpoch, currentEpoch-lastHourExported.EpochEnd)
+	gaps, err := edb.GetDashboardEpochGaps(currentExportedEpoch, currentExportedEpoch-lastHourExported.EpochEnd)
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}
@@ -63,13 +66,9 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 		return fmt.Errorf("gaps in dashboard epoch, skipping for now: %v", gaps)
 	}
 
-	if lastHourExported.EpochStart == 0 { // todo
-		lastHourExported.EpochStart = currentEpoch
-	}
+	_, currentEndBound := d.getHourAggregateBounds(currentExportedEpoch)
 
-	_, currentEndBound := d.getHourAggregateBounds(currentEpoch)
-
-	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += HourAggregateWidth {
+	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += getHourAggregateWidth() {
 		boundsStart, boundsEnd := d.getHourAggregateBounds(epoch)
 		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last hour entry since it is complete")
@@ -87,15 +86,18 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 
 func (d *epochToHourAggregator) getHourAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
-	epoch += offset                                                     // offset to utc
-	startOfPartition := epoch / HourAggregateWidth * HourAggregateWidth // inclusive
-	endOfPartition := startOfPartition + HourAggregateWidth             // exclusive
+	epoch += offset                                                               // offset to utc
+	startOfPartition := epoch / getHourAggregateWidth() * getHourAggregateWidth() // inclusive
+	endOfPartition := startOfPartition + getHourAggregateWidth()                  // exclusive
+	if startOfPartition < offset {
+		startOfPartition = offset
+	}
 	return startOfPartition - offset, endOfPartition - offset
 }
 
 func (d *epochToHourAggregator) GetHourPartitionRange(epoch uint64) (uint64, uint64) {
-	startOfPartition := epoch / (PartitionEpochWidth * HourAggregateWidth) * PartitionEpochWidth * HourAggregateWidth // inclusive
-	endOfPartition := startOfPartition + PartitionEpochWidth*HourAggregateWidth                                       // exclusive
+	startOfPartition := epoch / (PartitionEpochWidth * getHourAggregateWidth()) * PartitionEpochWidth * getHourAggregateWidth() // inclusive
+	endOfPartition := startOfPartition + PartitionEpochWidth*getHourAggregateWidth()                                            // exclusive
 	return startOfPartition, endOfPartition
 }
 
@@ -135,7 +137,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 
 	err = d.createHourlyPartition(partitionStartRange, partitionEndRange)
 	if err != nil {
-		return errors.Wrap(err, "failed to create hourly partition")
+		return errors.Wrap(err, fmt.Sprintf("failed to create hourly partition, startRange: %d, endRange: %d", partitionStartRange, partitionEndRange))
 	}
 
 	d.log.Infof("aggregating 1h, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
@@ -233,7 +235,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 			)
 			SELECT 
 				$1,
-				(SELECT epoch FROM end_epoch) as epoch,
+				(SELECT epoch FROM end_epoch) + 1 as epoch, -- exclusive, todo double check
 				aggregate.validator_index,
 				attestations_source_reward,
 				attestations_target_reward,
@@ -329,6 +331,9 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 	// Clear old epoch partitions
 	var delEpoch uint64
 	for i := uint64(0); ; i += PartitionEpochWidth {
+		if epochStart < d.epochWriter.getRetentionEpochDuration()-i {
+			break
+		}
 		delEpoch = epochStart - d.epochWriter.getRetentionEpochDuration() - i
 
 		startOfPartition, endOfPartition := d.epochWriter.getPartitionRange(delEpoch)

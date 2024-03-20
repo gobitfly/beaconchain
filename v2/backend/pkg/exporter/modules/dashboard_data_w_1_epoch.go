@@ -23,7 +23,7 @@ func newEpochWriter(d *dashboardData) *epochWriter {
 }
 
 const PartitionEpochWidth = 3
-const retentionBuffer = 2 // todo set to 1.6 buffer
+const retentionBuffer = 2.5
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {
 	return uint64(float64(utils.EpochsPerDay()) / 24 * retentionBuffer)
@@ -35,7 +35,7 @@ func (d *epochWriter) getPartitionRange(epoch uint64) (uint64, uint64) {
 	return startOfPartition, endOfPartition
 }
 
-func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
+func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
 	// Create table if needed
 	startOfPartition, endOfPartition := d.getPartitionRange(epoch)
 
