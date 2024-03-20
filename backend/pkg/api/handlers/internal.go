@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -236,7 +237,20 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 		returnBadRequest(w, err)
 		return
 	}
+	if groupId == types.DefaultGroupId {
+		returnBadRequest(w, errors.New("cannot delete default group"))
+		return
+	}
 	// TODO check if user is authorized for this dashboard
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !groupExists {
+		returnNotFound(w, errors.New("group not found"))
+		return
+	}
 	err = h.dai.RemoveValidatorDashboardGroup(dashboardId, uint64(groupId))
 	if err != nil {
 		handleError(w, err)
@@ -257,7 +271,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 		returnInternalServerError(w, bodyErr)
 		return
 	}
-	validatorArr := checkValidatorArray(&err, req.Validators)
+	indices, pubkeys := checkValidatorArray(&err, req.Validators)
 	groupId := checkGroupId(&err, req.GroupId, allowEmpty)
 	if err != nil {
 		returnBadRequest(w, err)
@@ -267,7 +281,16 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	if groupId == types.AllGroups {
 		groupId = types.DefaultGroupId
 	}
-	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !groupExists {
+		returnNotFound(w, errors.New("group not found"))
+		return
+	}
+	validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -317,12 +340,16 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
-	validatorArr := checkValidatorList(&err, r.URL.Query().Get("validators"))
-	if err != nil {
-		returnBadRequest(w, err)
-		return
+	var indices []uint64
+	var publicKeys [][]byte
+	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
+		indices, publicKeys = checkValidatorList(&err, validatorsParam)
+		if err != nil {
+			returnBadRequest(w, err)
+			return
+		}
 	}
-	validators, err := h.dai.GetValidatorsFromStrings(validatorArr)
+	validators, err := h.dai.GetValidatorsFromSlices(indices, publicKeys)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -509,6 +536,39 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 	response := types.InternalGetValidatorDashboardSummaryChartResponse{
 		Data: *data,
 	}
+	returnOk(w, response)
+}
+
+func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	groupId := checkGroupId(&err, r.URL.Query().Get("group_id"), allowEmpty)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	q := r.URL.Query()
+	period := checkEnum[enums.TimePeriod](&err, q.Get("period"), "period")
+	duty := checkEnum[enums.ValidatorDuty](&err, q.Get("duty"), "duty")
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardValidatorIndicesResponse{
+		Data: data,
+	}
+
 	returnOk(w, response)
 }
 
