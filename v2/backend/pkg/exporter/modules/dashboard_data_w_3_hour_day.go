@@ -17,14 +17,17 @@ type hourToDayAggregator struct {
 	mutex *sync.Mutex
 }
 
-const DayAggregateWidth = 225 // todo gnosis
-const PartitionDayWidth = 3   // todo
+const PartitionDayWidth = 6
 
 func newHourToDayAggregator(d *dashboardData) *hourToDayAggregator {
 	return &hourToDayAggregator{
 		dashboardData: d,
 		mutex:         &sync.Mutex{},
 	}
+}
+
+func GetDayAggregateWidth() uint64 {
+	return utils.EpochsPerDay()
 }
 
 func (d *hourToDayAggregator) dayAggregateAndClearOld() error {
@@ -243,9 +246,9 @@ func (d *hourToDayAggregator) rolling24hAggregate() error {
 
 func (d *hourToDayAggregator) getDayAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
-	epoch += offset                                                   // offset to utc
-	startOfPartition := epoch / DayAggregateWidth * DayAggregateWidth // inclusive
-	endOfPartition := startOfPartition + DayAggregateWidth            // exclusive
+	epoch += offset                                                             // offset to utc
+	startOfPartition := epoch / GetDayAggregateWidth() * GetDayAggregateWidth() // inclusive
+	endOfPartition := startOfPartition + GetDayAggregateWidth()                 // exclusive
 	return startOfPartition - offset, endOfPartition - offset
 }
 
@@ -271,7 +274,7 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 
 	_, currentEndBound := d.getDayAggregateBounds(latestHourlyBounds.EpochStart)
 
-	for epoch := latestDayBounds.EpochStart; epoch <= currentEndBound; epoch += DayAggregateWidth {
+	for epoch := latestDayBounds.EpochStart; epoch <= currentEndBound; epoch += GetDayAggregateWidth() {
 		boundsStart, boundsEnd := d.getDayAggregateBounds(epoch)
 		if latestDayBounds.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last day entry since it is complete")
@@ -485,8 +488,8 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 }
 
 func (d *hourToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, time.Time) {
-	startOfPartition := epoch / (PartitionDayWidth * DayAggregateWidth) * PartitionDayWidth * DayAggregateWidth // inclusive
-	endOfPartition := startOfPartition + PartitionDayWidth*DayAggregateWidth                                    // exclusive
+	startOfPartition := epoch / (PartitionDayWidth * GetDayAggregateWidth()) * PartitionDayWidth * GetDayAggregateWidth() // inclusive
+	endOfPartition := startOfPartition + PartitionDayWidth*GetDayAggregateWidth()                                         // exclusive
 	return utils.EpochToTime(startOfPartition), utils.EpochToTime(endOfPartition)
 }
 
@@ -496,13 +499,13 @@ func (d *hourToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error
 		PARTITION OF validator_dashboard_data_daily
 			FOR VALUES FROM ('%s') TO ('%s')
 		`,
-		dayToDDMMYYLabel(dayFrom), dayToDDMMYYLabel(dayTo), dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo),
+		dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo), dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo),
 	))
 	return err
 }
 
-func dayToDDMMYYLabel(day time.Time) string {
-	return day.Format("020106")
+func dayToYYMMDDLabel(day time.Time) string {
+	return day.Format("20060102")
 }
 
 func dayToDDMMYY(day time.Time) string {

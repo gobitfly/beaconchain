@@ -47,7 +47,23 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	if lastHourExported.EpochStart == 0 {
+	differenceToCurrentEpoch := currentEpoch - lastHourExported.EpochEnd
+
+	if differenceToCurrentEpoch > d.getHourRetentionDurationEpochs() {
+		d.log.Warnf("difference to current epoch is larger than retention duration, skipping for now: %v", differenceToCurrentEpoch)
+		return nil
+	}
+
+	gaps, err := edb.GetDashboardEpochGaps(currentEpoch, currentEpoch-lastHourExported.EpochEnd)
+	if err != nil {
+		return errors.Wrap(err, "failed to get dashboard epoch gaps")
+	}
+
+	if len(gaps) > 0 {
+		return fmt.Errorf("gaps in dashboard epoch, skipping for now: %v", gaps)
+	}
+
+	if lastHourExported.EpochStart == 0 { // todo
 		lastHourExported.EpochStart = currentEpoch
 	}
 
