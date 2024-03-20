@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/services"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -67,7 +68,7 @@ func InitServices(das *dataaccess.DataAccessService) dataaccess.DataAccessor {
 	db.WriterDb = das.WriterDb
 	db.PersistentRedisDbClient = das.PersistentRedisDbClient
 
-	// go services.StartSlotVizDataService()
+	go services.StartSlotVizDataService()
 
 	return das
 }
