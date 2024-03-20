@@ -686,9 +686,7 @@ type RedisCachedEpochRewards struct {
 	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }
 type QueuesMetadata struct {
-	Activation *struct {
-		Index int64
-	}
+	ActivationIndex sql.NullInt64
 }
 
 type CachedValidator struct {
