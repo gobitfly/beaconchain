@@ -153,7 +153,9 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 
 		err = tx.Commit(context.Background())
 		if err != nil {
-			return errors.Wrap(err, "error committing transaction")
+			if !utils.IsDuplicatedKeyError(err) {
+				return errors.Wrap(err, "error committing transaction")
+			}
 		}
 		return nil
 	})

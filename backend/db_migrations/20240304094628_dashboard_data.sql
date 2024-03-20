@@ -1,13 +1,15 @@
 -- +goose Up
 -- +goose StatementBegin
 
-DROP TABLE validator_dashboard_data_epoch;
-DROP TABLE validator_dashboard_data_hourly;
-DROP TABLE validator_dashboard_data_rolling_daily;
-DROP TABLE validator_dashboard_data_daily;
-DROP TABLE validator_dashboard_data_rolling_weekly;
-DROP TABLE validator_dashboard_data_rolling_monthly;
-DROP TABLE validator_dashboard_data_rolling_total;
+-- DROP TABLE validator_dashboard_data_epoch;
+-- DROP TABLE validator_dashboard_data_hourly;
+-- DROP TABLE validator_dashboard_data_rolling_daily;
+-- DROP TABLE validator_dashboard_data_daily;
+-- DROP TABLE validator_dashboard_data_rolling_weekly;
+-- DROP TABLE validator_dashboard_data_rolling_monthly;
+-- DROP TABLE validator_dashboard_data_rolling_90d;
+-- DROP TABLE validator_dashboard_data_rolling_yearly;
+-- DROP TABLE validator_dashboard_data_rolling_total;
 
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
@@ -258,6 +260,47 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_monthly (
     optimal_inclusion_delay_sum int,
     primary key (validator_index)
 );
+
+CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_90d (
+    validator_index int NOT NULL,
+    attestations_source_reward BIGINT,
+    attestations_target_reward BIGINT,
+    attestations_head_reward BIGINT,
+    attestations_inactivity_reward BIGINT,
+    attestations_inclusion_reward BIGINT,
+    attestations_reward BIGINT,
+    attestations_ideal_source_reward BIGINT,
+    attestations_ideal_target_reward BIGINT,
+    attestations_ideal_head_reward BIGINT,
+    attestations_ideal_inactivity_reward BIGINT,
+    attestations_ideal_inclusion_reward BIGINT,
+    attestations_ideal_reward BIGINT,
+    blocks_scheduled BIGINT,
+    blocks_proposed BIGINT,
+    blocks_cl_reward BIGINT, -- gwei
+    blocks_el_reward NUMERIC, -- wei
+    sync_scheduled BIGINT,
+    sync_executed BIGINT,
+    sync_rewards BIGINT,
+    slashed BOOLEAN,
+    balance_start BIGINT,
+    balance_end BIGINT,
+    deposits_count BIGINT,
+    deposits_amount BIGINT,
+    withdrawals_count BIGINT,
+    withdrawals_amount BIGINT,
+    inclusion_delay_sum BIGINT,
+    sync_chance double precision, 
+    block_chance double precision, 
+    attestations_scheduled int,
+    attestations_executed int,
+    attestation_head_executed int,
+    attestation_source_executed int,
+    attestation_target_executed int,
+    optimal_inclusion_delay_sum int,
+    primary key (validator_index)
+);
+
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_yearly (
     validator_index int NOT NULL,

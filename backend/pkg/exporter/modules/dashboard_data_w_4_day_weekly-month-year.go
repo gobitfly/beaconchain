@@ -12,31 +12,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-type dayToWeeklyAggregator struct {
+type dayUpAggregator struct {
 	*dashboardData
 	mutex *sync.Mutex
 }
 
-func newDayToWeeklyAggregator(d *dashboardData) *dayToWeeklyAggregator {
-	return &dayToWeeklyAggregator{
+func newDayUpAggregator(d *dashboardData) *dayUpAggregator {
+	return &dayUpAggregator{
 		dashboardData: d,
 		mutex:         &sync.Mutex{},
 	}
 }
 
-func (d *dayToWeeklyAggregator) rolling7dAggregate() error {
+func (d *dayUpAggregator) rolling7dAggregate() error {
 	return d.rollingXdAggregate(7, "validator_dashboard_data_rolling_weekly")
 }
 
-func (d *dayToWeeklyAggregator) rolling31dAggregate() error {
-	return d.rollingXdAggregate(31, "validator_dashboard_data_rolling_monthly")
+func (d *dayUpAggregator) rolling30dAggregate() error {
+	return d.rollingXdAggregate(30, "validator_dashboard_data_rolling_monthly")
 }
 
-func (d *dayToWeeklyAggregator) rolling365dAggregate() error {
+func (d *dayUpAggregator) rolling90dAggregate() error {
+	return d.rollingXdAggregate(90, "validator_dashboard_data_rolling_90d")
+}
+
+func (d *dayUpAggregator) rolling365dAggregate() error {
 	return d.rollingXdAggregate(365, "validator_dashboard_data_rolling_yearly")
 }
 
-func (d *dayToWeeklyAggregator) rollingXdAggregate(days int, tableName string) error {
+func (d *dayUpAggregator) rollingXdAggregate(days int, tableName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

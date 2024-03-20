@@ -23,13 +23,14 @@ var missedSlotMutex = &sync.RWMutex{}
 
 type dashboardData struct {
 	ModuleContext
-	log           ModuleLog
-	signingDomain []byte
-	epochWriter   *epochWriter
-	epochToTotal  *epochToTotalAggregator
-	epochToHour   *epochToHourAggregator
-	hourToDay     *hourToDayAggregator
-	dayTo         *dayToWeeklyAggregator
+	log            ModuleLog
+	signingDomain  []byte
+	epochWriter    *epochWriter
+	epochToTotal   *epochToTotalAggregator
+	epochToHour    *epochToHourAggregator
+	hourToDay      *hourToDayAggregator
+	dayUp          *dayUpAggregator
+	headEpochQueue chan uint64
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
@@ -41,45 +42,115 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	temp.epochToTotal = newEpochToTotalAggregator(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
 	temp.hourToDay = newHourToDayAggregator(temp)
-	temp.dayTo = newDayToWeeklyAggregator(temp)
+	temp.dayUp = newDayUpAggregator(temp)
+	temp.headEpochQueue = make(chan uint64, 1000)
 	return temp
 }
 
 func (d *dashboardData) Init() error {
 	go func() {
-		d.backfillEpochData()
+		err := d.backfillEpochData(nil)
+		if err != nil {
+			d.log.Fatal(err, "failed to backfill epoch data", 0)
+		}
+
+		d.processHeadQueue()
 	}()
 
 	return nil
 }
 
-var backFillMutex = &sync.Mutex{}
+func (d *dashboardData) processHeadQueue() {
+	for {
+		epoch := <-d.headEpochQueue
+
+		d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
+		stage := 0
+		for {
+			if stage <= 0 {
+				targetEpoch := epoch - 1
+				err := d.backfillEpochData(&targetEpoch)
+				if err != nil {
+					d.log.Error(err, "failed to backfill epoch data", 0, map[string]interface{}{"epoch": epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 1
+			}
+
+			if stage <= 1 {
+				err := d.ExportEpochData(epoch)
+				if err != nil {
+					d.log.Error(err, "failed to export epoch data", 0, map[string]interface{}{"epoch": epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 2
+			}
+
+			if stage <= 2 {
+				err := d.aggregatePerEpoch()
+				if err != nil {
+					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 3
+			}
+
+			if stage <= 3 {
+				err := d.aggregateMid()
+				if err != nil {
+					d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 4
+			}
+
+			if epoch%4 == 0 {
+				if stage <= 4 {
+					err := d.aggregateHeavy()
+					if err != nil {
+						d.log.Error(err, "failed to aggregate heavy", 0, map[string]interface{}{"epoch": epoch})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					stage = 5
+				}
+			}
+
+			break
+		}
+	}
+}
 
 // returns false if there is already an active backfill happening, otherwise returns true
-func (d *dashboardData) backfillEpochData() bool {
-	if !backFillMutex.TryLock() {
-		return false
-	}
-	defer backFillMutex.Unlock()
-
-	res, err := d.CL.GetFinalityCheckpoints("finalized")
-	if err != nil {
-		d.log.Error(err, "failed to get finalized checkpoint", 0)
-		return true
+func (d *dashboardData) backfillEpochData(upToEpoch *uint64) error {
+	if upToEpoch == nil {
+		res, err := d.CL.GetFinalityCheckpoints("finalized")
+		if err != nil {
+			return errors.Wrap(err, "failed to get finalized checkpoint")
+		}
+		upToEpoch = &res.Data.Finalized.Epoch
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, d.epochWriter.getRetentionEpochDuration())
+	latestEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
-		d.log.Error(err, "failed to get epoch gaps", 0)
-		return true
+		return errors.Wrap(err, "failed to get latest dashboard epoch")
+	}
+
+	gaps, err := edb.GetDashboardEpochGaps(*upToEpoch, *upToEpoch-latestEpoch)
+	if err != nil {
+		return errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
 		d.log.Infof("Epoch dashboard data gaps found, backfilling fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
 
 		for _, gap := range gaps {
-			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
-			if gap < res.Data.Finalized.Epoch-d.epochWriter.getRetentionEpochDuration() {
+			//backfill if needed, skip backfilling older than RetainEpochDuration
+			if gap < latestEpoch {
 				continue
 			}
 
@@ -93,7 +164,7 @@ func (d *dashboardData) backfillEpochData() bool {
 				continue
 			}
 
-			d.log.Infof("backfilling epoch %d", gap)
+			d.log.Infof("adding epoch to backfilling epoch %d", gap)
 			err = d.ExportEpochData(gap)
 			if err != nil {
 				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
@@ -105,12 +176,12 @@ func (d *dashboardData) backfillEpochData() bool {
 				d.log.Error(err, "failed to aggregate", 0)
 			}
 		}
+
+		d.log.Infof("backfill finished")
 	}
-	d.log.Infof("backfill finished")
-	return true
+	return nil
 }
 
-// called every epoch so far
 func (d *dashboardData) aggregatePerEpoch() error {
 	start := time.Now()
 	defer func() {
@@ -136,21 +207,28 @@ func (d *dashboardData) aggregatePerEpoch() error {
 		return errors.Wrap(err, "failed to aggregate day")
 	}
 
-	// -- Below are considered for a slightly slower interval but are here for now --
-	err = d.dayTo.rolling7dAggregate()
+	return nil
+}
+
+func (d *dashboardData) aggregateMid() error {
+	start := time.Now()
+	defer func() {
+		d.log.Infof("all of aggregation (mid) took %v", time.Since(start))
+	}()
+
+	err := d.dayUp.rolling7dAggregate()
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate 7d")
 	}
 
-	err = d.dayTo.rolling31dAggregate()
+	err = d.dayUp.rolling30dAggregate()
 	if err != nil {
-		return errors.Wrap(err, "failed to aggregate 31d")
+		return errors.Wrap(err, "failed to aggregate 30d")
 	}
 
-	// TODO REMOVE
-	err = d.aggregateHeavy()
+	err = d.dayUp.rolling90dAggregate()
 	if err != nil {
-		return errors.Wrap(err, "failed to aggregate heavy")
+		return errors.Wrap(err, "failed to aggregate 90d")
 	}
 
 	return nil
@@ -163,7 +241,7 @@ func (d *dashboardData) aggregateHeavy() error {
 		d.log.Infof("all of aggregation (heavy) took %v", time.Since(start))
 	}()
 
-	err := d.dayTo.rolling365dAggregate()
+	err := d.dayUp.rolling365dAggregate()
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate 365d")
 	}
@@ -172,9 +250,6 @@ func (d *dashboardData) aggregateHeavy() error {
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
-	// TODO: dont export head epochs as long as backfill is not finished, makes the code simpler and easier to understand
-	// and reduced complex edge cases
-
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
@@ -196,23 +271,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 		}
 	}
 
-	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
-
-	err = d.ExportEpochData(res.Data.Finalized.Epoch)
-	if err != nil {
-		return err
-	}
-
-	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
-	// since the init backfill only fixes gaps at the start of exporter but does not fix
-	// gaps that occur while operating (for example node not available for a brief moment)
-	// aggregate if backfill is not running in parallel elsewhere
-	if d.backfillEpochData() {
-		err = d.aggregatePerEpoch()
-		if err != nil {
-			return err
-		}
-	}
+	d.headEpochQueue <- res.Data.Finalized.Epoch
 
 	return nil
 }
