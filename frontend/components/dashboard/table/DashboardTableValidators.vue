@@ -3,13 +3,14 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
+import type { TimeFrame } from '~/types/value'
 
 interface Props {
   validators: number[],
   groupId?: number,
-  timeFrame?: SummaryDetail
+  timeFrame?: TimeFrame
   context: DashboardValidatorContext
 }
 const props = defineProps<Props>()

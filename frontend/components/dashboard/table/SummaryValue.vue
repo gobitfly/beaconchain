@@ -12,17 +12,17 @@ import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
   SummaryDetailsEfficiencyValidatorProps,
-  type SummaryDetail,
   type SummaryDetailsEfficiencyValidatorProp,
   type SummaryDetailsEfficiencyProp,
   type SummaryDetailsEfficiencyCombinedProp,
   type DashboardValidatorContext
 } from '~/types/dashboard/summary'
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { TimeFrame } from '~/types/value'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
-  detail: SummaryDetail,
+  detail: TimeFrame,
   data: VDBGroupSummaryData,
   row: VDBSummaryTableRow
 }
