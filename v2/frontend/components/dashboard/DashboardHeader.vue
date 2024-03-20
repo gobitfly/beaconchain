@@ -49,36 +49,25 @@ const items = computed(() => {
 
   const sortedItems: MenuBarButton[][] = []
 
-  const validatorItems: MenuBarButton[] = dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  if (validatorItems.length > 0) {
-    sortedItems.push(validatorItems)
-  }
-
-  const accountItems: MenuBarButton[] = dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })) ?? []
-  if (accountItems.length > 0) {
-    if (buttonCount === 3) {
-      sortedItems.push(accountItems)
-    } else {
-      if (sortedItems.length === 0) {
-        sortedItems.push([])
+  const addToSortedItems = (minButtonCount: number, items?:MenuBarButton[]) => {
+    if (items?.length) {
+      if (buttonCount >= minButtonCount) {
+        sortedItems.push(items)
       } else {
-        sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
+        let last = sortedItems.length - 1
+        if (last < 0) {
+          sortedItems.push([])
+          last = 0
+        } else {
+          sortedItems[last][sortedItems[last].length - 1].class = 'p-big-separator'
+        }
+        sortedItems[last] = sortedItems[last].concat(items)
       }
-      sortedItems[0] = sortedItems[0].concat(accountItems)
     }
   }
-
-  const notificationItem: MenuBarButton = { label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }
-  if (buttonCount > 1) {
-    sortedItems.push([notificationItem])
-  } else {
-    if (sortedItems.length === 0) {
-      sortedItems.push([])
-    } else {
-      sortedItems[0][sortedItems[0].length - 1].class = 'p-big-separator'
-    }
-    sortedItems[0] = sortedItems[0].concat([notificationItem])
-  }
+  addToSortedItems(0, dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })))
+  addToSortedItems(3, dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })))
+  addToSortedItems(2, [{ label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }])
 
   for (const items of sortedItems) {
     let activeLabel = ''
