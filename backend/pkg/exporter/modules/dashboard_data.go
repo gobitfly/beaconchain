@@ -21,16 +21,19 @@ import (
 var missedSlots map[uint64]bool
 var missedSlotMutex = &sync.RWMutex{}
 
+const heavyAggregateIntervalEpochs = 9 // ~ hourly
+
 type dashboardData struct {
 	ModuleContext
-	log            ModuleLog
-	signingDomain  []byte
-	epochWriter    *epochWriter
-	epochToTotal   *epochToTotalAggregator
-	epochToHour    *epochToHourAggregator
-	hourToDay      *hourToDayAggregator
-	dayUp          *dayUpAggregator
-	headEpochQueue chan uint64
+	log               ModuleLog
+	signingDomain     []byte
+	epochWriter       *epochWriter
+	epochToTotal      *epochToTotalAggregator
+	epochToHour       *epochToHourAggregator
+	hourToDay         *hourToDayAggregator
+	dayUp             *dayUpAggregator
+	headEpochQueue    chan uint64
+	backFillCompleted bool
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
@@ -44,14 +47,24 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	temp.hourToDay = newHourToDayAggregator(temp)
 	temp.dayUp = newDayUpAggregator(temp)
 	temp.headEpochQueue = make(chan uint64, 1000)
+	temp.backFillCompleted = false
 	return temp
 }
 
 func (d *dashboardData) Init() error {
 	go func() {
-		err := d.backfillEpochData(nil)
-		if err != nil {
-			d.log.Fatal(err, "failed to backfill epoch data", 0)
+		for {
+			done, err := d.backfillEpochData(nil)
+			if err != nil {
+				d.log.Fatal(err, "failed to backfill epoch data", 0)
+			}
+
+			if done {
+				d.log.Infof("dashboard data up to date, starting head export")
+				d.backFillCompleted = true
+				break
+			}
+			time.Sleep(1 * time.Second)
 		}
 
 		d.processHeadQueue()
@@ -66,10 +79,17 @@ func (d *dashboardData) processHeadQueue() {
 
 		d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
 		stage := 0
-		for {
+		for { // retry this epoch until no errors occur
+			currentFinalizedEpoch, err := d.CL.GetFinalityCheckpoints("finalized")
+			if err != nil {
+				d.log.Error(err, "failed to get finalized checkpoint", 0)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+
 			if stage <= 0 {
 				targetEpoch := epoch - 1
-				err := d.backfillEpochData(&targetEpoch)
+				_, err := d.backfillEpochData(&targetEpoch)
 				if err != nil {
 					d.log.Error(err, "failed to backfill epoch data", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
@@ -89,7 +109,7 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			if stage <= 2 {
-				err := d.aggregatePerEpoch()
+				err := d.aggregatePerEpoch(true)
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
@@ -98,25 +118,28 @@ func (d *dashboardData) processHeadQueue() {
 				stage = 3
 			}
 
-			if stage <= 3 {
-				err := d.aggregateMid()
-				if err != nil {
-					d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
-					time.Sleep(time.Second * 10)
-					continue
-				}
-				stage = 4
-			}
-
-			if epoch%4 == 0 {
-				if stage <= 4 {
-					err := d.aggregateHeavy()
+			// only aggregate more intense data if we are close to head finalization
+			if currentFinalizedEpoch.Data.Finalized.Epoch < epoch+3 {
+				if stage <= 3 {
+					err := d.aggregateMid()
 					if err != nil {
-						d.log.Error(err, "failed to aggregate heavy", 0, map[string]interface{}{"epoch": epoch})
+						d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
 						time.Sleep(time.Second * 10)
 						continue
 					}
-					stage = 5
+					stage = 4
+				}
+
+				if epoch%heavyAggregateIntervalEpochs == 0 {
+					if stage <= 4 {
+						err := d.aggregateHeavy()
+						if err != nil {
+							d.log.Error(err, "failed to aggregate heavy", 0, map[string]interface{}{"epoch": epoch})
+							time.Sleep(time.Second * 10)
+							continue
+						}
+						stage = 5
+					}
 				}
 			}
 
@@ -125,86 +148,145 @@ func (d *dashboardData) processHeadQueue() {
 	}
 }
 
-// returns false if there is already an active backfill happening, otherwise returns true
-func (d *dashboardData) backfillEpochData(upToEpoch *uint64) error {
+type DataEpoch struct {
+	Data  []*validatorDashboardDataRow
+	Epoch uint64
+}
+
+// returns true if there was nothing to backfill, otherwise returns false
+// if upToEpoch is nil, it will backfill until the latest finalized epoch
+func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
 	if upToEpoch == nil {
 		res, err := d.CL.GetFinalityCheckpoints("finalized")
 		if err != nil {
-			return errors.Wrap(err, "failed to get finalized checkpoint")
+			return false, errors.Wrap(err, "failed to get finalized checkpoint")
 		}
 		upToEpoch = &res.Data.Finalized.Epoch
 	}
 
-	latestEpoch, err := edb.GetLatestDashboardEpoch()
+	latestExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
-		return errors.Wrap(err, "failed to get latest dashboard epoch")
+		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
 	gaps, err := edb.GetDashboardEpochGaps(*upToEpoch, *upToEpoch-latestEpoch)
 	if err != nil {
-		return errors.Wrap(err, "failed to get epoch gaps")
+		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
-		d.log.Infof("Epoch dashboard data gaps found, backfilling fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+		d.log.Infof("Epoch dashboard data gaps found, backfilling gaps in the range fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
 
-		for _, gap := range gaps {
-			//backfill if needed, skip backfilling older than RetainEpochDuration
-			if gap < latestEpoch {
-				continue
-			}
+		var nextDataChan chan *DataEpoch = make(chan *DataEpoch, 1)
+		go func() {
+			for _, gap := range gaps {
+				for {
+					//backfill if needed, skip backfilling older than RetainEpochDuration
+					if gap < latestExportedEpoch {
+						continue
+					}
 
-			// just in case we ask again before exporting since some time may have been passed
-			hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
-			if err != nil {
-				d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
-				continue
-			}
-			if hasEpoch {
-				continue
-			}
+					// just in case we ask again before exporting since some time may have been passed
+					hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
+					if err != nil {
+						d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					if hasEpoch {
+						time.Sleep(time.Second * 1)
+						continue
+					}
 
-			d.log.Infof("adding epoch to backfilling epoch %d", gap)
-			err = d.ExportEpochData(gap)
-			if err != nil {
-				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
-			}
-			d.log.Infof("backfill completed for epoch %d", gap)
+					d.log.Infof("backfill, retreiving data for epoch %d", gap)
+					data, err := d.GetEpochData(gap)
+					if err != nil {
+						d.log.Error(err, "failed to get epoch data", 0, map[string]interface{}{"epoch": gap})
+						time.Sleep(time.Second * 10)
+						continue
+					}
 
-			err = d.aggregatePerEpoch()
-			if err != nil {
-				d.log.Error(err, "failed to aggregate", 0)
+					nextDataChan <- &DataEpoch{
+						Data:  data,
+						Epoch: gap,
+					}
+
+					break
+				}
+			}
+		}()
+
+		for {
+			select {
+			case data := <-nextDataChan:
+				stage := 0
+				for { // retry this epoch until no errors occur
+					if stage <= 0 {
+						err := d.epochWriter.WriteEpochData(data.Epoch, data.Data)
+						if err != nil {
+							d.log.Error(err, "backfill, failed to write epoch data", 0, map[string]interface{}{"epoch": data.Epoch})
+							time.Sleep(time.Second * 10)
+							continue
+						}
+						stage = 1
+						d.log.Infof("backfill, wrote epoch data %d", data.Epoch)
+					}
+
+					err = d.aggregatePerEpoch(false)
+					if err != nil {
+						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch": data.Epoch})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					d.log.Infof("backfill, aggregated epoch data %d", data.Epoch)
+
+					if data.Epoch >= gaps[len(gaps)-1] {
+						d.log.Infof("backfilling finished for range epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+						return false, nil
+					}
+
+					break
+				}
+			case <-time.After(time.Second * 10):
 			}
 		}
-
-		d.log.Infof("backfill finished")
 	}
-	return nil
+	return true, nil
 }
 
-func (d *dashboardData) aggregatePerEpoch() error {
+var lastExportedHour uint64 = 0
+
+func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 	start := time.Now()
 	defer func() {
 		d.log.Infof("all of aggregation took %v", time.Since(start))
 	}()
 
-	// Used Epoch Data
-	{
-		// important to do this before hour aggregate as hour aggregate deletes old epochs
-		err := d.epochToTotal.aggregateTotal()
-		if err != nil {
-			return errors.Wrap(err, "failed to aggregate total")
-		}
+	// important to do this before hour aggregate as hour aggregate deletes old epochs
+	err := d.epochToTotal.aggregateTotal()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate total")
+	}
 
-		err = d.epochToHour.aggregate1hAndClearOld()
+	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		return errors.Wrap(err, "failed to get last exported epoch")
+	}
+	currentStartBound, _ := d.epochToHour.getHourAggregateBounds(currentExportedEpoch)
+
+	// Performance improvement for backfilling, no need to aggregate day after each epoch, we can update once per hour
+
+	if workingOnHead || currentStartBound != lastExportedHour {
+		err = d.epochToHour.aggregate1hAndClearOld() // will aggregate last hour too if it hasnt completed yet
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate 1h")
 		}
-	}
 
-	err := d.hourToDay.dayAggregateAndClearOld()
-	if err != nil {
-		return errors.Wrap(err, "failed to aggregate day")
+		err := d.hourToDay.dayAggregateAndClearOld(workingOnHead)
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate day")
+		}
+		lastExportedHour = currentStartBound
 	}
 
 	return nil
@@ -250,6 +332,10 @@ func (d *dashboardData) aggregateHeavy() error {
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
+	if !d.backFillCompleted {
+		return nil // nothing to do, wait for backfill to finish
+	}
+
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
@@ -316,11 +402,14 @@ func (d *dashboardData) ExportEpochData(epoch uint64) error {
 		d.signingDomain = domain
 	}
 
-	result := d.process(data, d.signingDomain)
+	result, err := d.process(data, d.signingDomain)
+	if err != nil {
+		return err
+	}
 	d.log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
 
 	start = time.Now()
-	err := d.epochWriter.writeEpochData(epoch, result)
+	err = d.epochWriter.WriteEpochData(epoch, result)
 	if err != nil {
 		return err
 	}
@@ -328,6 +417,23 @@ func (d *dashboardData) ExportEpochData(epoch uint64) error {
 
 	d.log.Infof("successfully wrote dashboard epoch data for epoch %d in %v", epoch, time.Since(totalStart))
 	return nil
+}
+
+func (d *dashboardData) GetEpochData(epoch uint64) ([]*validatorDashboardDataRow, error) {
+	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	if data == nil {
+		return nil, errors.New("can not get data")
+	}
+
+	if d.signingDomain == nil {
+		domain, err := utils.GetSigningDomain()
+		if err != nil {
+			return nil, err
+		}
+		d.signingDomain = domain
+	}
+
+	return d.process(data, d.signingDomain)
 }
 
 type Data struct {
@@ -347,7 +453,11 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	var err error
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
+
 	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
+	if firstSlotOfEpoch == 0 {
+		firstSlotOfPreviousEpoch = 0
+	}
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
@@ -358,6 +468,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(4)
 
+	totalStart := time.Now()
 	errGroup.Go(func() error {
 		// retrieve the validator balances at the start of the epoch
 		start := time.Now()
@@ -398,7 +509,12 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 		// retrieve the attestation committees
 		start := time.Now()
 		// As of dencun you can attest up until the end of the following epoch
-		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		min := lastSlotOfEpoch - utils.Config.Chain.ClConfig.SlotsPerEpoch
+		if lastSlotOfEpoch < utils.Config.Chain.ClConfig.SlotsPerEpoch {
+			min = 0
+		}
+
+		for slot := lastSlotOfEpoch; slot >= min; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
 			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
 				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": slot})
@@ -415,6 +531,10 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
 					result.attestationAssignments[k] = valIndexU64
 				}
+			}
+
+			if slot < utils.Config.Chain.ClConfig.SlotsPerEpoch {
+				break // special case for epoch 0
 			}
 		}
 		d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
@@ -449,6 +569,8 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	if err != nil {
 		return nil
 	}
+
+	d.log.Infof("retrieved all data for epoch %d in %v", epoch, time.Since(totalStart))
 
 	missedSlotMutex.Lock()
 	if missedSlots == nil {
@@ -525,7 +647,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	return &result
 }
 
-func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboardDataRow {
+func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
 	idealAttestationRewards := make(map[int64]int)
@@ -552,15 +674,6 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
 
 		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
-
-		// validatorsData[i].InclusionDelaySum = sql.NullInt64{Valid: false}
-		// validatorsData[i].BlockScheduled = sql.NullInt16{Int16: 0, Valid: false}
-		// validatorsData[i].SyncScheduled = sql.NullInt32{Int32: 0, Valid: false}
-		// validatorsData[i].BlocksClReward = sql.NullInt64{Int64: 0, Valid: false}
-		// validatorsData[i].SyncExecuted = sql.NullInt32{Int32: 0, Valid: false}
-		// validatorsData[i].BlocksProposed = sql.NullInt16{Int16: 0, Valid: false}
-		// validatorsData[i].DepositsCount = sql.NullInt16{Int16: 0, Valid: false}
-		// validatorsData[i].WithdrawalsCount = sql.NullInt16{Int16: 0, Valid: false}
 	}
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
@@ -634,6 +747,7 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
 					continue
 				}
+				return nil, err
 			}
 
 			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
@@ -662,7 +776,7 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
 					if !found { // This should never happen!
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
-						continue
+						return nil, fmt.Errorf("validator not found in attestation assignments")
 					}
 					validatorsData[validator_index].InclusionDelaySum = sql.NullInt64{
 						Int64: int64(block.Data.Message.Slot - attestation.Data.Slot - 1),
@@ -727,7 +841,7 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 
 	// TODO: el reward data
 
-	return validatorsData
+	return validatorsData, nil
 }
 
 func mustParseInt64(s string) int64 {

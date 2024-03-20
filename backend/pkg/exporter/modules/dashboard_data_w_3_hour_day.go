@@ -30,21 +30,23 @@ func GetDayAggregateWidth() uint64 {
 	return utils.EpochsPerDay()
 }
 
-func (d *hourToDayAggregator) dayAggregateAndClearOld() error {
+func (d *hourToDayAggregator) dayAggregateAndClearOld(workingOnHead bool) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	err := d.rolling24hAggregate()
-	if err != nil {
-		return errors.Wrap(err, "failed to rolling 24h aggregate")
+	if workingOnHead {
+		err := d.rolling24hAggregate()
+		if err != nil {
+			return errors.Wrap(err, "failed to rolling 24h aggregate")
+		}
 	}
 
-	err = d.utcDayAggregate()
+	err := d.utcDayAggregate()
 	if err != nil {
 		return errors.Wrap(err, "failed to utc day aggregate")
 	}
 
-	currentHeadEpoch, err := edb.GetLastExportedHour()
+	lastExportedHour, err := edb.GetLastExportedHour()
 	if err != nil {
 		return errors.Wrap(err, "failed to get last exported hour")
 	}
@@ -56,8 +58,12 @@ func (d *hourToDayAggregator) dayAggregateAndClearOld() error {
 
 	//Clear old partitions
 	var delEpoch uint64
-	for i := uint64(0); ; i += HourAggregateWidth {
-		delEpoch = currentHeadEpoch.EpochStart - d.epochToHour.getHourRetentionDurationEpochs() - i
+	for i := uint64(0); ; i += getHourAggregateWidth() {
+		if lastExportedHour.EpochStart < d.epochToHour.getHourRetentionDurationEpochs()-i {
+			break
+		}
+
+		delEpoch = lastExportedHour.EpochStart - d.epochToHour.getHourRetentionDurationEpochs() - i
 
 		startOfPartition, endOfPartition := d.epochToHour.GetHourPartitionRange(delEpoch)
 		err := d.epochToHour.deleteHourlyPartition(startOfPartition, endOfPartition)
@@ -249,6 +255,9 @@ func (d *hourToDayAggregator) getDayAggregateBounds(epoch uint64) (uint64, uint6
 	epoch += offset                                                             // offset to utc
 	startOfPartition := epoch / GetDayAggregateWidth() * GetDayAggregateWidth() // inclusive
 	endOfPartition := startOfPartition + GetDayAggregateWidth()                 // exclusive
+	if startOfPartition < offset {
+		startOfPartition = offset
+	}
 	return startOfPartition - offset, endOfPartition - offset
 }
 
@@ -258,25 +267,21 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 		d.log.Infof("utc day aggregate took %v", time.Since(startTime))
 	}()
 
-	latestDayBounds, err := edb.GetLastExportedDay()
+	latestExportedDay, err := edb.GetLastExportedDay()
 	if err != nil && err != sql.ErrNoRows {
 		return errors.Wrap(err, "failed to get latest daily epoch")
 	}
 
-	latestHourlyBounds, err := edb.GetLastExportedHour()
+	latestExportedHour, err := edb.GetLastExportedHour()
 	if err != nil {
 		return errors.Wrap(err, "failed to get latest hourly epoch")
 	}
 
-	if latestDayBounds.EpochStart == 0 {
-		latestDayBounds.EpochStart = latestHourlyBounds.EpochStart
-	}
+	_, currentEndBound := d.getDayAggregateBounds(latestExportedHour.EpochStart)
 
-	_, currentEndBound := d.getDayAggregateBounds(latestHourlyBounds.EpochStart)
-
-	for epoch := latestDayBounds.EpochStart; epoch <= currentEndBound; epoch += GetDayAggregateWidth() {
+	for epoch := latestExportedDay.EpochStart; epoch <= currentEndBound; epoch += GetDayAggregateWidth() {
 		boundsStart, boundsEnd := d.getDayAggregateBounds(epoch)
-		if latestDayBounds.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
+		if latestExportedDay.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last day entry since it is complete")
 			continue
 		}
@@ -308,7 +313,7 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 	_, err = tx.Exec(`
 		WITH
 			end_epoch as (
-				SELECT max(epoch_start) as epoch FROM validator_dashboard_data_hourly where epoch_start >= $1 AND epoch_start < $2
+				SELECT max(epoch_start) as epoch, max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly where epoch_start >= $1 AND epoch_start < $2
 			),
 			balance_starts as (
 				SELECT validator_index, balance_start FROM validator_dashboard_data_hourly WHERE epoch_start = $1
@@ -400,7 +405,7 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 			SELECT 
 				$3,
 				$1,
-				(SELECT epoch FROM end_epoch),
+				(SELECT epoch_end FROM end_epoch), -- exclusive, hence use epoch_end
 				aggregate.validator_index,
 				attestations_source_reward,
 				attestations_target_reward,
