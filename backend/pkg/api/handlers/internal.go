@@ -16,41 +16,41 @@ import (
 // --------------------------------------
 // Authenication
 
-func (h HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
 // --------------------------------------
 // Ad Configurations
 
-func (h HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
 
-func (h HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
 // --------------------------------------
 // Dashboards
 
-func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	user, err := getUser(r)
 	if err != nil {
 		returnUnauthorized(w, err)
@@ -70,59 +70,59 @@ func (h HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http
 // --------------------------------------
 // Account Dashboards
 
-func (h HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
 
-func (h HandlerService) InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
 
-func (h HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
 
-func (h HandlerService) InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
 
-func (h HandlerService) InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
@@ -131,7 +131,7 @@ func (h HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.R
 
 const errorMsgParsingId = "error parsing parameter 'dashboard_id'"
 
-func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	user, err := getUser(r)
 	if err != nil {
@@ -164,7 +164,7 @@ func (h HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r
 	returnCreated(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleError(w, err)
@@ -182,7 +182,7 @@ func (h HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -198,7 +198,7 @@ func (h HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, 
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
@@ -228,7 +228,7 @@ func (h HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWrit
 	returnCreated(w, response)
 }
 
-func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
@@ -260,7 +260,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWr
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
@@ -310,7 +310,7 @@ func (h HandlerService) InternalPostValidatorDashboardValidators(w http.Response
 	returnCreated(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -337,7 +337,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseW
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	var indices []uint64
@@ -364,7 +364,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respon
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
@@ -394,7 +394,7 @@ func (h HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseW
 	returnCreated(w, response)
 }
 
-func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	_ = checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
@@ -429,7 +429,7 @@ func (h HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWri
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	_ = checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
@@ -450,7 +450,7 @@ func (h HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Response
 	returnNoContent(w)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleError(w, err)
@@ -469,7 +469,7 @@ func (h HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -496,7 +496,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
@@ -521,7 +521,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respons
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -539,7 +539,7 @@ func (h HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respons
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -572,7 +572,7 @@ func (h HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Res
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -599,7 +599,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
@@ -625,7 +625,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respons
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
@@ -645,7 +645,7 @@ func (h HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respons
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
@@ -674,7 +674,7 @@ func (h HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrite
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -701,7 +701,7 @@ func (h HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrite
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -720,7 +720,7 @@ func (h HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
@@ -746,7 +746,7 @@ func (h HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respons
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -771,7 +771,7 @@ func (h HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w ht
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -797,7 +797,7 @@ func (h HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w ht
 	returnOk(w, response)
 }
 
-func (h HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var err error
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
