@@ -2,7 +2,10 @@
 import { storeToRefs } from 'pinia'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 
-const { latest } = storeToRefs(useLatestStateStore())
+const store = useLatestStateStore()
+const { getLatestState } = store
+await useAsyncData('latest_state', () => getLatestState())
+const { latest } = storeToRefs(store)
 
 </script>
 <template>

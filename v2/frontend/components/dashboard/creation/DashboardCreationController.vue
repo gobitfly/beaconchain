@@ -4,6 +4,7 @@ import { type DashboardCreationDisplayType, type DashboardCreationState } from '
 import { type VDBPostReturnData } from '~/types/api/validator_dashboard'
 
 const router = useRouter()
+const { fetch } = useCustomFetch()
 
 interface Props {
   displayType: DashboardCreationDisplayType,
@@ -51,14 +52,14 @@ function onBack () {
 async function createDashboard () {
   let newDashboardId = -1
   if (type.value === 'account') {
-    await useCustomFetch<undefined>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { // TODO: Use correct type once available
+    await fetch<undefined>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { // TODO: Use correct type once available
       body: {
         name: name.value
       }
     })
     newDashboardId = 1
   } else if (type.value === 'validator') {
-    const response = await useCustomFetch<VDBPostReturnData>(API_PATH.DASHBOARD_CREATE_VALIDATOR, {
+    const response = await fetch<VDBPostReturnData>(API_PATH.DASHBOARD_CREATE_VALIDATOR, {
       body: {
         name: name.value,
         network: network.value
