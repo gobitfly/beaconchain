@@ -103,10 +103,10 @@ func updateValidatorMapping() error {
 	compressedBuffer := bytes.NewBuffer(compressed)
 	var decompressedBuffer bytes.Buffer
 	w, err := pgzip.NewReaderN(compressedBuffer, 1_000_000, 10)
-	defer w.Close()
 	if err != nil {
 		return errors.Wrap(err, "failed to create pgzip reader")
 	}
+	defer w.Close()
 	_, err = w.WriteTo(&decompressedBuffer)
 	if err != nil {
 		return errors.Wrap(err, "failed to decompress validator mapping from redis")
