@@ -7,6 +7,8 @@ import (
 	"encoding/gob"
 	"strconv"
 	"strings"
+	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -453,19 +456,50 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 					Mapping: make([]*types.CachedValidator, len(block.Validators)),
 				}
 
+				activationMapping := make(map[int][]uint64)
+				start := time.Now()
+
 				for _, v := range block.Validators {
-					RedisCachedValidatorsMapping.Mapping[v.Index] = &types.CachedValidator{
+					r := types.CachedValidator{
 						PublicKey:             v.PublicKey,
-						ActivationEpoch:       types.Epoch(v.ActivationEpoch),
-						WithdrawableEpoch:     types.Epoch(v.WithdrawableEpoch),
 						Status:                v.Status,
 						WithdrawalCredentials: v.WithdrawalCredentials,
 						Balance:               v.Balance,
+						Slashed:               v.Slashed,
+					}
+					if v.ActivationEpoch != db.FarFutureEpoch {
+						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
+					}
+					if v.ExitEpoch != db.FarFutureEpoch {
+						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
+					}
+					if v.WithdrawableEpoch != db.FarFutureEpoch {
+						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
+					}
+					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
+					if v.Status == "pending_queued" {
+						a := int(v.ActivationEligibilityEpoch)
+						activationMapping[a] = append(activationMapping[a], v.Index)
 					}
 				}
+				log.Debugf("filled validator mapping, took: %s", time.Since(start))
+
+				start = time.Now()
+				// need to sort as activations don't necessarily have to be in order
+				keys := maps.Keys(activationMapping)
+				sort.Ints(keys)
+				var i int64
+				for _, a := range keys {
+					// don't need to sort as we our validator array is indeed in order
+					for _, vi := range activationMapping[a] {
+						RedisCachedValidatorsMapping.Mapping[vi].Queues.Activation = &struct{ Index int64 }{Index: i}
+						i++
+					}
+				}
+				log.Debugf("calculated activation queue indexes, took: %s", time.Since(start))
 
 				// gob struct
-				start := time.Now()
+				start = time.Now()
 				var serializedValidatorMapping bytes.Buffer
 				enc := gob.NewEncoder(&serializedValidatorMapping)
 				err := enc.Encode(RedisCachedValidatorsMapping)

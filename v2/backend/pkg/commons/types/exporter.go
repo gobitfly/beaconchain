@@ -685,13 +685,22 @@ type RedisCachedEpochRewards struct {
 	Epoch   Epoch
 	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }
+type QueuesMetadata struct {
+	Activation *struct {
+		Index int64
+	}
+}
+
 type CachedValidator struct {
 	PublicKey             []byte
-	ActivationEpoch       Epoch
-	WithdrawableEpoch     Epoch
+	ActivationEpoch       sql.NullInt64
+	ExitEpoch             sql.NullInt64
+	WithdrawableEpoch     sql.NullInt64
 	Status                string
 	WithdrawalCredentials []byte
 	Balance               uint64
+	Slashed               bool
+	Queues                QueuesMetadata
 }
 
 type RedisCachedValidatorsMapping struct {
