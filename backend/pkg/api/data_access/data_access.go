@@ -55,6 +55,7 @@ type DataAccessor interface {
 	GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error)
 	GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error)
+	GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error)
 
 	GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error)
@@ -1580,7 +1581,18 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
 	// TODO @recy21
+	// line chart for efficiencies of all groups for each epoch. includes a series for all groups combined
+	// series id is group id, NO series stack
 	return d.dummy.GetValidatorDashboardSummaryChart(dashboardId)
+}
+
+func (d DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
+	// TODO @recy21
+	// fetch ALL validator indices for the given dashboardId and given filters
+
+	// if duty == enums.ValidatorDuties.None THEN ignore period
+	// if groupId == t.AllGroups THEN fetch for all groups
+	return d.dummy.GetValidatorDashboardValidatorIndices(dashboardId, groupId, duty, period)
 }
 
 func (d DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
@@ -1595,6 +1607,8 @@ func (d DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId
 
 func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
 	// TODO @recy21
+	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
+	// series id is group id, series stack is 'execution' or 'consensus'
 	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)
 }
 

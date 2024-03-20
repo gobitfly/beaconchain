@@ -143,6 +143,12 @@ func (d DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t
 	return &r, err
 }
 
+func (d DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
+	r := []uint64{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d DummyService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	r := []t.VDBRewardsTableRow{}
 	p := t.Paging{}
