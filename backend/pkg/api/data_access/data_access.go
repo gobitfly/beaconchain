@@ -1290,40 +1290,40 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 	query := `select
 			users_val_dashboards_validators.validator_index,
-			attestations_source_reward,
-			attestations_target_reward,
-			attestations_head_reward,
-			attestations_inactivity_reward,
-			attestations_inclusion_reward,
-			attestations_reward,
-			attestations_ideal_source_reward,
-			attestations_ideal_target_reward,
-			attestations_ideal_head_reward,
-			attestations_ideal_inactivity_reward,
-			attestations_ideal_inclusion_reward,
-			attestations_ideal_reward,
-			attestations_scheduled,
-			attestations_executed,
-			attestation_head_executed,
-			attestation_source_executed,
-			attestation_target_executed,
-			blocks_scheduled,
-			blocks_proposed,
-			blocks_cl_reward,
-			blocks_el_reward,
-			sync_scheduled,
-			sync_executed,
-			sync_rewards,
-			slashed,
-			balance_start,
-			balance_end,
-			deposits_count,
-			deposits_amount,
-			withdrawals_count,
-			withdrawals_amount,
-			sync_chance,
-			block_chance,
-			inclusion_delay_sum
+			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
+			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
+			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
+			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
+			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
+			COALESCE(attestations_reward, 0) as attestations_reward,
+			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
+			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
+			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
+			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
+			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
+			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
+			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
+			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
+			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
+			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
+			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
+			COALESCE(blocks_proposed, 0) as blocks_proposed,
+			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
+			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
+			COALESCE(sync_scheduled, 0) as sync_scheduled,
+			COALESCE(sync_executed, 0) as sync_executed,
+			COALESCE(sync_rewards, 0) as sync_rewards,
+			COALESCE(slashed, false) as slashed,
+			COALESCE(balance_start, 0) as balance_start,
+			COALESCE(balance_end, 0) as balance_end,
+			COALESCE(deposits_count, 0) as deposits_count,
+			COALESCE(deposits_amount, 0) as deposits_amount,
+			COALESCE(withdrawals_count, 0) as withdrawals_count,
+			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
+			COALESCE(sync_chance, 0) as sync_chance,
+			COALESCE(block_chance, 0) as block_chance,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
@@ -1332,40 +1332,40 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	if dashboardId.Validators != nil {
 		query = `select
 			validator_index,
-			attestations_source_reward,
-			attestations_target_reward,
-			attestations_head_reward,
-			attestations_inactivity_reward,
-			attestations_inclusion_reward,
-			attestations_reward,
-			attestations_ideal_source_reward,
-			attestations_ideal_target_reward,
-			attestations_ideal_head_reward,
-			attestations_ideal_inactivity_reward,
-			attestations_ideal_inclusion_reward,
-			attestations_ideal_reward,
-			attestations_scheduled,
-			attestations_executed,
-			attestation_head_executed,
-			attestation_source_executed,
-			attestation_target_executed,
-			blocks_scheduled,
-			blocks_proposed,
-			blocks_cl_reward,
-			blocks_el_reward,
-			sync_scheduled,
-			sync_executed,
-			sync_rewards,
-			slashed,
-			balance_start,
-			balance_end,
-			deposits_count,
-			deposits_amount,
-			withdrawals_count,
-			withdrawals_amount,
-			sync_chance,
-			block_chance,
-			inclusion_delay_sum
+			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
+			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
+			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
+			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
+			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
+			COALESCE(attestations_reward, 0) as attestations_reward,
+			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
+			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
+			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
+			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
+			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
+			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
+			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
+			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
+			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
+			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
+			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
+			COALESCE(blocks_proposed, 0) as blocks_proposed,
+			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
+			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
+			COALESCE(sync_scheduled, 0) as sync_scheduled,
+			COALESCE(sync_executed, 0) as sync_executed,
+			COALESCE(sync_rewards, 0) as sync_rewards,
+			COALESCE(slashed, false) as slashed,
+			COALESCE(balance_start, 0) as balance_start,
+			COALESCE(balance_end, 0) as balance_end,
+			COALESCE(deposits_count, 0) as deposits_count,
+			COALESCE(deposits_amount, 0) as deposits_amount,
+			COALESCE(withdrawals_count, 0) as withdrawals_count,
+			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
+			COALESCE(sync_chance, 0) as sync_chance,
+			COALESCE(block_chance, 0) as block_chance,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from %[1]s
 		where %[1]s.validator_index = ANY($1)
 	`
@@ -1425,7 +1425,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, aprDivisor int, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		var err error
@@ -1511,7 +1511,8 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		apr := (float64(reward) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
+		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
+		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
 
 		data.Apr.Cl = apr
 		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
@@ -1535,7 +1536,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", 1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -1543,7 +1544,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", 7, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -1551,21 +1552,21 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 31, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
 		ret.Last31d = *data
 		return nil
 	})
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId.Id, groupId, validators)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.AllTime = *data
-	// 	return nil
-	// })
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", 1, dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.AllTime = *data
+		return nil
+	})
 	err := wg.Wait()
 
 	if err != nil {
