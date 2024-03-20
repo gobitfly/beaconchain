@@ -5,6 +5,7 @@ import (
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gorilla/mux"
 )
 
@@ -15,7 +16,7 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dai dataaccess.DataAccessor) *mux.Router {
+func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	handlerService := handlers.NewHandlerService(dai)
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
@@ -24,6 +25,36 @@ func NewApiRouter(dai dataaccess.DataAccessor) *mux.Router {
 	addRoutes(handlerService, publicRouter, internalRouter)
 
 	return router
+}
+
+// TODO replace with proper auth
+func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			query := r.URL.Query().Get("api_key")
+
+			if header != "Bearer "+apiKey && query != apiKey {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
@@ -63,6 +94,7 @@ func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Rou
 		{"DELETE", "/validator-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
 		{"GET", "/validator-dashboards/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
 		{"GET", "/validator-dashboards/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
+		{"GET", "/validator-dashboards/{dashboard_id}/validator-indices", nil, hs.InternalGetValidatorDashboardValidatorIndices},
 		{"GET", "/validator-dashboards/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
 		{"GET", "/validator-dashboards/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
 		{"GET", "/validator-dashboards/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
@@ -171,10 +203,10 @@ func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Rou
 	}
 	for _, endpoint := range endpoints {
 		if endpoint.PublicHandler != nil {
-			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method)
+			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)
 		}
 		if endpoint.InternalHander != nil {
-			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method)
+			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
 		}
 	}
 }

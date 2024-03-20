@@ -99,6 +99,19 @@ const onCurrencyChange = (event: Event) => {
       Input in eth [2] fixed out in WEI: <BcFormatValue value="2" :options="{sourceUnit:'MAIN', fixedUnit:'WEI'}" />
     </div>
   </div>
+  <b>
+    Format numbers
+  </b>
+  <div>100000, no settings: <BcFormatNumber :value="100000" /></div>
+  <div>100000.1234, no settings: <BcFormatNumber :value="100000.1234" /></div>
+  <div>100000, min 2 decimals: <BcFormatNumber :value="100000" :min-decimals="2" /></div>
+  <div>100000.1234, min/max 3: <BcFormatNumber :value="100000.1234" :min-decimals="3" :max-decimals="3" /></div>
+  <div>0, no settings: <BcFormatNumber :value="0" /></div>
+  <div>0.00001, no settings: <BcFormatNumber :value="0.00001" /></div>
+  <div>0.01, no settings: <BcFormatNumber :value="0.01" /></div>
+  <div>no value, no settings: <BcFormatNumber /></div>
+  <div>no value, default '-': <BcFormatNumber default="-" /></div>
+  <div>-100000, no settings: <BcFormatNumber :value="-100000" /></div>
 </template>
 
 <style lang="scss" scoped>

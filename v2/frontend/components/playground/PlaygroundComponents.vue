@@ -15,5 +15,8 @@ import PlaygroundSearchbarAccounts from './PlaygroundSearchbarAccounts.vue';
     <TabPanel header="Search bars">
       <PlaygroundEmbeddedSearchbars />
     </TabPanel>
+    <TabPanel header="Dialog">
+      <PlaygroundDialog />
+    </TabPanel>
   </TabView>
 </template>

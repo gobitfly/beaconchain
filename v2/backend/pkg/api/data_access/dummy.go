@@ -40,7 +40,7 @@ func (d DummyService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VD
 	return &r, err
 }
 
-func (d DummyService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
+func (d DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
 	r := []t.VDBValidator{}
 	err := commonFakeData(&r)
 	return r, err
@@ -76,6 +76,10 @@ func (d DummyService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, 
 
 func (d DummyService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
 	return nil
+}
+
+func (d DummyService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
+	return true, nil
 }
 
 func (d DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
@@ -137,6 +141,12 @@ func (d DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t
 	r := t.ChartData[int]{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
+	r := []uint64{}
+	err := commonFakeData(&r)
+	return r, err
 }
 
 func (d DummyService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {

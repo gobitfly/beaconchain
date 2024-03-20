@@ -19,6 +19,8 @@ const key = computed(() => {
   return route.params.id
 })
 
+const manageValidatorsModalVisisble = ref(false)
+
 const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 function showDashboardCreation (type: DashboardCreationDisplayType) {
@@ -44,6 +46,7 @@ onMounted(() => {
     </BcPageWrapper>
   </div>
   <div v-else>
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
     <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
@@ -57,6 +60,7 @@ onMounted(() => {
         </div>
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
+      <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
       </div>

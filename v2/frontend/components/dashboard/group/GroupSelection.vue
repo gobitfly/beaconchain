@@ -6,6 +6,8 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
+
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const list = computed(() => {
@@ -16,7 +18,7 @@ const list = computed(() => {
   return groups
 })
 
-const selected = defineModel<number>({ required: true })
+const selected = defineModel<number | undefined>({ required: true })
 
 const selectedGroup = computed(() => {
   return list.value.find(item => item.id === selected.value)
@@ -31,6 +33,7 @@ const selectedGroup = computed(() => {
     option-value="id"
     option-label="name"
     :placeholder="$t('dashboard.group.selection.placeholder')"
+    @update:model-value="(value: number)=>emit('setGroup', value)"
   >
     <template v-if="selectedGroup" #value>
       <span>{{ $t('dashboard.group.selection.group') }}:

@@ -47,17 +47,21 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
+  min-width: 375px;
 
   .p-dialog-header {
     color: var(--text-color);
     .p-dialog-title {
-      @include fonts.big_text;
+      @include fonts.dialog_header;
     }
   }
   &.p-dialog-header-hidden {
     .p-dialog-header {
       display: none;
     }
+  }
+  @media screen and (max-width: 430px) {    
+    margin-bottom: 0;
   }
 }
 
