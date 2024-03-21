@@ -1,8 +1,8 @@
-import { type SearchAheadResult, type ResultType } from '~/types/searchbar'
+import { type SearchAheadResult } from '~/types/searchbar'
 
 export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadResult {
   const searched = body?.input as string
-  const searchable = body?.searchable as ResultType[]
+  // const searchable = body?.searchable as ResultType[]
   const response : SearchAheadResult = {}; response.data = []
 
   if (Math.random() < 1 / 10) {
