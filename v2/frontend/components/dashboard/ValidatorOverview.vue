@@ -31,6 +31,7 @@ const createInfo = (key: string, value: ClElValue<number | string>, formatFuncti
 
 const dataList = computed(() => {
   const v = validatorDashboardOverview.value
+
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`)
   }
@@ -47,6 +48,7 @@ const dataList = computed(() => {
   if (!v) {
     return list
   }
+
   const onlineClass = v.validators.online ? 'positive' : ''
   const offlineClass = v.validators.online ? 'negative' : ''
   active.value = { label: `<span class="${onlineClass}">${v.validators.online ?? 0}</span> / <span class="${offlineClass}">${v.validators.offline ?? 0}</span>` }

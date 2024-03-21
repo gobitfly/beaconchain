@@ -13,18 +13,15 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 
 const route = useRoute()
 
-const dashboardKey = computed(() => {
-  if (Array.isArray(route.params.id)) {
-    return route.params.id.join(',')
-  }
-  return route.params.id
-})
-
 const { key } = storeToRefs(useValidatorDashboardOverviewStore())
 
-watch(dashboardKey, (newKey) => {
-  console.log('DIECE: New dashboard key found on index page', newKey)
-  key.value = newKey // TODO: This does not seem perfect
+watch(route, (newRoute) => {
+  console.log('DIECE: New route found on index page', newRoute)
+  if (Array.isArray(newRoute.params.id)) {
+    key.value = newRoute.params.id.join(',')
+  } else {
+    key.value = newRoute.params.id
+  }
 }, { immediate: true })
 
 const manageValidatorsModalVisisble = ref(false)

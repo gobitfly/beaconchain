@@ -10,7 +10,7 @@ const { getDashboards } = store
 const { path } = useRoute()
 
 const { dashboards } = storeToRefs(store)
-await useAsyncData('validator_dashboards', () => getDashboards()) // TODO: This is called here and in DashboardValidatorManageValidators.vue. Should just be called once?
+await useAsyncData('user_dashboards', () => getDashboards()) // TODO: This is called here and in DashboardValidatorManageValidators.vue. Should just be called once?
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
