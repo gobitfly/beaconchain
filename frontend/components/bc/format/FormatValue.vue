@@ -9,7 +9,7 @@ interface Props {
   positiveClass?: string
   negativeClass?: string
 }
-const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive-text', negativeClass: 'negative-text' })
+const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive', negativeClass: 'negative' })
 
 const { converter } = useValue()
 
@@ -49,13 +49,3 @@ const data = computed(() => {
     </span>
   </BcTooltip>
 </template>
-
-<style lang="scss" scoped>
-.positive-text {
-  color: var(--positive-color);
-}
-
-.negative-text {
-  color: var(--negtive-color);
-}
-</style>

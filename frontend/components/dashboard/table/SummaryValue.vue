@@ -12,17 +12,17 @@ import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
   SummaryDetailsEfficiencyValidatorProps,
-  type SummaryDetail,
   type SummaryDetailsEfficiencyValidatorProp,
   type SummaryDetailsEfficiencyProp,
   type SummaryDetailsEfficiencyCombinedProp,
   type DashboardValidatorContext
 } from '~/types/dashboard/summary'
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { TimeFrame } from '~/types/value'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
-  detail: SummaryDetail,
+  detail: TimeFrame,
   data: VDBGroupSummaryData,
   row: VDBSummaryTableRow
 }
@@ -85,16 +85,16 @@ const data = computed(() => {
       luck: col.luck
     }
   } else if (props.property === 'efficiency_all_time') {
-    let efficiencyTotal = props.row.efficiency_last_24h
+    let efficiencyTotal = props.row.efficiency.all_time
     switch (props.detail) {
-      case 'last_31d':
-        efficiencyTotal = props.row.efficiency_last_31d
+      case 'last_30d':
+        efficiencyTotal = props.row.efficiency.last_30d
         break
       case 'last_7d':
-        efficiencyTotal = props.row.efficiency_last_7d
+        efficiencyTotal = props.row.efficiency.last_7d
         break
-      case 'all_time':
-        efficiencyTotal = props.row.efficiency_all_time
+      case 'last_24h':
+        efficiencyTotal = props.row.efficiency.last_24h
         break
     }
     return {
@@ -156,10 +156,15 @@ const data = computed(() => {
   </div>
   <div v-else-if="data?.luck" class="info_row">
     <span>
-      <FontAwesomeIcon :icon="faCube" />
-      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> |
-      <FontAwesomeIcon :icon="faSync" />
-      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faCube" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" />
+      </span>
+      <span> | </span>
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faSync" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      </span>
     </span>
     <BcTooltip position="top">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
@@ -241,5 +246,6 @@ const data = computed(() => {
 .info_row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 </style>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import type { ClElValue } from '~/types/api/common'
 import type { DashboardKey } from '~/types/dashboard'
 import { type OverviewTableData } from '~/types/dashboard/overview'
+import { TimeFrames, type NumberOrString } from '~/types/value'
 import { totalElClNumbers } from '~/utils/bigMath'
 
 interface Props {
@@ -25,28 +27,43 @@ watch(() => props.dashboardKey, () => {
 
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
+const formatValueWei = (value: NumberOrString): NumberOrString => {
+  return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
+}
+const formatValuePercent = (value: NumberOrString): NumberOrString => {
+  return formatPercent(value as number)
+}
+
+const createInfo = (key: string, value: ClElValue<number | string>, formatFunction: (value: Partial<NumberOrString>) => NumberOrString) => {
+  const clValue = formatFunction(value.cl)
+  const elValue = formatFunction(value.el)
+  return {
+    label: $t(`statistics.${key}`),
+    value: `${clValue} (CL) ${elValue} (EL)`
+  }
+}
+
 const dataList = computed(() => {
   const v = overview.value
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`)
   }
   const efficiency: OverviewTableData = {
-    label: $t(`${tPath}total_efficiency`)
+    label: $t(`${tPath}7d_efficiency`)
   }
   const rewards: OverviewTableData = {
-    label: $t(`${tPath}total_rewards`)
-  }
-  const luck: OverviewTableData = {
-    label: $t(`${tPath}proposal_luck`)
+    label: $t(`${tPath}7d_rewards`)
   }
   const apr: OverviewTableData = {
-    label: $t(`${tPath}total_apr`)
+    label: $t(`${tPath}7d_apr`)
   }
-  const list: OverviewTableData[] = [active, efficiency, rewards, luck, apr]
+  const list: OverviewTableData[] = [active, efficiency, rewards, apr]
   if (!v) {
     return list
   }
-  active.value = { label: `${v.validators.active}/${v.validators.total}` }
+  const onlineClass = v.validators.online ? 'positive' : ''
+  const offlineClass = v.validators.online ? 'negative' : ''
+  active.value = { label: `<span class="${onlineClass}">${v.validators.online}</span> / <span class="${offlineClass}">${v.validators.offline}</span>` }
   active.additonalValues = [
     [
       { label: v.validators.pending ?? 0 },
@@ -59,42 +76,15 @@ const dataList = computed(() => {
       { label: $t('validator_state.slashed') }
     ]
   ]
-  efficiency.value = { label: formatPercent(v.efficiency.total) }
 
-  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.all_time), { addPlus: true })
-  const statsLabels = [
-    { label: `(${$t('statistics.last_24h')})` },
-    { label: `(${$t('statistics.last_7d')})` },
-    { label: `(${$t('statistics.last_31d')})` },
-    { label: `(${$t('statistics.last_365d')})` }
-  ]
-  rewards.additonalValues = [
-    [
-      converter.value.weiToValue(totalElCl(v.rewards.last_24h), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_31d), { addPlus: true }),
-      converter.value.weiToValue(totalElCl(v.rewards.last_365d), { addPlus: true })
-    ], statsLabels
-  ]
+  efficiency.value = { label: formatPercent(v.efficiency.last_7d) }
+  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v.efficiency[k]) }))
 
-  luck.value = { label: formatPercent(v.luck.proposal.percent) }
-  luck.additonalValues = [
-    [
-      { label: formatPercent(v.luck.sync.percent) }
-    ],
-    [
-      { label: $t(`${tPath}sync_committee_luck`) }
-    ]
-  ]
-  apr.value = { label: formatPercent(totalElClNumbers(v.apr.all_time)) }
-  apr.additonalValues = [
-    [
-      { label: formatPercent(totalElClNumbers(v.apr.last_24h)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_7d)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_31d)) },
-      { label: formatPercent(totalElClNumbers(v.apr.last_365d)) }
-    ], statsLabels
-  ]
+  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true })
+  rewards.infos = TimeFrames.map(k => createInfo(k, v.rewards[k], formatValueWei))
+
+  apr.value = { label: formatPercent(totalElClNumbers(v.apr.last_7d)) }
+  apr.infos = TimeFrames.map(k => createInfo(k, v.apr[k], formatValuePercent))
   return list
 })
 

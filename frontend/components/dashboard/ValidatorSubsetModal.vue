@@ -4,13 +4,14 @@ import {
   faCopy
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { TimeFrame } from '~/types/value'
 
 const { t: $t } = useI18n()
 
 interface Props {
   context: DashboardValidatorContext;
-  timeFrame?: SummaryDetail;
+  timeFrame?: TimeFrame;
   dashboardName?: string,
   groupName?: string, // overruled by dashboardName
   validators: number[],
@@ -56,8 +57,8 @@ const caption = computed(() => {
       return text + ' ' + $t('statistics.last_24h')
     case 'last_7d':
       return text + ' ' + $t('statistics.last_7d')
-    case 'last_31d':
-      return text + ' ' + $t('statistics.last_31d')
+    case 'last_30d':
+      return text + ' ' + $t('statistics.last_30d')
     case 'all_time':
       return text + ' ' + $t('statistics.all')
   }
