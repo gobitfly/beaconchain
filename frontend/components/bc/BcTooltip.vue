@@ -8,6 +8,7 @@ interface Props {
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean,
   tooltipClass?: string,
+  fitContent?: boolean,
   scrollContainer?: string // query selector for scrollable parent container
 }
 
@@ -34,7 +35,7 @@ const isOpen = computed(() => isSelected.value || hover.value || hoverTooltip.va
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
 
 const classList = computed(() => {
-  return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed']
+  return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed', props.fitContent ? 'fit-content' : '']
 })
 
 const setPosition = () => {
@@ -178,12 +179,20 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
-
 @keyframes fadeIn {
-  0% { opacity: 0; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
+
 .slot_container {
   display: inline;
 
@@ -282,9 +291,13 @@ onUnmounted(() => {
     font-weight: var(--inter-medium);
   }
 
-  &:has(b) {
+  &:has(b):not(.fit-content) {
     min-width: 200px;
     text-align: left;
+  }
+
+  &.fit-content {
+    min-width: max-content;
   }
 }
 </style>
