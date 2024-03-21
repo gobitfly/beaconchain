@@ -1,18 +1,13 @@
 <script lang="ts" setup>
 import type Menubar from 'primevue/menubar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import type { DashboardKey } from '~/types/dashboard'
 
 const { width } = useWindowSize()
-
-interface Props {
-  dashboardKey?: DashboardKey // optional because it's not available for notifications
-}
-const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
 const store = useUserDashboardStore()
 const { getDashboards } = store
+const { path } = useRoute()
 
 const { dashboards } = storeToRefs(store)
 await useAsyncData('validator_dashboards', () => getDashboards()) // TODO: This is called here and in DashboardValidatorManageValidators.vue. Should just be called once?
@@ -21,7 +16,6 @@ const emit = defineEmits<{(e: 'showCreation'): void }>()
 
 interface MenuBarButton {
   label: string;
-  active: boolean;
   route?: string;
   class?: string;
 }
@@ -44,14 +38,13 @@ watch(width, () => {
   } else {
     buttonCount.value = 3 // [validator], [accounts], [notifications]
   }
-})
+}, { immediate: true })
 
-const items = computed(() => {
+const items = computed<MenuBarEntry[]>(() => {
   if (dashboards.value === undefined) {
     return []
   }
 
-  const dashboardsButtons: MenuBarEntry[] = []
   const sortedItems: MenuBarButton[][] = []
 
   const addToSortedItems = (minButtonCount: number, items?:MenuBarButton[]) => {
@@ -70,28 +63,19 @@ const items = computed(() => {
       }
     }
   }
-  addToSortedItems(0, dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })))
-  addToSortedItems(3, dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, active: id === props.dashboardKey, route: `/dashboard/${id}` })))
-  addToSortedItems(2, [{ label: $t('dashboard.notifications'), active: props.dashboardKey === undefined, route: '/notifications' }])
+  addToSortedItems(0, dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, route: `/dashboard/${id}` })))
+  addToSortedItems(3, dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, route: `/account-dashboard/${id}` })))
+  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
-  for (const items of sortedItems) {
-    let activeLabel = ''
-    items.forEach((item) => {
-      if (item.active) {
-        activeLabel = item.label
-      }
-    })
-
-    dashboardsButtons.push({
-      label: activeLabel !== '' ? activeLabel : items[0].label,
-      active: activeLabel !== '',
+  return sortedItems.map((items) => {
+    const active = items.find(i => i.route === path)
+    return {
+      label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
-      route: items.length === 1 ? items[0].route : undefined,
+      route: items.length === 1 ? items[0].route : active?.route,
       items: items.length > 1 ? items : undefined
-    })
-  }
-
-  return dashboardsButtons
+    }
+  })
 })
 </script>
 
@@ -104,12 +88,12 @@ const items = computed(() => {
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
           <NuxtLink v-if="item.route" :to="item.route">
-            <span class="button-content" :class="[item.class, {'p-active': item.active, 'pointer': item.dropdown}]">
+            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown}]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
           </NuxtLink>
-          <span v-else class="button-content" :class="{ 'p-active': item.active, 'pointer': item.dropdown }">
+          <span v-else class="button-content" :class="{ 'pointer': item.dropdown }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
           </span>
