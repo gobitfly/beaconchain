@@ -64,7 +64,7 @@ const items = computed<MenuBarEntry[]>(() => {
     }
   }
   addToSortedItems(0, dashboards.value?.validator_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.validator_dashboard')} ${id}`, route: `/dashboard/${id}` })))
-  addToSortedItems(3, dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, route: `/acount-dashboard/${id}` })))
+  addToSortedItems(3, dashboards.value?.account_dashboards.map(({ id, name }) => ({ label: name || `${$t('dashboard.account_dashboard')} ${id}`, route: `/account-dashboard/${id}` })))
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
   return sortedItems.map((items) => {
