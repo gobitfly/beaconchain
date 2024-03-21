@@ -52,24 +52,20 @@ function onBack () {
 }
 
 async function createDashboard () {
-  let newDashboardId = -1
+  visible.value = false
   if (type.value === 'account') {
     if (!name.value) {
       return
     }
     const response = await createAccountDashboard(name.value)
-    newDashboardId = response?.id || 1
+    router.push(`/account-dashboard/${response?.id || 1}`)
   } else if (type.value === 'validator') {
     if (!name.value || !network.value) {
       return
     }
     const response = await createValidatorDashboard(name.value, network.value)
-    newDashboardId = response?.id || 1
+    router.push(`/dashboard/${response?.id || 1}`)
   }
-
-  visible.value = false
-
-  router.push(`/dashboard/${newDashboardId}`)
 }
 </script>
 
