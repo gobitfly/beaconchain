@@ -7,21 +7,21 @@ import { ChainFamily, ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({
   chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
   colored: { type: Boolean, default: false }, // tells whether the icon must be in its official color or in the color of the font
-  harmonizePerceivedSize: { type: Boolean, default: false } // makes certain icons slightly smaller, not to appear bigger than the others
+  harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
 })
 
-const family = ChainInfo[props.chainId as ChainIDs].family
-const sizing = props.harmonizePerceivedSize ? family : 'do-not-adjust-size'
-const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
+const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
+const coloring = computed(() => !props.colored ? 'monochromatic' : '')
+const sizing = props.harmonizePerceivedSize ? family : ''
 </script>
 
 <template>
   <div class="frame">
-    <IconNetworkEthereumColored v-if="family === ChainFamily.Ethereum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkArbitrumColored v-else-if="family === ChainFamily.Arbitrum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkOptimismColored v-else-if="family === ChainFamily.Optimism" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkBaseColored v-else-if="family === ChainFamily.Base" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkGnosisColored v-else-if="family === ChainFamily.Gnosis" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkEthereum v-if="family === ChainFamily.Ethereum" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkArbitrum v-else-if="family === ChainFamily.Arbitrum" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkOptimism v-else-if="family === ChainFamily.Optimism" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkBase v-else-if="family === ChainFamily.Base" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkGnosis v-else-if="family === ChainFamily.Gnosis" class="icon" :class="[sizing,coloring]" />
   </div>
 </template>
 
@@ -42,7 +42,7 @@ const coloring = !props.colored ? 'monochromatic' : 'do-not-change-colors'
 
 // The following classes are used only if props `harmonize-perceived-size` has been set to true.
 // It corrects what a human brain perceives, to give the feeling that all icons have a similar size (maybe a matter of surface area).
-// Based on empirical trials an errors with author's brain, works better on a dark background.
+// Based on empirical trials an errors with author's brain.
 
 .Ethereum {
   height: 110%;

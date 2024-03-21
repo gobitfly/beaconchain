@@ -40,11 +40,11 @@ import {
   faBuildingColumns
 } from '@fortawesome/sharp-solid-svg-icons'
 
-import EthereumMono from '~/components/icon/network/EthereumColored.vue'
-import GnosisMono from '~/components/icon/network/GnosisColored.vue'
-import ArbitrumMono from '~/components/icon/network/ArbitrumColored.vue'
-import BaseMono from '~/components/icon/network/BaseColored.vue'
-import OptimismMono from '~/components/icon/network/OptimismColored.vue'
+import NetworkEthereum from '~/components/icon/network/NetworkEthereum.vue'
+import NetworkGnosis from '~/components/icon/network/NetworkGnosis.vue'
+import NetworkArbitrum from '~/components/icon/network/NetworkArbitrum.vue'
+import NetworkBase from '~/components/icon/network/NetworkBase.vue'
+import NetworkOptimism from '~/components/icon/network/NetworkOptimism.vue'
 import IconEthermineStaking from '~/components/icon/megaMenu/EthermineStaking.vue'
 import IconEthStore from '~/components/icon/megaMenu/EthStore.vue'
 import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
@@ -66,7 +66,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: EthereumMono,
+              svg: NetworkEthereum,
               url: '/'
             },
             {
@@ -338,7 +338,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: GnosisMono,
+              svg: NetworkGnosis,
               url: '/'
             },
             {
@@ -556,7 +556,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: ArbitrumMono,
+              svg: NetworkArbitrum,
               url: '/'
             },
             {
@@ -670,7 +670,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: BaseMono,
+              svg: NetworkBase,
               url: '/'
             },
             {
@@ -784,7 +784,7 @@ const items = [
           items: [
             {
               label: $t('header.megamenu.overview'),
-              svg: OptimismMono,
+              svg: NetworkOptimism,
               url: '/'
             },
             {

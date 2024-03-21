@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { IconNetworkEthereumColored, IconNetworkGnosisColored } from '#components'
+import { IconNetworkEthereum, IconNetworkGnosis } from '#components'
 
 const { t: $t } = useI18n()
 
 const network = defineModel<string>('network', { required: true })
-const allNetworks = shallowRef([{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumColored }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisColored }])
+const allNetworks = [{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis }]
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 

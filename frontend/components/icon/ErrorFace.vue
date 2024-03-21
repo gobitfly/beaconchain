@@ -3,7 +3,7 @@ const props = defineProps({
   inline: { type: Boolean, default: false }
 })
 
-const look = props.inline ? 'inline' : 'default'
+const look = props.inline ? 'inline' : ''
 </script>
 
 <template>

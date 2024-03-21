@@ -46,7 +46,7 @@ function onButtonClicked (value: string) {
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" />
+          <component :is="button.component" class="monochromatic" />
         </slot>
       </template>
     </BcToggleSingleBarButton>
