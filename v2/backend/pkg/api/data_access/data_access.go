@@ -289,7 +289,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 	return result, err
 }
 
-// param validators: slice of validator public keys or indices, a index should resolve to the newest index version
+// param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return nil, nil
@@ -691,7 +691,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 		GroupId        uint64 `db:"group_id"`
 	}{}
 
-	// Query to find the pubkey for each validator index and version pair
+	// Query to find the pubkey for each validator index
 	pubkeysQuery := `
 		SELECT
 			validator_index,
@@ -700,7 +700,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 		WHERE validator_index = ANY($1)
 	`
 
-	// Query to add the validator and version pairs to the dashboard and group
+	// Query to add the validators to the dashboard and group
 	addValidatorsQuery := `
 		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
 			VALUES 
@@ -718,7 +718,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 			dashboard_id = EXCLUDED.dashboard_id,
 			group_id = EXCLUDED.group_id,
 			validator_index = EXCLUDED.validator_index
-		RETURNING validator_index, validator_index_version, group_id
+		RETURNING validator_index, group_id
 	`
 
 	// Find all the pubkeys
