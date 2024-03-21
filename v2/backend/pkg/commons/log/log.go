@@ -22,7 +22,7 @@ func Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...F
 	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
 }
 
-func Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
+func WarnWithStackTrace(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
 	logErrorInfo(err, callerSkip, additionalInfos...).Warn(errorMsg)
 }
 

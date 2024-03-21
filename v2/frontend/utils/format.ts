@@ -3,6 +3,8 @@ import { round } from 'lodash-es'
 
 const { epochToTs } = useNetwork()
 
+const REGEXP_HAS_NUMBERS = /^(?!0+$)\d+$/
+
 export interface NumberFormatConfig {
   precision?: number
   fixed?:number
@@ -74,11 +76,13 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
   }
   minDecimalCount = minDecimalCount === undefined ? maxDecimalCount : Math.min(minDecimalCount, maxDecimalCount)
   const split = value.split('.')
-  let dec = (split[1] ?? '').substring(0, maxDecimalCount)
+  let dec = (split[1] ?? '')
+  const hasTinyValue = !!dec && REGEXP_HAS_NUMBERS.test(dec)
+  dec = dec.substring(0, maxDecimalCount)
   while (dec.length < minDecimalCount) {
     dec += '0'
   }
-  if (split[0] === '0' && (!dec || parseInt(dec) === 0)) {
+  if (split[0] === '0' && (!dec || parseInt(dec) === 0) && hasTinyValue) {
     if (maxDecimalCount === 0) {
       return '<1'
     }

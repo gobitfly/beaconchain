@@ -29,6 +29,7 @@ export default defineNuxtConfig({
       apiClient: process.env.API_CLIENT,
       legacyApiClient: process.env.LEGACY_API_CLIENT,
       xUserId: process.env.X_USER_ID,
+      apiKey: process.env.API_KEY,
       gitVersion
     },
     private: {

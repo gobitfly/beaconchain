@@ -9,18 +9,11 @@ import (
 // ------------------------------------------------------------
 // Overview
 type VDBOverviewValidators struct {
-	Total   uint64 `json:"total"`
-	Active  uint64 `json:"active"`
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
 	Pending uint64 `json:"pending"`
 	Exited  uint64 `json:"exited"`
 	Slashed uint64 `json:"slashed"`
-}
-
-type VDBOverviewEfficiency struct {
-	Total       float64 `json:"total"`
-	Attestation float64 `json:"attestation"`
-	Proposal    float64 `json:"proposal"`
-	Sync        float64 `json:"sync"`
 }
 
 type VDBOverviewGroup struct {
@@ -29,12 +22,11 @@ type VDBOverviewGroup struct {
 }
 
 type VDBOverviewData struct {
-	Groups     []VDBOverviewGroup                  `json:"groups"`
-	Validators VDBOverviewValidators               `json:"validators"`
-	Efficiency VDBOverviewEfficiency               `json:"efficiency"`
-	Rewards    PeriodicClElValues[decimal.Decimal] `json:"rewards"`
-	Luck       Luck                                `json:"luck"`
-	Apr        PeriodicClElValues[float64]         `json:"apr"`
+	Groups     []VDBOverviewGroup                         `json:"groups"`
+	Validators VDBOverviewValidators                      `json:"validators"`
+	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
+	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
+	Apr        PeriodicValues[ClElValue[float64]]         `json:"apr"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
@@ -42,14 +34,9 @@ type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 // ------------------------------------------------------------
 // Summary Tab
 type VDBSummaryTableRow struct {
-	GroupId uint64 `json:"group_id"`
-
-	EfficiencyLast24h float64 `json:"efficiency_last_24h"`
-	EfficiencyLast7d  float64 `json:"efficiency_last_7d"`
-	EfficiencyLast31d float64 `json:"efficiency_last_31d"`
-	EfficiencyAllTime float64 `json:"efficiency_all_time"`
-
-	Validators []uint64 `json:"validators"`
+	GroupId    uint64                  `json:"group_id"`
+	Efficiency PeriodicValues[float64] `json:"efficiency"`
+	Validators []uint64                `json:"validators"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
@@ -77,12 +64,14 @@ type VDBGroupSummaryColumn struct {
 type VDBGroupSummaryData struct {
 	Last24h VDBGroupSummaryColumn `json:"last_24h"`
 	Last7d  VDBGroupSummaryColumn `json:"last_7d"`
-	Last31d VDBGroupSummaryColumn `json:"last_31d"`
+	Last30d VDBGroupSummaryColumn `json:"last_30d"`
 	AllTime VDBGroupSummaryColumn `json:"all_time"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
 type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
+
+type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
 
 // ------------------------------------------------------------
 // Rewards Tab
@@ -107,13 +96,13 @@ type VDBGroupRewardsDetails struct {
 	Income      decimal.Decimal `json:"income"`
 }
 type VDBGroupRewardsData struct {
-	AttestationSource VDBGroupRewardsDetails `json:"attestation_source"`
-	AttestationTarget VDBGroupRewardsDetails `json:"attestation_target"`
-	AttestationHead   VDBGroupRewardsDetails `json:"attestation_head"`
-	Sync              VDBGroupRewardsDetails `json:"sync"`
-	Slashing          VDBGroupRewardsDetails `json:"slashing"`
-	Proposal          VDBGroupRewardsDetails `json:"proposal"`
-	ProposalElReward  decimal.Decimal        `json:"proposal_el_reward"`
+	AttestationsSource VDBGroupRewardsDetails `json:"attestations_source"`
+	AttestationsTarget VDBGroupRewardsDetails `json:"attestations_target"`
+	AttestationsHead   VDBGroupRewardsDetails `json:"attestations_head"`
+	Sync               VDBGroupRewardsDetails `json:"sync"`
+	Slashing           VDBGroupRewardsDetails `json:"slashing"`
+	Proposal           VDBGroupRewardsDetails `json:"proposal"`
+	ProposalElReward   decimal.Decimal        `json:"proposal_el_reward"`
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
@@ -127,12 +116,12 @@ type VDBEpochDutiesItem struct {
 type VDBEpochDutiesTableRow struct {
 	Validator uint64 `json:"validator"`
 
-	AttestationSource VDBEpochDutiesItem `json:"attestation_source"`
-	AttestationTarget VDBEpochDutiesItem `json:"attestation_target"`
-	AttestationHead   VDBEpochDutiesItem `json:"attestation_head"`
-	Proposal          VDBEpochDutiesItem `json:"proposal"`
-	Sync              VDBEpochDutiesItem `json:"sync"`
-	Slashing          VDBEpochDutiesItem `json:"slashing"`
+	AttestationsSource VDBEpochDutiesItem `json:"attestations_source"`
+	AttestationsTarget VDBEpochDutiesItem `json:"attestations_target"`
+	AttestationsHead   VDBEpochDutiesItem `json:"attestations_head"`
+	Proposal           VDBEpochDutiesItem `json:"proposal"`
+	Sync               VDBEpochDutiesItem `json:"sync"`
+	Slashing           VDBEpochDutiesItem `json:"slashing"`
 }
 type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
@@ -176,10 +165,10 @@ type VDBHeatmapTooltipData struct {
 	Syncs     []VDBHeatmapTooltipDuty `json:"syncs"`
 	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
 
-	AttestationHead   StatusCount     `json:"attestation_head"`
-	AttestationSource StatusCount     `json:"attestation_source"`
-	AttestationTarget StatusCount     `json:"attestation_target"`
-	AttestationIncome decimal.Decimal `json:"attestation_income"`
+	AttestationsHead   StatusCount     `json:"attestations_head"`
+	AttestationsSource StatusCount     `json:"attestations_source"`
+	AttestationsTarget StatusCount     `json:"attestations_target"`
+	AttestationIncome  decimal.Decimal `json:"attestation_income"`
 }
 type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatmapTooltipData]
 
@@ -229,7 +218,7 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'deposited' | 'pending' | 'online' | 'offline' | 'exited' | 'slashed'" faker:"oneof: deposited, pending, online, offline, exited, slashed"`
+	Status               string          `json:"status" tstype:"'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn'" faker:"oneof: pending, online, offline, exiting, exited, slashed, withdrawn"`
 	QueuePosition        uint64          `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }

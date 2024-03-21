@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,8 +27,8 @@ type HandlerService struct {
 	dai dataaccess.DataAccessor
 }
 
-func NewHandlerService(DataAccessor dataaccess.DataAccessor) HandlerService {
-	return HandlerService{dai: DataAccessor}
+func NewHandlerService(DataAccessor dataaccess.DataAccessor) *HandlerService {
+	return &HandlerService{dai: DataAccessor}
 }
 
 // --------------------------------------
@@ -75,7 +76,7 @@ func joinErr(err *error, message string) {
 
 func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string) string {
 	if !regex.MatchString(param) {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter ' `+paramName+` has incorrect format`, param))
+		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter '`+paramName+`' has incorrect format`, param))
 	}
 	return param
 }
@@ -83,23 +84,12 @@ func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string
 func checkName(handlerErr *error, name string, minLength int) string {
 	if len(name) < minLength {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too short, minimum length is %d`, name, minLength))
+		return name
 	} else if len(name) > 50 {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too long, maximum length is %d`, name, maxNameLength))
+		return name
 	}
 	return checkRegex(handlerErr, reName, name, "name")
-}
-
-func checkMultipleRegex(handlerErr *error, regexes []*regexp.Regexp, params []string, paramName string) []string {
-OUTER:
-	for _, param := range params {
-		for _, regex := range regexes {
-			if regex.MatchString(param) {
-				continue OUTER
-			}
-		}
-		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter '%s' has incorrect format", param, paramName))
-	}
-	return params
 }
 
 func checkNameNotEmpty(handlerErr *error, name string) string {
@@ -187,6 +177,11 @@ func checkUint(handlerErr *error, param, paramName string) uint64 {
 	return num
 }
 
+type validatorSet struct {
+	Indexes    []uint64
+	PublicKeys [][]byte
+}
+
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
 	var err error
@@ -204,16 +199,16 @@ func parseDashboardId(id string) (interface{}, error) {
 	if err != nil {
 		return nil, errors.New("invalid format for parameter 'dashboard_id'")
 	}
-	validators := checkValidatorList(&err, string(decodedId))
-	if len(validators) > 20 {
+	indexes, publicKeys := checkValidatorList(&err, string(decodedId))
+	if len(indexes)+len(publicKeys) > 20 {
 		return nil, errors.New("too many validators in the list, maximum is 20")
 	}
-	return validators, nil
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, err
 }
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
@@ -223,8 +218,8 @@ func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDB
 			return nil, err
 		}
 		return &types.VDBId{Id: dashboardInfo.Id, Validators: nil}, nil
-	case []string:
-		validators, err := h.dai.GetValidatorsFromStrings(dashboardId)
+	case validatorSet:
+		validators, err := h.dai.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +230,7 @@ func (h HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDB
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
@@ -297,13 +292,21 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 	return paging
 }
 
-func parseSortColumn[T enums.EnumFactory[T]](column string) (T, error) {
+func parseEnum[T enums.EnumFactory[T]](enum string, name string) (T, error) {
 	var c T
-	col := c.NewFromString(column)
+	col := c.NewFromString(enum)
 	if col.Int() == -1 {
-		return col, errors.New("given value '" + column + "' for parameter 'sort' is not a valid column name for sorting")
+		return col, errors.New("given value '" + enum + "' for parameter '" + name + "' is not a valid value")
 	}
 	return col, nil
+}
+
+func checkEnum[T enums.EnumFactory[T]](handlerErr *error, enum string, name string) T {
+	col, err := parseEnum[T](enum, name)
+	if err != nil {
+		joinErr(handlerErr, err.Error())
+	}
+	return col
 }
 
 func parseSortOrder(order string) (bool, error) {
@@ -335,7 +338,7 @@ func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.S
 		if len(sortSplit) == 1 {
 			sortSplit = append(sortSplit, "")
 		}
-		sort, err := parseSortColumn[T](sortSplit[0])
+		sort, err := parseEnum[T](sortSplit[0], "sort")
 		if err != nil {
 			joinErr(handlerErr, err.Error())
 			return sorts
@@ -349,20 +352,35 @@ func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.S
 	return sorts
 }
 
-func checkValidatorList(handlerErr *error, validators string) []string {
+func checkValidatorList(handlerErr *error, validators string) ([]uint64, [][]byte) {
 	return checkValidatorArray(handlerErr, strings.Split(validators, ","))
 }
 
-func checkValidatorArray(handlerErr *error, validators []string) []string {
-	return checkMultipleRegex(handlerErr, []*regexp.Regexp{reNumber, reValidatorPubkey}, validators, "validators")
+func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, [][]byte) {
+	var indexes []uint64
+	var publicKeys [][]byte
+	for _, v := range validators {
+		if reNumber.MatchString(v) {
+			indexes = append(indexes, checkUint(handlerErr, v, "validators"))
+		} else if reValidatorPubkey.MatchString(v) {
+			bytes, err := hex.DecodeString(v[2:])
+			if err != nil {
+				joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+			}
+			publicKeys = append(publicKeys, bytes)
+		} else {
+			joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+		}
+	}
+	return indexes, publicKeys
 }
 
 func checkNetwork(handlerErr *error, network string) uint64 {
 	// try parsing as uint64
 	networkId, err := strconv.ParseUint(network, 10, 64)
 	if err != nil {
-		// TODO string try to match network name
-		joinErr(handlerErr, fmt.Sprintf("invalid network id: %s", network))
+		// TODO try to match string with network name
+		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter 'network' is not a valid network id", network))
 	}
 	return networkId
 }
@@ -398,11 +416,11 @@ func getUser(r *http.Request) (User, error) {
 //   Response handling
 
 func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	if response == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Error(err, "error writing response", 0, nil)
 	}
@@ -442,7 +460,6 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
-//nolint:unused
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }

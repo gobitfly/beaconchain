@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
-import { useCustomFetch } from '~/composables/useCustomFetch'
 
 export const useUserStore = defineStore('user-store', () => {
   const { public: { xUserId } } = useRuntimeConfig()
+  const { fetch } = useCustomFetch()
 
   async function doLogin (email: string, password: string) {
-    await useCustomFetch<LoginResponse>(API_PATH.LOGIN, {
+    await fetch<LoginResponse>(API_PATH.LOGIN, {
       body: {
         email,
         password
