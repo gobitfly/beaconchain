@@ -2,10 +2,11 @@
 import { IconNetworkEthereum, IconNetworkGnosis } from '#components'
 import type { ValidatorDashboardNetwork } from '~/types/dashboard'
 
-const { t: $t } = useI18n()
-
 const network = defineModel<ValidatorDashboardNetwork>('network')
-const allNetworks = [{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis }]
+const allNetworks = [
+  { text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum, componentClass: 'monochromatic' },
+  { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis, componentClass: 'monochromatic' }
+]
 
 const { t: $t } = useI18n()
 
