@@ -74,28 +74,54 @@ async function createDashboard () {
 </script>
 
 <template>
-  <div v-if="visible">
-    <BcDialog v-if="props.displayType === 'modal'" v-model="visible">
-      <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @next="onNext()" />
-      <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @next="onNext()" @back="onBack()" />
-    </BcDialog>
-    <div v-else-if="props.displayType === 'panel'">
-      <div class="panel-container">
-        <DashboardCreationTypeMask v-if="state === 'type'" v-model:state="state" v-model:type="type" v-model:name="name" @next="onNext()" />
-        <DashboardCreationNetworkMask v-else-if="state === 'network'" v-model:state="state" v-model:network="network" @next="onNext()" @back="onBack()" />
-      </div>
+  <BcDialog v-if="visible && props.displayType === 'modal'" v-model="visible">
+    <DashboardCreationTypeMask
+      v-if="state === 'type'"
+      v-model:state="state"
+      v-model:type="type"
+      v-model:name="name"
+      @next="onNext()"
+    />
+    <DashboardCreationNetworkMask
+      v-else-if="state === 'network'"
+      v-model:state="state"
+      v-model:network="network"
+      @next="onNext()"
+      @back="onBack()"
+    />
+  </BcDialog>
+  <div v-else-if="visible && props.displayType === 'panel'">
+    <div class="panel-container">
+      <DashboardCreationTypeMask
+        v-if="state === 'type'"
+        v-model:state="state"
+        v-model:type="type"
+        v-model:name="name"
+        @next="onNext()"
+      />
+      <DashboardCreationNetworkMask
+        v-else-if="state === 'network'"
+        v-model:state="state"
+        v-model:network="network"
+        @next="onNext()"
+        @back="onBack()"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-  .panel-container {
-    border: 1px solid var(--primary-orange);
-    border-radius: var(--border-radius);
-    padding: var(--padding-large);
+.panel-container {
+  border: 1px solid var(--primary-orange);
+  border-radius: var(--border-radius);
+  padding: var(--padding-large);
+  box-sizing: border-box;
+  width: 460px;
+  max-width: calc(100% - 42px);
 
-    @media (max-width: 400px) {
-      padding: var(--padding);
-    }
+  @media (max-width: 400px) {
+    padding: var(--padding);
+    max-width: calc(100% - 22px);
   }
+}
 </style>

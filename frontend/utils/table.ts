@@ -13,23 +13,31 @@ export const setQuerySearch = (search?: string, query?: TableQueryParams): Table
   return { ...query, search }
 }
 
+const getSortOrder = (dir?: number | null) => dir === -1 ? 'asc' : 'desc'
+
 export const setQuerySort = (sort?: DataTableSortEvent, query?: TableQueryParams): TableQueryParams => {
   query = query || {}
-  if (!sort?.multiSortMeta?.length) {
-    if (query) {
-      delete query.sort
-      delete query.order
-    }
-  } else {
+  if (sort?.multiSortMeta?.length) {
     if (!query) {
       query = {}
     }
     query = {
       ...query,
       sort: sort?.multiSortMeta.map((obj) => {
-        return `${obj.field}:${obj.order === -1 ? 'asc' : 'desc'}`
+        return `${obj.field}:${getSortOrder(obj.order)}`
       }).join(',')
     }
+  } else if (sort?.sortField && sort?.sortOrder) {
+    if (!query) {
+      query = {}
+    }
+    query = {
+      ...query,
+      sort: `${sort.sortField}:${getSortOrder(sort?.sortOrder)}`
+    }
+  } else if (query) {
+    delete query.sort
+    delete query.order
   }
   return query
 }
