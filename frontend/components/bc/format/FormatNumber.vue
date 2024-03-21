@@ -1,7 +1,8 @@
 <script setup lang="ts">
 
 interface Props {
-  value?: number | string,
+  value?: number | string, // has to be number
+  text?: string, // for already formatted numbers
   minDecimals?: number, // defaults to 0
   maxDecimals?: number, // defaults to 2
   default?: number | string // used if value is not defined
@@ -9,14 +10,16 @@ interface Props {
 const props = defineProps<Props>()
 
 const label = computed(() => {
+  if (props.text?.length) {
+    return formattedNumberToHtml(props.text)
+  }
   if (props.value === undefined || props.value === '') {
     return props.default
   }
-  return trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0)
+  return formattedNumberToHtml(trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0))
 })
-
 </script>
 <template>
-  <span v-if="label"> {{ label }}
-  </span>
+  <!-- eslint-disable-next-line vue/no-v-html -->
+  <span v-if="label" v-html="label" />
 </template>
