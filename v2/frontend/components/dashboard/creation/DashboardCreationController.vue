@@ -116,6 +116,7 @@ async function createDashboard () {
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
+  box-sizing: border-box;
   width: 460px;
   max-width: calc(100% - 42px);
 
