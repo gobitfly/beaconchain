@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	isort "sort"
 	"sync"
 	"time"
@@ -1560,10 +1561,90 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 // for summary charts: series id is group id, no stack
 
 func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
-	// TODO @recy21
-	// line chart for efficiencies of all groups for each epoch. includes a series for all groups combined
-	// series id is group id, NO series stack
-	return d.dummy.GetValidatorDashboardSummaryChart(dashboardId)
+	ret := &t.ChartData[int]{}
+
+	type queryResult struct {
+		StartEpoch            uint64          `db:"epoch_start"`
+		GroupId               uint64          `db:"group_id"`
+		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+	}
+
+	var queryResults []queryResult
+
+	cutOffDate := time.Date(2023, 9, 27, 23, 59, 59, 0, time.UTC).Add(time.Hour*24*30).AddDate(0, 0, -30)
+
+	if dashboardId.Validators != nil {
+		validatorList := make([]uint64, 0)
+		for _, validator := range dashboardId.Validators {
+			validatorList = append(validatorList, validator.Index)
+		}
+
+		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+			select
+			epoch_start,
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+				from  validator_dashboard_data_daily
+			WHERE day > $1 AND validator_index = ANY($2)
+		) as a ORDER BY epoch_start, group_id;`
+		err := db.AlloyReader.Select(&queryResults, query, cutOffDate, validatorList)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+		}
+	} else {
+		query := `select epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+			select
+			epoch_start, 
+				group_id,
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+				from users_val_dashboards_validators 
+			join validator_dashboard_data_daily on validator_dashboard_data_daily.validator_index = users_val_dashboards_validators.validator_index
+			where day > $1 AND dashboard_id = $2
+			group by 1, 2
+		) as a ORDER BY epoch_start, group_id;`
+		err := db.AlloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+		}
+	}
+
+	epochs := make(map[uint64]bool)
+	groups := make(map[uint64]bool)
+	data := make(map[uint64]map[uint64]float64)
+	for _, row := range queryResults {
+		epochs[row.StartEpoch] = true
+		groups[row.GroupId] = true
+
+		if data[row.StartEpoch] == nil {
+			data[row.StartEpoch] = make(map[uint64]float64)
+		}
+		data[row.StartEpoch][row.GroupId] = calculateTotalEfficiency(row.AttestationEfficiency, row.ProposerEfficiency, row.SyncEfficiency)
+	}
+
+	ret.Categories = make([]uint64, 0, len(epochs))
+	for epoch := range epochs {
+		ret.Categories = append(ret.Categories, epoch)
+	}
+	sort.Slice(ret.Categories, func(i, j int) bool {
+		return ret.Categories[i] < ret.Categories[j]
+	})
+
+	ret.Series = make([]t.ChartSeries[int], 0, len(groups))
+	for group := range groups {
+		series := t.ChartSeries[int]{
+			Id:    int(group),
+			Stack: "",
+			Data:  make([]float64, 0, len(epochs)),
+		}
+		ret.Series = append(ret.Series, series)
+	}
+
+	return ret, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
