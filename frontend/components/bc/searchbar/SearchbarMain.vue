@@ -35,9 +35,12 @@ enum States {
 }
 interface SearchState {
   state : States,
-  numberOfDifferentInputs : number,
   numberOfApiCallsWithoutResponse : number,
-  userFeelsLucky: boolean
+  callAgainUserPressedSearchButtonOrEnter: boolean
+}
+
+enum ResultState {
+  Obtained, Outdated, Error
 }
 
 interface ResultSuggestion {
@@ -68,9 +71,8 @@ const inputted = ref('')
 let lastKnownInput = ''
 const searchState = ref<SearchState>({
   state: States.InputIsEmpty,
-  numberOfDifferentInputs: 0,
   numberOfApiCallsWithoutResponse: 0,
-  userFeelsLucky: false
+  callAgainUserPressedSearchButtonOrEnter: false
 })
 const showDropDown = ref<boolean>(false)
 const networkDropdownOptions : {name: string, label: string}[] = []
@@ -103,12 +105,9 @@ const userFilters = ref<UserFilters>({
   noCategoryIsSelected: true
 })
 
-let searchAheadThread = searchAhead()
-
 function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
   inputted.value = ''
-  searchState.value.numberOfDifferentInputs++
   resetSearchState()
   if (closeDropDown) {
     showDropDown.value = false // not equivalent to `showDropDown.value = !closeDropDown` because it must not be opened when it is already closed
@@ -116,14 +115,18 @@ function cleanUp (closeDropDown : boolean) {
   results.raw = { data: [] }
 }
 
-function resetSearchState (state : States = States.InputIsEmpty) {
+function resetSearchState (state : States = States.InputIsEmpty) : SearchState {
+  const previousState = { ...searchState.value }
+
   if (state === searchState.value.state) {
     // makes sure that Vue re-renders the drop-down although the state does not change
     searchState.value.state = States.UpdateIncoming
   }
   searchState.value.numberOfApiCallsWithoutResponse = 0
-  searchState.value.userFeelsLucky = false
+  searchState.value.callAgainUserPressedSearchButtonOrEnter = false
   searchState.value.state = state
+
+  return previousState
 }
 
 function updateSearchState (state : States = States.InputIsEmpty) {
@@ -138,14 +141,6 @@ function userIsWaiting () : boolean {
   return searchState.value.state === States.SearchRequestWillBeSent || searchState.value.state === States.WaitingForResults
 }
 
-function inputCheckpoint () : number {
-  return searchState.value.numberOfDifferentInputs
-}
-
-function didInputChangeSinceCheckpoint (inputCheckpoint : number) {
-  return inputCheckpoint !== searchState.value.numberOfDifferentInputs
-}
-
 onMounted(() => {
   searchableTypes = []
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained as a props)
@@ -154,13 +149,12 @@ onMounted(() => {
       searchableTypes.push(t)
     }
   }
-
   // creates the fields storing the state of the filter buttons, and deselect them
   for (const s of searchable) {
     userFilters.value.categories[s] = false
   }
   userFilters.value.noCategoryIsSelected = true
-
+  // creates the network filtering data and the network drop-down
   for (const nw of getListOfImplementedChainIDs(true)) {
     // creates the field telling us whether this network is selected
     userFilters.value.networks[String(nw)] = false
@@ -169,7 +163,6 @@ onMounted(() => {
   }
   networkDropdownUserSelection.value = [] // deselects all options
   networkFilterHasChanged()
-
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
@@ -187,30 +180,6 @@ function listenToClicks (event : Event) {
   showDropDown.value = false
 }
 
-searchAheadThread.then((received) => {
-  if (received === 'NeverMind') {
-    return
-  }
-  console.log('THEN CALLED')
-  if (received === 'Error') {
-    searchState.value.numberOfApiCallsWithoutResponse++
-    if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
-      resetSearchState(States.Error)
-    } else {
-      // this tells the interval timer to try again
-      updateSearchState(States.SearchRequestWillBeSent)
-    }
-    return
-  }
-
-  const mustFunctionUserFeelsLuckyBeCalled = searchState.value.userFeelsLucky // this value must be retrieved now because of the call to resetSearchState() before it is used
-  filterAndOrganizeResults()
-  resetSearchState(States.ApiHasResponded)
-  if (mustFunctionUserFeelsLuckyBeCalled) {
-    userFeelsLucky()
-  }
-})
-
 // In the V1, the server was receiving a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
 // Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
 // was only for entries of size 1.
@@ -224,38 +193,75 @@ setInterval(() => {
   }
   updateSearchState(States.WaitingForResults)
 
-  searchAheadThread = searchAhead() // if a thread is already calling the API with a previous input, this line discards it
+  // These two calls run in a separate thread. They request results from the API and then update the drop-down.
+  searchAhead().then(updateBarAfterSearchAhead)
+  // the timer returns immediately
 },
 SearchRequestPeriodicity
 )
 
-function inputMightHaveChanged () {
-  if (inputted.value === lastKnownInput) {
-    return
+async function searchAhead () : Promise<ResultState> {
+  const startInput = inputted.value
+  let received : SearchAheadResult | undefined
+
+  try {
+    received = await fetch<SearchAheadResult>(API_PATH.SEARCH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { input: inputted.value, searchable: searchableTypes }
+    })
+  } catch (error) {
+    received = undefined
   }
-  lastKnownInput = inputted.value
-  searchState.value.numberOfDifferentInputs++
-  if (inputted.value.length === 0) {
-    cleanUp(false)
-  } else {
-    // we order a search (the timer will launch it)
-    resetSearchState(States.SearchRequestWillBeSent)
+  if (inputted.value !== startInput) { // important: errors are ignored if outdated
+    return ResultState.Outdated
+  }
+  if (received === undefined || received.error !== undefined || received.data === undefined) {
+    return ResultState.Error
+  }
+  results.raw = received
+  return ResultState.Obtained
+}
+
+function updateBarAfterSearchAhead (howSearchWent : ResultState) {
+  switch (howSearchWent) {
+    case ResultState.Error :
+      searchState.value.numberOfApiCallsWithoutResponse++
+      if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
+        resetSearchState(States.Error) // the user will see an error message
+      } else {
+        updateSearchState(States.SearchRequestWillBeSent) // we try again
+      }
+      break
+    case ResultState.Outdated :
+      break
+    case ResultState.Obtained :
+      filterAndOrganizeResults()
+      // we change the state of the component to States.ApiHasResponded and we check whether callAgainUserPressedSearchButtonOrEnter was true before the change
+      if (resetSearchState(States.ApiHasResponded).callAgainUserPressedSearchButtonOrEnter) {
+      // userPressedSearchButtonOrEnter() asked to be called again because the user pressed Enter or the search button but the results were still pending
+        userPressedSearchButtonOrEnter()
+      }
+      break
   }
 }
 
-function userFeelsLucky () {
+function userPressedSearchButtonOrEnter () {
   if (searchState.value.state === States.InputIsEmpty) {
     return
   }
   // if the previous API call failed and the user tries again with Enter or the search button
   if (searchState.value.state === States.Error) {
-    // we order a new search (the timer will lanuch it)
+    // we order a new search (the timer will launch it)
     resetSearchState(States.SearchRequestWillBeSent)
+    return
   }
-  // if we are waiting for a response from the API (because of inputMightHaveChanged() or because of the retry just above)
+  // From here, we know that the user does not want to see the drop-down. He presssed Enter or the button to be redirected blindly.
+
+  // if the results did not come yet
   if (userIsWaiting()) {
-    // we ask the timer to call this function once (and if) the results are received
-    searchState.value.userFeelsLucky = true
+    // we ask the timer to call this function again when the communication with the API is complete
+    searchState.value.callAgainUserPressedSearchButtonOrEnter = true
     // in the meantime, we do not proceed further
     return
   }
@@ -297,6 +303,19 @@ function userClickedProposal (chain : ChainIDs, type : ResultType, what: string)
   emit('go', what, type, chain)
 }
 
+function inputMightHaveChanged () {
+  if (inputted.value === lastKnownInput) {
+    return
+  }
+  lastKnownInput = inputted.value
+  if (inputted.value.length === 0) {
+    cleanUp(false)
+  } else {
+    // we order a search (the timer will launch it)
+    resetSearchState(States.SearchRequestWillBeSent)
+  }
+}
+
 function networkFilterHasChanged () {
   userFilters.value.noNetworkIsSelected = (networkDropdownUserSelection.value.length === 0)
   userFilters.value.everyNetworkIsSelected = (networkDropdownUserSelection.value.length === networkDropdownOptions.length)
@@ -316,28 +335,6 @@ function categoryFilterHasChanged () {
     }
   }
   userFilters.value.noCategoryIsSelected = allButtonsOff
-}
-
-async function searchAhead () : Promise<SearchAheadResult | 'NeverMind' | 'Error'> {
-  await setTimeout(() => {}, 10)
-  if (inputted.value === '') {
-    return 'NeverMind'
-  }
-  console.log('Search ahead')
-  return { data: [{ chain_id: 1, type: inputted.value }] } /*
-  try {
-    const received = await fetch<SearchAheadResult>(API_PATH.SEARCH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: { input: inputted.value, searchable: searchableTypes }
-    })
-    if (received !== undefined && received.error === undefined && received.data !== undefined) {
-      return received
-    }
-    return 'Error'
-  } catch (error) {
-    return 'Error'
-  } */
 }
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
@@ -397,7 +394,7 @@ function filterAndOrganizeResults () {
     place.networks[existingNetwork].types[existingType].suggestion.push(toBeAdded)
   }
 
-  // This sorting orders the displayed results and is fundamental for function userFeelsLucky(). Do not alter the sorting without considering the needs of that function.
+  // This sorting orders the displayed results and is fundamental for function userPressedSearchButtonOrEnter(). Do not alter the sorting without considering the needs of that function.
   function sortResults (place : OrganizedResults) {
     place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority)
     for (const network of place.networks) {
@@ -529,13 +526,13 @@ function refreshOutputArea () {
           :class="barStyle"
           type="text"
           :placeholder="$t('search_bar.placeholder')"
-          @keyup="(e) => {if (e.key === 'Enter') {userFeelsLucky()} else {inputMightHaveChanged()}}"
+          @keyup="(e) => {if (e.key === 'Enter') {userPressedSearchButtonOrEnter()} else {inputMightHaveChanged()}}"
           @focus="showDropDown = true"
         />
         <span
           id="searchbutton"
           :class="barStyle"
-          @click="userFeelsLucky()"
+          @click="userPressedSearchButtonOrEnter()"
         >
           <FontAwesomeIcon :icon="faMagnifyingGlass" />
         </span>
