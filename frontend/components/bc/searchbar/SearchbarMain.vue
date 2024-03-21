@@ -173,7 +173,7 @@ onUnmounted(() => {
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (dropDown.value === undefined || inputFieldAndButton.value === undefined ||
+  if (dropDown.value === null || dropDown.value === undefined || inputFieldAndButton.value === undefined ||
       dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
