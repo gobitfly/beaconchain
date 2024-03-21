@@ -25,6 +25,9 @@ type ValidatorMapping struct {
 
 var currentValidatorMapping *ValidatorMapping
 var lastValidatorIndex int
+var _cachedBufferCompressed = new(bytes.Buffer)
+var _cachedBufferDecompressed = new(bytes.Buffer)
+var _cachedValidatorMapping = new(types.RedisCachedValidatorsMapping)
 
 var currentMappingMutex = &sync.RWMutex{}
 
@@ -40,16 +43,16 @@ func StartIndexMappingService() {
 	}
 }
 
-func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
+func initValidatorMapping() {
 	log.Infof("initializing validator mapping")
-	lenMapping := len(data.Mapping)
+	lenMapping := len(_cachedValidatorMapping.Mapping)
 
 	c := ValidatorMapping{}
 	c.ValidatorIndices = make(map[string]*uint64, lenMapping)
 	c.ValidatorPubkeys = make([]string, lenMapping)
-	c.ValidatorMetadata = make([]*types.CachedValidator, lenMapping)
+	c.ValidatorMetadata = _cachedValidatorMapping.Mapping
 
-	for i, v := range data.Mapping {
+	for i, v := range _cachedValidatorMapping.Mapping {
 		if i == lenMapping {
 			break
 		}
@@ -59,34 +62,35 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 
 		c.ValidatorPubkeys[i] = b
 		c.ValidatorIndices[b] = &j
-		c.ValidatorMetadata[i] = v
 	}
 	currentValidatorMapping = &c
 	lastValidatorIndex = lenMapping - 1
 }
 
-func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
+func quickUpdateValidatorMapping() {
 	log.Infof("quick updating validator mapping")
+	// update metadata by overwriting it
+	currentValidatorMapping.ValidatorMetadata = _cachedValidatorMapping.Mapping
 
-	for i, v := range data.Mapping {
-		if i > lastValidatorIndex {
-			b := hexutil.Encode(v.PublicKey)
-			j := uint64(i)
+	newLastValidatorIndex := len(_cachedValidatorMapping.Mapping) - 1
 
-			currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
-			currentValidatorMapping.ValidatorIndices[b] = &j
-			currentValidatorMapping.ValidatorMetadata = append(currentValidatorMapping.ValidatorMetadata, v)
-
-			lastValidatorIndex = i
-			continue
-		}
-		currentValidatorMapping.ValidatorMetadata[i] = v
+	if newLastValidatorIndex <= lastValidatorIndex {
+		log.Debugf("no new validators to add to mapping")
+		return
 	}
+	// update mappings
+	for i := lastValidatorIndex + 1; i <= newLastValidatorIndex; i++ {
+		v := _cachedValidatorMapping.Mapping[i]
+		b := hexutil.Encode(v.PublicKey)
+		j := uint64(i)
+
+		currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
+		currentValidatorMapping.ValidatorIndices[b] = &j
+	}
+	lastValidatorIndex = newLastValidatorIndex
 }
 
 func updateValidatorMapping() error {
-	var validatorMapping *types.RedisCachedValidatorsMapping
-
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -99,14 +103,15 @@ func updateValidatorMapping() error {
 
 	// decompress
 	start = time.Now()
-	compressedBuffer := bytes.NewBuffer(compressed)
-	var decompressedBuffer bytes.Buffer
-	w, err := pgzip.NewReaderN(compressedBuffer, 1_000_000, 10)
+	_cachedBufferCompressed.Reset()
+	_cachedBufferCompressed.Write(compressed)
+	w, err := pgzip.NewReaderN(_cachedBufferCompressed, 1_000_000, 10)
 	if err != nil {
 		return errors.Wrap(err, "failed to create pgzip reader")
 	}
 	defer w.Close()
-	_, err = w.WriteTo(&decompressedBuffer)
+	_cachedBufferDecompressed.Reset()
+	_, err = w.WriteTo(_cachedBufferDecompressed)
 	if err != nil {
 		return errors.Wrap(err, "failed to decompress validator mapping from redis")
 	}
@@ -114,8 +119,8 @@ func updateValidatorMapping() error {
 
 	// ungob
 	start = time.Now()
-	dec := gob.NewDecoder(&decompressedBuffer)
-	err = dec.Decode(&validatorMapping)
+	dec := gob.NewDecoder(_cachedBufferDecompressed)
+	err = dec.Decode(&_cachedValidatorMapping)
 	if err != nil {
 		return errors.Wrap(err, "error decoding assignments data")
 	}
@@ -124,12 +129,16 @@ func updateValidatorMapping() error {
 	currentMappingMutex.Lock()
 	start = time.Now()
 	if currentValidatorMapping == nil {
-		initValidatorMapping(validatorMapping)
+		initValidatorMapping()
 	} else {
-		quickUpdateValidatorMapping(validatorMapping)
+		quickUpdateValidatorMapping()
 	}
 	log.Debugf("updated Validator Mapping, took %s", time.Since(start))
 	currentMappingMutex.Unlock()
+
+	// free up memory
+	_cachedBufferCompressed.Reset()
+	_cachedBufferDecompressed.Reset()
 
 	return nil
 }
