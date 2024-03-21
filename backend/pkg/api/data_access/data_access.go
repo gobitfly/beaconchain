@@ -1613,6 +1613,6 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
 }
