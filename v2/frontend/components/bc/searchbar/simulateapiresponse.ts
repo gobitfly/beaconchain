@@ -96,13 +96,13 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   }
   response.data.push(
     {
-      chain_id: 17000,
+      chain_id: 1,
       type: 'contracts',
       hash_value: '0x' + searched + 'a0ba39494ce839613fffba74279579260',
       str_value: 'Uniswap'
     },
     {
-      chain_id: 17000,
+      chain_id: 1,
       type: 'validators_by_withdrawal_address',
       hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938'
     },
