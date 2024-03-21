@@ -6,6 +6,7 @@ interface Props {
     icon?: IconDefinition,
     text?: string,
     component?: Component,
+    componentClass?: string,
     value: string
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
@@ -46,7 +47,7 @@ function onButtonClicked (value: string) {
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" class="monochromatic" />
+          <component :is="button.component" :class="button.componentClass" />
         </slot>
       </template>
     </BcToggleSingleBarButton>
