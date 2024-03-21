@@ -3,8 +3,8 @@
     "last_24h": {
       "attestations_head": {
         "status_count": {
-          "success": 121,
-          "failed": 32
+          "success": 179174123400000,
+          "failed": 3291741234000000
         },
         "earned": "11100000000000000",
         "penalty": "3200000000000000",
@@ -12,8 +12,8 @@
       },
       "attestations_source": {
         "status_count": {
-          "success": 122,
-          "failed": 32
+          "success": 1791741234,
+          "failed": 3291741234
         },
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
@@ -21,16 +21,16 @@
       },
       "attestations_target": {
         "status_count": {
-          "success": 0,
-          "failed": 32
+          "success": 1791741234,
+          "failed": 3291741234
         },
         "earned": "11300000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
       "attestation_count": {
-          "success": 50,
-          "failed": 32
+        "success": 1791741234000001111,
+        "failed": 32917412340000002222
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
@@ -71,12 +71,12 @@
       },
       "luck": {
         "proposal": {
-          "percent": 102.32,
+          "percent": 102001.32,
           "expected": 120,
           "average": 233
         },
         "sync": {
-          "percent": 202.32,
+          "percent": 202001.32,
           "expected": 120,
           "average": 233
         }
@@ -85,8 +85,8 @@
     "last_7d": {
       "attestations_head": {
         "status_count": {
-          "success": 223,
-          "failed": 32
+          "success": 179174123412,
+          "failed": 329174123400
         },
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
@@ -94,8 +94,8 @@
       },
       "attestations_source": {
         "status_count": {
-          "success": 123,
-          "failed": 32
+          "success": 1791741234,
+          "failed": 3291741234
         },
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
@@ -103,16 +103,16 @@
       },
       "attestations_target": {
         "status_count": {
-          "success": 123,
-          "failed": 32
+          "success": 1791741234,
+          "failed": 3291741234
         },
         "earned": "11200000000000000",
         "penalty": "3200000000000000",
         "validators": [1, 213, 1245, 453, 345, 23]
       },
       "attestation_count": {
-          "success": 150,
-          "failed": 0
+        "success": 1791741234,
+        "failed": 3291741234
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,

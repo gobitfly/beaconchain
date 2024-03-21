@@ -78,7 +78,7 @@ watch(() => props.expandable, (expandable) => {
   <DataTable
     v-model:expandedRows="expandedRows"
     class="bc-table"
-    sort-mode="multiple"
+    sort-mode="single"
     lazy
     :value="data?.data"
     :data-key="dataKey"
