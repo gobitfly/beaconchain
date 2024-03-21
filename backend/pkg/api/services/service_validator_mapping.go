@@ -36,21 +36,21 @@ func StartIndexMappingService() {
 			log.Error(err, "error updating validator mapping", 0)
 		}
 		log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-		utils.ConstantTimeDelay(startTime, 32*12*time.Second)
+		utils.ConstantTimeDelay(startTime, time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot)*time.Second)
 	}
 }
 
 func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 	log.Infof("initializing validator mapping")
-	l := len(data.Mapping)
+	lenMapping := len(data.Mapping)
 
 	c := ValidatorMapping{}
-	c.ValidatorIndices = make(map[string]*uint64)
-	c.ValidatorPubkeys = make([]string, l)
-	c.ValidatorMetadata = make([]*types.CachedValidator, l)
+	c.ValidatorIndices = make(map[string]*uint64, lenMapping)
+	c.ValidatorPubkeys = make([]string, lenMapping)
+	c.ValidatorMetadata = make([]*types.CachedValidator, lenMapping)
 
 	for i, v := range data.Mapping {
-		if i == l {
+		if i == lenMapping {
 			break
 		}
 
@@ -62,7 +62,7 @@ func initValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 		c.ValidatorMetadata[i] = v
 	}
 	currentValidatorMapping = &c
-	lastValidatorIndex = l - 1
+	lastValidatorIndex = lenMapping - 1
 }
 
 func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
@@ -80,8 +80,7 @@ func quickUpdateValidatorMapping(data *types.RedisCachedValidatorsMapping) {
 			lastValidatorIndex = i
 			continue
 		}
-		currentValidatorMapping.ValidatorMetadata[i].ActivationEpoch = v.ActivationEpoch
-		currentValidatorMapping.ValidatorMetadata[i].WithdrawableEpoch = v.WithdrawableEpoch
+		currentValidatorMapping.ValidatorMetadata[i] = v
 	}
 }
 
@@ -96,7 +95,7 @@ func updateValidatorMapping() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get compressed validator mapping from db")
 	}
-	log.Infof("reading validator mapping from redis done, took %s", time.Since(start))
+	log.Debugf("reading validator mapping from redis done, took %s", time.Since(start))
 
 	// decompress
 	start = time.Now()
