@@ -21,7 +21,7 @@ const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {
@@ -56,7 +56,7 @@ const groupNameLabel = (groupId?: number) => {
   if (groupId === undefined || groupId < 0) {
     return `${$t('dashboard.validator.summary.total_group_name')}`
   }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
+  const group = validatorDashboardOverview.value?.groups?.find(g => g.id === groupId)
   if (!group) {
     return `${groupId}` // fallback if we could not match the group name
   }
@@ -67,7 +67,7 @@ const groupIdLabel = (groupId?: number) => {
   if (groupId === undefined || groupId < 0) {
     return
   }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
+  const group = validatorDashboardOverview.value?.groups?.find(g => g.id === groupId)
   if (group && isMobile.value) {
     return
   }

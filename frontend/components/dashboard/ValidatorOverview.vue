@@ -2,30 +2,16 @@
 
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ClElValue } from '~/types/api/common'
-import type { DashboardKey } from '~/types/dashboard'
 import { type OverviewTableData } from '~/types/dashboard/overview'
 import { TimeFrames, type NumberOrString } from '~/types/value'
 import { totalElClNumbers } from '~/utils/bigMath'
-
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
 const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'
 
-// TODO: implement dashboard switching
-const { getOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('validator_dashboard_overview', () => getOverview(props.dashboardKey))
-
-watch(() => props.dashboardKey, () => {
-  getOverview(props.dashboardKey)
-}, { immediate: true })
-
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
@@ -44,7 +30,7 @@ const createInfo = (key: string, value: ClElValue<number | string>, formatFuncti
 }
 
 const dataList = computed(() => {
-  const v = overview.value
+  const v = validatorDashboardOverview.value
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`)
   }
