@@ -49,7 +49,7 @@ const dataList = computed(() => {
   }
   const onlineClass = v.validators.online ? 'positive' : ''
   const offlineClass = v.validators.online ? 'negative' : ''
-  active.value = { label: `<span class="${onlineClass}">${v.validators.online}</span> / <span class="${offlineClass}">${v.validators.offline}</span>` }
+  active.value = { label: `<span class="${onlineClass}">${v.validators.online ?? 0}</span> / <span class="${offlineClass}">${v.validators.offline ?? 0}</span>` }
   active.additonalValues = [
     [
       { label: v.validators.pending ?? 0 },
@@ -63,14 +63,14 @@ const dataList = computed(() => {
     ]
   ]
 
-  efficiency.value = { label: formatPercent(v.efficiency.last_7d) }
-  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v.efficiency[k]) }))
+  efficiency.value = { label: formatPercent(v.efficiency.last_7d ?? 0) }
+  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v.efficiency[k] ?? 0) }))
 
   rewards.value = converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true })
-  rewards.infos = TimeFrames.map(k => createInfo(k, v.rewards[k], formatValueWei))
+  rewards.infos = TimeFrames.map(k => createInfo(k, v.rewards[k] ?? 0, formatValueWei))
 
-  apr.value = { label: formatPercent(totalElClNumbers(v.apr.last_7d)) }
-  apr.infos = TimeFrames.map(k => createInfo(k, v.apr[k], formatValuePercent))
+  apr.value = { label: formatPercent(totalElClNumbers(v.apr.last_7d ?? 0)) }
+  apr.infos = TimeFrames.map(k => createInfo(k, v.apr[k] ?? 0, formatValuePercent))
   return list
 })
 
