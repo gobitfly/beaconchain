@@ -164,7 +164,7 @@
         }
       }
     },
-    "last_31d": {
+    "last_30d": {
       "attestations_head": {
         "status_count": {
           "success": 323,

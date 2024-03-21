@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faInfoCircle
+} from '@fortawesome/pro-regular-svg-icons'
 import { type OverviewTableData } from '~/types/dashboard/overview'
 interface Props {
   data: OverviewTableData
@@ -13,17 +17,30 @@ const props = defineProps<Props>()
         {{ props.data.label }}
       </div>
       <div class="big_text">
-        <BcTooltip :text="props.data.value?.fullLabel">
-          {{ props.data.value?.label }}
+        <BcTooltip :text="props.data.value?.fullLabel" :fit-content="true">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <span v-html="props.data.value?.label" />
         </BcTooltip>
       </div>
     </div>
     <div v-for="(infos, index) in props.data.additonalValues" :key="index" class="additional">
       <div v-for="(addValue, subIndex) in infos" :key="subIndex" class="small_text">
-        <BcTooltip :text="addValue.fullLabel">
+        <BcTooltip :text="addValue.fullLabel" :fit-content="true">
           {{ addValue.label }}
         </BcTooltip>
       </div>
+    </div>
+    <div v-if="props.data.infos" class="info">
+      <BcTooltip :fit-content="true">
+        <FontAwesomeIcon :icon="faInfoCircle" />
+        <template #tooltip>
+          <div class="info-label-list">
+            <div v-for="info in props.data.infos" :key="info.label">
+              <div><b>{{ info.label }}:</b> {{ info.value }}</div>
+            </div>
+          </div>
+        </template>
+      </BcTooltip>
     </div>
   </div>
 </template>
@@ -52,5 +69,13 @@ const props = defineProps<Props>()
     }
   }
 
+}
+
+.info-label-list{
+  text-align: left;
+}
+
+.info {
+  margin-left: var(--padding);
 }
 </style>

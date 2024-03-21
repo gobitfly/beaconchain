@@ -34,14 +34,6 @@ const data = computed(() => {
 
 .efficiency {
 
-  .positive {
-    color: var(--positive-color);
-  }
-
-  .negative {
-    color: var(--negative-color);
-  }
-
   .percent {
     &::before {
       content: "(";

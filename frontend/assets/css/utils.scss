@@ -27,3 +27,11 @@
 .no-wrap{
   white-space: nowrap;
 }
+
+.positive {  
+  color: var(--positive-color);
+}
+
+.negative{
+  color: var(--negative-color);
+}
