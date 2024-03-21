@@ -113,7 +113,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 
 		DROP TABLE IF EXISTS validators;
 		CREATE TABLE IF NOT EXISTS validators ( -- minimal only, columns missing
-			validator_index SERIAL NOT NULL, -- only serial if version is 0 (pending validator), otherwise will be the beaconchain validator index
+			validator_index BIGINT NOT NULL,
 			pubkey bytea NOT NULL,
 			PRIMARY KEY (validator_index)
 		);
