@@ -13,6 +13,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
 
 interface Props {
   dashboardKey: DashboardKey;
@@ -82,7 +83,7 @@ watch(selectedGroup, (value) => {
 
 watch(() => [props.dashboardKey, visible.value, query.value], async () => {
   if (props.dashboardKey && visible.value) {
-    data.value = await useCustomFetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
+    data.value = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
     selected.value = []
   }
 }, { immediate: true })

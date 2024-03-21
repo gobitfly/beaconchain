@@ -215,7 +215,7 @@ func (m ModuleLog) Error(err error, errorMsg interface{}, callerSkip int, additi
 
 func (m ModuleLog) Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
 	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
-	log.Warn(err, errorMsg, callerSkip, additionalInfos...)
+	log.WarnWithStackTrace(err, errorMsg, callerSkip, additionalInfos...)
 }
 
 func (m ModuleLog) Warnf(format string, args ...interface{}) {
