@@ -108,15 +108,6 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.header-container {
-  display: flex;
-  justify-content: space-between;
-
-  .dashboard-title {
-    margin-bottom: var(--padding-large);
-  }
-}
-
 .panel-controller {
   display: flex;
   justify-content: center;
