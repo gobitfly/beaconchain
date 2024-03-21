@@ -67,27 +67,27 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboardKey}/summary?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/summary-chart?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
     path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
-    mock: true
+    mock: false
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latestState',
