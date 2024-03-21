@@ -513,21 +513,30 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 				// compress using pgzip
 				start = time.Now()
-				var b bytes.Buffer
-				w, _ := pgzip.NewWriterLevel(&b, pgzip.BestCompression)
-				_ = w.SetConcurrency(5_00_000, 10)
+				var compressedValidatorMapping bytes.Buffer
+				w, err := pgzip.NewWriterLevel(&compressedValidatorMapping, pgzip.BestCompression)
+				if err != nil {
+					return fmt.Errorf("failed to create pgzip writer for epoch %v: %w", epoch, err)
+				}
+				err = w.SetConcurrency(500_000, 10)
+				if err != nil {
+					return fmt.Errorf("failed to set concurrency for pgzip writer for epoch %v: %w", epoch, err)
+				}
 				_, err = w.Write(serializedValidatorMapping.Bytes())
 				if err != nil {
 					return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
 				}
-				w.Close()
+				err = w.Close()
+				if err != nil {
+					return fmt.Errorf("error closing pgzip writer for epoch %v: %w", epoch, err)
+				}
 				log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
 
 				// load into redis
 				start = time.Now()
 				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
 				log.Infof("writing validator mappping to redis with no TTL")
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, b.Bytes(), 0).Err()
+				err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
 				if err != nil {
 					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
 				}
