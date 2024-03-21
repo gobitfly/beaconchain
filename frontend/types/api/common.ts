@@ -42,18 +42,15 @@ export interface StatusCount {
   success: number /* uint64 */;
   failed: number /* uint64 */;
 }
-export type ClElUnion = 
-    number /* float64 */ | string /* decimal.Decimal */;
-export interface ClElValue<T extends ClElUnion> {
+export interface ClElValue<T extends any> {
   el: T;
   cl: T;
 }
-export interface PeriodicClElValues<T extends ClElUnion> {
-  all_time: ClElValue<T>;
-  last_24h: ClElValue<T>;
-  last_7d: ClElValue<T>;
-  last_31d: ClElValue<T>;
-  last_365d: ClElValue<T>;
+export interface PeriodicValues<T extends any> {
+  all_time: T;
+  last_24h: T;
+  last_7d: T;
+  last_30d: T;
 }
 export interface ChartSeries<T extends number /* int */ | string> {
   id: T; // id may be a string or an int

@@ -47,6 +47,9 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
     <TabPanel header="Conversion">
       <PlaygroundConversion />
     </TabPanel>
+    <TabPanel header="Toasts">
+      <PlaygroundToasts />
+    </TabPanel>
   </TabView>
 </template>
 

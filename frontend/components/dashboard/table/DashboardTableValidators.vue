@@ -3,23 +3,32 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext, SummaryDetail } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import { DashboardValidatorSubsetModal } from '#components'
+import type { TimeFrame } from '~/types/value'
 
 interface Props {
   validators: number[],
   groupId?: number,
-  timeFrame?: SummaryDetail
+  timeFrame?: TimeFrame
   context: DashboardValidatorContext
 }
 const props = defineProps<Props>()
 
-const modalVisibility = ref(false)
-
 const { t: $t } = useI18n()
 const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 
+const dialog = useDialog()
+
 const openValidatorModal = () => {
-  modalVisibility.value = true
+  dialog.open(DashboardValidatorSubsetModal, {
+    data: {
+      context: props.context,
+      timeFrame: props.timeFrame,
+      groupName: groupName.value,
+      validators: props.validators
+    }
+  })
 }
 
 const groupName = computed(() => {
@@ -49,13 +58,6 @@ const groupName = computed(() => {
       class="link popout"
       :icon="faArrowUpRightFromSquare"
       @click="openValidatorModal"
-    />
-    <DashboardValidatorSubsetModal
-      v-model="modalVisibility"
-      :context="props.context"
-      :time-frame="props.timeFrame"
-      :group-name="groupName"
-      :validators="props.validators"
     />
   </div>
 </template>

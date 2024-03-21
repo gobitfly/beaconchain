@@ -66,13 +66,19 @@ const setPageSize = (value: number) => {
   emit('setPageSize', value)
 }
 
+watch(() => props.expandable, (expandable) => {
+  if (!expandable) {
+    toggleAll(true)
+  }
+})
+
 </script>
 
 <template>
   <DataTable
     v-model:expandedRows="expandedRows"
     class="bc-table"
-    sort-mode="multiple"
+    sort-mode="single"
     lazy
     :value="data?.data"
     :data-key="dataKey"

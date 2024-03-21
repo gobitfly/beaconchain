@@ -197,7 +197,7 @@ func notificationSender() {
 
 			err = conn.Close()
 			if err != nil {
-				log.Warn(err, "error returning connection to connection pool", 0)
+				log.WarnWithStackTrace(err, "error returning connection to connection pool", 0)
 			}
 			cancel()
 			continue
@@ -216,7 +216,7 @@ func notificationSender() {
 
 		conn.Close()
 		if err != nil {
-			log.Warn(err, "error returning connection to connection pool", 0)
+			log.WarnWithStackTrace(err, "error returning connection to connection pool", 0)
 		}
 		cancel()
 
@@ -660,7 +660,7 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 	for userID, userNotifications := range notificationsByUserID {
 		userEmail, exists := emailsByUserID[userID]
 		if !exists {
-			log.Warn(nil, "email notification skipping user", 0, log.Fields{"user_id": userID})
+			log.WarnWithStackTrace(nil, "email notification skipping user", 0, log.Fields{"user_id": userID})
 			// we don't need this metrics as users can now deactivate email notifications and it would increment the counter
 			// metrics.Errors.WithLabelValues("notifications_mail_not_found").Inc()
 			continue
