@@ -16,6 +16,7 @@
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
 
+      &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
         border-color: var(--primary-color);
@@ -43,7 +44,7 @@
       border-radius: var(--border-radius);
       padding: var(--padding) var(--padding-small);
 
-      &:not(:has(.p-active)) {
+      &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
       }
 
