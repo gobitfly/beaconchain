@@ -31,25 +31,32 @@ interface MenuBarEntry extends MenuBarButton {
   items?: MenuBarButton[];
 }
 
+const buttonCount = ref<number>(0)
+const menuBarClass = ref<string>('')
+
+watch(width, () => {
+  menuBarClass.value = ''
+  if (width.value < 540) {
+    buttonCount.value = 1 // [validator, accounts, notifications]
+    menuBarClass.value = 'right-aligned-submenu'
+  } else if (width.value < 680) {
+    buttonCount.value = 2 // [validator, accounts], [notifications]
+  } else {
+    buttonCount.value = 3 // [validator], [accounts], [notifications]
+  }
+})
+
 const items = computed(() => {
   if (dashboards.value === undefined) {
     return []
   }
 
   const dashboardsButtons: MenuBarEntry[] = []
-
-  let buttonCount = 3 // [validator], [accounts], [notifications]
-  if (width.value < 540) {
-    buttonCount = 1 // [validator, accounts, notifications]
-  } else if (width.value < 680) {
-    buttonCount = 2 // [validator, accounts], [notifications]
-  }
-
   const sortedItems: MenuBarButton[][] = []
 
   const addToSortedItems = (minButtonCount: number, items?:MenuBarButton[]) => {
     if (items?.length) {
-      if (buttonCount >= minButtonCount) {
+      if (buttonCount.value >= minButtonCount) {
         sortedItems.push(items)
       } else {
         let last = sortedItems.length - 1
@@ -94,7 +101,7 @@ const items = computed(() => {
       {{ $t('dashboard.title') }}
     </div>
     <div class="dashboard-buttons">
-      <Menubar :model="items" breakpoint="0px">
+      <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
           <NuxtLink v-if="item.route" :to="item.route">
             <span class="button-content" :class="[item.class, {'p-active': item.active, 'pointer': item.dropdown}]">
