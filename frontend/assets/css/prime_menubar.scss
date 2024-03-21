@@ -1,0 +1,78 @@
+@use "~/assets/css/fonts.scss";
+
+.p-menubar {
+  @include fonts.standard_text;
+
+  color: var(--text-color);
+  user-select: none;
+
+  .p-menubar-root-list
+  {
+    flex-wrap: nowrap;
+    gap: var(--padding);
+
+    > .p-menuitem {
+      background: var(--list-background);
+      border: 1px solid var(--container-border-color);
+      border-radius: var(--border-radius);
+
+      &:has(.router-link-active),
+      &:has(.p-active) {
+        color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+
+      > .p-menuitem-content {
+        padding: var(--padding) var(--padding) 6px var(--padding);
+        border-radius: var(--border-radius);
+      }
+
+      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+        background: var(--list-hover-background);
+      }
+    }
+  }
+
+  .p-submenu-list {
+    margin-top: var(--padding-tiny);
+    padding: var(--padding);
+    background: var(--background-color);
+    border: 1px solid var(--container-border-color);
+    border-radius: var(--border-radius);
+
+    .p-menuitem {
+      border-radius: var(--border-radius);
+      padding: var(--padding) var(--padding-small);
+
+      &:not(:has(.p-active)):not(:has(.router-link-active)) {
+        color: var(--text-color);
+      }
+
+      &:not(.p-highlight):not(.p-disabled):hover {
+        background: var(--list-hover-background);
+      }
+
+      &:not(:last-child) {
+        margin-bottom: var(--padding);
+        :after{
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: -5px;
+          width: 100%;
+          border-bottom: 1px solid var(--container-border-color);
+        }
+        &.p-big-separator {
+          :after{
+            border-bottom-width: 3px;
+            bottom: -6px;
+          }
+        }
+      }
+    }
+  }
+
+  &.right-aligned-submenu .p-submenu-list {
+    right: 0;
+  }
+}
