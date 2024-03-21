@@ -17,6 +17,7 @@ import {
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
 const props = defineProps({
   searchable: { type: Array, required: true }, // list of categories that the bar can search in
   barStyle: { type: String, required: true }, // look of the bar ('discreet', 'gaudy' or 'embedded')
@@ -26,6 +27,7 @@ const emit = defineEmits(['go'])
 
 enum States {
   InputIsEmpty,
+  SearchRequestWillBeSent,
   WaitingForResults,
   ApiHasResponded,
   Error,
@@ -33,6 +35,7 @@ enum States {
 }
 interface SearchState {
   state : States,
+  numberOfDifferentInputs : number,
   numberOfApiCallsWithoutResponse : number,
   userFeelsLucky: boolean
 }
@@ -52,8 +55,8 @@ interface OrganizedResults {
   }[]
 }
 
-const PeriodOfDropDownUpdates = 2000
-const NumberOfApiCallAttemptsBeforeShowingError = 2
+const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
+const NumberOfApiCallAttemptsBeforeShowingError = 1
 
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
@@ -65,6 +68,7 @@ const inputted = ref('')
 let lastKnownInput = ''
 const searchState = ref<SearchState>({
   state: States.InputIsEmpty,
+  numberOfDifferentInputs: 0,
   numberOfApiCallsWithoutResponse: 0,
   userFeelsLucky: false
 })
@@ -99,9 +103,12 @@ const userFilters = ref<UserFilters>({
   noCategoryIsSelected: true
 })
 
+let searchAheadThread = searchAhead()
+
 function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
   inputted.value = ''
+  searchState.value.numberOfDifferentInputs++
   resetSearchState()
   if (closeDropDown) {
     showDropDown.value = false // not equivalent to `showDropDown.value = !closeDropDown` because it must not be opened when it is already closed
@@ -117,6 +124,26 @@ function resetSearchState (state : States = States.InputIsEmpty) {
   searchState.value.numberOfApiCallsWithoutResponse = 0
   searchState.value.userFeelsLucky = false
   searchState.value.state = state
+}
+
+function updateSearchState (state : States = States.InputIsEmpty) {
+  if (state === searchState.value.state) {
+    // makes sure that Vue re-renders the drop-down although the state does not change
+    searchState.value.state = States.UpdateIncoming
+  }
+  searchState.value.state = state
+}
+
+function userIsWaiting () : boolean {
+  return searchState.value.state === States.SearchRequestWillBeSent || searchState.value.state === States.WaitingForResults
+}
+
+function inputCheckpoint () : number {
+  return searchState.value.numberOfDifferentInputs
+}
+
+function didInputChangeSinceCheckpoint (inputCheckpoint : number) {
+  return inputCheckpoint !== searchState.value.numberOfDifferentInputs
 }
 
 onMounted(() => {
@@ -151,34 +178,6 @@ onUnmounted(() => {
   document.removeEventListener('click', listenToClicks)
 })
 
-// In the V1, the server received a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
-// Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
-// was only for entries of size 1.
-// This less-than-2.5s-on-average delay arised from a Timeout Timer.
-// For the V2, I propose to work with an Interval Timer because:
-// - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
-// - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
-setInterval(() => {
-  if (searchState.value.state === States.WaitingForResults) {
-    if (!searchAhead()) {
-      // the communication with the API failed or the API is down
-      searchState.value.numberOfApiCallsWithoutResponse++
-      if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
-        resetSearchState(States.Error)
-      }
-    } else {
-      const callFunctionUserFeelsLucky = searchState.value.userFeelsLucky // this value must be retrieved now because of the call to resetSearchState() before it is used
-      filterAndOrganizeResults()
-      resetSearchState(States.ApiHasResponded)
-      if (callFunctionUserFeelsLucky) {
-        userFeelsLucky()
-      }
-    }
-  }
-},
-PeriodOfDropDownUpdates
-)
-
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
   if (dropDown.value === undefined || inputFieldAndButton.value === undefined ||
@@ -188,16 +187,59 @@ function listenToClicks (event : Event) {
   showDropDown.value = false
 }
 
+searchAheadThread.then((received) => {
+  if (received === 'NeverMind') {
+    return
+  }
+  console.log('THEN CALLED')
+  if (received === 'Error') {
+    searchState.value.numberOfApiCallsWithoutResponse++
+    if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
+      resetSearchState(States.Error)
+    } else {
+      // this tells the interval timer to try again
+      updateSearchState(States.SearchRequestWillBeSent)
+    }
+    return
+  }
+
+  const mustFunctionUserFeelsLuckyBeCalled = searchState.value.userFeelsLucky // this value must be retrieved now because of the call to resetSearchState() before it is used
+  filterAndOrganizeResults()
+  resetSearchState(States.ApiHasResponded)
+  if (mustFunctionUserFeelsLuckyBeCalled) {
+    userFeelsLucky()
+  }
+})
+
+// In the V1, the server was receiving a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
+// Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
+// was only for entries of size 1.
+// This less-than-2.5s-on-average delay arised from a Timeout Timer.
+// For the V2, I propose to work with an Interval Timer because:
+// - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
+// - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
+setInterval(() => {
+  if (searchState.value.state !== States.SearchRequestWillBeSent) {
+    return
+  }
+  updateSearchState(States.WaitingForResults)
+
+  searchAheadThread = searchAhead() // if a thread is already calling the API with a previous input, this line discards it
+},
+SearchRequestPeriodicity
+)
+
 function inputMightHaveChanged () {
   if (inputted.value === lastKnownInput) {
     return
   }
   lastKnownInput = inputted.value
+  searchState.value.numberOfDifferentInputs++
   if (inputted.value.length === 0) {
     cleanUp(false)
   } else {
     // we order a search (the timer will launch it)
-    resetSearchState(States.WaitingForResults)
+    resetSearchState(States.SearchRequestWillBeSent)
   }
 }
 
@@ -208,10 +250,10 @@ function userFeelsLucky () {
   // if the previous API call failed and the user tries again with Enter or the search button
   if (searchState.value.state === States.Error) {
     // we order a new search (the timer will lanuch it)
-    resetSearchState(States.WaitingForResults)
+    resetSearchState(States.SearchRequestWillBeSent)
   }
   // if we are waiting for a response from the API (because of inputMightHaveChanged() or because of the retry just above)
-  if (searchState.value.state === States.WaitingForResults) {
+  if (userIsWaiting()) {
     // we ask the timer to call this function once (and if) the results are received
     searchState.value.userFeelsLucky = true
     // in the meantime, we do not proceed further
@@ -276,28 +318,26 @@ function categoryFilterHasChanged () {
   userFilters.value.noCategoryIsSelected = allButtonsOff
 }
 
-// returns false if the API could not be reached or if it had a problem
-// returns true otherwise (so also true when no result matches the input)
-function searchAhead () : boolean {
-  let error = false
-
-  useCustomFetch<SearchAheadResult>(API_PATH.SEARCH, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: { input: inputted.value, searchable: searchableTypes }
-  }).then((received) => {
-    results.raw = received
-  }).catch(() => {
-    error = true
-  })
-  if (results.raw === undefined || results.raw.error !== undefined) {
-    error = true
+async function searchAhead () : Promise<SearchAheadResult | 'NeverMind' | 'Error'> {
+  await setTimeout(() => {}, 10)
+  if (inputted.value === '') {
+    return 'NeverMind'
   }
-
-  if (error) {
-    results.raw = { data: [] }
-  }
-  return !error
+  console.log('Search ahead')
+  return { data: [{ chain_id: 1, type: inputted.value }] } /*
+  try {
+    const received = await fetch<SearchAheadResult>(API_PATH.SEARCH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { input: inputted.value, searchable: searchableTypes }
+    })
+    if (received !== undefined && received.error === undefined && received.data !== undefined) {
+      return received
+    }
+    return 'Error'
+  } catch (error) {
+    return 'Error'
+  } */
 }
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
@@ -475,7 +515,7 @@ function refreshOutputArea () {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
   // refreshes the output area in the drop-down
-  resetSearchState(searchState.value.state)
+  updateSearchState(searchState.value.state)
 }
 </script>
 
@@ -592,7 +632,7 @@ function refreshOutputArea () {
           <div v-if="searchState.state === States.InputIsEmpty" class="info center">
             {{ $t('search_bar.help') }}
           </div>
-          <div v-else-if="searchState.state === States.WaitingForResults" class="info center">
+          <div v-else-if="userIsWaiting()" class="info center">
             {{ $t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
