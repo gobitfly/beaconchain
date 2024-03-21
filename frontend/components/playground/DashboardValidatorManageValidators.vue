@@ -10,7 +10,7 @@ const { validatorDashboardOverview } = storeToRefs(overviewStore)
 const store = useUserDashboardStore()
 const { getDashboards } = store
 
-await useAsyncData('validator_dashboards', () => getDashboards())
+await useAsyncData('user_dashboards', () => getDashboards())
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
