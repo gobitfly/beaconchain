@@ -246,5 +246,6 @@ const data = computed(() => {
 .info_row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 </style>
