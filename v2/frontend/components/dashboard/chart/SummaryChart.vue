@@ -40,7 +40,7 @@ watch(props, () => {
   getDashboardSummaryChart(props.dashboardKey)
 }, { immediate: true })
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
@@ -72,7 +72,7 @@ const option = computed(() => {
     chartData.value.series.forEach((element) => {
       let name = allGroups
       if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        const group = overview.value?.groups.find(group => group.id === element.id)
+        const group = validatorDashboardOverview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
 

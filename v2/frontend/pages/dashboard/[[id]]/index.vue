@@ -9,15 +9,23 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
 import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const route = useRoute()
 
-const key = computed(() => {
+const dashboardKey = computed(() => {
   if (Array.isArray(route.params.id)) {
     return route.params.id.join(',')
   }
   return route.params.id
 })
+
+const { key } = storeToRefs(useValidatorDashboardOverviewStore())
+
+watch(dashboardKey, (newKey) => {
+  console.log('DIECE: New dashboard key found on index page', newKey)
+  key.value = newKey // TODO: This does not seem perfect
+}, { immediate: true })
 
 const manageValidatorsModalVisisble = ref(false)
 

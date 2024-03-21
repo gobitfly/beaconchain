@@ -24,7 +24,7 @@ const { width } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
 
@@ -100,7 +100,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   alert(`remove val ${row.index}`)
 }
 
-const total = computed(() => addUpValues(overview.value?.validators))
+const total = computed(() => addUpValues(validatorDashboardOverview.value?.validators))
 
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= total.value)
 

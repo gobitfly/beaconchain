@@ -8,10 +8,10 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const list = computed(() => {
-  const groups = overview.value?.groups ?? []
+  const groups = validatorDashboardOverview.value?.groups ?? []
   if (props.includeAll) {
     return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '' }].concat(groups)
   }

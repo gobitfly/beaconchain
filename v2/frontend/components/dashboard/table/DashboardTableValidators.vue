@@ -16,7 +16,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
 
 const dialog = useDialog()
 
@@ -38,7 +38,7 @@ const groupName = computed(() => {
   if (props.groupId < 0) {
     return $t('dashboard.validator.summary.total_group_name')
   }
-  const group = overview.value?.groups?.find(g => g.id === props.groupId)
+  const group = validatorDashboardOverview.value?.groups?.find(g => g.id === props.groupId)
   return group?.name || `${props.groupId}`
 })
 

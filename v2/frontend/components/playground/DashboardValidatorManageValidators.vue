@@ -5,9 +5,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 const overviewStore = useValidatorDashboardOverviewStore()
-const { getOverview } = overviewStore
-await useAsyncData('validator_dashboard_overview', () => getOverview(100))
-const { overview } = storeToRefs(overviewStore)
+const { validatorDashboardOverview } = storeToRefs(overviewStore)
 
 const store = useUserDashboardStore()
 const { getDashboards } = store
@@ -29,7 +27,7 @@ const openGroupSelection = (withPreselection: boolean) => {
   dialog.open(DashboardGroupSelectionDialog, {
     onClose: response => onClose(response?.data),
     data: {
-      groupId: withPreselection ? overview.value?.groups?.[0]?.id : undefined,
+      groupId: withPreselection ? validatorDashboardOverview.value?.groups?.[0]?.id : undefined,
       selectedValidators: withPreselection ? 1 : 10,
       totalValidators: 123
     }
