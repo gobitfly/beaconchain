@@ -40,14 +40,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="key==''">
+  <div v-if="key === ''">
     <BcPageWrapper>
-      <DashboardCreationController ref="dashboardCreationControllerPanel" class="panel-controller" :display-type="'panel'" />
+      <DashboardCreationController
+        ref="dashboardCreationControllerPanel"
+        class="panel-controller"
+        :display-type="'panel'"
+      />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
-    <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
+    <DashboardCreationController
+      ref="dashboardCreationControllerModal"
+      class="modal-controller"
+      :display-type="'modal'"
+    />
     <BcPageWrapper>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
@@ -100,20 +108,29 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.header-container {
+  display: flex;
+  justify-content: space-between;
+
+  .dashboard-title {
+    margin-bottom: var(--padding-large);
+  }
+}
 
 .panel-controller {
   display: flex;
   justify-content: center;
-  padding: 60px 0px;
+  margin-top: 60px;
+  margin-bottom: 60px;
+  overflow: hidden;
 }
 
-:global(.modal_controller) {
-  max-width: 460px;
-  width: 100%;
+:global(.modal-controller) {
+  max-width: 100%;
+  width: 460px;
 }
 
 .overview {
   margin-bottom: var(--padding-large);
 }
-
 </style>

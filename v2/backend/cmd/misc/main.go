@@ -18,6 +18,7 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -170,6 +171,19 @@ func main() {
 	})
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
+
+	// Initialize the persistent redis client
+	rdc := redis.NewClient(&redis.Options{
+		Addr:        utils.Config.RedisSessionStoreEndpoint,
+		ReadTimeout: time.Second * 20,
+	})
+
+	if err := rdc.Ping(context.Background()).Err(); err != nil {
+		log.Fatal(err, "error connecting to persistent redis store", 0)
+	}
+
+	db.PersistentRedisDbClient = rdc
+	defer db.PersistentRedisDbClient.Close()
 
 	switch opts.Command {
 	case "nameValidatorsByRanges":
