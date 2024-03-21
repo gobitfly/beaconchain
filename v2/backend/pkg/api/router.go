@@ -6,7 +6,6 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -29,24 +28,27 @@ func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 }
 
 // TODO replace with proper auth
-func GetAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		query := r.URL.Query().Get("api_key")
+func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			query := r.URL.Query().Get("api_key")
 
-		if header != "Bearer "+utils.Config.ApiKeySecret && query != utils.Config.ApiKeySecret {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+			if header != "Bearer "+apiKey && query != apiKey {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -55,7 +57,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
+func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
 	endpoints := []endpoint{
 		{"GET", "/healthz", hs.PublicGetHealthz, nil},
 		{"GET", "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
@@ -92,6 +94,7 @@ func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Rou
 		{"DELETE", "/validator-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
 		{"GET", "/validator-dashboards/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
 		{"GET", "/validator-dashboards/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
+		{"GET", "/validator-dashboards/{dashboard_id}/validator-indices", nil, hs.InternalGetValidatorDashboardValidatorIndices},
 		{"GET", "/validator-dashboards/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
 		{"GET", "/validator-dashboards/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
 		{"GET", "/validator-dashboards/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},

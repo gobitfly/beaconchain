@@ -84,6 +84,8 @@ type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupS
 
 type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
 
+type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
+
 // ------------------------------------------------------------
 // Rewards Tab
 type VDBRewardesTableDuty struct {

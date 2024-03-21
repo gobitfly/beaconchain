@@ -43,7 +43,7 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
 .container{
   display: flex;
   flex-direction: column;
-  align-items: start;
+  align-items: flex-start;
   gap: 10px;
   padding: 10px;
 }

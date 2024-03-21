@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useLatestStateStore } from '~/stores/useLatestStateStore'
 useHead({
   script: [
     {
@@ -9,10 +8,8 @@ useHead({
     }
   ]
 }, { mode: 'client' })
-const { getLatestState } = useLatestStateStore()
-await useAsyncData('latest_state', () => getLatestState())
-
 useWindowSizeProvider()
+useBcToastProvider()
 
 </script>
 
@@ -20,6 +17,7 @@ useWindowSizeProvider()
   <div class="min-h-full">
     <NuxtPage />
     <DynamicDialog />
+    <Toast />
   </div>
 </template>
 
