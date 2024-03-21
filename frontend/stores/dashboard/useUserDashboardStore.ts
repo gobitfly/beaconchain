@@ -10,7 +10,6 @@ export const useUserDashboardStore = defineStore('user_dashboards', () => {
   async function getDashboards () {
     const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
     dashboards.value = res.data
-    warn('dashboard', res)
     return dashboards.value
   }
 
