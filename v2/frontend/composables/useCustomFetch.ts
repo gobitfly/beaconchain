@@ -128,7 +128,9 @@ export function useCustomFetch () {
       throw new Error(`path ${pathName} not found`)
     }
 
-    options.signal = AbortSignal.timeout(APIcallTimeout)
+    if (options.signal === undefined) {
+      options.signal = AbortSignal.timeout(APIcallTimeout)
+    }
 
     if (map.mockFunction !== undefined && map.mock) {
       return map.mockFunction(options.body as Record<string, any>, pathValues, query) as T
