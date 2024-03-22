@@ -290,7 +290,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 	return result, err
 }
 
-// param validators: slice of validator public keys or indices, a index should resolve to the newest index version
+// param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return nil, nil
@@ -300,15 +300,12 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 	validators := []t.VDBValidator{}
 	err := d.AlloyReader.Select(&validators, `
 		SELECT 
-			validator_index,
-			MAX(validator_index_version) as validator_index_version
+			validator_index
 		FROM validators
 		WHERE validator_index = ANY($1)
-		GROUP BY validator_index
 		UNION ALL
 		SELECT 
-			validator_index,
-			validator_index_version
+			validator_index
 		FROM validators
 		WHERE pubkey = ANY($2)
 	`, pq.Array(indices), pq.ByteaArray(publicKeys))
@@ -660,84 +657,80 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 		return nil, nil
 	}
 
+	validatorIndices := make([]uint64, 0, len(validators))
+	for _, v := range validators {
+		validatorIndices = append(validatorIndices, v.Index)
+	}
+
 	pubkeys := []struct {
-		ValidatorIndex        uint64 `db:"validator_index"`
-		ValidatorIndexVersion uint64 `db:"validator_index_version"`
-		Pubkey                []byte `db:"pubkey"`
+		ValidatorIndex uint64 `db:"validator_index"`
+		Pubkey         []byte `db:"pubkey"`
 	}{}
 
 	addedValidators := []struct {
-		ValidatorIndex        uint64 `db:"validator_index"`
-		ValidatorIndexVersion uint64 `db:"validator_index_version"`
-		GroupId               uint64 `db:"group_id"`
+		ValidatorIndex uint64 `db:"validator_index"`
+		GroupId        uint64 `db:"group_id"`
 	}{}
 
-	// Query to find the pubkey for each validator index and version pair
+	// Query to find the pubkey for each validator index
 	pubkeysQuery := `
 		SELECT
 			validator_index,
-			validator_index_version,
 			pubkey
 		FROM validators
-		WHERE (validator_index, validator_index_version) IN (
+		WHERE validator_index = ANY($1)
 	`
 
-	// Query to add the validator and version pairs to the dashboard and group
+	// Query to add the validators to the dashboard and group
 	addValidatorsQuery := `
-		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index, validator_index_version)
+		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
 			VALUES 
 	`
 
-	flattenedValidators := make([]interface{}, 0, len(validators)*2)
-	for idx, v := range validators {
-		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
-		pubkeysQuery += fmt.Sprintf("($%d, $%d), ", idx*2+1, idx*2+2)
-		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d, $%d), ", idx*2+3, idx*2+4)
+	for idx := range validatorIndices {
+		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d), ", idx+3)
 	}
-	pubkeysQuery = pubkeysQuery[:len(pubkeysQuery)-2] + ")"             // remove trailing comma
 	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
 
 	// If a validator is already in the dashboard, update the group
 	// If the validator is already in that group nothing changes but we will include it in the result anyway
 	addValidatorsQuery += `
-		ON CONFLICT (dashboard_id, validator_index, validator_index_version) DO UPDATE SET 
+		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET 
 			dashboard_id = EXCLUDED.dashboard_id,
 			group_id = EXCLUDED.group_id,
-			validator_index = EXCLUDED.validator_index,
-			validator_index_version = EXCLUDED.validator_index_version
-		RETURNING validator_index, validator_index_version, group_id
+			validator_index = EXCLUDED.validator_index
+		RETURNING validator_index, group_id
 	`
 
 	// Find all the pubkeys
-	err := d.AlloyReader.Select(&pubkeys, pubkeysQuery, flattenedValidators...)
+	err := d.AlloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validatorIndices))
 	if err != nil {
 		return nil, err
 	}
 
 	// Add all the validators to the dashboard and group
-	addValidatorsArgsIntf := append([]interface{}{dashboardId, groupId}, flattenedValidators...)
+	addValidatorsArgsIntf := []interface{}{dashboardId, groupId}
+	for _, validatorIndex := range validatorIndices {
+		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
+	}
 	err = d.AlloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Combine the pubkeys and group ids for the result
-	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
+	pubkeysMap := make(map[uint64]string, len(pubkeys))
 	for _, pubKeyInfo := range pubkeys {
-		pubkeysMap[t.VDBValidator{
-			Index:   pubKeyInfo.ValidatorIndex,
-			Version: pubKeyInfo.ValidatorIndexVersion}] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
+		pubkeysMap[pubKeyInfo.ValidatorIndex] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
 	}
 
-	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
+	addedValidatorsMap := make(map[uint64]uint64, len(addedValidators))
 	for _, addedValidatorInfo := range addedValidators {
-		addedValidatorsMap[t.VDBValidator{
-			Index:   addedValidatorInfo.ValidatorIndex,
-			Version: addedValidatorInfo.ValidatorIndexVersion}] = addedValidatorInfo.GroupId
+		addedValidatorsMap[addedValidatorInfo.ValidatorIndex] = addedValidatorInfo.GroupId
 	}
 
 	result := []t.VDBPostValidatorsData{}
-	for _, validator := range validators {
+	for _, validator := range validatorIndices {
 		result = append(result, t.VDBPostValidatorsData{
 			PublicKey: pubkeysMap[validator],
 			GroupId:   addedValidatorsMap[validator],
@@ -756,22 +749,19 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 		return err
 	}
 
+	validatorIndices := make([]uint64, 0, len(validators))
+	for _, v := range validators {
+		validatorIndices = append(validatorIndices, v.Index)
+	}
+
 	//Create the query to delete validators
 	deleteValidatorsQuery := `
 		DELETE FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1 AND (validator_index, validator_index_version) IN (
+		WHERE dashboard_id = $1 AND validator_index = ANY($2)
 	`
 
-	flattenedValidators := make([]interface{}, 0, len(validators)*2)
-	for idx, v := range validators {
-		flattenedValidators = append(flattenedValidators, v.Index, v.Version)
-		deleteValidatorsQuery += fmt.Sprintf("($%d, $%d), ", idx*2+2, idx*2+3)
-	}
-	deleteValidatorsQuery = deleteValidatorsQuery[:len(deleteValidatorsQuery)-2] + ")" // remove trailing comma
-
 	// Delete the validators
-	deleteValidatorsArgsIntf := append([]interface{}{dashboardId}, flattenedValidators...)
-	_, err := d.AlloyWriter.Exec(deleteValidatorsQuery, deleteValidatorsArgsIntf...)
+	_, err := d.AlloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validatorIndices))
 
 	return err
 }
@@ -1704,6 +1694,6 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
 }
