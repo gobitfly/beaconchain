@@ -23,7 +23,7 @@ onMounted(() => {
 
   for (const nw in props.initialState) {
     state[nw] = props.initialState[nw]
-    vueMultiselectAllOptions.push({ name: String(nw), label: ChainInfo[Number(nw) as ChainIDs].name })
+    vueMultiselectAllOptions.push({ name: String(nw), label: ChainInfo[Number(nw) as ChainIDs].description })
     if (state[nw]) {
       vueMultiselectSelectedOptions.value.push(nw)
     }
