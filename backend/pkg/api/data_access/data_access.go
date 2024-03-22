@@ -1603,11 +1603,12 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 		}
 	}
 
-	epochs := make(map[uint64]bool)
+	// convert the returned data to the expected return type (not pretty)
+	epochsMap := make(map[uint64]bool)
 	groups := make(map[uint64]bool)
 	data := make(map[uint64]map[uint64]float64)
 	for _, row := range queryResults {
-		epochs[row.StartEpoch] = true
+		epochsMap[row.StartEpoch] = true
 		groups[row.GroupId] = true
 
 		if data[row.StartEpoch] == nil {
@@ -1616,23 +1617,48 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 		data[row.StartEpoch][row.GroupId] = calculateTotalEfficiency(row.AttestationEfficiency, row.ProposerEfficiency, row.SyncEfficiency)
 	}
 
-	ret.Categories = make([]uint64, 0, len(epochs))
-	for epoch := range epochs {
-		ret.Categories = append(ret.Categories, epoch)
+	epochsArray := make([]uint64, 0, len(epochsMap))
+	for epoch := range epochsMap {
+		epochsArray = append(epochsArray, epoch)
 	}
-	sort.Slice(ret.Categories, func(i, j int) bool {
-		return ret.Categories[i] < ret.Categories[j]
+	sort.Slice(epochsArray, func(i, j int) bool {
+		return epochsArray[i] < epochsArray[j]
 	})
 
-	ret.Series = make([]t.ChartSeries[int], 0, len(groups))
+	groupsArray := make([]uint64, 0, len(groups))
+	for group := range groups {
+		groupsArray = append(groupsArray, group)
+	}
+	sort.Slice(groupsArray, func(i, j int) bool {
+		return groupsArray[i] < groupsArray[j]
+	})
+
+	ret.Categories = epochsArray
+	ret.Series = make([]t.ChartSeries[int], 0, len(groupsArray))
+
+	seriesMap := make(map[uint64]*t.ChartSeries[int])
 	for group := range groups {
 		series := t.ChartSeries[int]{
 			Id:    int(group),
 			Stack: "",
-			Data:  make([]float64, 0, len(epochs)),
+			Data:  make([]float64, 0, len(epochsMap)),
 		}
-		ret.Series = append(ret.Series, series)
+		seriesMap[group] = &series
 	}
+
+	for _, epoch := range epochsArray {
+		for _, group := range groupsArray {
+			seriesMap[group].Data = append(seriesMap[group].Data, data[epoch][group])
+		}
+	}
+
+	for _, series := range seriesMap {
+		ret.Series = append(ret.Series, *series)
+	}
+
+	sort.Slice(ret.Series, func(i, j int) bool {
+		return ret.Series[i].Id < ret.Series[j].Id
+	})
 
 	return ret, nil
 }
