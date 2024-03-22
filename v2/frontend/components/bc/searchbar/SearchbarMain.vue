@@ -12,7 +12,8 @@ import {
   type ResultSuggestion,
   type OrganizedResults,
   type SearchBarStyle,
-  type Matching
+  type Matching,
+  type PickingCallBackFunction
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
@@ -21,9 +22,13 @@ const { fetch } = useCustomFetch()
 const props = defineProps<{
   searchable: Category[], // list of categories that the bar can search in
   barStyle: SearchBarStyle, // look of the bar ('discreet', 'gaudy' or 'embedded')
-  pickByDefault: Function // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
+  pickByDefault: PickingCallBackFunction // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
 }>()
 const emit = defineEmits(['go'])
+
+enum ResultState {
+  Obtained, Outdated, Error
+}
 
 enum States {
   InputIsEmpty,
@@ -33,18 +38,13 @@ enum States {
   Error,
   UpdateIncoming
 }
-interface SearchState {
+interface GlobalState {
   state : States,
-  numberOfApiCallsWithoutResponse : number,
-  callAgainUserPressedSearchButtonOrEnter: boolean
-}
-
-enum ResultState {
-  Obtained, Outdated, Error
+  callAgainFunctionUserPressedSearchButtonOrEnter: boolean
+  showDropDown: boolean
 }
 
 const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
-const NumberOfApiCallAttemptsBeforeShowingError = 1
 
 const barStyle : SearchBarStyle = props.barStyle as SearchBarStyle
 const searchButtonSize = (barStyle === 'discreet') ? '34px' : '40px'
@@ -54,12 +54,11 @@ let searchableTypes : ResultType[] = []
 
 const inputted = ref('')
 let lastKnownInput = ''
-const searchState = ref<SearchState>({
+const globalState = ref<GlobalState>({
   state: States.InputIsEmpty,
-  numberOfApiCallsWithoutResponse: 0,
-  callAgainUserPressedSearchButtonOrEnter: false
+  callAgainFunctionUserPressedSearchButtonOrEnter: false,
+  showDropDown: false
 })
-const showDropDown = ref<boolean>(false)
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 
@@ -83,33 +82,31 @@ const userFilters = {
 function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
   inputted.value = ''
-  resetSearchState()
+  resetGlobalState(States.InputIsEmpty)
   if (closeDropDown) {
-    showDropDown.value = false // not equivalent to `showDropDown.value = !closeDropDown` because it must not be opened when it is already closed
+    globalState.value.showDropDown = false
   }
-  results.raw = { data: [] }
 }
 
-function resetSearchState (state : States = States.InputIsEmpty) : SearchState {
-  const previousState = { ...searchState.value }
+function resetGlobalState (state : States) : GlobalState {
+  const previousState = { ...globalState.value }
 
-  if (state === searchState.value.state) {
+  if (state === globalState.value.state) {
     // makes sure that Vue re-renders the drop-down although the state does not change
-    searchState.value.state = States.UpdateIncoming
+    globalState.value.state = States.UpdateIncoming
   }
-  searchState.value.numberOfApiCallsWithoutResponse = 0
-  searchState.value.callAgainUserPressedSearchButtonOrEnter = false
-  searchState.value.state = state
+  globalState.value.callAgainFunctionUserPressedSearchButtonOrEnter = false
+  globalState.value.state = state
 
   return previousState
 }
 
-function updateSearchState (state : States = States.InputIsEmpty) {
-  if (state === searchState.value.state) {
+function updateGlobalState (state : States) {
+  if (state === globalState.value.state) {
     // makes sure that Vue re-renders the drop-down although the state does not change
-    searchState.value.state = States.UpdateIncoming
+    globalState.value.state = States.UpdateIncoming
   }
-  searchState.value.state = state
+  globalState.value.state = state
 }
 
 onMounted(() => {
@@ -144,7 +141,7 @@ function listenToClicks (event : Event) {
       dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
-  showDropDown.value = false
+  globalState.value.showDropDown = false
 }
 
 // In the V1, the server was receiving a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
@@ -155,10 +152,10 @@ function listenToClicks (event : Event) {
 // - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
 // - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
 setInterval(() => {
-  if (searchState.value.state !== States.SearchRequestWillBeSent) {
+  if (globalState.value.state !== States.SearchRequestWillBeSent) {
     return
   }
-  updateSearchState(States.WaitingForResults)
+  updateGlobalState(States.WaitingForResults)
 
   // These two calls run in a separate thread. They request results from the API and then update the drop-down.
   searchAhead().then(updateBarAfterSearchAhead)
@@ -193,19 +190,15 @@ async function searchAhead () : Promise<ResultState> {
 function updateBarAfterSearchAhead (howSearchWent : ResultState) {
   switch (howSearchWent) {
     case ResultState.Error :
-      searchState.value.numberOfApiCallsWithoutResponse++
-      if (searchState.value.numberOfApiCallsWithoutResponse >= NumberOfApiCallAttemptsBeforeShowingError) {
-        resetSearchState(States.Error) // the user will see an error message
-      } else {
-        updateSearchState(States.SearchRequestWillBeSent) // we try again
-      }
+      resetGlobalState(States.Error) // the user will see an error message
       break
     case ResultState.Outdated :
-      break
+      // nothing to do
+      return
     case ResultState.Obtained :
       filterAndOrganizeResults()
-      // we change the state of the component to States.ApiHasResponded and we check whether callAgainUserPressedSearchButtonOrEnter was true before the change
-      if (resetSearchState(States.ApiHasResponded).callAgainUserPressedSearchButtonOrEnter) {
+      // we change the state of the component to States.ApiHasResponded and we check whether callAgainFunctionUserPressedSearchButtonOrEnter was true before the change
+      if (resetGlobalState(States.ApiHasResponded).callAgainFunctionUserPressedSearchButtonOrEnter) {
       // userPressedSearchButtonOrEnter() asked to be called again because the user pressed Enter or the search button but the results were still pending
         userPressedSearchButtonOrEnter()
       }
@@ -214,15 +207,15 @@ function updateBarAfterSearchAhead (howSearchWent : ResultState) {
 }
 
 function userPressedSearchButtonOrEnter () {
-  switch (searchState.value.state) {
+  switch (globalState.value.state) {
     case States.InputIsEmpty : // the user enjoys the sounds of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
-      resetSearchState(States.SearchRequestWillBeSent) // we order a new search (the timer will launch it)
+      resetGlobalState(States.SearchRequestWillBeSent) // we order a new search (the timer will launch it)
       return
     case States.SearchRequestWillBeSent :
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
-      searchState.value.callAgainUserPressedSearchButtonOrEnter = true // we ask the timer to call this function again when the communication with the API is complete
+      globalState.value.callAgainFunctionUserPressedSearchButtonOrEnter = true // we ask the timer to call this function again when the communication with the API is complete
       return // in the meantime, we do not proceed further
   }
   // from here, we know that the user pressed Enter or clicked the search button to be redirected by us to the most relevant page
@@ -258,10 +251,10 @@ function userPressedSearchButtonOrEnter () {
   emit('go', type?.suggestion[0].columns[type?.suggestion[0].queryParam], type?.type, network?.chainId)
 }
 
-function userClickedSuggestion (chain : ChainIDs, type : ResultType, what: string) {
+function userClickedSuggestion (chain : ChainIDs, type : ResultType, wanted: string) {
   // cleans up and calls back parent's function
   cleanUp(true)
-  emit('go', what, type, chain)
+  emit('go', wanted, type, chain)
 }
 
 function inputMightHaveChanged () {
@@ -273,7 +266,7 @@ function inputMightHaveChanged () {
     cleanUp(false)
   } else {
     // we order a search (the timer will launch it)
-    resetSearchState(States.SearchRequestWillBeSent)
+    resetGlobalState(States.SearchRequestWillBeSent)
   }
 }
 
@@ -454,13 +447,13 @@ function refreshOutputArea () {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
   // refreshes the output area in the drop-down
-  updateSearchState(searchState.value.state)
+  updateGlobalState(globalState.value.state)
 }
 </script>
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
+    <div class="whole-component" :class="[barStyle, globalState.showDropDown?'dropdown-is-opened':'']">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <InputText
           v-model="inputted"
@@ -469,7 +462,7 @@ function refreshOutputArea () {
           type="text"
           :placeholder="$t('search_bar.placeholder')"
           @keyup="(e) => {if (e.key === 'Enter') {userPressedSearchButtonOrEnter()} else {inputMightHaveChanged()}}"
-          @focus="showDropDown = true"
+          @focus="globalState.showDropDown = true"
         />
         <span
           class="searchbutton"
@@ -479,7 +472,7 @@ function refreshOutputArea () {
           <FontAwesomeIcon :icon="faMagnifyingGlass" />
         </span>
       </div>
-      <div v-if="showDropDown" ref="dropDown" class="drop-down" :class="barStyle">
+      <div v-if="globalState.showDropDown" ref="dropDown" class="drop-down" :class="barStyle">
         <div class="separation" :class="barStyle" />
         <div class="filter-area">
           <BcSearchbarNetworkSelector
@@ -495,7 +488,7 @@ function refreshOutputArea () {
             @change="categoryFilterHasChanged"
           />
         </div>
-        <div v-if="searchState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
+        <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
             <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
               <BcSearchbarSuggestionLine
@@ -520,14 +513,14 @@ function refreshOutputArea () {
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
-          <div v-if="searchState.state === States.InputIsEmpty" class="info center">
+          <div v-if="globalState.state === States.InputIsEmpty" class="info center">
             {{ $t('search_bar.help') }}
           </div>
-          <div v-else-if="searchState.state === States.SearchRequestWillBeSent || searchState.state === States.WaitingForResults" class="info center">
+          <div v-else-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
             {{ $t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
-          <div v-else-if="searchState.state === States.Error" class="info center">
+          <div v-else-if="globalState.state === States.Error" class="info center">
             {{ $t('search_bar.something_wrong') }}
             <IconErrorFace :inline="true" />
             <br>
