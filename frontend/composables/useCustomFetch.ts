@@ -27,7 +27,7 @@ type PathName = typeof pathNames[number]
 export type PathValues = Record<string, string | number>
 
 interface MockFunction {
-  (body?: Record<string, any>, param?: PathValues, query?: PathValues) : any
+  (body?: any, param?: PathValues, query?: PathValues) : any
 }
 
 type MappingData = {
@@ -142,7 +142,7 @@ export function useCustomFetch () {
     }
 
     if (map.mockFunction !== undefined && map.mock) {
-      return map.mockFunction(options.body as Record<string, any>, pathValues, query) as T
+      return map.mockFunction(options.body, pathValues, query) as T
     }
 
     const url = useRequestURL()

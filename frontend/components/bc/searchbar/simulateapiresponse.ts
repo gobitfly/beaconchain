@@ -1,7 +1,7 @@
 import { type SearchAheadResult } from '~/types/searchbar'
 
-export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadResult {
-  const searched = body?.input as string
+export function simulateAPIresponseForTheSearchBar (body? : Record<string, string>) : SearchAheadResult {
+  const searched = body?.input
   // const searchable = body?.searchable as ResultType[]
   const response : SearchAheadResult = {}; response.data = []
 
