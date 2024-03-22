@@ -1257,7 +1257,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
-	ret := t.VDBGroupSummaryData{}
+	ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
 	query := `select
@@ -1496,8 +1496,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			data.AttestationEfficiency = 0
 		}
 
-		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
-		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		if totalBlockChance > 0 {
+			data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
+		} else {
+			data.Luck.Proposal.Percent = 0
+		}
+		if totalSyncChance > 0 {
+			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		} else {
+			data.Luck.Sync.Percent = 0
+		}
 		if totalInclusionDelayDivisor > 0 {
 			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
 		} else {
@@ -1544,8 +1552,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
-
-	return &ret, nil
+	return ret, nil
 }
 
 // for summary charts: series id is group id, no stack
