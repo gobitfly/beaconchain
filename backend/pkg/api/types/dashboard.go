@@ -1,7 +1,7 @@
 package types
 
 type Dashboard struct {
-	Id   string `json:"id"`
+	Id   uint64 `json:"id"`
 	Name string `json:"name"`
 }
 type UserDashboardsData struct {

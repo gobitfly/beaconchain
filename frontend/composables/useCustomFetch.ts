@@ -70,7 +70,7 @@ const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
     path: '/validator-dashboards',
-    mock: true,
+    mock: false,
     method: 'POST'
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
