@@ -11,10 +11,6 @@ import (
 var FrontendReaderDB *sqlx.DB
 var FrontendWriterDB *sqlx.DB
 
-func MustInitFrontendDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
-	FrontendWriterDB, FrontendReaderDB = mustInitDB(writer, reader)
-}
-
 func GetAllAppSubscriptions() ([]*types.PremiumData, error) {
 	data := []*types.PremiumData{}
 

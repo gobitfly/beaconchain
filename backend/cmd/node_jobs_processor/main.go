@@ -39,7 +39,7 @@ func main() {
 		"version":   version.Version,
 		"chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
-	db.MustInitDB(&types.DatabaseConfig{
+	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
 		Password:     cfg.WriterDatabase.Password,
 		Name:         cfg.WriterDatabase.Name,
