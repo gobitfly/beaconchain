@@ -50,7 +50,7 @@ func main() {
 	utils.Config = cfg
 	log.InfoWithFields(log.Fields{"config": *configPath, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
-	db.MustInitDB(&types.DatabaseConfig{
+	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
 		Password:     cfg.WriterDatabase.Password,
 		Name:         cfg.WriterDatabase.Name,
