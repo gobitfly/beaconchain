@@ -44,7 +44,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			db.MustInitDB(&types.DatabaseConfig{
+			db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 				Username:     cfg.WriterDatabase.Username,
 				Password:     cfg.WriterDatabase.Password,
 				Name:         cfg.WriterDatabase.Name,
@@ -71,7 +71,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitAlloyDb(&types.DatabaseConfig{
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.AlloyWriter.Username,
 			Password:     cfg.AlloyWriter.Password,
 			Name:         cfg.AlloyWriter.Name,
