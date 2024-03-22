@@ -25,7 +25,7 @@ type PathName = typeof pathNames[number]
 export type PathValues = Record<string, string | number>
 
 interface MockFunction {
-  (body?: RequestInit['body'] | Record<string, any>, param?: PathValues, query?: PathValues) : any
+  (body?: any, param?: PathValues, query?: PathValues) : any
 }
 
 type MappingData = {
