@@ -417,14 +417,27 @@ func getUser(r *http.Request) (User, error) {
 
 func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
 	if response == nil {
+		w.WriteHeader(statusCode)
 		return
 	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		log.Error(err, "error encoding json data", 2, nil)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("error encoding json data"))
-		log.Error(err, "error encoding json data and writing response", 2, nil)
+		response = types.ApiErrorResponse{
+			Error: "error encoding json data",
+		}
+		if err = json.NewEncoder(w).Encode(response); err != nil {
+			// there seems to be an error with the lib
+			log.Error(err, "error writing response", 0, nil)
+		}
+		return
+	}
+	w.WriteHeader(statusCode)
+	if _, err = w.Write(jsonData); err != nil {
+		// already returned wrong status code to user, can't prevent that
+		log.Error(err, "error writing response", 0, nil)
 	}
 }
 
