@@ -10,7 +10,7 @@ import { warn } from 'vue'
 import { uniq } from 'lodash-es'
 import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow } from '~/types/api/validator_dashboard'
+import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
@@ -71,7 +71,8 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
   }
   const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch<any>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
+  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
+
   loadData()
   getOverview(props.dashboardKey)
 }
@@ -82,7 +83,8 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     return
   }
 
-  await fetch<any>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
+
   loadData()
   getOverview(props.dashboardKey)
 }
