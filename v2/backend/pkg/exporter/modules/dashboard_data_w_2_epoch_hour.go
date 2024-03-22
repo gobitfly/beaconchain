@@ -37,7 +37,7 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 
 	startTime := time.Now()
 	defer func() {
-		d.log.Infof("aggregate1h took %v", time.Since(startTime))
+		d.log.Infof("aggregate 1h took %v", time.Since(startTime))
 	}()
 
 	lastHourExported, err := edb.GetLastExportedHour()
@@ -63,7 +63,7 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 	}
 
 	if len(gaps) > 0 {
-		return fmt.Errorf("gaps in dashboard epoch, skipping for now: %v", gaps)
+		return fmt.Errorf("gaps in dashboard epoch, skipping for now: %v", gaps) // sanity, this should never happen
 	}
 
 	_, currentEndBound := d.getHourAggregateBounds(currentExportedEpoch)
@@ -140,7 +140,7 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 		return errors.Wrap(err, fmt.Sprintf("failed to create hourly partition, startRange: %d, endRange: %d", partitionStartRange, partitionEndRange))
 	}
 
-	d.log.Infof("aggregating 1h, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
+	d.log.Infof("aggregating 1h specific, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
 
 	_, err = tx.Exec(`
 		WITH

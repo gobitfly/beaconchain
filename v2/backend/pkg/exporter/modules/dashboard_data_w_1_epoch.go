@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -14,11 +15,13 @@ import (
 
 type epochWriter struct {
 	*dashboardData
+	mutex *sync.Mutex
 }
 
 func newEpochWriter(d *dashboardData) *epochWriter {
 	return &epochWriter{
 		dashboardData: d,
+		mutex:         &sync.Mutex{},
 	}
 }
 
@@ -39,7 +42,9 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 	// Create table if needed
 	startOfPartition, endOfPartition := d.getPartitionRange(epoch)
 
+	d.mutex.Lock()
 	err := d.createEpochPartition(startOfPartition, endOfPartition)
+	d.mutex.Unlock()
 	if err != nil {
 		return errors.Wrap(err, "failed to create epoch partition")
 	}

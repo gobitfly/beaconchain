@@ -208,6 +208,14 @@ func (m ModuleLog) Infof(format string, args ...interface{}) {
 	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
 }
 
+func (m ModuleLog) Debug(message string) {
+	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Debugf(format string, args ...interface{}) {
+	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
 func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {
 	additionalInfos["module"] = m.module.GetName()
 	log.InfoWithFields(additionalInfos, msg)
