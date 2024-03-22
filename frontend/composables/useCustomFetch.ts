@@ -4,8 +4,6 @@ import { simulateAPIresponseForTheSearchBar } from '~/components/bc/searchbar/si
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
-const APIcallTimeout = 30 * 1000 // 30 seconds
-
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER_DASHBOARDS = '/user/dashboards',
