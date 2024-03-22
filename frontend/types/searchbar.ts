@@ -352,6 +352,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   }
 }
 
+export interface PickingCallBackFunction {(possibilities : Matching[]) : Matching}
+
 export function getListOfCategories () : Category[] {
   const list : Category[] = []
 
