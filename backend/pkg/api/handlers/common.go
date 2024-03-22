@@ -422,7 +422,9 @@ func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) 
 		return
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Error(err, "error writing response", 0, nil)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("error encoding json data"))
+		log.Error(err, "error encoding json data and writing response", 2, nil)
 	}
 }
 
