@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -31,10 +30,10 @@ var _cachedValidatorMapping = new(types.RedisCachedValidatorsMapping)
 
 var currentMappingMutex = &sync.RWMutex{}
 
-func StartIndexMappingService() {
+func (s *Services) startIndexMappingService() {
 	for {
 		startTime := time.Now()
-		err := updateValidatorMapping() // TODO: only update data if something has changed (new head epoch)
+		err := s.updateValidatorMapping() // TODO: only update data if something has changed (new head epoch)
 		if err != nil {
 			log.Error(err, "error updating validator mapping", 0)
 		}
@@ -43,7 +42,7 @@ func StartIndexMappingService() {
 	}
 }
 
-func initValidatorMapping() {
+func (s *Services) initValidatorMapping() {
 	log.Infof("initializing validator mapping")
 	lenMapping := len(_cachedValidatorMapping.Mapping)
 
@@ -67,7 +66,7 @@ func initValidatorMapping() {
 	lastValidatorIndex = lenMapping - 1
 }
 
-func quickUpdateValidatorMapping() {
+func (s *Services) quickUpdateValidatorMapping() {
 	log.Infof("quick updating validator mapping")
 	// update metadata by overwriting it
 	currentValidatorMapping.ValidatorMetadata = _cachedValidatorMapping.Mapping
@@ -90,12 +89,12 @@ func quickUpdateValidatorMapping() {
 	lastValidatorIndex = newLastValidatorIndex
 }
 
-func updateValidatorMapping() error {
+func (s *Services) updateValidatorMapping() error {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
-	compressed, err := db.PersistentRedisDbClient.Get(ctx, key).Bytes()
+	compressed, err := s.persistentRedisDbClient.Get(ctx, key).Bytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get compressed validator mapping from db")
 	}
@@ -129,9 +128,9 @@ func updateValidatorMapping() error {
 	currentMappingMutex.Lock()
 	start = time.Now()
 	if currentValidatorMapping == nil {
-		initValidatorMapping()
+		s.initValidatorMapping()
 	} else {
-		quickUpdateValidatorMapping()
+		s.quickUpdateValidatorMapping()
 	}
 	log.Debugf("updated Validator Mapping, took %s", time.Since(start))
 	currentMappingMutex.Unlock()
@@ -145,7 +144,7 @@ func updateValidatorMapping() error {
 
 // GetCurrentValidatorMapping returns the current validator mapping and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the validator mapping service from updating
-func GetCurrentValidatorMapping() (*ValidatorMapping, func(), error) {
+func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), error) {
 	currentMappingMutex.RLock()
 
 	if currentValidatorMapping == nil {
@@ -155,9 +154,9 @@ func GetCurrentValidatorMapping() (*ValidatorMapping, func(), error) {
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil
 }
 
-func GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, error) {
+func (s *Services) GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, error) {
 	res := make([]string, len(indices))
-	mapping, releaseLock, err := GetCurrentValidatorMapping()
+	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
 	if err != nil {
 		return nil, err
@@ -171,9 +170,9 @@ func GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, error) {
 	return res, nil
 }
 
-func GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, error) {
+func (s *Services) GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, error) {
 	res := make([]uint64, len(pubkeys))
-	mapping, releaseLock, err := GetCurrentValidatorMapping()
+	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
 	if err != nil {
 		return nil, err
