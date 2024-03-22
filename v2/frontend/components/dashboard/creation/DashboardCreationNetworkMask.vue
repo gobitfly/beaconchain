@@ -1,15 +1,16 @@
 <script lang="ts" setup>
 import { IconNetworkEthereumMono, IconNetworkGnosisMono } from '#components'
+import type { ValidatorDashboardNetwork } from '~/types/dashboard'
 
 const { t: $t } = useI18n()
 
-const network = defineModel<string>('network', { required: true })
+const network = defineModel<ValidatorDashboardNetwork>('network')
 const allNetworks = [{ text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereumMono }, { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosisMono }]
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
 const continueDisabled = computed(() => {
-  return network.value === ''
+  return !network.value
 })
 </script>
 

@@ -12,7 +12,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const selected = defineModel<string>({ required: true })
+const selected = defineModel<string>()
 
 const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = value === selected.value
