@@ -4,13 +4,13 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
 import {
   Category,
-  CategoryInfo,
   ResultType,
   TypeInfo,
   getListOfResultTypes,
-  getListOfResultTypesInCategory,
   type SearchAheadSingleResult,
   type SearchAheadResult,
+  type ResultSuggestion,
+  type OrganizedResults,
   type SearchBarStyle,
   type Matching
 } from '~/types/searchbar'
@@ -18,11 +18,11 @@ import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/netwo
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-const props = defineProps({
-  searchable: { type: Array, required: true }, // list of categories that the bar can search in
-  barStyle: { type: String, required: true }, // look of the bar ('discreet', 'gaudy' or 'embedded')
-  pickByDefault: { type: Function, required: true } // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
-})
+const props = defineProps<{
+  searchable: Category[], // list of categories that the bar can search in
+  barStyle: SearchBarStyle, // look of the bar ('discreet', 'gaudy' or 'embedded')
+  pickByDefault: Function // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
+}>()
 const emit = defineEmits(['go'])
 
 enum States {
@@ -43,21 +43,6 @@ enum ResultState {
   Obtained, Outdated, Error
 }
 
-interface ResultSuggestion {
-  columns: string[],
-  queryParam: number, // index of the string given to the callback function `@go`
-  closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
-}
-interface OrganizedResults {
-  networks: {
-    chainId: ChainIDs,
-    types: {
-      type: ResultType,
-      suggestion: ResultSuggestion[]
-    }[]
-  }[]
-}
-
 const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
 const NumberOfApiCallAttemptsBeforeShowingError = 1
 
@@ -75,35 +60,25 @@ const searchState = ref<SearchState>({
   callAgainUserPressedSearchButtonOrEnter: false
 })
 const showDropDown = ref<boolean>(false)
-const networkDropdownOptions : {name: string, label: string}[] = []
-const networkDropdownUserSelection = ref<string[]>([])
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 
 const results = {
   raw: { data: [] } as SearchAheadResult, // response of the API, without structure nor order
   organized: {
-    in: { networks: [] } as OrganizedResults, // filtered results, organized
+    in: { networks: [] } as OrganizedResults, // filtered-in results, organized
     howManyResultsIn: 0,
-    out: { networks: [] } as OrganizedResults, // filtered out results, organized
+    out: { networks: [] } as OrganizedResults, // filtered-out results, organized
     howManyResultsOut: 0
   }
 }
 
-interface UserFilters {
-  networks: Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
-  noNetworkIsSelected : boolean,
-  everyNetworkIsSelected : boolean,
-  categories : Record<string, boolean>, // each field will have a Category as key and the state of the button as value
-  noCategoryIsSelected : boolean
-}
-const userFilters = ref<UserFilters>({
-  networks: {},
+const userFilters = {
+  networks: {} as Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
   noNetworkIsSelected: true,
-  everyNetworkIsSelected: false,
-  categories: {},
+  categories: {} as Record<string, boolean>, // each field will have a Category as key and the state of the button as value
   noCategoryIsSelected: true
-})
+}
 
 function cleanUp (closeDropDown : boolean) {
   lastKnownInput = ''
@@ -137,10 +112,6 @@ function updateSearchState (state : States = States.InputIsEmpty) {
   searchState.value.state = state
 }
 
-function userIsWaiting () : boolean {
-  return searchState.value.state === States.SearchRequestWillBeSent || searchState.value.state === States.WaitingForResults
-}
-
 onMounted(() => {
   searchableTypes = []
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained as a props)
@@ -151,18 +122,14 @@ onMounted(() => {
   }
   // creates the fields storing the state of the filter buttons, and deselect them
   for (const s of searchable) {
-    userFilters.value.categories[s] = false
+    userFilters.categories[s] = false
   }
-  userFilters.value.noCategoryIsSelected = true
-  // creates the network filtering data and the network drop-down
+  userFilters.noCategoryIsSelected = true
+  // creates the fields storing the state of the network drop-down, and deselect all of them
   for (const nw of getListOfImplementedChainIDs(true)) {
-    // creates the field telling us whether this network is selected
-    userFilters.value.networks[String(nw)] = false
-    // populates the network-drop-down
-    networkDropdownOptions.push({ name: String(nw), label: ChainInfo[nw].name })
+    userFilters.networks[String(nw)] = false
   }
-  networkDropdownUserSelection.value = [] // deselects all options
-  networkFilterHasChanged()
+  userFilters.noNetworkIsSelected = true
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
@@ -247,24 +214,18 @@ function updateBarAfterSearchAhead (howSearchWent : ResultState) {
 }
 
 function userPressedSearchButtonOrEnter () {
-  if (searchState.value.state === States.InputIsEmpty) {
-    return
+  switch (searchState.value.state) {
+    case States.InputIsEmpty : // the user enjoys the sounds of clicks
+      return
+    case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
+      resetSearchState(States.SearchRequestWillBeSent) // we order a new search (the timer will launch it)
+      return
+    case States.SearchRequestWillBeSent :
+    case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
+      searchState.value.callAgainUserPressedSearchButtonOrEnter = true // we ask the timer to call this function again when the communication with the API is complete
+      return // in the meantime, we do not proceed further
   }
-  // if the previous API call failed and the user tries again with Enter or the search button
-  if (searchState.value.state === States.Error) {
-    // we order a new search (the timer will launch it)
-    resetSearchState(States.SearchRequestWillBeSent)
-    return
-  }
-  // From here, we know that the user does not want to see the drop-down. He presssed Enter or the button to be redirected blindly.
-
-  // if the results did not come yet
-  if (userIsWaiting()) {
-    // we ask the timer to call this function again when the communication with the API is complete
-    searchState.value.callAgainUserPressedSearchButtonOrEnter = true
-    // in the meantime, we do not proceed further
-    return
-  }
+  // from here, we know that the user pressed Enter or clicked the search button to be redirected by us to the most relevant page
 
   if (results.organized.howManyResultsIn + results.organized.howManyResultsOut === 0) {
     // nothing matching the input has been found
@@ -297,8 +258,8 @@ function userPressedSearchButtonOrEnter () {
   emit('go', type?.suggestion[0].columns[type?.suggestion[0].queryParam], type?.type, network?.chainId)
 }
 
-function userClickedProposal (chain : ChainIDs, type : ResultType, what: string) {
-  // cleans up and calls back user's function
+function userClickedSuggestion (chain : ChainIDs, type : ResultType, what: string) {
+  // cleans up and calls back parent's function
   cleanUp(true)
   emit('go', what, type, chain)
 }
@@ -316,25 +277,28 @@ function inputMightHaveChanged () {
   }
 }
 
-function networkFilterHasChanged () {
-  userFilters.value.noNetworkIsSelected = (networkDropdownUserSelection.value.length === 0)
-  userFilters.value.everyNetworkIsSelected = (networkDropdownUserSelection.value.length === networkDropdownOptions.length)
+function networkFilterHasChanged (state : Record<string, boolean>) {
+  let noNetworkIsSelected = true
 
-  for (const nw in userFilters.value.networks) {
-    userFilters.value.networks[nw] = networkDropdownUserSelection.value.includes(nw)
+  for (const nw in userFilters.networks) {
+    userFilters.networks[nw] = state[nw]
+    noNetworkIsSelected &&= !state[nw]
   }
+  userFilters.noNetworkIsSelected = noNetworkIsSelected
+
+  refreshOutputArea()
 }
 
-function categoryFilterHasChanged () {
-  // determining whether any filter button is activated
-  let allButtonsOff = true
-  for (const cat in userFilters.value.categories) {
-    if (userFilters.value.categories[cat]) {
-      allButtonsOff = false
-      break
-    }
+function categoryFilterHasChanged (state : Record<string, boolean>) {
+  let noCategoryIsSelected = true
+
+  for (const cat in userFilters.categories) {
+    userFilters.categories[cat] = state[cat]
+    noCategoryIsSelected &&= !state[cat]
   }
-  userFilters.value.noCategoryIsSelected = allButtonsOff
+  userFilters.noCategoryIsSelected = noCategoryIsSelected
+
+  refreshOutputArea()
 }
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
@@ -364,10 +328,9 @@ function filterAndOrganizeResults () {
       chainId = finding.chain_id as ChainIDs
     }
     // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized object
-    // note that when the user did not select any network or any category, we default to showing all of them
     let place : OrganizedResults
-    if ((userFilters.value.networks[String(chainId)] || userFilters.value.noNetworkIsSelected || chainId === ChainIDs.Any) &&
-        (userFilters.value.categories[TypeInfo[type].category] || userFilters.value.noCategoryIsSelected)) {
+    if ((userFilters.networks[String(chainId)] || userFilters.noNetworkIsSelected || chainId === ChainIDs.Any) &&
+        (userFilters.categories[TypeInfo[type].category] || userFilters.noCategoryIsSelected)) {
       place = results.organized.in
       results.organized.howManyResultsIn++
     } else {
@@ -487,27 +450,6 @@ function resemblanceWithInput (str2 : string) : number {
   return dist[str1.length][str2.length]
 }
 
-function filterHint (category : Category) : string {
-  let hint = $t('search_bar.shows') + ' '
-
-  if (category === Category.Validators) {
-    hint += $t('search_bar.this_type') + ' '
-    hint += 'Validator'
-  } else {
-    const list = getListOfResultTypesInCategory(category, false)
-
-    hint += (list.length === 1 ? $t('search_bar.this_type') : $t('search_bar.these_types')) + ' '
-    for (let i = 0; i < list.length; i++) {
-      hint += TypeInfo[list[i]].title
-      if (i < list.length - 1) {
-        hint += ', '
-      }
-    }
-  }
-
-  return hint
-}
-
 function refreshOutputArea () {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
@@ -517,12 +459,12 @@ function refreshOutputArea () {
 </script>
 
 <template>
-  <div id="anchor" :class="barStyle">
-    <div id="whole-component" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
-      <div id="input-and-button" ref="inputFieldAndButton" :class="barStyle">
+  <div class="anchor" :class="barStyle">
+    <div class="whole-component" :class="[barStyle, showDropDown?'dropdown-is-opened':'']">
+      <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <InputText
-          id="input-field"
           v-model="inputted"
+          class="input-field"
           :class="barStyle"
           type="text"
           :placeholder="$t('search_bar.placeholder')"
@@ -530,89 +472,41 @@ function refreshOutputArea () {
           @focus="showDropDown = true"
         />
         <span
-          id="searchbutton"
+          class="searchbutton"
           :class="barStyle"
           @click="userPressedSearchButtonOrEnter()"
         >
           <FontAwesomeIcon :icon="faMagnifyingGlass" />
         </span>
       </div>
-      <div v-if="showDropDown" id="drop-down" ref="dropDown" :class="barStyle">
-        <div id="separation" :class="barStyle" />
-        <div id="filter-area">
-          <div id="filter-networks">
-            <!--do not remove '&nbsp;' in the placeholder otherwise the CSS of the component believes that nothing is selected when everthing is selected-->
-            <MultiSelect
-              v-model="networkDropdownUserSelection"
-              :options="networkDropdownOptions"
-              option-value="name"
-              option-label="label"
-              placeholder="Networks:&nbsp;all"
-              :variant="'filled'"
-              display="comma"
-              :show-toggle-all="false"
-              :max-selected-labels="1"
-              :selected-items-label="'Networks: ' + (userFilters.everyNetworkIsSelected ? 'all' : '{0}')"
-              append-to="self"
-              @change="networkFilterHasChanged(); refreshOutputArea()"
-              @click="(e : Event) => e.stopPropagation()"
-            />
-          </div>
-          <div id="filter-categories">
-            <span v-for="filter of Object.keys(userFilters.categories)" :key="filter">
-              <BcTooltip :text="filterHint(filter as Category)">
-                <label class="filter-button">
-                  <input
-                    v-model="userFilters.categories[filter]"
-                    class="hiddencheckbox"
-                    :true-value="true"
-                    :false-value="false"
-                    type="checkbox"
-                    @change="categoryFilterHasChanged(); refreshOutputArea()"
-                  >
-                  <span class="face" :class="barStyle">
-                    {{ CategoryInfo[filter as Category].filterLabel }}
-                  </span>
-                </label>
-              </BcTooltip>
-            </span>
-          </div>
+      <div v-if="showDropDown" ref="dropDown" class="drop-down" :class="barStyle">
+        <div class="separation" :class="barStyle" />
+        <div class="filter-area">
+          <BcSearchbarNetworkSelector
+            class="filter-networks"
+            :initial-state="userFilters.networks"
+            :bar-style="barStyle"
+            @change="networkFilterHasChanged"
+          />
+          <BcSearchbarCategorySelectors
+            class="filter-categories"
+            :initial-state="userFilters.categories"
+            :bar-style="barStyle"
+            @change="categoryFilterHasChanged"
+          />
         </div>
         <div v-if="searchState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
             <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <div
+              <BcSearchbarSuggestionLine
                 v-for="(suggestion, i) of typ.suggestion"
                 :key="i"
-                class="single-result"
-                :class="barStyle"
-                @click="userClickedProposal(network.chainId, typ.type, suggestion.columns[suggestion.queryParam])"
-              >
-                <span v-if="network.chainId !== ChainIDs.Any" class="columns-icons" :class="barStyle">
-                  <BcSearchbarTypeIcons :type="typ.type" class="type-icon not-alone" />
-                  <IconNetwork :chain-id="network.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
-                </span>
-                <span v-else class="columns-icons" :class="barStyle">
-                  <BcSearchbarTypeIcons :type="typ.type" class="type-icon alone" />
-                </span>
-                <span class="columns-0" :class="barStyle">
-                  <BcSearchbarMiddleEllipsis>{{ suggestion.columns[0] }}</BcSearchbarMiddleEllipsis>
-                </span>
-                <span class="columns-1and2" :class="barStyle">
-                  <span v-if="suggestion.columns[1] !== ''" class="columns-1" :class="barStyle">
-                    <BcSearchbarMiddleEllipsis>{{ suggestion.columns[1] }}</BcSearchbarMiddleEllipsis>
-                  </span>
-                  <span v-if="suggestion.columns[2] !== ''" class="columns-2" :class="[barStyle,(suggestion.columns[1] !== '')?'greyish':'']">
-                    <BcSearchbarMiddleEllipsis v-if="TypeInfo[typ.type].dropdownColumns[1] === undefined" :width-is-fixed="true">({{ suggestion.columns[2] }})</BcSearchbarMiddleEllipsis>
-                    <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.columns[2] }}</BcSearchbarMiddleEllipsis>
-                  </span>
-                </span>
-                <span class="columns-category" :class="barStyle">
-                  <span class="category-label" :class="barStyle">
-                    {{ CategoryInfo[TypeInfo[typ.type].category].filterLabel }}
-                  </span>
-                </span>
-              </div>
+                :suggestion="suggestion"
+                :chain-id="network.chainId"
+                :result-type="typ.type"
+                :bar-style="barStyle"
+                @click="userClickedSuggestion"
+              />
             </div>
           </div>
           <div v-if="results.organized.howManyResultsIn == 0" class="info center">
@@ -629,7 +523,7 @@ function refreshOutputArea () {
           <div v-if="searchState.state === States.InputIsEmpty" class="info center">
             {{ $t('search_bar.help') }}
           </div>
-          <div v-else-if="userIsWaiting()" class="info center">
+          <div v-else-if="searchState.state === States.SearchRequestWillBeSent || searchState.state === States.WaitingForResults" class="info center">
             {{ $t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
@@ -649,7 +543,7 @@ function refreshOutputArea () {
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-#anchor {
+.anchor {
   position: relative;
   display: flex;
   margin: auto;
@@ -672,7 +566,7 @@ function refreshOutputArea () {
   }
 }
 
-#whole-component {
+.whole-component {
   @include main.container;
   position: absolute;
   left: 0px;
@@ -694,10 +588,10 @@ function refreshOutputArea () {
   }
 }
 
-#whole-component #input-and-button {
+.whole-component .input-and-button {
   display: flex;
 
-  #input-field {
+  .input-field {
     display: flex;
     flex-grow: 1;
     left: 0;
@@ -707,7 +601,7 @@ function refreshOutputArea () {
     background-color: transparent;
     color: var(--input-placeholder-text-color);
   }
-  #searchbutton {
+  .searchbutton {
     display: flex;
     width: v-bind(searchButtonSize);
     height: v-bind(searchButtonSize);
@@ -741,13 +635,13 @@ function refreshOutputArea () {
   }
 }
 
-#whole-component #drop-down {
+.whole-component .drop-down {
   left: 0;
   right: 0;
   padding-left: 4px;
   padding-right: 4px;
   padding-bottom: 4px;
-  #separation {
+  .separation {
     left: 11px;
     right: 11px;
     height: 1px;
@@ -761,86 +655,18 @@ function refreshOutputArea () {
   }
 }
 
-#whole-component #drop-down #filter-area {
+.whole-component .drop-down .filter-area {
   display: flex;
   row-gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 8px;
 
-  #filter-networks {
+  .filter-networks {
     margin-left: 6px;
-
-    .p-multiselect {
-      @include fonts.small_text_bold;
-      width: 128px;
-      height: 20px;
-      border-radius: 10px;
-      .p-multiselect-trigger {
-        width: 1.5rem;
-      }
-      .p-multiselect-label {
-        padding-top: 3px;
-        border-top-left-radius: 10px;
-        border-bottom-left-radius: 10px;
-        .p-placeholder {
-          border-top-left-radius: 10px;
-          border-bottom-left-radius: 10px;
-          background: var(--searchbar-filter-unselected-gaudy);
-        }
-      }
-      &.p-multiselect-panel {
-        width: 140px;
-        max-height: 100px;
-        overflow: auto;
-      }
-    }
-  }
-  .filter-button {
-    @include fonts.small_text_bold;
-
-    .face{
-      display: inline-block;
-      border-radius: 10px;
-      height: 17px;
-      padding-top: 2.5px;
-      padding-left: 8px;
-      padding-right: 8px;
-      text-align: center;
-      margin-left: 6px;
-      transition: 0.2s;
-      &.discreet {
-        color: var(--light-black);
-        background-color: var(--light-grey);
-      }
-      &.gaudy {
-        color: var(--primary-contrast-color);
-        background-color: var(--searchbar-filter-unselected-gaudy);
-      }
-      &:hover {
-        background-color: var(--light-grey-3);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
-    }
-    .hiddencheckbox {
-      display: none;
-      width: 0;
-      height: 0;
-    }
-    .hiddencheckbox:checked + .face {
-      background-color: var(--button-color-active);
-      &:hover {
-        background-color: var(--button-color-hover);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
-    }
   }
 }
 
-#whole-component #drop-down .output-area {
+.whole-component .drop-down .output-area {
   display: flex;
   flex-direction: column;
   min-height: 128px;
@@ -860,170 +686,6 @@ function refreshOutputArea () {
       display: flex;
       flex-direction: column;
       right: 0px;
-      .single-result {
-        cursor: pointer;
-        display: grid;
-        min-width: 0;
-        right: 0px;
-        padding-top: 7px;
-        padding-bottom: 7px;
-        @media (min-width: 600px) { // large screen
-          &.gaudy {
-            grid-template-columns: 40px 106px 488px auto;
-            padding-left: 4px;
-            padding-right: 4px;
-          }
-          &.discreet {
-            grid-template-columns: 40px 106px 298px;
-          }
-        }
-        @media (max-width: 600px) { // mobile
-          grid-template-columns: 40px 106px 218px;
-        }
-        border-radius: var(--border-radius);
-
-        &:hover {
-          &.discreet {
-            background-color: var(--searchbar-background-hover-discreet);
-          }
-          &.gaudy {
-            background-color: var(--dropdown-background-hover);
-          }
-        }
-        &:active {
-          &.discreet {
-            background-color: var(--searchbar-background-pressed-discreet);
-          }
-          &.gaudy {
-            background-color: var(--button-color-pressed);
-          }
-        }
-
-        .columns-icons {
-          position: relative;
-          grid-column: 1;
-          grid-row: 1;
-          @media (max-width: 600px) { // mobile
-            grid-row-end: span 2;
-          }
-          &.discreet {
-            grid-row-end: span 2;
-          }
-          display: flex;
-          margin-top: auto;
-          margin-bottom: auto;
-          width: 30px;
-          height: 36px;
-
-          .type-icon {
-            &.not-alone {
-              display: inline;
-              position: relative;
-              top: 2px;
-            }
-            &.alone {
-             display: flex;
-             margin-top: auto;
-             margin-bottom: auto;
-            }
-            width: 20px;
-            max-height: 20px;
-          }
-          .network-icon {
-            position: absolute;
-            bottom: 0px;
-            right: 0px;
-            width: 20px;
-            height: 20px;
-          }
-        }
-        .columns-0 {
-          grid-column: 2;
-          grid-row: 1;
-          display: inline-block;
-          position: relative;
-          margin-top: auto;
-          &.gaudy {
-            margin-bottom: auto;
-          }
-          margin-right: 14px;
-          left: 0px;
-          font-weight: var(--roboto-medium);
-        }
-        .columns-1and2 {
-          grid-column: 3;
-          grid-row: 1;
-          display: flex;
-          @media (max-width: 600px) { // mobile
-            grid-row-end: span 2;
-            flex-direction: column;
-          }
-          &.discreet {
-            grid-row-end: span 2;
-            flex-direction: column;
-          }
-          position: relative;
-          margin-top: auto;
-          margin-bottom: auto;
-          left: 0px;
-          font-weight: var(--roboto-medium);
-          white-space: nowrap;
-
-          .columns-1 {
-            display: flex;
-            max-width: 100%;
-            @media (min-width: 600px) { // large screen
-              &.gaudy {
-                max-width: 27%;
-              }
-            }
-            position: relative;
-            margin-right: 0.8ch;
-          }
-          .columns-2 {
-            display: flex;
-            position: relative;
-            flex-grow: 1;
-            &.greyish.discreet {
-              color: var(--searchbar-text-detail-discreet);
-            }
-            &.greyish.gaudy {
-              color: var(--searchbar-text-detail-gaudy);
-            }
-          }
-        }
-        .columns-category {
-          display: block;
-          @media (min-width: 600px) { // large screen
-            &.gaudy {
-              grid-column: 4;
-              grid-row: 1;
-              margin-top: auto;
-              margin-bottom: auto;
-              margin-right: 2px;
-              float: right;
-              justify-content: right;
-              text-align: right;
-            }
-            &.discreet {
-              grid-column: 2;
-              grid-row: 2;
-            }
-          }
-          @media (max-width: 600px) { // mobile
-            grid-column: 2;
-            grid-row: 2;
-          }
-          .category-label {
-            &.discreet {
-              color: var(--searchbar-text-detail-discreet);
-            }
-            &.gaudy {
-              color: var(--searchbar-text-detail-gaudy);
-            }
-          }
-        }
-      }
     }
   }
 

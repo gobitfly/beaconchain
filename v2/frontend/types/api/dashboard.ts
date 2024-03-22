@@ -6,7 +6,7 @@ import type { ApiDataResponse } from './common'
 // source: dashboard.go
 
 export interface Dashboard {
-  id: string;
+  id: number /* uint64 */;
   name: string;
 }
 export interface UserDashboardsData {

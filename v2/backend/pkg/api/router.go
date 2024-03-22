@@ -57,7 +57,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func addRoutes(hs handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
+func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
 	endpoints := []endpoint{
 		{"GET", "/healthz", hs.PublicGetHealthz, nil},
 		{"GET", "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},

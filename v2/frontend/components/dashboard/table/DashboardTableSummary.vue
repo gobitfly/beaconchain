@@ -138,7 +138,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.col.efficiency_last_24h')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_last_24h" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_24h" :color-break-point="80" />
               </template>
             </Column>
             <Column
@@ -148,17 +148,17 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.col.efficiency_last_7d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_last_7d" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_7d" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_last_31d"
+              field="efficiency_last_30d"
               :sortable="true"
-              :header="$t('dashboard.validator.col.efficiency_last_31d')"
+              :header="$t('dashboard.validator.col.efficiency_last_30d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_last_31d" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_30d" :color-break-point="80" />
               </template>
             </Column>
             <Column
@@ -168,7 +168,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.col.efficiency_all_time')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_all_time" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.all_time" :color-break-point="80" />
               </template>
             </Column>
             <Column

@@ -83,6 +83,21 @@ export interface SearchAheadResult {
   error?: string
 }
 
+export interface ResultSuggestion {
+  columns: string[],
+  queryParam: number, // index of the string given to the callback function `@go`
+  closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
+}
+export interface OrganizedResults {
+  networks: {
+    chainId: ChainIDs,
+    types: {
+      type: ResultType,
+      suggestion: ResultSuggestion[]
+    }[]
+  }[]
+}
+
 interface TypeInfoFields {
   title: string,
   category: Category,
