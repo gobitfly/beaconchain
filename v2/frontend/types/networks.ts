@@ -56,6 +56,7 @@ export enum ChainIDs {
 
 interface ChainInfoFields {
   name: string,
+  description: string,
   family: ChainFamily,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
   L1: ChainIDs, // if the network is a L2, this field points to the L1
@@ -68,6 +69,7 @@ interface ChainInfoFields {
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Any]: {
     name: 'Any',
+    description: 'Any network',
     family: ChainFamily.Any,
     mainNet: ChainIDs.Any,
     L1: ChainIDs.Any,
@@ -78,7 +80,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.Ethereum]: {
-    name: 'Ethereum Mainnet',
+    name: 'Ethereum',
+    description: 'Ethereum Mainnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Ethereum,
@@ -88,7 +91,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 1
   },
   [ChainIDs.Holesky]: {
-    name: 'Holesky Testnet',
+    name: 'Holesky',
+    description: 'Holesky Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Holesky,
@@ -98,7 +102,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 2
   },
   [ChainIDs.Sepolia]: {
-    name: 'Sepolia Testnet',
+    name: 'Sepolia',
+    description: 'Sepolia Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
     L1: ChainIDs.Sepolia,
@@ -109,7 +114,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
-    name: 'Arbitrum One L2',
+    name: 'Arbitrum One',
+    description: 'Arbitrum One L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Ethereum,
@@ -119,7 +125,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
-    name: 'Arbitrum Nova L2',
+    name: 'Arbitrum Nova',
+    description: 'Arbitrum Nova L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
     L1: ChainIDs.Ethereum,
@@ -129,7 +136,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
-    name: 'Arbitrum One Sepolia Testnet',
+    name: 'Arbitrum Sepolia',
+    description: 'Arbitrum One Sepolia Testnet',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
     L1: ChainIDs.Sepolia,
@@ -140,7 +148,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.OptimismEthereum]: {
-    name: 'Optimism L2',
+    name: 'Optimism',
+    description: 'Optimism L2',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Ethereum,
@@ -150,7 +159,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
-    name: 'Optimism Sepolia Testnet',
+    name: 'Optimism Sepolia',
+    description: 'Optimism Sepolia Testnet',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
     L1: ChainIDs.Sepolia,
@@ -161,7 +171,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.BaseEthereum]: {
-    name: 'Base L2',
+    name: 'Base',
+    description: 'Base L2',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Ethereum,
@@ -171,7 +182,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 30
   },
   [ChainIDs.BaseSepolia]: {
-    name: 'Base Sepolia Testnet',
+    name: 'Base Sepolia',
+    description: 'Base Sepolia Testnet',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
     L1: ChainIDs.Sepolia,
@@ -183,6 +195,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
 
   [ChainIDs.Gnosis]: {
     name: 'Gnosis',
+    description: 'Gnosis',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Gnosis,
@@ -192,7 +205,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 40
   },
   [ChainIDs.Chiado]: {
-    name: 'Gnosis Chiado Testnet',
+    name: 'Gnosis Chiado',
+    description: 'Gnosis Chiado Testnet',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
     L1: ChainIDs.Chiado,
