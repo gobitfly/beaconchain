@@ -1700,7 +1700,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 }
 
 func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
-	// TODO @recy21
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardHeatmap(dashboardId)
 }
 
