@@ -270,9 +270,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             </Column>
             <Column field="action">
               <template #header>
-                <Button v-show="selected?.length" class="edit-button">
+                <Button v-show="selected?.length" class="edit-button" @click.stop.prevent="editSelected()">
                   <span class="edit-label">{{ $t('common.edit') }}</span>
-                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" @click.stop.prevent="editSelected()" />
+                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" />
                 </Button>
               </template>
               <template #body="slotProps">
