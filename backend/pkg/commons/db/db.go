@@ -71,7 +71,7 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 	dbConnectionTimeout.Stop()
 }
 
-func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
+func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
 	if writer.MaxOpenConns == 0 {
 		writer.MaxOpenConns = 50
 	}
@@ -130,14 +130,6 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
 	dbConnReader.SetMaxIdleConns(reader.MaxIdleConns)
 	return dbConnWriter, dbConnReader
-}
-
-func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
-	WriterDb, ReaderDb = mustInitDB(writer, reader)
-}
-
-func MustInitAlloyDb(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
-	AlloyWriter, AlloyReader = mustInitDB(writer, reader)
 }
 
 func ApplyEmbeddedDbSchema(version int64) error {
