@@ -5,23 +5,26 @@ import (
 	"context"
 	"database/sql"
 	"encoding/gob"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/klauspost/pgzip"
 
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -443,8 +446,104 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				}
 				return nil
 			})
-		}
 
+			// store validator mapping in redis
+			g.Go(func() error {
+				// generate mapping
+				RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
+					Epoch:   types.Epoch(epoch),
+					Mapping: make([]*types.CachedValidator, len(block.Validators)),
+				}
+
+				activationMapping := make(map[int][]uint64)
+				start := time.Now()
+
+				for _, v := range block.Validators {
+					r := types.CachedValidator{
+						PublicKey:             v.PublicKey,
+						Status:                v.Status,
+						WithdrawalCredentials: v.WithdrawalCredentials,
+						Balance:               v.Balance,
+						EffectiveBalance:      v.EffectiveBalance,
+						Slashed:               v.Slashed,
+					}
+					if v.ActivationEpoch != db.FarFutureEpoch {
+						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
+					}
+					if v.ActivationEligibilityEpoch != db.FarFutureEpoch {
+						r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
+					}
+					if v.ExitEpoch != db.FarFutureEpoch {
+						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
+					}
+					if v.WithdrawableEpoch != db.FarFutureEpoch {
+						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
+					}
+					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
+					if v.Status == "pending_queued" {
+						a := int(v.ActivationEligibilityEpoch)
+						activationMapping[a] = append(activationMapping[a], v.Index)
+					}
+				}
+				log.Debugf("filled validator mapping, took: %s", time.Since(start))
+
+				start = time.Now()
+				// need to sort as activations don't necessarily have to be in order
+				keys := maps.Keys(activationMapping)
+				sort.Ints(keys)
+				var i int64
+				for _, a := range keys {
+					// don't need to sort as we our validator array is indeed in order
+					for _, vi := range activationMapping[a] {
+						RedisCachedValidatorsMapping.Mapping[vi].Queues.ActivationIndex = sql.NullInt64{Int64: i, Valid: true}
+						i++
+					}
+				}
+				log.Debugf("calculated activation queue indexes, took: %s", time.Since(start))
+
+				// gob struct
+				start = time.Now()
+				var serializedValidatorMapping bytes.Buffer
+				enc := gob.NewEncoder(&serializedValidatorMapping)
+				err := enc.Encode(RedisCachedValidatorsMapping)
+				if err != nil {
+					return fmt.Errorf("error serializing validator mapping to gob for epoch %v: %w", epoch, err)
+				}
+				log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
+
+				// compress using pgzip
+				start = time.Now()
+				var compressedValidatorMapping bytes.Buffer
+				w, err := pgzip.NewWriterLevel(&compressedValidatorMapping, pgzip.BestCompression)
+				if err != nil {
+					return fmt.Errorf("failed to create pgzip writer for epoch %v: %w", epoch, err)
+				}
+				err = w.SetConcurrency(500_000, 10)
+				if err != nil {
+					return fmt.Errorf("failed to set concurrency for pgzip writer for epoch %v: %w", epoch, err)
+				}
+				_, err = w.Write(serializedValidatorMapping.Bytes())
+				if err != nil {
+					return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
+				}
+				err = w.Close()
+				if err != nil {
+					return fmt.Errorf("error closing pgzip writer for epoch %v: %w", epoch, err)
+				}
+				log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
+
+				// load into redis
+				start = time.Now()
+				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
+				log.Infof("writing validator mappping to redis with no TTL")
+				err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
+				if err != nil {
+					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
+				}
+				log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
+				return nil
+			})
+		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {
 			g.Go(func() error {
