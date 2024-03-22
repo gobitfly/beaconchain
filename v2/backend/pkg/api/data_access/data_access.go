@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"sort"
 	isort "sort"
 	"sync"
@@ -1485,6 +1486,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
 		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
+		if math.IsNaN(apr) {
+			apr = 0
+		}
 
 		data.Apr.Cl = apr
 		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
@@ -1492,7 +1496,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-		if data.AttestationEfficiency < 0 {
+		if data.AttestationEfficiency < 0 || math.IsNaN(data.AttestationEfficiency) {
 			data.AttestationEfficiency = 0
 		}
 
