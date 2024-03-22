@@ -11,8 +11,7 @@ import {
   faUserAstronaut,
   faAd,
   faShoppingCart,
-  faCheckCircle,
-  faNewspaper
+  faCheckCircle
 } from '@fortawesome/pro-solid-svg-icons'
 
 import { Target } from '~/types/links'
