@@ -36,10 +36,6 @@ func (d *dayUpAggregator) rolling90dAggregate() error {
 	return d.rollingXdAggregate(90, "validator_dashboard_data_rolling_90d")
 }
 
-func (d *dayUpAggregator) rolling365dAggregate() error {
-	return d.rollingXdAggregate(365, "validator_dashboard_data_rolling_yearly")
-}
-
 func (d *dayUpAggregator) rollingXdAggregate(days int, tableName string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
