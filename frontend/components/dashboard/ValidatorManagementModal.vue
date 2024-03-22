@@ -29,7 +29,9 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const overviewStore = useValidatorDashboardOverviewStore()
+const { getOverview } = overviewStore
+const { overview } = storeToRefs(overviewStore)
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
 
@@ -71,6 +73,7 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
 
   await fetch<any>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
   loadData()
+  getOverview(props.dashboardKey)
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -81,6 +84,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 
   await fetch<any>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
   loadData()
+  getOverview(props.dashboardKey)
 }
 
 const addValidator = () => {
