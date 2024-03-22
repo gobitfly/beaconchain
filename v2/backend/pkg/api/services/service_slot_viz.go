@@ -198,6 +198,9 @@ func updateSlotVizData() error {
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
 				for _, validator := range duty.Validators {
+					if dutiesInfo.EpochAttestationDuties[uint32(validator)] == nil {
+						dutiesInfo.EpochAttestationDuties[uint32(validator)] = make(map[uint32]bool, 5)
+					}
 					dutiesInfo.EpochAttestationDuties[uint32(validator)][uint32(attestedSlot)] = true // validator has attested for that slot
 				}
 			}
