@@ -64,7 +64,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitFrontendDB(&types.DatabaseConfig{
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.Frontend.WriterDatabase.Username,
 			Password:     cfg.Frontend.WriterDatabase.Password,
 			Name:         cfg.Frontend.WriterDatabase.Name,

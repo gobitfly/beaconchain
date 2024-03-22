@@ -11,8 +11,7 @@ import {
   faUserAstronaut,
   faAd,
   faShoppingCart,
-  faCheckCircle,
-  faNewspaper
+  faCheckCircle
 } from '@fortawesome/pro-solid-svg-icons'
 
 import { Target } from '~/types/links'
@@ -45,8 +44,8 @@ const columns: Row[] = [
       ['Discord', faDiscord, 'https://dsc.gg/beaconchain', Target.External],
       ['Twitter', faTwitter, 'https://twitter.com/beaconcha_in', Target.External],
       ['Github', faGithub, 'https://github.com/gobitfly/beaconchain', Target.External],
-      ['Github Mobile App', faGithub, 'https://github.com/gobitfly/eth2-beaconchain-explorer-app', Target.External],
-      [$t('footer.press_kit'), faNewspaper, '/presskit', Target.Internal]
+      ['Github Mobile App', faGithub, 'https://github.com/gobitfly/eth2-beaconchain-explorer-app', Target.External]
+      // [$t('footer.press_kit'), faNewspaper, '/presskit', Target.Internal] // TODO: Add link once press kit is available
     ]
   }
 ]
