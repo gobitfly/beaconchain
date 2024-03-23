@@ -12,8 +12,8 @@
 
 /*
   Internal functionning:
-  CSS allows to clip text only at its end, not in the middle. So this component searches for the text length that fits the best the container
-  without overflowing.
+  CSS allows to clip text only at its end, not in the middle. So this component must do it "manually": it searches for the clipped text length that
+  fits the best the container without overflowing.
   This search involves trials and errors: different text lengths are tried for every instance of this component on the page.
   Therefore we must absolutely do it as quickly as possible and the different attempts must not cause flikering nor blurry effects with the
   component as well as its neighbors.
