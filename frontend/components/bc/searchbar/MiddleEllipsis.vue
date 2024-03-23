@@ -1,52 +1,83 @@
 <script setup lang="ts">
 /*
-  Usage:
+  This component clips the text that you give in its slot. The text is clipped in the middle so the beginning and the end of the text
+  remain visible.
+
+  Use it with the following syntax:
+  <BcSearchbarMiddleEllipsis>your long text</BcSearchbarMiddleEllipsis>
+
+  The slot cannot contain HTML and components. The slot must contain text only. The text can be generated at run time with {{ }}
+  Therefore, to style the text, assign a class to the component or to its parent container.
 */
 
 /*
-  Because the text is not shortened by the CSS engine, we must search for the text length that fits the best the container without overflowing.
+  Internal functionning:
+  CSS allows to clip text only at its end, not in the middle. So this component searches for the text length that fits the best the container
+  without overflowing.
   This search involves trials and errors: different text lengths are tried for every instance of this component on the page.
-  Therefore we must absolutely find the right length as quickly as possible and try the different lengths without causing flikering nor blurry effects with the component and its neighbors.
+  Therefore we must absolutely do it as quickly as possible and the different attempts must not cause flikering nor blurry effects with the
+  component as well as its neighbors.
   Here is the strategy that I suggest to fulfill those constraints:
-  1a. If the parent has not fixed a width, let the browser write in a span the full text passed in the slot and, if it overflows, let it clip it after it set the component width
-      with the official rules of HTML&CSS.
-  1b. Or, if the parent signals that it has fixed the width, empty the span. We empty the span because "fixing a width" can be done loosely:
-      when the content overflows and the width has been fixed loosely by the parent (for example with `flex-grow`), the component might still grow larger than its container.
-  2.  Measure the width of the component: this is our target width. We want to find the longest text possible within the target.
-  3a. Make the content invisible to avoid flickering and blurry effects during the search.
-  3b. Force the component width to the target width. This makes sure that the neighbor components will not be pulled and pushed repetitively while we try different text lengths (that also speeds us up).
-  4.  Run a dichotomic search (in O(log n)) in the span, to find the largest text that we can fit within the target.
-      Guide the search by influencing it with the approximate length of the text that might fit, calculated by combining the width of the text, the text length and the component width.
-      This guidance speeds up significantly the search: my tests (hashes in the search bar) show that we iterate 3 times on average versus 7 times with a pure dichotomy.
+  1.  Make the content invisible to avoid flickering and blurry effects during the procedure.
+  2a. If the parent has not fixed a width, let the browser write in a span the full text passed in the slot and, if it overflows, let it clip it
+      after it set the component width with the official rules of HTML&CSS. This is not the clipping style that we want but it tells us which width
+      the component must have.
+  2b. Or, if the parent signals that it has fixed the width, empty the span. We empty the span because "fixing a width" might have been done loosely:
+      if the content overflows and the width has been fixed loosely by the parent (for example with `flex-grow`), the component might still grow
+      larger than its container.
+  3.  Now that either 2a or 2b is done, measure the width of the component: this is our target width. We will find the longest text possible
+      within that target.
+  4.  Force the component width to the target width. This makes sure that the neighbor components will not be pulled and pushed repetitively while
+      we try different text lengths (that also speeds us up).
+  5.  Run a dichotomic search (in O(log n)) in the span, to find the largest text that we can fit within the target.
+      Guide the search by influencing it with the approximate length of the text that might fit, calculated by combining the width of the text, the
+      text length and the component width. This guidance speeds up significantly the search: my tests (hashes in the search bar) show that we
+      iterate 3 times on average versus 7 times with a pure dichotomy.
       Of course, if the original text is smaller than the target, 0 iteration happens.
-  5.  Unfix the component width to recover its original dynamic settings and make the component visible.
+  6.  Unfix the component width to recover its original setting and make the content visible.
 */
 
 enum FrameWidthMode {
-  AdaptiveInParent = 'frame-adaptivewidth-in-parent',
-  FixedInParent = 'frame-fixedwidth-in-parent',
+  AdaptiveInParent = 'frame-adaptivewidth-inparent',
+  FixedInParent = 'frame-fixedwidth-inparent',
   FixedHere = 'frame-forcedwidth-here'
 }
 
 const props = defineProps({ widthIsFixed: { type: Boolean, default: false } })
 const frameSpan = ref<HTMLSpanElement>()
 const contentSpan = ref<HTMLSpanElement>()
+const defaultSlot = useSlots().default
 
 const contentVisibility = ref<string>('hidden')
 const frameWidthMode = ref<FrameWidthMode>(getOriginalFrameWidthMode())
 let frameWidthIfForced = ''
 
-let originalText = ''
-
-onMounted(() => {
-  originalText = getSpanText()
-  searchForIdealLength()
+onMounted(() => { // reacts when the component is displayed on the client
+  updateShortenedText()
 })
+watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
+  updateShortenedText()
+})
+const resizingObserver = new ResizeObserver(updateShortenedText) // will react to changes of component width
 
-function searchForIdealLength () {
+function updateShortenedText () {
+  if (frameSpan.value !== undefined && contentSpan.value !== undefined && contentSpan.value !== null) {
+    const originalText = (defaultSlot === undefined) ? '' : String(defaultSlot()[0].children)
+    resizingObserver.unobserve(frameSpan.value) // makes sure that calls will not be triggerred by the different text lengths that searchForIdealLength() will try
+    searchForIdealLength(originalText)
+    resizingObserver.observe(frameSpan.value) // makes sure that the text remains ideally shortened when the component gets more or less room
+  }
+}
+
+function searchForIdealLength (originalText : string) {
+  if (originalText === '') {
+    setSpanText('')
+    return
+  }
+
   setSpanVisibility(false)
 
-  // The following lines measure the maximum width that the component is authorized to take and store this information in `targetWidth`
+  // The following paragraph measures the maximum width that the component is authorized to take and store this information in `targetWidth`
   if (frameWidthMode.value === FrameWidthMode.FixedInParent) {
     setSpanText('') // we do this to make sure that we will measure the width desired by the parent, the component does not grow larger than that.
   } else {
@@ -54,11 +85,12 @@ function searchForIdealLength () {
   }
   const targetWidth = getSpanWidth(frameSpan)
 
-  // now we measure the width of the span when it contains the complete text
+  // This paragraph measures the width of the span when it contains the complete text
   setSpanText(originalText)
   let maxWidth = getSpanWidth(contentSpan)
   let maxLength = originalText.length
 
+  // Now we search for the longest clipped text which fits in the target width
   if (maxWidth > targetWidth) {
     setFrameWidth(targetWidth) // to avoid pulling and pushing repetitively neighbor components while we try different text lengths
     let minWidth = 0
@@ -86,7 +118,7 @@ function searchForIdealLength () {
       } else if (estimatedLengthGap === 0) {
         break
       }
-      setSpanText(shortenText(lengthToTry))
+      setSpanText(shortenText(originalText, lengthToTry))
     }
 
     setFrameWidth(undefined)
@@ -95,7 +127,7 @@ function searchForIdealLength () {
   setSpanVisibility(true)
 }
 
-function shortenText (maxLength : number) : string {
+function shortenText (originalText : string, maxLength : number) : string {
   if (originalText.length <= maxLength) {
     return originalText
   }
@@ -110,14 +142,14 @@ function shortenText (maxLength : number) : string {
 }
 
 function getSpanText () : string {
-  if (contentSpan.value === undefined || contentSpan.value.textContent === null) {
+  if (contentSpan.value === undefined || contentSpan.value === null || contentSpan.value.textContent === null) {
     return ''
   }
   return contentSpan.value.textContent
 }
 
 function setSpanText (text : string) {
-  if (contentSpan.value !== undefined) {
+  if (contentSpan.value !== undefined && contentSpan.value !== null) {
     contentSpan.value.textContent = text
   }
 }
@@ -160,11 +192,11 @@ function getOriginalFrameWidthMode () : FrameWidthMode {
   overflow: clip;
 }
 
-.frame-adaptivewidth-in-parent {
+.frame-adaptivewidth-inparent {
   max-width: 100%;
 }
 
-.frame-fixedwidth-in-parent {
+.frame-fixedwidth-inparent {
   width: 100%;
 }
 

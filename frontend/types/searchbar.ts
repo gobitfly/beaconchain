@@ -63,12 +63,18 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Validators]: { filterLabel: 'Validators' }
 }
 
-// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements. The function returns one Matching element.
+// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements.
+// The function returns one Matching element.
 export interface Matching {
-  closeness: number, // if different results of this type exist on the network, only the best closeness is recorded here
-  network: ChainIDs,
-  type: ResultType
+  closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
+  network: ChainIDs, // the network that this result belongs to
+  type: ResultType // the type of the result
 }
+/* When the user presses Enter, this callback function receives a simplified representation of the possible matches and must return
+   one element from this list. This list is passed in parameter `possibilities` as a simplified view of the actual list of results.
+   It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar triggers the
+   event `@go` to call your handler with the actual data of the result that you picked. */
+export interface PickingCallBackFunction {(possibilities : Matching[]) : Matching}
 
 export interface SearchAheadSingleResult {
   chain_id: number,
@@ -351,8 +357,6 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     dropdownColumns: ['Validator', 'Named', undefined]
   }
 }
-
-export interface PickingCallBackFunction {(possibilities : Matching[]) : Matching}
 
 export function getListOfCategories () : Category[] {
   const list : Category[] = []

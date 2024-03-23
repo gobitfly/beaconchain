@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ResultType, SubCategory, TypeInfo } from '~/types/searchbar'
 
-const props = defineProps({
-  type: { type: String, required: true }
-})
+const props = defineProps<{
+  type: ResultType
+}>()
 
-const subCategory = TypeInfo[props.type as ResultType].subCategory
+const subCategory = computed(() => TypeInfo[props.type].subCategory)
 
 </script>
 

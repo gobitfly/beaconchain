@@ -22,7 +22,10 @@ const { fetch } = useCustomFetch()
 const props = defineProps<{
   searchable: Category[], // list of categories that the bar can search in
   barStyle: SearchBarStyle, // look of the bar ('discreet', 'gaudy' or 'embedded')
-  pickByDefault: PickingCallBackFunction // when the user presses Enter, this callback function receives a simplified representation of the possible matches and must return one element from this list. The parameter (of type Matching[]) is a simplified view of the list of results sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. The bar will then trigger the event `@go` to call your handler with the result data of the matching that you picked.
+  pickByDefault: PickingCallBackFunction /* When the user presses Enter, this callback function receives a simplified representation of
+   the possible matches and must return one element from this list. This list is passed in the parameter (of type Matching[]) as a
+   simplified view of the actual list of results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you
+   return a matching, the bar triggers the event `@go` to call your handler with the actual data of the result that you picked. */
 }>()
 const emit = defineEmits(['go'])
 
