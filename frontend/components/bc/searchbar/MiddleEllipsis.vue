@@ -77,7 +77,7 @@ function searchForIdealLength (originalText : string) {
 
   setSpanVisibility(false)
 
-  // The following paragraph measures the maximum width that the component is authorized to take and store this information in `targetWidth`
+  // The following paragraph measures the maximum width that the component is authorized to take and stores this information in `targetWidth`
   if (frameWidthMode.value === FrameWidthMode.FixedInParent) {
     setSpanText('') // we do this to make sure that we will measure the width desired by the parent, the component does not grow larger than that.
   } else {
