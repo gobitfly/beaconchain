@@ -61,8 +61,8 @@ watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
 const resizingObserver = new ResizeObserver(updateShortenedText) // will react to changes of component width
 
 function updateShortenedText () {
-  if (frameSpan.value !== undefined && contentSpan.value !== undefined && contentSpan.value !== null) {
-    const originalText = (defaultSlot === undefined) ? '' : String(defaultSlot()[0].children)
+  if (frameSpan.value !== undefined && contentSpan.value !== undefined && contentSpan.value !== null && defaultSlot !== undefined) {
+    const originalText = String(defaultSlot()[0].children)
     resizingObserver.unobserve(frameSpan.value) // makes sure that calls will not be triggerred by the different text lengths that searchForIdealLength() will try
     searchForIdealLength(originalText)
     resizingObserver.observe(frameSpan.value) // makes sure that the text remains ideally shortened when the component gets more or less room
