@@ -6,7 +6,7 @@ import { ChainIDs } from '~/types/networks'
 
 // picks a result by default when the user presses Enter instead of clicking a result in the drop-down
 function pickSomethingByDefault (possibilities : Matching[]) : Matching {
-  // BcSearchbarMainComponent.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
+  // BcSearchbarMain.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
   // Now we look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
   // If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority).
   let bestMatchWithHigherPriority = possibilities[0]

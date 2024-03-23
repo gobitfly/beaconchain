@@ -70,7 +70,7 @@ export interface Matching {
   network: ChainIDs, // the network that this result belongs to
   type: ResultType // the type of the result
 }
-/* When the user presses Enter, this callback function receives a simplified representation of the possible matches and must return
+/* When the user presses Enter, this callback function receives a simplified representation of the suggested results and must return
    one element from this list. This list is passed in parameter `possibilities` as a simplified view of the actual list of results.
    It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar triggers the
    event `@go` to call your handler with the actual data of the result that you picked. */
