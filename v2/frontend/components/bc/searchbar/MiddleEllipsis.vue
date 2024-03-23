@@ -32,7 +32,7 @@
   5.  Run a dichotomic search (in O(log n)) in the span, to find the largest text that we can fit within the target.
       Guide the search by influencing it with the approximate length of the text that might fit, calculated by combining the width of the text, the
       text length and the component width. This guidance speeds up significantly the search: my tests (hashes in the search bar) show that we
-      iterate 3 times on average versus 7 times with a pure dichotomy.
+      iterate 3 times on average versus 5-6 times with a pure dichotomy.
       Of course, if the original text is smaller than the target, 0 iteration happens.
   6.  Unfix the component width to recover its original setting and make the content visible.
 */
