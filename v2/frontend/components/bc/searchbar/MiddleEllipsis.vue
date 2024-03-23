@@ -6,7 +6,7 @@
   Use it with the following syntax:
   <BcSearchbarMiddleEllipsis>your long text</BcSearchbarMiddleEllipsis>
 
-  The slot cannot contain HTML and components. The slot must contain text only. The text can be generated at run time with {{ }}
+  The slot must contain text only. The text can be generated at run time with {{ }}. HTML tags and components are ignored.
   Therefore, to style the text, assign a class to the component or to its parent container.
 */
 

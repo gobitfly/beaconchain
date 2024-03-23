@@ -522,7 +522,7 @@ function informationIfHiddenResults () : string {
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
             <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <BcSearchbarSuggestionLine
+              <BcSearchbarSuggestionRow
                 v-for="(suggestion, i) of typ.suggestion"
                 :key="i"
                 :suggestion="suggestion"
@@ -662,6 +662,7 @@ function informationIfHiddenResults () : string {
   padding-left: 4px;
   padding-right: 4px;
   padding-bottom: 4px;
+
   .separation {
     left: 11px;
     right: 11px;
@@ -674,56 +675,56 @@ function informationIfHiddenResults () : string {
       background-color: var(--input-border-color);
     }
   }
-}
 
-.whole-component .drop-down .filter-area {
-  display: flex;
-  row-gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
+  .filter-area {
+    display: flex;
+    row-gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
 
-  .filter-networks {
-    margin-left: 6px;
-  }
-}
-
-.whole-component .drop-down .output-area {
-  display: flex;
-  flex-direction: column;
-  min-height: 128px;
-  max-height: 270px;  // the height of the filter section is subtracted
-  right: 0px;
-  overflow: auto;
-  @include fonts.standard_text;
-  &.discreet {
-    color: var(--searchbar-text-discreet);
+    .filter-networks {
+      margin-left: 6px;
+    }
   }
 
-  .network-container {
+  .output-area {
     display: flex;
     flex-direction: column;
+    min-height: 128px;
+    max-height: 270px;  // the height of the filter section is subtracted
     right: 0px;
-    .type-container {
+    overflow: auto;
+    @include fonts.standard_text;
+    &.discreet {
+      color: var(--searchbar-text-discreet);
+    }
+
+    .network-container {
       display: flex;
       flex-direction: column;
       right: 0px;
+      .type-container {
+        display: flex;
+        flex-direction: column;
+        right: 0px;
+      }
     }
-  }
 
-  .info {
-    width: 100%;
-    @include fonts.standard_text;
-    color: var(--text-color-disabled);
-    justify-content: center;
-    text-align: center;
-    align-items: center;
-    &.bottom {
-      padding-top: 6px;
-      margin-top: auto;
-    }
-    &.center {
-      margin-bottom: auto;
-      margin-top: auto;
+    .info {
+      width: 100%;
+      @include fonts.standard_text;
+      color: var(--text-color-disabled);
+      justify-content: center;
+      text-align: center;
+      align-items: center;
+      &.bottom {
+        padding-top: 6px;
+        margin-top: auto;
+      }
+      &.center {
+        margin-bottom: auto;
+        margin-top: auto;
+      }
     }
   }
 }
