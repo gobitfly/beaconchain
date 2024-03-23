@@ -23,7 +23,7 @@ const props = defineProps<{
   searchable: Category[], // list of categories that the bar can search in
   barStyle: SearchBarStyle, // look of the bar ('discreet', 'gaudy' or 'embedded')
   pickByDefault: PickingCallBackFunction /* When the user presses Enter, this callback function receives a simplified representation of
-   the possible matches and must return one element from this list. This list is passed in the parameter (of type Matching[]) as a
+   the suggested results and must return one element from this list. This list is passed in the parameter (of type Matching[]) as a
    simplified view of the actual list of results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you
    return a matching, the bar triggers the event `@go` to call your handler with the actual data of the result that you picked. */
 }>()
@@ -297,6 +297,13 @@ function categoryFilterHasChanged (state : Record<string, boolean>) {
   refreshOutputArea()
 }
 
+function refreshOutputArea () {
+  // updates the result lists with the latest API response and user filters
+  filterAndOrganizeResults()
+  // refreshes the output area in the drop-down
+  updateGlobalState(globalState.value.state)
+}
+
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
 function filterAndOrganizeResults () {
   results.organized.in = { networks: [] }
@@ -446,11 +453,32 @@ function resemblanceWithInput (str2 : string) : number {
   return dist[str1.length][str2.length]
 }
 
-function refreshOutputArea () {
-  // updates the result lists with the latest API response and user filters
-  filterAndOrganizeResults()
-  // refreshes the output area in the drop-down
-  updateGlobalState(globalState.value.state)
+function informationIfInputIsEmpty () : string {
+  return $t('search_bar.type_something') + ' ' +
+         $t('search_bar.and_use_filters')
+}
+
+function informationIfNoResult () : string {
+  const info = $t('search_bar.no_result_matches') + ' '
+
+  if (results.organized.howManyResultsOut > 0) {
+    return info + $t('search_bar.your_filters')
+  } else {
+    return info + $t('search_bar.your_input')
+  }
+}
+
+function informationIfHiddenResults () : string {
+  let info : string
+
+  info = String(results.organized.howManyResultsOut) + ' '
+  info += (results.organized.howManyResultsOut === 1 ? $t('search_bar.one_result_hidden') : $t('search_bar.several_results_hidden'))
+
+  if (results.organized.howManyResultsIn === 0) {
+    return '(' + info + ')'
+  } else {
+    return '+' + info + ' ' + $t('search_bar.by_your_filters')
+  }
 }
 </script>
 
@@ -506,18 +534,15 @@ function refreshOutputArea () {
             </div>
           </div>
           <div v-if="results.organized.howManyResultsIn == 0" class="info center">
-            {{ $t('search_bar.no_result_matches') }}
-            {{ results.organized.howManyResultsOut > 0 ? $t('search_bar.your_filters') : $t('search_bar.your_input') }}
+            {{ informationIfNoResult() }}
           </div>
           <div v-if="results.organized.howManyResultsOut > 0" class="info bottom">
-            {{ (results.organized.howManyResultsIn == 0 ? ' (' : '+') + String(results.organized.howManyResultsOut) }}
-            {{ (results.organized.howManyResultsOut == 1 ? $t('search_bar.result_hidden') : $t('search_bar.results_hidden')) +
-              (results.organized.howManyResultsIn == 0 ? ')' : ' '+$t('search_bar.by_your_filters')) }}
+            {{ informationIfHiddenResults() }}
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.InputIsEmpty" class="info center">
-            {{ $t('search_bar.help') }}
+            {{ informationIfInputIsEmpty() }}
           </div>
           <div v-else-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
             {{ $t('search_bar.searching') }}
