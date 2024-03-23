@@ -18,7 +18,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="single-result" :class="barStyle" @click="emit('click', chainId, resultType, suggestion.columns[suggestion.queryParam])">
+  <div class="row" :class="barStyle" @click="emit('click', chainId, resultType, suggestion.columns[suggestion.queryParam])">
     <span v-if="chainId !== ChainIDs.Any" class="columns-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
       <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
@@ -50,7 +50,7 @@ defineProps<{
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-.single-result {
+.row {
   cursor: pointer;
   display: grid;
   min-width: 0;
@@ -217,5 +217,5 @@ defineProps<{
       }
     }
   }
- }
+}
 </style>

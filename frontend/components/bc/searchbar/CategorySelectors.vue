@@ -90,6 +90,7 @@ function tellWhatFilterDoes (category : Category) : string {
     text-align: center;
     margin-left: 6px;
     transition: 0.2s;
+
     &.discreet {
       color: var(--light-black);
       background-color: var(--light-grey);
@@ -98,6 +99,7 @@ function tellWhatFilterDoes (category : Category) : string {
       color: var(--primary-contrast-color);
       background-color: var(--searchbar-filter-unselected-gaudy);
     }
+
     &:hover {
       background-color: var(--light-grey-3);
     }
