@@ -14,7 +14,7 @@ defineProps<{
     chainId: ChainIDs,
     resultType: ResultType,
     barStyle: SearchBarStyle
- }>()
+}>()
 </script>
 
 <template>
