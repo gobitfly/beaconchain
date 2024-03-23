@@ -34,7 +34,7 @@
       text length and the component width. This guidance speeds up significantly the search: my tests (hashes in the search bar) show that we
       iterate 3 times on average versus 5-6 times with a pure dichotomy.
       Of course, if the original text is smaller than the target, 0 iteration happens.
-  6.  Unfix the component width to recover its original setting and make the content visible.
+  6.  Unfix the component width to recover its original setting. Make the content visible.
 */
 
 enum FrameWidthMode {
