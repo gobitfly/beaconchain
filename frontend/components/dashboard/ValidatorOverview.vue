@@ -12,7 +12,7 @@ const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'
 
-const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 warn('DIECE: Validator Overview', validatorDashboardOverview)
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {

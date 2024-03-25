@@ -7,8 +7,11 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
+import { warn } from 'vue'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+
+warn('DIECE: A FRESH NEW DASHBOARD !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
 const route = useRoute()
 

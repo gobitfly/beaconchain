@@ -4,8 +4,7 @@ import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const overviewStore = useValidatorDashboardOverviewStore()
-const { validatorDashboardOverview } = storeToRefs(overviewStore)
+const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const store = useUserDashboardStore()
 const { getDashboards } = store

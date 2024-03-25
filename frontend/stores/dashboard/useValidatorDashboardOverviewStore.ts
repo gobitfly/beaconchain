@@ -1,28 +1,46 @@
 import { defineStore } from 'pinia'
 import { warn } from 'vue'
-import type { InternalGetValidatorDashboardResponse } from '~/types/api/validator_dashboard'
+import type { VDBOverviewData, InternalGetValidatorDashboardResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
-export const useValidatorDashboardOverviewStore = defineStore('validator_overview', () => {
-  const { fetch } = useCustomFetch()
+const validatorOverviewStore = defineStore('validator_overview', () => {
+  const data = ref<VDBOverviewData | undefined | null>()
+  warn('DIECE: validatorOverviewStore = defineStore, data', data)
+  const overview = readonly(data)
 
-  warn('DIECE: Creating useValidatorDashboardOverviewStore')
+  const setOverview = (d: VDBOverviewData | undefined | null) => {
+    data.value = d
+  }
+
+  return { overview, setOverview }
+})
+
+// this only works if called within a components script setup
+// but that's good enough since the data returned below is reactive
+export function useValidatorDashboardOverviewStore () {
+  const { fetch } = useCustomFetch()
+  const store = validatorOverviewStore()
+  const { setOverview } = store
+  const { overview } = storeToRefs(store)
+
   const key = inject<Ref<DashboardKey>>('dashboardKey')
-  warn('DIECE: currently key is set to:', key?.value)
+  warn('DIECE: useValidatorDashboardOverviewStore, currently key is set to:', key?.value)
 
   async function getOverview () {
-    warn('DIECE: Fetching for useValidatorDashboardOverviewStore <InternalGetValidatorDashboardResponse>, dashboardKey:', key?.value)
+    warn('DIECE: getOverview() called')
 
     if (key === undefined) {
       return undefined
     }
 
-    const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key.value! })
-    warn('DIECE: Fetching DONE in store and got', res.data)
-    return res.data
+    const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key.value })
+    setOverview(res.data)
+    return overview.value
   }
 
-  const { data, pending, refresh } = useAsyncData('validator_overview', getOverview, { watch: [key!] }) // This store can only be used within dashboard/index and its children
+  // TODO: Have watch on key here?
 
-  return { key, validatorDashboardOverview: data, refreshValidatorDashboardOverview: refresh, pending }
-})
+  const { data, refresh } = useAsyncData('validator_overview', getOverview, { watch: [key!] }) // This store can only be used within dashboard/index and its children
+
+  return { validatorDashboardOverview: data, refreshValidatorDashboardOverview: refresh }
+}

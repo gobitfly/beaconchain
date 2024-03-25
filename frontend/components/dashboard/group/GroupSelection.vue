@@ -8,7 +8,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 
-const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const list = computed(() => {
   const groups = validatorDashboardOverview.value?.groups ?? []
