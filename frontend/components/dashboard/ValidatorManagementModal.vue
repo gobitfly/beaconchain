@@ -315,7 +315,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       <div class="footer">
         <div v-if="MaxValidatorsPerDashboard" class="left">
           <div class="labels" :class="{premiumLimit}">
-            <span>{{ data?.paging?.total_count ?? 0 }}/{{ MaxValidatorsPerDashboard }}</span>
+            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="MaxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />
