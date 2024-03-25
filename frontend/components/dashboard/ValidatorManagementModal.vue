@@ -212,7 +212,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <BcTable
             v-model:selection="selected"
             :data="data"
-            data-key="group_id"
+            data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"
             class="management-table"
