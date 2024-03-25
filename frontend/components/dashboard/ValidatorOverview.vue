@@ -1,5 +1,6 @@
 <script setup lang="ts">
 
+import { warn } from 'vue'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ClElValue } from '~/types/api/common'
 import { type OverviewTableData } from '~/types/dashboard/overview'
@@ -12,6 +13,7 @@ const { converter } = useValue()
 const tPath = 'dashboard.validator.overview.'
 
 const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
+warn('DIECE: Validator Overview', validatorDashboardOverview)
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
