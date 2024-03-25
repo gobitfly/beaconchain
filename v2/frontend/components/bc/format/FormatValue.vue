@@ -22,8 +22,9 @@ const data = computed(() => {
   }
   const res = converter.value.weiToValue(props.value, props.options)
   let labelClass = ''
+  const label = `${res.label}`
   if (props.useColors) {
-    if (`${res.label}`.startsWith('-')) {
+    if (label.startsWith('-')) {
       labelClass = props.negativeClass
     } else if (res.label !== '0') {
       labelClass = props.positiveClass
@@ -31,21 +32,21 @@ const data = computed(() => {
   }
   return {
     labelClass,
-    label: res.label,
+    label,
     tooltip: res.fullLabel
   }
 })
 
 </script>
 <template>
-  <BcTooltip :text="data.tooltip">
+  <BcTooltip>
     <template v-if="!!$slots.tooltip || data.tooltip" #tooltip>
       <slot name="tooltip" :data="data">
-        {{ data.tooltip }}
+        <BcFormatNumber :text="data.tooltip" />
       </slot>
     </template>
-    <span :class="data.labelClass">
-      {{ data.label }}
+    <span>
+      <BcFormatNumber :class="data.labelClass" :text="data.label" />
     </span>
   </BcTooltip>
 </template>
