@@ -170,6 +170,7 @@
         "search_placeholder": "Name, Id",
         "groups_added": "groups added",
         "remove_title": "Remove Groups",
+        "new_group_placeholder": "New group name",
         "remove_text": "Do you want to remove group {group} form your dashboard?",
         "col":{
           "name": "Name", 

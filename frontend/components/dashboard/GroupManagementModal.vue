@@ -151,8 +151,8 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <InputText v-model="newGroupName" class="search-input" />
-          <Button class="p-button-icon-only" style="display: inline;" @click="addGroup">
+          <InputText v-model="newGroupName" class="search-input" :disabled="premiumLimit" :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')" />
+          <Button style="display: inline;" :disabled="!newGroupName.length || premiumLimit" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -208,7 +208,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       <div class="footer">
         <div class="left">
           <div v-if="MaxGroupsPerDashboard" class="labels" :class="premiumLimit">
-            <span><BcFormatNumber :value="data.paging.total_count" default="0" />/<BcFormatNumber :value="MaxGroupsPerDashboard" /></span>
+            <span>
+              <BcFormatNumber :value="data.paging.total_count" default="0" />/
+              <BcFormatNumber :value="MaxGroupsPerDashboard" />
+            </span>
             <span>{{ $t('dashboard.validator.group_management.groups_added') }}</span>
           </div>
           <BcPremiumGem />
@@ -245,7 +248,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   display: contents;
 }
 
-.edit-group{
+.edit-group {
   width: 180px;
 }
 
@@ -271,12 +274,20 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--padding);
-  gap: var(--padding);
 
   .search-input {
     flex-shrink: 1;
     flex-grow: 1;
     width: 50px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    height: 100%;
+  }
+
+  button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: var(--padding-small) 8px;
   }
 }
 
