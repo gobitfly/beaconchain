@@ -74,12 +74,10 @@ const addGroup = async () => {
   await getOverview(props.dashboardKey)
 }
 
-/*
-TODO: add edit group once we have our edit component
 const editGroup = (row: VDBOverviewGroup, newName?: string) => {
   // TODO open modal to edit multiple
   warn(`Edit group ${row.name} [${row.id}] -> ${newName}`)
-} */
+}
 
 const removeGroup = async (row: VDBOverviewGroup) => {
   // TODO: display confirm modal if user really wants to remove validator.
@@ -110,8 +108,8 @@ const dashboardName = computed(() => {
 })
 
 // TODO: once we have a user management we need to check how to get the real premium limit
-const total = ref(40)
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= total.value)
+const MaxGroupsPerDashboard = 40
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxGroupsPerDashboard)
 
 </script>
 
@@ -124,9 +122,13 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
     <template v-if="!size.showSubTitle" #header>
       <span class="hdden-title" />
     </template>
-    <BcTableControl :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')" @set-search="setSearch">
+    <BcTableControl
+      :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')"
+      @set-search="setSearch"
+    >
       <template #header-left>
-        <span v-if="size.showSubTitle"> {{ $t('dashboard.validator.group_management.sub_title', {dashboardName}) }}</span>
+        <span v-if="size.showSubTitle"> {{ $t('dashboard.validator.group_management.sub_title', { dashboardName })
+        }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.group_management.title') }}</span>
       </template>
       <template #bc-table-sub-header>
@@ -150,21 +152,31 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
           >
             <Column field="name" :sortable="true" :header="$t('dashboard.validator.group_management.col.name')">
               <template #body="slotProps">
-                {{ slotProps.data.name }}
+                <BcInputLabel
+                  class="edit-group"
+                  :value="slotProps.data.name"
+                  :default="slotProps.data.id === 0 ? $t('common.default') : ''"
+                  :can-be-empty="slotProps.data.id === 0"
+                  @set-value="(name: string) => editGroup(slotProps.data, name)"
+                />
               </template>
             </Column>
             <Column field="id" :sortable="true" :header="$t('dashboard.validator.group_management.col.id')" />
 
             <Column field="count" :sortable="true" :header="$t('dashboard.validator.group_management.col.count')">
               <template #body="slotProps">
-                <!-- TODO: add formating-->
-                {{ slotProps.data.count ?? 0 }}
+                <BcFormatNumber :value="slotProps.data.count" default="0" />
               </template>
             </Column>
             <Column field="action">
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon v-if="slotProps.data.id" :icon="faTrash" class="link" @click="removeGroup(slotProps.data)" />
+                  <FontAwesomeIcon
+                    v-if="slotProps.data.id"
+                    :icon="faTrash"
+                    class="link"
+                    @click="removeGroup(slotProps.data)"
+                  />
                 </div>
               </template>
             </Column>
@@ -175,8 +187,8 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
     <template #footer>
       <div class="footer">
         <div class="left">
-          <div v-if="total" class="labels" :class="premiumLimit">
-            <span>{{ data.paging.total_count }}/{{ total }}</span>
+          <div v-if="MaxGroupsPerDashboard" class="labels" :class="premiumLimit">
+            <span><BcFormatNumber :value="data.paging.total_count" default="0" />/<BcFormatNumber :value="MaxGroupsPerDashboard" /></span>
             <span>{{ $t('dashboard.validator.group_management.groups_added') }}</span>
           </div>
           <BcPremiumGem />
@@ -213,13 +225,13 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
   display: contents;
 }
 
+.edit-group{
+  width: 180px;
+}
+
 .small-title {
   @include utils.truncate-text;
   @include fonts.big_text;
-}
-
-.group-selection {
-  width: 160px;
 }
 
 .management-table {
@@ -263,7 +275,8 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
     .labels {
       display: flex;
       gap: var(--padding-small);
-      &.premiumLimit{
+
+      &.premiumLimit {
         color: var(--negative-color);
       }
 

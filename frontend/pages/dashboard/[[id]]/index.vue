@@ -117,6 +117,7 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: var(--padding);
+  margin-bottom: var(--padding);
 }
 .panel-controller {
   display: flex;
