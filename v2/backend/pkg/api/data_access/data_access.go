@@ -40,7 +40,7 @@ type DataAccessor interface {
 
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
-	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error)
+	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
 	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
@@ -464,14 +464,24 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 		// should have valid primary id
 		wg.Go(func() error {
 			var queryResult []struct {
-				Id   uint32 `db:"id"`
-				Name string `db:"name"`
+				Id    uint32 `db:"id"`
+				Name  string `db:"name"`
+				Count uint64 `db:"count"`
 			}
-			if err := d.alloyReader.Select(&queryResult, `SELECT id, name FROM users_val_dashboards_groups WHERE dashboard_id = $1`, dashboardId.Id); err != nil {
+			query := `SELECT id, name, COUNT(validator_index)
+			FROM
+				users_val_dashboards_groups groups
+			LEFT JOIN users_val_dashboards_validators validators
+					ON groups.dashboard_id = validators.dashboard_id AND groups.id = validators.group_id
+			WHERE
+				groups.dashboard_id = $1
+			GROUP BY
+				groups.id, groups.name`
+			if err := d.alloyReader.Select(&queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
 			for _, res := range queryResult {
-				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name})
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
 			}
 			return nil
 		})
@@ -589,8 +599,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	return &data, nil
 }
 
-func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
-	result := &t.VDBOverviewGroup{}
+func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
+	result := &t.VDBPostCreateGroupData{}
 
 	// Create a new group that has the smallest unique id possible
 	err := d.alloyWriter.Get(result, `
