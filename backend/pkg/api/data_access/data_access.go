@@ -598,8 +598,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	return &data, nil
 }
 
-func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
-	result := &t.VDBOverviewGroup{}
+func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
+	result := &t.VDBPostCreateGroupData{}
 
 	// Create a new group that has the smallest unique id possible
 	err := d.alloyWriter.Get(result, `

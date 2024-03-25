@@ -226,6 +226,10 @@ export interface VDBPostReturnData {
   network: number /* uint64 */;
   created_at: string /* time.Time */;
 }
+export interface VDBPostCreateGroupData {
+  id: number /* uint64 */;
+  name: string;
+}
 export interface VDBPostValidatorsData {
   public_key: string;
   group_id: number /* uint64 */;
