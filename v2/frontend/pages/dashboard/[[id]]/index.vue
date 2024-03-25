@@ -58,7 +58,7 @@ onMounted(() => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" /> <!--All dashboard-key props have to be removed as the dashboard key now can be injected-->
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
