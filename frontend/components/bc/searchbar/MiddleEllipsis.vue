@@ -62,8 +62,9 @@ watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
 
 let lastObservedFrameWidth : number
 const resizingObserver = new ResizeObserver(() => { // will react to changes of component width
-  // the test is required because ResizeObserver.observe() fires unconditionally when called
-  if (getSpanWidth(frameSpan) !== lastObservedFrameWidth) {
+  // the first condition below is required because ResizeObserver.observe() fires unconditionally when called
+  // the second condition is a workaround to a paranormal phenomena with some rendering engines: identical widths often indicates that the frame has overflowed the parent (should not happen in theory but does)
+  if (getSpanWidth(frameSpan) !== lastObservedFrameWidth || getSpanWidth(contentSpan) === getSpanWidth(frameSpan)) {
     updateShortenedText()
   }
 })
@@ -89,7 +90,7 @@ function searchForIdealLength (originalText : string) {
   if (frameWidthMode.value === FrameWidthMode.FixedInParent) {
     setSpanText('') // we do this to make sure that we will measure the width desired by the parent, the component does not grow larger than that.
   } else {
-    setSpanText(originalText) // if the parent signals that it did not fix a width, we leave the text in the span to let the browser find a width following HTML and CSS rules (the parent must have set a max-width)
+    setSpanText(originalText) // if the parent signals that it did not fix a width, we leave the text in the span to let the browser clip it with a width following HTML and CSS rules
   }
   const targetWidth = getSpanWidth(frameSpan)
 
@@ -107,7 +108,7 @@ function searchForIdealLength (originalText : string) {
     while (minLength < maxLength - 1) {
       let averageCharWidthBetweenCurrentAndBound : number
 
-      if (getSpanWidth(contentSpan) > targetWidth) {
+      if (getSpanWidth(contentSpan) >= targetWidth) { // the = is important, because identical widths often means that the frame is slightly overflowing the parent (this should not happen in theory but I noticed some paranormal phenomena with rendering engines)
         maxLength = getSpanText().length
         maxWidth = getSpanWidth(contentSpan)
         averageCharWidthBetweenCurrentAndBound = (getSpanWidth(contentSpan) - minWidth) / (getSpanText().length - minLength)
@@ -194,7 +195,7 @@ function getOriginalFrameWidthMode () : FrameWidthMode {
 </template>
 
 <style lang="scss" scoped>
-.frame {
+.frame { //border: 1px solid green;
   display: inline-block;
   position: relative;
   overflow: clip;
@@ -212,7 +213,7 @@ function getOriginalFrameWidthMode () : FrameWidthMode {
   width: v-bind(frameWidthIfForced)
 }
 
-.content {
+.content { //border: 1px solid red;
   display: inline-block;
   position: relative;
   white-space: nowrap;
