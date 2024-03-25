@@ -73,7 +73,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitDB(&types.DatabaseConfig{
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.WriterDatabase.Username,
 			Password:     cfg.WriterDatabase.Password,
 			Name:         cfg.WriterDatabase.Name,
@@ -95,7 +95,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitFrontendDB(&types.DatabaseConfig{
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.Frontend.WriterDatabase.Username,
 			Password:     cfg.Frontend.WriterDatabase.Password,
 			Name:         cfg.Frontend.WriterDatabase.Name,

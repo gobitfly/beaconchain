@@ -63,12 +63,12 @@ func StartAll(context ModuleContext) {
 
 	// start subscription modules
 
-	modules := []ModuleInterface{
-		NewDashboardDataModule(context),
-	}
+	modules := []ModuleInterface{}
 
 	if !utils.Config.JustV2 {
 		modules = append(modules, NewSlotExporter(context))
+	} else {
+		modules = append(modules, NewDashboardDataModule(context))
 	}
 
 	startSubscriptionModules(&context, modules)
