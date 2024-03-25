@@ -14,7 +14,7 @@ const onCurrencyChange = (event: Event) => {
 <template>
   <div>
     Conversions
-    <select v-model="currency" @change="onCurrencyChange($event)">
+    <select :value="currency" @change="onCurrencyChange($event)">
       <option value="NAT">
         Native
       </option>
@@ -112,6 +112,24 @@ const onCurrencyChange = (event: Event) => {
   <div>no value, no settings: <BcFormatNumber /></div>
   <div>no value, default '-': <BcFormatNumber default="-" /></div>
   <div>-100000, no settings: <BcFormatNumber :value="-100000" /></div>
+
+  <b>
+    Format percent
+  </b>
+
+  <div>
+    1234567.89123, color, +:
+    <BcFormatPercent :percent="1234567.89123" :color-break-point="80" :add-positive-sign="true" />
+  </div>
+  <div>
+    -1234567.89123, color, +:
+    <BcFormatPercent :percent="-1234567.89123" :color-break-point="80" :add-positive-sign="true" />
+  </div>
+
+  <div>
+    1 - no settings
+    <BcFormatPercent :percent="1" />
+  </div>
 </template>
 
 <style lang="scss" scoped>
