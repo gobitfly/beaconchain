@@ -155,7 +155,7 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            {{ data.networkLabel }}
+            <BcFormatNumber :text="data.networkLabel" />
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row" v-html="data.stateLabel" />
