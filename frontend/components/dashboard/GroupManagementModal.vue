@@ -24,7 +24,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { width } = useWindowSize()
+const { width, isMobile } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
@@ -151,7 +151,12 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <InputText v-model="newGroupName" class="search-input" :disabled="premiumLimit" :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')" />
+          <InputText
+            v-model="newGroupName"
+            class="search-input"
+            :disabled="premiumLimit"
+            :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
+          />
           <Button style="display: inline;" :disabled="!newGroupName.length || premiumLimit" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
@@ -172,18 +177,18 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
               <template #body="slotProps">
                 <!-- TODO: wait for the backend to implement group renaming the activate this input and finish the logic -->
                 <BcInputLabel
-                  class="edit-group"
+                  class="edit-group truncate-text"
                   :value="slotProps.data.name"
                   :default="slotProps.data.id === 0 ? $t('common.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
-                  :disabled="true"
+                  :disabled="false"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
               </template>
             </Column>
-            <Column field="id" :sortable="true" :header="$t('dashboard.validator.group_management.col.id')" />
+            <Column field="id" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.id')" />
 
-            <Column field="count" :sortable="true" :header="$t('dashboard.validator.group_management.col.count')">
+            <Column field="count" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.count')">
               <template #body="slotProps">
                 <BcFormatNumber :value="slotProps.data.count" default="0" />
               </template>
@@ -249,7 +254,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 }
 
 .edit-group {
-  width: 180px;
+  max-width: 180px;
 }
 
 .small-title {
@@ -336,31 +341,14 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   justify-content: flex-end;
 }
 
-@media (max-width: 959px) {
-  :deep(.edit-button) {
-    padding: 8px 6px;
+@media (max-width: 560px) {
 
-    .edit-label {
-      display: none;
-    }
-  }
-
-  .public-key {
-    width: unset;
+  .edit-group {
+    max-width: 100px;
   }
 
   .action-col {
     width: 33px;
-  }
-
-  :deep(.status-col) {
-    .p-column-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 20px;
-    }
-
   }
 }
 </style>
