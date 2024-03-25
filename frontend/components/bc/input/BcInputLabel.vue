@@ -58,7 +58,7 @@ watch([isEditing, inputRef], ([edit, input]) => {
 <template>
   <div class="input-container">
     <div v-if="isEditing" class="input-wrapper">
-      <InputText ref="inputRef" v-model="editValue" class="value" @keypress.enter="iconClick" />
+      <InputText ref="inputRef" v-model="editValue" @keypress.enter="iconClick" />
     </div>
     <span v-if="!isEditing" class="label">
       {{ label || value }}

@@ -18,7 +18,7 @@ const input3 = ref('')
       <BcInputLabel :value="input3" :label="input3 || 'Default'" :can-be-empty="true" @set-value="(v: string) => input3 = v" />
     </div>
     <div>
-      <BcInputLabel :value="input1" :disabled="true" @set-value="(v: string) => input1 = v" />
+      <BcInputLabel :value="input1" :disabled="true" />
     </div>
   </div>
 </template>
