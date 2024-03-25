@@ -19,6 +19,7 @@ export interface VDBOverviewValidators {
 export interface VDBOverviewGroup {
   id: number /* uint64 */;
   name: string;
+  count: number /* uint64 */;
 }
 export interface VDBOverviewData {
   groups: VDBOverviewGroup[];
@@ -64,6 +65,7 @@ export interface VDBGroupSummaryData {
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */>>; // line chart, series id is group id, no stack
+export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<number /* uint64 */[]>;
 /**
  * ------------------------------------------------------------
  * Rewards Tab
