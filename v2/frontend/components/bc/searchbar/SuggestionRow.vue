@@ -8,7 +8,7 @@ import {
   type SearchBarStyle
 } from '~/types/searchbar'
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(['row-selected'])
 defineProps<{
     suggestion: ResultSuggestion,
     chainId: ChainIDs,
@@ -18,27 +18,27 @@ defineProps<{
 </script>
 
 <template>
-  <div class="row" :class="barStyle" @click="emit('click', chainId, resultType, suggestion.columns[suggestion.queryParam])">
-    <span v-if="chainId !== ChainIDs.Any" class="columns-icons" :class="barStyle">
+  <div class="row" :class="barStyle" @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)">
+    <span v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
       <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
     </span>
-    <span v-else class="columns-icons" :class="barStyle">
+    <span v-else class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
     </span>
-    <span class="columns-0" :class="barStyle">
-      <BcSearchbarMiddleEllipsis>{{ suggestion.columns[0] }}</BcSearchbarMiddleEllipsis>
+    <span class="cell-0" :class="barStyle">
+      <BcSearchbarMiddleEllipsis>{{ suggestion.output[0] }}</BcSearchbarMiddleEllipsis>
     </span>
-    <span class="columns-1and2" :class="barStyle">
-      <span v-if="suggestion.columns[1] !== ''" class="columns-1" :class="barStyle">
-        <BcSearchbarMiddleEllipsis>{{ suggestion.columns[1] }}</BcSearchbarMiddleEllipsis>
+    <span class="cell-1and2" :class="barStyle">
+      <span v-if="suggestion.output[1] !== ''" class="cell-1" :class="barStyle">
+        <BcSearchbarMiddleEllipsis>{{ suggestion.output[1] }}</BcSearchbarMiddleEllipsis>
       </span>
-      <span v-if="suggestion.columns[2] !== ''" class="columns-2" :class="[barStyle,(suggestion.columns[1] !== '')?'greyish':'']">
-        <BcSearchbarMiddleEllipsis v-if="TypeInfo[resultType].dropdownColumns[1] === undefined" :width-is-fixed="true">({{ suggestion.columns[2] }})</BcSearchbarMiddleEllipsis>
-        <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.columns[2] }}</BcSearchbarMiddleEllipsis>
+      <span v-if="suggestion.output[2] !== ''" class="cell-2" :class="[barStyle,(suggestion.output[1] !== '')?'greyish':'']">
+        <BcSearchbarMiddleEllipsis v-if="TypeInfo[resultType].dropdownOutput[1] === undefined" :width-is-fixed="true">({{ suggestion.output[2] }})</BcSearchbarMiddleEllipsis>
+        <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.output[2] }}</BcSearchbarMiddleEllipsis>
       </span>
     </span>
-    <span class="columns-category" :class="barStyle">
+    <span class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
         {{ CategoryInfo[TypeInfo[resultType].category].filterLabel }}
       </span>
@@ -89,7 +89,7 @@ defineProps<{
     }
   }
 
-  .columns-icons {
+  .cell-icons {
     position: relative;
     grid-column: 1;
     grid-row: 1;
@@ -128,7 +128,7 @@ defineProps<{
     }
   }
 
-  .columns-0 {
+  .cell-0 {
     grid-column: 2;
     grid-row: 1;
     display: inline-block;
@@ -142,7 +142,7 @@ defineProps<{
     font-weight: var(--roboto-medium);
   }
 
-  .columns-1and2 {
+  .cell-1and2 {
     grid-column: 3;
     grid-row: 1;
     display: flex;
@@ -161,7 +161,7 @@ defineProps<{
     font-weight: var(--roboto-medium);
     white-space: nowrap;
 
-    .columns-1 {
+    .cell-1 {
       display: flex;
       max-width: 100%;
       @media (min-width: 600px) { // large screen
@@ -173,7 +173,7 @@ defineProps<{
       margin-right: 0.8ch;
     }
 
-    .columns-2 {
+    .cell-2 {
       display: flex;
       position: relative;
       flex-grow: 1;
@@ -186,7 +186,7 @@ defineProps<{
     }
   }
 
-  .columns-category {
+  .cell-category {
     display: block;
     @media (min-width: 600px) { // large screen
       &.gaudy {
