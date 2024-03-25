@@ -157,10 +157,23 @@
     },
     "validator": {
       "manage-validators": "Manage Validators",
+      "manage-groups": "Manage Groups",
       "management":{
-        "title": "Manage",
+        "title": "Manage Groups",
         "sub_title": "Add or remove validators from your dashboard",
         "validators_added": "validators added"
+      },
+      "group_management":{
+        "title": "Manage",
+        "sub_title": "Add or delete validator groups for {dashboardName}",
+        "validators_added": "validators added",
+        "search_placeholder": "Name, Id",
+        "groups_added": "groups added",
+        "col":{
+          "name": "Name", 
+          "id": "Group Id",
+          "count": "Amount"
+        }
       },
       "overview": {
         "your_online_validators": "Your Online Validators",
