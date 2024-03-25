@@ -70,7 +70,7 @@ func main() {
 		log.Infof("Writing statistic with: SlotsPerEpoch [%v] or SecondsPerSlot [%v]", utils.Config.Chain.ClConfig.SlotsPerEpoch, utils.Config.Chain.ClConfig.SecondsPerSlot)
 	}
 
-	db.MustInitDB(&types.DatabaseConfig{
+	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
 		Password:     cfg.WriterDatabase.Password,
 		Name:         cfg.WriterDatabase.Name,
@@ -90,7 +90,7 @@ func main() {
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
 
-	db.MustInitFrontendDB(&types.DatabaseConfig{
+	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.Frontend.WriterDatabase.Username,
 		Password:     cfg.Frontend.WriterDatabase.Password,
 		Name:         cfg.Frontend.WriterDatabase.Name,
