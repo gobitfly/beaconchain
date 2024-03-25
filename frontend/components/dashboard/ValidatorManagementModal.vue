@@ -52,7 +52,15 @@ const size = computed(() => {
   }
 })
 
+const resetData = () => {
+  data.value = undefined
+  selected.value = []
+  selectedGroup.value = -1
+  cursor.value = undefined
+}
+
 const onClose = () => {
+  resetData()
   visible.value = false
 }
 
@@ -178,6 +186,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     v-model="visible"
     :header="$t('dashboard.validator.management.title')"
     class="validator-managment-modal-container"
+    @update:visible="(visible: boolean)=>!visible && resetData()"
   >
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span class="hdden-title" />
