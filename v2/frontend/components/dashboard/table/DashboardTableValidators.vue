@@ -16,7 +16,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const dialog = useDialog()
 

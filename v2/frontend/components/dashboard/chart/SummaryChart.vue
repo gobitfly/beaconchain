@@ -40,7 +40,7 @@ watch(props, () => {
   getDashboardSummaryChart(props.dashboardKey)
 }, { immediate: true })
 
-const { validatorDashboardOverview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
