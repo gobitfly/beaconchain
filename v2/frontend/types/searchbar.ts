@@ -337,7 +337,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['hash_value'], // withdrawal credential
     queryParamField: 'hash_value',
-    dropdownOutput: ['Validator', '', undefined]
+    dropdownOutput: ['Validator', 'Credential', undefined]
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',

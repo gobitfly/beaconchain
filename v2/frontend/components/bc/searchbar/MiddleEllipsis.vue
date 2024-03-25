@@ -63,7 +63,7 @@ watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
 let lastObservedFrameWidth : number
 const resizingObserver = new ResizeObserver(() => { // will react to changes of component width
   // the first condition below is required because ResizeObserver.observe() fires unconditionally when called
-  // the second condition is a workaround to a paranormal phenomena with some rendering engines: identical widths often indicates that the frame has overflowed the parent (should not happen in theory but does)
+  // the second condition is a workaround to a paranormal phenomenon with some rendering engines: identical widths often indicates that the frame has overflowed the parent (should not happen in theory but does)
   if (getSpanWidth(frameSpan) !== lastObservedFrameWidth || getSpanWidth(contentSpan) === getSpanWidth(frameSpan)) {
     updateShortenedText()
   }
@@ -195,7 +195,7 @@ function getOriginalFrameWidthMode () : FrameWidthMode {
 </template>
 
 <style lang="scss" scoped>
-.frame { //border: 1px solid green;
+.frame {
   display: inline-block;
   position: relative;
   overflow: clip;
@@ -213,7 +213,7 @@ function getOriginalFrameWidthMode () : FrameWidthMode {
   width: v-bind(frameWidthIfForced)
 }
 
-.content { //border: 1px solid red;
+.content {
   display: inline-block;
   position: relative;
   white-space: nowrap;

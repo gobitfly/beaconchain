@@ -9,40 +9,93 @@ import {
 } from '~/types/searchbar'
 
 const emit = defineEmits(['row-selected'])
-defineProps<{
+const props = defineProps<{
     suggestion: ResultSuggestion,
     chainId: ChainIDs,
     resultType: ResultType,
     barStyle: SearchBarStyle
 }>()
+
+function formatCell0 () : string {
+  if (props.suggestion.count >= 2) {
+    return String(props.suggestion.count) + ' ' + props.suggestion.output[0] + 's'
+  }
+  return props.suggestion.output[0]
+}
+
+function formatCell1 () : string {
+  if (TypeInfo[props.resultType].dropdownOutput[1] === undefined) {
+    // if this cell's data comes from the API, we might need to tell the user what data it is
+    switch (props.resultType) {
+      case ResultType.ValidatorsByIndex :
+      case ResultType.ValidatorsByPubkey :
+        return 'Index ' + props.suggestion.output[1]
+      // more cases might arise in the future
+    }
+  }
+  return props.suggestion.output[1]
+}
 </script>
 
 <template>
-  <div class="row" :class="barStyle" @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)">
-    <span v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+  <div
+    v-if="barStyle == 'embedded'"
+    class="row-common row-embedded"
+    :class="barStyle"
+    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
+  >
+    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
       <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
-    </span>
-    <span v-else class="cell-icons" :class="barStyle">
+    </div>
+    <div v-else class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
-    </span>
-    <span class="cell-0" :class="barStyle">
+    </div>
+    <div class="cell-0" :class="barStyle">
+      {{ formatCell0() }}
+    </div>
+    <div class="cell-1and2-common cell-1" :class="barStyle">
+      {{ formatCell1() }}
+    </div>
+    <div class="cell-1and2-common cell-2" :class="barStyle">
+      <BcSearchbarMiddleEllipsis :width-is-fixed="true">
+        {{ suggestion.output[2] }}
+      </BcSearchbarMiddleEllipsis>
+    </div>
+  </div>
+
+  <div
+    v-else
+    class="row-common row-gaudyordiscreet"
+    :class="barStyle"
+    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
+  >
+    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
+      <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+    </div>
+    <div v-else class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
+    </div>
+    <div class="cell-0" :class="barStyle">
       <BcSearchbarMiddleEllipsis>{{ suggestion.output[0] }}</BcSearchbarMiddleEllipsis>
-    </span>
-    <span class="cell-1and2" :class="barStyle">
+    </div>
+    <div class="cell-1and2" :class="barStyle">
       <span v-if="suggestion.output[1] !== ''" class="cell-1" :class="barStyle">
         <BcSearchbarMiddleEllipsis>{{ suggestion.output[1] }}</BcSearchbarMiddleEllipsis>
       </span>
       <span v-if="suggestion.output[2] !== ''" class="cell-2" :class="[barStyle,(suggestion.output[1] !== '')?'greyish':'']">
-        <BcSearchbarMiddleEllipsis v-if="TypeInfo[resultType].dropdownOutput[1] === undefined" :width-is-fixed="true">({{ suggestion.output[2] }})</BcSearchbarMiddleEllipsis>
+        <BcSearchbarMiddleEllipsis v-if="TypeInfo[resultType].dropdownOutput[1] === undefined" :width-is-fixed="true">
+          ({{ suggestion.output[2] }})
+        </BcSearchbarMiddleEllipsis>
         <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.output[2] }}</BcSearchbarMiddleEllipsis>
       </span>
-    </span>
-    <span class="cell-category" :class="barStyle">
+    </div>
+    <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
         {{ CategoryInfo[TypeInfo[resultType].category].filterLabel }}
       </span>
-    </span>
+    </div>
   </div>
 </template>
 
@@ -50,33 +103,23 @@ defineProps<{
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-.row {
+// styles common to all modes
+
+.row-common {
   cursor: pointer;
   display: grid;
   min-width: 0;
   right: 0px;
   padding-top: 7px;
   padding-bottom: 7px;
-  @media (min-width: 600px) { // large screen
-    &.gaudy {
-      grid-template-columns: 40px 106px auto min-content;
-      padding-left: 4px;
-      padding-right: 4px;
-    }
-    &.discreet {
-      grid-template-columns: 40px 106px auto;
-    }
-  }
-  @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px 106px auto;
-  }
   border-radius: var(--border-radius);
 
   &:hover {
     &.discreet {
       background-color: var(--searchbar-background-hover-discreet);
     }
-    &.gaudy {
+    &.gaudy,
+    &.embedded {
       background-color: var(--dropdown-background-hover);
     }
   }
@@ -84,7 +127,8 @@ defineProps<{
     &.discreet {
       background-color: var(--searchbar-background-pressed-discreet);
     }
-    &.gaudy {
+    &.gaudy,
+    &.embedded {
       background-color: var(--button-color-pressed);
     }
   }
@@ -134,11 +178,87 @@ defineProps<{
     display: inline-block;
     position: relative;
     margin-top: auto;
-    &.gaudy {
-      margin-bottom: auto;
-    }
+    margin-bottom: auto;
     margin-right: 14px;
     left: 0px;
+  }
+}
+
+// specific style for the embedded mode
+
+.row-embedded {
+  @media (min-width: 600px) { // large screen
+    grid-template-columns: 40px 106px auto min-content;
+    padding-left: 4px;
+  }
+  @media (max-width: 600px) { // mobile
+    grid-template-columns: 40px auto 90px;
+  }
+  padding-right: 4px;
+
+  .cell-0 {
+    @media (min-width: 600px) { // large screen
+      font-weight: var(--roboto-medium);
+    }
+    @media (max-width: 600px) { // mobile
+      font-weight: var(--roboto-regular);
+    }
+  }
+
+  .cell-1and2-common {
+    display: flex;
+    position: relative;
+    margin-top: auto;
+    margin-bottom: auto;
+    white-space: nowrap;
+    grid-row: 1;
+    justify-content: right;
+  }
+
+  .cell-1 {
+    @media (min-width: 600px) { // large screen
+      grid-column: 4;
+    }
+    @media (max-width: 600px) { // mobile
+      grid-column: 3;
+      color: var(--searchbar-text-detail-gaudy);
+    }
+    width: 90px;
+  }
+
+  .cell-2 {
+    @media (min-width: 600px) { // large screen
+      grid-row: 1;
+      grid-column: 3;
+      font-weight: var(--roboto-medium);
+    }
+    @media (max-width: 600px) { // mobile
+      grid-row: 2;
+      grid-column-end: span 2;
+      font-weight: var(--roboto-regular);
+    }
+    width: 100%;
+  }
+}
+
+// specific style for the gaudy and discreet modes
+
+.row-gaudyordiscreet {
+  @media (min-width: 600px) { // large screen
+    &.gaudy {
+      grid-template-columns: 40px 106px auto min-content;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    &.discreet {
+      grid-template-columns: 40px 106px auto;
+    }
+  }
+  @media (max-width: 600px) { // mobile
+    grid-template-columns: 40px 106px auto;
+  }
+
+  .cell-0 {
     font-weight: var(--roboto-medium);
   }
 
@@ -195,9 +315,7 @@ defineProps<{
         margin-top: auto;
         margin-bottom: auto;
         margin-right: 2px;
-        float: right;
-        justify-content: right;
-        text-align: right;
+        padding-left: 8px;
       }
       &.discreet {
         grid-column: 2;

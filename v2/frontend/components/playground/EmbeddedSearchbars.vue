@@ -85,7 +85,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
 
 <style scoped lang="scss">
 .container {
-  width: 500px;
+  max-width: 500px;
   height: 200px;
   padding: 16px;
 }
