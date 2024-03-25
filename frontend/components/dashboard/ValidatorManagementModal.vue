@@ -159,9 +159,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
     onClose: response => response?.data && removeValidators(list),
     data: {
-      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length),
-      yesLabel: $t('navigation.remove'),
-      noLabel: $t('navigation.dismiss')
+      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
     }
   })
 }
