@@ -55,22 +55,30 @@ let frameWidthIfForced = ''
 onMounted(() => { // reacts when the component is displayed on the client
   updateShortenedText()
 })
+
 watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
   updateShortenedText()
 })
-const resizingObserver = new ResizeObserver(updateShortenedText) // will react to changes of component width
+
+let lastObservedFrameWidth : number
+const resizingObserver = new ResizeObserver(() => { // will react to changes of component width
+  // the test is required because ResizeObserver.observe() fires unconditionally when called
+  if (getSpanWidth(frameSpan) !== lastObservedFrameWidth) {
+    updateShortenedText()
+  }
+})
 
 function updateShortenedText () {
-  if (frameSpan.value !== undefined && contentSpan.value !== undefined && contentSpan.value !== null && defaultSlot !== undefined) {
-    const originalText = String(defaultSlot()[0].children)
-    resizingObserver.unobserve(frameSpan.value) // makes sure that calls will not be triggerred by the different text lengths that searchForIdealLength() will try
-    searchForIdealLength(originalText)
-    resizingObserver.observe(frameSpan.value) // makes sure that the text remains ideally shortened when the component gets more or less room
+  if (frameSpan.value && contentSpan.value && defaultSlot) {
+    resizingObserver.unobserve(frameSpan.value) // ensures that calls will not be triggerred by the different text lengths that searchForIdealLength() will try
+    searchForIdealLength(String(defaultSlot()[0].children))
+    lastObservedFrameWidth = getSpanWidth(frameSpan)
+    resizingObserver.observe(frameSpan.value) // ensures that the text will remain ideally sized when the component gets more or less room
   }
 }
 
 function searchForIdealLength (originalText : string) {
-  if (originalText === '') {
+  if (!originalText) {
     setSpanText('')
     return
   }
@@ -142,14 +150,14 @@ function shortenText (originalText : string, maxLength : number) : string {
 }
 
 function getSpanText () : string {
-  if (contentSpan.value === undefined || contentSpan.value === null || contentSpan.value.textContent === null) {
+  if (!contentSpan.value || !contentSpan.value.textContent) {
     return ''
   }
   return contentSpan.value.textContent
 }
 
 function setSpanText (text : string) {
-  if (contentSpan.value !== undefined && contentSpan.value !== null) {
+  if (contentSpan.value) {
     contentSpan.value.textContent = text
   }
 }
@@ -159,7 +167,7 @@ function setSpanVisibility (visible : boolean) {
 }
 
 function getSpanWidth (whichOne : Ref<HTMLSpanElement | undefined>) : number {
-  if (whichOne.value === undefined) {
+  if (!whichOne.value) {
     return 0
   }
   return whichOne.value.clientWidth

@@ -1,16 +1,17 @@
-import { type SearchAheadResult, type ResultType } from '~/types/searchbar'
+import { type SearchAheadResult, type ResultType, TypeInfo } from '~/types/searchbar'
 
 export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadResult {
   const searched = body?.input as string
-  const searchable = body?.searchable as ResultType[]
+  const searchable = body?.types as ResultType[]
+  const countIdenticalResults = body?.count as boolean
   const response : SearchAheadResult = {}; response.data = []
 
   if (Math.random() < 1 / 10) {
     // 10% of the time, we simulate an error
     return {}
   }
-  // results are found 85% of the time
-  if (Math.random() < 1 / 7.0) {
+  // results are found 90% of the time
+  if (Math.random() < 1 / 10) {
     return response
   }
 
@@ -22,12 +23,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       chain_id: 1,
       type: 'tokens',
       str_value: searched + 'Coin',
-      hash_value: '0xb794f5ea0ba39494ce839613fffba74279579268'
+      hash_value: '0x06e523CD06A0cF68DaA6D8EB5ad672B5ADad0AD4'
     },
     {
       chain_id: 1,
       type: 'accounts',
-      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A50F7357Ca938'
+      hash_value: '0xc9f2d4D703d5B14bdb0FF261e308F88306DfF47b'
     },
     {
       chain_id: 1,
@@ -37,7 +38,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     {
       chain_id: 1,
       type: 'contracts',
-      hash_value: '0x' + searched + 'a0ba39494ce839613fffba74279579260',
+      hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D',
       str_value: 'Uniswap'
     }
   )
@@ -98,34 +99,34 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     {
       chain_id: 1,
       type: 'contracts',
-      hash_value: '0x' + searched + 'a0ba39494ce839613fffba74279579260',
+      hash_value: '0x1c6bC968f5Be2410e98f0CB5Fad7363Fac875351',
       str_value: 'Uniswap'
     },
     {
       chain_id: 1,
       type: 'validators_by_withdrawal_address',
-      hash_value: '0x' + searched + '00bfCb29F2d2FaDE0a7E3A5357Ca938'
+      hash_value: '0xc2c89C217d256b060e6b3Ae567B6b213ad9954B2'
     },
     {
       chain_id: 42161,
       type: 'contracts',
-      hash_value: '0x' + searched + '00000000000000000000000000CAFFE',
+      hash_value: '0xF2C5B60e03cb38cA0e568b847BB8773c93E31e12',
       str_value: 'Tormato Cash'
     },
     {
       chain_id: 42161,
       type: 'transactions',
-      hash_value: '0x' + searched + 'a297ab886723ecfbc2cefab2ba385792058b344fbbc1f1e0a1139b2'
+      hash_value: '0xacd47cc7a30b4273aadec96b4e5aa06d1cfa627b751f358069b9a7febdba3c30'
     },
     {
       chain_id: 8453,
       type: 'accounts',
-      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
+      hash_value: '0x2b7290a54aD073bB3963DDEb538b630e8ff10aD7'
     },
     {
       chain_id: 8453,
       type: 'validators_by_deposit_address',
-      hash_value: '0x' + searched + '00b29F2d2FaDE0a7E3AAaaAAa'
+      hash_value: '0x2b7290a54aD073bB3963DDEb538b630e8ff10aD7'
     }
   )
   if (searchedIsPositiveInteger) {
@@ -194,13 +195,13 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'tokens',
-        str_value: searched + ' Coin',
+        str_value: searched + 'Coin',
         hash_value: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
       },
       {
         chain_id: 100,
         type: 'ens_addresses',
-        str_value: searched + 'hallo.eth',
+        str_value: searched + '-hallo.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
@@ -212,7 +213,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'ens_overview',
-        str_value: searched + 'hallo.eth',
+        str_value: searched + '-hallo.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
@@ -224,7 +225,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + 'hallo.eth'
+        str_value: searched + '-hallo.eth'
       },
       {
         chain_id: 100,
@@ -234,7 +235,16 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     )
   }
 
+  // keeping only the types that the API is asked for
   response.data = response.data.filter((singleRes) => { return searchable.includes(singleRes.type as ResultType) })
+  // if asked by the bar, making-up a number of identical results for the validators
+  if (countIdenticalResults) {
+    for (const singleRes of response.data) {
+      if (TypeInfo[singleRes.type as ResultType].countable) {
+        singleRes.num_value = (Math.random() < 1 / 2.0) ? 2 + Math.floor(1000 * Math.random()) : 1
+      }
+    }
+  }
 
   return response
 }

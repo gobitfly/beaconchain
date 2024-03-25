@@ -2,10 +2,11 @@
 import { Category, ResultType, type Matching } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
-// TODO : implementing this toy component
+// TODO : implementing these examples of use
 
-// picks a result by default when the user presses Enter instead of clicking a result in the drop-down
-function pickSomethingByDefault (possibilities : Matching[]) : Matching {
+// Picks a result by default when the user presses Enter instead of clicking a result in the drop-down.
+// If you return undefined, it means that either no result suits you or you want to deactivate Enter.
+function pickSomethingByDefault (possibilities : Matching[]) : Matching|undefined {
   // BcSearchbarMain.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
   // Now we look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
   // If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority).
@@ -33,7 +34,7 @@ function userSelectedAnAccount (wanted : string, type : ResultType, chain : Chai
   return { wanted, chain } // just some dummy stuff to avoid the warning about unused parameters
 }
 
-function userSelectedAValidator (wanted : string, type : ResultType, chain : ChainIDs) {
+function userSelectedValidator (wanted : string, type : ResultType, chain : ChainIDs, count : number) { // parameter `count` tells how many validators are in the batch (1 if no batch)
   switch (type) {
     case ResultType.ValidatorsByIndex :
     case ResultType.ValidatorsByPubkey :
@@ -49,19 +50,20 @@ function userSelectedAValidator (wanted : string, type : ResultType, chain : Cha
       return
   }
 
-  return { wanted, chain } // just some dummy stuff to avoid the warning about unused parameters
+  return { wanted, chain, count } // just some dummy stuff to avoid the warning about unused parameters
 }
 </script>
 
 <template>
   <br>
-  Not implemented yet. This tab will be used to design and implement the bars embedded in the Account and Validator pages
+  This tab is used to design and implement the bars embedded in the Account and Validator pages
   <br> <br>
   <div class="container">
     Accounts:
-    <br>
+    <br><br>
     <BcSearchbarMain
       :searchable="[Category.Addresses]"
+      :unsearchable="[ResultType.EnsOverview]"
       bar-style="embedded"
       :pick-by-default="pickSomethingByDefault"
       @go="userSelectedAnAccount"
@@ -70,19 +72,21 @@ function userSelectedAValidator (wanted : string, type : ResultType, chain : Cha
   <br>
   <div class="container">
     Validators:
-    <br>
+    <br><br>
     <BcSearchbarMain
       :searchable="[Category.Validators]"
+      :only-networks="[ChainIDs.Gnosis]"
       bar-style="embedded"
       :pick-by-default="pickSomethingByDefault"
-      @go="userSelectedAValidator"
+      @go="userSelectedValidator"
     />
   </div>
 </template>
 
 <style scoped lang="scss">
 .container {
-  width: 400px;
+  width: 500px;
   height: 200px;
+  padding: 16px;
 }
 </style>

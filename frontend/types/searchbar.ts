@@ -63,18 +63,19 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Validators]: { filterLabel: 'Validators' }
 }
 
-// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements.
-// The function returns one Matching element.
+// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements
+// and the function returns one Matching element.
 export interface Matching {
   closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
   network: ChainIDs, // the network that this result belongs to
   type: ResultType // the type of the result
 }
-/* When the user presses Enter, this callback function receives a simplified representation of the suggested results and must return
-   one element from this list. This list is passed in parameter `possibilities` as a simplified view of the actual list of results.
-   It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar triggers the
-   event `@go` to call your handler with the actual data of the result that you picked. */
-export interface PickingCallBackFunction {(possibilities : Matching[]) : Matching}
+/* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
+   element from this list (or undefined). This list is passed in parameter `possibilities` as a simplified view of the actual list of
+   results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar
+   triggers the event `@go` to call your handler with the actual data of the result that you picked. If you return undefined instead
+   of a matching, nothing happens (either no result suits you or you want to deactivate Enter). */
+export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
 export interface SearchAheadSingleResult {
   chain_id: number,
@@ -90,9 +91,10 @@ export interface SearchAheadResult {
 }
 
 export interface ResultSuggestion {
-  columns: string[],
-  queryParam: number, // index of the string given to the callback function `@go`
+  output: string[],
+  queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
   closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
+  count : number // how many identical results are found (often 1, but the API can inform us if there is more)
 }
 export interface OrganizedResults {
   networks: {
@@ -110,9 +112,10 @@ interface TypeInfoFields {
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
-  dataInSearchAheadResult : (keyof SearchAheadSingleResult)[], // the order of these field-names sets the order of the information displayed in the dropdown
-  queryParamIndex : number, // points to the field-name in array `dataInSearchAheadResult` whose data will be understood by the back-end as a reference to a result
-  dropdownColumns : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (dataInSearchAheadResult). The first column often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
+  countable: boolean, // whether it is possible for the API to find several identical results and count them
+  fieldsInSearchAheadResult : (keyof SearchAheadSingleResult)[], // fields to read from the SearchAheadSingleResult object returned by the API. The order of these field-names sets the order of the information displayed in the dropdown (in 'gaudy' style on a large screen)
+  queryParamField : keyof SearchAheadSingleResult, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end
+  dropdownOutput : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (fieldsInSearchAheadResult). The first element often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -122,9 +125,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and will fill array `dropdownColumns` (see below) with this information in that order.
-    queryParamIndex: 0,
-    dropdownColumns: [undefined, '', undefined] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and fill array `dropdownOutput` (see below) with this information in that order.
+    queryParamField: 'str_value', // This is the name of the field in SearchAheadSingleResult which identifies precisely a result when communicating with the back-end.
+    dropdownOutput: [undefined, '', undefined] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down (in 'gaudy' style on a large screen) will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
   },
   [ResultType.NFTs]: {
     title: 'ERC-721 & ERC-1155 token (NFT)',
@@ -132,9 +136,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
-    queryParamIndex: 0,
-    dropdownColumns: [undefined, '', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
+    queryParamField: 'str_value',
+    dropdownOutput: [undefined, '', undefined]
   },
   [ResultType.Epochs]: {
     title: 'Epoch',
@@ -142,9 +147,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, '']
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value'],
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, '']
   },
   [ResultType.Slots]: {
     title: 'Slot',
@@ -152,9 +158,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'], // num_value is the slot number, hash_value is the state root if it is what the user typed otherwise it contains by default the block root
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // num_value is the slot number, hash_value is the state root if it is what the user typed otherwise it contains by default the block root
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, undefined]
   },
   [ResultType.Blocks]: {
     title: 'Block',
@@ -162,9 +169,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'], // same as above
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // same as above
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, undefined]
   },
   [ResultType.BlockRoots]: {
     title: 'Block root',
@@ -172,9 +180,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'],
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, undefined]
   },
   [ResultType.StateRoots]: {
     title: 'State root',
@@ -182,9 +191,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'],
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, undefined]
   },
   [ResultType.Transactions]: {
     title: 'Transaction',
@@ -192,9 +202,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['hash_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', '', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['hash_value'],
+    queryParamField: 'hash_value',
+    dropdownOutput: ['', '', undefined]
   },
   [ResultType.TransactionBatches]: {
     title: 'Transaction batch',
@@ -202,9 +213,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['TX Batch', undefined, '']
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value'],
+    queryParamField: 'num_value',
+    dropdownOutput: ['TX Batch', undefined, '']
   },
   [ResultType.StateBatches]: {
     title: 'State batch',
@@ -212,9 +224,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', undefined, '']
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value'],
+    queryParamField: 'num_value',
+    dropdownOutput: ['', undefined, '']
   },
   [ResultType.Contracts]: {
     title: 'Contract',
@@ -222,9 +235,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
-    queryParamIndex: 1,
-    dropdownColumns: [undefined, '', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
+    queryParamField: 'hash_value',
+    dropdownOutput: [undefined, '', undefined]
   },
   [ResultType.Accounts]: {
     title: 'Account',
@@ -232,9 +246,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 2,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['hash_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', '', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['hash_value'],
+    queryParamField: 'hash_value',
+    dropdownOutput: ['', '', undefined]
   },
   [ResultType.EnsAddresses]: {
     title: 'ENS address',
@@ -242,9 +257,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
-    queryParamIndex: 0,
-    dropdownColumns: [undefined, '', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
+    queryParamField: 'str_value',
+    dropdownOutput: [undefined, '', undefined]
   },
   [ResultType.EnsOverview]: {
     title: 'Overview of ENS domain',
@@ -252,9 +268,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.EnsSystem,
     priority: 15,
     belongsToAllNetworks: true,
-    dataInSearchAheadResult: ['str_value', 'hash_value'], // same as above
-    queryParamIndex: 0,
-    dropdownColumns: ['ENS Overview', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // same as above
+    queryParamField: 'str_value',
+    dropdownOutput: ['ENS Overview', undefined, undefined]
   },
   [ResultType.Graffiti]: {
     title: 'Graffito',
@@ -262,9 +279,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['str_value'],
-    queryParamIndex: 0,
-    dropdownColumns: ['', 'Blocks with', undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['str_value'],
+    queryParamField: 'str_value',
+    dropdownOutput: ['', 'Blocks with', undefined]
   },
   [ResultType.ValidatorsByIndex]: {
     title: 'Validator by index',
@@ -272,9 +290,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
+    queryParamField: 'num_value',
+    dropdownOutput: ['Validator', undefined, undefined]
   },
   [ResultType.ValidatorsByPubkey]: {
     title: 'Validator by public key',
@@ -282,9 +301,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
-    queryParamIndex: 1,
-    dropdownColumns: ['Validator', undefined, undefined]
+    countable: false,
+    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
+    queryParamField: 'hash_value',
+    dropdownOutput: ['Validator', undefined, undefined]
   },
   [ResultType.ValidatorsByDepositAddress]: {
     title: 'Validator by deposit address',
@@ -292,9 +312,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['hash_value'], // deposit address
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Deposited by', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['hash_value'], // deposit address
+    queryParamField: 'hash_value',
+    dropdownOutput: ['Validator', 'Deposited by', undefined]
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     title: 'Validator by ENS of the deposit address',
@@ -302,9 +323,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['str_value'], // ENS name
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Deposited by', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['str_value'], // ENS name
+    queryParamField: 'str_value',
+    dropdownOutput: ['Validator', 'Deposited by', undefined]
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     title: 'Validator by withdrawal credential',
@@ -312,9 +334,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['hash_value'], // withdrawal credential
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', '', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['hash_value'], // withdrawal credential
+    queryParamField: 'hash_value',
+    dropdownOutput: ['Validator', '', undefined]
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',
@@ -322,9 +345,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['hash_value'], // withdrawal address
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Withdrawn to', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['hash_value'], // withdrawal address
+    queryParamField: 'hash_value',
+    dropdownOutput: ['Validator', 'Withdrawn to', undefined]
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: 'Validator by ENS of the withdrawal address',
@@ -332,9 +356,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['str_value'], // ENS name
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Withdrawn to', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['str_value'], // ENS name
+    queryParamField: 'str_value',
+    dropdownOutput: ['Validator', 'Withdrawn to', undefined]
   },
   [ResultType.ValidatorsByGraffiti]: {
     title: 'Validator by graffito',
@@ -342,9 +367,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['str_value'], // graffito
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Tagging with', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['str_value'], // graffito
+    queryParamField: 'str_value',
+    dropdownOutput: ['Validator', 'Block graffiti', undefined]
   },
   [ResultType.ValidatorsByName]: {
     title: 'Validator by name',
@@ -352,9 +378,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    dataInSearchAheadResult: ['str_value'], // name that the owner recorded on beaconcha.in
-    queryParamIndex: 0,
-    dropdownColumns: ['Validator', 'Named', undefined]
+    countable: true,
+    fieldsInSearchAheadResult: ['str_value'], // name that the owner recorded on beaconcha.in
+    queryParamField: 'str_value',
+    dropdownOutput: ['Validator', 'Named', undefined]
   }
 }
 
