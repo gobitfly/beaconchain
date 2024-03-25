@@ -176,6 +176,21 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         type: 'validators_by_index',
         num_value: Number(searched),
         hash_value: '0x85e5ac15a728a2bf0b0b4f22312dad780d4e27856e30997ee11f73d74d86682800046a86a01d134dbdf171326cd7cc54'
+      },
+      {
+        chain_id: 100,
+        type: 'validators_by_deposit_address',
+        hash_value: '0x2b7290a54aD073bB3963DDEb538b630e8ff10aD7'
+      },
+      {
+        chain_id: 100,
+        type: 'validators_by_withdrawal_address',
+        hash_value: '0xc2c89C217d256b060e6b3Ae567B6b213ad9954B2'
+      },
+      {
+        chain_id: 100,
+        type: 'validators_by_withdrawal_credential',
+        hash_value: '0x0100000000000000000000000c6bd499ef02a44031ffe8336f59c82d81333f2a'
       }
     )
   } else {
