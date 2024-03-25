@@ -169,6 +169,8 @@
         "validators_added": "validators added",
         "search_placeholder": "Name, Id",
         "groups_added": "groups added",
+        "remove_title": "Remove Groups",
+        "remove_text": "Do you want to remove group {group} form your dashboard?",
         "col":{
           "name": "Name", 
           "id": "Group Id",

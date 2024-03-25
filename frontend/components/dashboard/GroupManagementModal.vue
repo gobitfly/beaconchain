@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
+import { BcDialogConfirm } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
@@ -15,7 +16,8 @@ import type { Cursor } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 
 const { t: $t } = useI18n()
-// const { fetch } = useCustomFetch()
+const { fetch } = useCustomFetch()
+const dialog = useDialog()
 
 interface Props {
   dashboardKey: DashboardKey;
@@ -64,26 +66,42 @@ const size = computed(() => {
   }
 })
 
+const resetData = () => {
+  search.value = ''
+  newGroupName.value = ''
+  cursor.value = 0
+}
+
 const onClose = () => {
   visible.value = false
+  resetData()
 }
 
 const addGroup = async () => {
-  // TODO call API to add Group
-  warn(`Add group ${newGroupName.value}`)
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: props.dashboardKey })
   await getOverview(props.dashboardKey)
 }
 
 const editGroup = (row: VDBOverviewGroup, newName?: string) => {
-  // TODO open modal to edit multiple
+  // TODO: Implement group renaming once the backend supports it.
   warn(`Edit group ${row.name} [${row.id}] -> ${newName}`)
 }
 
-const removeGroup = async (row: VDBOverviewGroup) => {
-  // TODO: display confirm modal if user really wants to remove validator.
-  // If multiple are selected ask if he wnats to remove all selected
-  alert(`remove val ${row.id}`)
-  await getOverview(props.dashboardKey)
+const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_DELETE, undefined, { dashboardKey: props.dashboardKey, groupId: row.id })
+  getOverview(props.dashboardKey)
+}
+
+const removeGroup = (row: VDBOverviewGroup) => {
+  dialog.open(BcDialogConfirm, {
+    props: {
+      header: $t('dashboard.validator.group_management.remove_title')
+    },
+    onClose: response => response?.data && removeGroupConfirmed(row),
+    data: {
+      question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
+    }
+  })
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -152,11 +170,13 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           >
             <Column field="name" :sortable="true" :header="$t('dashboard.validator.group_management.col.name')">
               <template #body="slotProps">
+                <!-- TODO: wait for the backend to implement group renaming the activate this input and finish the logic -->
                 <BcInputLabel
                   class="edit-group"
                   :value="slotProps.data.name"
                   :default="slotProps.data.id === 0 ? $t('common.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
+                  :disabled="true"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
               </template>

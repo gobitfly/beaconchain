@@ -13,7 +13,7 @@ const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
 const list = computed(() => {
   const groups = overview.value?.groups ?? []
   if (props.includeAll) {
-    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '' }].concat(groups)
+    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(groups)
   }
   return groups
 })
