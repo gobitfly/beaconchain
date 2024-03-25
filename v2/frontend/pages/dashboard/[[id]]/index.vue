@@ -8,12 +8,14 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
-import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardKey } from '~/types/dashboard'
 
 const route = useRoute()
 
-const { key } = storeToRefs(useValidatorDashboardOverviewStore())
+// const { key } = storeToRefs(useValidatorDashboardOverviewStore())
+const key = ref<DashboardKey>('')
+provide('dashboardKey', key)
 
 watch(route, (newRoute) => {
   console.log('DIECE: New route found on index page', newRoute)
@@ -22,6 +24,7 @@ watch(route, (newRoute) => {
   } else {
     key.value = newRoute.params.id
   }
+  console.log('DIECE: dashboard key set to', key.value)
 }, { immediate: true })
 
 const manageValidatorsModalVisisble = ref(false)
