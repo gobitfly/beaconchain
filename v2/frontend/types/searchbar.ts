@@ -94,7 +94,7 @@ export interface ResultSuggestion {
   output: string[],
   queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
   closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
-  count : number // how many identical results are found (often 1, but the API can inform us if there is more)
+  count : number // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
 }
 export interface OrganizedResults {
   networks: {

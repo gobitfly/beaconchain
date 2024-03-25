@@ -59,16 +59,16 @@ defineProps<{
   padding-bottom: 7px;
   @media (min-width: 600px) { // large screen
     &.gaudy {
-      grid-template-columns: 40px 106px 488px auto;
+      grid-template-columns: 40px 106px auto min-content;
       padding-left: 4px;
       padding-right: 4px;
     }
     &.discreet {
-      grid-template-columns: 40px 106px 298px;
+      grid-template-columns: 40px 106px auto;
     }
   }
   @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px 106px 218px;
+    grid-template-columns: 40px 106px auto;
   }
   border-radius: var(--border-radius);
 

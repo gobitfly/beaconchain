@@ -429,7 +429,7 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   const queryParamFieldName = TypeInfo[type].queryParamField
   const queryParam = String(apiResponseElement[queryParamFieldName])
 
-  // getting the number of identical results found
+  // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
   if (isResultCountable(type)) {
     count = (apiResponseElement.num_value === undefined) ? NaN : apiResponseElement.num_value
