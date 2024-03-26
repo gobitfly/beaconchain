@@ -24,7 +24,7 @@ const { width } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
-const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
 
