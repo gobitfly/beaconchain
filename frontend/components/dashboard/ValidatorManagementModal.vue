@@ -185,7 +185,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     @update:visible="(visible: boolean)=>!visible && resetData()"
   >
     <template v-if="!size.showWithdrawalCredentials" #header>
-      <span class="hdden-title" />
+      <span />
     </template>
     <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>

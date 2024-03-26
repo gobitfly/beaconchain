@@ -189,6 +189,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
                   :default="slotProps.data.id === 0 ? $t('common.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="false"
+                  :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
               </template>
