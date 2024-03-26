@@ -28,6 +28,7 @@
     "continue": "Continue",
     "done": "Done",
     "dismiss": "Dismiss",
+    "remove": "Remove",
     "yes": "Yes",
     "no": "No",
     "save": "Save"
@@ -161,7 +162,9 @@
       "management":{
         "title": "Manage Groups",
         "sub_title": "Add or remove validators from your dashboard",
-        "validators_added": "validators added"
+        "validators_added": "validators added",
+        "remove_title": "Remove Validators",
+        "remove_text": "Do you want to remove validator {validator} form your dashboard? | Do you want to remove {count} validators form your dashboard?"
       },
       "group_management":{
         "title": "Manage",
