@@ -12,7 +12,7 @@ const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const list = computed<VDBOverviewGroup[]>(() => {
-  const groups = validatorDashboardOverview.value?.groups ?? []
+  const groups = [...validatorDashboardOverview.value?.groups ?? []]
   if (props.includeAll) {
     return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(groups)
   }
