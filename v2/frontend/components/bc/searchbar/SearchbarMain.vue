@@ -12,10 +12,13 @@ import {
   type ResultSuggestion,
   type OrganizedResults,
   type SearchBarStyle,
+  SearchBarPurpose,
   type Matching,
   type PickingCallBackFunction
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+
+const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -44,14 +47,14 @@ enum States {
   Error,
   UpdateIncoming
 }
+
 interface GlobalState {
   state : States,
   callAgainFunctionUserPressedSearchButtonOrEnter: boolean
   showDropDown: boolean
 }
 
-const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
-
+const barPurpose = whatIsMyPurpose()
 let searchableTypes : ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
@@ -390,7 +393,7 @@ function filterAndOrganizeResults () {
 // The fields that the function reads in the API response as well as the place they are displayed
 // in the drop-down are set in the object `TypeInfo` filled in types/searchbar.ts, by its properties
 // fieldsInSearchAheadResult (sets the fields to read and their order) and dropdownOutput (tells to fill
-// array `output` with that ordered data).
+// array `output` with that data).
 function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion {
   const emptyResult : ResultSuggestion = { output: [], queryParam: '', closeness: NaN, count: 0 }
 
@@ -473,7 +476,7 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     return TypeInfo[type].countable
   }
   // from here, there is uncertainty but we must simply tell whether counting is possible for some results
-  if (props.barStyle !== 'embedded') {
+  if (barPurpose === SearchBarPurpose.General) {
     return false // we do not ask the API to count identical results when the bar is versatile (general bar to search anything on the blockchain)
   }
   for (const type of searchableTypes) {
@@ -482,6 +485,22 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     }
   }
   return false
+}
+
+function whatIsMyPurpose () : SearchBarPurpose {
+  if (props.barStyle === 'embedded') {
+    if (props.searchable.length === 1) {
+      if (props.searchable[0] === Category.Addresses) {
+        return SearchBarPurpose.Accounts
+      } else if (props.searchable[0] === Category.Validators) {
+        return SearchBarPurpose.Validators
+      }
+    }
+    // there is no reason to reach this state but let's be careful:
+    warn('The purpose of the bar could not be determined')
+  }
+
+  return SearchBarPurpose.General
 }
 
 function mustNetworkFilterBeShown () : boolean {
@@ -493,35 +512,23 @@ function mustCategoryFiltersBeShown () : boolean {
 }
 
 function inputPlaceHolder () : string {
-  let info = ''
-
-  if (props.barStyle !== 'embedded') {
-    info = $t('search_bar.general_placeholder')
-  } else if (props.searchable.length === 1) {
-    if (props.searchable[0] === Category.Validators) {
-      info = $t('search_bar.validator_placeholder')
-    } else if (props.searchable[0] === Category.Addresses) {
-      info = $t('search_bar.account_placeholder')
-    }
+  switch (barPurpose) {
+    case SearchBarPurpose.General : return $t('search_bar.general_placeholder')
+    case SearchBarPurpose.Accounts : return $t('search_bar.account_placeholder')
+    case SearchBarPurpose.Validators : return $t('search_bar.validator_placeholder')
   }
-
-  return info
+  return '' // cannot happen but the static analysis thinks it can
 }
 
 function informationIfInputIsEmpty () : string {
-  let info = $t('search_bar.type_something') + ' '
+  const info = $t('search_bar.type_something') + ' '
 
-  if (props.barStyle !== 'embedded') {
-    info += $t('search_bar.and_use_filters')
-  } else if (props.searchable.length === 1) {
-    if (props.searchable[0] === Category.Validators) {
-      info += $t('search_bar.related_to_validator')
-    } else if (props.searchable[0] === Category.Addresses) {
-      info += $t('search_bar.related_to_account')
-    }
+  switch (barPurpose) {
+    case SearchBarPurpose.General : return info + $t('search_bar.and_use_filters')
+    case SearchBarPurpose.Accounts : return info + $t('search_bar.related_to_account')
+    case SearchBarPurpose.Validators : return info + $t('search_bar.related_to_validator')
   }
-
-  return info
+  return info // cannot happen but the static analysis thinks it can
 }
 
 function areThereResultsHiddenByUser () : boolean {
@@ -573,7 +580,7 @@ function informationIfHiddenResults () : string {
           :class="barStyle"
           @click="userPressedSearchButtonOrEnter()"
         >
-          <FontAwesomeIcon v-if="barStyle != 'embedded'" :icon="faMagnifyingGlass" />
+          <FontAwesomeIcon v-if="barPurpose == SearchBarPurpose.General" :icon="faMagnifyingGlass" />
           <FontAwesomeIcon v-else :icon="faPlus" />
         </span>
       </div>
@@ -605,6 +612,7 @@ function informationIfHiddenResults () : string {
                 :chain-id="network.chainId"
                 :result-type="typ.type"
                 :bar-style="barStyle"
+                :bar-purpose="barPurpose"
                 @row-selected="userClickedSuggestion"
               />
             </div>
