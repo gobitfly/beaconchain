@@ -7,6 +7,7 @@ interface Props {
   precision?: number
   fixed?: number
   fullOnEmptyBase?: boolean
+  addPositiveSign?: boolean
   colorBreakPoint?: number // if set then the percentage will be colored accordingly
 }
 
@@ -28,7 +29,7 @@ const data = computed(() => {
     return { label, className }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
-  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2 }
+  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2, addPositiveSign: props.addPositiveSign }
   label = formatPercent(percent, config)
 
   if (props.colorBreakPoint) {
@@ -43,5 +44,5 @@ const data = computed(() => {
 
 </script>
 <template>
-  <span :class="data.className">{{ data.label }}</span>
+  <BcFormatNumber v-if="data.label" :text="data.label" :class="data.className" />
 </template>

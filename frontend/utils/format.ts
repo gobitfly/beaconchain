@@ -1,5 +1,4 @@
 import { commify } from '@ethersproject/units'
-import { round } from 'lodash-es'
 
 const { epochToTs } = useNetwork()
 
@@ -16,16 +15,11 @@ export function formatPercent (percent?: number, config?: NumberFormatConfig):st
     return ''
   }
   const { precision, fixed, addPositiveSign } = { ...{ precision: 2, fixed: 2, addPositiveSign: false }, ...config }
-  let result = percent
-  if (precision !== undefined) {
-    result = round(result, precision)
+  let result = trim(percent, precision, fixed)
+  if (addPositiveSign) {
+    result = addPlusSign(result)
   }
-  const label = fixed !== undefined ? `${result.toFixed(fixed)}%` : `${result}%`
-  if (fixed !== undefined) {
-    return `${result.toFixed(fixed)}%`
-  }
-
-  return addPositiveSign ? addPlusSign(label) : label
+  return `${result}%`
 }
 
 export function calculatePercent (value?: number, base?: number):number {
@@ -112,4 +106,8 @@ export function formatEpochToDate (epoch: number, locales: string): string | und
 
   const date = formatTs(ts, locales)
   return `${date}`
+}
+
+export function formattedNumberToHtml (value?:string):string | undefined {
+  return value?.split(',').join("<span class='comma' />")
 }
