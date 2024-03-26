@@ -254,6 +254,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 :global(.validator-group-managment-modal-container .bc-table-header) {
   height: unset;
   padding: var(--padding) 0;
+  @include fonts.subtitle_text;
 }
 
 :global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
