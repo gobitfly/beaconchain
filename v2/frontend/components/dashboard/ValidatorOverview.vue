@@ -11,7 +11,7 @@ const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'
 
-const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label

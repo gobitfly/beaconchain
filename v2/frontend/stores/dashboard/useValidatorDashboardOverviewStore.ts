@@ -17,7 +17,7 @@ export function useValidatorDashboardOverviewStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorOverviewStore()) // NOTE: this is the REACTIVE (and read only) data
 
-  const validatorDashboardOverview = readonly(data)
+  const overview = readonly(data)
 
   // NOTE: function to UPDATE the data, use overview if you just want to access the data
   async function getOverview (key: DashboardKey) {
@@ -31,6 +31,5 @@ export function useValidatorDashboardOverviewStore () {
     return data.value
   }
 
-  // TODO: maybe this should just be data and refresh and every component that uses that chooses a name to their liking?
-  return { validatorDashboardOverview, refreshValidatorDashboardOverview: getOverview }
+  return { overview, refreshOverview: getOverview }
 }
