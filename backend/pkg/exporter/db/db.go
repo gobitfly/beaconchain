@@ -844,7 +844,7 @@ func GetOldestDashboardEpoch() (uint64, error) {
 
 func Get24hOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly where epoch_start >= $1", utils.EpochsPerDay())
+	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly", utils.EpochsPerDay())
 	return epoch, err
 }
 
@@ -903,7 +903,7 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 
 func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, error) {
 	var minEpoch uint64
-	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch LIMIT 1")
 	if err != nil {
 		return nil, err
 	}

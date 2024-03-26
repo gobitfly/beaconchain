@@ -71,11 +71,17 @@ func (d *dayUpAggregator) rollingXdAggregate(days int, tableName string) error {
 
 	_, err = tx.Exec(fmt.Sprintf(`
 		WITH
+			epoch_starts as (
+				SELECT epoch_start FROM validator_dashboard_data_daily WHERE day = $1 LIMIT 1
+			),
+			epoch_ends as (
+				SELECT epoch_end FROM validator_dashboard_data_daily WHERE day = $2 LIMIT 1
+			),
 			balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_daily WHERE day = $1
+				SELECT validator_index, balance_start, epoch_start FROM validator_dashboard_data_daily WHERE day = $1
 			),
 			balance_ends as (
-				SELECT validator_index, balance_end FROM validator_dashboard_data_daily WHERE day = $2
+				SELECT validator_index, balance_end, epoch_end FROM validator_dashboard_data_daily WHERE day = $2
 			),
 			aggregate as (
 				SELECT 
@@ -119,6 +125,8 @@ func (d *dayUpAggregator) rollingXdAggregate(days int, tableName string) error {
 			)
 			INSERT INTO %s (
 				validator_index,
+				epoch_start,
+				epoch_end,
 				attestations_source_reward,
 				attestations_target_reward,
 				attestations_head_reward,
@@ -157,6 +165,8 @@ func (d *dayUpAggregator) rollingXdAggregate(days int, tableName string) error {
 			)
 			SELECT 
 				aggregate.validator_index,
+				(SELECT epoch_start FROM epoch_starts),
+				(SELECT epoch_end FROM epoch_ends),
 				attestations_source_reward,
 				attestations_target_reward,
 				attestations_head_reward,
