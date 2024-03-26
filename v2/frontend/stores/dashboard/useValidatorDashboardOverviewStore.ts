@@ -20,7 +20,7 @@ export function useValidatorDashboardOverviewStore () {
   const overview = readonly(data)
 
   // NOTE: function to UPDATE the data, use overview if you just want to access the data
-  async function getOverview (key: DashboardKey) {
+  async function refreshOverview (key: DashboardKey) {
     if (key === undefined) {
       return undefined
     }
@@ -31,5 +31,5 @@ export function useValidatorDashboardOverviewStore () {
     return data.value
   }
 
-  return { overview, refreshOverview: getOverview }
+  return { overview, refreshOverview }
 }
