@@ -64,11 +64,7 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[], notInGroup?: number):NumberOrString[] => {
-  if (notInGroup !== undefined) {
-    validators = validators?.filter(v => v.group_id !== notInGroup)
-  }
-
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]):NumberOrString[] => {
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
@@ -152,7 +148,7 @@ watch(() => [props.dashboardKey, visible.value, query.value], () => {
 }, { immediate: true })
 
 const switchValidatorGroup = (row: VDBManageValidatorsTableRow, group: number) => {
-  changeGroup(mapIndexOrPubKey([row].concat(selected.value ?? []), group), group)
+  changeGroup(mapIndexOrPubKey([row].concat(selected.value ?? [])), group)
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {
