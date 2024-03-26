@@ -44,7 +44,7 @@ func (d *epochToTotalAggregator) aggregateTotal() error {
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	if currentExportedEpoch <= lastTotalExported.EpochEnd {
+	if currentExportedEpoch < lastTotalExported.EpochEnd {
 		return errors.Wrap(err, "total export nothing to do, currentEpoch <= lastTotalExported.EpochEnd")
 	}
 
@@ -57,7 +57,7 @@ func (d *epochToTotalAggregator) aggregateTotal() error {
 		return fmt.Errorf("gaps in dashboard epoch, skipping total for now: %v", gaps) // sanity, this should never happen
 	}
 
-	err = d.aggregateAndAddToTotal(lastTotalExported.EpochEnd+1, currentExportedEpoch)
+	err = d.aggregateAndAddToTotal(lastTotalExported.EpochEnd, currentExportedEpoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate total")
 	}
@@ -168,7 +168,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 			)
 			SELECT 
 				$1,
-				(SELECT epoch FROM end_epoch) as epoch,
+				(SELECT epoch + 1 FROM end_epoch) as epoch, -- exclusive
 				aggregate.validator_index,
 				attestations_source_reward,
 				attestations_target_reward,

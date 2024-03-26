@@ -198,7 +198,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 			if err != nil {
 				return nil, fmt.Errorf("epoch %d committee %d index %d has bad validator index %q", epoch, committee.Index, i, valIndex)
 			}
-			k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
+			k := utils.FormatAttestorAssignmentKey(committee.Slot, uint64(committee.Index), uint64(i))
 			assignments.AttestorAssignments[k] = valIndexU64
 		}
 	}
@@ -966,7 +966,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 		for i := uint64(0); i < aggregationBits.Len(); i++ {
 			if aggregationBits.BitAt(i) {
-				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, a.Data.CommitteeIndex, i)]
+				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, uint64(a.Data.CommitteeIndex), uint64(i))]
 				if !found { // This should never happen!
 					validator = 0
 					log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)

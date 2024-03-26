@@ -69,7 +69,7 @@ type AttesterSlashing struct {
 		Signature        bytesHexStr `json:"signature"`
 		Data             struct {
 			Slot            uint64 `json:"slot,string"`
-			Index           uint64 `json:"index,string"`
+			Index           uint16 `json:"index,string"`
 			BeaconBlockRoot string `json:"beacon_block_root"`
 			Source          struct {
 				Epoch uint64 `json:"epoch,string"`
@@ -86,7 +86,7 @@ type AttesterSlashing struct {
 		Signature        bytesHexStr `json:"signature"`
 		Data             struct {
 			Slot            uint64 `json:"slot,string"`
-			Index           uint64 `json:"index,string"`
+			Index           uint16 `json:"index,string"`
 			BeaconBlockRoot string `json:"beacon_block_root"`
 			Source          struct {
 				Epoch uint64 `json:"epoch,string"`
@@ -105,7 +105,7 @@ type Attestation struct {
 	Signature       bytesHexStr `json:"signature"`
 	Data            struct {
 		Slot            uint64 `json:"slot,string"`
-		Index           uint64 `json:"index,string"`
+		Index           uint16 `json:"index,string"`
 		BeaconBlockRoot string `json:"beacon_block_root"`
 		Source          struct {
 			Epoch uint64 `json:"epoch,string"`

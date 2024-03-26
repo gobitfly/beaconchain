@@ -14,6 +14,30 @@ import (
 
 func FormatAttestorAssignmentKey(AttesterSlot, CommitteeIndex, MemberIndex uint64) string {
 	return fmt.Sprintf("%v-%v-%v", AttesterSlot, CommitteeIndex, MemberIndex)
+
+	/*
+		Refactoring to
+
+		b := make([]byte, 14)
+		binary.LittleEndian.PutUint64(b, AttesterSlot)
+		binary.LittleEndian.PutUint16(b[8:], CommitteeIndex)
+		binary.LittleEndian.PutUint32(b[10:], MemberIndex)
+		return string(b)
+
+		would save memory but at the expense of readability.
+		Check usage first since we do some key parsing in some places.
+	*/
+}
+
+// Do not use if you have multiple AttesterSlots in multiple epochs, this is intended for singular epoch use
+func FormatAttestorAssignmentKeyLowMem(AttesterSlot uint64, CommitteeIndex uint16, MemberIndex uint32) uint64 {
+	var result uint64
+	attSlotLast2Bytes := AttesterSlot & 0xFFFF
+
+	result = attSlotLast2Bytes << 48
+	result |= uint64(CommitteeIndex) << 32
+	result |= uint64(MemberIndex)
+	return result
 }
 
 func ClToCurrency(valIf interface{}, currency string) decimal.Decimal {

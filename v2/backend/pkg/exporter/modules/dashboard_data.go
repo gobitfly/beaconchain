@@ -3,6 +3,7 @@ package modules
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -18,7 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const backfillParallelism = 8
+const backfillParallelism = 4
 
 type dashboardData struct {
 	ModuleContext
@@ -43,7 +44,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	temp.epochToHour = newEpochToHourAggregator(temp)
 	temp.hourToDay = newHourToDayAggregator(temp)
 	temp.dayUp = newDayUpAggregator(temp)
-	temp.headEpochQueue = make(chan uint64, 1000)
+	temp.headEpochQueue = make(chan uint64, 100)
 	temp.backFillCompleted = false
 	return temp
 }
@@ -64,7 +65,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		d.processHeadQueue()
+		d.processHeadQueue() // todo
 	}()
 
 	return nil
@@ -145,7 +146,7 @@ type EpochParallelGroup struct {
 }
 
 func getGapGroups(gaps []uint64, backfillParallelism int) []EpochParallelGroup {
-	groups := make([]EpochParallelGroup, 0)
+	groups := make([]EpochParallelGroup, 0, len(gaps)/4)
 	for i := 0; i < len(gaps); i++ {
 		group := EpochParallelGroup{
 			FromEpoch: gaps[i],
@@ -174,7 +175,7 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 	for _, gapGroup := range groups {
 		errGroup := &errgroup.Group{}
 
-		datas := make([]DataEpoch, backfillParallelism)
+		datas := make([]DataEpoch, 0, backfillParallelism)
 		start := time.Now()
 
 		for gap := gapGroup.FromEpoch; gap <= gapGroup.ToEpoch; gap++ {
@@ -209,10 +210,10 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 						continue
 					}
 
-					datas[gap-gapGroup.FromEpoch] = DataEpoch{
+					datas = append(datas, DataEpoch{
 						DataRaw: data,
 						Epoch:   gap,
-					}
+					})
 
 					break
 				}
@@ -225,6 +226,11 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 		// since we used skipSerialCalls we must provide startBalance and missedSlots for every epoch except FromEpoch
 		// with the data from the previous epoch.
 
+		// sort datas first, epoch asc
+		sort.Slice(datas, func(i, j int) bool {
+			return datas[i].Epoch < datas[j].Epoch
+		})
+
 		// provide data from the previous epochs
 		for i := 1; i < len(datas); i++ {
 			datas[i].DataRaw.startBalances = datas[i-1].DataRaw.endBalances
@@ -233,6 +239,7 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 
 		// process data
 		errGroup = &errgroup.Group{}
+		errGroup.SetLimit(backfillParallelism / 2) // mitigate short ram spike
 		for i := 0; i < len(datas); i++ {
 			i := i
 			errGroup.Go(func() error {
@@ -291,6 +298,8 @@ func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
 			d.backfillDataService(gaps, latestExportedEpoch, backfillParallelism, nextDataChan)
 		}()
 
+		done := false
+		doneMutex := &sync.Mutex{}
 		for {
 			select {
 			case datas := <-nextDataChan:
@@ -314,6 +323,9 @@ func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
 
 							if data.Epoch >= gaps[len(gaps)-1] {
 								d.log.Infof("backfilling finished for range epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+								doneMutex.Lock()
+								done = true
+								doneMutex.Unlock()
 								return nil
 							}
 
@@ -336,6 +348,9 @@ func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
 				}
 
 				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
+				if done {
+					break
+				}
 			case <-time.After(time.Second * 10):
 			}
 		}
@@ -515,7 +530,7 @@ type Data struct {
 	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
 	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
 	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
-	attestationAssignments   map[string]uint64
+	attestationAssignments   map[uint64]uint32
 	missedslots              map[uint64]bool
 }
 
@@ -537,7 +552,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
 	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
 	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
-	result.attestationAssignments = make(map[string]uint64)
+	result.attestationAssignments = make(map[uint64]uint32)
 	result.missedslots = make(map[uint64]bool, slotsPerEpoch*2)
 
 	cl := d.CL
@@ -595,9 +610,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"slot": committee.Slot, "committee": committee.Index, "index": i})
 						continue
 					}
-					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
+					k := utils.FormatAttestorAssignmentKeyLowMem(committee.Slot, uint16(committee.Index), uint32(i))
 					aaMutex.Lock()
-					result.attestationAssignments[k] = valIndexU64
+					result.attestationAssignments[k] = uint32(valIndexU64)
 					aaMutex.Unlock()
 				}
 			}
@@ -736,8 +751,8 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		idealAttestationRewards[idealReward.EffectiveBalance] = i
 	}
 
-	pubkeyToIndexMapEnd := make(map[string]int64)
-	pubkeyToIndexMapStart := make(map[string]int64)
+	pubkeyToIndexMapEnd := make(map[string]int64, len(validatorsData))
+	pubkeyToIndexMapStart := make(map[string]int64, len(validatorsData))
 	activeCount := 0
 	// write start & end balances and slashed status
 	for i := 0; i < len(validatorsData); i++ {
@@ -763,21 +778,35 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[validator_index].BlockChance = float64(utils.Config.Chain.ClConfig.SlotsPerEpoch) / float64(activeCount)
 	}
 
+	size := uint64(len(validatorsData))
+	sizeInt := int64(len(validatorsData))
+	size32 := uint32(len(validatorsData))
+
 	// write scheduled block data
 	for _, proposerAssignment := range data.proposerAssignments.Data {
 		proposerIndex := proposerAssignment.ValidatorIndex
+		if proposerIndex >= size {
+			return nil, errors.New("proposer index out of range")
+		}
 		validatorsData[proposerIndex].BlockScheduled.Int16++
 		validatorsData[proposerIndex].BlockScheduled.Valid = true
 	}
 
 	// write scheduled sync committee data
 	for _, validator := range data.syncCommitteeAssignments.Data.Validators {
-		validatorsData[mustParseInt64(validator)].SyncScheduled.Int32 = int32(len(data.beaconBlockData)) // take into account missed slots
-		validatorsData[mustParseInt64(validator)].SyncScheduled.Valid = true
+		validatorIndex := mustParseInt64(validator)
+		if validatorIndex >= sizeInt {
+			return nil, errors.New("proposer index out of range")
+		}
+		validatorsData[validatorIndex].SyncScheduled.Int32 = int32(len(data.beaconBlockData)) // take into account missed slots
+		validatorsData[validatorIndex].SyncScheduled.Valid = true
 	}
 
 	// write proposer rewards data
 	for _, reward := range data.beaconBlockRewardData {
+		if reward.Data.ProposerIndex >= size {
+			return nil, errors.New("proposer index out of range")
+		}
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Int64 += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Valid = true
 	}
@@ -786,6 +815,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	for _, rewards := range data.syncCommitteeRewardData {
 		for _, reward := range rewards.Data {
 			validator_index := reward.ValidatorIndex
+			if validator_index >= size {
+				return nil, errors.New("proposer index out of range")
+			}
 			syncReward := reward.Reward
 			validatorsData[validator_index].SyncReward.Int64 += syncReward
 			validatorsData[validator_index].SyncReward.Valid = true
@@ -832,6 +864,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			}
 
 			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
+			if validator_index >= sizeInt {
+				return nil, errors.New("proposer index out of range")
+			}
 
 			validatorsData[validator_index].DepositsAmount.Int64 += int64(depositData.Data.Amount)
 			validatorsData[validator_index].DepositsAmount.Valid = true
@@ -842,6 +877,10 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
 			validator_index := withdrawal.ValidatorIndex
+
+			if validator_index >= size {
+				return nil, errors.New("proposer index out of range")
+			}
 			validatorsData[validator_index].WithdrawalsAmount.Int64 += int64(withdrawal.Amount)
 			validatorsData[validator_index].WithdrawalsAmount.Valid = true
 
@@ -854,11 +893,15 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 			for i := uint64(0); i < aggregationBits.Len(); i++ {
 				if aggregationBits.BitAt(i) {
-					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
+					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKeyLowMem(attestation.Data.Slot, uint16(attestation.Data.Index), uint32(i))]
 					if !found { // This should never happen!
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
 						return nil, fmt.Errorf("validator not found in attestation assignments")
 					}
+					if validator_index >= size32 {
+						return nil, errors.New("proposer index out of range")
+					}
+
 					validatorsData[validator_index].InclusionDelaySum = sql.NullInt64{
 						Int64: int64(block.Data.Message.Slot - attestation.Data.Slot - 1),
 						Valid: true,
@@ -882,6 +925,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
 		validator_index := attestationReward.ValidatorIndex
+		if validator_index >= size {
+			return nil, errors.New("proposer index out of range")
+		}
 
 		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt64{Int64: attestationReward.Head, Valid: true}
 		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt64{Int64: attestationReward.Source, Valid: true}
