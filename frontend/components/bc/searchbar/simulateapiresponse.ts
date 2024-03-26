@@ -40,6 +40,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       type: 'contracts',
       hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D',
       str_value: 'Uniswap'
+    },
+    {
+      chain_id: 1,
+      type: 'contracts',
+      hash_value: '0x2b7290a54aD073bB3963DDEb538b630e8ff10aD7',
+      str_value: ''
     }
   )
   if (searchedIsPositiveInteger) {
@@ -191,6 +197,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         chain_id: 100,
         type: 'validators_by_withdrawal_credential',
         hash_value: '0x0100000000000000000000000c6bd499ef02a44031ffe8336f59c82d81333f2a'
+      },
+      {
+        chain_id: 100,
+        type: 'contracts',
+        hash_value: '0x06e523CD06A0cF68DaA6D8EB5ad672B5ADad0AD4',
+        str_value: ''
       }
     )
   } else {

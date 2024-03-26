@@ -1,6 +1,7 @@
 import { ChainIDs } from '~/types/networks'
 
 export type SearchBarStyle = 'discreet' | 'gaudy' | 'embedded'
+export enum SearchBarPurpose { General, Accounts, Validators }
 
 export enum Category {
   Tokens = 'tokens',
@@ -51,18 +52,6 @@ export enum ResultType {
   ValidatorsByName = 'validators_by_name'
 }
 
-interface CategoryInfoFields {
-  filterLabel : string
-}
-
-export const CategoryInfo: Record<Category, CategoryInfoFields> = {
-  [Category.Tokens]: { filterLabel: 'Tokens' },
-  [Category.NFTs]: { filterLabel: 'NFTs' },
-  [Category.Protocol]: { filterLabel: 'Protocol' },
-  [Category.Addresses]: { filterLabel: 'Addresses' },
-  [Category.Validators]: { filterLabel: 'Validators' }
-}
-
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements
 // and the function returns one Matching element.
 export interface Matching {
@@ -106,6 +95,37 @@ export interface OrganizedResults {
   }[]
 }
 
+interface CategoryInfoFields {
+  filterLabel : string,
+  resultRowLabel : string
+}
+
+export const CategoryInfo: Record<Category, CategoryInfoFields> = {
+  [Category.Tokens]: { filterLabel: 'Tokens', resultRowLabel: 'Tokens (ERC-20)' },
+  [Category.NFTs]: { filterLabel: 'NFTs', resultRowLabel: 'NFTs' },
+  [Category.Protocol]: { filterLabel: 'Protocol', resultRowLabel: 'Protocol' },
+  [Category.Addresses]: { filterLabel: 'Addresses', resultRowLabel: 'Addresses' },
+  [Category.Validators]: { filterLabel: 'Validators', resultRowLabel: 'Validators' }
+}
+
+interface SubCategoryInfoFields {
+  title : string
+}
+
+export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
+  [SubCategory.Tokens]: { title: 'Token' },
+  [SubCategory.NFTs]: { title: 'NFT' },
+  [SubCategory.Epochs]: { title: 'Epoch' },
+  [SubCategory.SlotsAndBlocks]: { title: 'Slot/Block' },
+  [SubCategory.Transactions]: { title: 'Transaction' },
+  [SubCategory.Batches]: { title: 'Batch' },
+  [SubCategory.Contracts]: { title: 'Contract' },
+  [SubCategory.Accounts]: { title: 'Account' },
+  [SubCategory.EnsSystem]: { title: 'ENS system' },
+  [SubCategory.Graffiti]: { title: 'Graffiti' },
+  [SubCategory.Validators]: { title: 'Validator' }
+}
+
 interface TypeInfoFields {
   title: string,
   category: Category,
@@ -115,7 +135,7 @@ interface TypeInfoFields {
   countable: boolean, // whether it is possible for the API to find several identical results and count them
   fieldsInSearchAheadResult : (keyof SearchAheadSingleResult)[], // fields to read from the SearchAheadSingleResult object returned by the API. The order of these field-names sets the order of the information displayed in the dropdown (in 'gaudy' style on a large screen)
   queryParamField : keyof SearchAheadSingleResult, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end
-  dropdownOutput : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. The undefined elements will be filled during execution with the fields given just above here (fieldsInSearchAheadResult). The first element often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
+  dropdownOutput : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. As instructed by isOutputAnAPIresponse() (see further down below), undefined elements will be filled during execution with the fields given just above here (fieldsInSearchAheadResult). The first element (0) often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -383,6 +403,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     queryParamField: 'str_value',
     dropdownOutput: ['Validator', 'Named', undefined]
   }
+}
+
+export function isOutputAnAPIresponse (type : ResultType, dropdownOutputIndex : number) : boolean {
+  return TypeInfo[type].dropdownOutput[dropdownOutputIndex] === undefined
 }
 
 export function getListOfCategories () : Category[] {

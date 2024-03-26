@@ -63,7 +63,7 @@ watch(() => { return defaultSlot }, () => { // reacts to changes of slot content
 let lastObservedFrameWidth : number
 const resizingObserver = new ResizeObserver(() => { // will react to changes of component width
   // the first condition below is required because ResizeObserver.observe() fires unconditionally when called
-  // the second condition is a workaround to a paranormal phenomenon with some rendering engines: identical widths often indicates that the frame has overflowed the parent (should not happen in theory but does)
+  // the second condition detects that the frame started to touch the content span, because the component is beeing sized-down by the user (then the frame would stop schrinking due to the content blocking it)
   if (getSpanWidth(frameSpan) !== lastObservedFrameWidth || getSpanWidth(contentSpan) === getSpanWidth(frameSpan)) {
     updateShortenedText()
   }
@@ -108,7 +108,7 @@ function searchForIdealLength (originalText : string) {
     while (minLength < maxLength - 1) {
       let averageCharWidthBetweenCurrentAndBound : number
 
-      if (getSpanWidth(contentSpan) >= targetWidth) { // the = is important, because identical widths often means that the frame is slightly overflowing the parent (this should not happen in theory but I noticed some paranormal phenomena with rendering engines)
+      if (getSpanWidth(contentSpan) >= targetWidth) { // the = is important, because identical widths often means that the frame is slightly overflowing the parent (this happens when the component is sized down by the user)
         maxLength = getSpanText().length
         maxWidth = getSpanWidth(contentSpan)
         averageCharWidthBetweenCurrentAndBound = (getSpanWidth(contentSpan) - minWidth) / (getSpanText().length - minLength)

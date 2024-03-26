@@ -2,10 +2,13 @@
 import { ChainIDs } from '~/types/networks'
 import {
   CategoryInfo,
+  SubCategoryInfo,
   TypeInfo,
   ResultType,
+  isOutputAnAPIresponse,
   type ResultSuggestion,
-  type SearchBarStyle
+  type SearchBarStyle,
+  SearchBarPurpose
 } from '~/types/searchbar'
 
 const emit = defineEmits(['row-selected'])
@@ -13,19 +16,29 @@ const props = defineProps<{
     suggestion: ResultSuggestion,
     chainId: ChainIDs,
     resultType: ResultType,
-    barStyle: SearchBarStyle
+    barStyle: SearchBarStyle,
+    barPurpose: SearchBarPurpose
 }>()
 
 function formatCell0 () : string {
-  if (props.suggestion.count >= 2) {
-    return String(props.suggestion.count) + ' ' + props.suggestion.output[0] + 's'
+  let label : string
+
+  if (props.barPurpose === SearchBarPurpose.Accounts) {
+    label = SubCategoryInfo[TypeInfo[props.resultType].subCategory].title
+  } else {
+    label = props.suggestion.output[0]
   }
-  return props.suggestion.output[0]
+
+  if (props.suggestion.count >= 2) {
+    return String(props.suggestion.count) + ' ' + label + 's'
+  }
+
+  return label
 }
 
 function formatCell1 () : string {
-  if (TypeInfo[props.resultType].dropdownOutput[1] === undefined) {
-    // if this cell's data comes from the API, we might need to tell the user what data it is
+  if (isOutputAnAPIresponse(props.resultType, 1)) {
+    // we tell the user what is the data that they see (ex: "Index" for a validator index)
     switch (props.resultType) {
       case ResultType.ValidatorsByIndex :
       case ResultType.ValidatorsByPubkey :
@@ -34,6 +47,16 @@ function formatCell1 () : string {
     }
   }
   return props.suggestion.output[1]
+}
+
+function formatCell2 () : string {
+  if (isOutputAnAPIresponse(props.resultType, 0)) {
+    if (props.resultType === ResultType.Contracts && props.suggestion.output[0] === TypeInfo[props.resultType].title) {
+      return props.suggestion.output[2]
+    }
+    return props.suggestion.output[0]
+  }
+  return props.suggestion.output[2]
 }
 </script>
 
@@ -54,13 +77,13 @@ function formatCell1 () : string {
     <div class="cell-0" :class="barStyle">
       {{ formatCell0() }}
     </div>
-    <div class="cell-1and2-common cell-1" :class="barStyle">
-      {{ formatCell1() }}
-    </div>
     <div class="cell-1and2-common cell-2" :class="barStyle">
       <BcSearchbarMiddleEllipsis :width-is-fixed="true">
-        {{ suggestion.output[2] }}
+        {{ formatCell2() }}
       </BcSearchbarMiddleEllipsis>
+    </div>
+    <div v-if="suggestion.output[1] !== ''" class="cell-1and2-common cell-1" :class="barStyle">
+      {{ formatCell1() }}
     </div>
   </div>
 
@@ -85,15 +108,12 @@ function formatCell1 () : string {
         <BcSearchbarMiddleEllipsis>{{ suggestion.output[1] }}</BcSearchbarMiddleEllipsis>
       </span>
       <span v-if="suggestion.output[2] !== ''" class="cell-2" :class="[barStyle,(suggestion.output[1] !== '')?'greyish':'']">
-        <BcSearchbarMiddleEllipsis v-if="TypeInfo[resultType].dropdownOutput[1] === undefined" :width-is-fixed="true">
-          ({{ suggestion.output[2] }})
-        </BcSearchbarMiddleEllipsis>
-        <BcSearchbarMiddleEllipsis v-else :width-is-fixed="true">{{ suggestion.output[2] }}</BcSearchbarMiddleEllipsis>
+        <BcSearchbarMiddleEllipsis :width-is-fixed="true">{{ suggestion.output[2] }}</BcSearchbarMiddleEllipsis>
       </span>
     </div>
     <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
-        {{ CategoryInfo[TypeInfo[resultType].category].filterLabel }}
+        {{ CategoryInfo[TypeInfo[resultType].category].resultRowLabel }}
       </span>
     </div>
   </div>
@@ -192,7 +212,7 @@ function formatCell1 () : string {
     padding-left: 4px;
   }
   @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px auto 90px;
+    grid-template-columns: 40px auto 100px;
   }
   padding-right: 4px;
 
@@ -223,7 +243,7 @@ function formatCell1 () : string {
       grid-column: 3;
       color: var(--searchbar-text-detail-gaudy);
     }
-    width: 90px;
+    width: 100px;
   }
 
   .cell-2 {
