@@ -10,18 +10,24 @@ import {
 import { warn } from 'vue'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import type { DashboardKey } from '~/types/dashboard'
 
 warn('DIECE: A FRESH NEW DASHBOARD !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
 const route = useRoute()
 
-const key = computed(() => {
+const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
     return route.params.id.join(',')
   }
   return route.params.id
 })
 provide('dashboardKey', key)
+
+// NOTE: this is the "owner" of the store and sets up its reactivity
+const { refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
+await useAsyncData('validator_overview', () => refreshValidatorDashboardOverview(key.value), { watch: [key] })
 
 const manageValidatorsModalVisisble = ref(false)
 

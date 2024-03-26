@@ -13,7 +13,7 @@ const { converter } = useValue()
 const tPath = 'dashboard.validator.overview.'
 
 const { validatorDashboardOverview } = useValidatorDashboardOverviewStore()
-warn('DIECE: Validator Overview', validatorDashboardOverview)
+warn('DIECE: Validator Overview', validatorDashboardOverview.value)
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
