@@ -17,8 +17,9 @@ type VDBOverviewValidators struct {
 }
 
 type VDBOverviewGroup struct {
-	Id   uint64 `db:"id" json:"id"`
-	Name string `db:"name" json:"name"`
+	Id    uint64 `json:"id"`
+	Name  string `json:"name"`
+	Count uint64 `json:"count"`
 }
 
 type VDBOverviewData struct {
@@ -233,6 +234,11 @@ type VDBPostReturnData struct {
 	Name      string    `db:"name" json:"name"`
 	Network   uint64    `db:"network" json:"network"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}
+
+type VDBPostCreateGroupData struct {
+	Id   uint64 `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 type VDBPostValidatorsData struct {

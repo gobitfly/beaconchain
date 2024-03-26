@@ -68,8 +68,8 @@ func (d *DummyService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) erro
 	return nil
 }
 
-func (d *DummyService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
-	r := t.VDBOverviewGroup{}
+func (d *DummyService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
+	r := t.VDBPostCreateGroupData{}
 	err := commonFakeData(&r)
 	return &r, err
 }

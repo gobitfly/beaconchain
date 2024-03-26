@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
@@ -10,10 +11,10 @@ const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 
 const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
-const list = computed(() => {
+const list = computed<VDBOverviewGroup[]>(() => {
   const groups = validatorDashboardOverview.value?.groups ?? []
   if (props.includeAll) {
-    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '' }].concat(groups)
+    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(groups)
   }
   return groups
 })
