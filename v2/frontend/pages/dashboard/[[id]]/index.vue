@@ -20,7 +20,7 @@ const key = computed<DashboardKey>(() => {
   }
   return route.params.id
 })
-provide('dashboardKey', key)
+// TODO: This is the "owner" of the dashboard key, it should provide it
 
 // NOTE: this is the "owner" of the store and sets up its reactivity
 const { refreshOverview: refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
