@@ -7,13 +7,10 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
-import { warn } from 'vue'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { DashboardKey } from '~/types/dashboard'
-
-warn('DIECE: A FRESH NEW DASHBOARD !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
 const route = useRoute()
 
@@ -26,11 +23,8 @@ const key = computed<DashboardKey>(() => {
 provide('dashboardKey', key)
 
 // NOTE: this is the "owner" of the store and sets up its reactivity
-warn('DIECE: Dashboard Index: Setting up validator overview store')
 const { refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
-warn('DIECE: Dashboard Index: queueing data')
 await useAsyncData('validator_overview', () => refreshValidatorDashboardOverview(key.value), { watch: [key] })
-warn('DIECE: Dashboard Index: validator overview store set up')
 
 const manageValidatorsModalVisisble = ref(false)
 
