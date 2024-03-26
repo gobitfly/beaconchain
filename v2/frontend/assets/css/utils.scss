@@ -35,3 +35,8 @@
 .negative{
   color: var(--negative-color);
 }
+.comma{
+  &:before{
+    content: ',';
+  }
+}

@@ -7,10 +7,13 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
+import { uniq } from 'lodash-es'
+import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow } from '~/types/api/validator_dashboard'
+import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
+import type { NumberOrString } from '~/types/value'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -22,9 +25,13 @@ const props = defineProps<Props>()
 
 const { width } = useWindowSize()
 
+const dialog = useDialog()
+
 const visible = defineModel<boolean>()
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const overviewStore = useValidatorDashboardOverviewStore()
+const { getOverview } = overviewStore
+const { overview } = storeToRefs(overviewStore)
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
 
@@ -45,18 +52,64 @@ const size = computed(() => {
   }
 })
 
+const resetData = () => {
+  data.value = undefined
+  selected.value = []
+  selectedGroup.value = -1
+  cursor.value = undefined
+}
+
 const onClose = () => {
+  resetData()
   visible.value = false
 }
 
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]):NumberOrString[] => {
+  return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
+}
+
+const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
+  if (!validators?.length) {
+    warn('no validators selected to change group')
+    return
+  }
+  const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
+
+  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
+
+  loadData()
+  getOverview(props.dashboardKey)
+}
+
+const removeValidators = async (validators?: NumberOrString[]) => {
+  if (!validators?.length) {
+    warn('no validators selected to change group')
+    return
+  }
+
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
+
+  loadData()
+  getOverview(props.dashboardKey)
+}
+
 const addValidator = () => {
-  // TODO call API to add Validator
-  warn(`Add validator ${selectedValidator.value} for ${selectedGroup.value}`)
+  changeGroup([selectedValidator.value], selectedGroup.value)
 }
 
 const editSelected = () => {
-  // TODO open modal to edit multiple
-  warn(`Edit selected validators ${selected.value?.length}`)
+  dialog.open(DashboardGroupSelectionDialog, {
+    onClose: (response) => {
+      if (response?.data !== undefined) {
+        changeGroup(mapIndexOrPubKey(selected.value), response?.data)
+      }
+    },
+    data: {
+      groupId: selected.value?.[0]?.group_id ?? undefined,
+      selectedValidators: selected.value?.length,
+      totalValidators: total?.value
+    }
+  })
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -81,28 +134,46 @@ watch(selectedGroup, (value) => {
   setQuery({ ...query?.value, group_id: value })
 })
 
-watch(() => [props.dashboardKey, visible.value, query.value], async () => {
-  if (props.dashboardKey && visible.value) {
+const loadData = async () => {
+  if (props.dashboardKey) {
     data.value = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
     selected.value = []
+  }
+}
+
+watch(() => [props.dashboardKey, visible.value, query.value], () => {
+  if (visible.value) {
+    loadData()
   }
 }, { immediate: true })
 
 const switchValidatorGroup = (row: VDBManageValidatorsTableRow, group: number) => {
-  // TODO: swtich group for row
-  // If multiple rows are selected switch group for all rows (that do not belog to the selected group)
-  alert(`switchGroup ${group} for ${row.index}`)
+  changeGroup(mapIndexOrPubKey([row].concat(selected.value ?? [])), group)
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {
-  // TODO: display confirm modal if user really wants to remove validator.
-  // If multiple are selected ask if he wnats to remove all selected
-  alert(`remove val ${row.index}`)
+  const list = mapIndexOrPubKey([row].concat(selected.value ?? []))
+  if (!list?.length) {
+    warn('no validator to remove')
+  }
+
+  dialog.open(BcDialogConfirm, {
+    props: {
+      header: $t('dashboard.validator.management.remove_title')
+    },
+    onClose: response => response?.data && removeValidators(list),
+    data: {
+      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
+    }
+  })
 }
 
 const total = computed(() => addUpValues(overview.value?.validators))
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= total.value)
+// TODO: get this value from the backend based on the logged in user
+const MaxValidatorsPerDashboard = 1000
+
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxValidatorsPerDashboard)
 
 </script>
 
@@ -111,9 +182,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
     v-model="visible"
     :header="$t('dashboard.validator.management.title')"
     class="validator-managment-modal-container"
+    @update:visible="(visible: boolean)=>!visible && resetData()"
   >
     <template v-if="!size.showWithdrawalCredentials" #header>
-      <span class="hdden-title" />
+      <span />
     </template>
     <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>
@@ -124,8 +196,8 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
         <div class="add-row">
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: replace input once Searchbar is finished -->
-          <InputText v-model="selectedValidator" class="search-input" />
-          <Button class="p-button-icon-only" style="display: inline;" @click="addValidator">
+          <InputText v-model="selectedValidator" class="search-input" placeholder="Placeholder input (will be replaced once the searchbar is finished)" />
+          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator" @click="addValidator">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
           <!-- end of temp -->
@@ -136,7 +208,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
           <BcTable
             v-model:selection="selected"
             :data="data"
-            data-key="group_id"
+            data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"
             class="management-table"
@@ -203,9 +275,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
             </Column>
             <Column field="action">
               <template #header>
-                <Button v-show="selected?.length" class="edit-button">
+                <Button v-show="selected?.length" class="edit-button" @click.stop.prevent="editSelected()">
                   <span class="edit-label">{{ $t('common.edit') }}</span>
-                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" @click.stop.prevent="editSelected()" />
+                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" />
                 </Button>
               </template>
               <template #body="slotProps">
@@ -246,10 +318,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
     </BcTableControl>
     <template #footer>
       <div class="footer">
-        <div class="left">
-          <!-- TODO: Create a component to handle the 'upgrade to premium' account logic -->
-          <div v-if="total" class="labels" :class="{premiumLimit}">
-            <span>{{ data?.paging?.total_count ?? 0 }}/{{ total }}</span>
+        <div v-if="MaxValidatorsPerDashboard" class="left">
+          <div class="labels" :class="{premiumLimit}">
+            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="MaxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />
@@ -280,6 +351,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= to
 :global(.validator-managment-modal-container .bc-table-header) {
   height: unset;
   padding: var(--padding) 0;
+  @include fonts.subtitle_text;
 }
 
 :global(.validator-managment-modal-container .bc-table-header .side:first-child) {
