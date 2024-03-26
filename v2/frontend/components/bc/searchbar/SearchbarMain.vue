@@ -605,16 +605,17 @@ function informationIfHiddenResults () : string {
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
             <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <BcSearchbarSuggestionRow
-                v-for="(suggestion, i) of typ.suggestion"
-                :key="i"
-                :suggestion="suggestion"
-                :chain-id="network.chainId"
-                :result-type="typ.type"
-                :bar-style="barStyle"
-                :bar-purpose="barPurpose"
-                @row-selected="userClickedSuggestion"
-              />
+              <div v-for="(suggestion, i) of typ.suggestion" :key="i" class="suggestionrow-container" :class="barStyle">
+                <BcSearchbarSuggestionRow
+                  :suggestion="suggestion"
+                  :chain-id="network.chainId"
+                  :result-type="typ.type"
+                  :bar-style="barStyle"
+                  :bar-purpose="barPurpose"
+                  @row-selected="userClickedSuggestion"
+                />
+                <div class="separation-between-suggestions" :class="barStyle" />
+              </div>
             </div>
           </div>
           <div v-if="results.organized.howManyResultsIn == 0" class="info center">
@@ -827,10 +828,29 @@ function informationIfHiddenResults () : string {
       display: flex;
       flex-direction: column;
       right: 0px;
+
       .type-container {
         display: flex;
         flex-direction: column;
         right: 0px;
+
+        .suggestionrow-container {
+          width: 100%;
+
+          .separation-between-suggestions {
+            left: 11px;
+            right: 11px;
+            height: 1px;
+            display: none;
+
+            &.embedded {
+              @media (max-width: 600px) { // mobile
+                display: block;
+              }
+              background-color: var(--input-border-color);
+            }
+          }
+        }
       }
     }
 
