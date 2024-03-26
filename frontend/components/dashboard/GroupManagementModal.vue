@@ -78,8 +78,12 @@ const onClose = () => {
 }
 
 const addGroup = async () => {
+  if (!newGroupName.value?.length) {
+    return
+  }
   await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: props.dashboardKey })
   await getOverview(props.dashboardKey)
+  newGroupName.value = ''
 }
 
 const editGroup = (row: VDBOverviewGroup, newName?: string) => {
@@ -136,9 +140,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     v-model="visible"
     :header="$t('dashboard.validator.group_management.title')"
     class="validator-group-managment-modal-container"
+    @update:visible="(visible: boolean)=>!visible && resetData()"
   >
     <template v-if="!size.showSubTitle" #header>
-      <span class="hdden-title" />
+      <span />
     </template>
     <BcTableControl
       :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')"
@@ -155,7 +160,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             v-model="newGroupName"
             class="search-input"
             :disabled="premiumLimit"
+            maxlength="20"
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
+            @keypress.enter="addGroup"
           />
           <Button style="display: inline;" :disabled="!newGroupName.length || premiumLimit" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
@@ -173,7 +180,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="name" :sortable="true" :header="$t('dashboard.validator.group_management.col.name')">
+            <Column field="name" class="edit-group" :sortable="true" :header="$t('dashboard.validator.group_management.col.name')">
               <template #body="slotProps">
                 <!-- TODO: wait for the backend to implement group renaming the activate this input and finish the logic -->
                 <BcInputLabel
@@ -212,7 +219,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     <template #footer>
       <div class="footer">
         <div class="left">
-          <div v-if="MaxGroupsPerDashboard" class="labels" :class="premiumLimit">
+          <div v-if="MaxGroupsPerDashboard" class="labels" :class="{premiumLimit}">
             <span>
               <BcFormatNumber :value="data.paging.total_count" default="0" />/
               <BcFormatNumber :value="MaxGroupsPerDashboard" />
@@ -251,6 +258,11 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 
 :global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
+}
+
+:global(.validator-group-managment-modal-container .edit-group ){
+  max-width: 201px;
+  width: 201px;
 }
 
 .edit-group {
@@ -336,7 +348,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 }
 
 .action-col {
-  width: 94px;
+  width: 100%;
   display: flex;
   justify-content: flex-end;
 }
