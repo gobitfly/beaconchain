@@ -26,8 +26,11 @@ const key = computed<DashboardKey>(() => {
 provide('dashboardKey', key)
 
 // NOTE: this is the "owner" of the store and sets up its reactivity
+warn('DIECE: Dashboard Index: Setting up validator overview store')
 const { refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
+warn('DIECE: Dashboard Index: queueing data')
 await useAsyncData('validator_overview', () => refreshValidatorDashboardOverview(key.value), { watch: [key] })
+warn('DIECE: Dashboard Index: validator overview store set up')
 
 const manageValidatorsModalVisisble = ref(false)
 
