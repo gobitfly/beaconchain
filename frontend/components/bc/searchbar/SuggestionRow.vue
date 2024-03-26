@@ -20,13 +20,13 @@ const props = defineProps<{
     barPurpose: SearchBarPurpose
 }>()
 
-function formatCell0 () : string {
+function formatEmbeddedNameCell () : string {
   let label : string
 
   if (props.barPurpose === SearchBarPurpose.Accounts) {
     label = SubCategoryInfo[TypeInfo[props.resultType].subCategory].title
   } else {
-    label = props.suggestion.output[0]
+    label = props.suggestion.output.name
   }
 
   if (props.suggestion.count >= 2) {
@@ -36,27 +36,24 @@ function formatCell0 () : string {
   return label
 }
 
-function formatCell1 () : string {
-  if (isOutputAnAPIresponse(props.resultType, 1)) {
+function formatEmbeddedDescriptionCell () : string {
+  if (isOutputAnAPIresponse(props.resultType, 'description')) {
     // we tell the user what is the data that they see (ex: "Index" for a validator index)
     switch (props.resultType) {
       case ResultType.ValidatorsByIndex :
       case ResultType.ValidatorsByPubkey :
-        return 'Index ' + props.suggestion.output[1]
+        return 'Index ' + props.suggestion.output.description
       // more cases might arise in the future
     }
   }
-  return props.suggestion.output[1]
+  return props.suggestion.output.description
 }
 
-function formatCell2 () : string {
-  if (isOutputAnAPIresponse(props.resultType, 0)) {
-    if (props.resultType === ResultType.Contracts && props.suggestion.output[0] === TypeInfo[props.resultType].title) {
-      return props.suggestion.output[2]
-    }
-    return props.suggestion.output[0]
+function formatEmbeddedLowleveldataCell () : string {
+  if (props.suggestion.nameWasUnknown || !isOutputAnAPIresponse(props.resultType, 'name')) {
+    return props.suggestion.output.lowLevelData
   }
-  return props.suggestion.output[2]
+  return props.suggestion.output.name
 }
 </script>
 
@@ -74,16 +71,16 @@ function formatCell2 () : string {
     <div v-else class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
     </div>
-    <div class="cell-0" :class="barStyle">
-      {{ formatCell0() }}
+    <div class="cell-name" :class="barStyle">
+      {{ formatEmbeddedNameCell() }}
     </div>
-    <div class="cell-1and2-common cell-2" :class="barStyle">
+    <div class="cell-blockchaininfo-common cell-bi-lowleveldata" :class="barStyle">
       <BcSearchbarMiddleEllipsis :width-is-fixed="true">
-        {{ formatCell2() }}
+        {{ formatEmbeddedLowleveldataCell() }}
       </BcSearchbarMiddleEllipsis>
     </div>
-    <div v-if="suggestion.output[1] !== ''" class="cell-1and2-common cell-1" :class="barStyle">
-      {{ formatCell1() }}
+    <div v-if="suggestion.output.description !== ''" class="cell-blockchaininfo-common cell-bi-description" :class="barStyle">
+      {{ formatEmbeddedDescriptionCell() }}
     </div>
   </div>
 
@@ -100,20 +97,20 @@ function formatCell2 () : string {
     <div v-else class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
     </div>
-    <div class="cell-0" :class="barStyle">
-      <BcSearchbarMiddleEllipsis>{{ suggestion.output[0] }}</BcSearchbarMiddleEllipsis>
+    <div class="cell-name" :class="barStyle">
+      <BcSearchbarMiddleEllipsis>{{ suggestion.output.name }}</BcSearchbarMiddleEllipsis>
     </div>
-    <div class="cell-1and2" :class="barStyle">
-      <span v-if="suggestion.output[1] !== ''" class="cell-1" :class="barStyle">
-        <BcSearchbarMiddleEllipsis>{{ suggestion.output[1] }}</BcSearchbarMiddleEllipsis>
+    <div class="cell-blockchaininfo" :class="barStyle">
+      <span v-if="suggestion.output.description !== ''" class="cell-bi-description" :class="barStyle">
+        <BcSearchbarMiddleEllipsis>{{ suggestion.output.description }}</BcSearchbarMiddleEllipsis>
       </span>
-      <span v-if="suggestion.output[2] !== ''" class="cell-2" :class="[barStyle,(suggestion.output[1] !== '')?'greyish':'']">
-        <BcSearchbarMiddleEllipsis :width-is-fixed="true">{{ suggestion.output[2] }}</BcSearchbarMiddleEllipsis>
+      <span v-if="suggestion.output.lowLevelData !== ''" class="cell-bi-lowleveldata" :class="[barStyle,(suggestion.output.description !== '')?'greyish':'']">
+        <BcSearchbarMiddleEllipsis :width-is-fixed="true">{{ suggestion.output.lowLevelData }}</BcSearchbarMiddleEllipsis>
       </span>
     </div>
     <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
-        {{ CategoryInfo[TypeInfo[resultType].category].resultRowLabel }}
+        {{ CategoryInfo[TypeInfo[resultType].category].title }}
       </span>
     </div>
   </div>
@@ -129,7 +126,10 @@ function formatCell2 () : string {
   cursor: pointer;
   display: grid;
   min-width: 0;
-  right: 0px;
+  margin-left: 4px;
+  padding-left: 4px;
+  margin-right: 4px;
+  padding-right: 4px;
   padding-top: 7px;
   padding-bottom: 7px;
   border-radius: var(--border-radius);
@@ -192,15 +192,13 @@ function formatCell2 () : string {
     }
   }
 
-  .cell-0 {
+  .cell-name {
     grid-column: 2;
     grid-row: 1;
     display: inline-block;
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
-    margin-right: 14px;
-    left: 0px;
   }
 }
 
@@ -209,14 +207,12 @@ function formatCell2 () : string {
 .row-embedded {
   @media (min-width: 600px) { // large screen
     grid-template-columns: 40px 106px auto min-content;
-    padding-left: 4px;
   }
   @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px auto 100px;
+    grid-template-columns: 40px auto min-content;
   }
-  padding-right: 4px;
 
-  .cell-0 {
+  .cell-name {
     @media (min-width: 600px) { // large screen
       font-weight: var(--roboto-medium);
     }
@@ -225,17 +221,17 @@ function formatCell2 () : string {
     }
   }
 
-  .cell-1and2-common {
+  .cell-blockchaininfo-common {
     display: flex;
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
     white-space: nowrap;
     grid-row: 1;
-    justify-content: right;
   }
 
-  .cell-1 {
+  .cell-bi-description {
+    position: relative;
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }
@@ -244,9 +240,12 @@ function formatCell2 () : string {
       color: var(--searchbar-text-detail-gaudy);
     }
     width: 100px;
+    margin-left: auto;
+    justify-content: right;
   }
 
-  .cell-2 {
+  .cell-bi-lowleveldata {
+    position: relative;
     @media (min-width: 600px) { // large screen
       grid-row: 1;
       grid-column: 3;
@@ -266,23 +265,21 @@ function formatCell2 () : string {
 .row-gaudyordiscreet {
   @media (min-width: 600px) { // large screen
     &.gaudy {
-      grid-template-columns: 40px 106px auto min-content;
-      padding-left: 4px;
-      padding-right: 4px;
+      grid-template-columns: 40px 106px auto 114px;
     }
     &.discreet {
-      grid-template-columns: 40px 106px auto;
+      grid-template-columns: 40px 114px auto;
     }
   }
   @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px 106px auto;
+    grid-template-columns: 40px 114px auto;
   }
 
-  .cell-0 {
+  .cell-name {
     font-weight: var(--roboto-medium);
   }
 
-  .cell-1and2 {
+  .cell-blockchaininfo {
     grid-column: 3;
     grid-row: 1;
     display: flex;
@@ -297,11 +294,10 @@ function formatCell2 () : string {
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
-    left: 0px;
     font-weight: var(--roboto-medium);
     white-space: nowrap;
 
-    .cell-1 {
+    .cell-bi-description {
       display: flex;
       max-width: 100%;
       @media (min-width: 600px) { // large screen
@@ -313,7 +309,7 @@ function formatCell2 () : string {
       margin-right: 0.8ch;
     }
 
-    .cell-2 {
+    .cell-bi-lowleveldata {
       display: flex;
       position: relative;
       flex-grow: 1;
@@ -328,14 +324,14 @@ function formatCell2 () : string {
 
   .cell-category {
     display: block;
+    position: relative;
     @media (min-width: 600px) { // large screen
       &.gaudy {
         grid-column: 4;
         grid-row: 1;
         margin-top: auto;
         margin-bottom: auto;
-        margin-right: 2px;
-        padding-left: 8px;
+        margin-left: auto;
       }
       &.discreet {
         grid-column: 2;
@@ -347,6 +343,8 @@ function formatCell2 () : string {
       grid-row: 2;
     }
     .category-label {
+      display: inline-block;
+      position: relative;
       &.discreet {
         color: var(--searchbar-text-detail-discreet);
       }

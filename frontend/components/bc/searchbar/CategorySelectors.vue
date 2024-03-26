@@ -88,7 +88,7 @@ function tellWhatFilterDoes (category : Category) : string {
     padding-left: 8px;
     padding-right: 8px;
     text-align: center;
-    margin-left: 6px;
+    margin-right: 6px;
     transition: 0.2s;
 
     &.discreet {

@@ -20,7 +20,7 @@ export enum SubCategory {
   Batches,
   Contracts,
   Accounts,
-  EnsSystem,
+  EnsOverview,
   Graffiti,
   Validators
 }
@@ -79,8 +79,27 @@ export interface SearchAheadResult {
   error?: string
 }
 
+export enum PredefinedFilling {
+  CategoryTitle,
+  SubCategoryTitle,
+  TypeTitle
+}
+
+export type DropdownOutput = {
+  name : string,
+  description : string,
+  lowLevelData : string
+}
+
+type DropdownOutputBeforeFilling = {
+  name : undefined | string | PredefinedFilling,
+  description : undefined | string | PredefinedFilling,
+  lowLevelData : undefined | string | PredefinedFilling
+}
+
 export interface ResultSuggestion {
-  output: string[],
+  output: DropdownOutput,
+  nameWasUnknown : boolean,
   queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
   closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
   count : number // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
@@ -96,16 +115,16 @@ export interface OrganizedResults {
 }
 
 interface CategoryInfoFields {
-  filterLabel : string,
-  resultRowLabel : string
+  title : string
+  filterLabel : string
 }
 
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
-  [Category.Tokens]: { filterLabel: 'Tokens', resultRowLabel: 'Tokens (ERC-20)' },
-  [Category.NFTs]: { filterLabel: 'NFTs', resultRowLabel: 'NFTs' },
-  [Category.Protocol]: { filterLabel: 'Protocol', resultRowLabel: 'Protocol' },
-  [Category.Addresses]: { filterLabel: 'Addresses', resultRowLabel: 'Addresses' },
-  [Category.Validators]: { filterLabel: 'Validators', resultRowLabel: 'Validators' }
+  [Category.Tokens]: { title: 'ERC-20 Tokens', filterLabel: 'Tokens' },
+  [Category.NFTs]: { title: 'NFTs', filterLabel: 'NFTs' },
+  [Category.Protocol]: { title: 'Protocol', filterLabel: 'Protocol' },
+  [Category.Addresses]: { title: 'Addresses', filterLabel: 'Addresses' },
+  [Category.Validators]: { title: 'Validators', filterLabel: 'Validators' }
 }
 
 interface SubCategoryInfoFields {
@@ -121,7 +140,7 @@ export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
   [SubCategory.Batches]: { title: 'Batch' },
   [SubCategory.Contracts]: { title: 'Contract' },
   [SubCategory.Accounts]: { title: 'Account' },
-  [SubCategory.EnsSystem]: { title: 'ENS system' },
+  [SubCategory.EnsOverview]: { title: 'ENS Overview' },
   [SubCategory.Graffiti]: { title: 'Graffiti' },
   [SubCategory.Validators]: { title: 'Validator' }
 }
@@ -133,9 +152,9 @@ interface TypeInfoFields {
   priority: number,
   belongsToAllNetworks: boolean,
   countable: boolean, // whether it is possible for the API to find several identical results and count them
-  fieldsInSearchAheadResult : (keyof SearchAheadSingleResult)[], // fields to read from the SearchAheadSingleResult object returned by the API. The order of these field-names sets the order of the information displayed in the dropdown (in 'gaudy' style on a large screen)
+  fieldsInSearchAheadResult : (keyof SearchAheadSingleResult)[], // fields to read from the SearchAheadSingleResult object returned by the API. The order of these field-names sets the order that we use to fill the undefined data of dropdownOutputBeforeFilling (see just below here)
   queryParamField : keyof SearchAheadSingleResult, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end
-  dropdownOutput : (string|undefined)[] // Information to show when a result of this type is suggested in the drop-down. As instructed by isOutputAnAPIresponse() (see further down below), undefined elements will be filled during execution with the fields given just above here (fieldsInSearchAheadResult). The first element (0) often names the type. If so, it can be set to '' statically, which will be replaced during execution with the content of field `title` above.
+  dropdownOutputBeforeFilling : DropdownOutputBeforeFilling // Information to show when a result of this type is suggested in the drop-down. As instructed by isOutputAnAPIresponse() (see further down below), undefined elements will be filled during execution from the fields named in fieldsInSearchAheadResult (see just above here).
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -146,9 +165,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 3,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and fill array `dropdownOutput` (see below) with this information in that order.
+    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and fill the undefined fields of ResultSuggestion.output` (see just below) with this information in that order.
     queryParamField: 'str_value', // This is the name of the field in SearchAheadSingleResult which identifies precisely a result when communicating with the back-end.
-    dropdownOutput: [undefined, '', undefined] // These `undefined`s will be replaced during execution with what is given above here, respectively str_value and hash_value in that order. So the first information displayed in the drop-down (in 'gaudy' style on a large screen) will be a string, the second info will be a hash. According to '', the last column of information will be left empty.
+    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined } // These `undefined`s will be replaced during execution with the data named in fieldsInSearchAheadResult (see just above), respectively str_value and hash_value in that order.
   },
   [ResultType.NFTs]: {
     title: 'ERC-721 & ERC-1155 token (NFT)',
@@ -159,7 +178,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
     queryParamField: 'str_value',
-    dropdownOutput: [undefined, '', undefined]
+    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined }
   },
   [ResultType.Epochs]: {
     title: 'Epoch',
@@ -170,7 +189,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value'],
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, '']
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
   },
   [ResultType.Slots]: {
     title: 'Slot',
@@ -181,7 +200,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'], // num_value is the slot number, hash_value is the state root if it is what the user typed otherwise it contains by default the block root
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.Blocks]: {
     title: 'Block',
@@ -192,7 +211,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'], // same as above
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.BlockRoots]: {
     title: 'Block root',
@@ -203,7 +222,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'],
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.StateRoots]: {
     title: 'State root',
@@ -214,7 +233,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'],
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.Transactions]: {
     title: 'Transaction',
@@ -225,10 +244,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['hash_value'],
     queryParamField: 'hash_value',
-    dropdownOutput: ['', '', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: '', lowLevelData: undefined }
   },
   [ResultType.TransactionBatches]: {
-    title: 'Transaction batch',
+    title: 'TX Batch',
     category: Category.Protocol,
     subCategory: SubCategory.Batches,
     priority: 14,
@@ -236,7 +255,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value'],
     queryParamField: 'num_value',
-    dropdownOutput: ['TX Batch', undefined, '']
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
   },
   [ResultType.StateBatches]: {
     title: 'State batch',
@@ -247,7 +266,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value'],
     queryParamField: 'num_value',
-    dropdownOutput: ['', undefined, '']
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
   },
   [ResultType.Contracts]: {
     title: 'Contract',
@@ -258,7 +277,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
     queryParamField: 'hash_value',
-    dropdownOutput: [undefined, '', undefined]
+    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined } // if the API gives '' for the first element (0), we will replace it with a generic name (the title of this type: "Contract")
   },
   [ResultType.Accounts]: {
     title: 'Account',
@@ -269,7 +288,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['hash_value'],
     queryParamField: 'hash_value',
-    dropdownOutput: ['', '', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: '', lowLevelData: undefined }
   },
   [ResultType.EnsAddresses]: {
     title: 'ENS address',
@@ -280,18 +299,18 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
     queryParamField: 'str_value',
-    dropdownOutput: [undefined, '', undefined]
+    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined }
   },
   [ResultType.EnsOverview]: {
     title: 'Overview of ENS domain',
     category: Category.Addresses,
-    subCategory: SubCategory.EnsSystem,
+    subCategory: SubCategory.EnsOverview,
     priority: 15,
     belongsToAllNetworks: true,
     countable: false,
     fieldsInSearchAheadResult: ['str_value', 'hash_value'], // same as above
     queryParamField: 'str_value',
-    dropdownOutput: ['ENS Overview', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.Graffiti]: {
     title: 'Graffito',
@@ -302,7 +321,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['str_value'],
     queryParamField: 'str_value',
-    dropdownOutput: ['', 'Blocks with', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: 'Blocks with', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByIndex]: {
     title: 'Validator by index',
@@ -313,7 +332,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
     queryParamField: 'num_value',
-    dropdownOutput: ['Validator', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.ValidatorsByPubkey]: {
     title: 'Validator by public key',
@@ -324,7 +343,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: false,
     fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
     queryParamField: 'hash_value',
-    dropdownOutput: ['Validator', undefined, undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
   },
   [ResultType.ValidatorsByDepositAddress]: {
     title: 'Validator by deposit address',
@@ -335,7 +354,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['hash_value'], // deposit address
     queryParamField: 'hash_value',
-    dropdownOutput: ['Validator', 'Deposited by', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Deposited by', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     title: 'Validator by ENS of the deposit address',
@@ -346,7 +365,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['str_value'], // ENS name
     queryParamField: 'str_value',
-    dropdownOutput: ['Validator', 'Deposited by', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Deposited by', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     title: 'Validator by withdrawal credential',
@@ -357,7 +376,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['hash_value'], // withdrawal credential
     queryParamField: 'hash_value',
-    dropdownOutput: ['Validator', 'Credential', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Credential', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',
@@ -368,7 +387,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['hash_value'], // withdrawal address
     queryParamField: 'hash_value',
-    dropdownOutput: ['Validator', 'Withdrawn to', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: 'Validator by ENS of the withdrawal address',
@@ -379,7 +398,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['str_value'], // ENS name
     queryParamField: 'str_value',
-    dropdownOutput: ['Validator', 'Withdrawn to', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByGraffiti]: {
     title: 'Validator by graffito',
@@ -390,7 +409,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['str_value'], // graffito
     queryParamField: 'str_value',
-    dropdownOutput: ['Validator', 'Block graffiti', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Block graffiti', lowLevelData: undefined }
   },
   [ResultType.ValidatorsByName]: {
     title: 'Validator by name',
@@ -401,12 +420,12 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countable: true,
     fieldsInSearchAheadResult: ['str_value'], // name that the owner recorded on beaconcha.in
     queryParamField: 'str_value',
-    dropdownOutput: ['Validator', 'Named', undefined]
+    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Named', lowLevelData: undefined }
   }
 }
 
-export function isOutputAnAPIresponse (type : ResultType, dropdownOutputIndex : number) : boolean {
-  return TypeInfo[type].dropdownOutput[dropdownOutputIndex] === undefined
+export function isOutputAnAPIresponse (type : ResultType, dropdownOutputField : keyof DropdownOutput) : boolean {
+  return TypeInfo[type].dropdownOutputBeforeFilling[dropdownOutputField] === undefined
 }
 
 export function getListOfCategories () : Category[] {

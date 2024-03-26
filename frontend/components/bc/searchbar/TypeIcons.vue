@@ -18,7 +18,7 @@ const subCategory = computed(() => TypeInfo[props.type].subCategory)
   <IconDatatypeBatchIcon v-else-if="subCategory === SubCategory.Batches" />
   <IconDatatypeContractIcon v-else-if="subCategory === SubCategory.Contracts" />
   <IconDatatypeAccountIcon v-else-if="subCategory === SubCategory.Accounts" />
-  <IconDatatypeEnsIcon v-else-if="subCategory === SubCategory.EnsSystem" />
+  <IconDatatypeEnsIcon v-else-if="subCategory === SubCategory.EnsOverview" />
   <IconDatatypeGraffitiIcon v-else-if="subCategory === SubCategory.Graffiti" />
   <IconDatatypeValidatorIcon v-else-if="subCategory === SubCategory.Validators" />
 </template>

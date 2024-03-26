@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { warn } from 'vue'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
   Category,
   ResultType,
+  PredefinedFilling,
+  type DropdownOutput,
+  CategoryInfo,
+  SubCategoryInfo,
   TypeInfo,
   getListOfResultTypes,
   type SearchAheadSingleResult,
@@ -67,6 +69,8 @@ const globalState = ref<GlobalState>({
 })
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
+
+const zindexCorrectionClass = computed(() => globalState.value.showDropDown ? 'dropdown-is-opened' : '')
 
 const userFilters = {
   networks: {} as Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
@@ -332,7 +336,7 @@ function filterAndOrganizeResults () {
 
     // getting organized information from the finding
     const toBeAdded = convertOneSearchAheadResultIntoResultSuggestion(finding)
-    if (toBeAdded.output.length === 0) {
+    if (!toBeAdded) {
       continue
     }
     // determining the network that the finding belongs to
@@ -389,21 +393,19 @@ function filterAndOrganizeResults () {
 
 // This function takes a single result element returned by the API and organizes it into an element
 // simpler to handle by the code of the search bar (not only for displaying).
-// If the result element from the API is somehow unexpected, then the function returns an empty array.
+// If the result element from the API is somehow unexpected, then the function returns an empty `output` field.
 // The fields that the function reads in the API response as well as the place they are displayed
 // in the drop-down are set in the object `TypeInfo` filled in types/searchbar.ts, by its properties
-// fieldsInSearchAheadResult (sets the fields to read and their order) and dropdownOutput (tells to fill
-// array `output` with that data).
-function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion {
-  const emptyResult : ResultSuggestion = { output: [], queryParam: '', closeness: NaN, count: 0 }
-
+// fieldsInSearchAheadResult (sets the fields to read and their order) and dropdownOutputBeforeFilling (tells
+// us to fill `output` with that data in that order).
+function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion | undefined {
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
-    return emptyResult
+    return undefined
   }
 
   const type = apiResponseElement.type as ResultType
-  const output = Array.from(TypeInfo[type].dropdownOutput)
+  const output = { ...TypeInfo[type].dropdownOutputBeforeFilling }
 
   // Filling the empty output elements of the drop down (some are already filled statically by TypeInfo[type].dropdownOutput)
   // We fill them by taking the API data in the order defined in TypeInfo[type].fieldsInSearchAheadResult
@@ -411,21 +413,40 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   for (const field of fieldsContainingData) {
     if (apiResponseElement[field] === undefined) {
       warn('The API returned a search-ahead result of type ', type, ' with a missing field: ', field)
-      return emptyResult
+      return undefined
     }
-    // Searching for the output element to fill with API data (this nested loop might look inefficient but an optimization would be an overkill (our two arrays are of size 3) growing the code without effect)
-    for (let i = 0; i < output.length; i++) {
-      if (output[i] === undefined) {
+    // Searching for the output element to fill with API data (this nested loop might look inefficient but an optimization would be an overkill (our two objects are of size 3) growing the code without effect)
+    for (const k in output) {
+      const key = k as keyof typeof output
+      if (output[key] === undefined) {
         // The output element to fill is found.
-        output[i] = String(apiResponseElement[field])
+        output[key] = String(apiResponseElement[field])
         break
       }
     }
   }
-  if (output[0] === '') {
-    // Defaulting to the name of the result type.
-    // This is useful for example with contracts, when the back-end does not know the name of a contract, the drop-down shows "Contract"
-    output[0] = TypeInfo[type].title
+  // filling the elements that must contain predefined strings
+  for (const k in output) {
+    const key = k as keyof typeof output
+    switch (output[key]) {
+      case PredefinedFilling.CategoryTitle :
+        output[key] = CategoryInfo[TypeInfo[type].category].title
+        break
+      case PredefinedFilling.SubCategoryTitle :
+        output[key] = SubCategoryInfo[TypeInfo[type].subCategory].title
+        break
+      case PredefinedFilling.TypeTitle :
+        output[key] = TypeInfo[type].title
+        break
+    }
+  }
+
+  // Defaulting the name to the result type if we obtained ''
+  // This is expected to happen in one case: when the back-end does not know the name of a contract, it returns ''
+  let nameWasUnknown = false
+  if (output.name === '') {
+    output.name = TypeInfo[type].title
+    nameWasUnknown = true
   }
 
   // retrieving the data that identifies this very result in the back-end (will be given to the callback function `@go`)
@@ -448,7 +469,7 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
     }
   }
 
-  return { output: output as string[], queryParam, closeness, count }
+  return { output: output as DropdownOutput, nameWasUnknown, queryParam, closeness, count }
 }
 
 // Calculates the Levenshtein distance between the parameter and the user input.
@@ -564,7 +585,7 @@ function informationIfHiddenResults () : string {
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, globalState.showDropDown?'dropdown-is-opened':'']">
+    <div class="whole-component" :class="[barStyle, zindexCorrectionClass]">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <InputText
           v-model="inputted"
@@ -575,14 +596,13 @@ function informationIfHiddenResults () : string {
           @keyup="(e) => {if (e.key === 'Enter') {userPressedSearchButtonOrEnter()} else {inputMightHaveChanged()}}"
           @focus="globalState.showDropDown = true"
         />
-        <span
+        <BcSearchbarButton
           class="searchbutton"
-          :class="barStyle"
+          :class="[barStyle, zindexCorrectionClass]"
+          :bar-style="barStyle"
+          :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
-        >
-          <FontAwesomeIcon v-if="barPurpose == SearchBarPurpose.General" :icon="faMagnifyingGlass" />
-          <FontAwesomeIcon v-else :icon="faPlus" />
-        </span>
+        />
       </div>
       <div v-if="globalState.showDropDown" ref="dropDown" class="drop-down" :class="barStyle">
         <div class="separation" :class="barStyle" />
@@ -676,14 +696,15 @@ function informationIfHiddenResults () : string {
   }
 }
 
+.dropdown-is-opened {
+  z-index: 256;
+}
+
 .whole-component {
   @include main.container;
   position: absolute;
   left: 0px;
   right: 0px;
-  &.dropdown-is-opened {
-    z-index: 256;
-  }
 
   &.discreet {
     background-color: var(--searchbar-background-discreet);
@@ -723,71 +744,39 @@ function informationIfHiddenResults () : string {
       padding-right: 41px;
     }
   }
+
   .searchbutton {
-    display: flex;
     position: absolute;
-    justify-content: center;
-    align-items: center;
-    border-radius: var(--border-radius);
-    cursor: pointer;
     &.embedded {
       right: -1px;
       top: -1px;
       width: 32px;
       height: 32px;
-      font-size: 18px;
-      color: var(--text-color-inverted);
-      background-color: var(--button-color-active);
-      &:hover {
-        background-color: var(--button-color-hover);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
     }
     &.discreet {
       right: 0px;
       top: 0px;
       width: 34px;
       height: 34px;
-      font-size: 15px;
-      color: var(--input-placeholder-text-color);
-      background-color: transparent;
-      &:hover {
-        background-color: var(--searchbar-background-hover-discreet);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
     }
     &.gaudy {
       right: -1px;
       top: -1px;
       width: 42px;
       height: 42px;
-      font-size: 18px;
-      color: var(--text-color);
-      background-color: transparent;
-      &:hover {
-        background-color: var(--dropdown-background-hover);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
     }
   }
 }
 
 .whole-component .drop-down {
-  left: 0;
-  right: 0;
-  padding-left: 4px;
-  padding-right: 4px;
+  position: relative;
+  width: 100%;
   padding-bottom: 4px;
 
   .separation {
-    left: 11px;
-    right: 11px;
+    position: relative;
+    margin-left: 8px;
+    margin-right: 8px;
     height: 1px;
     margin-bottom: 10px;
     &.embedded {
@@ -810,14 +799,18 @@ function informationIfHiddenResults () : string {
     .filter-networks {
       margin-left: 6px;
     }
+
+    .filter-categories {
+      margin-left: 6px;
+    }
   }
 
   .output-area {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 128px;
     max-height: 270px;  // the height of the filter section is subtracted
-    right: 0px;
     overflow: auto;
     @include fonts.standard_text;
     &.discreet {
@@ -825,23 +818,27 @@ function informationIfHiddenResults () : string {
     }
 
     .network-container {
+      position: relative;
       display: flex;
       flex-direction: column;
-      right: 0px;
+      width: 100%;
 
       .type-container {
+        position: relative;
         display: flex;
         flex-direction: column;
-        right: 0px;
+        width: 100%;
 
         .suggestionrow-container {
+          position: relative;
           width: 100%;
 
           .separation-between-suggestions {
-            left: 11px;
-            right: 11px;
-            height: 1px;
+            position: relative;
             display: none;
+            margin-left: 8px;
+            margin-right: 8px;
+            height: 0.9px;
 
             &.embedded {
               @media (max-width: 600px) { // mobile
