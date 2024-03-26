@@ -3,6 +3,8 @@ import { type ChartData } from '~/types/api/common'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
+// this is a store (even though the data is only used by a single component) because the component should not reload the data everytime the component is created
+
 const validatorDashboardSummaryChartStore = defineStore('useValidatorDashboardSummaryChartStore', () => {
   const data = ref<ChartData<number> | undefined >()
   return { data }
