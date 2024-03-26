@@ -22,7 +22,7 @@ export function useValidatorDashboardOverviewStore () {
   const { fetch } = useCustomFetch()
   const store = validatorOverviewStore()
   const { setOverview } = store
-  const { overview } = storeToRefs(store) // NOTE: this is the REACTIVE data
+  const { overview } = storeToRefs(store) // NOTE: this is the REACTIVE (and read only) data
 
   // NOTE: function to UPDATE the data, use overview if you just want to access the data
   async function getOverview (key: DashboardKey) {
