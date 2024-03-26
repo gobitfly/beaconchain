@@ -32,13 +32,12 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const store = useValidatorDashboardSummaryChartStore()
-const { getDashboardSummaryChart } = store
-const { chartData } = storeToRefs(store)
-
-watch(props, () => {
-  getDashboardSummaryChart(props.dashboardKey)
-}, { immediate: true })
+// TODO: The chart data is loaded everytime the view is changed to chart
+// Should only load once and then only when the dashboard key is changed
+const { chartData, refreshChartData } = useValidatorDashboardSummaryChartStore()
+// TODO: This watch should only watch props.dashboardKey but that does not work (try it!)
+// Since the dasboard key will be replaced with provide/inject soon anyways, this can be ignored for now
+await useAsyncData('validator_summary_chart', () => refreshChartData(props.dashboardKey), { watch: [props] })
 
 const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
@@ -60,6 +59,10 @@ const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
 const option = computed(() => {
+  if (chartData === undefined) {
+    return undefined
+  }
+
   interface SeriesObject {
     data: number[];
     type: string;
@@ -77,7 +80,7 @@ const option = computed(() => {
       }
 
       const newObj: SeriesObject = {
-        data: element.data,
+        data: [...element.data],
         type: 'line',
         name
       }
@@ -188,7 +191,9 @@ const option = computed(() => {
 </script>
 
 <template>
-  <VChart class="chart" :option="option" autoresize />
+  <ClientOnly>
+    <VChart class="chart" :option="option" autoresize />
+  </ClientOnly>
 </template>
 
 <style lang="scss">

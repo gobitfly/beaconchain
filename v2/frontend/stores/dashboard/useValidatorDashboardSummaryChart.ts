@@ -3,15 +3,23 @@ import { type ChartData } from '~/types/api/common'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
-export const useValidatorDashboardSummaryChartStore = defineStore('useValidatorDashboardSummaryChartStore', () => {
-  const { fetch } = useCustomFetch()
-  const chartData = ref<ChartData<number> | undefined >()
+const validatorDashboardSummaryChartStore = defineStore('useValidatorDashboardSummaryChartStore', () => {
+  const data = ref<ChartData<number> | undefined >()
+  return { data }
+})
 
-  async function getDashboardSummaryChart (dashboardKey: DashboardKey) {
+export function useValidatorDashboardSummaryChartStore () {
+  const { fetch } = useCustomFetch()
+  const { data } = storeToRefs(validatorDashboardSummaryChartStore())
+
+  const chartData = readonly(data)
+
+  async function refreshChartData (dashboardKey: DashboardKey) {
     const response = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey })
-    chartData.value = response.data
-    return chartData.value
+    data.value = response.data
+
+    return data.value
   }
 
-  return { chartData, getDashboardSummaryChart }
-})
+  return { chartData, refreshChartData }
+}
