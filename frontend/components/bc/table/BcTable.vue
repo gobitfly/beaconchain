@@ -8,6 +8,7 @@ interface Props {
   pageSize?: number,
   data?: ApiPagingResponse<any>,
   expandable?: boolean,
+  isRowExpandable?: (item: any) => boolean,
   selectionMode?: 'multiple' | 'single'
   tableClass?: string
   addSpacer?: boolean
@@ -35,7 +36,7 @@ const toggleAll = (forceClose = false) => {
   props.data?.data?.forEach((item) => {
     if (wasExpanded || forceClose) {
       delete expandedRows.value[item[props.dataKey!]]
-    } else {
+    } else if (!props.isRowExpandable || props.isRowExpandable(item)) {
       expandedRows.value[item[props.dataKey!]] = true
     }
   })
@@ -91,6 +92,7 @@ watch(() => props.expandable, (expandable) => {
 
       <template #body="slotProps">
         <IconChevron
+          v-if="!isRowExpandable || isRowExpandable(slotProps.data)"
           class="toggle"
           :direction="dataKey && expandedRows[slotProps.data[dataKey]] ? 'bottom' : 'right'"
           @click.stop.prevent="toggleItem(slotProps.data)"

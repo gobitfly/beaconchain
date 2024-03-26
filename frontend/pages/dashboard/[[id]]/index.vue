@@ -76,7 +76,7 @@ onMounted(() => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
           </template>
-          Rewards coming soon!
+          <DashboardTableRewards :dashboard-key="key" />
         </TabPanel>
         <TabPanel>
           <template #header>
