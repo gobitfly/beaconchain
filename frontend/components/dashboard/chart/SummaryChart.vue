@@ -38,14 +38,14 @@ const props = defineProps<Props>()
 const key = computed(() => props.dashboardKey)
 
 const data = ref<ChartData<number> | undefined >()
-watch(key, async () => {
+await useAsyncData('validator_overview', async () => {
   if (key.value === undefined) {
     data.value = undefined
     return
   }
   const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: key.value })
   data.value = res.data
-}, { immediate: true })
+}, { watch: [key], server: false })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
