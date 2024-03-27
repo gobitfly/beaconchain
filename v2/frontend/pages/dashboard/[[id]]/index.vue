@@ -27,6 +27,7 @@ const { refreshOverview: refreshValidatorDashboardOverview } = useValidatorDashb
 await useAsyncData('validator_overview', () => refreshValidatorDashboardOverview(key.value), { watch: [key] })
 
 const manageValidatorsModalVisisble = ref(false)
+const manageGroupsModalVisisble = ref(false)
 
 const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
@@ -57,7 +58,8 @@ onMounted(() => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" /> <!--All dashboard-key props have to be removed as the dashboard key now can be injected-->
+    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" :dashboard-key="key" />
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
@@ -68,7 +70,10 @@ onMounted(() => {
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
-      <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
+      <div class="edit-buttons-row">
+        <Button :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
+        <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
+      </div>
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
       </div>
@@ -115,6 +120,12 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.edit-buttons-row{
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--padding);
+  margin-bottom: var(--padding);
+}
 .panel-controller {
   display: flex;
   justify-content: center;
