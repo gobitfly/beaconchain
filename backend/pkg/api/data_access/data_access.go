@@ -1736,6 +1736,73 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
+	// TODO: implement sorting, filtering & paging
+
+	type DashboardInfo struct {
+		Validators uint64 `db:"validator_index"`
+		Group      uint64 `db:"group_id"`
+	}
+	var dashboardInfo []DashboardInfo
+	if dashboardId.Validators == nil {
+		err := db.AlloyReader.Select(&dashboardInfo, `
+		SELECT 
+			validator_index,
+			group_id
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1`, dashboardId.Id)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		for _, validator := range dashboardId.Validators {
+			dashboardInfo = append(dashboardInfo, DashboardInfo{Validators: validator.Index, Group: 0})
+		}
+	}
+
+	validatorsGroupMap := make(map[uint64]uint64)
+	validators := make([]uint64, 0, len(dashboardInfo))
+	for _, info := range dashboardInfo {
+		validatorsGroupMap[info.Validators] = info.Group
+		validators = append(validators, info.Validators)
+	}
+
+	var withdrawals []*types.Withdrawals
+
+	err := d.readerDb.Select(&withdrawals, `
+	SELECT
+		w.slot,
+		w.index,
+		w.validatorindex,
+		w.address,
+		w.amount
+	FROM blocks_withdrawals w
+	INNER JOIN blocks b ON b.blockroot = w.block_root AND b.status = '1'
+	WHERE validatorindex = ANY($1)`, pq.Array(validators))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("error getting blocks_withdrawals for validators: %+v: %w", validators, err)
+	}
+
+	result := make([]t.VDBWithdrawalsTableRow, 0)
+	for _, withdrawal := range withdrawals {
+		result = append(result, t.VDBWithdrawalsTableRow{
+			Epoch:   utils.EpochOfSlot(withdrawal.Slot),
+			Index:   withdrawal.ValidatorIndex,
+			GroupId: validatorsGroupMap[withdrawal.ValidatorIndex],
+			Recipient: t.Address{
+				Hash: t.Hash(fmt.Sprintf("%#x", withdrawal.Address)),
+				// TODO: implement the ENS
+				Ens: "",
+			},
+			Amount: decimal.NewFromInt(int64(withdrawal.Amount)),
+		})
+	}
+
+	paging := &t.Paging{
+		TotalCount: uint64(len(result)),
+	}
+
+	return result, paging, nil
 }
