@@ -10,12 +10,12 @@ import {
 const { t: $t } = useI18n()
 const emit = defineEmits(['change'])
 const props = defineProps<{
-    initialState: Record<string, boolean>, // each key is a category name (as enumerated in Category in searchbar.ts)
+    initialState: Record<string, boolean>, // each field will have a stringifyEnum(Category) as key and the state of the option as value
     barStyle: SearchBarStyle
  }>()
 
 let componentIsReady = false
-const state = ref<Record<string, boolean>>({}) // each key is a category name (as enumerated in Category in searchbar.ts)
+const state = ref<Record<string, boolean>>({}) // each field will have a stringifyEnum(Category) as key and the state of the option as value
 
 onMounted(() => {
   componentIsReady = false
@@ -29,7 +29,7 @@ function selectionHasChanged () {
   }
 }
 
-function tellWhatFilterDoes (category : Category) : string {
+function explainWhatFilterDoes (category : Category) : string {
   let hint = $t('search_bar.shows') + ' '
 
   if (category === Category.Validators) {
@@ -54,7 +54,7 @@ function tellWhatFilterDoes (category : Category) : string {
 <template>
   <div>
     <span v-for="filter of Object.keys(state)" :key="filter">
-      <BcTooltip :text="tellWhatFilterDoes(filter as Category)">
+      <BcTooltip :text="explainWhatFilterDoes(Number(filter) as Category)">
         <label class="filter-button">
           <input
             v-model="state[filter]"
@@ -65,7 +65,7 @@ function tellWhatFilterDoes (category : Category) : string {
             @change="selectionHasChanged"
           >
           <span class="face" :class="barStyle">
-            {{ CategoryInfo[filter as Category].filterLabel }}
+            {{ CategoryInfo[Number(filter) as Category].filterLabel }}
           </span>
         </label>
       </BcTooltip>
@@ -91,13 +91,13 @@ function tellWhatFilterDoes (category : Category) : string {
     margin-right: 6px;
     transition: 0.2s;
 
-    &.discreet {
-      color: var(--light-black);
-      background-color: var(--light-grey);
-    }
     &.gaudy {
       color: var(--primary-contrast-color);
       background-color: var(--searchbar-filter-unselected-gaudy);
+    }
+    &.discreet {
+      color: var(--light-black);
+      background-color: var(--light-grey);
     }
 
     &:hover {

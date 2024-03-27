@@ -2,13 +2,16 @@
 import { warn } from 'vue'
 import {
   Category,
+  SubCategory,
   ResultType,
-  PredefinedFilling,
-  type DropdownOutput,
+  FillFrom,
+  type HowToFillresultSuggestionOutput,
+  type ResultSuggestionOutput,
   CategoryInfo,
   SubCategoryInfo,
   TypeInfo,
   getListOfResultTypes,
+  isOutputAnAPIresponse,
   type SearchAheadSingleResult,
   type SearchAheadResult,
   type ResultSuggestion,
@@ -73,9 +76,9 @@ const inputFieldAndButton = ref<HTMLDivElement>()
 const zindexCorrectionClass = computed(() => globalState.value.showDropDown ? 'dropdown-is-opened' : '')
 
 const userFilters = {
-  networks: {} as Record<string, boolean>, // each field will have a String(ChainIDs) as key and the state of the option as value
+  networks: {} as Record<string, boolean>, // each field will have a stringifyEnum(ChainIDs) as key and the state of the option as value
   noNetworkIsSelected: true,
-  categories: {} as Record<string, boolean>, // each field will have a Category as key and the state of the button as value
+  categories: {} as Record<string, boolean>, // each field will have a stringifyEnum(Category) as key and the state of the button as value
   noCategoryIsSelected: true
 }
 
@@ -131,13 +134,13 @@ onMounted(() => {
   }
   // creates the fields storing the state of the category-filter buttons, and deselect them
   for (const s of props.searchable) {
-    userFilters.categories[s] = false
+    userFilters.categories[stringifyEnum(s)] = false
   }
   userFilters.noCategoryIsSelected = true
   // creates the fields storing the state of the network drop-down, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
   for (const nw of networks) {
-    userFilters.networks[String(nw)] = false
+    userFilters.networks[stringifyEnum(nw)] = false
   }
   userFilters.noNetworkIsSelected = true
   // listens to clicks outside the component
@@ -303,7 +306,6 @@ function networkFilterHasChanged (state : Record<string, boolean>) {
 
 function categoryFilterHasChanged (state : Record<string, boolean>) {
   let noCategoryIsSelected = true
-
   for (const cat in userFilters.categories) {
     userFilters.categories[cat] = state[cat]
     noCategoryIsSelected &&= !state[cat]
@@ -348,8 +350,10 @@ function filterAndOrganizeResults () {
     }
     // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized object
     let place : OrganizedResults
-    const acceptTheChainID = (String(chainId) in userFilters.networks && (userFilters.networks[String(chainId)] || userFilters.noNetworkIsSelected)) || chainId === ChainIDs.Any
-    const acceptTheCategory = TypeInfo[type].category in userFilters.categories && (userFilters.categories[TypeInfo[type].category] || userFilters.noCategoryIsSelected)
+    const stringifyedChainId = stringifyEnum(chainId)
+    const stringifyedCategory = stringifyEnum(TypeInfo[type].category)
+    const acceptTheChainID = (stringifyedChainId in userFilters.networks && (userFilters.networks[stringifyedChainId] || userFilters.noNetworkIsSelected)) || chainId === ChainIDs.Any
+    const acceptTheCategory = stringifyedCategory in userFilters.categories && (userFilters.categories[stringifyedCategory] || userFilters.noCategoryIsSelected)
     if (acceptTheChainID && acceptTheCategory) {
       place = results.organized.in
       results.organized.howManyResultsIn++
@@ -391,13 +395,11 @@ function filterAndOrganizeResults () {
   sortResults(results.organized.out)
 }
 
-// This function takes a single result element returned by the API and organizes it into an element
-// simpler to handle by the code of the search bar (not only for displaying).
-// If the result element from the API is somehow unexpected, then the function returns an empty `output` field.
-// The fields that the function reads in the API response as well as the place they are displayed
-// in the drop-down are set in the object `TypeInfo` filled in types/searchbar.ts, by its properties
-// fieldsInSearchAheadResult (sets the fields to read and their order) and dropdownOutputBeforeFilling (tells
-// us to fill `output` with that data in that order).
+// This function takes a single result element returned by the API and organizes it into an element simpler to handle by the
+// code of the search bar because more... organized.
+// If the result JSON from the API is somehow unexpected, the function returns `undefined`.
+// The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestion.output
+// object are given by the filling information in TypeInfo[<result type>].howToFillresultSuggestionOutput in types/searchbar.ts
 function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion | undefined {
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
@@ -405,43 +407,21 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   }
 
   const type = apiResponseElement.type as ResultType
-  const output = { ...TypeInfo[type].dropdownOutputBeforeFilling }
+  const howToFillresultSuggestionOutput = TypeInfo[type].howToFillresultSuggestionOutput
+  const output = {} as ResultSuggestionOutput
 
-  // Filling the empty output elements of the drop down (some are already filled statically by TypeInfo[type].dropdownOutput)
-  // We fill them by taking the API data in the order defined in TypeInfo[type].fieldsInSearchAheadResult
-  const fieldsContainingData = TypeInfo[type].fieldsInSearchAheadResult
-  for (const field of fieldsContainingData) {
-    if (apiResponseElement[field] === undefined) {
-      warn('The API returned a search-ahead result of type ', type, ' with a missing field: ', field)
+  for (const k in howToFillresultSuggestionOutput) {
+    const key = k as keyof HowToFillresultSuggestionOutput
+    const data = getAPIdata(apiResponseElement, howToFillresultSuggestionOutput[key])
+    if (data === undefined) {
+      warn('The API returned a search-ahead result of type ', type, ' with a missing field.')
       return undefined
-    }
-    // Searching for the output element to fill with API data (this nested loop might look inefficient but an optimization would be an overkill (our two objects are of size 3) growing the code without effect)
-    for (const k in output) {
-      const key = k as keyof typeof output
-      if (output[key] === undefined) {
-        // The output element to fill is found.
-        output[key] = String(apiResponseElement[field])
-        break
-      }
-    }
-  }
-  // filling the elements that must contain predefined strings
-  for (const k in output) {
-    const key = k as keyof typeof output
-    switch (output[key]) {
-      case PredefinedFilling.CategoryTitle :
-        output[key] = CategoryInfo[TypeInfo[type].category].title
-        break
-      case PredefinedFilling.SubCategoryTitle :
-        output[key] = SubCategoryInfo[TypeInfo[type].subCategory].title
-        break
-      case PredefinedFilling.TypeTitle :
-        output[key] = TypeInfo[type].title
-        break
+    } else {
+      output[key] = data
     }
   }
 
-  // Defaulting the name to the result type if we obtained ''
+  // Defaulting the name to the result type if the API gave ''
   // This is expected to happen in one case: when the back-end does not know the name of a contract, it returns ''
   let nameWasUnknown = false
   if (output.name === '') {
@@ -450,8 +430,7 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   }
 
   // retrieving the data that identifies this very result in the back-end (will be given to the callback function `@go`)
-  const queryParamFieldName = TypeInfo[type].queryParamField
-  const queryParam = String(apiResponseElement[queryParamFieldName])
+  const queryParam = getAPIdata(apiResponseElement, TypeInfo[type].queryParamField) as string
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
@@ -462,14 +441,48 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
   // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions by relevance when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
-  for (const field of TypeInfo[type].fieldsInSearchAheadResult) {
-    const cl = resemblanceWithInput(String(apiResponseElement[field]))
-    if (cl < closeness) {
-      closeness = cl
+  for (const k in output) {
+    const key = k as keyof HowToFillresultSuggestionOutput
+    if (isOutputAnAPIresponse(type, key)) {
+      const cl = resemblanceWithInput(output[key])
+      if (cl < closeness) {
+        closeness = cl
+      }
     }
   }
 
-  return { output: output as DropdownOutput, nameWasUnknown, queryParam, closeness, count }
+  return { output, nameWasUnknown, queryParam, closeness, count }
+}
+
+function getAPIdata (apiResponseElement : SearchAheadSingleResult, fillFrom : FillFrom | string) : string | undefined {
+  const type = apiResponseElement.type as ResultType
+  let sourceField : keyof SearchAheadSingleResult
+
+  switch (fillFrom) {
+    case FillFrom.SASRstr_value :
+      sourceField = 'str_value'
+      break
+    case FillFrom.SASRnum_value :
+      sourceField = 'num_value'
+      break
+    case FillFrom.SASRhash_value :
+      sourceField = 'hash_value'
+      break
+    case FillFrom.CategoryTitle :
+      return CategoryInfo[TypeInfo[type].category].title
+    case FillFrom.SubCategoryTitle :
+      return SubCategoryInfo[TypeInfo[type].subCategory].title
+    case FillFrom.TypeTitle :
+      return TypeInfo[type].title
+    default :
+      return fillFrom as string // this is a predefined text, hard-coded in object TypeInfo defined in searchbar.ts
+  }
+
+  if (apiResponseElement[sourceField] !== undefined) {
+    return String(apiResponseElement[sourceField])
+  }
+
+  return undefined
 }
 
 // Calculates the Levenshtein distance between the parameter and the user input.
@@ -518,7 +531,7 @@ function whatIsMyPurpose () : SearchBarPurpose {
       }
     }
     // there is no reason to reach this state but let's be careful:
-    warn('The purpose of the bar could not be determined')
+    warn('The purpose of the search bar could not be determined')
   }
 
   return SearchBarPurpose.General
@@ -580,6 +593,12 @@ function informationIfHiddenResults () : string {
   }
 
   return info
+}
+
+// This padding with leading zeros is required otherwise the fields in a Record whose keys are
+// enum values would get sorted lexicographically for some reason.
+function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string {
+  return String(enumValue).padStart(10, '0')
 }
 </script>
 
@@ -706,17 +725,17 @@ function informationIfHiddenResults () : string {
   left: 0px;
   right: 0px;
 
+  &.gaudy,
+  &.embedded {
+    background-color: var(--searchbar-background-gaudy);
+    border: 1px solid var(--input-border-color);
+  }
   &.discreet {
     background-color: var(--searchbar-background-discreet);
     border: none;
     &.dropdown-is-opened {
       border: 1px solid var(--searchbar-background-hover-discreet);
     }
-  }
-  &.embedded,
-  &.gaudy {
-    background-color: var(--searchbar-background-gaudy);
-    border: 1px solid var(--input-border-color);
   }
 }
 
@@ -731,27 +750,27 @@ function informationIfHiddenResults () : string {
     box-shadow: none;
     background-color: transparent;
     color: var(--input-placeholder-text-color);
-    &.embedded {
-      height: 30px;
-      padding-right: 31px;
+    &.gaudy {
+      height: 40px;
+      padding-right: 41px;
     }
     &.discreet {
       height: 34px;
       padding-right: 35px;
     }
-    &.gaudy {
-      height: 40px;
-      padding-right: 41px;
+    &.embedded {
+      height: 30px;
+      padding-right: 31px;
     }
   }
 
   .searchbutton {
     position: absolute;
-    &.embedded {
+    &.gaudy {
       right: -1px;
       top: -1px;
-      width: 32px;
-      height: 32px;
+      width: 42px;
+      height: 42px;
     }
     &.discreet {
       right: 0px;
@@ -759,11 +778,11 @@ function informationIfHiddenResults () : string {
       width: 34px;
       height: 34px;
     }
-    &.gaudy {
+    &.embedded {
       right: -1px;
       top: -1px;
-      width: 42px;
-      height: 42px;
+      width: 32px;
+      height: 32px;
     }
   }
 }
@@ -779,13 +798,13 @@ function informationIfHiddenResults () : string {
     margin-right: 8px;
     height: 1px;
     margin-bottom: 10px;
-    &.embedded {
+    &.gaudy {
       background-color: var(--input-border-color);
     }
     &.discreet {
       background-color: var(--searchbar-background-hover-discreet);
     }
-    &.gaudy {
+    &.embedded {
       background-color: var(--input-border-color);
     }
   }
@@ -799,7 +818,6 @@ function informationIfHiddenResults () : string {
     .filter-networks {
       margin-left: 6px;
     }
-
     .filter-categories {
       margin-left: 6px;
     }
