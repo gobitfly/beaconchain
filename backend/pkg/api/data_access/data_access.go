@@ -1680,8 +1680,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
-	var validatorsArray []t.VDBValidator
+	var validators []uint64
 	if dashboardId.Validators == nil {
+		// Get the validators in case a dashboard id is provided
 		validatorsQuery := `
 		SELECT 
 			validator_index
@@ -1694,30 +1695,29 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 			validatorsQuery += " AND group_id = $2"
 			validatorsParams = append(validatorsParams, groupId)
 		}
-		err := db.AlloyReader.Select(&validatorsArray, validatorsQuery, validatorsParams...)
+		err := d.alloyReader.Select(&validators, validatorsQuery, validatorsParams...)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		validatorsArray = dashboardId.Validators
-		groupId = t.DefaultGroupId
+		// In case a list of validators is provided use them
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
 	}
 
-	if len(validatorsArray) == 0 {
+	if len(validators) == 0 {
+		// Return if there are no validators
 		return nil, nil
 	}
 
-	validators := make([]uint64, 0, len(validatorsArray))
-	for _, validator := range validatorsArray {
-		validators = append(validators, validator.Index)
-	}
-
 	if duty == enums.ValidatorDuties.None {
-		// TODO Is that what is meant with this comment?
+		// TODO Unclear comment, is this what is meant?
 		// if duty == enums.ValidatorDuties.None THEN ignore period
 		return validators, nil
 	}
 
+	// Get the table name based on the period
 	tableName := ""
 	switch period {
 	case enums.TimePeriods.AllTime:
@@ -1730,27 +1730,29 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 		tableName = "validator_dashboard_data_rolling_monthly"
 	}
 
-	columnName := ""
+	// Get the column condition based on the duty
+	columnCond := ""
 	switch duty {
 	case enums.ValidatorDuties.Sync:
-		columnName = "sync_scheduled"
+		columnCond = "sync_scheduled > 0"
 	case enums.ValidatorDuties.Proposal:
-		columnName = "blocks_scheduled"
+		columnCond = "blocks_scheduled > 0"
 	case enums.ValidatorDuties.Slashed:
 		// TODO: Wait for slashings to be available in the database
-		// columnName = "slashing_scheduled"
+		// columnCond = "(slashed OR slashings_executed > 0)"
+		columnCond = "slashed"
 		return nil, nil
 	}
 
-	// fetch ALL validator indices for the given dashboardId and given filters
+	// Get ALL validator indices for the given filters
 	query := fmt.Sprintf(`
 		SELECT
 			validator_index
 		FROM %s
-		WHERE validator_index = ANY($1) AND %s > 0`, tableName, columnName)
+		WHERE validator_index = ANY($1) AND %s`, tableName, columnCond)
 
 	var result []uint64
-	err := db.AlloyReader.Select(&result, query, pq.Array(validators))
+	err := d.alloyReader.Select(&result, query, pq.Array(validators))
 	return result, err
 }
 
