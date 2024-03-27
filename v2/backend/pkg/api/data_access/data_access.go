@@ -1740,7 +1740,6 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 		// TODO: Wait for slashings to be available in the database
 		// columnCond = "(slashed OR slashings_executed > 0)"
 		columnCond = "slashed"
-		return nil, nil
 	}
 
 	// Get ALL validator indices for the given filters
