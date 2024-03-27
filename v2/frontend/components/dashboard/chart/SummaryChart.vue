@@ -88,7 +88,7 @@ const option = computed(() => {
       }
 
       const newObj: SeriesObject = {
-        data: [...element.data],
+        data: element.data,
         type: 'line',
         name
       }

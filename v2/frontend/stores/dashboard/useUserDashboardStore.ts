@@ -28,7 +28,7 @@ export function useUserDashboardStore () {
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: '0' } })
     if (res.data) {
       data.value = {
-        account_dashboards: [...dashboards.value?.account_dashboards || []],
+        account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
           { id: res.data.id, name: res.data.name }
@@ -42,7 +42,7 @@ export function useUserDashboardStore () {
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { body: { name } })
     if (res.data) {
       data.value = {
-        validator_dashboards: [...dashboards.value?.validator_dashboards || []],
+        validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [
           ...(dashboards.value?.account_dashboards || []),
           { id: res.data.id, name: res.data.name }
