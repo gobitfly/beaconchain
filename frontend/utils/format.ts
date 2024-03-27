@@ -1,4 +1,5 @@
 import { commify } from '@ethersproject/units'
+import { DateTime, type StringUnitLength } from 'luxon'
 
 const { epochToTs } = useNetwork()
 
@@ -96,6 +97,15 @@ export function formatTs (ts: number, locales: string): string {
     year: 'numeric'
   }
   return new Date(ts * 1000).toLocaleDateString(locales, options)
+}
+
+export function formatEpochToRelative (epoch: number, timestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+  const ts = epochToTs(epoch)
+  if (ts === undefined) {
+    return undefined
+  }
+  const date = timestamp ? DateTime.fromMillis(timestamp) : DateTime.now()
+  return DateTime.fromMillis(ts * 1000).setLocale(locales).toRelative({ base: date, style })
 }
 
 export function formatEpochToDate (epoch: number, locales: string): string | undefined {
