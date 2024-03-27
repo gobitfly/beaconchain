@@ -7,7 +7,7 @@ interface Props {
   dashboardKey: DashboardKey
 }
 const props = defineProps<Props>()
-const { tickTimestamp } = useDate(12)
+const { tick } = useInterval(12)
 
 const store = useValidatorSlotVizStore()
 
@@ -15,7 +15,7 @@ const { getSlotViz } = store
 const { slotViz } = storeToRefs(store)
 await useAsyncData('validator_dashboard_slot_viz', () => getSlotViz(props.dashboardKey))
 
-watch(() => [props.dashboardKey, tickTimestamp.value], () => {
+watch(() => [props.dashboardKey, tick.value], () => {
   getSlotViz(props.dashboardKey)
 }, { immediate: true })
 
