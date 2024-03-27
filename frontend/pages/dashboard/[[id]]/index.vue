@@ -22,8 +22,8 @@ const key = computed<DashboardKey>(() => {
 })
 
 // NOTE: this is the "owner" of the store and sets up its reactivity
-const { refreshOverview: refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('validator_overview', () => refreshValidatorDashboardOverview(key.value), { watch: [key] })
+const { refreshOverview } = useValidatorDashboardOverviewStore()
+await useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
 
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)
