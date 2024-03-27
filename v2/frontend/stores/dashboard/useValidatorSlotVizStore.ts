@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { SlotVizEpoch, InternalGetValidatorDashboardSlotVizResponse } from '~/types/api/slot_viz'
 import type { DashboardKey } from '~/types/dashboard'
 
-export const validatorSlotVizStore = defineStore('validator_slotViz', () => {
+const validatorSlotVizStore = defineStore('validator_slotViz', () => {
   const data = ref<SlotVizEpoch[] | undefined | null>()
   return { data }
 })
