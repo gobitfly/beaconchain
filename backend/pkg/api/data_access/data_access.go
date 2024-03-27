@@ -654,11 +654,19 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	// TODO: implement sorting, filtering & paging
 
-	var validatorsArray []t.VDBValidator
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
 	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
 		validatorsQuery := `
 		SELECT 
-			validator_index
+			validator_index,
+			group_id
 		FROM users_val_dashboards_validators
 		WHERE dashboard_id = $1
 		`
@@ -668,93 +676,112 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			validatorsQuery += " AND group_id = $2"
 			validatorsParams = append(validatorsParams, groupId)
 		}
-		err := db.AlloyReader.Select(&validatorsArray, validatorsQuery, validatorsParams...)
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, validatorsParams...)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
 	} else {
-		validatorsArray = dashboardId.Validators
-		groupId = 0
+		// In case a list of validators is provided, set the group to default 0
+		for _, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = 0
+			validators = append(validators, validator.Index)
+		}
 	}
 
-	validators := make([]uint64, 0, len(validatorsArray))
-	for _, validator := range validatorsArray {
-		validators = append(validators, validator.Index)
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
 	}
 
+	// Get the pubkeys of the validators
 	validatorPubKeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validators)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Get the current validator state
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock() // important to unlock once done, otherwise data updater cant update the data
+	defer releaseValMapLock()
 	if err != nil {
 		return nil, nil, err
 	}
 	validatorMetadata := validatorMapping.ValidatorMetadata
 
+	// Get the validator duties to check the last fullfilled attestation
 	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock() // important to unlock once done, otherwise data updater cant update the data
+	defer releaseValDutiesLock()
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Set the threshold for "online" => "offline" to 2 epochs without attestation
 	attestationThresholdSlot := uint64(0)
 	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
 	if dutiesInfo.LatestSlot >= twoEpochs {
 		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
 	}
 
-	result := make([]t.VDBManageValidatorsTableRow, 0, len(validators))
+	// Fill the result
+	result := make([]t.VDBManageValidatorsTableRow, len(validators))
 	for idx, validator := range validators {
 		result[idx].Index = validator
 		result[idx].PublicKey = t.PubKey(validatorPubKeys[idx])
-		result[idx].GroupId = uint64(groupId)
+		result[idx].GroupId = validatorGroupMap[validator]
 
 		pubKey, err := hexutil.Decode(validatorPubKeys[idx])
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, metadata := range validatorMetadata {
-			if bytes.Equal(metadata.PublicKey, pubKey) {
-				result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
-				result[idx].WithdrawalCredential = t.Hash(fmt.Sprintf("%#x", metadata.WithdrawalCredentials))
 
-				status := ""
-				switch datatypes.ValidatorStatus(metadata.Status) {
-				case datatypes.PendingInitialized:
-					status = "deposited"
-				case datatypes.PendingQueued:
-					status = "pending"
-					if metadata.Queues.ActivationIndex.Valid {
-						result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
-					}
-				case datatypes.ActiveOngoing, datatypes.ActiveExiting, datatypes.ActiveSlashed:
-					var lastAttestionSlot uint32
-					for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
-						if attested && slot > lastAttestionSlot {
-							lastAttestionSlot = slot
-						}
-					}
-					if lastAttestionSlot < uint32(attestationThresholdSlot) {
-						status = "offline"
-					} else {
-						status = "online"
-					}
-				case datatypes.ExitedUnslashed, datatypes.ExitedSlashed, datatypes.WithdrawalPossible, datatypes.WithdrawalDone:
-					if metadata.Slashed {
-						status = "slashed"
-					} else {
-						status = "exited"
+		validatorFound := false
+		for _, metadata := range validatorMetadata {
+			if !bytes.Equal(metadata.PublicKey, pubKey) {
+				continue
+			}
+			result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+			result[idx].WithdrawalCredential = t.Hash(fmt.Sprintf("%#x", metadata.WithdrawalCredentials))
+
+			status := ""
+			switch datatypes.ValidatorStatus(metadata.Status) {
+			case datatypes.PendingInitialized:
+				status = "deposited"
+			case datatypes.PendingQueued:
+				status = "pending"
+				if metadata.Queues.ActivationIndex.Valid {
+					result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+				}
+			case datatypes.ActiveOngoing, datatypes.ActiveExiting, datatypes.ActiveSlashed:
+				var lastAttestionSlot uint32
+				for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+					if attested && slot > lastAttestionSlot {
+						lastAttestionSlot = slot
 					}
 				}
-				result[idx].Status = status
-
-				break
+				if lastAttestionSlot < uint32(attestationThresholdSlot) {
+					status = "offline"
+				} else {
+					status = "online"
+				}
+			case datatypes.ExitedUnslashed, datatypes.ExitedSlashed, datatypes.WithdrawalPossible, datatypes.WithdrawalDone:
+				if metadata.Slashed {
+					status = "slashed"
+				} else {
+					status = "exited"
+				}
 			}
-		}
+			result[idx].Status = status
 
+			validatorFound = true
+			break
+		}
+		if !validatorFound {
+			return nil, nil, fmt.Errorf("validator index %d not found in the metadata", validator)
+		}
 	}
 
 	return result, nil, nil
