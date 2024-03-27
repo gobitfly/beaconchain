@@ -1,14 +1,14 @@
 import { ChainIDs } from '~/types/networks'
 
-export type SearchBarStyle = 'discreet' | 'gaudy' | 'embedded'
+export type SearchBarStyle = 'gaudy' | 'discreet' | 'embedded'
 export enum SearchBarPurpose { General, Accounts, Validators }
 
 export enum Category {
-  Tokens = 'tokens',
-  NFTs = 'nfts',
-  Protocol = 'protocol',
-  Addresses = 'addresses',
-  Validators = 'validators'
+  Tokens,
+  NFTs,
+  Protocol,
+  Addresses,
+  Validators
 }
 
 export enum SubCategory {
@@ -79,26 +79,30 @@ export interface SearchAheadResult {
   error?: string
 }
 
-export enum PredefinedFilling {
-  CategoryTitle,
-  SubCategoryTitle,
-  TypeTitle
-}
-
-export type DropdownOutput = {
+// in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
+export type ResultSuggestionOutput = {
   name : string,
   description : string,
   lowLevelData : string
 }
 
-type DropdownOutputBeforeFilling = {
-  name : undefined | string | PredefinedFilling,
-  description : undefined | string | PredefinedFilling,
-  lowLevelData : undefined | string | PredefinedFilling
+// The next 2 types will determine what data we must write into the differient fields of ResultSuggestionOutput after the API responded
+export enum FillFrom {
+  SASRstr_value,
+  SASRnum_value,
+  SASRhash_value,
+  CategoryTitle,
+  SubCategoryTitle,
+  TypeTitle
+}
+export interface HowToFillresultSuggestionOutput {
+  name : FillFrom | string,
+  description : FillFrom | string,
+  lowLevelData : FillFrom | string,
 }
 
 export interface ResultSuggestion {
-  output: DropdownOutput,
+  output: ResultSuggestionOutput,
   nameWasUnknown : boolean,
   queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
   closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
@@ -151,10 +155,9 @@ interface TypeInfoFields {
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
-  countable: boolean, // whether it is possible for the API to find several identical results and count them
-  fieldsInSearchAheadResult : (keyof SearchAheadSingleResult)[], // fields to read from the SearchAheadSingleResult object returned by the API. The order of these field-names sets the order that we use to fill the undefined data of dropdownOutputBeforeFilling (see just below here)
-  queryParamField : keyof SearchAheadSingleResult, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end
-  dropdownOutputBeforeFilling : DropdownOutputBeforeFilling // Information to show when a result of this type is suggested in the drop-down. As instructed by isOutputAnAPIresponse() (see further down below), undefined elements will be filled during execution from the fields named in fieldsInSearchAheadResult (see just above here).
+  countable: boolean, // whether it is possible for the API to find several identical results of this type and count them
+  queryParamField : FillFrom, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end (this data will be passed to your `@go` call-back function when a result suggestion has been chosen)
+  howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestionOutput
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -165,9 +168,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 3,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // This means that we read the token name and the token address from the API response and fill the undefined fields of ResultSuggestion.output` (see just below) with this information in that order.
-    queryParamField: 'str_value', // This is the name of the field in SearchAheadSingleResult which identifies precisely a result when communicating with the back-end.
-    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined } // These `undefined`s will be replaced during execution with the data named in fieldsInSearchAheadResult (see just above), respectively str_value and hash_value in that order.
+    queryParamField: FillFrom.SASRstr_value, // this tells us that field `str_value` in SearchAheadSingleResult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
+    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in SearchAheadSingleResult, and `lowLevelData` will be filled with `hash_value`
   },
   [ResultType.NFTs]: {
     title: 'ERC-721 & ERC-1155 token (NFT)',
@@ -176,9 +178,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 4,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // token name, token address
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.Epochs]: {
     title: 'Epoch',
@@ -187,9 +188,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 12,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value'],
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.Slots]: {
     title: 'Slot',
@@ -198,9 +198,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 11,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // num_value is the slot number, hash_value is the state root if it is what the user typed otherwise it contains by default the block root
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.Blocks]: {
     title: 'Block',
@@ -209,9 +208,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 10,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // same as above
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.BlockRoots]: {
     title: 'Block root',
@@ -220,9 +218,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 18,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'],
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.StateRoots]: {
     title: 'State root',
@@ -231,9 +228,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 19,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'],
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.Transactions]: {
     title: 'Transaction',
@@ -242,20 +238,18 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 17,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['hash_value'],
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: '', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: '', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.TransactionBatches]: {
-    title: 'TX Batch',
+    title: 'Tx Batch',
     category: Category.Protocol,
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value'],
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.StateBatches]: {
     title: 'State batch',
@@ -264,9 +258,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 13,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value'],
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: undefined, lowLevelData: '' }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.Contracts]: {
     title: 'Contract',
@@ -275,9 +268,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 2,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // str_value is the name of the contract  (for ex: "uniswap") or "" by default if unknown
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined } // if the API gives '' for the first element (0), we will replace it with a generic name (the title of this type: "Contract")
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
   [ResultType.Accounts]: {
     title: 'Account',
@@ -286,9 +278,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 2,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['hash_value'],
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: '', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: '', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.EnsAddresses]: {
     title: 'ENS address',
@@ -297,9 +288,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 1,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // ENS name, corresponding address
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: undefined, description: '', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.EnsOverview]: {
     title: 'Overview of ENS domain',
@@ -308,20 +298,18 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 15,
     belongsToAllNetworks: true,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value', 'hash_value'], // same as above
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRstr_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.Graffiti]: {
-    title: 'Graffito',
+    title: 'Graffiti',
     category: Category.Protocol,
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['str_value'],
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.TypeTitle, description: 'Blocks with', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: 'Blocks with', lowLevelData: FillFrom.SASRstr_value }
   },
   [ResultType.ValidatorsByIndex]: {
     title: 'Validator by index',
@@ -330,9 +318,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
-    queryParamField: 'num_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.ValidatorsByPubkey]: {
     title: 'Validator by public key',
@@ -341,9 +328,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9,
     belongsToAllNetworks: false,
     countable: false,
-    fieldsInSearchAheadResult: ['num_value', 'hash_value'], // validator index, pubkey
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: undefined, lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.ValidatorsByDepositAddress]: {
     title: 'Validator by deposit address',
@@ -352,9 +338,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 6,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['hash_value'], // deposit address
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Deposited by', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Deposited by', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     title: 'Validator by ENS of the deposit address',
@@ -363,9 +348,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 5,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['str_value'], // ENS name
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Deposited by', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Deposited by', lowLevelData: FillFrom.SASRstr_value }
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     title: 'Validator by withdrawal credential',
@@ -374,9 +358,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 8,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['hash_value'], // withdrawal credential
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Credential', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Credential', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: 'Validator by withdrawal address',
@@ -385,9 +368,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 8,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['hash_value'], // withdrawal address
-    queryParamField: 'hash_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: FillFrom.SASRhash_value }
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: 'Validator by ENS of the withdrawal address',
@@ -396,9 +378,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 7,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['str_value'], // ENS name
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: FillFrom.SASRstr_value }
   },
   [ResultType.ValidatorsByGraffiti]: {
     title: 'Validator by graffito',
@@ -407,9 +388,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9999,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['str_value'], // graffito
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Block graffiti', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Block graffiti', lowLevelData: FillFrom.SASRstr_value }
   },
   [ResultType.ValidatorsByName]: {
     title: 'Validator by name',
@@ -418,14 +398,20 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9999,
     belongsToAllNetworks: false,
     countable: true,
-    fieldsInSearchAheadResult: ['str_value'], // name that the owner recorded on beaconcha.in
-    queryParamField: 'str_value',
-    dropdownOutputBeforeFilling: { name: PredefinedFilling.SubCategoryTitle, description: 'Named', lowLevelData: undefined }
+    queryParamField: FillFrom.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Named', lowLevelData: FillFrom.SASRstr_value }
   }
 }
 
-export function isOutputAnAPIresponse (type : ResultType, dropdownOutputField : keyof DropdownOutput) : boolean {
-  return TypeInfo[type].dropdownOutputBeforeFilling[dropdownOutputField] === undefined
+export function isOutputAnAPIresponse (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
+  switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
+    case FillFrom.SASRstr_value :
+    case FillFrom.SASRnum_value :
+    case FillFrom.SASRhash_value :
+      return true
+    default:
+      return false
+  }
 }
 
 export function getListOfCategories () : Category[] {

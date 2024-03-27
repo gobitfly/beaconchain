@@ -20,14 +20,8 @@ const props = defineProps<{
     barPurpose: SearchBarPurpose
 }>()
 
-function formatEmbeddedNameCell () : string {
-  let label : string
-
-  if (props.barPurpose === SearchBarPurpose.Accounts) {
-    label = SubCategoryInfo[TypeInfo[props.resultType].subCategory].title
-  } else {
-    label = props.suggestion.output.name
-  }
+function formatEmbeddedSubcategoryCell () : string {
+  const label = SubCategoryInfo[TypeInfo[props.resultType].subCategory].title
 
   if (props.suggestion.count >= 2) {
     return String(props.suggestion.count) + ' ' + label + 's'
@@ -49,44 +43,18 @@ function formatEmbeddedDescriptionCell () : string {
   return props.suggestion.output.description
 }
 
-function formatEmbeddedLowleveldataCell () : string {
-  if (props.suggestion.nameWasUnknown || !isOutputAnAPIresponse(props.resultType, 'name')) {
-    return props.suggestion.output.lowLevelData
+function formatEmbeddedIdentificationCell () : string {
+  if (isOutputAnAPIresponse(props.resultType, 'name') && !props.suggestion.nameWasUnknown) {
+    return props.suggestion.output.name
   }
-  return props.suggestion.output.name
+  return props.suggestion.output.lowLevelData
 }
 </script>
 
 <template>
   <div
-    v-if="barStyle == 'embedded'"
-    class="row-common row-embedded"
-    :class="barStyle"
-    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
-  >
-    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
-      <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
-    </div>
-    <div v-else class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
-    </div>
-    <div class="cell-name" :class="barStyle">
-      {{ formatEmbeddedNameCell() }}
-    </div>
-    <div class="cell-blockchaininfo-common cell-bi-lowleveldata" :class="barStyle">
-      <BcSearchbarMiddleEllipsis :width-is-fixed="true">
-        {{ formatEmbeddedLowleveldataCell() }}
-      </BcSearchbarMiddleEllipsis>
-    </div>
-    <div v-if="suggestion.output.description !== ''" class="cell-blockchaininfo-common cell-bi-description" :class="barStyle">
-      {{ formatEmbeddedDescriptionCell() }}
-    </div>
-  </div>
-
-  <div
-    v-else
-    class="row-common row-gaudyordiscreet"
+    v-if="barStyle == 'gaudy' || barStyle == 'discreet'"
+    class="row-gaudyordiscreet"
     :class="barStyle"
     @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
   >
@@ -114,15 +82,39 @@ function formatEmbeddedLowleveldataCell () : string {
       </span>
     </div>
   </div>
+
+  <div
+    v-else-if="barStyle == 'embedded'"
+    class="row-embedded"
+    :class="barStyle"
+    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
+  >
+    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
+      <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+    </div>
+    <div v-else class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
+    </div>
+    <div class="cell-subcategory" :class="barStyle">
+      {{ formatEmbeddedSubcategoryCell() }}
+    </div>
+    <div class="cell-blockchaininfo-common cell-bi-identification" :class="barStyle">
+      <BcSearchbarMiddleEllipsis :width-is-fixed="true">
+        {{ formatEmbeddedIdentificationCell() }}
+      </BcSearchbarMiddleEllipsis>
+    </div>
+    <div v-if="suggestion.output.description !== ''" class="cell-blockchaininfo-common cell-bi-description" :class="barStyle">
+      {{ formatEmbeddedDescriptionCell() }}
+    </div>
+  </div>
 </template>
 
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-// styles common to all modes
-
-.row-common {
+@mixin common-to-both-rows {
   cursor: pointer;
   display: grid;
   min-width: 0;
@@ -135,21 +127,21 @@ function formatEmbeddedLowleveldataCell () : string {
   border-radius: var(--border-radius);
 
   &:hover {
-    &.discreet {
-      background-color: var(--searchbar-background-hover-discreet);
-    }
     &.gaudy,
     &.embedded {
       background-color: var(--dropdown-background-hover);
     }
+    &.discreet {
+      background-color: var(--searchbar-background-hover-discreet);
+    }
   }
   &:active {
-    &.discreet {
-      background-color: var(--searchbar-background-pressed-discreet);
-    }
     &.gaudy,
     &.embedded {
       background-color: var(--button-color-pressed);
+    }
+    &.discreet {
+      background-color: var(--searchbar-background-pressed-discreet);
     }
   }
 
@@ -192,7 +184,8 @@ function formatEmbeddedLowleveldataCell () : string {
     }
   }
 
-  .cell-name {
+  .cell-name,
+  .cell-subcategory {
     grid-column: 2;
     grid-row: 1;
     display: inline-block;
@@ -202,67 +195,11 @@ function formatEmbeddedLowleveldataCell () : string {
   }
 }
 
-// specific style for the embedded mode
-
-.row-embedded {
-  @media (min-width: 600px) { // large screen
-    grid-template-columns: 40px 106px auto min-content;
-  }
-  @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px auto min-content;
-  }
-
-  .cell-name {
-    @media (min-width: 600px) { // large screen
-      font-weight: var(--roboto-medium);
-    }
-    @media (max-width: 600px) { // mobile
-      font-weight: var(--roboto-regular);
-    }
-  }
-
-  .cell-blockchaininfo-common {
-    display: flex;
-    position: relative;
-    margin-top: auto;
-    margin-bottom: auto;
-    white-space: nowrap;
-    grid-row: 1;
-  }
-
-  .cell-bi-description {
-    position: relative;
-    @media (min-width: 600px) { // large screen
-      grid-column: 4;
-    }
-    @media (max-width: 600px) { // mobile
-      grid-column: 3;
-      color: var(--searchbar-text-detail-gaudy);
-    }
-    width: 100px;
-    margin-left: auto;
-    justify-content: right;
-  }
-
-  .cell-bi-lowleveldata {
-    position: relative;
-    @media (min-width: 600px) { // large screen
-      grid-row: 1;
-      grid-column: 3;
-      font-weight: var(--roboto-medium);
-    }
-    @media (max-width: 600px) { // mobile
-      grid-row: 2;
-      grid-column-end: span 2;
-      font-weight: var(--roboto-regular);
-    }
-    width: 100%;
-  }
-}
-
 // specific style for the gaudy and discreet modes
 
 .row-gaudyordiscreet {
+  @include common-to-both-rows;
+
   @media (min-width: 600px) { // large screen
     &.gaudy {
       grid-template-columns: 40px 106px auto 114px;
@@ -313,11 +250,11 @@ function formatEmbeddedLowleveldataCell () : string {
       display: flex;
       position: relative;
       flex-grow: 1;
-      &.greyish.discreet {
-        color: var(--searchbar-text-detail-discreet);
-      }
       &.greyish.gaudy {
         color: var(--searchbar-text-detail-gaudy);
+      }
+      &.greyish.discreet {
+        color: var(--searchbar-text-detail-discreet);
       }
     }
   }
@@ -345,13 +282,73 @@ function formatEmbeddedLowleveldataCell () : string {
     .category-label {
       display: inline-block;
       position: relative;
-      &.discreet {
-        color: var(--searchbar-text-detail-discreet);
-      }
       &.gaudy {
         color: var(--searchbar-text-detail-gaudy);
       }
+      &.discreet {
+        color: var(--searchbar-text-detail-discreet);
+      }
     }
+  }
+}
+
+// specific style for the embedded mode
+
+.row-embedded {
+  @include common-to-both-rows;
+
+  @media (min-width: 600px) { // large screen
+    grid-template-columns: 40px 106px auto min-content;
+  }
+  @media (max-width: 600px) { // mobile
+    grid-template-columns: 40px auto min-content;
+  }
+
+  .cell-subcategory {
+    @media (min-width: 600px) { // large screen
+      font-weight: var(--roboto-medium);
+    }
+    @media (max-width: 600px) { // mobile
+      font-weight: var(--roboto-regular);
+    }
+  }
+
+  .cell-blockchaininfo-common {
+    display: flex;
+    position: relative;
+    margin-top: auto;
+    margin-bottom: auto;
+    white-space: nowrap;
+    grid-row: 1;
+  }
+
+  .cell-bi-identification {
+    position: relative;
+    @media (min-width: 600px) { // large screen
+      grid-row: 1;
+      grid-column: 3;
+      font-weight: var(--roboto-medium);
+    }
+    @media (max-width: 600px) { // mobile
+      grid-row: 2;
+      grid-column-end: span 2;
+      font-weight: var(--roboto-regular);
+    }
+    width: 100%;
+  }
+
+  .cell-bi-description {
+    position: relative;
+    @media (min-width: 600px) { // large screen
+      grid-column: 4;
+    }
+    @media (max-width: 600px) { // mobile
+      grid-column: 3;
+      color: var(--searchbar-text-detail-gaudy);
+    }
+    width: 100px;
+    margin-left: auto;
+    justify-content: right;
   }
 }
 </style>
