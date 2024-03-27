@@ -1,7 +1,6 @@
 package dataaccess
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -710,7 +709,13 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	if err != nil {
 		return nil, nil, err
 	}
-	validatorMetadata := validatorMapping.ValidatorMetadata
+
+	// Convert the metadata to a map for easier access
+	validatorMetadataMap := make(map[string]*types.CachedValidator, len(validatorMapping.ValidatorMetadata))
+	for _, metadata := range validatorMapping.ValidatorMetadata {
+		pubKey := hexutil.Encode(metadata.PublicKey)
+		validatorMetadataMap[pubKey] = metadata
+	}
 
 	// Get the validator duties to check the last fulfilled attestation
 	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
@@ -733,55 +738,43 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		result[idx].PublicKey = t.PubKey(validatorPubKeys[idx])
 		result[idx].GroupId = validatorGroupMap[validator]
 
-		pubKey, err := hexutil.Decode(validatorPubKeys[idx])
-		if err != nil {
-			return nil, nil, err
-		}
-
-		validatorFound := false
-		for _, metadata := range validatorMetadata {
-			if !bytes.Equal(metadata.PublicKey, pubKey) {
-				continue
-			}
-			result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
-			result[idx].WithdrawalCredential = t.Hash(fmt.Sprintf("%#x", metadata.WithdrawalCredentials))
-
-			status := ""
-			switch constypes.ValidatorStatus(metadata.Status) {
-			case constypes.PendingInitialized:
-				status = "deposited"
-			case constypes.PendingQueued:
-				status = "pending"
-				if metadata.Queues.ActivationIndex.Valid {
-					result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
-				}
-			case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-				var lastAttestionSlot uint32
-				for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
-					if attested && slot > lastAttestionSlot {
-						lastAttestionSlot = slot
-					}
-				}
-				if lastAttestionSlot < uint32(attestationThresholdSlot) {
-					status = "offline"
-				} else {
-					status = "online"
-				}
-			case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-				if metadata.Slashed {
-					status = "slashed"
-				} else {
-					status = "exited"
-				}
-			}
-			result[idx].Status = status
-
-			validatorFound = true
-			break
-		}
-		if !validatorFound {
+		metadata, ok := validatorMetadataMap[validatorPubKeys[idx]]
+		if !ok {
 			return nil, nil, fmt.Errorf("validator index %d not found in the metadata", validator)
 		}
+
+		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
+
+		status := ""
+		switch constypes.ValidatorStatus(metadata.Status) {
+		case constypes.PendingInitialized:
+			status = "deposited"
+		case constypes.PendingQueued:
+			status = "pending"
+			if metadata.Queues.ActivationIndex.Valid {
+				result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+			}
+		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
+			var lastAttestionSlot uint32
+			for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+				if attested && slot > lastAttestionSlot {
+					lastAttestionSlot = slot
+				}
+			}
+			if lastAttestionSlot < uint32(attestationThresholdSlot) {
+				status = "offline"
+			} else {
+				status = "online"
+			}
+		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
+			if metadata.Slashed {
+				status = "slashed"
+			} else {
+				status = "exited"
+			}
+		}
+		result[idx].Status = status
 	}
 
 	return result, nil, nil
