@@ -4,8 +4,7 @@ import { type DashboardCreationDisplayType, type DashboardCreationState } from '
 
 const router = useRouter()
 
-const store = useUserDashboardStore()
-const { createValidatorDashboard, createAccountDashboard } = store
+const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 
 interface Props {
   displayType: DashboardCreationDisplayType,

@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
-const store = useLatestStateStore()
-const { getLatestState } = store
-await useAsyncData('latest_state', () => getLatestState())
-const { latest } = storeToRefs(store)
+const { latestState, refreshLatestState } = useLatestStateStore()
+await useAsyncData('latest_state', () => refreshLatestState())
 
 </script>
 <template>
   <div class="header top">
     <div class="content">
-      <div>Current Epoch: {{ latest?.currentEpoch }}</div>
+      <div>Current Epoch: {{ latestState?.currentEpoch }}</div>
       <BcSearchbarGeneral v-if="!props.isHomePage" location="header" />
       <NuxtLink to="/login">
         Login

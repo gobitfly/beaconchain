@@ -28,12 +28,8 @@ const { width, isMobile } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
-const overviewStore = useValidatorDashboardOverviewStore()
-const { getOverview } = overviewStore
-const { overview } = storeToRefs(overviewStore)
-
-const dashboardStore = useUserDashboardStore()
-const { dashboards } = storeToRefs(dashboardStore)
+const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
+const { dashboards } = useUserDashboardStore()
 
 const cursor = ref<Cursor>(0)
 const pageSize = ref<number>(5)
@@ -82,7 +78,7 @@ const addGroup = async () => {
     return
   }
   await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: props.dashboardKey })
-  await getOverview(props.dashboardKey)
+  await refreshOverview(props.dashboardKey)
   newGroupName.value = ''
 }
 
@@ -93,7 +89,7 @@ const editGroup = (row: VDBOverviewGroup, newName?: string) => {
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
   await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_DELETE, undefined, { dashboardKey: props.dashboardKey, groupId: row.id })
-  getOverview(props.dashboardKey)
+  refreshOverview(props.dashboardKey)
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
