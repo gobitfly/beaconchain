@@ -1,9 +1,8 @@
-import { storeToRefs } from 'pinia'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { type Currency } from '~/types/currencies'
 
 export function useCurrency () {
-  const { latest } = storeToRefs(useLatestStateStore())
+  const { latestState } = useLatestStateStore()
 
   const selectedCurrency = useCookie<Currency>('currency', { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
@@ -12,13 +11,13 @@ export function useCurrency () {
   }
 
   const rates = computed(() => {
-    return latest.value?.rates || {} as Record<Currency, number>
+    return latestState.value?.rates || {} as Record<Currency, number>
   })
 
   const available = computed(() => {
     let list: Currency[] = ['NAT', 'ETH']
-    if (latest.value?.rates) {
-      list = list.concat(Object.keys(latest.value.rates) as Currency[])
+    if (latestState.value?.rates) {
+      list = list.concat(Object.keys(latestState.value.rates) as Currency[])
     }
     return list
   })

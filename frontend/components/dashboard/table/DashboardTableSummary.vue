@@ -21,7 +21,7 @@ const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {
