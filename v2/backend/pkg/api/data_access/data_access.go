@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
@@ -1738,46 +1739,61 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	// TODO: implement sorting, filtering & paging
 
-	type DashboardInfo struct {
-		Validators uint64 `db:"validator_index"`
-		Group      uint64 `db:"group_id"`
-	}
-	var dashboardInfo []DashboardInfo
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
 	if dashboardId.Validators == nil {
-		err := db.AlloyReader.Select(&dashboardInfo, `
-		SELECT 
-			validator_index,
-			group_id
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1`, dashboardId.Id)
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+			SELECT
+			    validator_index,
+			    group_id
+			FROM
+			    users_val_dashboards_validators
+			WHERE
+			    dashboard_id = $1`
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
 	} else {
+		// In case a list of validators is provided, set the group to default 0
 		for _, validator := range dashboardId.Validators {
-			dashboardInfo = append(dashboardInfo, DashboardInfo{Validators: validator.Index, Group: 0})
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
 		}
 	}
 
-	validatorsGroupMap := make(map[uint64]uint64)
-	validators := make([]uint64, 0, len(dashboardInfo))
-	for _, info := range dashboardInfo {
-		validatorsGroupMap[info.Validators] = info.Group
-		validators = append(validators, info.Validators)
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
 	}
 
 	var withdrawals []*types.Withdrawals
 
 	err := d.readerDb.Select(&withdrawals, `
-	SELECT
-		w.slot,
-		w.index,
-		w.validatorindex,
-		w.address,
-		w.amount
-	FROM blocks_withdrawals w
-	INNER JOIN blocks b ON b.blockroot = w.block_root AND b.status = '1'
-	WHERE validatorindex = ANY($1)`, pq.Array(validators))
+		SELECT
+		    w.slot,
+		    w.index,
+		    w.validatorindex,
+		    w.address,
+		    w.amount
+		FROM
+		    blocks_withdrawals w
+		    INNER JOIN blocks b ON b.blockroot = w.block_root
+		        AND b.status = '1'
+		WHERE
+		    validatorindex = ANY ($1)`, pq.Array(validators))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
@@ -1790,9 +1806,9 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		result = append(result, t.VDBWithdrawalsTableRow{
 			Epoch:   utils.EpochOfSlot(withdrawal.Slot),
 			Index:   withdrawal.ValidatorIndex,
-			GroupId: validatorsGroupMap[withdrawal.ValidatorIndex],
+			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
 			Recipient: t.Address{
-				Hash: t.Hash(fmt.Sprintf("%#x", withdrawal.Address)),
+				Hash: t.Hash(hexutil.Encode(withdrawal.Address)),
 				// TODO: implement the ENS
 				Ens: "",
 			},
