@@ -20,7 +20,6 @@ const key = computed<DashboardKey>(() => {
   return route.params.id
 })
 
-// NOTE: this is the "owner" of the store and sets up its reactivity
 const { refreshDashboards } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
