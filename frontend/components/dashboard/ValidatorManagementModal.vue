@@ -29,7 +29,7 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const { overview: validatorDashboardOverview, refreshOverview: refreshValidatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
 
@@ -76,7 +76,7 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
   await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
 
   loadData()
-  refreshValidatorDashboardOverview(props.dashboardKey)
+  refreshOverview(props.dashboardKey)
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -88,7 +88,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
 
   loadData()
-  refreshValidatorDashboardOverview(props.dashboardKey)
+  refreshOverview(props.dashboardKey)
 }
 
 const addValidator = () => {
@@ -166,7 +166,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   })
 }
 
-const total = computed(() => addUpValues(validatorDashboardOverview.value?.validators))
+const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
 const MaxValidatorsPerDashboard = 1000
