@@ -358,6 +358,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   display: contents;
 }
 
+:global(.validator-managment-modal-container .bc-pageinator .left-info) {
+  padding-left: var(--padding-large);
+}
+
 .small-title {
   @include utils.truncate-text;
   @include fonts.big_text;
@@ -397,7 +401,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--padding);
+  margin-top: var(--padding-large);
   gap: var(--padding);
 
   .left {
