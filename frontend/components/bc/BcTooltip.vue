@@ -16,9 +16,7 @@ const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
-const ttStore = useTooltipStore()
-const { doSelect } = ttStore
-const { selected } = storeToRefs(ttStore)
+const { selected, doSelect } = useTooltipStore()
 const { width, height } = useWindowSize()
 
 // this const will be avaiable on template

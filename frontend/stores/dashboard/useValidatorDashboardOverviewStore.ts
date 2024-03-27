@@ -17,18 +17,14 @@ export function useValidatorDashboardOverviewStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorOverviewStore()) // NOTE: this is the REACTIVE (and read only) data
 
-  const overview = readonly(data)
+  const overview = computed(() => data.value) // NOTE: we use computed here to have a readonly access to the data only from the outside
 
   // NOTE: function to UPDATE the data, use overview if you just want to access the data
   async function refreshOverview (key: DashboardKey) {
-    if (key === undefined) {
-      return undefined
-    }
-
     const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
     data.value = res.data // NOTE: set data in store
 
-    return data.value
+    return overview.value
   }
 
   return { overview, refreshOverview }
