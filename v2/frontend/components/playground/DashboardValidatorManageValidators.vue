@@ -1,18 +1,9 @@
 <script setup lang="ts">
 import { DashboardGroupSelectionDialog } from '#components'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const overviewStore = useValidatorDashboardOverviewStore()
-const { getOverview } = overviewStore
-await useAsyncData('validator_dashboard_overview', () => getOverview(100))
-const { overview } = storeToRefs(overviewStore)
-
-const store = useUserDashboardStore()
-const { getDashboards } = store
-
-await useAsyncData('validator_dashboards', () => getDashboards())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
