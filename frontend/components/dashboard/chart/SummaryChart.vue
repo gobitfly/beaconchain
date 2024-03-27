@@ -15,8 +15,9 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
-import type { DashboardKey } from '~/types/dashboard'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
+import { type ChartData } from '~/types/api/common'
 
 use([
   CanvasRenderer,
@@ -27,6 +28,8 @@ use([
   GridComponent
 ])
 
+const { fetch } = useCustomFetch()
+
 interface Props {
   dashboardKey: DashboardKey
 }
@@ -34,10 +37,15 @@ const props = defineProps<Props>()
 
 const key = computed(() => props.dashboardKey)
 
-// TODO: The chart data is loaded everytime the view is changed to chart
-// Should only load once and then only when the dashboard key is changed
-const { chartData, refreshChartData } = useValidatorDashboardSummaryChartStore()
-await useAsyncData('validator_summary_chart', () => refreshChartData(key.value), { watch: [key] })
+const data = ref<ChartData<number> | undefined >()
+watch(key, async () => {
+  if (key.value === undefined) {
+    data.value = undefined
+    return
+  }
+  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: key.value })
+  data.value = res.data
+}, { immediate: true })
 
 const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
@@ -59,7 +67,7 @@ const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
 const option = computed(() => {
-  if (chartData === undefined) {
+  if (data === undefined) {
     return undefined
   }
 
@@ -70,9 +78,9 @@ const option = computed(() => {
   }
 
   const series: SeriesObject[] = []
-  if (chartData.value?.series) {
+  if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
-    chartData.value.series.forEach((element) => {
+    data.value.series.forEach((element) => {
       let name = allGroups
       if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
         const group = validatorDashboardOverview.value?.groups.find(group => group.id === element.id)
@@ -97,7 +105,7 @@ const option = computed(() => {
     },
     xAxis: {
       type: 'category',
-      data: chartData.value?.categories,
+      data: data.value?.categories,
       boundaryGap: false,
       axisLabel: {
         fontSize: textSize,
