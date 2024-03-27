@@ -8,16 +8,24 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
-import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardKey } from '~/types/dashboard'
 
 const route = useRoute()
 
-const key = computed(() => {
+const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
     return route.params.id.join(',')
   }
   return route.params.id
 })
+
+const { refreshDashboards } = useUserDashboardStore()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
+await Promise.all([
+  useAsyncData('user_dashboards', () => refreshDashboards()),
+  useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
+])
 
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)

@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
 
-export const useUserStore = defineStore('user-store', () => {
+const userStore = defineStore('user-store', () => {
   const { public: { xUserId } } = useRuntimeConfig()
+  return { data: xUserId }
+})
+
+export function useUserStore () {
   const { fetch } = useCustomFetch()
+  const { data } = storeToRefs(userStore())
+
+  const xUserId = computed(() => data.value)
 
   async function doLogin (email: string, password: string) {
     await fetch<LoginResponse>(API_PATH.LOGIN, {
@@ -22,4 +29,4 @@ export const useUserStore = defineStore('user-store', () => {
   const isLoggedIn = computed(() => !!user.value)
 
   return { doLogin, user, isLoggedIn }
-})
+}

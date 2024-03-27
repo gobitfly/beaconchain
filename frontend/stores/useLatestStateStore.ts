@@ -1,18 +1,26 @@
 import { defineStore } from 'pinia'
 import type { LatestState } from '~/types/latestState'
 
-export const useLatestStateStore = defineStore('latest-state-store', () => {
+const latestStateStore = defineStore('latest-state-store', () => {
+  const data = ref<LatestState | undefined | null>()
+  return { data }
+})
+
+export function useLatestStateStore () {
   const { fetch } = useCustomFetch()
-  const latest = ref<LatestState | undefined | null>()
-  async function getLatestState () {
+  const { data } = storeToRefs(latestStateStore())
+
+  const latestState = computed(() => data.value)
+
+  async function refreshLatestState () {
     if (process.server) {
       const res = await fetch<LatestState>(API_PATH.LATEST_STATE)
-      latest.value = res
+      data.value = res
     } else {
       // TODO remove this once we can load the data also from the client
     }
-    return latest.value
+    return latestState.value
   }
 
-  return { latest, getLatestState }
-})
+  return { latestState, refreshLatestState }
+}
