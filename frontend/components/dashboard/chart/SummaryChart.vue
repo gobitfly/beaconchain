@@ -32,12 +32,12 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const key = computed(() => props.dashboardKey)
+
 // TODO: The chart data is loaded everytime the view is changed to chart
 // Should only load once and then only when the dashboard key is changed
 const { chartData, refreshChartData } = useValidatorDashboardSummaryChartStore()
-// TODO: This watch should only watch props.dashboardKey but that does not work (try it!)
-// Since the dasboard key will be replaced with provide/inject soon anyways, this can be ignored for now
-await useAsyncData('validator_summary_chart', () => refreshChartData(props.dashboardKey), { watch: [props] })
+await useAsyncData('validator_summary_chart', () => refreshChartData(key.value), { watch: [key] })
 
 const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
 
