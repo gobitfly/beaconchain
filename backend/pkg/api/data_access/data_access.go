@@ -1712,8 +1712,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 	}
 
 	if duty == enums.ValidatorDuties.None {
-		// TODO Unclear comment, is this what is meant?
-		// if duty == enums.ValidatorDuties.None THEN ignore period
+		// If we don't need to filter by duty return all validators in the dashboard and group
 		return validators, nil
 	}
 
