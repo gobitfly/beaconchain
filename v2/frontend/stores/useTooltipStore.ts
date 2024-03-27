@@ -1,11 +1,18 @@
 import { defineStore } from 'pinia'
 
-export const useTooltipStore = defineStore('user-store', () => {
-  const selected = ref<HTMLElement | null>(null)
+export const tooltipStore = defineStore('user-store', () => {
+  const data = ref<HTMLElement | null>(null)
+  return { data }
+})
+
+export function useTooltipStore () {
+  const { data } = storeToRefs(tooltipStore())
+
+  const selected = computed(() => data.value)
 
   function doSelect (element: HTMLElement | null) {
-    selected.value = element
+    data.value = element
   }
 
   return { selected, doSelect }
-})
+}

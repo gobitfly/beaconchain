@@ -14,13 +14,13 @@ export function useValidatorDashboardSummaryChartStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorDashboardSummaryChartStore())
 
-  const chartData = readonly(data)
+  const chartData = computed(() => data.value)
 
   async function refreshChartData (dashboardKey: DashboardKey) {
-    const response = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey })
-    data.value = response.data
+    const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey })
+    data.value = res.data
 
-    return data.value
+    return chartData.value
   }
 
   return { chartData, refreshChartData }

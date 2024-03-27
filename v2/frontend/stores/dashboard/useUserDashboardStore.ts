@@ -13,13 +13,13 @@ export function useUserDashboardStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userDashboardStore())
 
-  const dashboards = readonly(data)
+  const dashboards = computed(() => data.value)
 
   async function refreshDashboards () {
     const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
     data.value = res.data
 
-    return data.value
+    return dashboards.value
   }
 
   async function createValidatorDashboard (name: string, network: ValidatorDashboardNetwork) {
