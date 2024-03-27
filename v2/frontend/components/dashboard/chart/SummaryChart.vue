@@ -47,7 +47,7 @@ watch(key, async () => {
   data.value = res.data
 }, { immediate: true })
 
-const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
@@ -83,7 +83,7 @@ const option = computed(() => {
     data.value.series.forEach((element) => {
       let name = allGroups
       if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        const group = validatorDashboardOverview.value?.groups.find(group => group.id === element.id)
+        const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
 

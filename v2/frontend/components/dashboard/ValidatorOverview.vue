@@ -11,7 +11,7 @@ const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'
 
-const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
@@ -30,7 +30,7 @@ const createInfo = (key: string, value: ClElValue<number | string>, formatFuncti
 }
 
 const dataList = computed(() => {
-  const v = validatorDashboardOverview.value
+  const v = overview.value
 
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`)

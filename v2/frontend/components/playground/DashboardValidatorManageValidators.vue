@@ -3,7 +3,7 @@ import { DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const { overview: validatorDashboardOverview } = useValidatorDashboardOverviewStore()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
@@ -20,7 +20,7 @@ const openGroupSelection = (withPreselection: boolean) => {
   dialog.open(DashboardGroupSelectionDialog, {
     onClose: response => onClose(response?.data),
     data: {
-      groupId: withPreselection ? validatorDashboardOverview.value?.groups?.[0]?.id : undefined,
+      groupId: withPreselection ? overview.value?.groups?.[0]?.id : undefined,
       selectedValidators: withPreselection ? 1 : 10,
       totalValidators: 123
     }
