@@ -687,7 +687,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	} else {
 		// In case a list of validators is provided, set the group to default 0
 		for _, validator := range dashboardId.Validators {
-			validatorGroupMap[validator.Index] = 0
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
 			validators = append(validators, validator.Index)
 		}
 	}
