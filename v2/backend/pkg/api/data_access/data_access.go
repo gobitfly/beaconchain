@@ -20,7 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	datatypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -712,7 +712,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	}
 	validatorMetadata := validatorMapping.ValidatorMetadata
 
-	// Get the validator duties to check the last fullfilled attestation
+	// Get the validator duties to check the last fulfilled attestation
 	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
 	defer releaseValDutiesLock()
 	if err != nil {
@@ -747,15 +747,15 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			result[idx].WithdrawalCredential = t.Hash(fmt.Sprintf("%#x", metadata.WithdrawalCredentials))
 
 			status := ""
-			switch datatypes.ValidatorStatus(metadata.Status) {
-			case datatypes.PendingInitialized:
+			switch constypes.ValidatorStatus(metadata.Status) {
+			case constypes.PendingInitialized:
 				status = "deposited"
-			case datatypes.PendingQueued:
+			case constypes.PendingQueued:
 				status = "pending"
 				if metadata.Queues.ActivationIndex.Valid {
 					result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
 				}
-			case datatypes.ActiveOngoing, datatypes.ActiveExiting, datatypes.ActiveSlashed:
+			case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
 				var lastAttestionSlot uint32
 				for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
 					if attested && slot > lastAttestionSlot {
@@ -767,7 +767,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 				} else {
 					status = "online"
 				}
-			case datatypes.ExitedUnslashed, datatypes.ExitedSlashed, datatypes.WithdrawalPossible, datatypes.WithdrawalDone:
+			case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
 				if metadata.Slashed {
 					status = "slashed"
 				} else {
