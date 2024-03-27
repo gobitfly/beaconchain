@@ -6,18 +6,18 @@ import type { DateInfo } from '~/types/date'
 export function useDateProvider () {
   const date = ref(new Date())
   const timestamp = computed(() => date.value.getTime())
-  const interval = ref()
+  let interval:NodeJS.Timeout
 
   const upDate = () => {
     date.value = new Date()
   }
 
   onMounted(() => {
-    interval.value = setInterval(() => upDate(), 1000)
+    interval = setInterval(() => upDate(), 1000)
   })
 
   onUnmounted(() => {
-    interval.value && clearInterval(interval.value)
+    interval && clearInterval(interval)
   })
 
   provide<DateInfo>('date-info', { date, timestamp })
