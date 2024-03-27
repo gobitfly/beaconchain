@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
 
-export const userStore = defineStore('user-store', () => {
+const userStore = defineStore('user-store', () => {
   const { public: { xUserId } } = useRuntimeConfig()
   return { data: xUserId }
 })
