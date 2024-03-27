@@ -7,8 +7,7 @@ const { width } = useWindowSize()
 const { t: $t } = useI18n()
 const { path } = useRoute()
 
-const { dashboards, refreshDashboards } = useUserDashboardStore()
-await useAsyncData('user_dashboards', () => refreshDashboards())
+const { dashboards } = useUserDashboardStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 

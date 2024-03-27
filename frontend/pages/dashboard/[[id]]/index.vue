@@ -9,7 +9,6 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { DashboardKey } from '~/types/dashboard'
 
 const route = useRoute()
@@ -22,8 +21,12 @@ const key = computed<DashboardKey>(() => {
 })
 
 // NOTE: this is the "owner" of the store and sets up its reactivity
+const { refreshDashboards } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
+await Promise.all([
+  useAsyncData('user_dashboards', () => refreshDashboards()),
+  useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
+])
 
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)
