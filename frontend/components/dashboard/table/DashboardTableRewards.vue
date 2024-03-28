@@ -5,7 +5,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import type { BcFormatNumber } from '#build/components'
+import { totalElCl } from '~/utils/bigMath'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -19,13 +19,15 @@ const { t: $t } = useI18n()
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore(props.dashboardKey)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    validator: width.value >= 1400,
-    efficiency_plus: width.value >= 1180
+    duty: width.value >= 980,
+    clRewards: width.value >= 860,
+    elRewards: width.value >= 740,
+    groupId: width.value >= 620
   }
 })
 
@@ -58,7 +60,7 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const groupIdLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
+  if (groupId === undefined || groupId < 0 || width.value < 1000) {
     return
   }
   const group = overview.value?.groups?.find(g => g.id === groupId)
@@ -104,8 +106,8 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
 <template>
   <div>
     <BcTableControl
-      :title="$t('dashboard.validator.summary.title')"
-      :search-placeholder="$t('dashboard.validator.summary.search_placeholder')"
+      :title="$t('dashboard.validator.rewards.title')"
+      :search-placeholder="$t('dashboard.validator.rewards.search_placeholder')"
       :is-row-expandable="isRowExpandable"
       @set-search="setSearch"
     >
@@ -115,7 +117,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             :data="rewards"
             data-key="epoch"
             :expandable="true"
-            class="rewards_table"
+            class="rewards-table"
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
@@ -127,21 +129,77 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             <Column
               field="epoch"
               :sortable="true"
-              body-class="bold"
-              :header="$t('dashboard.validator.col.epoch')"
+              body-class="bold epoch"
+              header-class="epoch"
+              :header="$t('common.epoch')"
             >
               <template #body="slotProps">
                 <BcFormatNumber :value="slotProps.data.epoch" />
               </template>
             </Column>
             <Column
+              field="age"
+              body-class="age"
+              header-class="age"
+              :header="$t('common.age')"
+            >
+              <template #body="slotProps">
+                <BcFormatTimePassed :value="slotProps.data.epoch" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.duty"
+              field="duty"
+              body-class="bold duty"
+              header-class="duty"
+              :header="$t('dashboard.validator.col.duty')"
+            >
+              <template #body="slotProps">
+                <DashboardTableValueDuty :duty="slotProps.data.duty" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.groupId"
               field="group_id"
-              body-class="bold"
+              body-class="group-id"
+              header-class="group-id"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
                 {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
                   groupIdLabel(slotProps.data.group_id) }}</span>
+              </template>
+            </Column>
+            <Column
+              field="reward"
+              body-class="reward"
+              header-class="reward"
+              :header="$t('dashboard.validator.col.total_rewards')"
+            >
+              <template #body="slotProps">
+                <BcFormatValue :value="totalElCl(slotProps.data.reward)" :use-colors="true" :options="{addPlus: true}" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.elRewards"
+              field="reward_el"
+              body-class="reward"
+              header-class="reward"
+              :header="$t('dashboard.validator.col.el_rewards')"
+            >
+              <template #body="slotProps">
+                <BcFormatValue :value="slotProps.data.reward?.el" :use-colors="true" :options="{addPlus: true}" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.clRewards"
+              field="reward_cl"
+              body-class="reward"
+              header-class="reward"
+              :header="$t('dashboard.validator.col.cl_rewards')"
+            >
+              <template #body="slotProps">
+                <BcFormatValue :value="slotProps.data.reward?.cl" :use-colors="true" :options="{addPlus: true}" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -160,27 +218,36 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
 </template>
 
 <style lang="scss" scoped>
-:deep(.rewards_table) {
-  --col-width: 216px;
+:deep(.rewards-table) {
+  --col-width: 154px;
 
-  td:has(.validator_column) {
-    width: var(--col-width);
-    max-width: var(--col-width);
-    min-width: var(--col-width);
+  .epoch,
+  .age {
+    width: 80px;
+    max-width: 80px;
+    min-width: 80px;
+  }
+  .group_id,
+  .reward {
+    width: 120px;
+    max-width: 120px;
+    min-width: 120px;
   }
 
-  td,
-  th {
-    &:not(.expander):not(:last-child) {
-      width: var(--col-width);
-      max-width: var(--col-width);
-      min-width: var(--col-width);
-
+  @media (max-width: 1300px) {
+    .duty {
+      width: 300px;
+      max-width: 300px;
+      min-width: 300px;
     }
   }
 
-  @media (max-width: 600px) {
-    --col-width: 140px;
+  @media (max-width: 1150px) {
+    .duty {
+      width: 160px;
+      max-width: 160px;
+      min-width: 160px;
+    }
   }
 
   .total-row {
