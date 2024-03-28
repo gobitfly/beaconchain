@@ -21,7 +21,7 @@ const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | u
 
 const { overview } = useValidatorDashboardOverviewStore()
 
-const { width, isMobile } = useWindowSize()
+const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     duty: width.value >= 980,
@@ -57,17 +57,6 @@ const groupNameLabel = (groupId?: number) => {
     return `${groupId}` // fallback if we could not match the group name
   }
   return `${group.name}`
-}
-
-const groupIdLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0 || width.value < 1000) {
-    return
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (group && isMobile.value) {
-    return
-  }
-  return ` (ID: ${groupId})`
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -166,8 +155,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
-                  groupIdLabel(slotProps.data.group_id) }}</span>
+                {{ groupNameLabel(slotProps.data.group_id) }}
               </template>
             </Column>
             <Column
@@ -203,7 +191,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              Here can be your details {{ slotProps.data.group_id }}
+              <DashboardTableRewardsDetails :dashboard-key="dashboardKey" :row="slotProps.data" />
             </template>
           </BcTable>
         </ClientOnly>

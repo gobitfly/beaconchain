@@ -78,7 +78,7 @@ onMounted(() => {
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
       </div>
-      <TabView lazy>
+      <TabView lazy :active-index="1">
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />

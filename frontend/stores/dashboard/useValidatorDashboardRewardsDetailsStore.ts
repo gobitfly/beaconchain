@@ -7,7 +7,7 @@ const validatorDashboardRewardsDetailsStore = defineStore('validator_dashboard_r
   return { data }
 })
 
-export const useValidatorDashboardSummaryDetailsStore = (dashboardKey: DashboardKey, groupId: number) => {
+export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: DashboardKey, groupId: number, epoch: number) => {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
 
@@ -16,7 +16,7 @@ export const useValidatorDashboardSummaryDetailsStore = (dashboardKey: Dashboard
   }
 
   async function getDetails () {
-    const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS, undefined, { dashboardKey, groupId })
+    const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS, undefined, { dashboardKey, groupId, epoch })
     data.value = { ...data.value, [getKey()]: res.data }
     return res.data
   }
