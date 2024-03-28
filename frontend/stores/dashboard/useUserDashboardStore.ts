@@ -69,7 +69,7 @@ export function useUserDashboardStore () {
 
   function getValidatorDashboardName (key: DashboardKey) {
     if (typeof key === 'string') {
-      return undefined
+      return key
     }
 
     return dashboards.value?.validator_dashboards.find(d => d.id === key)?.name
