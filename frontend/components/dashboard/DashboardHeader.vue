@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type Menubar from 'primevue/menubar'
+import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 
 const { width } = useWindowSize()
@@ -10,17 +11,6 @@ const { path } = useRoute()
 const { dashboards } = useUserDashboardStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
-
-interface MenuBarButton {
-  label: string;
-  route?: string;
-  class?: string;
-}
-
-interface MenuBarEntry extends MenuBarButton {
-  dropdown: boolean;
-  items?: MenuBarButton[];
-}
 
 const buttonCount = ref<number>(0)
 const menuBarClass = ref<string>('')
