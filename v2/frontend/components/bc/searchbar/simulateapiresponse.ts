@@ -39,7 +39,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       chain_id: 1,
       type: 'contracts',
       hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D',
-      str_value: 'Uniswap'
+      str_value: 'C' + searched
     },
     {
       chain_id: 1,
@@ -224,6 +224,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         type: 'tokens',
         str_value: searched + 'Coin',
         hash_value: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
+      },
+      {
+        chain_id: 100,
+        type: 'contracts',
+        hash_value: '0xF2C5B60e03cb38cA0e568b847BB8773c93E31e12',
+        str_value: searched
       },
       {
         chain_id: 100,

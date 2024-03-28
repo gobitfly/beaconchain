@@ -1,23 +1,9 @@
 <script setup lang="ts">
-import { Category, ResultType, type Matching } from '~/types/searchbar'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
-// TODO : implementing these examples of use
-
-// Picks a result by default when the user presses Enter instead of clicking a result in the drop-down.
-// If you return undefined, it means that either no result suits you or you want to deactivate Enter.
-function pickSomethingByDefault (possibilities : Matching[]) : Matching|undefined {
-  // BcSearchbarMain.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
-  // Now we look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
-  // If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority).
-  let bestMatchWithHigherPriority = possibilities[0]
-  for (const possibility of possibilities) {
-    if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
-      bestMatchWithHigherPriority = possibility
-    }
-  }
-  return bestMatchWithHigherPriority
-}
+const selectedAccount = ref<string>('')
+const selectedValidator = ref<string>('')
 
 function userSelectedAnAccount (wanted : string, type : ResultType, chain : ChainIDs) {
   switch (type) {
@@ -25,32 +11,32 @@ function userSelectedAnAccount (wanted : string, type : ResultType, chain : Chai
     case ResultType.Contracts :
     case ResultType.EnsAddresses :
     case ResultType.EnsOverview :
-      // to be implemented
       break
     default :
       return
   }
 
-  return { wanted, chain } // just some dummy stuff to avoid the warning about unused parameters
+  selectedAccount.value = 'You selected ' + wanted + ' on chain ' + chain + '.'
 }
 
 function userSelectedValidator (wanted : string, type : ResultType, chain : ChainIDs, count : number) { // parameter `count` tells how many validators are in the batch (1 if no batch)
   switch (type) {
-    case ResultType.ValidatorsByIndex :
-    case ResultType.ValidatorsByPubkey :
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
-    case ResultType.ValidatorsByGraffiti :
-      // to be implemented
+    case ResultType.ValidatorsByIndex : // `wanted` contains the index of the validator
+    case ResultType.ValidatorsByPubkey : // `wanted` contains the pubkey of the validator
+      break
+    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys :
+    case ResultType.ValidatorsByDepositAddress : // `wanted` contains the address that was used to deposit the 32 ETH
+    case ResultType.ValidatorsByDepositEnsName : // `wanted` contains the ENS name that was used to deposit the 32 ETH
+    case ResultType.ValidatorsByWithdrawalCredential : // `wanted` contains the withdrawal credential
+    case ResultType.ValidatorsByWithdrawalAddress : // `wanted` contains the withdrawal address
+    case ResultType.ValidatorsByWithdrawalEnsName : // `wanted` contains the ENS name of the withdrawal address
+    case ResultType.ValidatorsByGraffiti : // `wanted` contains the graffiti used to sign blocks
       break
     default :
       return
   }
 
-  return { wanted, chain, count } // just some dummy stuff to avoid the warning about unused parameters
+  selectedValidator.value = 'You selected ' + wanted + ' on chain ' + chain + '. Number of validators: ' + count
 }
 </script>
 
@@ -59,25 +45,24 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
   This tab is used to design and implement the bars embedded in the Account and Validator pages
   <br> <br>
   <div class="container">
-    Accounts:
+    Accounts: <span>{{ selectedAccount }}</span>
     <br><br>
     <BcSearchbarMain
-      :searchable="[Category.Addresses]"
-      :unsearchable="[ResultType.EnsOverview]"
-      bar-style="embedded"
-      :pick-by-default="pickSomethingByDefault"
+      :bar-style="SearchbarStyle.Embedded"
+      :bar-purpose="SearchbarPurpose.Accounts"
+      :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
       @go="userSelectedAnAccount"
     />
   </div>
   <br>
   <div class="container">
-    Validators:
+    Validators: <span>{{ selectedValidator }}</span>
     <br><br>
     <BcSearchbarMain
-      :searchable="[Category.Validators]"
-      :only-networks="[ChainIDs.Gnosis]"
-      bar-style="embedded"
-      :pick-by-default="pickSomethingByDefault"
+      :bar-style="SearchbarStyle.Embedded"
+      :bar-purpose="SearchbarPurpose.Validators"
+      :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
+      :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
       @go="userSelectedValidator"
     />
   </div>

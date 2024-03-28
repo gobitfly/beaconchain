@@ -1,7 +1,11 @@
 import { ChainIDs } from '~/types/networks'
 
-export type SearchBarStyle = 'gaudy' | 'discreet' | 'embedded'
-export enum SearchBarPurpose { General, Accounts, Validators }
+export enum SearchbarStyle {
+  Gaudy = 'gaudy',
+  Discreet = 'discreet',
+  Embedded = 'embedded'
+}
+export enum SearchbarPurpose { General, Accounts, Validators }
 
 export enum Category {
   Tokens,
@@ -62,8 +66,9 @@ export interface Matching {
 /* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
    element from this list (or undefined). This list is passed in parameter `possibilities` as a simplified view of the actual list of
    results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar
-   triggers the event `@go` to call your handler with the actual data of the result that you picked. If you return undefined instead
-   of a matching, nothing happens (either no result suits you or you want to deactivate Enter). */
+   triggers the event `@go` to call your handler with the actual data of the result that you picked. If you return `undefined` instead
+   of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
+   You will find futher below a function named pickHighestPriorityAmongMostRelevantMatchings. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
 export interface SearchAheadSingleResult {
@@ -105,24 +110,44 @@ export interface ResultSuggestion {
   output: ResultSuggestionOutput,
   nameWasUnknown : boolean,
   queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
-  closeness: number // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
-  count : number // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
+  closeness: number, // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
+  count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
+  rawResult: SearchAheadSingleResult // reference to the original data given by the API
 }
+
 export interface OrganizedResults {
   networks: {
     chainId: ChainIDs,
     types: {
       type: ResultType,
-      suggestion: ResultSuggestion[]
+      suggestions: ResultSuggestion[]
     }[]
   }[]
 }
 
-interface CategoryInfoFields {
-  title : string
-  filterLabel : string
+interface SearchbarPurposeInfoField {
+  searchable : Category[], // list of categories that the bar can search in
+  unsearchable : ResultType[] // list of types that the bar will not search for
+}
+export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
+  [SearchbarPurpose.General]: {
+    searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators],
+    unsearchable: []
+  },
+  [SearchbarPurpose.Accounts]: {
+    searchable: [Category.Addresses],
+    unsearchable: [ResultType.EnsOverview]
+  },
+  [SearchbarPurpose.Validators]: {
+    searchable: [Category.Validators],
+    unsearchable: []
+  }
 }
 
+interface CategoryInfoFields {
+  title : string,
+  filterLabel : string
+}
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Tokens]: { title: 'ERC-20 Tokens', filterLabel: 'Tokens' },
   [Category.NFTs]: { title: 'NFTs', filterLabel: 'NFTs' },
@@ -134,7 +159,6 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
 interface SubCategoryInfoFields {
   title : string
 }
-
 export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
   [SubCategory.Tokens]: { title: 'Token' },
   [SubCategory.NFTs]: { title: 'NFT' },
@@ -455,4 +479,26 @@ export function getListOfResultTypesInCategory (category: Category, sortByPriori
   }
 
   return searchableTypesPerCategory[category]
+}
+
+// This is an example of function that <BcSearchbarMain> needs in its props `pick-by-default`. You can design a function fulfilling your needs
+// or simply give this one (after importing pickHighestPriorityAmongMostRelevantMatchings at the top of your script setup) if it does what you
+// need.
+// The purpose of the function given to props `pick-by-default` is to pick a result when the user presses Enter instead of clicking a result in
+// the drop-down. Note: if your function returns `undefined` it means that either no result suits you or you want to deactivate Enter.
+export function pickHighestPriorityAmongMostRelevantMatchings (possibilities : Matching[]) : Matching|undefined {
+  // What this funtion works with:
+  //   `possibilities` contains an abstract representation of the possible results sorted by network and type priority (the order appearing in
+  //   the drop-down). We must select one of them or we can return `undefined` if no result suits us or if we want to deactivate Enter.
+  // What we implemented in this example function:
+  //   We look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
+  //   If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority). This
+  //   happens for example when the user input corresponds to both a validator index and a block number.
+  let bestMatchWithHigherPriority = possibilities[0]
+  for (const possibility of possibilities) {
+    if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
+      bestMatchWithHigherPriority = possibility
+    }
+  }
+  return bestMatchWithHigherPriority
 }

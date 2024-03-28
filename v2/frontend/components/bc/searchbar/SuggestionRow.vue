@@ -7,17 +7,16 @@ import {
   ResultType,
   isOutputAnAPIresponse,
   type ResultSuggestion,
-  type SearchBarStyle,
-  SearchBarPurpose
+  SearchbarStyle,
+  SearchbarPurpose
 } from '~/types/searchbar'
 
-const emit = defineEmits(['row-selected'])
 const props = defineProps<{
     suggestion: ResultSuggestion,
     chainId: ChainIDs,
     resultType: ResultType,
-    barStyle: SearchBarStyle,
-    barPurpose: SearchBarPurpose
+    barStyle: SearchbarStyle,
+    barPurpose: SearchbarPurpose
 }>()
 
 function formatEmbeddedSubcategoryCell () : string {
@@ -53,10 +52,9 @@ function formatEmbeddedIdentificationCell () : string {
 
 <template>
   <div
-    v-if="barStyle == 'gaudy' || barStyle == 'discreet'"
+    v-if="barStyle == SearchbarStyle.Gaudy || barStyle == SearchbarStyle.Discreet"
     class="row-gaudyordiscreet"
     :class="barStyle"
-    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
   >
     <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
@@ -84,10 +82,9 @@ function formatEmbeddedIdentificationCell () : string {
   </div>
 
   <div
-    v-else-if="barStyle == 'embedded'"
+    v-else-if="barStyle == SearchbarStyle.Embedded"
     class="row-embedded"
     :class="barStyle"
-    @click="emit('row-selected', chainId, resultType, suggestion.queryParam, suggestion.count)"
   >
     <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />

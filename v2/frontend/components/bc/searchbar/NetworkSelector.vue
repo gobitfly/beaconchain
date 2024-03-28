@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { type SearchBarStyle } from '~/types/searchbar'
+import { SearchbarStyle } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
 const emit = defineEmits(['change'])
 const props = defineProps<{
   initialState: Record<string, boolean>, // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts)
-  barStyle: SearchBarStyle
+  barStyle: SearchbarStyle
 }>()
 
 let vueMultiselectAllOptions : {name: string, label: string}[] = []
