@@ -126,12 +126,12 @@ export interface OrganizedResults {
 }
 
 interface SearchbarPurposeInfoField {
-  searchable : Category[], // list of categories that the bar can search in
-  unsearchable : ResultType[] // list of types that the bar will not search for
+  searchable : Category[], // List of categories that the bar can search in. They will appear on the screen in the same order as in this list.
+  unsearchable : ResultType[] // List of types that the bar will not search for.
 }
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
   [SearchbarPurpose.General]: {
-    searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators],
+    searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
     unsearchable: []
   },
   [SearchbarPurpose.Accounts]: {
