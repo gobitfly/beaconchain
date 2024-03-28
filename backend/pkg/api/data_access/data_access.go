@@ -1790,44 +1790,69 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	}
 
 	// Get the withdrawals for the validators
-	var withdrawals []*types.Withdrawals
-	err := d.readerDb.Select(&withdrawals, `
+	queryResult := []struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		Epoch          uint64 `db:"epoch"`
+		Amount         int64  `db:"withdrawals_amount"`
+	}{}
+	err := d.alloyReader.Select(&queryResult, `
 		SELECT
-		    w.block_slot AS slot,
-		    w.validatorindex,
-		    w.address,
-		    w.amount
+		    validator_index,
+			epoch,
+		    withdrawals_amount
 		FROM
-		    blocks_withdrawals w
-		    INNER JOIN blocks b ON b.blockroot = w.block_root
-		        AND b.status = '1'
+		    validator_dashboard_data_epoch
 		WHERE
-		    validatorindex = ANY ($1)`, pq.Array(validators))
+		    validator_index = ANY ($1) AND withdrawals_amount > 0`, pq.Array(validators))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
 		}
-		return nil, nil, fmt.Errorf("error getting blocks_withdrawals for validators: %+v: %w", validators, err)
+		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
 
-	addressMap := make(map[string]string)
-	for _, withdrawal := range withdrawals {
-		addressMap[hexutil.Encode(withdrawal.Address)] = ""
+	// Get the validators with withdrawals
+	validatorsWithWithdrawals := make(map[uint64]bool, 0)
+	for _, withdrawal := range queryResult {
+		validatorsWithWithdrawals[withdrawal.ValidatorIndex] = true
 	}
-	db.GetEnsNamesForAddresses(addressMap)
 
+	// Get the current validator state
+	validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the withdrawal addresses for the validators
+	withdrawalAddresses := make(map[uint64]string)
+	addressEns := make(map[string]string)
+	for validator := range validatorsWithWithdrawals {
+		withdrawalCredentials := validatorMapping.ValidatorMetadata[validator].WithdrawalCredentials
+		withdrawalAddress, err := utils.GetAddressOfWithdrawalCredentials(withdrawalCredentials)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid withdrawal credentials for validator %d: %s", validator, hexutil.Encode(withdrawalCredentials))
+		}
+		withdrawalAddresses[validator] = hexutil.Encode(withdrawalAddress.Bytes())
+		addressEns[hexutil.Encode(withdrawalAddress.Bytes())] = ""
+	}
+
+	// Get the ENS names for the addresses
+	db.GetEnsNamesForAddresses(addressEns)
+
+	// Create the result
 	result := make([]t.VDBWithdrawalsTableRow, 0)
-	for _, withdrawal := range withdrawals {
-		address := hexutil.Encode(withdrawal.Address)
+	for _, withdrawal := range queryResult {
+		address := withdrawalAddresses[withdrawal.ValidatorIndex]
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   utils.EpochOfSlot(withdrawal.Slot),
+			Epoch:   withdrawal.Epoch,
 			Index:   withdrawal.ValidatorIndex,
 			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
 			Recipient: t.Address{
 				Hash: t.Hash(address),
-				Ens:  addressMap[address],
+				Ens:  addressEns[address],
 			},
-			Amount: decimal.NewFromInt(int64(withdrawal.Amount)),
+			Amount: decimal.NewFromInt(withdrawal.Amount),
 		})
 	}
 
