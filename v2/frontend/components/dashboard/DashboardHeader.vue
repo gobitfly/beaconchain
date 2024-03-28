@@ -5,12 +5,9 @@ import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 const { width } = useWindowSize()
 
 const { t: $t } = useI18n()
-const store = useUserDashboardStore()
-const { getDashboards } = store
 const { path } = useRoute()
 
-const { dashboards } = storeToRefs(store)
-await useAsyncData('validator_dashboards', () => getDashboards()) // TODO: This is called here and in DashboardValidatorManageValidators.vue. Should just be called once?
+const { dashboards } = useUserDashboardStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 

@@ -8,18 +8,27 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
-import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import type { DashboardKey } from '~/types/dashboard'
 
 const route = useRoute()
 
-const key = computed(() => {
+const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
     return route.params.id.join(',')
   }
   return route.params.id
 })
 
+const { refreshDashboards } = useUserDashboardStore()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
+await Promise.all([
+  useAsyncData('user_dashboards', () => refreshDashboards()),
+  useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
+])
+
 const manageValidatorsModalVisisble = ref(false)
+const manageGroupsModalVisisble = ref(false)
 
 const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
@@ -50,6 +59,7 @@ onMounted(() => {
     </BcPageWrapper>
   </div>
   <div v-else>
+    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" :dashboard-key="key" />
     <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
@@ -61,7 +71,10 @@ onMounted(() => {
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
-      <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
+      <div class="edit-buttons-row">
+        <Button :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
+        <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
+      </div>
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
       </div>
@@ -108,6 +121,12 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.edit-buttons-row{
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--padding);
+  margin-bottom: var(--padding);
+}
 .panel-controller {
   display: flex;
   justify-content: center;

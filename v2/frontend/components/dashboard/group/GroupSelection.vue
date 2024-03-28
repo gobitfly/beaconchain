@@ -9,7 +9,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const list = computed<VDBOverviewGroup[]>(() => {
   const groups = overview.value?.groups ?? []

@@ -13,7 +13,7 @@ export const setQuerySearch = (search?: string, query?: TableQueryParams): Table
   return { ...query, search }
 }
 
-const getSortOrder = (dir?: number | null) => dir === -1 ? 'asc' : 'desc'
+export const getSortOrder = (dir?: number | null) => dir === -1 ? 'asc' : 'desc'
 
 export const setQuerySort = (sort?: DataTableSortEvent, query?: TableQueryParams): TableQueryParams => {
   query = query || {}
