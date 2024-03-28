@@ -10,6 +10,7 @@ useHead({
 }, { mode: 'client' })
 useWindowSizeProvider()
 useBcToastProvider()
+useDateProvider()
 
 </script>
 
