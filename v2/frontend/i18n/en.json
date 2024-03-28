@@ -131,6 +131,9 @@
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
     "notifications": "Notifications",
+    "share": "Share",
+    "share_dashboard": "Share Dashboard",
+    "delete_dashboard": "Delete Dashboard",
     "group": {
       "selection": {
         "group": "Group",
@@ -163,7 +166,6 @@
     "validator": {
       "manage_validators": "Manage Validators",
       "manage_groups": "Manage Groups",
-      "share": "Share",
       "management":{
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",

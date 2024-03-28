@@ -10,15 +10,17 @@ import {
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { DashboardCreationController, BcDialogConfirm } from '#components'
+import { DashboardCreationController, BcDialogConfirm, IconMore } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
 import type { DashboardKey } from '~/types/dashboard'
+import type { MenuBarEntry } from '~/types/menuBar'
 
 const route = useRoute()
 const dialog = useDialog()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const router = useRouter()
+const { width } = useWindowSize()
 
 const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
@@ -31,6 +33,54 @@ const key = computed<DashboardKey>(() => {
   }
 
   return idAsNumber
+})
+
+const moreButtons = computed<MenuBarEntry[] | undefined>(() => {
+  if (width.value < 475) {
+    return [
+      {
+        label: '',
+        dropdown: false,
+        class: 'icon-only',
+        component: IconMore,
+        items: [
+          {
+            label: $t('dashboard.share_dashboard'),
+            command: () => { share() }
+          },
+          {
+            label: $t('dashboard.delete_dashboard'),
+            command: () => { remove() }
+          }
+        ]
+      }
+    ]
+  }
+
+  return undefined
+})
+
+const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
+  if (width.value < 760) {
+    return [
+      {
+        label: 'Manage',
+        dropdown: true,
+        items: [
+          {
+            label: $t('dashboard.validator.manage_groups'),
+            command: () => { manageGroupsModalVisisble.value = true }
+          },
+          {
+            label: $t('dashboard.validator.manage_validators'),
+            command: () => { manageValidatorsModalVisisble.value = true }
+          }
+        ]
+      }
+    ]
+  }
+
+  return undefined
 })
 
 const { dashboards, refreshDashboards, getValidatorDashboardName } = useUserDashboardStore()
@@ -127,16 +177,37 @@ onMounted(() => {
           <div class="h1 name">
             {{ dashboardName }}
           </div>
-          <div class="button-container">
+          <Menubar v-if="moreButtons" :model="moreButtons" breakpoint="0px">
+            <template #item="{ item }">
+              <span class="button-content more-button pointer">
+                <div v-if="item.component">
+                  <component :is="item.component" />
+                </div>
+                <div v-else>
+                  <span class="text">{{ item.label }}</span>
+                  <IconChevron v-if="item.dropdown" direction="bottom" />
+                </div>
+              </span>
+            </template>
+          </Menubar>
+          <div v-else class="button-container">
             <Button class="share-button" @click="share()">
-              {{ $t('dashboard.validator.share') }}<FontAwesomeIcon :icon="faShare" />
+              {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
             </Button>
             <Button class="p-button-icon-only" @click="remove()">
               <FontAwesomeIcon :icon="faTrash" />
             </Button>
           </div>
         </div>
-        <div class="manage-buttons-container">
+        <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
+          <template #item="{ item }">
+            <span class="button-content pointer">
+              <span class="text">{{ item.label }}</span>
+              <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
+            </span>
+          </template>
+        </Menubar>
+        <div v-else class="manage-buttons-container">
           <Button :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
           <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
         </div>
@@ -187,18 +258,23 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/utils.scss';
+
 .header-row {
+  height: 30px;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  gap: var(--padding);
+  margin-bottom: var(--padding);
 
   .name-container{
     display: flex;
-    align-items: center;
     gap: var(--padding-large);
 
     .name {
       margin-top: 0;
+      overflow: hidden;
+      text-overflow: ellipsis; // TODO: Fix ellipsis handling
     }
 
     .button-container{
@@ -207,7 +283,6 @@ onMounted(() => {
 
       .share-button{
         display: flex;
-        align-items: center;
         gap: var(--padding-small);
       }
     }
@@ -217,7 +292,54 @@ onMounted(() => {
     display: flex;
     justify-content: flex-end;
     gap: var(--padding);
-    margin-bottom: var(--padding);
+  }
+
+  :deep(.p-menubar .p-menubar-root-list) {
+    >.p-menuitem{
+      color: var(--text-color-inverted);
+      background: var(--button-color-active);
+      font-weight: var(--standard_text_medium_font_weight);
+      border-color: var(--button-color-active);
+
+      >.p-menuitem-content {
+        padding: 0;
+
+        >.button-content{
+          display: flex;
+
+          &:not(.more-button){
+            align-items: center;
+            gap: 7px;
+            padding: 7px 17px;
+          }
+
+          &.more-button{
+            padding: 6px 13px 3px 13px;
+          }
+
+          .pointer {
+            cursor: pointer;
+          }
+        }
+      }
+
+      >.p-submenu-list {
+        font-weight: var(--standard_text_font_weight);
+
+        >.p-menuitem .button-content{
+          gap: 0;
+          padding: 0;
+
+          .text {
+            @include utils.truncate-text;
+          }
+        }
+      }
+
+      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+        background: var(--button-color-hover);
+      }
+    }
   }
 }
 
