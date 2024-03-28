@@ -5,8 +5,11 @@ import {
   faCubes,
   faFire,
   faWallet,
-  faMoneyBill
+  faMoneyBill,
+  faShare,
+  faTrash
 } from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
 import type { DashboardKey } from '~/types/dashboard'
@@ -40,6 +43,10 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
   }
 }
 
+const onShare = () => {
+  alert('Not implemented yet')
+}
+
 onMounted(() => {
   // TODO: Implement check if user does not have a single dashboard instead of the key check once information is available
   if (key.value === '') {
@@ -71,9 +78,24 @@ onMounted(() => {
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
-      <div class="edit-buttons-row">
-        <Button :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
-        <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
+      <div class="header-row">
+        <div class="name-container">
+          <div class="h1 name">
+            Validators
+          </div>
+          <div class="button-container">
+            <Button class="share-button" @click="onShare()">
+              {{ $t('dashboard.validator.share') }}<FontAwesomeIcon :icon="faShare" />
+            </Button>
+            <Button class="p-button-icon-only">
+              <FontAwesomeIcon :icon="faTrash" />
+            </Button>
+          </div>
+        </div>
+        <div class="manage-buttons-container">
+          <Button :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
+          <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
+        </div>
       </div>
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
@@ -121,12 +143,40 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.edit-buttons-row{
+.header-row {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--padding);
-  margin-bottom: var(--padding);
+  justify-content: space-between;
+  align-items: baseline;
+
+  .name-container{
+    display: flex;
+    align-items: center;
+    gap: var(--padding-large);
+
+    .name {
+      margin-top: 0;
+    }
+
+    .button-container{
+      display: flex;
+      gap: var(--padding);
+
+      .share-button{
+        display: flex;
+        align-items: center;
+        gap: var(--padding-small);
+      }
+    }
+  }
+
+  .manage-buttons-container{
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--padding);
+    margin-bottom: var(--padding);
+  }
 }
+
 .panel-controller {
   display: flex;
   justify-content: center;
@@ -142,5 +192,9 @@ onMounted(() => {
 
 .overview {
   margin-bottom: var(--padding-large);
+}
+
+.p-tabview {
+  margin-top: var(--padding-large);
 }
 </style>
