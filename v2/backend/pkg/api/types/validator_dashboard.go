@@ -102,8 +102,13 @@ type VDBGroupRewardsData struct {
 	AttestationsHead   VDBGroupRewardsDetails `json:"attestations_head"`
 	Sync               VDBGroupRewardsDetails `json:"sync"`
 	Slashing           VDBGroupRewardsDetails `json:"slashing"`
+	Inactivity         VDBGroupRewardsDetails `json:"inactivity"`
 	Proposal           VDBGroupRewardsDetails `json:"proposal"`
-	ProposalElReward   decimal.Decimal        `json:"proposal_el_reward"`
+
+	ProposalElReward            decimal.Decimal `json:"proposal_el_reward"`
+	ProposalClAttIncReward      decimal.Decimal `json:"proposal_cl_att_inc_reward"`
+	ProposalClSyncIncReward     decimal.Decimal `json:"proposal_cl_sync_inc_reward"`
+	ProposalClSlashingIncReward decimal.Decimal `json:"proposal_cl_slashing_inc_reward"`
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
