@@ -61,9 +61,13 @@
       display: none;
     }
   }
-  @media screen and (max-width: 430px) {    
+  @media screen and (max-width: 430px) {
     margin-bottom: 0;
   }
+}
+
+.p-dialog-mask {
+  background: var(--black-transparent-3);
 }
 
 // InputText
