@@ -139,8 +139,8 @@
         "placeholder": "Select group", 
         "dialog": {
           "title": "Edit Groups",
-          "assign-group": "Assign to group",
-          "validators-selected": "1/{total} validator selected | {count}/{total} validators selected"
+          "assign_group": "Assign to group",
+          "validators_selected": "1/{total} validator selected | {count}/{total} validators selected"
         }
       }
     },
@@ -157,8 +157,9 @@
       }
     },
     "validator": {
-      "manage-validators": "Manage Validators",
-      "manage-groups": "Manage Groups",
+      "manage_validators": "Manage Validators",
+      "manage_groups": "Manage Groups",
+      "share": "Share",
       "management":{
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",
