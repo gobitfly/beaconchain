@@ -97,6 +97,16 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// Create the data access service
 	das := createDataAccessService(cfg)
 
+	// TODO: We set the global db connections here to have access to the functions in the db package
+	// which use them without having to rewrite every single one.
+	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
+	db.ReaderDb = das.readerDb
+	db.WriterDb = das.writerDb
+	db.AlloyReader = das.alloyReader
+	db.AlloyWriter = das.alloyWriter
+	db.BigtableClient = das.bigtable
+	db.PersistentRedisDbClient = das.persistentRedisDbClient
+
 	// Create the services
 	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.bigtable, das.persistentRedisDbClient)
 
@@ -1779,12 +1789,11 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		return nil, nil, nil
 	}
 
+	// Get the withdrawals for the validators
 	var withdrawals []*types.Withdrawals
-
 	err := d.readerDb.Select(&withdrawals, `
 		SELECT
-		    w.slot,
-		    w.index,
+		    w.block_slot AS slot,
 		    w.validatorindex,
 		    w.address,
 		    w.amount
@@ -1795,22 +1804,28 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		WHERE
 		    validatorindex = ANY ($1)`, pq.Array(validators))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
 		}
 		return nil, nil, fmt.Errorf("error getting blocks_withdrawals for validators: %+v: %w", validators, err)
 	}
 
+	addressMap := make(map[string]string)
+	for _, withdrawal := range withdrawals {
+		addressMap[hexutil.Encode(withdrawal.Address)] = ""
+	}
+	db.GetEnsNamesForAddresses(addressMap)
+
 	result := make([]t.VDBWithdrawalsTableRow, 0)
 	for _, withdrawal := range withdrawals {
+		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
 			Epoch:   utils.EpochOfSlot(withdrawal.Slot),
 			Index:   withdrawal.ValidatorIndex,
 			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
 			Recipient: t.Address{
-				Hash: t.Hash(hexutil.Encode(withdrawal.Address)),
-				// TODO: implement the ENS
-				Ens: "",
+				Hash: t.Hash(address),
+				Ens:  addressMap[address],
 			},
 			Amount: decimal.NewFromInt(int64(withdrawal.Amount)),
 		})
