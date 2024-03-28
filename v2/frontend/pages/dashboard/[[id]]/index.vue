@@ -10,11 +10,15 @@ import {
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { DashboardCreationController } from '#components'
+import { DashboardCreationController, BcDialogConfirm } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
 import type { DashboardKey } from '~/types/dashboard'
 
 const route = useRoute()
+const dialog = useDialog()
+const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
+const router = useRouter()
 
 const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
@@ -29,7 +33,7 @@ const key = computed<DashboardKey>(() => {
   return idAsNumber
 })
 
-const { getValidatorDashboardName, refreshDashboards } = useUserDashboardStore()
+const { dashboards, refreshDashboards, getValidatorDashboardName } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('user_dashboards', () => refreshDashboards()),
@@ -51,8 +55,40 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
   }
 }
 
-const onShare = () => {
+const share = () => {
   alert('Not implemented yet')
+}
+
+const remove = () => {
+  dialog.open(BcDialogConfirm, {
+    props: {
+      header: $t('dashboard.deletion.title')
+    },
+    onClose: response => response?.data && removeDashboard(key.value),
+    data: {
+      question: $t('dashboard.deletion.text', { dashboard: dashboardName.value })
+    }
+  })
+}
+
+const removeDashboard = async (key: DashboardKey) => {
+  await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
+
+  await refreshDashboards()
+
+  // forward user to another dashboard (if possible)
+  if ((dashboards.value?.validator_dashboards?.length ?? 0) > 0) {
+    router.push(`/dashboard/${dashboards.value?.validator_dashboards[0].id}`)
+    return
+  }
+
+  if ((dashboards.value?.account_dashboards?.length ?? 0) > 0) {
+    router.push(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
+    return
+  }
+
+  // no other dashboard available, forward to creation screen
+  router.push('/dashboard')
 }
 
 onMounted(() => {
@@ -92,10 +128,10 @@ onMounted(() => {
             {{ dashboardName }}
           </div>
           <div class="button-container">
-            <Button class="share-button" @click="onShare()">
+            <Button class="share-button" @click="share()">
               {{ $t('dashboard.validator.share') }}<FontAwesomeIcon :icon="faShare" />
             </Button>
-            <Button class="p-button-icon-only">
+            <Button class="p-button-icon-only" @click="remove()">
               <FontAwesomeIcon :icon="faTrash" />
             </Button>
           </div>

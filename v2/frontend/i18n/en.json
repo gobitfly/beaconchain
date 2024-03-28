@@ -156,6 +156,10 @@
         "subtitle": "What network are your validators on?"
       }
     },
+    "deletion": {
+      "title": "Delete Dashboard",
+      "text": "Do you want to delete dashboard {dashboard}?"
+    },
     "validator": {
       "manage_validators": "Manage Validators",
       "manage_groups": "Manage Groups",
