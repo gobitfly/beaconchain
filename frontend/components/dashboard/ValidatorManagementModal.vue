@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import {
-  faAdd,
   faEdit,
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
@@ -14,6 +13,8 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
+import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -91,8 +92,28 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(props.dashboardKey)
 }
 
-const addValidator = () => {
+const addValidator = (wanted : string, type : ResultType, chain : ChainIDs, count : number) => {
+  switch (type) {
+    case ResultType.ValidatorsByIndex : // `wanted` contains the index of the validator
+    case ResultType.ValidatorsByPubkey : // `wanted` contains the pubkey of the validator
+      selectedValidator.value = wanted
+      break
+    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys :
+    case ResultType.ValidatorsByDepositAddress : // `wanted` contains the address that was used to deposit the 32 ETH
+    case ResultType.ValidatorsByDepositEnsName : // `wanted` contains the ENS name that was used to deposit the 32 ETH
+    case ResultType.ValidatorsByWithdrawalCredential : // `wanted` contains the withdrawal credential
+    case ResultType.ValidatorsByWithdrawalAddress : // `wanted` contains the withdrawal address
+    case ResultType.ValidatorsByWithdrawalEnsName : // `wanted` contains the ENS name of the withdrawal address
+    case ResultType.ValidatorsByGraffiti : // `wanted` contains the graffiti used to sign blocks
+      selectedValidator.value = wanted // TODO: maybe handle these cases differently? (because `wanted` identifies a list of validators instead of a single index/pubkey)
+      break
+    default :
+      return
+  }
+
   changeGroup([selectedValidator.value], selectedGroup.value)
+
+  return { chain, count } // There is actually nothing to return, I write this dummy line to avoid a warning about unused parameters. TODO: remove this line and the parameters that you do not need.
 }
 
 const editSelected = () => {
@@ -193,12 +214,15 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       <template #bc-table-sub-header>
         <div class="add-row">
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: replace input once Searchbar is finished -->
-          <InputText v-model="selectedValidator" class="search-input" placeholder="Placeholder input (will be replaced once the searchbar is finished)" />
-          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator" @click="addValidator">
-            <FontAwesomeIcon :icon="faAdd" />
-          </Button>
-          <!-- end of temp -->
+          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of networks that the validators should to belong to -->
+          <BcSearchbarMain
+            :bar-style="SearchbarStyle.Embedded"
+            :bar-purpose="SearchbarPurpose.Validators"
+            :only-networks="[ChainIDs.Ethereum]"
+            :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
+            class="search-bar"
+            @go="addValidator"
+          />
         </div>
       </template>
       <template #table>
@@ -384,10 +408,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   margin-bottom: var(--padding);
   gap: var(--padding);
 
-  .search-input {
+  .search-bar {
     flex-shrink: 1;
     flex-grow: 1;
-    width: 50px;
   }
 }
 

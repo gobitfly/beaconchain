@@ -4,14 +4,14 @@ import {
   CategoryInfo,
   TypeInfo,
   getListOfResultTypesInCategory,
-  type SearchBarStyle
+  SearchbarStyle
 } from '~/types/searchbar'
 
 const { t: $t } = useI18n()
 const emit = defineEmits(['change'])
 const props = defineProps<{
     initialState: Record<string, boolean>, // each field will have a stringifyEnum(Category) as key and the state of the option as value
-    barStyle: SearchBarStyle
+    barStyle: SearchbarStyle
  }>()
 
 let componentIsReady = false

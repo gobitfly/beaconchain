@@ -2,19 +2,19 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
-  type SearchBarStyle,
-  SearchBarPurpose
+  SearchbarStyle,
+  SearchbarPurpose
 } from '~/types/searchbar'
 
 defineProps<{
-    barStyle: SearchBarStyle,
-    barPurpose: SearchBarPurpose
+    barStyle: SearchbarStyle,
+    barPurpose: SearchbarPurpose
 }>()
 
 </script>
 
 <template>
-  <Button v-if="barPurpose == SearchBarPurpose.Accounts || barPurpose == SearchBarPurpose.Validators" class="p-button-icon-only plus">
+  <Button v-if="barPurpose == SearchbarPurpose.Accounts || barPurpose == SearchbarPurpose.Validators" class="p-button-icon-only plus">
     <FontAwesomeIcon :icon="faPlus" />
   </Button>
   <span v-else class="magnifier-button" :class="barStyle">

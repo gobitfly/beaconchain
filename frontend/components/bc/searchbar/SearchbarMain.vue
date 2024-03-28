@@ -16,8 +16,9 @@ import {
   type SearchAheadResult,
   type ResultSuggestion,
   type OrganizedResults,
-  type SearchBarStyle,
-  SearchBarPurpose,
+  SearchbarStyle,
+  SearchbarPurpose,
+  SearchbarPurposeInfo,
   type Matching,
   type PickingCallBackFunction
 } from '~/types/searchbar'
@@ -28,15 +29,16 @@ const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const props = defineProps<{
-  searchable: Category[], // list of categories that the bar can search in
-  unsearchable?: ResultType[], // the bar will not search for this types
+  barStyle: SearchbarStyle, // look of the bar
+  barPurpose: SearchbarPurpose, // what the bar will be used for
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
-  barStyle: SearchBarStyle, // look of the bar ('discreet', 'gaudy' or 'embedded')
   pickByDefault: PickingCallBackFunction /* When the user presses Enter, this callback function receives a simplified representation of
    the suggested results and returns one element from this list (or undefined). This list is passed in the parameter (of type Matching[])
    as a simplified view of the actual list of results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority.
    After you return a matching, the bar triggers the event `@go` to call your handler with the actual data of the result that you picked.
-   If you return undefined instead of a matching, nothing happens (either no result suits you or you want to deactivate Enter). */
+   If you return undefined instead of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
+   In file searchbar.ts you will find a function named pickHighestPriorityAmongMostRelevantMatchings. It is an example that you can use
+   directly by writing `pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"`. */
 }>()
 const emit = defineEmits(['go'])
 
@@ -59,7 +61,6 @@ interface GlobalState {
   showDropDown: boolean
 }
 
-const barPurpose = whatIsMyPurpose()
 let searchableTypes : ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
@@ -92,12 +93,21 @@ const results = {
   }
 }
 
-function cleanUp (closeDropDown : boolean) {
-  lastKnownInput = ''
-  inputted.value = ''
-  resetGlobalState(States.InputIsEmpty)
-  if (closeDropDown) {
-    globalState.value.showDropDown = false
+function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRemove : ResultSuggestion | undefined) {
+  if (forcedReset || props.barPurpose === SearchbarPurpose.General) {
+    // we empty the input and close the drop-down
+    lastKnownInput = ''
+    inputted.value = ''
+    resetGlobalState(States.InputIsEmpty)
+    if (closeDropDown) {
+      globalState.value.showDropDown = false
+    }
+  } else if (props.barPurpose === SearchbarPurpose.Accounts || props.barPurpose === SearchbarPurpose.Validators) {
+    // we remove the result and refresh the drop-down with the new list of results
+    if (suggestionToRemove && results.raw.data) {
+      results.raw.data.splice(results.raw.data.indexOf(suggestionToRemove.rawResult), 1)
+      refreshOutputArea()
+    }
   }
 }
 
@@ -125,15 +135,15 @@ function updateGlobalState (state : States) {
 onMounted(() => {
   searchableTypes = []
   allTypesBelongToAllNetworks = true
-  // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained as a props)
+  // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
   for (const t of getListOfResultTypes(false)) {
-    if (props.searchable.includes(TypeInfo[t].category) && !props.unsearchable?.includes(t)) {
+    if (SearchbarPurposeInfo[props.barPurpose].searchable.includes(TypeInfo[t].category) && !SearchbarPurposeInfo[props.barPurpose].unsearchable.includes(t)) {
       searchableTypes.push(t)
       allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
     }
   }
   // creates the fields storing the state of the category-filter buttons, and deselect them
-  for (const s of props.searchable) {
+  for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
     userFilters.categories[stringifyEnum(s)] = false
   }
   userFilters.noCategoryIsSelected = true
@@ -172,7 +182,6 @@ setInterval(() => {
     return
   }
   updateGlobalState(States.WaitingForResults)
-
   // These two calls run in a separate thread. They request results from the API and then update the drop-down.
   searchAhead().then(updateBarAfterSearchAhead)
   // the timer returns immediately
@@ -257,8 +266,8 @@ function userPressedSearchButtonOrEnter () {
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestion` (see the sorting done in `filterAnsdOrganizeResults()`)
-      possibilities.push({ closeness: type.suggestion[0].closeness, network: network.chainId, type: type.type })
+      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestions` (see the sorting done in `filterAnsdOrganizeResults()`)
+      possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type })
     }
   }
   // calling back parent's function in charge of making a choice
@@ -268,15 +277,15 @@ function userPressedSearchButtonOrEnter () {
     const network = toConsider.networks.find(nw => nw.chainId === picked.network)
     const type = network?.types.find(ty => ty.type === picked.type)
     // calling back parent's function taking action with the result
-    cleanUp(true)
-    emit('go', type?.suggestion[0].queryParam, type?.type, network?.chainId, type?.suggestion[0].count)
+    emit('go', type?.suggestions[0].queryParam, type?.type, network?.chainId, type?.suggestions[0].count)
+    cleanUp(false, false, type?.suggestions[0])
   }
 }
 
-function userClickedSuggestion (chain : ChainIDs, type : ResultType, wanted: string, count : number) {
-  // cleans up and calls back parent's function
-  cleanUp(true)
-  emit('go', wanted, type, chain, count)
+function userClickedSuggestion (chain : ChainIDs, type : ResultType, suggestion : ResultSuggestion) {
+  // calls back parent's function and cleans up
+  emit('go', suggestion.queryParam, type, chain, suggestion.count)
+  cleanUp(false, true, suggestion)
 }
 
 function inputMightHaveChanged () {
@@ -285,7 +294,7 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp(false)
+    cleanUp(true, false, undefined)
   } else {
     // we order a search (the timer will launch it)
     resetGlobalState(States.SearchRequestWillBeSent)
@@ -374,11 +383,11 @@ function filterAndOrganizeResults () {
     if (existingType < 0) {
       existingType = -1 + place.networks[existingNetwork].types.push({
         type,
-        suggestion: []
+        suggestions: []
       })
     }
     // now we can insert the finding at the right place in the organized results
-    place.networks[existingNetwork].types[existingType].suggestion.push(toBeAdded)
+    place.networks[existingNetwork].types[existingType].suggestions.push(toBeAdded)
   }
 
   // This sorting orders the displayed results and is fundamental for function userPressedSearchButtonOrEnter(). Do not alter the sorting without considering the needs of that function.
@@ -387,7 +396,7 @@ function filterAndOrganizeResults () {
     for (const network of place.networks) {
       network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority)
       for (const type of network.types) {
-        type.suggestion.sort((a, b) => a.closeness - b.closeness)
+        type.suggestions.sort((a, b) => a.closeness - b.closeness)
       }
     }
   }
@@ -451,7 +460,7 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
     }
   }
 
-  return { output, nameWasUnknown, queryParam, closeness, count }
+  return { output, nameWasUnknown, queryParam, closeness, count, rawResult: apiResponseElement }
 }
 
 function getAPIdata (apiResponseElement : SearchAheadSingleResult, fillFrom : FillFrom | string) : string | undefined {
@@ -459,21 +468,12 @@ function getAPIdata (apiResponseElement : SearchAheadSingleResult, fillFrom : Fi
   let sourceField : keyof SearchAheadSingleResult
 
   switch (fillFrom) {
-    case FillFrom.SASRstr_value :
-      sourceField = 'str_value'
-      break
-    case FillFrom.SASRnum_value :
-      sourceField = 'num_value'
-      break
-    case FillFrom.SASRhash_value :
-      sourceField = 'hash_value'
-      break
-    case FillFrom.CategoryTitle :
-      return CategoryInfo[TypeInfo[type].category].title
-    case FillFrom.SubCategoryTitle :
-      return SubCategoryInfo[TypeInfo[type].subCategory].title
-    case FillFrom.TypeTitle :
-      return TypeInfo[type].title
+    case FillFrom.SASRstr_value : sourceField = 'str_value'; break
+    case FillFrom.SASRnum_value : sourceField = 'num_value'; break
+    case FillFrom.SASRhash_value : sourceField = 'hash_value'; break
+    case FillFrom.CategoryTitle : return CategoryInfo[TypeInfo[type].category].title
+    case FillFrom.SubCategoryTitle : return SubCategoryInfo[TypeInfo[type].subCategory].title
+    case FillFrom.TypeTitle : return TypeInfo[type].title
     default :
       return fillFrom as string // this is a predefined text, hard-coded in object TypeInfo defined in searchbar.ts
   }
@@ -510,7 +510,7 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     return TypeInfo[type].countable
   }
   // from here, there is uncertainty but we must simply tell whether counting is possible for some results
-  if (barPurpose === SearchBarPurpose.General) {
+  if (props.barPurpose === SearchbarPurpose.General) {
     return false // we do not ask the API to count identical results when the bar is versatile (general bar to search anything on the blockchain)
   }
   for (const type of searchableTypes) {
@@ -519,22 +519,6 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     }
   }
   return false
-}
-
-function whatIsMyPurpose () : SearchBarPurpose {
-  if (props.barStyle === 'embedded') {
-    if (props.searchable.length === 1) {
-      if (props.searchable[0] === Category.Addresses) {
-        return SearchBarPurpose.Accounts
-      } else if (props.searchable[0] === Category.Validators) {
-        return SearchBarPurpose.Validators
-      }
-    }
-    // there is no reason to reach this state but let's be careful:
-    warn('The purpose of the search bar could not be determined')
-  }
-
-  return SearchBarPurpose.General
 }
 
 function mustNetworkFilterBeShown () : boolean {
@@ -546,10 +530,10 @@ function mustCategoryFiltersBeShown () : boolean {
 }
 
 function inputPlaceHolder () : string {
-  switch (barPurpose) {
-    case SearchBarPurpose.General : return $t('search_bar.general_placeholder')
-    case SearchBarPurpose.Accounts : return $t('search_bar.account_placeholder')
-    case SearchBarPurpose.Validators : return $t('search_bar.validator_placeholder')
+  switch (props.barPurpose) {
+    case SearchbarPurpose.General : return $t('search_bar.general_placeholder')
+    case SearchbarPurpose.Accounts : return $t('search_bar.account_placeholder')
+    case SearchbarPurpose.Validators : return $t('search_bar.validator_placeholder')
   }
   return '' // cannot happen but the static analysis thinks it can
 }
@@ -557,10 +541,10 @@ function inputPlaceHolder () : string {
 function informationIfInputIsEmpty () : string {
   const info = $t('search_bar.type_something') + ' '
 
-  switch (barPurpose) {
-    case SearchBarPurpose.General : return info + $t('search_bar.and_use_filters')
-    case SearchBarPurpose.Accounts : return info + $t('search_bar.related_to_account')
-    case SearchBarPurpose.Validators : return info + $t('search_bar.related_to_validator')
+  switch (props.barPurpose) {
+    case SearchbarPurpose.General : return info + $t('search_bar.and_use_filters')
+    case SearchbarPurpose.Accounts : return info + $t('search_bar.related_to_account')
+    case SearchbarPurpose.Validators : return info + $t('search_bar.related_to_validator')
   }
   return info // cannot happen but the static analysis thinks it can
 }
@@ -644,14 +628,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
           <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
             <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <div v-for="(suggestion, i) of typ.suggestion" :key="i" class="suggestionrow-container" :class="barStyle">
+              <div v-for="(suggestion, i) of typ.suggestions" :key="i" class="suggestionrow-container" :class="barStyle">
                 <BcSearchbarSuggestionRow
                   :suggestion="suggestion"
                   :chain-id="network.chainId"
                   :result-type="typ.type"
                   :bar-style="barStyle"
                   :bar-purpose="barPurpose"
-                  @row-selected="userClickedSuggestion"
+                  @click="userClickedSuggestion(network.chainId, typ.type, suggestion)"
                 />
                 <div class="separation-between-suggestions" :class="barStyle" />
               </div>

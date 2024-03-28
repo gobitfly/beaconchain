@@ -1,33 +1,17 @@
 <script setup lang="ts">
-import { Category, ResultType, type SearchBarStyle, type Matching } from '~/types/searchbar'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({ location: { type: String, required: true } })
 
-let searchBarStyle : SearchBarStyle
+let searchbarStyle : SearchbarStyle
 
 switch (props.location) {
-  case 'header' :
-    searchBarStyle = 'discreet'
-    break
   case 'page' :
-    searchBarStyle = 'gaudy'
+    searchbarStyle = SearchbarStyle.Gaudy
     break
-}
-
-// Picks a result by default when the user presses Enter instead of clicking a result in the drop-down.
-// If you return undefined, it means that either no result suits you or you want to deactivate Enter.
-function pickSomethingByDefault (possibilities : Matching[]) : Matching|undefined {
-  // BcSearchbarMain.vue has sorted the possible results in `possibilities` by network and type priority (the order appearing in the drop-down).
-  // Now we look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
-  // If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority). This
-  // happens for example when the user input corresponds to both a validator index and a block number.
-  let bestMatchWithHigherPriority = possibilities[0]
-  for (const possibility of possibilities) {
-    if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
-      bestMatchWithHigherPriority = possibility
-    }
-  }
-  return bestMatchWithHigherPriority
+  case 'header' :
+    searchbarStyle = SearchbarStyle.Discreet
+    break
 }
 
 function redirectToRelevantPage (wanted : string, type : ResultType, chain : ChainIDs) {
@@ -101,9 +85,9 @@ function redirectToRelevantPage (wanted : string, type : ResultType, chain : Cha
 
 <template>
   <BcSearchbarMain
-    :searchable="[Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators]"
-    :bar-style="searchBarStyle"
-    :pick-by-default="pickSomethingByDefault"
+    :bar-style="searchbarStyle"
+    :bar-purpose="SearchbarPurpose.General"
+    :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
     @go="redirectToRelevantPage"
   />
 </template>
