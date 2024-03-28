@@ -72,8 +72,8 @@ onMounted(() => {
         <DashboardValidatorOverview class="overview" :dashboard-key="key" />
       </template>
       <div class="edit-buttons-row">
-        <Button :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
-        <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
+        <Button :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
+        <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
       </div>
       <div>
         <DashboardValidatorSlotViz :dashboard-key="key" />
