@@ -20,15 +20,23 @@ const key = computed<DashboardKey>(() => {
   if (Array.isArray(route.params.id)) {
     return route.params.id.join(',')
   }
-  return route.params.id
+
+  const idAsNumber = parseInt(route.params.id)
+  if (isNaN(idAsNumber)) {
+    return route.params.id
+  }
+
+  return idAsNumber
 })
 
-const { refreshDashboards } = useUserDashboardStore()
+const { getValidatorDashboardName, refreshDashboards } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('user_dashboards', () => refreshDashboards()),
   useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
 ])
+
+const dashboardName = computed(() => getValidatorDashboardName(key.value))
 
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)
@@ -81,7 +89,7 @@ onMounted(() => {
       <div class="header-row">
         <div class="name-container">
           <div class="h1 name">
-            Validators
+            {{ dashboardName }}
           </div>
           <div class="button-container">
             <Button class="share-button" @click="onShare()">
