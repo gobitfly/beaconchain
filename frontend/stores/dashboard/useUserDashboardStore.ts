@@ -11,6 +11,7 @@ const userDashboardStore = defineStore('user_dashboards_store', () => {
 
 export function useUserDashboardStore () {
   const { fetch } = useCustomFetch()
+  const { t: $t } = useI18n()
   const { data } = storeToRefs(userDashboardStore())
 
   const dashboards = computed(() => data.value)
@@ -18,6 +19,20 @@ export function useUserDashboardStore () {
   async function refreshDashboards () {
     const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
     data.value = res.data
+
+    // add fallback names for dashboards that have no names
+    if (dashboards.value) {
+      dashboards.value.account_dashboards.forEach((d) => {
+        if (d.name === '') {
+          d.name = `${$t('dashboard.account_dashboard')} ${d.id}`
+        }
+      })
+      dashboards.value.validator_dashboards.forEach((d) => {
+        if (d.name === '') {
+          d.name = `${$t('dashboard.validator_dashboard')} ${d.id}`
+        }
+      })
+    }
 
     return dashboards.value
   }
