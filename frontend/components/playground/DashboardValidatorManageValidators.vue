@@ -1,18 +1,9 @@
 <script setup lang="ts">
 import { DashboardGroupSelectionDialog } from '#components'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const overviewStore = useValidatorDashboardOverviewStore()
-const { getOverview } = overviewStore
-await useAsyncData('validator_dashboard_overview', () => getOverview(100))
-const { overview } = storeToRefs(overviewStore)
-
-const store = useUserDashboardStore()
-const { getDashboards } = store
-
-await useAsyncData('validator_dashboards', () => getDashboards())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
@@ -39,8 +30,12 @@ const openGroupSelection = (withPreselection: boolean) => {
 </script>
 <template>
   <div class="icon-holder">
-    <div>Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" /></div>
-    <div>This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" /></div>
+    <div class="premium-row">
+      Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" />
+    </div>
+    <div class="premium-row">
+      This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" />
+    </div>
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />
   </div>
@@ -74,6 +69,10 @@ const openGroupSelection = (withPreselection: boolean) => {
 </template>
 
 <style lang="scss" scoped>
+.premium-row{
+  display: inline-flex;
+  gap: 10px;
+}
 .group-selection{
   width: 200px;
 }

@@ -10,6 +10,7 @@ interface Props {
   label?: string, // used if not in edit mode, defaults to value,
   disabled?: boolean,
   canBeEmpty?: boolean,
+  maxlength?: number,
 }
 
 const props = defineProps<Props>()
@@ -58,7 +59,7 @@ watch([isEditing, inputRef], ([edit, input]) => {
 <template>
   <div class="input-container">
     <div v-if="isEditing" class="input-wrapper">
-      <InputText ref="inputRef" v-model="editValue" @keypress.enter="iconClick" />
+      <InputText ref="inputRef" v-model="editValue" :maxlength="maxlength" @keypress.enter="iconClick" />
     </div>
     <span v-if="!isEditing" class="label">
       {{ label || value }}
