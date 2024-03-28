@@ -8,6 +8,7 @@ export enum API_PATH {
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
+  DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidator',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_GROUP_DELETE = '/validator-dashboards/group_delete',
@@ -84,6 +85,12 @@ const mapping: Record<string, MappingData> = {
     path: '/validator-dashboards',
     mock: false,
     method: 'POST'
+  },
+  [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
+    path: '/validator-dashboards/{dashboardKey}',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
+    mock: false,
+    method: 'DELETE'
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
