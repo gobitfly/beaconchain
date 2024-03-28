@@ -1,6 +1,6 @@
 export function useNetwork () {
-  // TODO: Replace hardcoded Ethereum Mainnet values with real network information once network endpoint is available
-  const tsForSlot0 = 1606820423
+  // TODO: Replace hardcoded Ethereum Holesky values with real network information once network endpoint is available
+  const tsForSlot0 = 1695902400
   const secondsPerSlot = 12
   const slotsPerEpoch = 32
 

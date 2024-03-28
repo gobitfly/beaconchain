@@ -2,6 +2,7 @@
 import type { Currency } from '~/types/currencies'
 
 const { setCurrency, currency } = useCurrency()
+const { latest } = storeToRefs(useLatestStateStore())
 
 const onCurrencyChange = (event: Event) => {
   const select = event.target as HTMLSelectElement
@@ -129,6 +130,50 @@ const onCurrencyChange = (event: Event) => {
   <div>
     1 - no settings
     <BcFormatPercent :percent="1" />
+  </div>
+  <b>
+    Format Epochs time passed
+  </b>
+  <div>
+    Epoch 1 ->
+    <BcFormatTimePassed :value="1" />
+  </div>
+
+  <div>
+    Epoch 272684 ->
+    <BcFormatTimePassed :value="272684" />
+  </div>
+  <div>
+    latest Epoch ->
+    <BcFormatTimePassed :value="latest?.currentEpoch" />
+  </div>
+  <div>
+    latest Epoch - 1 ->
+    <BcFormatTimePassed :value="(latest?.currentEpoch ?? 1) - 1" />
+  </div>
+  <div>
+    latest Epoch - 10 ->
+    <BcFormatTimePassed :value="(latest?.currentEpoch ?? 10) - 10" />
+  </div>
+  <div>
+    next Epoch ->
+    <BcFormatTimePassed :value="(latest?.currentEpoch ?? 0 )+ 1" />
+  </div>
+  <div>
+    next Epoch no tick ->
+    <BcFormatTimePassed :value="(latest?.currentEpoch ?? 0 )+ 1" :no-update="true" />
+  </div>
+  <div>
+    the Epoch after ->
+    <BcFormatTimePassed :value="(latest?.currentEpoch ?? 0) + 2" />
+  </div>
+  <div>
+    latest Epoch long format->
+    <BcFormatTimePassed :value="latest?.currentEpoch" unit-length="long" />
+  </div>
+  <div>
+    latest Epoch short format->
+    <BcFormatTimePassed :value="latest?.currentEpoch" unit-length="short" />
   </div>
 </template>
 
