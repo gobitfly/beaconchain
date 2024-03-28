@@ -257,6 +257,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 :global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
 }
+:global(.validator-group-managment-modal-container .bc-pageinator .left-info) {
+  padding-left: var(--padding-large);
+}
 
 :global(.validator-group-managment-modal-container .edit-group ){
   max-width: 201px;
@@ -310,7 +313,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--padding);
+  margin-top: var(--padding-large);
   gap: var(--padding);
 
   .left {

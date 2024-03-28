@@ -131,7 +131,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: var(--standard_text_bold_font_weight);
+  font-weight: var(--standard_text_medium_font_weight);
   padding: var(--padding);
 
   .left-info {

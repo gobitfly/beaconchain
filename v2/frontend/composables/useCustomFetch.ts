@@ -115,7 +115,7 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.LATEST_STATE]: {
     path: '/latestState',
     legacy: true,
-    mock: true
+    mock: false
   },
   [API_PATH.LOGIN]: {
     path: '/login',
