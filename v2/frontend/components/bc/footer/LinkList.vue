@@ -73,13 +73,11 @@ const columns: Row[] = [
   line-height: 33px;
 
   @media (min-width: 600px) {
-    // large screen
-    margin-bottom: 10px;
+    margin-bottom: var(--padding);
   }
 
   @media (max-width: 600px) {
-    // mobile
-    margin-top: 10px;
+    margin-top: var(--padding);
   }
 }
 
