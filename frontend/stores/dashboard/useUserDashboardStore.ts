@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
-import type { ValidatorDashboardNetwork } from '~/types/dashboard'
+import type { ValidatorDashboardNetwork, DashboardKey } from '~/types/dashboard'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -52,5 +52,13 @@ export function useUserDashboardStore () {
     }
   }
 
-  return { dashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard }
+  function getValidatorDashboardName (key: DashboardKey) {
+    if (typeof key === 'string') {
+      return undefined
+    }
+
+    return dashboards.value?.validator_dashboards.find(d => d.id === key)?.name
+  }
+
+  return { dashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard, getValidatorDashboardName }
 }
