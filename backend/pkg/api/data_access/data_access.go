@@ -697,24 +697,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return nil, nil, nil
 	}
 
-	// Get the pubkeys of the validators
-	validatorPubKeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validators)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Get the current validator state
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
 	defer releaseValMapLock()
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// Convert the metadata to a map for easier access
-	validatorMetadataMap := make(map[string]*types.CachedValidator, len(validatorMapping.ValidatorMetadata))
-	for _, metadata := range validatorMapping.ValidatorMetadata {
-		pubKey := hexutil.Encode(metadata.PublicKey)
-		validatorMetadataMap[pubKey] = metadata
 	}
 
 	// Get the validator duties to check the last fulfilled attestation
@@ -734,14 +721,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	// Fill the result
 	result := make([]t.VDBManageValidatorsTableRow, len(validators))
 	for idx, validator := range validators {
-		result[idx].Index = validator
-		result[idx].PublicKey = t.PubKey(validatorPubKeys[idx])
-		result[idx].GroupId = validatorGroupMap[validator]
+		metadata := validatorMapping.ValidatorMetadata[validator]
 
-		metadata, ok := validatorMetadataMap[validatorPubKeys[idx]]
-		if !ok {
-			return nil, nil, fmt.Errorf("validator index %d not found in the metadata", validator)
-		}
+		result[idx].Index = validator
+		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
+		result[idx].GroupId = validatorGroupMap[validator]
 
 		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
 		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
