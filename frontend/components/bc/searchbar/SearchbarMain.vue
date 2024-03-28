@@ -58,7 +58,7 @@ enum States {
 interface GlobalState {
   state : States,
   callAgainFunctionUserPressedSearchButtonOrEnter: boolean
-  showDropDown: boolean
+  showDropdown: boolean
 }
 
 let searchableTypes : ResultType[] = []
@@ -69,12 +69,12 @@ let lastKnownInput = ''
 const globalState = ref<GlobalState>({
   state: States.InputIsEmpty,
   callAgainFunctionUserPressedSearchButtonOrEnter: false,
-  showDropDown: false
+  showDropdown: false
 })
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 
-const zindexCorrectionClass = computed(() => globalState.value.showDropDown ? 'dropdown-is-opened' : '')
+const zindexCorrectionClass = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
 
 const userFilters = {
   networks: {} as Record<string, boolean>, // each field will have a stringifyEnum(ChainIDs) as key and the state of the option as value
@@ -100,7 +100,7 @@ function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRe
     inputted.value = ''
     resetGlobalState(States.InputIsEmpty)
     if (closeDropDown) {
-      globalState.value.showDropDown = false
+      globalState.value.showDropdown = false
     }
   } else if (props.barPurpose === SearchbarPurpose.Accounts || props.barPurpose === SearchbarPurpose.Validators) {
     // we remove the result and refresh the drop-down with the new list of results
@@ -114,22 +114,20 @@ function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRe
 function resetGlobalState (state : States) : GlobalState {
   const previousState = { ...globalState.value }
 
-  if (state === globalState.value.state) {
-    // makes sure that Vue re-renders the drop-down although the state does not change
-    globalState.value.state = States.UpdateIncoming
-  }
   globalState.value.callAgainFunctionUserPressedSearchButtonOrEnter = false
-  globalState.value.state = state
+  updateGlobalState(state)
 
   return previousState
 }
 
 function updateGlobalState (state : States) {
   if (state === globalState.value.state) {
-    // makes sure that Vue re-renders the drop-down although the state does not change
+    // we make sure that Vue re-renders the drop-down although the state does not change
     globalState.value.state = States.UpdateIncoming
+    nextTick().then(() => updateGlobalState(state))
+  } else {
+    globalState.value.state = state
   }
-  globalState.value.state = state
 }
 
 onMounted(() => {
@@ -167,7 +165,7 @@ function listenToClicks (event : Event) {
       dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
-  globalState.value.showDropDown = false
+  globalState.value.showDropdown = false
 }
 
 // In the V1, the server was receiving a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
@@ -579,10 +577,10 @@ function informationIfHiddenResults () : string {
   return info
 }
 
-// This padding with leading zeros is required otherwise the fields in a Record whose keys are
-// enum values would get sorted lexicographically for some reason.
+// This padding a leading zero is required otherwise the fields in a Record whose keys are
+// well-formatted numbers would get sorted lexicographically... for some reason.
 function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string {
-  return String(enumValue).padStart(10, '0')
+  return '0' + String(enumValue)
 }
 </script>
 
@@ -597,7 +595,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           type="text"
           :placeholder="inputPlaceHolder()"
           @keyup="(e) => {if (e.key === 'Enter') {userPressedSearchButtonOrEnter()} else {inputMightHaveChanged()}}"
-          @focus="globalState.showDropDown = true"
+          @focus="globalState.showDropdown = true"
         />
         <BcSearchbarButton
           class="searchbutton"
@@ -607,7 +605,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropDown" ref="dropDown" class="drop-down" :class="barStyle">
+      <div v-if="globalState.showDropdown" ref="dropDown" class="drop-down" :class="barStyle">
         <div class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector

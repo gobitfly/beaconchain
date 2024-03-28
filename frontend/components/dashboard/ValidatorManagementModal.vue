@@ -214,7 +214,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       <template #bc-table-sub-header>
         <div class="add-row">
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of networks that the validators should to belong to -->
+          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             :bar-style="SearchbarStyle.Embedded"
             :bar-purpose="SearchbarPurpose.Validators"
