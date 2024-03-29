@@ -41,3 +41,8 @@ func IsHash(s string) bool {
 func IsValidWithdrawalCredentials(s string) bool {
 	return withdrawalCredentialsRE.MatchString(s) || withdrawalCredentialsAddressRE.MatchString(s)
 }
+
+// IsValidWithdrawalCredentialsAddress verifies whether a string represents valid withdrawal credential with address.
+func IsValidWithdrawalCredentialsAddress(s string) bool {
+	return withdrawalCredentialsAddressRE.MatchString(s)
+}
