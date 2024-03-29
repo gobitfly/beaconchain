@@ -289,6 +289,8 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		}
 		columns = append(columns, n)
 	}
+	// set cursor direction
+	reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction))
 
 	// generate next cursor
 	for _, c := range columns {
@@ -308,6 +310,9 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		v := reflect.ValueOf(data[0]).FieldByName(c).Int()
 		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
 	}
+
+	// flip direction of prev cursor
+	reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction.Invert()))
 
 	prev_cursor, err := CursorToString[T](cursor)
 	if err != nil {
