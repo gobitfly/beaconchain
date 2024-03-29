@@ -1838,7 +1838,9 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	}
 
 	// Get the ENS names for the addresses
-	db.GetEnsNamesForAddresses(addressEns)
+	if err := db.GetEnsNamesForAddresses(addressEns); err != nil {
+		return nil, nil, err
+	}
 
 	// Create the result
 	result := make([]t.VDBWithdrawalsTableRow, 0)
