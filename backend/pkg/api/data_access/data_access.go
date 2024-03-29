@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -660,8 +661,121 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
+	// TODO: implement sorting, filtering & paging
+
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+		SELECT 
+			validator_index,
+			group_id
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+		`
+		validatorsParams := []interface{}{dashboardId.Id}
+
+		if groupId != t.AllGroups {
+			validatorsQuery += " AND group_id = $2"
+			validatorsParams = append(validatorsParams, groupId)
+		}
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, validatorsParams...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		for _, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
+	}
+
+	// Get the current validator state
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the validator duties to check the last fulfilled attestation
+	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
+	defer releaseValDutiesLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Set the threshold for "online" => "offline" to 2 epochs without attestation
+	attestationThresholdSlot := uint64(0)
+	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	if dutiesInfo.LatestSlot >= twoEpochs {
+		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
+	}
+
+	// Fill the result
+	result := make([]t.VDBManageValidatorsTableRow, len(validators))
+	for idx, validator := range validators {
+		metadata := validatorMapping.ValidatorMetadata[validator]
+
+		result[idx].Index = validator
+		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
+		result[idx].GroupId = validatorGroupMap[validator]
+
+		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
+
+		status := ""
+		switch constypes.ValidatorStatus(metadata.Status) {
+		case constypes.PendingInitialized:
+			status = "deposited"
+		case constypes.PendingQueued:
+			status = "pending"
+			if metadata.Queues.ActivationIndex.Valid {
+				result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+			}
+		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
+			var lastAttestionSlot uint32
+			for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+				if attested && slot > lastAttestionSlot {
+					lastAttestionSlot = slot
+				}
+			}
+			if lastAttestionSlot < uint32(attestationThresholdSlot) {
+				status = "offline"
+			} else {
+				status = "online"
+			}
+		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
+			if metadata.Slashed {
+				status = "slashed"
+			} else {
+				status = "exited"
+			}
+		}
+		result[idx].Status = status
+	}
+
+	paging := &t.Paging{
+		TotalCount: uint64(len(result)),
+	}
+
+	return result, paging, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
