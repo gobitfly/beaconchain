@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
@@ -95,6 +96,16 @@ var _ DataAccessor = (*DataAccessService)(nil)
 func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// Create the data access service
 	das := createDataAccessService(cfg)
+
+	// TODO: We set the global db connections here to have access to the functions in the db package
+	// which use them without having to rewrite every single one.
+	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
+	db.ReaderDb = das.readerDb
+	db.WriterDb = das.writerDb
+	db.AlloyReader = das.alloyReader
+	db.AlloyWriter = das.alloyWriter
+	db.BigtableClient = das.bigtable
+	db.PersistentRedisDbClient = das.persistentRedisDbClient
 
 	// Create the services
 	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.bigtable, das.persistentRedisDbClient)
@@ -1736,6 +1747,120 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
+	// TODO: implement sorting, filtering & paging
+
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+			SELECT
+			    validator_index,
+			    group_id
+			FROM
+			    users_val_dashboards_validators
+			WHERE
+			    dashboard_id = $1`
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		for _, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
+	}
+
+	// Get the withdrawals for the validators
+	queryResult := []struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		Epoch          uint64 `db:"epoch"`
+		Amount         int64  `db:"withdrawals_amount"`
+	}{}
+	err := d.alloyReader.Select(&queryResult, `
+		SELECT
+		    validator_index,
+			epoch,
+		    withdrawals_amount
+		FROM
+		    validator_dashboard_data_epoch
+		WHERE
+		    validator_index = ANY ($1) AND withdrawals_amount > 0`, pq.Array(validators))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
+	}
+
+	// Get the validators with withdrawals
+	validatorsWithWithdrawals := make(map[uint64]bool, 0)
+	for _, withdrawal := range queryResult {
+		validatorsWithWithdrawals[withdrawal.ValidatorIndex] = true
+	}
+
+	// Get the current validator state
+	validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the withdrawal addresses for the validators
+	withdrawalAddresses := make(map[uint64]string)
+	addressEns := make(map[string]string)
+	for validator := range validatorsWithWithdrawals {
+		withdrawalCredentials := validatorMapping.ValidatorMetadata[validator].WithdrawalCredentials
+		withdrawalAddress, err := utils.GetAddressOfWithdrawalCredentials(withdrawalCredentials)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid withdrawal credentials for validator %d: %s", validator, hexutil.Encode(withdrawalCredentials))
+		}
+		withdrawalAddresses[validator] = hexutil.Encode(withdrawalAddress.Bytes())
+		addressEns[hexutil.Encode(withdrawalAddress.Bytes())] = ""
+	}
+
+	// Get the ENS names for the addresses
+	if err := db.GetEnsNamesForAddresses(addressEns); err != nil {
+		return nil, nil, err
+	}
+
+	// Create the result
+	result := make([]t.VDBWithdrawalsTableRow, 0)
+	for _, withdrawal := range queryResult {
+		address := withdrawalAddresses[withdrawal.ValidatorIndex]
+		result = append(result, t.VDBWithdrawalsTableRow{
+			Epoch:   withdrawal.Epoch,
+			Index:   withdrawal.ValidatorIndex,
+			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
+			Recipient: t.Address{
+				Hash: t.Hash(address),
+				Ens:  addressEns[address],
+			},
+			Amount: decimal.NewFromInt(withdrawal.Amount),
+		})
+	}
+
+	paging := &t.Paging{
+		TotalCount: uint64(len(result)),
+	}
+
+	return result, paging, nil
 }
