@@ -19,6 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -289,6 +291,8 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		}
 		columns = append(columns, n)
 	}
+	// set cursor direction
+	reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction))
 
 	// generate next cursor
 	for _, c := range columns {
@@ -309,6 +313,9 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
 	}
 
+	// flip direction of prev cursor
+	reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction.Invert()))
+
 	prev_cursor, err := CursorToString[T](cursor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate prev_cursor: %w", err)
@@ -326,4 +333,12 @@ func GetEpochOffsetGenesis() uint64 {
 	genesisTs := Config.Chain.GenesisTimestamp
 	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
 	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+}
+
+func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error) {
+	if !IsValidWithdrawalCredentialsAddress(hexutil.Encode(withCred)) {
+		return nil, fmt.Errorf("invalid withdrawal credentials for address: %s", hexutil.Encode(withCred))
+	}
+	addr := common.BytesToAddress(withCred[12:])
+	return &addr, nil
 }
