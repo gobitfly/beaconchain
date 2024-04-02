@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/big"
 	"sort"
 	isort "sort"
 	"sync"
@@ -250,6 +249,45 @@ func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]uint32
 		}
 	}
 	return validatorsArray, nil
+}
+
+func (d DataAccessService) getDashboardValidatorGroups(dashboardId t.VDBId) (map[uint64]uint64, []uint64, error) {
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+			SELECT
+			    validator_index,
+			    group_id
+			FROM
+			    users_val_dashboards_validators
+			WHERE
+			    dashboard_id = $1`
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		validators = make([]uint64, len(dashboardId.Validators))
+		for i, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators[i] = validator.Index
+		}
+	}
+	return validatorGroupMap, validators, nil
 }
 
 func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {
@@ -1903,6 +1941,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 }
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+	// WIP cursor, search
 	/*c, err2 := utils.StringToCursor[t.GenericCursor](cursor)
 	f := []struct {
 		ValidatorIndex int
@@ -1912,48 +1951,34 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	if err != nil {
 		return nil, nil, err
 	}*/
-	// probably not worth converting arrays to maps map for max 100 valis per page (?)
-	validatorGroupInfo := make([]struct {
-		Index   uint64 `db:"validator_index"`
-		GroupId uint64 `db:"group_id"`
-	}, 0)
-
-	// TODO change those queries, that can't be efficient. The tables should really live in the same db so we can join on them
-	err := d.alloyReader.Select(&validatorGroupInfo, `
-		SELECT
-			validator_index,
-			group_id
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1
-		SORT BY validator_index
-		`, dashboardId)
-	if err != nil {
+	validatorGroupMap, validators, err := d.getDashboardValidatorGroups(dashboardId)
+	if err != nil || len(validators) == 0 {
 		return nil, nil, err
 	}
 
-	validators := make([]uint64, len(validatorGroupInfo))
-	for i, vali := range validatorGroupInfo {
-		validators[i] = vali.Index
-	}
 	proposals := make([]struct {
-		// GroupId  string
-		Proposer uint64        `db:"proposer"`
-		Epoch    uint64        `db:"epoch"`
-		Slot     uint64        `db:"slot"`
-		Status   uint64        `db:"status"`
-		Block    sql.NullInt64 `db:"exec_block_number"`
-		Mev      sql.NullInt64 `db:"mev_reward"`
+		Proposer     uint64        `db:"proposer"`
+		Epoch        uint64        `db:"epoch"`
+		Slot         uint64        `db:"slot"`
+		Status       uint64        `db:"status"`
+		Block        sql.NullInt64 `db:"exec_block_number"`
+		FeeRecipient []byte        `db:"exec_fee_recipient"`
+		Mev          sql.NullInt64 `db:"mev_reward"`
+		MevRecipient []byte        `db:"proposer_fee_recipient"`
+		GraffitiText string        `db:"graffiti_text"`
 	}, 0)
 
-	// TODO rework, this seems to be very inefficient for larger validator sets
 	err = d.readerDb.Select(&proposals, `
 		SELECT
+			proposer,
 			epoch,
 			slot,
 			status,
-			proposer,
-			COALESCE(exec_block_number, 0) AS exec_block_number,
-			relays_blocks.value AS mev_reward
+			exec_block_number,
+			exec_fee_recipient,
+			relays_blocks.value AS mev_reward,
+			COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
+			graffiti_text
 		FROM blocks
 		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
 		WHERE proposer = ANY($1)
@@ -1967,20 +1992,16 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	blocksNoRelay := make([]uint64, 0, len(proposals))
 	data := make([]t.VDBBlocksTableRow, len(proposals))
 	for _, proposal := range proposals {
-		if proposal.Block.Valid && !proposal.Mev.Valid {
+		if proposal.Status == 1 && !proposal.Mev.Valid {
 			blocksNoRelay = append(blocksNoRelay, uint64(proposal.Block.Int64))
 		}
 	}
 	// (non-mev) tx reward is in bt
 	indexedBlocksNoRelay, err := d.bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
 	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
+	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
-		for j := 0; j >= 0; j++ {
-			if validatorGroupInfo[j].Index == proposal.Proposer {
-				data[i].GroupId = validatorGroupInfo[j].GroupId
-				break
-			}
-		}
+		data[i].GroupId = validatorGroupMap[proposal.Proposer]
 		data[i].Proposer = proposal.Proposer
 		data[i].Epoch = proposal.Epoch
 		data[i].Slot = proposal.Slot
@@ -1996,27 +2017,38 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		default:
 			// invalid
 		}
-		if !proposal.Block.Valid {
+		if proposal.Status == 0 || proposal.Status == 2 {
+			continue
+		}
+		data[i].Graffiti = proposal.GraffitiText
+		if proposal.Status == 3 {
 			continue
 		}
 		data[i].Block = uint64(proposal.Block.Int64)
+		rewardRecipient := ""
 		if proposal.Mev.Valid {
 			data[i].Reward.El = decimal.NewFromInt(proposal.Mev.Int64)
+			rewardRecipient = hexutil.Encode(proposal.MevRecipient)
 		} else {
 			// bt returns blocks sorted desc
 			for ; idxNoRelayBlocks >= 0; idxNoRelayBlocks-- {
 				if indexedBlocksNoRelay[idxNoRelayBlocks].Number == uint64(proposal.Block.Int64) {
-					data[i].Reward.El = decimal.NewFromBigInt(new(big.Int).SetBytes(indexedBlocksNoRelay[idxNoRelayBlocks].TxReward), 0)
+					data[i].Reward.El = decimal.NewFromBigInt(utils.Eth1TotalReward(indexedBlocksNoRelay[idxNoRelayBlocks]), 0)
 					break
 				}
 			}
+			rewardRecipient = hexutil.Encode(proposal.FeeRecipient)
 		}
-		// TODO wait for CL rewards to be added around here pkg/exporter/modules/dasboard_data.go:47
-		/* blockReward, err :=
-		if err != nil {
-			return nil, t.Paging{}, err
-		}
-		data[i].Reward.Cl = blockReward.Total*/
+		data[i].RewardRecipient.Hash = t.Hash(rewardRecipient)
+		ensMapping[rewardRecipient] = ""
+		// TODO CL rewards - depends on BIDS-3036
+	}
+	// determine reward recipient ENS names
+	if err := db.GetEnsNamesForAddresses(ensMapping); err != nil {
+		return nil, nil, err
+	}
+	for i := range data {
+		data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
 	}
 	return data, &t.Paging{}, err
 }
@@ -2044,39 +2076,9 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	// TODO: implement sorting, filtering & paging
 
-	validatorGroupMap := make(map[uint64]uint64)
-	var validators []uint64
-	if dashboardId.Validators == nil {
-		// Get the validators and their groups in case a dashboard id is provided
-		queryResult := []struct {
-			ValidatorIndex uint64 `db:"validator_index"`
-			GroupId        uint64 `db:"group_id"`
-		}{}
-
-		validatorsQuery := `
-			SELECT
-			    validator_index,
-			    group_id
-			FROM
-			    users_val_dashboards_validators
-			WHERE
-			    dashboard_id = $1`
-
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for _, res := range queryResult {
-			validatorGroupMap[res.ValidatorIndex] = res.GroupId
-			validators = append(validators, res.ValidatorIndex)
-		}
-	} else {
-		// In case a list of validators is provided, set the group to default 0
-		for _, validator := range dashboardId.Validators {
-			validatorGroupMap[validator.Index] = t.DefaultGroupId
-			validators = append(validators, validator.Index)
-		}
+	validatorGroupMap, validators, err := d.getDashboardValidatorGroups(dashboardId)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if len(validators) == 0 {
@@ -2090,7 +2092,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		Epoch          uint64 `db:"epoch"`
 		Amount         int64  `db:"withdrawals_amount"`
 	}{}
-	err := d.alloyReader.Select(&queryResult, `
+	err = d.alloyReader.Select(&queryResult, `
 		SELECT
 		    validator_index,
 			epoch,
