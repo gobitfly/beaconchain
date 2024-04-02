@@ -31,12 +31,12 @@ const visible = defineModel<boolean>()
 
 const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 
-const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
-
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
+
+const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -134,12 +134,11 @@ watch(selectedGroup, (value) => {
 
 const loadData = async () => {
   if (props.dashboardKey) {
-    const q = { limit: pageSize.value, ...query.value }
-    const testQ = JSON.stringify(q)
-    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, q)
+    const testQ = JSON.stringify(query.value)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
 
     // Make sure that during loading the query did not change
-    if (testQ === JSON.stringify({ limit: pageSize.value, ...query.value })) {
+    if (testQ === JSON.stringify(query.value)) {
       data.value = result
       selected.value = []
     }
