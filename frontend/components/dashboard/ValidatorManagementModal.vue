@@ -156,11 +156,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   }
 
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.validator.management.remove_title')
-    },
     onClose: response => response?.data && removeValidators(list),
     data: {
+      title: $t('dashboard.validator.management.remove_title'),
       question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
     }
   })

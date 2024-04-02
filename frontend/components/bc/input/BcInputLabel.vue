@@ -91,5 +91,9 @@ watch([isEditing, inputRef], ([edit, input]) => {
     margin-left: 8px;
     @include utils.truncate-text;
   }
+
+  .link{
+    margin-right: var(--padding);
+  }
 }
 </style>
