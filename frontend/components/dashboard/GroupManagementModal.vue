@@ -261,7 +261,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 
 :global(.validator-group-managment-modal-container .edit-group ){
   max-width: 201px;
-  height: 26px;
+  height: 27px;
   width: 201px;
 }
 
