@@ -12,10 +12,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { width } = useWindowSize()
 const { details } = useValidatorDashboardRewardsDetailsStore(props.dashboardKey, props.row.group_id, props.row.epoch)
-
-const isWideEnough = computed(() => width.value >= 980)
 
 const data = computed(() => {
   if (!details.value) {
@@ -104,8 +101,8 @@ const openDuties = () => {
 
 </script>
 <template>
-  <div v-if="details" class="container">
-    <div v-if="isWideEnough">
+  <div v-if="details" class="details-container">
+    <div>
       <div class="small-screen-value">
         <div class="label">
           {{ $t('common.age') }}
@@ -123,7 +120,7 @@ const openDuties = () => {
         </div>
       </div>
     </div>
-    <div class="details-container">
+    <div class="rewards-container">
       <div class="rewards-group">
         <div class="col icon">
           <div v-for="item in data?.rewards" :key="item.label" class="row">
@@ -174,9 +171,14 @@ const openDuties = () => {
 </template>
 
 <style lang="scss" scoped>
-.container {
+.details-container {
+  padding: 14px 28px;
+  color: var(--container-color);
+  background-color: var(--container-background);
+
   .small-screen-value {
-    display: flex;
+    display: none;
+    margin-bottom: var(--padding-large);
 
     .label {
       width: 80px;
@@ -187,14 +189,11 @@ const openDuties = () => {
     }
   }
 
-  .details-container {
+  .rewards-container {
 
     display: flex;
     flex-wrap: wrap;
-
-    @media (max-width: 1180px) {
-      flex-direction: column-reverse;
-    }
+    gap: var(--padding-xl);
 
     .rewards-group {
       display: flex;
@@ -205,10 +204,23 @@ const openDuties = () => {
         >span {
           height: 32px;
           padding: var(--padding-small);
+          text-wrap: nowrap;
+
+          &:last-child {
+            border-top: solid 1px var(--container-border-color);
+          }
         }
 
-        :last-child {
-          border-top: solid 1px var(--container-border-color);
+        &.value {
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+          align-items: flex-end;
+          max-width: 120px;
+          >div{
+            width: 100%;
+            text-align: end;
+          }
         }
       }
     }
@@ -217,10 +229,34 @@ const openDuties = () => {
       .row {
         height: 32px;
         padding: var(--padding-small);
+        display: flex;
+        justify-content: space-between;
+        width: 330px;
 
-        :last-child {
+        &:last-child {
           border-top: solid 1px var(--container-border-color);
         }
+      }
+    }
+  }
+
+  @media screen and (max-width: 1180px) {
+    padding: var(--padding) var(--padding-large);
+
+    .small-screen-value {
+      display: flex;
+    }
+
+    .rewards-container {
+      flex-direction: column-reverse;
+      gap: var(--padding-large);
+    }
+  }
+
+  @media screen and (max-width: 400px) {
+    .proposer-group {
+      .row {
+        width: 100%;
       }
     }
   }
