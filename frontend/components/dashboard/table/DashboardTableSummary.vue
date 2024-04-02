@@ -38,7 +38,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(() => [props.dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
