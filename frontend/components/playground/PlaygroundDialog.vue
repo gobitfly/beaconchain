@@ -12,11 +12,9 @@ function onClose (answer: boolean) {
 
 const openQuestion = (yesLabel?: string, noLabel?: string) => {
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: 'My super question'
-    },
     onClose: response => onClose(response?.data),
     data: {
+      title: 'My super question',
       question: 'Are you ready to rumble, or do you have second thoughts?',
       yesLabel,
       noLabel

@@ -2102,10 +2102,10 @@ func GetValidatorProposals(validators []uint64, proposals *[]types.ValidatorProp
 		`, validatorsPQArray)
 }
 
-func GetValidatorDutiesInfo(readerDb *sqlx.DB, startSlot uint64) ([]types.ValidatorDutyInfo, error) {
+func GetValidatorDutiesInfo(startSlot uint64) ([]types.ValidatorDutyInfo, error) {
 	validatorDutyInfo := []types.ValidatorDutyInfo{}
 
-	err := readerDb.Select(&validatorDutyInfo, `
+	err := ReaderDb.Select(&validatorDutyInfo, `
 		SELECT
 			blocks.slot,
 			blocks.status,

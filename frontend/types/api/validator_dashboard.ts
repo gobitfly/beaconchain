@@ -93,8 +93,12 @@ export interface VDBGroupRewardsData {
   attestations_head: VDBGroupRewardsDetails;
   sync: VDBGroupRewardsDetails;
   slashing: VDBGroupRewardsDetails;
+  inactivity: VDBGroupRewardsDetails;
   proposal: VDBGroupRewardsDetails;
   proposal_el_reward: string /* decimal.Decimal */;
+  proposal_cl_att_inc_reward: string /* decimal.Decimal */;
+  proposal_cl_sync_inc_reward: string /* decimal.Decimal */;
+  proposal_cl_slashing_inc_reward: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardGroupRewardsResponse = ApiDataResponse<VDBGroupRewardsData>;
 export type InternalGetValidatorDashboardRewardsChartResponse = ApiDataResponse<ChartData<number /* int */>>; // bar chart, series id is group id, stack is 'execution' or 'consensus'
