@@ -85,7 +85,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     return
   }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: props.dashboardKey })
 
   loadData()
   refreshOverview(props.dashboardKey)
