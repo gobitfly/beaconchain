@@ -134,8 +134,15 @@ watch(selectedGroup, (value) => {
 
 const loadData = async () => {
   if (props.dashboardKey) {
-    data.value = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
-    selected.value = []
+    const q = { limit: pageSize.value, ...query.value }
+    const testQ = JSON.stringify(q)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, q)
+
+    // Make sure that during loading the query did not change
+    if (testQ === JSON.stringify({ limit: pageSize.value, ...query.value })) {
+      data.value = result
+      selected.value = []
+    }
   }
 }
 
