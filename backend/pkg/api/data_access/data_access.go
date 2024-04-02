@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"sort"
 	isort "sort"
 	"sync"
@@ -1902,8 +1903,122 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 }
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	// WORKING Rami
-	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
+	/*c, err2 := utils.StringToCursor[t.GenericCursor](cursor)
+	f := []struct {
+		ValidatorIndex int
+		Epoch          int
+	}{{100, 2}, {1000, 100}}
+	_, err := utils.GetPagingFromData[t.GenericCursor](utils.DataStructure(f), enums.ASC)
+	if err != nil {
+		return nil, nil, err
+	}*/
+	// probably not worth converting arrays to maps map for max 100 valis per page (?)
+	validatorGroupInfo := make([]struct {
+		Index   uint64 `db:"validator_index"`
+		GroupId uint64 `db:"group_id"`
+	}, 0)
+
+	// TODO change those queries, that can't be efficient. The tables should really live in the same db so we can join on them
+	err := d.alloyReader.Select(&validatorGroupInfo, `
+		SELECT
+			validator_index,
+			group_id
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+		SORT BY validator_index
+		`, dashboardId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	validators := make([]uint64, len(validatorGroupInfo))
+	for i, vali := range validatorGroupInfo {
+		validators[i] = vali.Index
+	}
+	proposals := make([]struct {
+		// GroupId  string
+		Proposer uint64        `db:"proposer"`
+		Epoch    uint64        `db:"epoch"`
+		Slot     uint64        `db:"slot"`
+		Status   uint64        `db:"status"`
+		Block    sql.NullInt64 `db:"exec_block_number"`
+		Mev      sql.NullInt64 `db:"mev_reward"`
+	}, 0)
+
+	// TODO rework, this seems to be very inefficient for larger validator sets
+	err = d.readerDb.Select(&proposals, `
+		SELECT
+			epoch,
+			slot,
+			status,
+			proposer,
+			COALESCE(exec_block_number, 0) AS exec_block_number,
+			relays_blocks.value AS mev_reward
+		FROM blocks
+		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+		WHERE proposer = ANY($1)
+		ORDER BY slot ASC
+		LIMIT $2
+		`, pq.Array(validators), limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	blocksNoRelay := make([]uint64, 0, len(proposals))
+	data := make([]t.VDBBlocksTableRow, len(proposals))
+	for _, proposal := range proposals {
+		if proposal.Block.Valid && !proposal.Mev.Valid {
+			blocksNoRelay = append(blocksNoRelay, uint64(proposal.Block.Int64))
+		}
+	}
+	// (non-mev) tx reward is in bt
+	indexedBlocksNoRelay, err := d.bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
+	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
+	for i, proposal := range proposals {
+		for j := 0; j >= 0; j++ {
+			if validatorGroupInfo[j].Index == proposal.Proposer {
+				data[i].GroupId = validatorGroupInfo[j].GroupId
+				break
+			}
+		}
+		data[i].Proposer = proposal.Proposer
+		data[i].Epoch = proposal.Epoch
+		data[i].Slot = proposal.Slot
+		switch proposal.Status {
+		case 0:
+			data[i].Status = "scheduled"
+		case 1:
+			data[i].Status = "success"
+		case 2:
+			data[i].Status = "missed"
+		case 3:
+			data[i].Status = "orphaned"
+		default:
+			// invalid
+		}
+		if !proposal.Block.Valid {
+			continue
+		}
+		data[i].Block = uint64(proposal.Block.Int64)
+		if proposal.Mev.Valid {
+			data[i].Reward.El = decimal.NewFromInt(proposal.Mev.Int64)
+		} else {
+			// bt returns blocks sorted desc
+			for ; idxNoRelayBlocks >= 0; idxNoRelayBlocks-- {
+				if indexedBlocksNoRelay[idxNoRelayBlocks].Number == uint64(proposal.Block.Int64) {
+					data[i].Reward.El = decimal.NewFromBigInt(new(big.Int).SetBytes(indexedBlocksNoRelay[idxNoRelayBlocks].TxReward), 0)
+					break
+				}
+			}
+		}
+		// TODO wait for CL rewards to be added around here pkg/exporter/modules/dasboard_data.go:47
+		/* blockReward, err :=
+		if err != nil {
+			return nil, t.Paging{}, err
+		}
+		data[i].Reward.Cl = blockReward.Total*/
+	}
+	return data, &t.Paging{}, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
