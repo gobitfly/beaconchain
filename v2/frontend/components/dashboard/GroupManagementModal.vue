@@ -45,7 +45,7 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
     groups = groups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
   }
   if (sortField.value?.length && sortOrder.value) {
-    groups = orderBy(groups, sortField.value, getSortOrder())
+    groups = orderBy(groups, sortField.value, getSortOrder(sortOrder.value))
   }
   const totalCount = groups.length
   return {
@@ -94,11 +94,9 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
 
 const removeGroup = (row: VDBOverviewGroup) => {
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.validator.group_management.remove_title')
-    },
     onClose: response => response?.data && removeGroupConfirmed(row),
     data: {
+      title: $t('dashboard.validator.group_management.remove_title'),
       question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
     }
   })
@@ -263,6 +261,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 
 :global(.validator-group-managment-modal-container .edit-group ){
   max-width: 201px;
+  height: 27px;
   width: 201px;
 }
 

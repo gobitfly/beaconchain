@@ -31,12 +31,12 @@ const visible = defineModel<boolean>()
 
 const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 
-const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>(undefined, 500)
-
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
+
+const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -85,7 +85,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     return
   }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', body: { validators } }, { dashboardKey: props.dashboardKey })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: props.dashboardKey })
 
   loadData()
   refreshOverview(props.dashboardKey)
@@ -134,8 +134,14 @@ watch(selectedGroup, (value) => {
 
 const loadData = async () => {
   if (props.dashboardKey) {
-    data.value = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
-    selected.value = []
+    const testQ = JSON.stringify(query.value)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
+
+    // Make sure that during loading the query did not change
+    if (testQ === JSON.stringify(query.value)) {
+      data.value = result
+      selected.value = []
+    }
   }
 }
 
@@ -156,11 +162,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   }
 
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.validator.management.remove_title')
-    },
     onClose: response => response?.data && removeValidators(list),
     data: {
+      title: $t('dashboard.validator.management.remove_title'),
       question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
     }
   })
