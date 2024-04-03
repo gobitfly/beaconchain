@@ -42,6 +42,7 @@ type DataAccessor interface {
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
+	UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
 	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
@@ -628,6 +629,12 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPri
 	`, dashboardId, name)
 
 	return result, err
+}
+
+// updates the group name
+func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
+	// TODO @dataaccess: implement
+	return d.dummy.UpdateValidatorDashboardGroup(dashboardId, groupId, name)
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {

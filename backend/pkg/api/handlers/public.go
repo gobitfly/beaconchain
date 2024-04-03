@@ -94,6 +94,10 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 	returnCreated(w, nil)
 }
 
+func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+	returnCreated(w, nil)
+}
+
 func (h *HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
