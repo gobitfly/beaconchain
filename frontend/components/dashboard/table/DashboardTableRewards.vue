@@ -52,7 +52,7 @@ const groupNameLabel = (groupId?: number) => {
   if (groupId === DAHSHBOARDS_ALL_GROUPS_ID) {
     return `${$t('dashboard.validator.summary.total_group_name')}`
   } else if (groupId === DAHSHBOARDS_NEXT_EPOCH_ID) {
-    return ''
+    return '-'
   }
   const group = overview.value?.groups?.find(g => g.id === groupId)
   if (!group) {
