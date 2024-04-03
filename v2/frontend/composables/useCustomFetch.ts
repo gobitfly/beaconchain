@@ -10,7 +10,7 @@ export enum API_PATH {
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
-  DASHBOARD_VALIDATOR_GROUP_DELETE = '/validator-dashboards/group_delete',
+  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_modify',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -60,11 +60,11 @@ const mapping: Record<string, MappingData> = {
     mock: false,
     method: 'POST'
   },
-  [API_PATH.DASHBOARD_VALIDATOR_GROUP_DELETE]: {
-    path: 'validator-dashboards/{dashboard_id}/group_delete',
+  [API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY]: {
+    path: 'validator-dashboards/{dashboard_id}/groups/{group_id}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
     mock: false,
-    method: 'DELETE'
+    method: 'PUT' // can be 'DELETE' = delete group or 'PUT' = modify group
   },
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
