@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"math/big"
 	"sort"
 	isort "sort"
 	"sync"
@@ -43,6 +44,7 @@ type DataAccessor interface {
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
+	UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
 	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
@@ -631,6 +633,12 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPri
 	return result, err
 }
 
+// updates the group name
+func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
+	// TODO @dataaccess: implement
+	return d.dummy.UpdateValidatorDashboardGroup(dashboardId, groupId, name)
+}
+
 func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
 	tx, err := d.alloyWriter.Beginx()
 	if err != nil {
@@ -737,8 +745,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		result[idx].Index = validator
 		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
 		result[idx].GroupId = validatorGroupMap[validator]
-
-		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+		result[idx].Balance = utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
 
 		status := ""
