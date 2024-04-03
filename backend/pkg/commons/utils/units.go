@@ -22,3 +22,11 @@ func GWeiToEther(gwei *big.Int) decimal.Decimal {
 func GWeiBytesToEther(gwei []byte) decimal.Decimal {
 	return GWeiToEther(new(big.Int).SetBytes(gwei))
 }
+
+func GWeiToWei(gwei *big.Int) decimal.Decimal {
+	return decimal.NewFromBigInt(gwei, 0).Mul(decimal.NewFromInt(params.GWei))
+}
+
+func GWeiBytesToWei(gwei []byte) decimal.Decimal {
+	return GWeiToWei(new(big.Int).SetBytes(gwei))
+}
