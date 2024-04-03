@@ -26,15 +26,15 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiClient: process.env.API_CLIENT,
-      legacyApiClient: process.env.LEGACY_API_CLIENT,
-      xUserId: process.env.X_USER_ID,
-      apiKey: process.env.API_KEY,
+      apiClient: '',
+      legacyApiClient: '',
+      xUserId: '',
+      apiKey: '',
       gitVersion
     },
     private: {
-      apiServer: process.env.API_SERVER,
-      legacyApiServer: process.env.LEGACY_API_SERVER
+      apiServer: '',
+      legacyApiServer: ''
     }
   },
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
