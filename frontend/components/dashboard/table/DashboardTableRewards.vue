@@ -4,7 +4,7 @@ import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 
 interface Props {
@@ -49,8 +49,10 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
+  if (groupId === DAHSHBOARDS_ALL_GROUPS_ID) {
     return `${$t('dashboard.validator.summary.total_group_name')}`
+  } else if (groupId === DAHSHBOARDS_NEXT_EPOCH_ID) {
+    return ''
   }
   const group = overview.value?.groups?.find(g => g.id === groupId)
   if (!group) {
@@ -78,17 +80,15 @@ const setSearch = (value?: string) => {
 }
 
 const getRowClass = (row: VDBRewardsTableRow) => {
-  // TODO: get info from backend on how to identify the total group
-  if (row.group_id !== DAHSHBOARDS_ALL_GROUPS_ID) {
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
-  } /* else if (row.group_id === -2) {
+  } else if (row.group_id === DAHSHBOARDS_NEXT_EPOCH_ID) {
     return 'future-row'
-  } */
+  }
 }
 
 const isRowExpandable = (row: VDBRewardsTableRow) => {
-  // TODO: get info from backend on how to identify the future group [which is not expandable]
-  return row.group_id !== -2
+  return row.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID
 }
 
 </script>
@@ -128,7 +128,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             </Column>
             <Column field="age" body-class="age" header-class="age" :header="$t('common.age')">
               <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.epoch" />
+                <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
               </template>
             </Column>
             <Column
@@ -139,7 +139,12 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.duty')"
             >
               <template #body="slotProps">
-                <DashboardTableValueDuty :duty="slotProps.data.duty" />
+                <span v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                  {{ $t('dashboard.validator.rewards.attestation') }}, {{ $t('dashboard.validator.rewards.proposal') }},
+                  {{ $t('dashboard.validator.rewards.sync_committee') }}, {{ $t('dashboard.validator.rewards.slashing')
+                  }}
+                </span>
+                <DashboardTableValueDuty v-else :duty="slotProps.data.duty" />
               </template>
             </Column>
             <Column
@@ -150,7 +155,9 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}
+                <span>
+                  {{ groupNameLabel(slotProps.data.group_id) }}
+                </span>
               </template>
             </Column>
             <Column
@@ -160,7 +167,11 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.total_rewards')"
             >
               <template #body="slotProps">
+                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                  -
+                </div>
                 <BcFormatValue
+                  v-else
                   :value="totalElCl(slotProps.data.reward)"
                   :use-colors="true"
                   :options="{ addPlus: true }"
@@ -175,7 +186,15 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.el_rewards')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.reward?.el" :use-colors="true" :options="{ addPlus: true }" />
+                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                  -
+                </div>
+                <BcFormatValue
+                  v-else
+                  :value="slotProps.data.reward?.el"
+                  :use-colors="true"
+                  :options="{ addPlus: true }"
+                />
               </template>
             </Column>
             <Column
@@ -186,7 +205,15 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.cl_rewards')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.reward?.cl" :use-colors="true" :options="{ addPlus: true }" />
+                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                  -
+                </div>
+                <BcFormatValue
+                  v-else
+                  :value="slotProps.data.reward?.cl"
+                  :use-colors="true"
+                  :options="{ addPlus: true }"
+                />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -222,6 +249,10 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
     min-width: 120px;
   }
 
+  .time-passed {
+    white-space: nowrap;
+  }
+
   tr:not(.p-datatable-row-expansion) {
     @media (max-width: 1300px) {
       .duty {
@@ -240,9 +271,19 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
     }
   }
 
-  tr+.total-row {
+  tr:has(+.total-row) {
     td {
       border-bottom-color: var(--primary-color);
+    }
+  }
+
+  .future-row {
+    td {
+
+      div,
+      span {
+        opacity: 0.5;
+      }
     }
   }
 }
