@@ -10,7 +10,7 @@ export enum API_PATH {
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
-  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_edit',
+  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_modify',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
