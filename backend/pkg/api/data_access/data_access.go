@@ -737,7 +737,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		result[idx].Index = validator
 		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
 		result[idx].GroupId = validatorGroupMap[validator]
-		result[idx].Balance = decimal.NewFromBigInt(big.NewInt(int64(metadata.Balance)), int32(utils.Config.Frontend.ClCurrencyDivisor))
+		result[idx].Balance = decimal.NewFromBigInt(big.NewInt(int64(metadata.Balance)), int32(utils.Config.Frontend.ClCurrencyDecimals))
 		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
 
 		status := ""
