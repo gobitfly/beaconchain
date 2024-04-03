@@ -40,7 +40,7 @@ type CursorLike interface {
 
 type GenericCursor struct {
 	Direction enums.SortOrder `json:"d"`
-	Valid     bool            `json:"v"`
+	Valid     bool            `json:"-"`
 }
 
 func (c GenericCursor) IsCursor() bool {
