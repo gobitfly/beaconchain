@@ -643,7 +643,7 @@ func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPri
 
 	// Update the group name
 	_, err = tx.Exec(`
-		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND group_id = $3
+		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND id = $3
 	`, name, dashboardId, groupId)
 	if err != nil {
 		return nil, err
@@ -651,7 +651,7 @@ func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPri
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
+		return nil, fmt.Errorf("error committing tx to update a validator dashboard group: %w", err)
 	}
 
 	ret := &t.VDBPostCreateGroupData{
