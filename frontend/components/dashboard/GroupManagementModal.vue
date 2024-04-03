@@ -6,7 +6,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { warn } from 'vue'
 import { BcDialogConfirm } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
@@ -82,13 +81,13 @@ const addGroup = async () => {
   newGroupName.value = ''
 }
 
-const editGroup = (row: VDBOverviewGroup, newName?: string) => {
-  // TODO: Implement group renaming once the backend supports it.
-  warn(`Edit group ${row.name} [${row.id}] -> ${newName}`)
+const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'PUT', body: { name: newName } }, { dashboardKey: props.dashboardKey, groupId: row.id })
+  refreshOverview(props.dashboardKey)
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_DELETE, undefined, { dashboardKey: props.dashboardKey, groupId: row.id })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'DELETE' }, { dashboardKey: props.dashboardKey, groupId: row.id })
   refreshOverview(props.dashboardKey)
 }
 
