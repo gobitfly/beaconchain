@@ -54,4 +54,3 @@ func (c GenericCursor) IsValid() bool {
 func (c GenericCursor) GetDirection() enums.SortOrder {
 	return c.Direction
 }
-
