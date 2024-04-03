@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"sort"
 	isort "sort"
 	"sync"
@@ -736,8 +737,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		result[idx].Index = validator
 		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
 		result[idx].GroupId = validatorGroupMap[validator]
-
-		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+		result[idx].Balance = utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
 
 		status := ""
