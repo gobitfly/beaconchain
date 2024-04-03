@@ -282,7 +282,10 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 		if err != nil {
 			joinErr(handlerErr, err.Error())
 		}
-		paging.limit = min(limit, maxQueryLimit)
+		if limit > maxQueryLimit {
+			joinErr(handlerErr, fmt.Sprintf("given value '%d' for parameter 'limit' is too large, maximum limit is %d", limit, maxQueryLimit))
+		}
+		paging.limit = limit
 	}
 
 	if paging.cursor != "" {
