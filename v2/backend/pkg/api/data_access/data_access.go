@@ -1952,7 +1952,7 @@ func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
-	// TODO @recy21
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
 }
 
