@@ -79,16 +79,16 @@ const setSearch = (value?: string) => {
 
 const getRowClass = (row: VDBRewardsTableRow) => {
   // TODO: get info from backend on how to identify the total group
-  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+  if (row.group_id !== DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
-  } else if (row.group_id === -2) {
+  } /* else if (row.group_id === -2) {
     return 'future-row'
-  }
+  } */
 }
 
 const isRowExpandable = (row: VDBRewardsTableRow) => {
   // TODO: get info from backend on how to identify the future group [which is not expandable]
-  return row.group_id === -2
+  return row.group_id !== -2
 }
 
 </script>
@@ -97,7 +97,6 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
     <BcTableControl
       :title="$t('dashboard.validator.rewards.title')"
       :search-placeholder="$t('dashboard.validator.rewards.search_placeholder')"
-      :is-row-expandable="isRowExpandable"
       @set-search="setSearch"
     >
       <template #table>
@@ -111,6 +110,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :is-row-expandable="isRowExpandable"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -126,12 +126,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
                 <BcFormatNumber :value="slotProps.data.epoch" />
               </template>
             </Column>
-            <Column
-              field="age"
-              body-class="age"
-              header-class="age"
-              :header="$t('common.age')"
-            >
+            <Column field="age" body-class="age" header-class="age" :header="$t('common.age')">
               <template #body="slotProps">
                 <BcFormatTimePassed :value="slotProps.data.epoch" />
               </template>
@@ -165,7 +160,11 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.total_rewards')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="totalElCl(slotProps.data.reward)" :use-colors="true" :options="{addPlus: true}" />
+                <BcFormatValue
+                  :value="totalElCl(slotProps.data.reward)"
+                  :use-colors="true"
+                  :options="{ addPlus: true }"
+                />
               </template>
             </Column>
             <Column
@@ -176,7 +175,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.el_rewards')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.reward?.el" :use-colors="true" :options="{addPlus: true}" />
+                <BcFormatValue :value="slotProps.data.reward?.el" :use-colors="true" :options="{ addPlus: true }" />
               </template>
             </Column>
             <Column
@@ -187,7 +186,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
               :header="$t('dashboard.validator.col.cl_rewards')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.reward?.cl" :use-colors="true" :options="{addPlus: true}" />
+                <BcFormatValue :value="slotProps.data.reward?.cl" :use-colors="true" :options="{ addPlus: true }" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -215,6 +214,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
     max-width: 80px;
     min-width: 80px;
   }
+
   .group_id,
   .reward {
     width: 120px;
@@ -222,31 +222,25 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
     min-width: 120px;
   }
 
-  @media (max-width: 1300px) {
-    .duty {
-      width: 300px;
-      max-width: 300px;
-      min-width: 300px;
+  tr:not(.p-datatable-row-expansion) {
+    @media (max-width: 1300px) {
+      .duty {
+        width: 300px;
+        max-width: 300px;
+        min-width: 300px;
+      }
     }
-  }
 
-  @media (max-width: 1150px) {
-    .duty {
-      width: 160px;
-      max-width: 160px;
-      min-width: 160px;
-    }
-  }
-
-  .total-row {
-    &:not(:has(.bottom)) {
-      td {
-        border-bottom-color: var(--primary-color);
+    @media (max-width: 1150px) {
+      .duty {
+        width: 160px;
+        max-width: 160px;
+        min-width: 160px;
       }
     }
   }
 
-  .total-row+.p-datatable-row-expansion {
+  tr+.total-row {
     td {
       border-bottom-color: var(--primary-color);
     }

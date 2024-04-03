@@ -101,87 +101,93 @@ const openDuties = () => {
 
 </script>
 <template>
-  <div v-if="details" class="details-container">
-    <div>
-      <div class="small-screen-value">
-        <div class="label">
-          {{ $t('common.age') }}
-        </div>
-        <div class="value">
-          <BcFormatTimePassed :value="row.epoch" />
-        </div>
-      </div>
-      <div class="small-screen-value">
-        <div class="label">
-          {{ $t('dashboard.validator.col.duty') }}
-        </div>
-        <div class="value">
-          <DashboardTableValueDuty :duty="row.duty" />
-        </div>
-      </div>
-    </div>
-    <div class="rewards-container">
-      <div class="rewards-group">
-        <div class="col icon">
-          <div v-for="item in data?.rewards" :key="item.label" class="row">
-            <component :is="item.svg" v-if="item.svg" />
-            <FontAwesomeIcon v-if="item.icon" :icon="item.icon" />
+  <div class="background">
+    <div v-if="details" class="details-container">
+      <div>
+        <div class="small-screen-value">
+          <div class="label">
+            {{ $t('common.age') }}
+          </div>
+          <div class="value">
+            <BcFormatTimePassed :value="row.epoch" />
           </div>
         </div>
-        <div class="col label">
-          <div v-for="item in data?.rewards" :key="item.label" class="label">
-            {{ item.label }}
+        <div class="small-screen-value">
+          <div class="label">
+            {{ $t('dashboard.validator.col.duty') }}
+          </div>
+          <div class="value">
+            <DashboardTableValueDuty :duty="row.duty" class="detail-duty" />
           </div>
         </div>
-        <div class="col count">
-          <div v-for="item in data?.rewards" :key="item.label" class="row">
-            <DashboardTableEfficiency
-              v-if="item.value.status_count"
-              :success="item.value.status_count.success"
-              :failed="item.value.status_count.failed"
-            />
-            <div v-if="item.isTotal">
-              <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
+      </div>
+      <div class="rewards-container">
+        <div class="rewards-group">
+          <div class="col icon">
+            <div v-for="item in data?.rewards" :key="item.label" class="row">
+              <component :is="item.svg" v-if="item.svg" />
+              <FontAwesomeIcon v-if="item.icon" :icon="item.icon" />
             </div>
           </div>
-        </div>
-        <div class="col value">
-          <BcFormatValue
-            v-for="item in data?.rewards"
-            :key="item.label"
-            :value="item.value.income"
-            :use-colors="true"
-            :options="{ addPlus: true }"
-          />
-        </div>
-      </div>
-      <div class="proposer-group">
-        <div v-for="item in data?.proposer" :key="item.label" class="row">
-          <div class="label">
-            {{ item.label }}
+          <div class="col label">
+            <div v-for="item in data?.rewards" :key="item.label" class="label">
+              {{ item.label }}
+            </div>
           </div>
-          <BcFormatValue :value="item.value" :use-colors="true" :options="{ addPlus: true }" />
+          <div class="col count">
+            <div v-for="item in data?.rewards" :key="item.label" class="row">
+              <DashboardTableEfficiency
+                v-if="item.value.status_count"
+                :success="item.value.status_count.success"
+                :failed="item.value.status_count.failed"
+              />
+              <div v-if="item.isTotal">
+                <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
+              </div>
+            </div>
+          </div>
+          <div class="col value">
+            <BcFormatValue
+              v-for="item in data?.rewards"
+              :key="item.label"
+              :value="item.value.income"
+              :use-colors="true"
+              :options="{ addPlus: true }"
+            />
+          </div>
+        </div>
+        <div class="proposer-group">
+          <div v-for="item in data?.proposer" :key="item.label" class="row">
+            <div class="label">
+              {{ item.label }}
+            </div>
+            <BcFormatValue :value="item.value" :use-colors="true" :options="{ addPlus: true }" />
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <div v-else>
-    <BcLoadingSpinner />
+    <div v-else>
+      <BcLoadingSpinner />
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.details-container {
-  padding: 14px 28px;
+.background {
   color: var(--container-color);
   background-color: var(--container-background);
+}
+
+.details-container {
+  padding: 14px 28px;
 
   .small-screen-value {
     display: none;
     margin-bottom: var(--padding-large);
+    width: 100%;
 
     .label {
-      width: 80px;
+      width: 90px;
     }
 
     .value {
@@ -217,7 +223,8 @@ const openDuties = () => {
           flex-grow: 1;
           align-items: flex-end;
           max-width: 120px;
-          >div{
+
+          >div {
             width: 100%;
             text-align: end;
           }
@@ -239,26 +246,43 @@ const openDuties = () => {
       }
     }
   }
+}
 
-  @media screen and (max-width: 1180px) {
+@media screen and (max-width: 1180px) {
+
+  .details-container {
+    width: 400px;
     padding: var(--padding) var(--padding-large);
-
-    .small-screen-value {
-      display: flex;
-    }
 
     .rewards-container {
       flex-direction: column-reverse;
       gap: var(--padding-large);
-    }
-  }
+      widows: 100%;
 
-  @media screen and (max-width: 400px) {
-    .proposer-group {
-      .row {
+      .rewards-group {
         width: 100%;
       }
+
+      .proposer-group {
+        .row {
+          width: 100%;
+        }
+      }
     }
+  }
+}
+
+@media screen and (max-width: 980px) {
+  .details-container {
+    .small-screen-value {
+      display: flex;
+    }
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .details-container {
+    width: 100%;
   }
 }
 </style>
