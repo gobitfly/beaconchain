@@ -635,8 +635,30 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPri
 
 // updates the group name
 func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
-	// TODO @dataaccess: implement
-	return d.dummy.UpdateValidatorDashboardGroup(dashboardId, groupId, name)
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Update the group name
+	_, err = tx.Exec(`
+		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND group_id = $3
+	`, name, dashboardId, groupId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
+	}
+
+	ret := &t.VDBPostCreateGroupData{
+		Id:   groupId,
+		Name: name,
+	}
+	return ret, nil
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
