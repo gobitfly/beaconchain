@@ -154,12 +154,12 @@ func ReadConfig(cfg *types.Config, path string) error {
 		case "gnosis":
 			cfg.Frontend.MainCurrency = "GNO"
 			cfg.Frontend.ClCurrency = "mGNO"
-			cfg.Frontend.ClCurrencyDecimals = 9
+			cfg.Frontend.ClCurrencyDecimals = 18
 			cfg.Frontend.ClCurrencyDivisor = 1e9
 		default:
 			cfg.Frontend.MainCurrency = "ETH"
 			cfg.Frontend.ClCurrency = "ETH"
-			cfg.Frontend.ClCurrencyDecimals = 9
+			cfg.Frontend.ClCurrencyDecimals = 18
 			cfg.Frontend.ClCurrencyDivisor = 1e9
 		}
 	}
