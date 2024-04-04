@@ -31,14 +31,14 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
+const loadData = (q?: TableQueryParams) => {
+  if (!q) {
+    q = query.value ? { ...query.value } : { limit: pageSize.value }
   }
-  setQuery(query, true, true)
+  setQuery(q, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(() => [props.dashboardKey, overview.value], () => {
   loadData()
 }, { immediate: true })
 
