@@ -33,13 +33,24 @@ type DashboardInfo struct {
 }
 
 type CursorLike interface {
-	isCursor() bool
+	IsCursor() bool
+	IsValid() bool
+	GetDirection() enums.SortOrder
 }
 
 type GenericCursor struct {
 	Direction enums.SortOrder `json:"d"`
+	Valid     bool            `json:"-"`
 }
 
-func (b GenericCursor) isCursor() bool {
+func (c GenericCursor) IsCursor() bool {
 	return true
+}
+
+func (c GenericCursor) IsValid() bool {
+	return c.Valid
+}
+
+func (c GenericCursor) GetDirection() enums.SortOrder {
+	return c.Direction
 }
