@@ -1053,7 +1053,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 			for i := uint64(0); i < aggregationBits.Len(); i++ {
 				if aggregationBits.BitAt(i) {
-					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKeyLowMem(attestation.Data.Slot, uint16(attestation.Data.Index), uint32(i))]
+					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKeyLowMem(attestation.Data.Slot, attestation.Data.Index, uint32(i))]
 					if !found { // This should never happen!
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
 						return nil, fmt.Errorf("validator not found in attestation assignments")
