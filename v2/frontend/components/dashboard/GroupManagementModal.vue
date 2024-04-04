@@ -36,6 +36,7 @@ const newGroupName = ref<string>('')
 const search = ref<string>()
 const sortField = ref<string>()
 const sortOrder = ref<number | null>()
+const hasNoOpenDialogs = ref(true)
 
 const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   let groups = (overview.value?.groups ?? [])
@@ -92,8 +93,12 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
+  hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
-    onClose: response => response?.data && removeGroupConfirmed(row),
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      response?.data && removeGroupConfirmed(row)
+    },
     data: {
       title: $t('dashboard.validator.group_management.remove_title'),
       question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
@@ -131,6 +136,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 <template>
   <BcDialog
     v-model="visible"
+    :close-on-escape="hasNoOpenDialogs"
     :header="$t('dashboard.validator.group_management.title')"
     class="validator-group-managment-modal-container"
     @update:visible="(visible: boolean)=>!visible && resetData()"

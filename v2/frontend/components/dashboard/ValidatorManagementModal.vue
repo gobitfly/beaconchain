@@ -40,6 +40,7 @@ const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefin
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
+const hasNoOpenDialogs = ref(true)
 
 const size = computed(() => {
   return {
@@ -96,8 +97,10 @@ const addValidator = () => {
 }
 
 const editSelected = () => {
+  hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
     onClose: (response) => {
+      hasNoOpenDialogs.value = true
       if (response?.data !== undefined) {
         changeGroup(mapIndexOrPubKey(selected.value), response?.data)
       }
@@ -161,8 +164,12 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     warn('no validator to remove')
   }
 
+  hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
-    onClose: response => response?.data && removeValidators(list),
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      response?.data && removeValidators(list)
+    },
     data: {
       title: $t('dashboard.validator.management.remove_title'),
       question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
@@ -183,6 +190,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
   <BcDialog
     v-model="visible"
     :header="$t('dashboard.validator.management.title')"
+    :close-on-escape="hasNoOpenDialogs"
     class="validator-managment-modal-container"
     @update:visible="(visible: boolean)=>!visible && resetData()"
   >
