@@ -48,7 +48,7 @@ onMounted(() => {
 watch(dashboardKey, (newKey, oldKey) => {
   if (!isLoggedIn.value) {
     const ext = dashboards.value?.validator_dashboards?.[0] as ExtendedDashboard
-    if (ext && (ext.hash ?? '') === (oldKey ?? '')) {
+    if (ext && (!ext.hash || (ext.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
     }
   }

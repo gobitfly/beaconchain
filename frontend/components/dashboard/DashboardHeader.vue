@@ -6,9 +6,11 @@ import { type ExtendedDashboard } from '~/types/dashboard'
 const { width } = useWindowSize()
 
 const { t: $t } = useI18n()
-const { path } = useRoute()
+const route = useRoute()
+const router = useRouter()
 
 const { dashboards } = useUserDashboardStore()
+const { dashboardKey } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -45,7 +47,7 @@ const items = computed<MenuBarEntry[]>(() => {
 
   const sortedItems: MenuBarButton[][] = []
 
-  const addToSortedItems = (minButtonCount: number, items?:MenuBarButton[]) => {
+  const addToSortedItems = (minButtonCount: number, items?: MenuBarButton[]) => {
     if (items?.length) {
       if (buttonCount.value >= minButtonCount) {
         sortedItems.push(items)
@@ -72,8 +74,11 @@ const items = computed<MenuBarEntry[]>(() => {
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
   return sortedItems.map((items) => {
-    const active = items.find(i => i.route === path)
+    // if we are in a public dashboard and change the validators then the route does not get updated
+    const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
+    const active = items.find(i => i.route === fixedRoute.path)
     return {
+      active: !!active,
       label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
       route: items.length === 1 ? items[0].route : active?.route,
@@ -81,6 +86,7 @@ const items = computed<MenuBarEntry[]>(() => {
     }
   })
 })
+
 </script>
 
 <template>
@@ -91,8 +97,8 @@ const items = computed<MenuBarEntry[]>(() => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <NuxtLink v-if="item.route" :to="item.route">
-            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown}]">
+          <NuxtLink v-if="item.route" :to="item.route" :class="{ 'p-active': item.active }">
+            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown }]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
@@ -127,7 +133,7 @@ const items = computed<MenuBarEntry[]>(() => {
     align-items: center;
     gap: var(--padding);
 
-    .button-content{
+    .button-content {
       display: flex;
       align-items: center;
       justify-content: space-between;

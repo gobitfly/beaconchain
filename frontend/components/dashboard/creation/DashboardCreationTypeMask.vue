@@ -3,9 +3,14 @@ import { type DashboardType } from '~/types/dashboard'
 import { IconAccount, IconValidator } from '#components'
 
 const { t: $t } = useI18n()
+const { isLoggedIn } = useUserStore()
+const { dashboards } = useUserDashboardStore()
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-const typeButtons = [{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }]
+const typeButtons = [
+  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: !isLoggedIn.value && !!dashboards.value?.account_dashboards?.length },
+  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: !isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length }
+]
 
 const name = defineModel<string>('name', { required: true })
 
