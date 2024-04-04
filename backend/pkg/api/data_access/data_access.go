@@ -26,6 +26,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,7 +34,7 @@ type DataAccessor interface {
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
 
-	GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error)
+	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 
@@ -312,31 +313,25 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 }
 
 // param validators: slice of validator public keys or indices
-func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
+func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return nil, nil
 	}
 
-	// Query the database for the validators
-	validators := []t.VDBValidator{}
-	err := d.alloyReader.Select(&validators, `
-		SELECT 
-			validatorindex
-		FROM validators
-		WHERE validatorindex = ANY($1)
-		UNION ALL
-		SELECT 
-			validatorindex
-		FROM validators
-		WHERE pubkey = ANY($2)
-	`, pq.Array(indices), pq.ByteaArray(publicKeys))
+	_, err := d.services.GetPubkeysOfValidatorIndexSlice(indices)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return an error if not every validator was found
-	if len(validators) != len(indices)+len(publicKeys) {
-		return nil, fmt.Errorf("not all validators from strings were found")
+	extraIndices, err := d.services.GetValidatorIndexOfPubkeySlice(publicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to t.VDBValidator slice
+	validators := make([]t.VDBValidator, len(indices)+len(publicKeys))
+	for i, index := range append(indices, extraIndices...) {
+		validators[i] = t.VDBValidator{Index: index}
 	}
 
 	// Create a map to remove potential duplicates
@@ -344,10 +339,8 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 	for _, v := range validators {
 		validatorResultMap[v] = true
 	}
-	result := make([]t.VDBValidator, 0, len(validatorResultMap))
-	for validator := range validatorResultMap {
-		result = append(result, validator)
-	}
+
+	result := maps.Keys(validatorResultMap)
 
 	return result, nil
 }
