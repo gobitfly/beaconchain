@@ -1,12 +1,20 @@
 import { defineStore } from 'pinia'
 import type { AdConfiguration } from '~/types/adConfiguration'
 
-export const useAdConfigurationStore = defineStore('ad-configuration', () => {
-  const configurations = ref< Record<string, AdConfiguration[]>>({})
+const adConfigurationStore = defineStore('ad-configuration', () => {
+  const data = ref< Record<string, AdConfiguration[]>>({})
+  return { data }
+})
 
-  async function getAds (route:string) {
+export function useAdConfigurationStore () {
+  const { fetch } = useCustomFetch()
+  const { data } = storeToRefs(adConfigurationStore())
+
+  const adConfigs = computed(() => data.value)
+
+  async function refreshAdConfigs (route:string) {
     const keys = ['global', route].join(',')
-    const res = await useCustomFetch<AdConfiguration[]>(API_PATH.AD_CONFIGURATIONs, undefined, { keys })
+    const res = await fetch<AdConfiguration[]>(API_PATH.AD_CONFIGURATIONs, undefined, { keys })
     const newConfigurations:Record<string, AdConfiguration[]> = {}
     res.forEach((config) => {
       if (!newConfigurations[config.key]) {
@@ -14,9 +22,10 @@ export const useAdConfigurationStore = defineStore('ad-configuration', () => {
       }
       newConfigurations[config.key].push(config)
     })
-    configurations.value = { ...configurations.value, ...newConfigurations }
-    return configurations.value
+    data.value = { ...adConfigs.value, ...newConfigurations }
+
+    return adConfigs.value
   }
 
-  return { configurations, getAds }
-})
+  return { adConfigs, refreshAdConfigs }
+}

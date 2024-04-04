@@ -12,17 +12,17 @@ import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
   SummaryDetailsEfficiencyValidatorProps,
-  type SummaryDetail,
   type SummaryDetailsEfficiencyValidatorProp,
   type SummaryDetailsEfficiencyProp,
   type SummaryDetailsEfficiencyCombinedProp,
   type DashboardValidatorContext
 } from '~/types/dashboard/summary'
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { TimeFrame } from '~/types/value'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
-  detail: SummaryDetail,
+  detail: TimeFrame,
   data: VDBGroupSummaryData,
   row: VDBSummaryTableRow
 }
@@ -38,10 +38,7 @@ const data = computed(() => {
   if (props.property === 'attestation_total') {
     return {
       efficiency: {
-        status_count: {
-          success: col.attestation_head.status_count.success + col.attestation_source.status_count.success + col.attestation_target.status_count.success,
-          failed: col.attestation_head.status_count.failed + col.attestation_source.status_count.failed + col.attestation_target.status_count.failed
-        }
+        status_count: col.attestation_count
       }
     }
   } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
@@ -54,7 +51,7 @@ const data = computed(() => {
     let validators: number[] = []
     let context: DashboardValidatorContext = 'attestation'
     if (props.property === 'validators_attestation') {
-      validators = union(col.attestation_head.validators, col.attestation_source.validators, col.attestation_target.validators)
+      validators = union(col.attestations_head.validators, col.attestations_source.validators, col.attestations_target.validators)
     } else if (props.property === 'validators_proposal') {
       validators = col.proposals.validators ?? []
       context = 'proposal'
@@ -87,17 +84,17 @@ const data = computed(() => {
     return {
       luck: col.luck
     }
-  } else if (props.property === 'efficiency_total') {
-    let efficiencyTotal = props.row.efficiency_day
+  } else if (props.property === 'efficiency_all_time') {
+    let efficiencyTotal = props.row.efficiency.all_time
     switch (props.detail) {
-      case 'details_month':
-        efficiencyTotal = props.row.efficiency_month
+      case 'last_30d':
+        efficiencyTotal = props.row.efficiency.last_30d
         break
-      case 'details_week':
-        efficiencyTotal = props.row.efficiency_week
+      case 'last_7d':
+        efficiencyTotal = props.row.efficiency.last_7d
         break
-      case 'details_total':
-        efficiencyTotal = props.row.efficiency_total
+      case 'last_24h':
+        efficiencyTotal = props.row.efficiency.last_24h
         break
     }
     return {
@@ -133,7 +130,7 @@ const data = computed(() => {
     :context="data.context"
     :group-id="props.row.group_id"
   />
-  <div v-else-if="data?.attestationEfficiency" class="info_row">
+  <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
@@ -159,10 +156,15 @@ const data = computed(() => {
   </div>
   <div v-else-if="data?.luck" class="info_row">
     <span>
-      <FontAwesomeIcon :icon="faCube" />
-      <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" /> |
-      <FontAwesomeIcon :icon="faSync" />
-      <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faCube" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" />
+      </span>
+      <span> | </span>
+      <span class="no-wrap">
+        <FontAwesomeIcon :icon="faSync" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+      </span>
     </span>
     <BcTooltip position="top">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
@@ -200,19 +202,19 @@ const data = computed(() => {
           <b>
             {{ $t('common.luck') }}:
           </b>
-          <BcFormatPercent :percent="data.luck.proposal.percent" />
+          <BcFormatPercent :percent="data.luck.sync.percent" />
         </div>
         <div class="row">
           <b>
             {{ $t('common.expected') }}:
           </b>
-          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
+          {{ $t('common.in_day', {}, data.luck.sync.expected) }}
         </div>
         <div class="row">
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_day', {}, data.luck.proposal.average) }}
+          {{ $t('common.every_day', {}, data.luck.sync.average) }}
         </div>
       </template>
     </BcTooltip>
@@ -244,5 +246,6 @@ const data = computed(() => {
 .info_row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 </style>

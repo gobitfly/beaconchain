@@ -10,7 +10,12 @@ export type ValueConvertOptions = {
   addPlus?: boolean // add + sign if value is positive
 }
 
+export type NumberOrString = number | string
+
 export type ExtendedLabel = {
-  label: string | number
+  label: NumberOrString
   fullLabel?: string
 }
+
+export const TimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
+export type TimeFrame = typeof TimeFrames[number]

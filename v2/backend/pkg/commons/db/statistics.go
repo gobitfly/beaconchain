@@ -472,7 +472,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 		err = cache.LatestExportedStatisticDay.Set(day)
 		if err != nil {
-			log.Warn(err, "can not set latest exported statistic day in cache", 0)
+			log.WarnWithStackTrace(err, "can not set latest exported statistic day in cache", 0)
 		}
 
 		return nil

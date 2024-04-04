@@ -18,6 +18,7 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -132,7 +133,7 @@ func main() {
 		log.Fatal(err, "error initializing erigon client", 0)
 	}
 
-	db.MustInitDB(&types.DatabaseConfig{
+	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
 		Password:     cfg.WriterDatabase.Password,
 		Name:         cfg.WriterDatabase.Name,
@@ -151,7 +152,7 @@ func main() {
 	})
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
-	db.MustInitFrontendDB(&types.DatabaseConfig{
+	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.Frontend.WriterDatabase.Username,
 		Password:     cfg.Frontend.WriterDatabase.Password,
 		Name:         cfg.Frontend.WriterDatabase.Name,
@@ -170,6 +171,19 @@ func main() {
 	})
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
+
+	// Initialize the persistent redis client
+	rdc := redis.NewClient(&redis.Options{
+		Addr:        utils.Config.RedisSessionStoreEndpoint,
+		ReadTimeout: time.Second * 20,
+	})
+
+	if err := rdc.Ping(context.Background()).Err(); err != nil {
+		log.Fatal(err, "error connecting to persistent redis store", 0)
+	}
+
+	db.PersistentRedisDbClient = rdc
+	defer db.PersistentRedisDbClient.Close()
 
 	switch opts.Command {
 	case "nameValidatorsByRanges":

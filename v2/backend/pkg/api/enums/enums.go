@@ -304,3 +304,113 @@ var VDBManageValidatorsColumns = struct {
 	VDBManageValidatorsStatus,
 	VDBManageValidatorsWithdrawalCredential,
 }
+
+// ----------------
+// Postgres sort direction enum
+// SortOrder represents the sorting order, either ascending or descending.
+type SortOrder int
+
+// Constants for the sorting order.
+const (
+	ASC SortOrder = iota
+	DESC
+)
+
+// String method converts SortOrder to string representation.
+func (s SortOrder) String() string {
+	if s == ASC {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+// Invert method inverts the sorting order.
+func (s SortOrder) Invert() SortOrder {
+	if s == ASC {
+		return DESC
+	}
+	return ASC
+}
+
+// ----------------
+// Summary Dashboard Table Enums
+
+type TimePeriod int
+
+const (
+	AllTime TimePeriod = iota
+	Last24h
+	Last7d
+	Last30d
+)
+
+func (t TimePeriod) Int() int {
+	return int(t)
+}
+
+func (TimePeriod) NewFromString(s string) TimePeriod {
+	switch s {
+	case "", "all_time":
+		return AllTime
+	case "24h":
+		return Last24h
+	case "7d":
+		return Last7d
+	case "31d":
+		return Last30d
+	default:
+		return TimePeriod(-1)
+	}
+}
+
+var TimePeriods = struct {
+	AllTime TimePeriod
+	Last24h TimePeriod
+	Last7d  TimePeriod
+	Last30d TimePeriod
+}{
+	AllTime,
+	Last24h,
+	Last7d,
+	Last30d,
+}
+
+type ValidatorDuty int
+
+const (
+	DutyNone ValidatorDuty = iota
+	DutySync
+	DutyProposal
+	DutySlashed
+)
+
+func (d ValidatorDuty) Int() int {
+	return int(d)
+}
+
+func (ValidatorDuty) NewFromString(s string) ValidatorDuty {
+	switch s {
+	case "":
+		return DutyNone
+	case "sync":
+		return DutySync
+	case "proposal":
+		return DutyProposal
+	case "slashed":
+		return DutySlashed
+	default:
+		return ValidatorDuty(-1)
+	}
+}
+
+var ValidatorDuties = struct {
+	None     ValidatorDuty
+	Sync     ValidatorDuty
+	Proposal ValidatorDuty
+	Slashed  ValidatorDuty
+}{
+	DutyNone,
+	DutySync,
+	DutyProposal,
+	DutySlashed,
+}

@@ -2,17 +2,19 @@
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { type InternalGetValidatorDashboardSlotVizResponse, type SlotVizEpoch } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
-const { getLatestState } = useLatestStateStore()
-await useAsyncData('latest_state', () => getLatestState())
 
-const { latest } = storeToRefs(useLatestStateStore())
-
+const { latestState, refreshLatestState } = useLatestStateStore()
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
+const { refreshOverview } = useValidatorDashboardOverviewStore()
 
-await useAsyncData('test_slot_viz_data', async () => {
-  const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
-  slotVizData.value = res.data
-})
+await Promise.all([
+  useAsyncData('latest_state', () => refreshLatestState()),
+  useAsyncData('test_slot_viz_data', async () => {
+    const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
+    slotVizData.value = res.data
+  }),
+  useAsyncData('validator_dashboard_overview', () => refreshOverview(100))
+])
 
 onMounted(async () => {
   const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
@@ -30,7 +32,7 @@ onMounted(async () => {
       </Button>
     </NuxtLink>
     <div class="row">
-      Latest Epoch: {{ formatNumber(latest?.currentEpoch) }}
+      Latest Epoch: {{ formatNumber(latestState?.currentEpoch) }}
     </div>
 
     <TabView :lazy="true">

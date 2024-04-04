@@ -15,6 +15,12 @@ export interface VDBSlotVizDuty {
 }
 export interface VDBSlotVizTuple {
   validator: number /* uint64 */;
+  /**
+   * If the duty is a proposal & it's successful, the duty_object is the proposed block
+   * If the duty is a proposal & it failed/scheduled, the duty_object is the slot
+   * If the duty is a slashing & it's successful, the duty_object is the validator you slashed
+   * If the duty is a slashing & it failed, the duty_object is your validator that was slashed
+   */
   duty_object: number /* uint64 */;
 }
 export interface VDBSlotVizSlashing {

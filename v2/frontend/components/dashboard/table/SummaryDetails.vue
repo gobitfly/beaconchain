@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
-import { SummaryDetails, type SummaryDetail, type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
+import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
+import { TimeFrames, type TimeFrame } from '~/types/value'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -28,15 +29,15 @@ const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4
   const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
 
-  const addToList = (detail: SummaryDetail, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
+  const addToList = (detail: TimeFrame, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
     let row: SummaryRow | undefined
     if (tableIndex && isWideEnough.value) {
       row = list[0].find(row => row.prop === prop)
     }
     if (!row) {
       let title = $t(`dashboard.validator.summary.row.${prop}`)
-      if (prop === 'efficiency_total') {
-        title = `${title} (${$t(`statistics.${detail.split('_')[1]}`)})`
+      if (prop === 'efficiency_all_time') {
+        title = `${title} (${$t(`statistics.${detail}`)})`
       }
       row = { title, prop, details: [] }
       list[tableIndex].push(row)
@@ -44,8 +45,8 @@ const data = computed<SummaryRow[][]>(() => {
     row?.details.push(detail)
   }
 
-  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_total', 'attestation_total', 'attestation_head', 'attestation_source', 'attestation_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashed', 'validators_slashings', 'apr', 'luck']
-  SummaryDetails.forEach((detail, index) => {
+  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_all_time', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashed', 'validators_slashings', 'apr', 'luck']
+  TimeFrames.forEach((detail, index) => {
     props.forEach((prop, propIndex) => {
       if (!isWideEnough.value || propIndex) {
         addToList(detail, index, prop)
@@ -58,14 +59,14 @@ const data = computed<SummaryRow[][]>(() => {
 
 const rowClass = (data:SummaryRow) => {
   const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
-    efficiency_total: 'bold',
+    efficiency_all_time: 'bold',
     attestation_total: 'bold',
     sync: 'bold spacing-top',
     proposals: 'bold spacing-top',
     slashed: 'bold spacing-top',
     apr: 'bold',
     luck: 'bold spacing-top',
-    attestation_head: 'spacing-top'
+    attestations_head: 'spacing-top'
   }
   return classNames[data.prop]
 }

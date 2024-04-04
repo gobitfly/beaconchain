@@ -58,7 +58,7 @@ const data = computed(() => {
       const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
       rows.push([{
         class: 'failed',
-        icon: 'sync',
+        icon: 'slashing',
         dutyText,
         count: slot.slashing.failed.total_count,
         duties: slot.slashing.failed.slashings?.map(slash => ({
@@ -74,7 +74,7 @@ const data = computed(() => {
       const dutyText = $t('slotViz.tooltip.slashing.success.main')
       rows.push([{
         class: 'success',
-        icon: 'sync',
+        icon: 'slashing',
         dutyText,
         count: slot.slashing.success.total_count
       }])
@@ -155,7 +155,7 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            {{ data.networkLabel }}
+            <BcFormatNumber :text="data.networkLabel" />
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row" v-html="data.stateLabel" />

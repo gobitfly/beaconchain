@@ -1,7 +1,9 @@
 import { commify } from '@ethersproject/units'
-import { round } from 'lodash-es'
+import { DateTime, type StringUnitLength } from 'luxon'
 
 const { epochToTs } = useNetwork()
+
+const REGEXP_HAS_NUMBERS = /^(?!0+$)\d+$/
 
 export interface NumberFormatConfig {
   precision?: number
@@ -14,16 +16,11 @@ export function formatPercent (percent?: number, config?: NumberFormatConfig):st
     return ''
   }
   const { precision, fixed, addPositiveSign } = { ...{ precision: 2, fixed: 2, addPositiveSign: false }, ...config }
-  let result = percent
-  if (precision !== undefined) {
-    result = round(result, precision)
+  let result = trim(percent, precision, fixed)
+  if (addPositiveSign) {
+    result = addPlusSign(result)
   }
-  const label = fixed !== undefined ? `${result.toFixed(fixed)}%` : `${result}%`
-  if (fixed !== undefined) {
-    return `${result.toFixed(fixed)}%`
-  }
-
-  return addPositiveSign ? addPlusSign(label) : label
+  return `${result}%`
 }
 
 export function calculatePercent (value?: number, base?: number):number {
@@ -74,11 +71,13 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
   }
   minDecimalCount = minDecimalCount === undefined ? maxDecimalCount : Math.min(minDecimalCount, maxDecimalCount)
   const split = value.split('.')
-  let dec = (split[1] ?? '').substring(0, maxDecimalCount)
+  let dec = (split[1] ?? '')
+  const hasTinyValue = !!dec && REGEXP_HAS_NUMBERS.test(dec)
+  dec = dec.substring(0, maxDecimalCount)
   while (dec.length < minDecimalCount) {
     dec += '0'
   }
-  if (split[0] === '0' && (!dec || parseInt(dec) === 0)) {
+  if (split[0] === '0' && (!dec || parseInt(dec) === 0) && hasTinyValue) {
     if (maxDecimalCount === 0) {
       return '<1'
     }
@@ -100,6 +99,22 @@ export function formatTs (ts: number, locales: string): string {
   return new Date(ts * 1000).toLocaleDateString(locales, options)
 }
 
+export function formatToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+  if (!targetTimestamp) {
+    return undefined
+  }
+  const date = baseTimestamp ? DateTime.fromMillis(baseTimestamp) : DateTime.now()
+  return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
+}
+
+export function formatEpochToRelative (epoch: number, timestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+  const ts = epochToTs(epoch)
+  if (ts === undefined) {
+    return undefined
+  }
+  return formatToRelative(ts * 1000, timestamp, style, locales)
+}
+
 export function formatEpochToDate (epoch: number, locales: string): string | undefined {
   const ts = epochToTs(epoch)
   if (ts === undefined) {
@@ -108,4 +123,8 @@ export function formatEpochToDate (epoch: number, locales: string): string | und
 
   const date = formatTs(ts, locales)
   return `${date}`
+}
+
+export function formattedNumberToHtml (value?:string):string | undefined {
+  return value?.split(',').join("<span class='comma' />")
 }

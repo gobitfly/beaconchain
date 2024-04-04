@@ -1,15 +1,24 @@
 import { defineStore } from 'pinia'
-import { useCustomFetch } from '~/composables/useCustomFetch'
 import type { VDBOverviewData, InternalGetValidatorDashboardResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
-export const useValidatorDashboardOverviewStore = defineStore('validator_overview', () => {
-  const overview = ref<VDBOverviewData | undefined | null>()
-  async function getOverview (dashboardKey: DashboardKey) {
-    const res = await useCustomFetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey })
-    overview.value = res.data
+const validatorOverviewStore = defineStore('validator_overview_store', () => {
+  const data = ref<VDBOverviewData | undefined | null>()
+  return { data }
+})
+
+export function useValidatorDashboardOverviewStore () {
+  const { fetch } = useCustomFetch()
+  const { data } = storeToRefs(validatorOverviewStore())
+
+  const overview = computed(() => data.value)
+
+  async function refreshOverview (key: DashboardKey) {
+    const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
+    data.value = res.data
+
     return overview.value
   }
 
-  return { overview, getOverview }
-})
+  return { overview, refreshOverview }
+}

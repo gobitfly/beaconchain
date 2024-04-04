@@ -2,8 +2,6 @@ package types
 
 import (
 	"time"
-
-	"github.com/shopspring/decimal"
 )
 
 // frontend can ignore ApiResponse type, it's just for the backend
@@ -53,21 +51,16 @@ type StatusCount struct {
 	Failed  uint64 `json:"failed"`
 }
 
-type ClElUnion interface {
-	float64 | decimal.Decimal
-}
-
-type ClElValue[T ClElUnion] struct {
+type ClElValue[T any] struct {
 	El T `json:"el"`
 	Cl T `json:"cl"`
 }
 
-type PeriodicClElValues[T ClElUnion] struct {
-	Total ClElValue[T] `json:"total"`
-	Day   ClElValue[T] `json:"day"`
-	Week  ClElValue[T] `json:"week"`
-	Month ClElValue[T] `json:"month"`
-	Year  ClElValue[T] `json:"year"`
+type PeriodicValues[T any] struct {
+	AllTime T `json:"all_time"`
+	Last24h T `json:"last_24h"`
+	Last7d  T `json:"last_7d"`
+	Last30d T `json:"last_30d"`
 }
 
 type ChartSeries[T int | string] struct {

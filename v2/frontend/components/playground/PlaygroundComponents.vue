@@ -9,5 +9,11 @@
     <TabPanel header="Icons">
       <PlaygroundIcons />
     </TabPanel>
+    <TabPanel header="Input">
+      <PlaygroundInput />
+    </TabPanel>
+    <TabPanel header="Dialog">
+      <PlaygroundDialog />
+    </TabPanel>
   </TabView>
 </template>
