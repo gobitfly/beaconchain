@@ -7,6 +7,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -26,7 +27,7 @@ func newEpochWriter(d *dashboardData) *epochWriter {
 }
 
 const PartitionEpochWidth = 3
-const retentionBuffer = 2.5
+const retentionBuffer = 3
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {
 	return uint64(float64(utils.EpochsPerDay()) / 24 * retentionBuffer)
@@ -36,6 +37,32 @@ func (d *epochWriter) getPartitionRange(epoch uint64) (uint64, uint64) {
 	startOfPartition := epoch / PartitionEpochWidth * PartitionEpochWidth // inclusive
 	endOfPartition := startOfPartition + PartitionEpochWidth              // exclusive
 	return startOfPartition, endOfPartition
+}
+
+func (d *epochWriter) clearOldEpochs(removeBelowEpoch int64) error {
+	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_epoch")
+	if err != nil {
+		return errors.Wrap(err, "failed to get partitions")
+	}
+
+	for _, partition := range partitions {
+		epochFrom, epochTo, err := parseEpochRange(`validator_dashboard_data_epoch_(\d+)_(\d+)`, partition)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse epoch range")
+		}
+
+		if int64(epochTo) < removeBelowEpoch {
+			d.mutex.Lock()
+			err := d.deleteEpochPartition(epochFrom, epochTo)
+			d.log.Infof("Deleted old epoch partition %d-%d", epochFrom, epochTo)
+			d.mutex.Unlock()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete epoch partition")
+			}
+		}
+	}
+
+	return nil
 }
 
 func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDataRow) error {

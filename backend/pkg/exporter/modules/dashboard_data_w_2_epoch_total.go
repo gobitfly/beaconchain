@@ -48,7 +48,7 @@ func (d *epochToTotalAggregator) aggregateTotal() error {
 		return errors.Wrap(err, "total export nothing to do, currentEpoch <= lastTotalExported.EpochEnd")
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(currentExportedEpoch, currentExportedEpoch-lastTotalExported.EpochEnd)
+	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(lastTotalExported.EpochEnd))
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}
@@ -80,7 +80,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 			end_epoch as (
 				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch <= $2 AND epoch >= $1
 			),
-			balance_starts as (
+			balance_starts as ( -- we dont need this for updating, only for bootstraping
 				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
 			),
 			balance_ends as (
