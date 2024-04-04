@@ -1,19 +1,16 @@
 <script setup lang="ts">
 
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
-import type { DashboardKey } from '~/types/dashboard'
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey } = useDashboardKey()
+
 const { tick } = useInterval(12)
 
 const { slotViz, refreshSlotViz } = useValidatorSlotVizStore()
-await useAsyncData('validator_dashboard_slot_viz', () => refreshSlotViz(props.dashboardKey))
+await useAsyncData('validator_dashboard_slot_viz', () => refreshSlotViz(dashboardKey.value))
 
-watch(() => [props.dashboardKey, tick.value], () => {
-  refreshSlotViz(props.dashboardKey)
+watch(() => [dashboardKey.value, tick.value], () => {
+  refreshSlotViz(dashboardKey.value)
 }, { immediate: true })
 
 </script>

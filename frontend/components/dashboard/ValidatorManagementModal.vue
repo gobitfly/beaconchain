@@ -35,6 +35,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
+const { addEntities } = useDashboardKey()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
@@ -92,7 +93,8 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = () => {
-  changeGroup([selectedValidator.value], selectedGroup.value)
+  addEntities([selectedValidator.value])
+  // changeGroup([selectedValidator.value], selectedGroup.value)
 }
 
 const editSelected = () => {

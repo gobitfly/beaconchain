@@ -2,14 +2,7 @@
 import type { DashboardCreationController } from '#components'
 import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
-const route = useRoute()
-
-const key = computed(() => {
-  if (Array.isArray(route.params.id)) {
-    return route.params.id.join(',')
-  }
-  return route.params.id
-})
+const { dashboardKey } = useDashboardKeyProvider()
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this
@@ -26,7 +19,7 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 </script>
 
 <template>
-  <div v-if="key==''">
+  <div v-if="dashboardKey==''">
     <BcPageWrapper>
       <DashboardCreationController ref="dashboardCreationControllerPanel" class="panel-controller" :display-type="'panel'" />
     </BcPageWrapper>
@@ -37,7 +30,7 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
       </template>
-      <h1>Account Dashboard {{ key }}</h1>
+      <h1>Account Dashboard {{ dashboardKey }}</h1>
     </BcPageWrapper>
   </div>
 </template>
