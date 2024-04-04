@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <DashboardTableSummary :dashboard-key="1" />
+  <DashboardTableSummary />
 </template>
 
 <style lang="scss" scoped>

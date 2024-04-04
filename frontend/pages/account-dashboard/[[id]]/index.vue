@@ -2,7 +2,7 @@
 import type { DashboardCreationController } from '#components'
 import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
-const { dashboardKey } = useDashboardKeyProvider()
+const { dashboardKey } = useDashboardKeyProvider('account')
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this

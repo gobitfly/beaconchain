@@ -2,19 +2,17 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
+const { isLoggedIn } = useUserStore()
+const { isPublic } = useDashboardKey()
 
 const store = useValidatorDashboardSummaryStore()
 const { getSummary } = store
@@ -38,18 +36,18 @@ const loadData = (q?: TableQueryParams) => {
   setQuery(q, true, true)
 }
 
-watch(() => [props.dashboardKey, overview.value], () => {
+watch(() => [dashboardKey.value, overview.value], () => {
   loadData()
 }, { immediate: true })
 
 watch(query, (q) => {
   if (q) {
-    getSummary(props.dashboardKey, q)
+    getSummary(dashboardKey.value, q)
   }
 }, { immediate: true })
 
 const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
-  return summaryMap.value?.[props.dashboardKey]
+  return summaryMap.value?.[dashboardKey.value]
 })
 
 const groupNameLabel = (groupId?: number) => {
@@ -75,21 +73,21 @@ const groupIdLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySort(sort, queryMap.value[dashboardKey.value]))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryCursor(value, queryMap.value[dashboardKey.value]))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryPageSize(value, queryMap.value[dashboardKey.value]))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySearch(value, queryMap.value[dashboardKey.value]))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
@@ -97,6 +95,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
     return 'total-row'
   }
 }
+
+const groupsEnabled = computed(() => isLoggedIn.value && !isPublic.value)
 
 </script>
 <template>
@@ -122,6 +122,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             @set-page-size="setPageSize"
           >
             <Column
+              v-if="groupsEnabled"
               field="group_id"
               :sortable="true"
               body-class="bold"
@@ -186,14 +187,14 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-key="props.dashboardKey" />
+              <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
           </BcTable>
         </ClientOnly>
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart :dashboard-key="props.dashboardKey" />
+          <SummaryChart />
         </div>
       </template>
     </BcTableControl>

@@ -8,7 +8,7 @@ const tooltipStore = defineStore('user-store', () => {
 export function useTooltipStore () {
   const { data } = storeToRefs(tooltipStore())
 
-  const selected = computed(() => data.value)
+  const selected = computed(() => data?.value)
 
   function doSelect (element: HTMLElement | null) {
     data.value = element

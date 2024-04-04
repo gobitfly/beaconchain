@@ -9,10 +9,12 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
+import { type ExtendedDashboard } from '~/types/dashboard'
 
-const { dashboardKey } = useDashboardKeyProvider()
+const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
 
-const { refreshDashboards } = useUserDashboardStore()
+const { isLoggedIn } = useUserStore()
+const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('user_dashboards', () => refreshDashboards()),
@@ -33,15 +35,28 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 }
 
 onMounted(() => {
-  // TODO: Implement check if user does not have a single dashboard instead of the key check once information is available
-  if (dashboardKey.value === '') {
-    showDashboardCreation('panel')
+  if (!dashboardKey.value) {
+    if (!dashboards.value?.validator_dashboards?.length) {
+      showDashboardCreation('panel')
+    } else {
+      const ext = dashboards.value.validator_dashboards[0] as ExtendedDashboard
+      setDashboardKey(ext.hash ?? ext.id.toString())
+    }
+  }
+})
+
+watch(dashboardKey, (newKey, oldKey) => {
+  if (!isLoggedIn.value) {
+    const ext = dashboards.value?.validator_dashboards?.[0] as ExtendedDashboard
+    if (ext && (ext.hash ?? '') === (oldKey ?? '')) {
+      updateHash('validator', newKey)
+    }
   }
 })
 </script>
 
 <template>
-  <div v-if="dashboardKey === ''">
+  <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
       <DashboardCreationController
         ref="dashboardCreationControllerPanel"
@@ -51,8 +66,8 @@ onMounted(() => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" :dashboard-key="dashboardKey" />
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="dashboardKey" />
+    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
@@ -61,21 +76,21 @@ onMounted(() => {
     <BcPageWrapper>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation('modal')" />
-        <DashboardValidatorOverview class="overview" :dashboard-key="dashboardKey" />
+        <DashboardValidatorOverview class="overview" />
       </template>
       <div class="edit-buttons-row">
-        <Button :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
+        <Button v-if="isLoggedIn && !isPublic" :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
         <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
       </div>
       <div>
-        <DashboardValidatorSlotViz :dashboard-key="dashboardKey" />
+        <DashboardValidatorSlotViz />
       </div>
       <TabView lazy>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
           </template>
-          <DashboardTableSummary :dashboard-key="dashboardKey" />
+          <DashboardTableSummary />
         </TabPanel>
         <TabPanel>
           <template #header>

@@ -1,6 +1,6 @@
 <template>
   <div class="chart-container">
-    <DashboardChartSummaryChart :dashboard-key="1" />
+    <DashboardChartSummaryChart />
   </div>
 </template>
 

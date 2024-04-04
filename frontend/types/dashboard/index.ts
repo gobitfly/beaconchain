@@ -1,5 +1,7 @@
-// can be ether a dashboard id or a list of validators
-export type DashboardKey = number | string
+import type { Dashboard } from '../api/dashboard'
+
+// can be ether a dashboard id or a list of hashed validators
+export type DashboardKey = string
 
 export type DashboardType = 'validator' | 'account'
 
@@ -15,3 +17,16 @@ export type DashboardKeyData = {
   addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
 }
+
+export interface ExtendedDashboard extends Dashboard{
+  hash?: string;
+}
+
+/*
+export type ExtendedDashboard = {
+  id: number ;
+  name: string;
+  hash?: string
+}
+
+*/

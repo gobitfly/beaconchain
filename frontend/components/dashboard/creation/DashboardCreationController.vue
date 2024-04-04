@@ -18,6 +18,10 @@ const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
 // TODO: replace network types once we have them
 const network = ref<ValidatorDashboardNetwork>()
+const { dashboardKey, publicEntities } = useDashboardKey()
+const { isLoggedIn } = useUserStore()
+const { fetch } = useCustomFetch()
+const route = useRoute()
 
 function show () {
   visible.value = true
@@ -52,18 +56,26 @@ function onBack () {
 
 async function createDashboard () {
   visible.value = false
+  const matchingType = route.name === 'dashboard-id' && type.value === 'validator'
+
+  const key = matchingType && !isLoggedIn.value ? dashboardKey.value : undefined
   if (type.value === 'account') {
     if (!name.value) {
       return
     }
-    const response = await createAccountDashboard(name.value)
-    router.push(`/account-dashboard/${response?.id || 1}`)
+    const response = await createAccountDashboard(name.value, key)
+
+    router.push(`/account-dashboard/${response?.hash ?? response?.id ?? 1}`)
   } else if (type.value === 'validator') {
     if (!name.value || !network.value) {
       return
     }
-    const response = await createValidatorDashboard(name.value, network.value)
-    router.push(`/dashboard/${response?.id || 1}`)
+
+    const response = await createValidatorDashboard(name.value, network.value, key)
+    if (matchingType && publicEntities.value?.length && response?.id) {
+      await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators: publicEntities.value, group_id: '0' } }, { dashboardKey: response.id })
+    }
+    router.push(`/dashboard/${response?.hash ?? response?.id ?? 1}`)
   }
 }
 </script>

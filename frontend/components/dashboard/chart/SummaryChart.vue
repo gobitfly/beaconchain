@@ -15,7 +15,7 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
-import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 
@@ -30,22 +30,17 @@ use([
 
 const { fetch } = useCustomFetch()
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
-
-const key = computed(() => props.dashboardKey)
+const { dashboardKey } = useDashboardKey()
 
 const data = ref<ChartData<number> | undefined >()
 await useAsyncData('validator_overview', async () => {
-  if (key.value === undefined) {
+  if (dashboardKey.value === undefined) {
     data.value = undefined
     return
   }
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: key.value })
+  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: dashboardKey.value })
   data.value = res.data
-}, { watch: [key], server: false })
+}, { watch: [dashboardKey], server: false })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
