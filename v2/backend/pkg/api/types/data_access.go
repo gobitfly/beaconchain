@@ -24,7 +24,7 @@ type VDBId struct {
 }
 
 type VDBValidator struct {
-	Index uint64 `db:"validator_index"`
+	Index uint64 `db:"validatorindex"`
 }
 
 type DashboardInfo struct {
