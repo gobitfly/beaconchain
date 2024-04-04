@@ -17,7 +17,7 @@ type epochToHourAggregator struct {
 	mutex *sync.Mutex
 }
 
-const hourRetentionBuffer = 2.0
+const hourRetentionBuffer = 2.4
 
 func getHourAggregateWidth() uint64 {
 	return utils.EpochsPerDay() / 24
@@ -30,12 +30,39 @@ func newEpochToHourAggregator(d *dashboardData) *epochToHourAggregator {
 	}
 }
 
+func (d *epochToHourAggregator) clearOldHourAggregations(removeBelowEpoch int64) error {
+	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_hourly")
+	if err != nil {
+		return errors.Wrap(err, "failed to get partitions")
+	}
+
+	for _, partition := range partitions {
+		epochFrom, epochTo, err := parseEpochRange(`validator_dashboard_data_hourly_(\d+)_(\d+)`, partition)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse epoch range")
+		}
+
+		if int64(epochTo) < removeBelowEpoch {
+			d.mutex.Lock()
+			err := d.deleteHourlyPartition(epochFrom, epochTo)
+			d.log.Infof("Deleted old hourly partition %d-%d", epochFrom, epochTo)
+			d.mutex.Unlock()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete hourly partition")
+			}
+		}
+	}
+
+	return nil
+}
+
 // Assumes no gaps in epochs
-func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
+func (d *epochToHourAggregator) aggregate1h() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
 	startTime := time.Now()
+	d.log.Info("aggregating 1h")
 	defer func() {
 		d.log.Infof("aggregate 1h took %v", time.Since(startTime))
 	}()
@@ -50,14 +77,14 @@ func (d *epochToHourAggregator) aggregate1hAndClearOld() error {
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	differenceToCurrentEpoch := currentExportedEpoch - lastHourExported.EpochEnd
+	differenceToCurrentEpoch := currentExportedEpoch + 1 - lastHourExported.EpochEnd // epochEnd is excl hence the +1
 
 	if differenceToCurrentEpoch > d.getHourRetentionDurationEpochs() {
 		d.log.Warnf("difference to current epoch is larger than retention duration, skipping for now: %v", differenceToCurrentEpoch)
 		return nil
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(currentExportedEpoch, currentExportedEpoch-lastHourExported.EpochEnd)
+	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(currentExportedEpoch+1-d.epochWriter.getRetentionEpochDuration()))
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}
@@ -102,7 +129,7 @@ func (d *epochToHourAggregator) GetHourPartitionRange(epoch uint64) (uint64, uin
 }
 
 func (d *epochToHourAggregator) getHourRetentionDurationEpochs() uint64 {
-	return utils.EpochsPerDay() * hourRetentionBuffer
+	return uint64(float64(utils.EpochsPerDay()) * hourRetentionBuffer)
 }
 
 func (d *epochToHourAggregator) createHourlyPartition(epochStartFrom, epochStartTo uint64) error {
@@ -323,29 +350,5 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
-	minDbEpoch, err := edb.GetOldestDashboardEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get oldest dashboard epoch")
-	}
-
-	// Clear old epoch partitions
-	var delEpoch uint64
-	for i := uint64(0); ; i += PartitionEpochWidth {
-		if epochStart < d.epochWriter.getRetentionEpochDuration()-i {
-			break
-		}
-		delEpoch = epochStart - d.epochWriter.getRetentionEpochDuration() - i
-
-		startOfPartition, endOfPartition := d.epochWriter.getPartitionRange(delEpoch)
-		err := d.epochWriter.deleteEpochPartition(startOfPartition, endOfPartition)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete old epoch partition")
-		}
-		d.log.Infof("deleted old epoch partition %d_%d", startOfPartition, endOfPartition)
-
-		if delEpoch < minDbEpoch {
-			break
-		}
-	}
 	return nil
 }

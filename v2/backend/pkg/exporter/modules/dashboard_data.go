@@ -3,6 +3,7 @@ package modules
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"sync"
@@ -19,7 +20,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const backfillParallelism = 4
+// -------------- DEBUG FLAGS ----------------
+const debugAggregateMidEveryEpoch = true
+const debugTargetBackfillEpoch = uint64(6800)
+const debugSetBackfillCompleted = false
+
+// ----------- END OF DEBUG FLAGS ------------
+
+const epochFetchParallelism = 4
+const epochWriteParallelism = 4
+const databaseAggregationParallelism = 3
 
 type dashboardData struct {
 	ModuleContext
@@ -52,20 +62,39 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 func (d *dashboardData) Init() error {
 	go func() {
 		for {
-			done, err := d.backfillEpochData(nil)
+			var upToEpochPtr *uint64 = nil    // nil will backfill back to head
+			if debugTargetBackfillEpoch > 0 { // todo remove
+				upToEpoch := debugTargetBackfillEpoch
+				upToEpochPtr = &upToEpoch
+			}
+
+			done, err := d.backfillHeadEpochData(upToEpochPtr)
 			if err != nil {
 				d.log.Fatal(err, "failed to backfill epoch data", 0)
 			}
 
 			if done {
 				d.log.Infof("dashboard data up to date, starting head export")
-				d.backFillCompleted = true
+				if debugSetBackfillCompleted { // todo remove
+					d.backFillCompleted = true
+				}
 				break
 			}
 			time.Sleep(1 * time.Second)
 		}
 
-		d.processHeadQueue() // todo
+		// err := d.aggregatePerEpoch(true)
+		// if err != nil {
+		// 	d.log.Fatal(err, "failed to aggregate", 0)
+		// }
+
+		// err = d.aggregateMid()
+		// if err != nil {
+		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
+		// }
+
+		//d.headEpochQueue <- 4085
+		d.processHeadQueue()
 	}()
 
 	return nil
@@ -75,6 +104,7 @@ func (d *dashboardData) processHeadQueue() {
 	for {
 		epoch := <-d.headEpochQueue
 
+		startTime := time.Now()
 		d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
 		stage := 0
 		for { // retry this epoch until no errors occur
@@ -87,9 +117,9 @@ func (d *dashboardData) processHeadQueue() {
 
 			if stage <= 0 {
 				targetEpoch := epoch - 1
-				_, err := d.backfillEpochData(&targetEpoch)
+				_, err := d.backfillHeadEpochData(&targetEpoch)
 				if err != nil {
-					d.log.Error(err, "failed to backfill epoch data", 0, map[string]interface{}{"epoch": epoch})
+					d.log.Error(err, "failed to backfill head epoch data", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
 					continue
 				}
@@ -97,9 +127,9 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			if stage <= 1 {
-				err := d.ExportEpochData(epoch)
+				err := d.exportEpochAndTails(epoch)
 				if err != nil {
-					d.log.Error(err, "failed to export epoch data", 0, map[string]interface{}{"epoch": epoch})
+					d.log.Error(err, "failed to backfill tail epoch data", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
 					continue
 				}
@@ -117,7 +147,7 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			// only aggregate more intense data if we are close to head finalization
-			if currentFinalizedEpoch.Data.Finalized.Epoch < epoch+3 {
+			if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch < epoch+3 { // todo remove debug field
 				if stage <= 3 {
 					err := d.aggregateMid()
 					if err != nil {
@@ -131,59 +161,97 @@ func (d *dashboardData) processHeadQueue() {
 
 			break
 		}
+
+		d.log.Infof("completed dashboard epoch data for epoch %d in %v", epoch, time.Since(startTime))
 	}
 }
 
-type DataEpoch struct {
-	DataRaw *Data
-	Data    []*validatorDashboardDataRow
-	Epoch   uint64
-}
-
-type EpochParallelGroup struct {
-	FromEpoch uint64 // incl
-	ToEpoch   uint64 // incl
-}
-
-func getGapGroups(gaps []uint64, backfillParallelism int) []EpochParallelGroup {
-	groups := make([]EpochParallelGroup, 0, len(gaps)/4)
-	for i := 0; i < len(gaps); i++ {
-		group := EpochParallelGroup{
-			FromEpoch: gaps[i],
-			ToEpoch:   gaps[i],
-		}
-
-		var j int
-		for j = 1; j < backfillParallelism && i+j < len(gaps); j++ {
-			if group.ToEpoch+1 == gaps[i+j] { // only group sequential epochs
-				group.ToEpoch = gaps[i+j]
-			} else {
-				break
-			}
-		}
-		i += j - 1
-
-		groups = append(groups, group)
+func getMissingTailEpochsWithBounds(start, end int64) ([]uint64, error) {
+	if end < start {
+		return nil, nil
 	}
-	return groups
+	missingEpochs := make([]uint64, 0)
+	for epoch := start; epoch <= end; epoch++ {
+		hasEpoch, err := edb.HasDashboardDataForEpoch(uint64(epoch))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get epoch")
+		}
+		if !hasEpoch {
+			missingEpochs = append(missingEpochs, uint64(epoch))
+		}
+	}
+	return missingEpochs, nil
 }
 
-// fetches data for epochs in gaps and provides them via the nextDataChan
-func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch uint64, backfillParallelism int, nextDataChan chan []DataEpoch) {
-	groups := getGapGroups(gaps, backfillParallelism)
+// for aggregation
+func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
+	// for 24h aggregation
+	missingTails, err := d.hourToDay.getMissingRolling24TailEpochs(headEpoch)
+	if err != nil {
+		return errors.Wrap(err, "failed to get missing 24h tail epochs")
+	}
+
+	d.log.Infof("missing 24h: %v", missingTails)
+
+	// day aggregation
+	daysMissingTails, err := d.dayUp.getMissingRollingDayTailEpochs(headEpoch)
+	if err != nil {
+		return errors.Wrap(err, "failed to get missing day tail epochs")
+	}
+
+	// merge
+	missingTails = append(missingTails, daysMissingTails...)
+
+	// sort asc
+	sort.Slice(missingTails, func(i, j int) bool {
+		return missingTails[i] < missingTails[j]
+	})
+
+	d.log.Infof("fetch missing tail epochs: %v | fetch head: %d", missingTails, headEpoch)
+
+	// append head
+	missingTails = append(missingTails, headEpoch)
+
+	var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
+	go func() {
+		d.epochDataFetcher(missingTails, 0, epochFetchParallelism, nextDataChan)
+	}()
+
+	for {
+		datas := <-nextDataChan
+
+		d.writeEpochDatas(datas)
+
+		// has written last entry in gaps
+		if containsEpoch(datas, missingTails[len(missingTails)-1]) {
+			break
+		}
+	}
+
+	d.log.Infof("backfilling tail epochs for aggregation finished")
+
+	return nil
+}
+
+// fetches and processes epoch data and provides them via the nextDataChan
+// expects ordered epochs in ascending order
+func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64, epochFetchParallelism int, nextDataChan chan []DataEpoch) {
+	// group epochs into parallel worker groups
+	groups := getEpochParallelGroups(epochs, epochFetchParallelism)
 
 	for _, gapGroup := range groups {
 		errGroup := &errgroup.Group{}
 
-		datas := make([]DataEpoch, 0, backfillParallelism)
+		datas := make([]DataEpoch, 0, epochFetchParallelism)
 		start := time.Now()
 
-		for gap := gapGroup.FromEpoch; gap <= gapGroup.ToEpoch; gap++ {
+		// Step 1: fetch epoch data raw
+		for _, gap := range gapGroup.Epochs {
 			gap := gap
 			errGroup.Go(func() error {
 				for {
 					//backfill if needed, skip backfilling older than RetainEpochDuration
-					if gap < latestExportedEpoch {
+					if gap < epochTailCutOff {
 						continue
 					}
 
@@ -199,11 +267,12 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 						continue
 					}
 
-					d.log.Infof("backfill, retreiving data for epoch %d", gap)
-					// improve performance by skipping some calls for all epochs that are not the start epoch
+					d.log.Infof("epoch data fetcher, retreiving data for epoch %d", gap)
+
+					// for sequential improve performance by skipping some calls for all epochs that are not the start epoch
 					// and provide the startBalance and the missed slots for every following epoch in this sequence
-					// with the data from the previous epoch
-					data, err := d.GetEpochData(gap, gap != gapGroup.FromEpoch)
+					// with the data from the previous epoch. Do not do this for non sequential working groups
+					data, err := d.GetEpochDataRaw(gap, gap != gapGroup.Epochs[0] && gapGroup.Sequential)
 					if err != nil {
 						d.log.Error(err, "failed to get epoch data", 0, map[string]interface{}{"epoch": gap})
 						time.Sleep(time.Second * 10)
@@ -223,38 +292,42 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 
 		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
 
-		// since we used skipSerialCalls we must provide startBalance and missedSlots for every epoch except FromEpoch
-		// with the data from the previous epoch.
-
 		// sort datas first, epoch asc
 		sort.Slice(datas, func(i, j int) bool {
 			return datas[i].Epoch < datas[j].Epoch
 		})
 
-		// provide data from the previous epochs
-		for i := 1; i < len(datas); i++ {
-			datas[i].DataRaw.startBalances = datas[i-1].DataRaw.endBalances
-			datas[i].DataRaw.missedslots = datas[i-1].DataRaw.missedslots
+		// Half Step: for sequential since we used skipSerialCalls we must provide startBalance and missedSlots for every epoch except FromEpoch
+		// with the data from the previous epoch. This is done to improve performance by skipping some calls
+		if gapGroup.Sequential {
+			// provide data from the previous epochs
+			for i := 1; i < len(datas); i++ {
+				datas[i].DataRaw.startBalances = datas[i-1].DataRaw.endBalances
+				datas[i].DataRaw.missedslots = datas[i-1].DataRaw.missedslots
+			}
 		}
 
-		// process data
+		// Step 2: process data
 		errGroup = &errgroup.Group{}
-		errGroup.SetLimit(backfillParallelism / 2) // mitigate short ram spike
+		errGroup.SetLimit(epochFetchParallelism / 2) // mitigate short ram spike
 		for i := 0; i < len(datas); i++ {
 			i := i
 			errGroup.Go(func() error {
 				for {
-					d.log.Infof("backfill, processing data for epoch %d", datas[i].Epoch)
+					d.log.Infof("epoch data fetcher, processing data for epoch %d", datas[i].Epoch)
 					start := time.Now()
+
 					result, err := d.ProcessEpochData(datas[i].DataRaw, d.signingDomain)
 					if err != nil {
 						d.log.Error(err, "failed to process epoch data", 0, map[string]interface{}{"epoch": datas[i].Epoch})
 						time.Sleep(time.Second * 10)
 						continue
 					}
+
 					datas[i].Data = result
 					datas[i].DataRaw = nil // clear raw data, not needed any more
-					d.log.Infof("backfill, processed data for epoch %d in %v", datas[i].Epoch, time.Since(start))
+
+					d.log.Infof("epoch data fetcher, processed data for epoch %d in %v", datas[i].Epoch, time.Since(start))
 					break
 				}
 				return nil
@@ -263,15 +336,72 @@ func (d *dashboardData) backfillDataService(gaps []uint64, latestExportedEpoch u
 
 		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
 
-		d.log.Infof("backfill, fetched data for range epoch %d to %d in %v", gapGroup.FromEpoch, gapGroup.ToEpoch, time.Since(start))
+		d.log.Infof("epoch data fetcher, fetched data for epochs %v in %v", gapGroup.Epochs, time.Since(start))
 
 		nextDataChan <- datas
 	}
 }
 
+// breaks epoch down in groups of size parallelism
+// for example epochs: 1,2,3,5,7,9,10,11,12,13,20,30 with parallelism = 4 breaks down to groups:
+// 0 = 1,2,3 sequential true
+// 1 = 5,7 sequential false
+// 2 = 9,10,11,12 sequential true
+// 3 = 13,20,30 sequential false
+// expects ordered epochs in ascending order
+func getEpochParallelGroups(epochs []uint64, parallelism int) []EpochParallelGroup {
+	parallelGroups := make([]EpochParallelGroup, 0, len(epochs)/4)
+
+	// 1. Group sequential epochs in parallel groups
+	for i := 0; i < len(epochs); i++ {
+		group := EpochParallelGroup{
+			Epochs:     []uint64{epochs[i]},
+			Sequential: true,
+		}
+
+		var j int
+		for j = 1; j < parallelism && i+j < len(epochs); j++ {
+			if group.Epochs[len(group.Epochs)-1]+1 == epochs[i+j] { // only group sequential epochs
+				group.Epochs = append(group.Epochs, epochs[i+j])
+			} else {
+				break
+			}
+		}
+		i += j - 1
+
+		parallelGroups = append(parallelGroups, group)
+	}
+
+	groups := make([]EpochParallelGroup, 0)
+
+	// 2. Find non sequential (len(Epochs) == 1) epochs and group them as non sequential groups
+	for i := 0; i < len(parallelGroups); i++ {
+		group := parallelGroups[i]
+
+		if len(group.Epochs) == 1 {
+			var j int
+			for j = 1; j < parallelism && i+j < len(parallelGroups); j++ {
+				nextGroup := parallelGroups[i+j]
+				if len(nextGroup.Epochs) == 1 {
+					group.Sequential = false
+					group.Epochs = append(group.Epochs, nextGroup.Epochs[0])
+				} else {
+					break
+				}
+			}
+			i += j - 1
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups
+}
+
+// can be used to start a backfill up to epoch
 // returns true if there was nothing to backfill, otherwise returns false
 // if upToEpoch is nil, it will backfill until the latest finalized epoch
-func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
+func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	if upToEpoch == nil {
 		res, err := d.CL.GetFinalityCheckpoints("finalized")
 		if err != nil {
@@ -285,77 +415,84 @@ func (d *dashboardData) backfillEpochData(upToEpoch *uint64) (bool, error) {
 		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(*upToEpoch, *upToEpoch-latestEpoch)
+	gaps, err := edb.GetDashboardEpochGapsBetween(*upToEpoch, int64(latestExportedEpoch))
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
-		d.log.Infof("Epoch dashboard data gaps found, backfilling gaps in the range fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
+		d.log.Infof("Epoch dashboard data %d gaps found, backfilling gaps in the range fom epoch %d to %d", len(gaps), gaps[0], gaps[len(gaps)-1])
 
 		var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
 		go func() {
-			d.backfillDataService(gaps, latestExportedEpoch, backfillParallelism, nextDataChan)
+			d.epochDataFetcher(gaps, latestExportedEpoch-d.epochWriter.getRetentionEpochDuration(), epochFetchParallelism, nextDataChan)
 		}()
 
-		done := false
-		doneMutex := &sync.Mutex{}
 		for {
-			select {
-			case datas := <-nextDataChan:
+			d.log.Info("storage waiting for data from fetcher")
+			datas := <-nextDataChan
 
-				errGroup := &errgroup.Group{}
-				errGroup.SetLimit(3)
-				for i := 0; i < len(datas); i++ {
-					data := datas[i]
-					errGroup.Go(func() error {
-						for {
-							d.log.Infof("backfill, writing epoch data for epoch %v", data.Epoch)
-							start := time.Now()
-							// retry this epoch until no errors occur
-							err := d.epochWriter.WriteEpochData(data.Epoch, data.Data)
-							if err != nil {
-								d.log.Error(err, "backfill, failed to write epoch data", 0, map[string]interface{}{"epoch": data.Epoch})
-								time.Sleep(time.Second * 10)
-								continue
-							}
-							d.log.Infof("backfill, wrote epoch data %d in %v", data.Epoch, time.Since(start))
+			d.log.Info("storage got data, writing epoch data")
+			d.writeEpochDatas(datas)
 
-							if data.Epoch >= gaps[len(gaps)-1] {
-								d.log.Infof("backfilling finished for range epoch %d to %d", gaps[0], gaps[len(gaps)-1])
-								doneMutex.Lock()
-								done = true
-								doneMutex.Unlock()
-								return nil
-							}
-
-							break
-						}
-						return nil
-					})
+			d.log.Info("storage writing done, aggregate")
+			for {
+				err = d.aggregatePerEpoch(false)
+				if err != nil {
+					d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
+					time.Sleep(time.Second * 10)
+					continue
 				}
+				break
+			}
 
-				_ = errGroup.Wait() // no errors to handle since it will retry until it resolves without err
+			d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
 
-				for {
-					err = d.aggregatePerEpoch(false)
-					if err != nil {
-						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
-						time.Sleep(time.Second * 10)
-						continue
-					}
-					break
-				}
-
-				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
-				if done {
-					break
-				}
-			case <-time.After(time.Second * 10):
+			// has written last entry in gaps
+			if containsEpoch(datas, gaps[len(gaps)-1]) {
+				break
 			}
 		}
 	}
 	return true, nil
+}
+
+func containsEpoch(d []DataEpoch, epoch uint64) bool {
+	for i := 0; i < len(d); i++ {
+		if d[i].Epoch == epoch {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
+	errGroup := &errgroup.Group{}
+	errGroup.SetLimit(epochWriteParallelism)
+	for i := 0; i < len(datas); i++ {
+		data := datas[i]
+		errGroup.Go(func() error {
+			for {
+				d.log.Infof("storage, writing epoch data for epoch %v", data.Epoch)
+				start := time.Now()
+
+				// retry this epoch until no errors occur
+				err := d.epochWriter.WriteEpochData(data.Epoch, data.Data)
+				if err != nil {
+					d.log.Error(err, "storage, failed to write epoch data", 0, map[string]interface{}{"epoch": data.Epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+
+				d.log.Infof("storage, wrote epoch data %d in %v", data.Epoch, time.Since(start))
+
+				break
+			}
+			return nil
+		})
+	}
+
+	_ = errGroup.Wait() // no errors to handle since it will retry until it resolves without err
 }
 
 var lastExportedHour uint64 = ^uint64(0)
@@ -375,21 +512,51 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 		}()
 
 		// important to do this before hour aggregate as hour aggregate deletes old epochs
-		err := d.epochToTotal.aggregateTotal()
-		if err != nil {
-			return errors.Wrap(err, "failed to aggregate total")
-		}
+		errGroup := &errgroup.Group{}
+		errGroup.SetLimit(databaseAggregationParallelism)
+		errGroup.Go(func() error {
+			err := d.epochToTotal.aggregateTotal()
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate total")
+			}
+			return nil
+		})
 
-		err = d.epochToHour.aggregate1hAndClearOld() // will aggregate last hour too if it hasnt completed yet
-		if err != nil {
-			return errors.Wrap(err, "failed to aggregate 1h")
-		}
+		errGroup.Go(func() error {
+			err := d.epochToHour.aggregate1h() // will aggregate last hour too if it hasn't completed yet
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate 1h")
+			}
 
-		err = d.hourToDay.dayAggregateAndClearOld(workingOnHead)
+			err = d.hourToDay.dayAggregate(workingOnHead)
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate day")
+			}
+			return nil
+		})
+
+		err = errGroup.Wait()
 		if err != nil {
-			return errors.Wrap(err, "failed to aggregate day")
+			return errors.Wrap(err, "failed to aggregate")
 		}
 		lastExportedHour = currentStartBound
+
+		d.log.Infof("cleaning old epochs")
+
+		if !workingOnHead {
+			// clear old individual epochs when we are not at head, this is useful to clear up old epochs during backfill
+			// but should not be done when on head since epoch data is needed for mid aggregation (rolling) data.
+			err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
+			if err != nil {
+				return errors.Wrap(err, "failed to clear old epochs")
+			}
+		}
+
+		// clear old hourly aggregated epochs, do not remove epochs from epoch table here as these are needed for Mid aggregation
+		err = d.epochToHour.clearOldHourAggregations(int64(currentExportedEpoch - d.epochToHour.getHourRetentionDurationEpochs()))
+		if err != nil {
+			return errors.Wrap(err, "failed to clear old hours")
+		}
 	}
 
 	return nil
@@ -401,19 +568,47 @@ func (d *dashboardData) aggregateMid() error {
 		d.log.Infof("all of mid aggregation took %v", time.Since(start))
 	}()
 
-	err := d.dayUp.rolling7dAggregate()
+	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
-		return errors.Wrap(err, "failed to aggregate 7d")
+		return errors.Wrap(err, "failed to get last exported epoch")
 	}
 
-	err = d.dayUp.rolling30dAggregate()
+	errGroup := &errgroup.Group{}
+	errGroup.SetLimit(databaseAggregationParallelism)
+
+	errGroup.Go(func() error {
+		err = d.dayUp.rolling7dAggregate()
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 7d")
+		}
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		err = d.dayUp.rolling30dAggregate()
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 30d")
+		}
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		err = d.dayUp.rolling90dAggregate()
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 90d")
+		}
+		return nil
+	})
+
+	err = errGroup.Wait()
 	if err != nil {
-		return errors.Wrap(err, "failed to aggregate 30d")
+		return errors.Wrap(err, "failed to aggregate")
 	}
 
-	err = d.dayUp.rolling90dAggregate()
+	// clear old individual epochs. Do this here since the rolling aggregates relies on it being available
+	err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
 	if err != nil {
-		return errors.Wrap(err, "failed to aggregate 90d")
+		return errors.Wrap(err, "failed to clear old epochs")
 	}
 
 	return nil
@@ -462,46 +657,11 @@ func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) e
 	return nil
 }
 
-/*
-Use this function when sequentially getting data of new epochs, for example in the exporter.
-For random non sequential epoch data use ExportEpochDataNonSequential
-*/
-func (d *dashboardData) ExportEpochData(epoch uint64) error {
-	totalStart := time.Now()
-	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch, false)
-	if data == nil {
-		return errors.New("can not get data")
-	}
-	d.log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(totalStart))
-
-	start := time.Now()
-	if d.signingDomain == nil {
-		domain, err := utils.GetSigningDomain()
-		if err != nil {
-			return err
-		}
-		d.signingDomain = domain
-	}
-
-	result, err := d.process(data, d.signingDomain)
+func (d *dashboardData) GetEpochDataRaw(epoch uint64, skipSerialCalls bool) (*Data, error) {
+	data, err := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch, skipSerialCalls)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	d.log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
-
-	start = time.Now()
-	err = d.epochWriter.WriteEpochData(epoch, result)
-	if err != nil {
-		return err
-	}
-	d.log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
-
-	d.log.Infof("successfully wrote dashboard epoch data for epoch %d in %v", epoch, time.Since(totalStart))
-	return nil
-}
-
-func (d *dashboardData) GetEpochData(epoch uint64, skipSerialCalls bool) (*Data, error) {
-	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch, skipSerialCalls)
 	if data == nil {
 		return nil, errors.New("can not get data")
 	}
@@ -537,7 +697,7 @@ type Data struct {
 // Data for a single validator
 // use skipSerialCalls = false if you are not sure what you are doing. This flag is mainly
 // to gain performance improvements when exporting a couple sequential epochs in a row
-func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls bool) *Data {
+func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls bool) (*Data, error) {
 	var result Data
 	var err error
 
@@ -580,7 +740,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		result.syncCommitteeAssignments, err = cl.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
 		if err != nil {
 			d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
-			return nil
+			return err
 		}
 		d.log.Debugf("retrieved sync committee assignments in %v", time.Since(start))
 		return nil
@@ -600,7 +760,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			data, err := cl.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
 				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": slot})
-				return nil
+				return err
 			}
 
 			for _, committee := range data.Data {
@@ -629,7 +789,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		result.attestationRewards, err = cl.GetAttestationRewards(epoch)
 		if err != nil {
 			d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
-			return nil
+			return err
 		}
 		d.log.Debugf("retrieved attestation rewards data in %v", time.Since(start))
 		return nil
@@ -641,7 +801,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		result.endBalances, err = cl.GetValidators(lastSlotOfEpoch, nil, nil)
 		if err != nil {
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
-			return nil
+			return err
 		}
 		d.log.Debugf("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
 		return nil
@@ -699,13 +859,13 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 					mutex.Unlock()
 					return nil // missed
 				}
-				d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+
 				return err
 			}
 			if block.Data.Message.StateRoot == "" {
 				// todo better network handling, if 404 just log info, else log error
 				d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
-				return nil
+				return errors.New("can not get block data")
 			}
 			mutex.Lock()
 			result.beaconBlockData[slot] = block
@@ -714,7 +874,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			blockReward, err := cl.GetPropoalRewards(slot)
 			if err != nil {
 				d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
-				return nil
+				return err
 			}
 			mutex.Lock()
 			result.beaconBlockRewardData[slot] = blockReward
@@ -723,7 +883,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			syncRewards, err := cl.GetSyncRewards(slot)
 			if err != nil {
 				d.log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
-				return nil
+				return err
 			}
 			mutex.Lock()
 			result.syncCommitteeRewardData[slot] = syncRewards
@@ -735,12 +895,12 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 
 	err = errGroup.Wait()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	d.log.Infof("retrieved all data for epoch %d in %v", epoch, time.Since(totalStart))
 
-	return &result
+	return &result, nil
 }
 
 func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
@@ -979,6 +1139,43 @@ func mustParseInt64(s string) int64 {
 		panic(err)
 	}
 	return r
+}
+
+func parseEpochRange(pattern, partition string) (uint64, uint64, error) {
+	// Compile the regular expression pattern
+	regex := regexp.MustCompile(pattern)
+
+	// Find the matches in the partition string
+	matches := regex.FindStringSubmatch(partition)
+
+	// Check if the partition string matches the pattern
+	if len(matches) != 3 {
+		return 0, 0, fmt.Errorf("invalid partition string: %s", partition)
+	}
+
+	// Parse the epoch range values
+	epochFrom, err := strconv.ParseUint(matches[1], 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse epoch from: %w", err)
+	}
+
+	epochTo, err := strconv.ParseUint(matches[2], 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse epoch to: %w", err)
+	}
+
+	return epochFrom, epochTo, nil
+}
+
+type DataEpoch struct {
+	DataRaw *Data
+	Data    []*validatorDashboardDataRow
+	Epoch   uint64
+}
+
+type EpochParallelGroup struct {
+	Epochs     []uint64
+	Sequential bool
 }
 
 type validatorDashboardDataRow struct {

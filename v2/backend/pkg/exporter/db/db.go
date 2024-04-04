@@ -854,31 +854,31 @@ func GetMinOldHourlyEpoch() (uint64, error) {
 	return epoch, err
 }
 
-type LastHour struct {
+type EpochBounds struct {
 	EpochStart uint64 `db:"epoch_start"`
 	EpochEnd   uint64 `db:"epoch_end"`
 }
 
-type LastDay struct {
+type DayBounds struct {
 	Day        time.Time `db:"day"`
 	EpochStart uint64    `db:"epoch_start"`
 	EpochEnd   uint64    `db:"epoch_end"`
 }
 
-func GetLastExportedTotalEpoch() (*LastHour, error) {
-	var epoch LastHour
+func GetLastExportedTotalEpoch() (*EpochBounds, error) {
+	var epoch EpochBounds
 	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_rolling_total ORDER BY epoch_start DESC LIMIT 1")
 	return &epoch, err
 }
 
-func GetLastExportedHour() (*LastHour, error) {
-	var epoch LastHour
+func GetLastExportedHour() (*EpochBounds, error) {
+	var epoch EpochBounds
 	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
 	return &epoch, err
 }
 
-func GetLastExportedDay() (*LastDay, error) {
-	var epoch LastDay
+func GetLastExportedDay() (*DayBounds, error) {
+	var epoch DayBounds
 	err := db.AlloyReader.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
 	return &epoch, err
 }
@@ -901,19 +901,12 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	return true, nil
 }
 
-func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, error) {
-	var minEpoch uint64
-	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch LIMIT 1")
-	if err != nil {
-		return nil, err
+func GetDashboardEpochGapsBetween(targetEpoch uint64, minEpoch int64) ([]uint64, error) {
+	if minEpoch < 0 {
+		minEpoch = 0
 	}
-
-	if minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration {
-		minEpoch = targetEpoch - retainEpochDuration
-	}
-
 	var epochs []uint64
-	err = db.AlloyReader.Select(&epochs, `
+	err := db.AlloyReader.Select(&epochs, `
 		WITH
 		epoch_range AS (
 			SELECT generate_series($1::bigint, $2::bigint) AS epoch
@@ -928,8 +921,15 @@ func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, e
 		WHERE distinct_present_epochs.epoch IS NULL
 		ORDER BY epoch_range.epoch
 	`, minEpoch, targetEpoch)
-	if err != nil {
-		return nil, err
-	}
-	return epochs, nil
+	return epochs, err
+}
+
+func GetPartitionNamesOfTable(tableName string) ([]string, error) {
+	var partitions []string
+	err := db.AlloyReader.Select(&partitions, fmt.Sprintf(`
+		SELECT inhrelid::regclass AS partition_name
+		FROM pg_inherits
+		WHERE inhparent = 'public.%s'::regclass;`, tableName),
+	)
+	return partitions, err
 }
