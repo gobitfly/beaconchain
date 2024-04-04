@@ -6,13 +6,14 @@ interface Props {
     icon?: IconDefinition,
     text?: string,
     component?: Component,
+    componentClass?: string,
     value: string
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
 const props = defineProps<Props>()
 
-const selected = defineModel<string>({ required: true })
+const selected = defineModel<string>()
 
 const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = value === selected.value
@@ -46,7 +47,7 @@ function onButtonClicked (value: string) {
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" />
+          <component :is="button.component" :class="button.componentClass" />
         </slot>
       </template>
     </BcToggleSingleBarButton>

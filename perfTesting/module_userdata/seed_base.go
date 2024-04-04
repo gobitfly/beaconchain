@@ -40,7 +40,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 
 	for i := 0; i < iterations; i++ {
 		dashboardID := int64(i)
-		err := CreateValDashboard(dashboardID, NetworkMainnet)
+		err := CreateValDashboard(dashboardID, NetworkMainnet, "")
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareAll := rand.Intn(3) == 0
 
 		if share {
-			err = CreateValDashboardSharing(int64(i), shareAll)
+			err = CreateValDashboardSharing(int64(i), "", shareAll)
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 
 		// -- Acc --
 
-		err = CreateAccDashboard(dashboardID)
+		err = CreateAccDashboard(dashboardID, "")
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareNotes := rand.Intn(2) == 0
 
 		if share {
-			err = CreateAccDashboardSharing(int64(i), shareAll, shareNotes, `{"test": true}`)
+			err = CreateAccDashboardSharing(int64(i), "", shareAll, shareNotes, `{"test": true}`)
 			if err != nil {
 				return err
 			}
@@ -180,7 +180,6 @@ func insertValidatorsTable(start, count, maxValidatorIndex, pendingAfter int64) 
 	stmt, err := tx.Prepare(pq.CopyIn("validators",
 		"validator_index",
 		"pubkey",
-		"validator_index_version",
 	))
 	if err != nil {
 		return err
@@ -248,7 +247,6 @@ func insertValidatorsDashboard(dashboard, group, start, count, maxValidatorIndex
 		"validator_index",
 		"dashboard_id",
 		"group_id",
-		"validator_index_version",
 	))
 	if err != nil {
 		return err

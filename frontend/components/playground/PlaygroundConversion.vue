@@ -2,6 +2,7 @@
 import type { Currency } from '~/types/currencies'
 
 const { setCurrency, currency } = useCurrency()
+const { latestState } = useLatestStateStore()
 
 const onCurrencyChange = (event: Event) => {
   const select = event.target as HTMLSelectElement
@@ -14,7 +15,7 @@ const onCurrencyChange = (event: Event) => {
 <template>
   <div>
     Conversions
-    <select v-model="currency" @change="onCurrencyChange($event)">
+    <select :value="currency" @change="onCurrencyChange($event)">
       <option value="NAT">
         Native
       </option>
@@ -98,6 +99,81 @@ const onCurrencyChange = (event: Event) => {
     <div>
       Input in eth [2] fixed out in WEI: <BcFormatValue value="2" :options="{sourceUnit:'MAIN', fixedUnit:'WEI'}" />
     </div>
+  </div>
+  <b>
+    Format numbers
+  </b>
+  <div>100000, no settings: <BcFormatNumber :value="100000" /></div>
+  <div>100000.1234, no settings: <BcFormatNumber :value="100000.1234" /></div>
+  <div>100000, min 2 decimals: <BcFormatNumber :value="100000" :min-decimals="2" /></div>
+  <div>100000.1234, min/max 3: <BcFormatNumber :value="100000.1234" :min-decimals="3" :max-decimals="3" /></div>
+  <div>0, no settings: <BcFormatNumber :value="0" /></div>
+  <div>0.00001, no settings: <BcFormatNumber :value="0.00001" /></div>
+  <div>0.01, no settings: <BcFormatNumber :value="0.01" /></div>
+  <div>no value, no settings: <BcFormatNumber /></div>
+  <div>no value, default '-': <BcFormatNumber default="-" /></div>
+  <div>-100000, no settings: <BcFormatNumber :value="-100000" /></div>
+
+  <b>
+    Format percent
+  </b>
+
+  <div>
+    1234567.89123, color, +:
+    <BcFormatPercent :percent="1234567.89123" :color-break-point="80" :add-positive-sign="true" />
+  </div>
+  <div>
+    -1234567.89123, color, +:
+    <BcFormatPercent :percent="-1234567.89123" :color-break-point="80" :add-positive-sign="true" />
+  </div>
+
+  <div>
+    1 - no settings
+    <BcFormatPercent :percent="1" />
+  </div>
+  <b>
+    Format Epochs time passed
+  </b>
+  <div>
+    Epoch 1 ->
+    <BcFormatTimePassed :value="1" />
+  </div>
+
+  <div>
+    Epoch 272684 ->
+    <BcFormatTimePassed :value="272684" />
+  </div>
+  <div>
+    latest Epoch ->
+    <BcFormatTimePassed :value="latestState?.currentEpoch" />
+  </div>
+  <div>
+    latest Epoch - 1 ->
+    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 1) - 1" />
+  </div>
+  <div>
+    latest Epoch - 10 ->
+    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 10) - 10" />
+  </div>
+  <div>
+    next Epoch ->
+    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0 )+ 1" />
+  </div>
+  <div>
+    next Epoch no tick ->
+    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0 )+ 1" :no-update="true" />
+  </div>
+  <div>
+    the Epoch after ->
+    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0) + 2" />
+  </div>
+  <div>
+    latest Epoch long format->
+    <BcFormatTimePassed :value="latestState?.currentEpoch" unit-length="long" />
+  </div>
+  <div>
+    latest Epoch short format->
+    <BcFormatTimePassed :value="latestState?.currentEpoch" unit-length="short" />
   </div>
 </template>
 

@@ -23,3 +23,20 @@
     content: '\2026'
   }
 }
+
+.no-wrap{
+  white-space: nowrap;
+}
+
+.positive {  
+  color: var(--positive-color);
+}
+
+.negative{
+  color: var(--negative-color);
+}
+.comma{
+  &:before{
+    content: ',';
+  }
+}

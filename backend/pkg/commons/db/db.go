@@ -71,7 +71,7 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 	dbConnectionTimeout.Stop()
 }
 
-func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
+func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
 	if writer.MaxOpenConns == 0 {
 		writer.MaxOpenConns = 50
 	}
@@ -130,14 +130,6 @@ func mustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
 	dbConnReader.SetMaxIdleConns(reader.MaxIdleConns)
 	return dbConnWriter, dbConnReader
-}
-
-func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
-	WriterDb, ReaderDb = mustInitDB(writer, reader)
-}
-
-func MustInitAlloyDb(writer *types.DatabaseConfig, reader *types.DatabaseConfig) {
-	AlloyWriter, AlloyReader = mustInitDB(writer, reader)
 }
 
 func ApplyEmbeddedDbSchema(version int64) error {
@@ -2028,25 +2020,6 @@ func GetLastExportedStatisticDay() (uint64, error) {
 	return uint64(lastStatsDay.Int64), nil
 }
 
-// GetValidatorIncomePerformance gets all rewards of a validator in WEI for 1d, 7d, 365d and total
-func GetValidatorIncomePerformance(validators []uint64, incomePerformance *types.ValidatorIncomePerformance) error {
-	validatorsPQArray := pq.Array(validators)
-	return ReaderDb.Get(incomePerformance, `
-		SELECT
-			COALESCE(SUM(cl_performance_1d    ), 0)*1e9 AS cl_performance_wei_1d,
-			COALESCE(SUM(cl_performance_7d    ), 0)*1e9 AS cl_performance_wei_7d,
-			COALESCE(SUM(cl_performance_31d   ), 0)*1e9 AS cl_performance_wei_31d,
-			COALESCE(SUM(cl_performance_365d  ), 0)*1e9 AS cl_performance_wei_365d,
-			COALESCE(SUM(cl_performance_total ), 0)*1e9 AS cl_performance_wei_total,
-			COALESCE(SUM(mev_performance_1d   ), 0)     AS el_performance_wei_1d,
-			COALESCE(SUM(mev_performance_7d   ), 0)     AS el_performance_wei_7d,
-			COALESCE(SUM(mev_performance_31d  ), 0)     AS el_performance_wei_31d,
-			COALESCE(SUM(mev_performance_365d ), 0)     AS el_performance_wei_365d,
-			COALESCE(SUM(mev_performance_total), 0)     AS el_performance_wei_total
-		FROM validator_performance
-		WHERE validatorindex = ANY($1)`, validatorsPQArray)
-}
-
 func GetTotalValidatorDeposits(validators []uint64, totalDeposits *uint64) error {
 	validatorsPQArray := pq.Array(validators)
 	return ReaderDb.Get(totalDeposits, `
@@ -2129,10 +2102,10 @@ func GetValidatorProposals(validators []uint64, proposals *[]types.ValidatorProp
 		`, validatorsPQArray)
 }
 
-func GetValidatorDutiesInfo(readerDb *sqlx.DB, startSlot uint64) ([]types.ValidatorDutyInfo, error) {
+func GetValidatorDutiesInfo(startSlot uint64) ([]types.ValidatorDutyInfo, error) {
 	validatorDutyInfo := []types.ValidatorDutyInfo{}
 
-	err := readerDb.Select(&validatorDutyInfo, `
+	err := ReaderDb.Select(&validatorDutyInfo, `
 		SELECT
 			blocks.slot,
 			blocks.status,

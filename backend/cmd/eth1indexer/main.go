@@ -106,7 +106,7 @@ func main() {
 		}()
 	}
 
-	db.MustInitDB(&types.DatabaseConfig{
+	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,
 		Password:     cfg.WriterDatabase.Password,
 		Name:         cfg.WriterDatabase.Name,

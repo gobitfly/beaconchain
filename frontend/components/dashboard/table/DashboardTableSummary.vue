@@ -21,7 +21,7 @@ const { getSummary } = store
 const { summaryMap, queryMap } = storeToRefs(store)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = storeToRefs(useValidatorDashboardOverviewStore())
+const { overview } = useValidatorDashboardOverviewStore()
 
 const { width, isMobile } = useWindowSize()
 const colsVisible = computed(() => {
@@ -31,14 +31,14 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
+const loadData = (q?: TableQueryParams) => {
+  if (!q) {
+    q = query.value ? { ...query.value } : { limit: pageSize.value }
   }
-  setQuery(query, true, true)
+  setQuery(q, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(() => [props.dashboardKey, overview.value], () => {
   loadData()
 }, { immediate: true })
 
@@ -125,7 +125,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               field="group_id"
               :sortable="true"
               body-class="bold"
-              :header="$t('dashboard.validator.summary.col.group')"
+              :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
                 {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
@@ -133,49 +133,49 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <Column
-              field="efficiency_day"
+              field="efficiency_last_24h"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_day')"
+              :header="$t('dashboard.validator.col.efficiency_last_24h')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_day" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_24h" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_week"
+              field="efficiency_last_7d"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_week')"
+              :header="$t('dashboard.validator.col.efficiency_last_7d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_week" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_7d" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_month"
+              field="efficiency_last_30d"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_month')"
+              :header="$t('dashboard.validator.col.efficiency_last_30d')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_month" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.last_30d" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.efficiency_plus"
-              field="efficiency_total"
+              field="efficiency_all_time"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.efficiency_total')"
+              :header="$t('dashboard.validator.col.efficiency_all_time')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency_total" :color-break-point="80" />
+                <BcFormatPercent :percent="slotProps.data.efficiency.all_time" :color-break-point="80" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.validator"
               class="validator_column"
               :sortable="true"
-              :header="$t('dashboard.validator.summary.col.validators')"
+              :header="$t('dashboard.validator.col.validators')"
             >
               <template #body="slotProps">
                 <DashboardTableValidators

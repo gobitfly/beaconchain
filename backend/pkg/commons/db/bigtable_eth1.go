@@ -31,6 +31,7 @@ import (
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/go-redis/redis/v8"
@@ -2134,10 +2135,10 @@ func (bigtable *Bigtable) GetEth1TxsForAddress(prefix string, limit int64) ([]*t
 	return data, indexes, nil
 }
 
-func (bigtable *Bigtable) GetAddressesNamesArMetadata(names *map[string]string, inputMetadata *map[string]*types.ERC20Metadata) (map[string]string, map[string]*types.ERC20Metadata, error) {
+func (bigtable *Bigtable) GetAddressesNamesArMetadata(addresses *map[string]string, inputMetadata *map[string]*types.ERC20Metadata) (map[string]string, map[string]*types.ERC20Metadata, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
-			"names":         names,
+			"addresses":     addresses,
 			"inputMetadata": inputMetadata,
 			"func":          utils.GetCurrentFuncName(),
 			"duration":      REPORT_TIMEOUT,
@@ -2151,9 +2152,9 @@ func (bigtable *Bigtable) GetAddressesNamesArMetadata(names *map[string]string, 
 	g.SetLimit(25)
 	mux := sync.Mutex{}
 
-	if names != nil {
+	if addresses != nil {
 		g.Go(func() error {
-			err := bigtable.GetAddressNames(*names)
+			err := bigtable.GetAddressNames(*addresses)
 			if err != nil {
 				return err
 			}
@@ -2182,7 +2183,7 @@ func (bigtable *Bigtable) GetAddressesNamesArMetadata(names *map[string]string, 
 		return nil, nil, err
 	}
 
-	return *names, outputMetadata, nil
+	return *addresses, outputMetadata, nil
 }
 
 func (bigtable *Bigtable) GetIndexedEth1Transaction(txHash []byte) (*types.Eth1TransactionIndexed, error) {
@@ -3119,13 +3120,13 @@ func (bigtable *Bigtable) GetAddressNames(addresses map[string]string) error {
 
 	keys := make([]string, 0, len(addresses))
 
-	if err := GetEnsNamesForAddress(addresses); err != nil {
+	if err := GetEnsNamesForAddresses(addresses); err != nil {
 		return err
 	}
 
 	for address, label := range addresses {
 		if label == "" {
-			keys = append(keys, fmt.Sprintf("%s:%x", bigtable.chainId, address))
+			keys = append(keys, fmt.Sprintf("%s:%x", bigtable.chainId, strings.TrimPrefix(address, "0x")))
 		}
 	}
 
@@ -3135,7 +3136,7 @@ func (bigtable *Bigtable) GetAddressNames(addresses map[string]string) error {
 	err := bigtable.tableMetadata.ReadRows(ctx, gcp_bigtable.RowList(keys), func(r gcp_bigtable.Row) bool {
 		address := strings.TrimPrefix(r.Key(), keyPrefix)
 		addressBytes, _ := hex.DecodeString(address)
-		addresses[string(addressBytes)] = string(r[ACCOUNT_METADATA_FAMILY][0].Value)
+		addresses[hexutil.Encode(addressBytes)] = string(r[ACCOUNT_METADATA_FAMILY][0].Value)
 
 		return true
 	}, gcp_bigtable.RowFilter(filter))

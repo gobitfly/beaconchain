@@ -1,0 +1,40 @@
+{
+  "data": {
+    "validator_dashboards": [
+      {
+        "id": "1",
+        "name": "Lighthouse Validators"
+      },
+      {
+        "id": "2",
+        "name": "Prysm"
+      },
+      {
+        "id": "3",
+        "name": "Validators from my friend"
+      },
+      {
+        "id": "4",
+        "name": "The other validators"
+      }
+    ],
+    "account_dashboards": [
+      {
+        "id": "5",
+        "name": "Hardware Wallets"
+      },
+      {
+        "id": "6",
+        "name": "Hot Wallets"
+      },
+      {
+        "id": "7",
+        "name": "My friend's wallets"
+      },
+      {
+        "id": "8",
+        "name": "The other wallets"
+      }
+    ] 
+  }
+}

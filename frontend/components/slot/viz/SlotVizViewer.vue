@@ -8,9 +8,9 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const selectedCategoris = ref<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
+const selectedCategoris = shallowRef<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
 
-const icons: { component: Component, value: SlotVizCategories }[] = [
+const icons:{ component: Component, value: SlotVizCategories }[] = [
   {
     component: IconSlotBlockProposal,
     value: 'proposal'
@@ -33,7 +33,7 @@ const icons: { component: Component, value: SlotVizCategories }[] = [
       <div class="row" />
       <div v-for="row in props.data" :key="row.epoch" class="row">
         <div class="epoch">
-          {{ row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch) }}
+          <BcFormatNumber :text="row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch) " />
         </div>
       </div>
     </div>

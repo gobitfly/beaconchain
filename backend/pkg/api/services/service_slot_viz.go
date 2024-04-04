@@ -25,10 +25,10 @@ var currentDutiesInfo *SyncData
 
 var currentDataMutex = &sync.RWMutex{}
 
-func StartSlotVizDataService() {
+func (s *Services) startSlotVizDataService() {
 	for {
 		startTime := time.Now()
-		err := updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
+		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
 			log.Error(err, "error updating slotviz data", 0)
 		}
@@ -37,12 +37,12 @@ func StartSlotVizDataService() {
 	}
 }
 
-func updateSlotVizData() error {
+func (s *Services) updateSlotVizData() error {
 	var dutiesInfo *SyncData
 	if currentDutiesInfo == nil {
-		dutiesInfo = initDutiesInfo()
+		dutiesInfo = s.initDutiesInfo()
 	} else {
-		dutiesInfo = copyAndCleanDutiesInfo()
+		dutiesInfo = s.copyAndCleanDutiesInfo()
 	}
 
 	var validatorDutiesInfo []types.ValidatorDutyInfo
@@ -56,7 +56,7 @@ func updateSlotVizData() error {
 	gOuter.Go(func() error {
 		startTime := time.Now()
 		var err error
-		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(db.ReaderDb, getMaxValidatorDutiesInfoSlot())
+		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(s.getMaxValidatorDutiesInfoSlot())
 		if err != nil {
 			return errors.Wrap(err, "error getting validator duties info")
 		}
@@ -98,7 +98,7 @@ func updateSlotVizData() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 				defer cancel()
 
-				encodedRedisCachedEpochAssignments, err := db.PersistentRedisDbClient.Get(ctx, key).Result()
+				encodedRedisCachedEpochAssignments, err := s.persistentRedisDbClient.Get(ctx, key).Result()
 				if err != nil {
 					if epoch == headEpoch+1 {
 						log.Infof("headEpoch + 1 assignments not yet available, epoch %d", epoch)
@@ -198,6 +198,9 @@ func updateSlotVizData() error {
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
 				for _, validator := range duty.Validators {
+					if dutiesInfo.EpochAttestationDuties[uint32(validator)] == nil {
+						dutiesInfo.EpochAttestationDuties[uint32(validator)] = make(map[uint32]bool, 5)
+					}
 					dutiesInfo.EpochAttestationDuties[uint32(validator)][uint32(attestedSlot)] = true // validator has attested for that slot
 				}
 			}
@@ -213,7 +216,7 @@ func updateSlotVizData() error {
 			// Slashings
 			if duty.ProposerSlashingsCount > 0 {
 				slashedPropValidators := []uint64{}
-				err := db.ReaderDb.Select(&slashedPropValidators, `
+				err := s.readerDb.Select(&slashedPropValidators, `
 					SELECT
 						proposerindex
 					FROM blocks_proposerslashings
@@ -230,7 +233,7 @@ func updateSlotVizData() error {
 				}{}
 				slashedValidators := []uint64{}
 
-				err := db.ReaderDb.Select(&attSlashings, `
+				err := s.readerDb.Select(&attSlashings, `
 				SELECT
 					attestation1_indices,
 					attestation2_indices
@@ -243,7 +246,7 @@ func updateSlotVizData() error {
 				for _, row := range attSlashings {
 					inter := intersect.Simple(row.Attestestation1Indices, row.Attestestation2Indices)
 					if len(inter) == 0 {
-						log.Warn(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
+						log.WarnWithStackTrace(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
 					}
 					for _, v := range inter {
 						slashedValidators = append(slashedValidators, uint64(v.(int64)))
@@ -268,7 +271,7 @@ func updateSlotVizData() error {
 
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
-func GetCurrentDutiesInfo() (*SyncData, func(), error) {
+func (s *Services) GetCurrentDutiesInfo() (*SyncData, func(), error) {
 	currentDataMutex.RLock()
 
 	if currentDutiesInfo == nil {
@@ -278,7 +281,7 @@ func GetCurrentDutiesInfo() (*SyncData, func(), error) {
 	return currentDutiesInfo, currentDataMutex.RUnlock, nil
 }
 
-func initDutiesInfo() *SyncData {
+func (s *Services) initDutiesInfo() *SyncData {
 	dutiesInfo := SyncData{}
 	dutiesInfo.LatestSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
@@ -293,7 +296,7 @@ func initDutiesInfo() *SyncData {
 	return &dutiesInfo
 }
 
-func copyAndCleanDutiesInfo() *SyncData {
+func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	// deep copy & clean
 	headSlot := cache.LatestEpoch.Get() * utils.Config.Chain.ClConfig.SlotsPerEpoch
 	dropBelowSlot := headSlot - 2*utils.Config.Chain.ClConfig.SlotsPerEpoch
@@ -405,7 +408,7 @@ func copyAndCleanDutiesInfo() *SyncData {
 	return dutiesInfo
 }
 
-func getMaxValidatorDutiesInfoSlot() uint64 {
+func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 	headEpoch := cache.LatestEpoch.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 

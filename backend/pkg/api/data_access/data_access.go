@@ -2,11 +2,16 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"math"
+	"math/big"
+	"sort"
 	isort "sort"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
@@ -16,7 +21,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -25,7 +33,7 @@ type DataAccessor interface {
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
 
-	GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error)
+	GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error)
 
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 
@@ -35,9 +43,11 @@ type DataAccessor interface {
 
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
-	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error)
+	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
+	UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
+	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
@@ -51,6 +61,7 @@ type DataAccessor interface {
 	GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error)
 	GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error)
+	GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error)
 
 	GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error)
@@ -71,19 +82,45 @@ type DataAccessor interface {
 }
 
 type DataAccessService struct {
-	dummy DummyService
+	dummy *DummyService
 
-	ReaderDb                *sqlx.DB
-	WriterDb                *sqlx.DB
-	Bigtable                *db.Bigtable
-	PersistentRedisDbClient *redis.Client
+	readerDb                *sqlx.DB
+	writerDb                *sqlx.DB
+	alloyReader             *sqlx.DB
+	alloyWriter             *sqlx.DB
+	bigtable                *db.Bigtable
+	persistentRedisDbClient *redis.Client
+
+	services *services.Services
 }
 
-// ensure DataAccessService implements DataAccessor
-var _ DataAccessor = DataAccessService{}
+// ensure DataAccessService pointer implements DataAccessor
+var _ DataAccessor = (*DataAccessService)(nil)
 
-func NewDataAccessService(cfg *types.Config) DataAccessService {
+func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// Create the data access service
+	das := createDataAccessService(cfg)
+
+	// TODO: We set the global db connections here to have access to the functions in the db package
+	// which use them without having to rewrite every single one.
+	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
+	db.ReaderDb = das.readerDb
+	db.WriterDb = das.writerDb
+	db.AlloyReader = das.alloyReader
+	db.AlloyWriter = das.alloyWriter
+	db.BigtableClient = das.bigtable
+	db.PersistentRedisDbClient = das.persistentRedisDbClient
+
+	// Create the services
+	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.bigtable, das.persistentRedisDbClient)
+
+	// Initialize the services
+	das.services.InitServices()
+
+	return das
+}
+
+func createDataAccessService(cfg *types.Config) *DataAccessService {
 	dataAccessService := DataAccessService{
 		dummy: NewDummyService()}
 
@@ -92,9 +129,7 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		//TODO adjust db functions to be able to set local reader/writer without setting the global ones
-		db.MustInitDB(&types.DatabaseConfig{
+		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.WriterDatabase.Username,
 			Password:     cfg.WriterDatabase.Password,
 			Name:         cfg.WriterDatabase.Name,
@@ -111,15 +146,12 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
 		})
-
-		dataAccessService.ReaderDb = db.ReaderDb
-		dataAccessService.WriterDb = db.WriterDb
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.MustInitAlloyDb(&types.DatabaseConfig{
+		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.AlloyWriter.Username,
 			Password:     cfg.AlloyWriter.Password,
 			Name:         cfg.AlloyWriter.Name,
@@ -148,7 +180,7 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 		if err != nil {
 			log.Fatal(err, "error connecting to bigtable", 0)
 		}
-		dataAccessService.Bigtable = bt
+		dataAccessService.bigtable = bt
 	}()
 
 	// Initialize the tiered cache (redis)
@@ -173,7 +205,7 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 		if err := rdc.Ping(context.Background()).Err(); err != nil {
 			log.Fatal(err, "error connecting to persistent redis store", 0)
 		}
-		dataAccessService.PersistentRedisDbClient = rdc
+		dataAccessService.persistentRedisDbClient = rdc
 	}()
 
 	wg.Wait()
@@ -183,101 +215,33 @@ func NewDataAccessService(cfg *types.Config) DataAccessService {
 	}
 
 	// Return the result
-	return dataAccessService
+	return &dataAccessService
 }
 
-func (d DataAccessService) CloseDataAccessService() {
-	if d.ReaderDb != nil {
-		d.ReaderDb.Close()
+func (d *DataAccessService) CloseDataAccessService() {
+	if d.readerDb != nil {
+		d.readerDb.Close()
 	}
-	if d.WriterDb != nil {
-		d.WriterDb.Close()
+	if d.writerDb != nil {
+		d.writerDb.Close()
 	}
-	if d.Bigtable != nil {
-		d.Bigtable.Close()
+	if d.alloyReader != nil {
+		d.alloyReader.Close()
+	}
+	if d.alloyWriter != nil {
+		d.alloyWriter.Close()
+	}
+	if d.bigtable != nil {
+		d.bigtable.Close()
 	}
 }
 
-func (d DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardInfo(dashboardId)
-}
+//////////////////// 		Helper functions
 
-func (d DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardInfoByPublicId(publicDashboardId)
-}
-
-// param validators: slice of validator public keys or indices, a index should resolve to the newest index version
-func (d DataAccessService) GetValidatorsFromStrings(validators []string) ([]t.VDBValidator, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorsFromStrings(validators)
-}
-
-func (d DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
-	// TODO @recy21
-	return d.dummy.GetUserDashboards(userId)
-}
-
-func (d DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboard(userId, name, network)
-}
-
-func (d DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
-	// WORKING Rami
-	return d.dummy.GetValidatorDashboardOverview(dashboardId)
-}
-
-func (d DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboard(dashboardId)
-}
-
-func (d DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBOverviewGroup, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboardGroup(dashboardId, name)
-}
-
-func (d DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardGroup(dashboardId, groupId)
-}
-
-func (d DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-	// WORKING spletka
-	return d.dummy.AddValidatorDashboardValidators(dashboardId, groupId, validators)
-}
-
-func (d DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardValidators(dashboardId, groupId, cursor, sort, search, limit)
-}
-
-func (d DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardValidators(dashboardId, validators)
-}
-
-func (d DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	// WORKING spletka
-	return d.dummy.CreateValidatorDashboardPublicId(dashboardId, name, showGroupNames)
-}
-
-func (d DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	// WORKING spletka
-	return d.dummy.UpdateValidatorDashboardPublicId(publicDashboardId, name, showGroupNames)
-}
-
-func (d DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
-	// WORKING spletka
-	return d.dummy.RemoveValidatorDashboardPublicId(publicDashboardId)
-}
-
-func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
+func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
 	var validatorsArray []uint32
 	if len(dashboardId.Validators) == 0 {
-		err := db.AlloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId)
+		err := d.alloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -286,6 +250,773 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]
 		for _, validator := range dashboardId.Validators {
 			validatorsArray = append(validatorsArray, uint32(validator.Index))
 		}
+	}
+	return validatorsArray, nil
+}
+
+func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {
+	efficiency := float64(0)
+
+	if !attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = 0
+	} else if attestationEff.Valid && !proposalEff.Valid && !syncEff.Valid {
+		efficiency = attestationEff.Float64 * 100.0
+	} else if attestationEff.Valid && proposalEff.Valid && !syncEff.Valid {
+		efficiency = ((56.0 / 64.0 * attestationEff.Float64) + (8.0 / 64.0 * proposalEff.Float64)) * 100.0
+	} else if attestationEff.Valid && !proposalEff.Valid && syncEff.Valid {
+		efficiency = ((62.0 / 64.0 * attestationEff.Float64) + (2.0 / 64.0 * syncEff.Float64)) * 100.0
+	} else {
+		efficiency = (((54.0 / 64.0) * attestationEff.Float64) + ((8.0 / 64.0) * proposalEff.Float64) + ((2.0 / 64.0) * syncEff.Float64)) * 100.0
+	}
+
+	if efficiency < 0 {
+		efficiency = 0
+	}
+
+	return efficiency
+}
+
+//////////////////// 		Data Access
+
+func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
+	result := &t.DashboardInfo{}
+
+	err := d.alloyReader.Get(result, `
+		SELECT 
+			id, 
+			user_id
+		FROM users_val_dashboards
+		WHERE id = $1
+	`, dashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with id %d not found, err: %w", dashboardId, err)
+	}
+	return result, err
+}
+
+func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
+	result := &t.DashboardInfo{}
+
+	err := d.alloyReader.Get(result, `
+		SELECT 
+			uvd.id,
+			uvd.user_id
+		FROM users_val_dashboards_sharing uvds
+		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
+		WHERE uvds.public_id = $1
+	`, publicDashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("dashboard with public id %s not found, err: %w", publicDashboardId, err)
+	}
+	return result, err
+}
+
+// param validators: slice of validator public keys or indices
+func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
+	if len(indices) == 0 && len(publicKeys) == 0 {
+		return nil, nil
+	}
+
+	// Query the database for the validators
+	validators := []t.VDBValidator{}
+	err := d.alloyReader.Select(&validators, `
+		SELECT 
+			validatorindex
+		FROM validators
+		WHERE validatorindex = ANY($1)
+		UNION ALL
+		SELECT 
+			validatorindex
+		FROM validators
+		WHERE pubkey = ANY($2)
+	`, pq.Array(indices), pq.ByteaArray(publicKeys))
+	if err != nil {
+		return nil, err
+	}
+
+	// Return an error if not every validator was found
+	if len(validators) != len(indices)+len(publicKeys) {
+		return nil, fmt.Errorf("not all validators from strings were found")
+	}
+
+	// Create a map to remove potential duplicates
+	validatorResultMap := make(map[t.VDBValidator]bool)
+	for _, v := range validators {
+		validatorResultMap[v] = true
+	}
+	result := make([]t.VDBValidator, 0, len(validatorResultMap))
+	for validator := range validatorResultMap {
+		result = append(result, validator)
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+	result := &t.UserDashboardsData{}
+
+	// Get the validator dashboards
+	err := d.alloyReader.Select(&result.ValidatorDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_val_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the account dashboards
+	err = d.alloyReader.Select(&result.AccountDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_acc_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
+	result := &t.VDBPostReturnData{}
+	const defaultGrpName = "default"
+
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Create validator dashboard for user
+	err = tx.Get(result, `
+		INSERT INTO users_val_dashboards (user_id, network, name)
+			VALUES ($1, $2, $3)
+		RETURNING id, user_id, name, network, created_at
+	`, userId, network, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a default group for the new dashboard
+	_, err = tx.Exec(`
+		INSERT INTO users_val_dashboards_groups (dashboard_id, name)
+			VALUES ($1, $2)
+	`, result.Id, defaultGrpName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to create a validator dashboard: %w", err)
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error {
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Delete the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards WHERE id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all groups for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all validators for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all shared dashboards for the dashboard
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = $1
+	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
+	}
+	return nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
+	validators, err := d.getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
+	wg := errgroup.Group{}
+	data := t.VDBOverviewData{}
+
+	// Groups
+	if len(dashboardId.Validators) == 0 {
+		// should have valid primary id
+		wg.Go(func() error {
+			var queryResult []struct {
+				Id    uint32 `db:"id"`
+				Name  string `db:"name"`
+				Count uint64 `db:"count"`
+			}
+			query := `SELECT id, name, COUNT(validator_index)
+			FROM
+				users_val_dashboards_groups groups
+			LEFT JOIN users_val_dashboards_validators validators
+					ON groups.dashboard_id = validators.dashboard_id AND groups.id = validators.group_id
+			WHERE
+				groups.dashboard_id = $1
+			GROUP BY
+				groups.id, groups.name`
+			if err := d.alloyReader.Select(&queryResult, query, dashboardId.Id); err != nil {
+				return err
+			}
+			for _, res := range queryResult {
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
+			}
+			return nil
+		})
+	}
+
+	// Validator Status
+	wg.Go(func() error {
+		query := `SELECT status AS statename, COUNT(*) AS statecount
+		FROM validators
+		WHERE validatorindex = ANY($1)
+		GROUP BY status`
+		var queryResult []struct {
+			Name  string `db:"statename"`
+			Count uint64 `db:"statecount"`
+		}
+		err = d.readerDb.Select(&queryResult, query, validators)
+		if err != nil {
+			return fmt.Errorf("error retrieving validators data: %v", err)
+		}
+		for _, state := range queryResult {
+			switch state.Name {
+			case "exiting_online":
+				fallthrough
+			case "slashing_online":
+				fallthrough
+			case "active_online":
+				data.Validators.Online += state.Count
+			case "exiting_offline":
+				fallthrough
+			case "slashing_offline":
+				fallthrough
+			case "active_offline":
+				data.Validators.Offline += state.Count
+			case "deposited":
+				fallthrough
+			case "pending":
+				data.Validators.Pending += state.Count
+			case "slashed":
+				data.Validators.Slashed += state.Count
+			case "exited":
+				data.Validators.Exited += state.Count
+			}
+		}
+		return nil
+	})
+
+	// Rewards + Efficiency
+	retrieveData := func(tableName string) {
+		wg.Go(func() error {
+			query := `select
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency,
+
+				SUM(balance_start) AS balance_start,
+				SUM(balance_end) AS balance_end,
+				SUM(deposits_amount) AS deposits_amount,
+				SUM(withdrawals_amount) AS withdrawals_amount,
+				SUM(blocks_el_reward) AS blocks_el_reward
+			from %[1]s
+			where validator_index = ANY($1)
+			`
+			var queryResult struct {
+				AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+				ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+
+				BalanceStart      sql.NullInt64 `db:"balance_start"`
+				BalanceEnd        sql.NullInt64 `db:"balance_end"`
+				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
+				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
+				BlocksElReward    sql.NullInt64 `db:"blocks_el_reward"`
+			}
+			err = d.alloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), validators)
+			if err != nil {
+				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			}
+			var rewardsField *t.ClElValue[decimal.Decimal]
+			var efficiencyField *float64
+			switch tableName {
+			case "validator_dashboard_data_rolling_daily":
+				rewardsField = &data.Rewards.Last24h
+				efficiencyField = &data.Efficiency.Last24h
+			case "validator_dashboard_data_rolling_weekly":
+				rewardsField = &data.Rewards.Last7d
+				efficiencyField = &data.Efficiency.Last7d
+			case "validator_dashboard_data_rolling_monthly":
+				rewardsField = &data.Rewards.Last30d
+				efficiencyField = &data.Efficiency.Last30d
+			case "validator_dashboard_data_rolling_total":
+				rewardsField = &data.Rewards.AllTime
+				efficiencyField = &data.Efficiency.AllTime
+			}
+			(*rewardsField).El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
+			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64)
+			*efficiencyField = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+			return nil
+		})
+	}
+
+	retrieveData("validator_dashboard_data_rolling_daily")
+	retrieveData("validator_dashboard_data_rolling_weekly")
+	retrieveData("validator_dashboard_data_rolling_monthly")
+	retrieveData("validator_dashboard_data_rolling_total")
+
+	// Apr
+	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
+	// But waiting for Peter implementation of apr calc
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
+	}
+
+	return &data, nil
+}
+
+func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
+	result := &t.VDBPostCreateGroupData{}
+
+	// Create a new group that has the smallest unique id possible
+	err := d.alloyWriter.Get(result, `
+		WITH NextAvailableId AS (
+		    SELECT COALESCE(MIN(uvdg1.id) + 1, 0) AS next_id
+		    FROM users_val_dashboards_groups uvdg1
+		    LEFT JOIN users_val_dashboards_groups uvdg2 ON uvdg1.id + 1 = uvdg2.id AND uvdg1.dashboard_id = uvdg2.dashboard_id
+		    WHERE uvdg1.dashboard_id = $1 AND uvdg2.id IS NULL
+		)
+		INSERT INTO users_val_dashboards_groups (id, dashboard_id, name)
+			SELECT next_id, $1, $2
+		FROM NextAvailableId
+		RETURNING id, name
+	`, dashboardId, name)
+
+	return result, err
+}
+
+// updates the group name
+func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Update the group name
+	_, err = tx.Exec(`
+		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND id = $3
+	`, name, dashboardId, groupId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to update a validator dashboard group: %w", err)
+	}
+
+	ret := &t.VDBPostCreateGroupData{
+		Id:   groupId,
+		Name: name,
+	}
+	return ret, nil
+}
+
+func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Delete the group
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
+	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	// Delete all validators for the group
+	_, err = tx.Exec(`
+		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2
+	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
+	}
+	return nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+	// TODO: implement sorting, filtering & paging
+
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+		SELECT 
+			validator_index,
+			group_id
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+		`
+		validatorsParams := []interface{}{dashboardId.Id}
+
+		if groupId != t.AllGroups {
+			validatorsQuery += " AND group_id = $2"
+			validatorsParams = append(validatorsParams, groupId)
+		}
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, validatorsParams...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		for _, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
+	}
+
+	// Get the current validator state
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the validator duties to check the last fulfilled attestation
+	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
+	defer releaseValDutiesLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Set the threshold for "online" => "offline" to 2 epochs without attestation
+	attestationThresholdSlot := uint64(0)
+	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	if dutiesInfo.LatestSlot >= twoEpochs {
+		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
+	}
+
+	// Fill the result
+	result := make([]t.VDBManageValidatorsTableRow, len(validators))
+	for idx, validator := range validators {
+		metadata := validatorMapping.ValidatorMetadata[validator]
+
+		result[idx].Index = validator
+		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
+		result[idx].GroupId = validatorGroupMap[validator]
+		result[idx].Balance = utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
+		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
+
+		status := ""
+		switch constypes.ValidatorStatus(metadata.Status) {
+		case constypes.PendingInitialized:
+			status = "deposited"
+		case constypes.PendingQueued:
+			status = "pending"
+			if metadata.Queues.ActivationIndex.Valid {
+				result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+			}
+		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
+			var lastAttestionSlot uint32
+			for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+				if attested && slot > lastAttestionSlot {
+					lastAttestionSlot = slot
+				}
+			}
+			if lastAttestionSlot < uint32(attestationThresholdSlot) {
+				status = "offline"
+			} else {
+				status = "online"
+			}
+		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
+			if metadata.Slashed {
+				status = "slashed"
+			} else {
+				status = "exited"
+			}
+		}
+		result[idx].Status = status
+	}
+
+	paging := &t.Paging{
+		TotalCount: uint64(len(result)),
+	}
+
+	return result, paging, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
+	groupExists := false
+	err := d.alloyReader.Get(&groupExists, `
+		SELECT EXISTS(
+			SELECT
+				dashboard_id,
+				id
+			FROM users_val_dashboards_groups
+			WHERE dashboard_id = $1 AND id = $2
+		)
+	`, dashboardId, groupId)
+	return groupExists, err
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	if len(validators) == 0 {
+		// No validators to add
+		return nil, nil
+	}
+
+	validatorIndices := make([]uint64, 0, len(validators))
+	for _, v := range validators {
+		validatorIndices = append(validatorIndices, v.Index)
+	}
+
+	pubkeys := []struct {
+		ValidatorIndex uint64 `db:"validatorindex"`
+		Pubkey         []byte `db:"pubkey"`
+	}{}
+
+	addedValidators := []struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		GroupId        uint64 `db:"group_id"`
+	}{}
+
+	// Query to find the pubkey for each validator index
+	pubkeysQuery := `
+		SELECT
+			validatorindex,
+			pubkey
+		FROM validators
+		WHERE validatorindex = ANY($1)
+	`
+
+	// Query to add the validators to the dashboard and group
+	addValidatorsQuery := `
+		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
+			VALUES 
+	`
+
+	for idx := range validatorIndices {
+		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d), ", idx+3)
+	}
+	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
+
+	// If a validator is already in the dashboard, update the group
+	// If the validator is already in that group nothing changes but we will include it in the result anyway
+	addValidatorsQuery += `
+		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET 
+			dashboard_id = EXCLUDED.dashboard_id,
+			group_id = EXCLUDED.group_id,
+			validator_index = EXCLUDED.validator_index
+		RETURNING validator_index, group_id
+	`
+
+	// Find all the pubkeys
+	err := d.alloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validatorIndices))
+	if err != nil {
+		return nil, err
+	}
+
+	// Add all the validators to the dashboard and group
+	addValidatorsArgsIntf := []interface{}{dashboardId, groupId}
+	for _, validatorIndex := range validatorIndices {
+		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
+	}
+	err = d.alloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine the pubkeys and group ids for the result
+	pubkeysMap := make(map[uint64]string, len(pubkeys))
+	for _, pubKeyInfo := range pubkeys {
+		pubkeysMap[pubKeyInfo.ValidatorIndex] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
+	}
+
+	addedValidatorsMap := make(map[uint64]uint64, len(addedValidators))
+	for _, addedValidatorInfo := range addedValidators {
+		addedValidatorsMap[addedValidatorInfo.ValidatorIndex] = addedValidatorInfo.GroupId
+	}
+
+	result := []t.VDBPostValidatorsData{}
+	for _, validator := range validatorIndices {
+		result = append(result, t.VDBPostValidatorsData{
+			PublicKey: pubkeysMap[validator],
+			GroupId:   addedValidatorsMap[validator],
+		})
+	}
+
+	return result, nil
+}
+func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
+	if len(validators) == 0 {
+		// Remove all validators for the dashboard
+		_, err := d.alloyWriter.Exec(`
+			DELETE FROM users_val_dashboards_validators 
+			WHERE dashboard_id = $1
+		`, dashboardId)
+		return err
+	}
+
+	validatorIndices := make([]uint64, 0, len(validators))
+	for _, v := range validators {
+		validatorIndices = append(validatorIndices, v.Index)
+	}
+
+	//Create the query to delete validators
+	deleteValidatorsQuery := `
+		DELETE FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND validator_index = ANY($2)
+	`
+
+	// Delete the validators
+	_, err := d.alloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validatorIndices))
+
+	return err
+}
+
+func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+
+	// Create the public validator dashboard, multiple entries for the same dashboard are possible
+	err := d.alloyWriter.Get(&dbReturn, `
+		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
+			VALUES ($1, $2, $3)
+		RETURNING public_id, name, shared_groups
+	`, dashboardId, name, showGroupNames)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+
+	return result, nil
+}
+
+func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+
+	// Update the name and settings of the public validator dashboard
+	err := d.alloyWriter.Get(&dbReturn, `
+		UPDATE users_val_dashboards_sharing SET
+			name = $1,
+			shared_groups = $2
+		WHERE public_id = $3
+		RETURNING public_id, name, shared_groups
+	`, name, showGroupNames, publicDashboardId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("public dashboard id %v does not exist, cannot update it", publicDashboardId)
+		}
+		return nil, err
+	}
+
+	result := &t.VDBPostPublicIdData{}
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+
+	return result, nil
+}
+
+func (d *DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
+	// Delete the public validator dashboard
+	result, err := d.alloyWriter.Exec(`
+		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
+	`, publicDashboardId)
+	if err != nil {
+		return err
+	}
+
+	// Check if the public validator dashboard was deleted
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("error public dashboard id %v does not exist, cannot remove it", publicDashboardId)
+	}
+
+	return err
+}
+
+func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
+	validatorsArray, err := d.getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, err
 	}
 
 	validatorsMap := make(map[uint32]bool, len(validatorsArray))
@@ -302,7 +1033,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]
 
 	maxValidatorsInResponse := 6
 
-	dutiesInfo, releaseLock, err := services.GetCurrentDutiesInfo()
+	dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
 	defer releaseLock() // important to unlock once done, otherwise data updater cant update the data
 	if err != nil {
 		return nil, err
@@ -503,7 +1234,7 @@ func (d DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]
 	return slotVizEpochs, nil
 }
 
-func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	// TODO: implement sorting, filtering & paging
 	ret := make(map[uint64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
@@ -511,10 +1242,8 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardSummary called for dashboard %v", dashboardId)
-
 	validators := make([]uint64, 0)
-	if len(dashboardId.Validators) > 0 {
+	if dashboardId.Validators != nil {
 		for _, validator := range dashboardId.Validators {
 			validators = append(validators, validator.Index)
 		}
@@ -525,70 +1254,51 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	}
 
 	type queryResult struct {
-		GroupId    uint64  `db:"group_id"`
-		Efficiency float64 `db:"efficiency"`
+		GroupId               uint64          `db:"group_id"`
+		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
 
-	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) error {
+	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) (map[uint64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
-			query := `select 0 AS group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+			query := `select 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
-					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
-					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
-					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 					from  %[1]s
 				where validator_index = ANY($1)
 			) as a;`
-			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		} else {
-			query := `select group_id, ((0.84375 * attestation_efficiency) + (0.125 * proposer_efficiency) + (0.03125 * sync_efficiency)) * 100.0 AS efficiency FROM (
+			query := `select group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
 					group_id,
-					sum(attestations_reward)::decimal / sum(attestations_ideal_reward)::decimal AS attestation_efficiency,
-					COALESCE(SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0), 1) AS proposer_efficiency,
-					COALESCE(SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0), 1) AS sync_efficiency
+					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 					from users_val_dashboards_validators 
 				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 				where dashboard_id = $1
 				group by 1
 			) as a;`
-			err := db.AlloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		}
 
-		retMux.Lock()
+		data := make(map[uint64]float64)
 		for _, result := range queryResult {
-			if result.Efficiency < 0 {
-				result.Efficiency = 0
-			}
-
-			if ret[result.GroupId] == nil {
-				ret[result.GroupId] = &t.VDBSummaryTableRow{}
-			}
-			ret[result.GroupId].GroupId = result.GroupId
-
-			switch tableName {
-			case "validator_dashboard_data_rolling_daily":
-				ret[result.GroupId].EfficiencyDay = result.Efficiency
-			case "validator_dashboard_data_rolling_weekly":
-				ret[result.GroupId].EfficiencyWeek = result.Efficiency
-			case "validator_dashboard_data_rolling_monthly":
-				ret[result.GroupId].EfficiencyMonth = result.Efficiency
-			case "validator_dashboard_data_rolling_total":
-				ret[result.GroupId].EfficiencyTotal = result.Efficiency
-			default:
-				log.Fatal(fmt.Errorf("invalid table name"), "", 0)
-			}
+			data[result.GroupId] = d.calculateTotalEfficiency(result.AttestationEfficiency, result.ProposerEfficiency, result.SyncEfficiency)
 		}
-		retMux.Unlock()
-		return nil
+		return data, nil
 	}
 
 	if len(validators) == 0 { // retrieve the validators & groups from the dashboard table
@@ -600,7 +1310,7 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 
 			var queryResult []validatorsPerGroup
 
-			err := db.AlloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
+			err := d.alloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
 			if err != nil {
 				return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 			}
@@ -608,7 +1318,9 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 			retMux.Lock()
 			for _, result := range queryResult {
 				if ret[result.GroupId] == nil {
-					ret[result.GroupId] = &t.VDBSummaryTableRow{}
+					ret[result.GroupId] = &t.VDBSummaryTableRow{
+						GroupId: result.GroupId,
+					}
 				}
 
 				if ret[result.GroupId].Validators == nil {
@@ -625,16 +1337,72 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	}
 
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].Efficiency.Last24h = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].Efficiency.Last7d = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].Efficiency.Last30d = efficiency
+		}
+		return nil
 	})
 	wg.Go(func() error {
-		return retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
+		if err != nil {
+			return err
+		}
+
+		retMux.Lock()
+		defer retMux.Unlock()
+		for groupId, efficiency := range data {
+			if ret[groupId] == nil {
+				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
+			}
+
+			ret[groupId].Efficiency.AllTime = efficiency
+		}
+		return nil
 	})
 	err := wg.Wait()
 
@@ -659,48 +1427,99 @@ func (d DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cur
 	return retArr, paging, nil
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
-	ret := t.VDBGroupSummaryData{}
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
+	ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
-	log.Infof("GetValidatorDashboardGroupSummary called for dashboard %d with group id %v", dashboardId.Id, groupId)
 	query := `select
 			users_val_dashboards_validators.validator_index,
-			attestations_source_reward,
-			attestations_target_reward,
-			attestations_head_reward,
-			attestations_inactivity_reward,
-			attestations_inclusion_reward,
-			attestations_reward,
-			attestations_ideal_source_reward,
-			attestations_ideal_target_reward,
-			attestations_ideal_head_reward,
-			attestations_ideal_inactivity_reward,
-			attestations_ideal_inclusion_reward,
-			attestations_ideal_reward,
-			attestations_scheduled,
-			attestations_executed,
-			attestation_head_executed,
-			attestation_source_executed,
-			attestation_target_executed,
-			blocks_scheduled,
-			blocks_proposed,
-			blocks_cl_reward,
-			blocks_el_reward,
-			sync_scheduled,
-			sync_executed,
-			sync_rewards,
-			slashed,
-			balance_start,
-			balance_end,
-			deposits_count,
-			deposits_amount,
-			withdrawals_count,
-			withdrawals_amount
-			from users_val_dashboards_validators
+			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
+			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
+			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
+			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
+			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
+			COALESCE(attestations_reward, 0) as attestations_reward,
+			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
+			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
+			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
+			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
+			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
+			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
+			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
+			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
+			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
+			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
+			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
+			COALESCE(blocks_proposed, 0) as blocks_proposed,
+			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
+			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
+			COALESCE(sync_scheduled, 0) as sync_scheduled,
+			COALESCE(sync_executed, 0) as sync_executed,
+			COALESCE(sync_rewards, 0) as sync_rewards,
+			COALESCE(slashed, false) as slashed,
+			COALESCE(balance_start, 0) as balance_start,
+			COALESCE(balance_end, 0) as balance_end,
+			COALESCE(deposits_count, 0) as deposits_count,
+			COALESCE(deposits_amount, 0) as deposits_amount,
+			COALESCE(withdrawals_count, 0) as withdrawals_count,
+			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
+			COALESCE(sync_chance, 0) as sync_chance,
+			COALESCE(block_chance, 0) as block_chance,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
-	` //  OR %[1]s.validator_index = ANY($3)
+		`
+
+	if dashboardId.Validators != nil {
+		query = `select
+			validator_index,
+			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
+			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
+			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
+			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
+			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
+			COALESCE(attestations_reward, 0) as attestations_reward,
+			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
+			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
+			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
+			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
+			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
+			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
+			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
+			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
+			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
+			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
+			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
+			COALESCE(blocks_proposed, 0) as blocks_proposed,
+			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
+			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
+			COALESCE(sync_scheduled, 0) as sync_scheduled,
+			COALESCE(sync_executed, 0) as sync_executed,
+			COALESCE(sync_rewards, 0) as sync_rewards,
+			COALESCE(slashed, false) as slashed,
+			COALESCE(balance_start, 0) as balance_start,
+			COALESCE(balance_end, 0) as balance_end,
+			COALESCE(deposits_count, 0) as deposits_count,
+			COALESCE(deposits_amount, 0) as deposits_amount,
+			COALESCE(withdrawals_count, 0) as withdrawals_count,
+			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
+			COALESCE(sync_chance, 0) as sync_chance,
+			COALESCE(block_chance, 0) as block_chance,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+		from %[1]s
+		where %[1]s.validator_index = ANY($1)
+	`
+	}
+
+	validators := make([]uint64, 0)
+	if dashboardId.Validators != nil {
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+	}
 
 	type queryResult struct {
 		ValidatorIndex                    uint32 `db:"validator_index"`
@@ -730,7 +1549,7 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		SyncScheduled uint32 `db:"sync_scheduled"`
 		SyncExecuted  uint32 `db:"sync_executed"`
-		SyncRewards   uint64 `db:"sync_rewards"`
+		SyncRewards   int64  `db:"sync_rewards"`
 
 		Slashed bool `db:"slashed"`
 
@@ -742,12 +1561,23 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 
 		WithdrawalsCount  uint32 `db:"withdrawals_count"`
 		WithdrawalsAmount int64  `db:"withdrawals_amount"`
+
+		SyncChance  float64 `db:"sync_chance"`
+		BlockChance float64 `db:"block_chance"`
+
+		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, dashboardId t.VDBIdPrimary, groupId int64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, aprDivisor int, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
-		err := db.AlloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+		var err error
+
+		if len(validators) > 0 {
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), validators)
+		} else {
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+		}
 
 		if err != nil {
 			return nil, err
@@ -759,9 +1589,17 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 		totalEndBalance := int64(0)
 		totalDeposits := int64(0)
 		totalWithdrawals := int64(0)
+		totalSyncChance := float64(0)
+		totalBlockChance := float64(0)
+		totalInclusionDelaySum := int64(0)
+		totalInclusionDelayDivisor := int64(0)
+
 		for _, row := range rows {
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
+
+			data.AttestationCount.Success += uint64(row.AttestationsExecuted)
+			data.AttestationCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsExecuted)
 
 			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
 			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
@@ -806,116 +1644,443 @@ func (d DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId
 			totalEndBalance += row.BalanceEnd
 			totalDeposits += row.DepositsAmount
 			totalWithdrawals += row.WithdrawalsAmount
+			totalSyncChance += row.SyncChance
+			totalBlockChance += row.BlockChance
+			totalInclusionDelaySum += row.InclusionDelaySum
+
+			if row.InclusionDelaySum > 0 {
+				totalInclusionDelayDivisor += row.AttestationsScheduled
+			}
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		apr := float64(reward) / 32e9 * 100
+		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
+		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
+		if math.IsNaN(apr) {
+			apr = 0
+		}
 
 		data.Apr.Cl = apr
+		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
+
 		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-		if data.AttestationEfficiency < 0 {
+		if data.AttestationEfficiency < 0 || math.IsNaN(data.AttestationEfficiency) {
 			data.AttestationEfficiency = 0
+		}
+
+		if totalBlockChance > 0 {
+			data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
+		} else {
+			data.Luck.Proposal.Percent = 0
+		}
+		if totalSyncChance > 0 {
+			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		} else {
+			data.Luck.Sync.Percent = 0
+		}
+		if totalInclusionDelayDivisor > 0 {
+			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
+		} else {
+			data.AttestationAvgInclDist = 0
 		}
 
 		return &data, nil
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", dashboardId.Id, groupId)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", 1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
-		ret.DetailsDay = *data
+		ret.Last24h = *data
 		return nil
 	})
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsWeek = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsMonth = *data
-	// 	return nil
-	// })
-	// wg.Go(func() error {
-	// 	data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", dashboardId, groupId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ret.DetailsTotal = *data
-	// 	return nil
-	// })
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", 7, dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last7d = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 31, dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.Last30d = *data
+		return nil
+	})
+	wg.Go(func() error {
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", 1, dashboardId.Id, groupId, validators)
+		if err != nil {
+			return err
+		}
+		ret.AllTime = *data
+		return nil
+	})
 	err := wg.Wait()
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
-
-	return &ret, nil
+	return ret, nil
 }
 
 // for summary charts: series id is group id, no stack
 
-func (d DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardSummaryChart(dashboardId)
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
+	ret := &t.ChartData[int]{}
+
+	type queryResult struct {
+		StartEpoch            uint64          `db:"epoch_start"`
+		GroupId               uint64          `db:"group_id"`
+		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+	}
+
+	var queryResults []queryResult
+
+	cutOffDate := time.Date(2023, 9, 27, 23, 59, 59, 0, time.UTC).Add(time.Hour*24*30).AddDate(0, 0, -30)
+
+	if dashboardId.Validators != nil {
+		validatorList := make([]uint64, 0)
+		for _, validator := range dashboardId.Validators {
+			validatorList = append(validatorList, validator.Index)
+		}
+
+		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+			select
+			epoch_start,
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+				from  validator_dashboard_data_daily
+			WHERE day > $1 AND validator_index = ANY($2)
+		) as a ORDER BY epoch_start, group_id;`
+		err := d.alloyReader.Select(&queryResults, query, cutOffDate, validatorList)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+		}
+	} else {
+		query := `select epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+			select
+			epoch_start, 
+				group_id,
+				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+				from users_val_dashboards_validators 
+			join validator_dashboard_data_daily on validator_dashboard_data_daily.validator_index = users_val_dashboards_validators.validator_index
+			where day > $1 AND dashboard_id = $2
+			group by 1, 2
+		) as a ORDER BY epoch_start, group_id;`
+		err := d.alloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+		}
+	}
+
+	// convert the returned data to the expected return type (not pretty)
+	epochsMap := make(map[uint64]bool)
+	groups := make(map[uint64]bool)
+	data := make(map[uint64]map[uint64]float64)
+	for _, row := range queryResults {
+		epochsMap[row.StartEpoch] = true
+		groups[row.GroupId] = true
+
+		if data[row.StartEpoch] == nil {
+			data[row.StartEpoch] = make(map[uint64]float64)
+		}
+		data[row.StartEpoch][row.GroupId] = d.calculateTotalEfficiency(row.AttestationEfficiency, row.ProposerEfficiency, row.SyncEfficiency)
+	}
+
+	epochsArray := make([]uint64, 0, len(epochsMap))
+	for epoch := range epochsMap {
+		epochsArray = append(epochsArray, epoch)
+	}
+	sort.Slice(epochsArray, func(i, j int) bool {
+		return epochsArray[i] < epochsArray[j]
+	})
+
+	groupsArray := make([]uint64, 0, len(groups))
+	for group := range groups {
+		groupsArray = append(groupsArray, group)
+	}
+	sort.Slice(groupsArray, func(i, j int) bool {
+		return groupsArray[i] < groupsArray[j]
+	})
+
+	ret.Categories = epochsArray
+	ret.Series = make([]t.ChartSeries[int], 0, len(groupsArray))
+
+	seriesMap := make(map[uint64]*t.ChartSeries[int])
+	for group := range groups {
+		series := t.ChartSeries[int]{
+			Id:    int(group),
+			Stack: "",
+			Data:  make([]float64, 0, len(epochsMap)),
+		}
+		seriesMap[group] = &series
+	}
+
+	for _, epoch := range epochsArray {
+		for _, group := range groupsArray {
+			seriesMap[group].Data = append(seriesMap[group].Data, data[epoch][group])
+		}
+	}
+
+	for _, series := range seriesMap {
+		ret.Series = append(ret.Series, *series)
+	}
+
+	sort.Slice(ret.Series, func(i, j int) bool {
+		return ret.Series[i].Id < ret.Series[j].Id
+	})
+
+	return ret, nil
 }
 
-func (d DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators in case a dashboard id is provided
+		validatorsQuery := `
+		SELECT 
+			validator_index
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+		`
+		validatorsParams := []interface{}{dashboardId.Id}
+
+		if groupId != t.AllGroups {
+			validatorsQuery += " AND group_id = $2"
+			validatorsParams = append(validatorsParams, groupId)
+		}
+		err := d.alloyReader.Select(&validators, validatorsQuery, validatorsParams...)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// In case a list of validators is provided use them
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil
+	}
+
+	if duty == enums.ValidatorDuties.None {
+		// If we don't need to filter by duty return all validators in the dashboard and group
+		return validators, nil
+	}
+
+	// Get the table name based on the period
+	tableName := ""
+	switch period {
+	case enums.TimePeriods.AllTime:
+		tableName = "validator_dashboard_data_rolling_total"
+	case enums.TimePeriods.Last24h:
+		tableName = "validator_dashboard_data_rolling_daily"
+	case enums.TimePeriods.Last7d:
+		tableName = "validator_dashboard_data_rolling_weekly"
+	case enums.TimePeriods.Last30d:
+		tableName = "validator_dashboard_data_rolling_monthly"
+	}
+
+	// Get the column condition based on the duty
+	columnCond := ""
+	switch duty {
+	case enums.ValidatorDuties.Sync:
+		columnCond = "sync_scheduled > 0"
+	case enums.ValidatorDuties.Proposal:
+		columnCond = "blocks_scheduled > 0"
+	case enums.ValidatorDuties.Slashed:
+		// TODO: Wait for slashings to be available in the database
+		// columnCond = "(slashed OR slashings_executed > 0)"
+		columnCond = "slashed"
+	}
+
+	// Get ALL validator indices for the given filters
+	query := fmt.Sprintf(`
+		SELECT
+			validator_index
+		FROM %s
+		WHERE validator_index = ANY($1) AND %s`, tableName, columnCond)
+
+	var result []uint64
+	err := d.alloyReader.Select(&result, query, pq.Array(validators))
+	return result, err
+}
+
+func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardRewards(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
 }
 
-func (d DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
+func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
 	// TODO @recy21
+	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
+	// series id is group id, series stack is 'execution' or 'consensus'
 	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	// TODO @recy21
 	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// WORKING Rami
 	return d.dummy.GetValidatorDashboardBlocks(dashboardId, cursor, sort, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
-	// TODO @recy21
+func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardHeatmap(dashboardId)
 }
 
-func (d DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
-	// TODO @recy21
+func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
 }
 
-func (d DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardElDeposits(dashboardId, cursor, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	// TODO @recy21
+func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+	// WORKING @invis
 	return d.dummy.GetValidatorDashboardClDeposits(dashboardId, cursor, search, limit)
 }
 
-func (d DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO @recy21
-	return d.dummy.GetValidatorDashboardWithdrawals(dashboardId, cursor, sort, search, limit)
+func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+	// TODO: implement sorting, filtering & paging
+
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		validatorsQuery := `
+			SELECT
+			    validator_index,
+			    group_id
+			FROM
+			    users_val_dashboards_validators
+			WHERE
+			    dashboard_id = $1`
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		for _, validator := range dashboardId.Validators {
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, nil, nil
+	}
+
+	// Get the withdrawals for the validators
+	queryResult := []struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		Epoch          uint64 `db:"epoch"`
+		Amount         int64  `db:"withdrawals_amount"`
+	}{}
+	err := d.alloyReader.Select(&queryResult, `
+		SELECT
+		    validator_index,
+			epoch,
+		    withdrawals_amount
+		FROM
+		    validator_dashboard_data_epoch
+		WHERE
+		    validator_index = ANY ($1) AND withdrawals_amount > 0`, pq.Array(validators))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
+	}
+
+	// Get the validators with withdrawals
+	validatorsWithWithdrawals := make(map[uint64]bool, 0)
+	for _, withdrawal := range queryResult {
+		validatorsWithWithdrawals[withdrawal.ValidatorIndex] = true
+	}
+
+	// Get the current validator state
+	validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseLock()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the withdrawal addresses for the validators
+	withdrawalAddresses := make(map[uint64]string)
+	addressEns := make(map[string]string)
+	for validator := range validatorsWithWithdrawals {
+		withdrawalCredentials := validatorMapping.ValidatorMetadata[validator].WithdrawalCredentials
+		withdrawalAddress, err := utils.GetAddressOfWithdrawalCredentials(withdrawalCredentials)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid withdrawal credentials for validator %d: %s", validator, hexutil.Encode(withdrawalCredentials))
+		}
+		withdrawalAddresses[validator] = hexutil.Encode(withdrawalAddress.Bytes())
+		addressEns[hexutil.Encode(withdrawalAddress.Bytes())] = ""
+	}
+
+	// Get the ENS names for the addresses
+	if err := db.GetEnsNamesForAddresses(addressEns); err != nil {
+		return nil, nil, err
+	}
+
+	// Create the result
+	result := make([]t.VDBWithdrawalsTableRow, 0)
+	for _, withdrawal := range queryResult {
+		address := withdrawalAddresses[withdrawal.ValidatorIndex]
+		result = append(result, t.VDBWithdrawalsTableRow{
+			Epoch:   withdrawal.Epoch,
+			Index:   withdrawal.ValidatorIndex,
+			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
+			Recipient: t.Address{
+				Hash: t.Hash(address),
+				Ens:  addressEns[address],
+			},
+			Amount: decimal.NewFromInt(withdrawal.Amount),
+		})
+	}
+
+	paging := &t.Paging{
+		TotalCount: uint64(len(result)),
+	}
+
+	return result, paging, nil
 }
