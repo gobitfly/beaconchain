@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
+	"math/big"
 	"sort"
 	isort "sort"
 	"sync"
@@ -42,6 +44,7 @@ type DataAccessor interface {
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
 	CreateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
+	UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error)
 	RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error
 
 	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
@@ -630,6 +633,34 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(dashboardId t.VDBIdPri
 	return result, err
 }
 
+// updates the group name
+func (d *DataAccessService) UpdateValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
+	tx, err := d.alloyWriter.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// Update the group name
+	_, err = tx.Exec(`
+		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND id = $3
+	`, name, dashboardId, groupId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to update a validator dashboard group: %w", err)
+	}
+
+	ret := &t.VDBPostCreateGroupData{
+		Id:   groupId,
+		Name: name,
+	}
+	return ret, nil
+}
+
 func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPrimary, groupId uint64) error {
 	tx, err := d.alloyWriter.Beginx()
 	if err != nil {
@@ -736,8 +767,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		result[idx].Index = validator
 		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
 		result[idx].GroupId = validatorGroupMap[validator]
-
-		result[idx].Balance = decimal.NewFromInt(int64(metadata.Balance))
+		result[idx].Balance = utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
 
 		status := ""
@@ -1398,7 +1428,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
-	ret := t.VDBGroupSummaryData{}
+	ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
 	query := `select
@@ -1626,6 +1656,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
 		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
+		if math.IsNaN(apr) {
+			apr = 0
+		}
 
 		data.Apr.Cl = apr
 		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
@@ -1633,12 +1666,20 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-		if data.AttestationEfficiency < 0 {
+		if data.AttestationEfficiency < 0 || math.IsNaN(data.AttestationEfficiency) {
 			data.AttestationEfficiency = 0
 		}
 
-		data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
-		data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		if totalBlockChance > 0 {
+			data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
+		} else {
+			data.Luck.Proposal.Percent = 0
+		}
+		if totalSyncChance > 0 {
+			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / totalSyncChance * 100
+		} else {
+			data.Luck.Sync.Percent = 0
+		}
 		if totalInclusionDelayDivisor > 0 {
 			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
 		} else {
@@ -1685,8 +1726,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
-
-	return &ret, nil
+	return ret, nil
 }
 
 // for summary charts: series id is group id, no stack
@@ -1912,7 +1952,7 @@ func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
-	// TODO @recy21
+	// WORKING Rami
 	return d.dummy.GetValidatorDashboardGroupHeatmap(dashboardId, groupId, epoch)
 }
 
