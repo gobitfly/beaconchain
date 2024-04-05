@@ -40,7 +40,7 @@ func (d *DummyService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.V
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
+func (d *DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	r := []t.VDBValidator{}
 	err := commonFakeData(&r)
 	return r, err
