@@ -146,7 +146,7 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			// only aggregate more intense data if we are close to head finalization
-			if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch < epoch+3 { // todo remove debug field
+			if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1 { // todo remove debug field
 				if stage <= 3 {
 					err := d.aggregateMid()
 					if err != nil {
@@ -165,7 +165,8 @@ func (d *dashboardData) processHeadQueue() {
 	}
 }
 
-func getMissingTailEpochsWithBounds(start, end int64) ([]uint64, error) {
+// returns epochs between start and end that are missing in the database, arguments are inclusive
+func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
 	if end < start {
 		return nil, nil
 	}
@@ -182,7 +183,8 @@ func getMissingTailEpochsWithBounds(start, end int64) ([]uint64, error) {
 	return missingEpochs, nil
 }
 
-// for aggregation
+// exports the provided headEpoch plus any tail epochs that are needed for rolling aggregation
+// fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
 func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 	// for 24h aggregation
 	missingTails, err := d.hourToDay.getMissingRolling24TailEpochs(headEpoch)
@@ -473,6 +475,7 @@ func containsEpoch(d []DataEpoch, epoch uint64) bool {
 	return false
 }
 
+// stores all passed epoch data, blocks until all data is written without error
 func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(epochWriteParallelism)
@@ -504,6 +507,7 @@ func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
 
 var lastExportedHour uint64 = ^uint64(0)
 
+// Contains all aggregation logic that should happen for every new exported epoch
 func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
@@ -569,6 +573,8 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 	return nil
 }
 
+// This function contains more heavy aggregation like rolling 7d, 30d, 90d
+// As is this will also be called every epoch too (as long as exporter is on head, otherwise not), but it could be called less frequent too
 func (d *dashboardData) aggregateMid() error {
 	start := time.Now()
 	defer func() {
