@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
@@ -368,7 +368,7 @@ func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, []st
 		if reNumber.MatchString(v) {
 			indexes = append(indexes, checkUint(handlerErr, v, "validators"))
 		} else if reValidatorPubkey.MatchString(v) {
-			_, err := hex.DecodeString(v[2:])
+			_, err := hexutil.Decode(v)
 			if err != nil {
 				joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
 			}
