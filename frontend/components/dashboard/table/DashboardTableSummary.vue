@@ -23,7 +23,7 @@ const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | u
 
 const { overview } = useValidatorDashboardOverviewStore()
 
-const { width, isMobile } = useWindowSize()
+const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     validator: width.value >= 1400,
@@ -31,14 +31,14 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
+const loadData = (q?: TableQueryParams) => {
+  if (!q) {
+    q = query.value ? { ...query.value } : { limit: pageSize.value }
   }
-  setQuery(query, true, true)
+  setQuery(q, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(() => [props.dashboardKey, overview.value], () => {
   loadData()
 }, { immediate: true })
 
@@ -61,17 +61,6 @@ const groupNameLabel = (groupId?: number) => {
     return `${groupId}` // fallback if we could not match the group name
   }
   return `${group.name}`
-}
-
-const groupIdLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
-    return
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (group && isMobile.value) {
-    return
-  }
-  return ` (ID: ${groupId})`
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -128,8 +117,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
-                  groupIdLabel(slotProps.data.group_id) }}</span>
+                {{ groupNameLabel(slotProps.data.group_id) }}
               </template>
             </Column>
             <Column

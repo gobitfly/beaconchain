@@ -134,7 +134,6 @@
     "notifications": "Notifications",
     "group": {
       "selection": {
-        "group": "Group",
         "all": "All groups",
         "default": "Default",
         "placeholder": "Select group",
