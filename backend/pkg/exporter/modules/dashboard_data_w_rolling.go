@@ -38,6 +38,8 @@ type RollingAggregatorInt interface {
 	getBootstrapOnEpochsBehind() uint64
 }
 
+// Returns the epoch range of a current exported rolling table
+// Ideally the epoch range has an exact with of 24h, 7d, 31d or 90d BUT it can be more after bootstrap or less if there are less epochs on the network than the rolling width
 func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName string) (edb.EpochBounds, error) {
 	var bounds edb.EpochBounds
 	var err error
@@ -49,6 +51,10 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	return bounds, err
 }
 
+// returns the tail epochs (those must be removed from rolling) for a given intendedHeadEpoch for a given rolling table
+// fE a tail epoch for rolling 1 day aggregation (225 epochs) for boundsStart 0 (start epoch of last rolling export) and intendedHeadEpoch 227 on ethereum would correspond to a tail range of 0 - 1
+// meaning epoch [0,1] must be removed from the rolling table if you want to add epoch 227
+// arguments returned are inclusive
 func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, intendedHeadEpoch uint64, offset int64) (int64, int64) {
 	aggTailEpochStart := int64(boundsStart)
 	aggTailEpochEnd := int64(intendedHeadEpoch - utils.EpochsPerDay()*uint64(days) - 1)
@@ -138,7 +144,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string) error {
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, currentEpochHead, bootstrapOffset)
 
 	// sanity check if all tail epochs are present in db
-	missing, err := getMissingTailEpochsWithBounds(aggTailEpochStart, aggTailEpochEnd)
+	missing, err := getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing tail epochs")
 	}
@@ -180,11 +186,11 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, intendedHeadEpoch, offset)
 
-	return getMissingTailEpochsWithBounds(aggTailEpochStart, aggTailEpochEnd)
+	return getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 }
 
-// Adds the new epochs to the rolling table and removes the old ones
-// all inclusive
+// Adds the new epochs (headEpochStart to headEpochEnd) to the rolling table and removes the old ones (tailEpochStart to tailEpochEnd)
+// all arguments are inclusive
 func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, headEpochStart, headEpochEnd uint64, tailEpochStart, tailEpochEnd int64) error {
 	startTime := time.Now()
 	d.log.Infof("aggregating %s head: %d - %d | footer: %d - %d", tableName, headEpochStart, headEpochEnd, tailEpochStart, tailEpochEnd)
