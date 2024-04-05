@@ -16,13 +16,12 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
 // -------------- DEBUG FLAGS ----------------
 const debugAggregateMidEveryEpoch = true
-const debugTargetBackfillEpoch = uint64(6800)
+const debugTargetBackfillEpoch = uint64(0)
 const debugSetBackfillCompleted = false
 
 // ----------- END OF DEBUG FLAGS ------------
@@ -93,7 +92,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 4085
+		//d.headEpochQueue <- 46
 		d.processHeadQueue()
 	}()
 
@@ -201,6 +200,10 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 
 	// merge
 	missingTails = append(missingTails, daysMissingTails...)
+
+	if len(missingTails) > 10 {
+		d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")
+	}
 
 	// sort asc
 	sort.Slice(missingTails, func(i, j int) bool {
@@ -423,9 +426,13 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	if len(gaps) > 0 {
 		d.log.Infof("Epoch dashboard data %d gaps found, backfilling gaps in the range fom epoch %d to %d", len(gaps), gaps[0], gaps[len(gaps)-1])
 
+		cutOff := latestExportedEpoch - d.epochWriter.getRetentionEpochDuration()
+		if d.epochWriter.getRetentionEpochDuration() > latestExportedEpoch {
+			cutOff = 0
+		}
 		var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
 		go func() {
-			d.epochDataFetcher(gaps, latestExportedEpoch-d.epochWriter.getRetentionEpochDuration(), epochFetchParallelism, nextDataChan)
+			d.epochDataFetcher(gaps, cutOff, epochFetchParallelism, nextDataChan)
 		}()
 
 		for {
@@ -687,9 +694,9 @@ type Data struct {
 	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
 	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
 	attestationRewards       *constypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
+	beaconBlockData          map[uint8]*constypes.StandardBeaconSlotResponse           // do not use map index
+	beaconBlockRewardData    map[uint8]*constypes.StandardBlockRewardsResponse         // do not use map index
+	syncCommitteeRewardData  map[uint8]*constypes.StandardSyncCommitteeRewardsResponse // do not use map index
 	attestationAssignments   map[uint64]uint32
 	missedslots              map[uint64]bool
 }
@@ -709,9 +716,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	}
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
-	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
-	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
-	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
+	result.beaconBlockData = make(map[uint8]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
+	result.beaconBlockRewardData = make(map[uint8]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
+	result.syncCommitteeRewardData = make(map[uint8]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
 	result.attestationAssignments = make(map[uint64]uint32)
 	result.missedslots = make(map[uint64]bool, slotsPerEpoch*2)
 
@@ -765,14 +772,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 
 			for _, committee := range data.Data {
 				for i, valIndex := range committee.Validators {
-					valIndexU64, err := strconv.ParseUint(valIndex, 10, 64)
-					if err != nil {
-						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"slot": committee.Slot, "committee": committee.Index, "index": i})
-						continue
-					}
 					k := utils.FormatAttestorAssignmentKeyLowMem(committee.Slot, uint16(committee.Index), uint32(i))
 					aaMutex.Lock()
-					result.attestationAssignments[k] = uint32(valIndexU64)
+					result.attestationAssignments[k] = uint32(valIndex)
 					aaMutex.Unlock()
 				}
 			}
@@ -862,13 +864,14 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 
 				return err
 			}
-			if block.Data.Message.StateRoot == "" {
+			if len(block.Data.Message.StateRoot) == 0 {
 				// todo better network handling, if 404 just log info, else log error
 				d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 				return errors.New("can not get block data")
 			}
+			block.Data.Signature = nil // remove signature to save memory
 			mutex.Lock()
-			result.beaconBlockData[slot] = block
+			result.beaconBlockData[uint8(slot%254)] = block
 			mutex.Unlock()
 
 			blockReward, err := cl.GetPropoalRewards(slot)
@@ -877,7 +880,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				return err
 			}
 			mutex.Lock()
-			result.beaconBlockRewardData[slot] = blockReward
+			result.beaconBlockRewardData[uint8(slot%254)] = blockReward
 			mutex.Unlock()
 
 			syncRewards, err := cl.GetSyncRewards(slot)
@@ -886,7 +889,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				return err
 			}
 			mutex.Lock()
-			result.syncCommitteeRewardData[slot] = syncRewards
+			result.syncCommitteeRewardData[uint8(slot%254)] = syncRewards
 			mutex.Unlock()
 
 			return nil
@@ -919,7 +922,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[i] = &validatorDashboardDataRow{}
 		if i < len(data.startBalances.Data) {
 			validatorsData[i].BalanceStart = data.startBalances.Data[i].Balance
-			pubkeyToIndexMapStart[data.startBalances.Data[i].Validator.Pubkey] = int64(i)
+			pubkeyToIndexMapStart[string(data.startBalances.Data[i].Validator.Pubkey)] = int64(i)
 
 			if data.startBalances.Data[i].Status.IsActive() {
 				activeCount++
@@ -929,7 +932,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
 
-		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
+		pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
 	}
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
@@ -954,7 +957,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 	// write scheduled sync committee data
 	for _, validator := range data.syncCommitteeAssignments.Data.Validators {
-		validatorIndex := mustParseInt64(validator)
+		validatorIndex := int64(validator)
 		if validatorIndex >= sizeInt {
 			return nil, errors.New("proposer index out of range")
 		}
@@ -969,6 +972,11 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		}
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Int64 += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Valid = true
+
+		validatorsData[reward.Data.ProposerIndex].SlasherRewards.Int64 += reward.Data.AttesterSlashings + reward.Data.ProposerSlashings
+		if reward.Data.AttesterSlashings+reward.Data.ProposerSlashings > 0 {
+			validatorsData[reward.Data.ProposerIndex].SlasherRewards.Valid = true
+		}
 	}
 
 	// write sync committee reward data & sync committee execution stats
@@ -993,6 +1001,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	for _, block := range data.beaconBlockData {
 		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Int16++
 		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Valid = true
+		validatorsData[block.Data.Message.ProposerIndex].LastSubmittedDutyEpoch = sql.NullInt32{Int32: int32(block.Data.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch), Valid: true}
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
 			// TODO: properly verify that deposit is valid:
@@ -1002,7 +1011,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there was a VALID deposit in the blocks prior I DO COUNT the deposit towards the balance
 
 			err := utils.VerifyDepositSignature(&phase0.DepositData{
-				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
+				PublicKey:             phase0.BLSPubKey(depositData.Data.Pubkey),
 				WithdrawalCredentials: depositData.Data.WithdrawalCredentials,
 				Amount:                phase0.Gwei(depositData.Data.Amount),
 				Signature:             phase0.BLSSignature(depositData.Data.Signature),
@@ -1012,9 +1021,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
-				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount.Int16 > 0 {
+				if validatorsData[pubkeyToIndexMapEnd[string(depositData.Data.Pubkey)]].DepositsCount.Int16 > 0 {
 					d.log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
-				} else if _, ok := pubkeyToIndexMapStart[depositData.Data.Pubkey]; ok {
+				} else if _, ok := pubkeyToIndexMapStart[string(depositData.Data.Pubkey)]; ok {
 					d.log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
 				} else {
 					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
@@ -1023,7 +1032,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				return nil, err
 			}
 
-			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
+			validator_index := pubkeyToIndexMapEnd[string(depositData.Data.Pubkey)]
 			if validator_index >= sizeInt {
 				return nil, errors.New("proposer index out of range")
 			}
@@ -1067,6 +1076,8 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						Valid: true,
 					}
 
+					validatorsData[validator_index].LastSubmittedDutyEpoch = sql.NullInt32{Int32: int32(attestation.Data.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch), Valid: true}
+
 					optimalInclusionDistance := 0
 					for i := attestation.Data.Slot + 1; i < block.Data.Message.Slot; i++ {
 						if _, ok := data.missedslots[i]; ok {
@@ -1076,9 +1087,26 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						}
 					}
 
-					validatorsData[validator_index].OptimalInclusionDelay = int64(optimalInclusionDistance)
+					validatorsData[validator_index].OptimalInclusionDelay = sql.NullInt64{Int64: int64(optimalInclusionDistance), Valid: true}
 				}
 			}
+		}
+
+		// attester slashings "done" by proposer (slashed by)
+		for _, data := range block.Data.Message.Body.AttesterSlashings {
+			slashedIndices := data.GetSlashedIndices()
+			for _, index := range slashedIndices {
+				validatorsData[index].SlashedBy = sql.NullInt32{Int32: int32(block.Data.Message.ProposerIndex), Valid: true}
+				validatorsData[index].Slashed = true
+				validatorsData[index].SlashedViolation = sql.NullInt16{Int16: SLASHED_VIOLATION_ATTESTATION, Valid: true}
+			}
+		}
+
+		// proposer slashings "done" by proposer (slashed by)
+		for _, data := range block.Data.Message.Body.ProposerSlashings {
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedBy = sql.NullInt32{Int32: int32(block.Data.Message.ProposerIndex), Valid: true}
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].Slashed = true
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedViolation = sql.NullInt16{Int16: SLASHED_VIOLATION_PROPOSER, Valid: true}
 		}
 	}
 
@@ -1127,18 +1155,6 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	// TODO: el reward data
 
 	return validatorsData, nil
-}
-
-func mustParseInt64(s string) int64 {
-	if s == "" {
-		return 0
-	}
-	r, err := strconv.ParseInt(s, 10, 64)
-
-	if err != nil {
-		panic(err)
-	}
-	return r
 }
 
 func parseEpochRange(pattern, partition string) (uint64, uint64, error) {
@@ -1198,19 +1214,23 @@ type validatorDashboardDataRow struct {
 	AttestationSourceExecuted sql.NullInt16 //done
 	AttestationTargetExecuted sql.NullInt16 //done
 
+	LastSubmittedDutyEpoch sql.NullInt32 // does not include sync committee duty slots
+
 	BlockScheduled sql.NullInt16 // done
 	BlocksProposed sql.NullInt16 // done
 	BlockChance    float64       // done
 
 	BlocksClReward sql.NullInt64 // done
-	BlocksElReward decimal.Decimal
 
 	SyncScheduled sql.NullInt32 // done
 	SyncExecuted  sql.NullInt32 // done
 	SyncReward    sql.NullInt64 // done
 	SyncChance    float64       // done
 
-	Slashed bool // done
+	SlasherRewards   sql.NullInt64 // done
+	Slashed          bool          // done
+	SlashedBy        sql.NullInt32 // done
+	SlashedViolation sql.NullInt16 // done
 
 	BalanceStart uint64 // done
 	BalanceEnd   uint64 // done
@@ -1222,5 +1242,8 @@ type validatorDashboardDataRow struct {
 	WithdrawalsAmount sql.NullInt64 // done
 
 	InclusionDelaySum     sql.NullInt64 // done
-	OptimalInclusionDelay int64         // done
+	OptimalInclusionDelay sql.NullInt64 // done
 }
+
+const SLASHED_VIOLATION_ATTESTATION = 1
+const SLASHED_VIOLATION_PROPOSER = 2

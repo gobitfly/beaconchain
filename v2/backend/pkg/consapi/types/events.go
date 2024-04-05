@@ -57,13 +57,13 @@ func (e EventResponse) FinalizedCheckpoint() (*StandardFinalizedCheckpointRespon
 }
 
 type StandardEventHeadResponse struct {
-	Slot                      uint64 `json:"slot,string"`
-	Block                     string `json:"block"`
-	State                     string `json:"state"`
-	EpochTransition           bool   `json:"epoch_transition"`
-	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root"`
-	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root"`
-	ExecutionOptimistic       bool   `json:"execution_optimistic"`
+	Slot                      uint64      `json:"slot,string"`
+	Block                     string      `json:"block"`
+	State                     bytesHexStr `json:"state"`
+	EpochTransition           bool        `json:"epoch_transition"`
+	PreviousDutyDependentRoot bytesHexStr `json:"previous_duty_dependent_root"`
+	CurrentDutyDependentRoot  bytesHexStr `json:"current_duty_dependent_root"`
+	ExecutionOptimistic       bool        `json:"execution_optimistic"`
 }
 
 type StandardEventBlockResponse struct {

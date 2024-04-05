@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     attestation_source_executed smallint,
     attestation_target_executed smallint,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index, epoch)
 ) PARTITION BY range (epoch);
 
@@ -92,6 +96,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
     attestation_source_executed smallint,
     attestation_target_executed smallint,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index)
 );
 
@@ -134,6 +142,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     attestation_source_executed smallint,
     attestation_target_executed smallint,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (epoch_start, validator_index)
 ) PARTITION BY range(epoch_start);
 
@@ -178,6 +190,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
     attestation_source_executed smallint,
     attestation_target_executed smallint,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (day, validator_index)
 ) PARTITION BY range(day);
 
@@ -220,6 +236,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_weekly (
     attestation_source_executed int,
     attestation_target_executed int,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index)
 );
 
@@ -262,6 +282,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_monthly (
     attestation_source_executed int,
     attestation_target_executed int,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index)
 );
 
@@ -304,6 +328,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_90d (
     attestation_source_executed int,
     attestation_target_executed int,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index)
 );
 
@@ -346,6 +374,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_total (
     attestation_source_executed int,
     attestation_target_executed int,
     optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
     primary key (validator_index)
 );
 
