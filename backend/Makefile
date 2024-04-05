@@ -1,9 +1,6 @@
-GITCOMMIT=`git describe --always`
-VERSION=`git describe --always --tags`
-GITDATE=`TZ=UTC git show -s --date=iso-strict-local --format=%cd HEAD`
 BUILDDATE=`date -u +"%Y-%m-%dT%H:%M:%S%:z"`
 PACKAGE=github.com/gobitfly/beaconchain/pkg/commons
-LDFLAGS="-X ${PACKAGE}/version.Version=${VERSION} -X ${PACKAGE}/version.BuildDate=${BUILDDATE} -X ${PACKAGE}/version.GitCommit=${GITCOMMIT} -X ${PACKAGE}/version.GitDate=${GITDATE} -s -w"
+LDFLAGS="-X ${PACKAGE}/version.BuildDate=${BUILDDATE} -s -w"
 CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
