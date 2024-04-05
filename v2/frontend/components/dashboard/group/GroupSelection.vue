@@ -37,9 +37,7 @@ const selectedGroup = computed(() => {
     @update:model-value="(value: number)=>emit('setGroup', value)"
   >
     <template v-if="selectedGroup" #value>
-      <span>{{ $t('dashboard.group.selection.group') }}:
-        <DashboardGroupLabel :group="selectedGroup" />
-      </span>
+      <DashboardGroupLabel :group="selectedGroup" />
     </template>
 
     <template #option="slotProps">
