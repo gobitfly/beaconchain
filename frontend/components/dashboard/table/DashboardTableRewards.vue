@@ -18,16 +18,17 @@ const { t: $t } = useI18n()
 
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore(props.dashboardKey)
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { slotViz } = useValidatorSlotVizStore()
 
 const { overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    duty: width.value >= 980,
+    duty: width.value > 1180,
     clRewards: width.value >= 860,
     elRewards: width.value >= 740,
-    groupId: width.value >= 620
+    age: width.value >= 620
   }
 })
 
@@ -91,6 +92,28 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
   return row.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID
 }
 
+const findNextEpochDuties = (epoch: number) => {
+  const epochData = slotViz.value?.find(e => e.epoch === epoch)
+  if (!epochData) {
+    return
+  }
+  const list = []
+  if (epochData.slots?.find(s => s.attestations)) {
+    list.push($t('dashboard.validator.rewards.attestation'))
+  }
+  if (epochData.slots?.find(s => s.proposal)) {
+    list.push($t('dashboard.validator.rewards.proposal'))
+  }
+  if (epochData.slots?.find(s => s.sync)) {
+    list.push($t('dashboard.validator.rewards.sync_committee'))
+  }
+  if (epochData.slots?.find(s => s.slashing)) {
+    list.push($t('dashboard.validator.rewards.slashing'))
+  }
+
+  return list.join(', ')
+}
+
 </script>
 <template>
   <div>
@@ -126,7 +149,13 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
                 <BcFormatNumber :value="slotProps.data.epoch" />
               </template>
             </Column>
-            <Column field="age" body-class="age" header-class="age" :header="$t('common.age')">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+              body-class="age"
+              header-class="age"
+              :header="$t('common.age')"
+            >
               <template #body="slotProps">
                 <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
               </template>
@@ -140,15 +169,12 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             >
               <template #body="slotProps">
                 <span v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
-                  {{ $t('dashboard.validator.rewards.attestation') }}, {{ $t('dashboard.validator.rewards.proposal') }},
-                  {{ $t('dashboard.validator.rewards.sync_committee') }}, {{ $t('dashboard.validator.rewards.slashing')
-                  }}
+                  {{ findNextEpochDuties(slotProps.data.epoch) }}
                 </span>
                 <DashboardTableValueDuty v-else :duty="slotProps.data.duty" />
               </template>
             </Column>
             <Column
-              v-if="colsVisible.groupId"
               field="group_id"
               body-class="group-id"
               header-class="group-id"
@@ -261,14 +287,6 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
         min-width: 300px;
       }
     }
-
-    @media (max-width: 1150px) {
-      .duty {
-        width: 160px;
-        max-width: 160px;
-        min-width: 160px;
-      }
-    }
   }
 
   tr:has(+.total-row) {
@@ -280,8 +298,8 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
   .future-row {
     td {
 
-      div,
-      span {
+      >div,
+      >span {
         opacity: 0.5;
       }
     }

@@ -168,7 +168,7 @@
       },
       "rewards": {
         "title": "Rewards",
-        "search_placeholder": "Block Number / Graffiti / Property",
+        "search_placeholder": "Epoch, Index, Pubkey, Group",
         "attestation": "Attestation",
         "proposal": "Proposal",
         "sync_committee": "Sync Committee",
@@ -184,7 +184,14 @@
         "block": "Block",
         "sync": "Sync",
         "inactivity": "Inactivity Leak",
-        "total": "Total"
+        "total": "Total",
+        "tooltip": {
+          "sync": ["Participated / Missed"],
+          "slashing": [
+            "Amount of validators you slashed",
+            "Amount of your slashed validators"
+          ]
+        }
       },
       "group_management": {
         "title": "Manage Groups",

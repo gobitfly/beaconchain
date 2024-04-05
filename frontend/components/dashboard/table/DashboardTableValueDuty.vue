@@ -43,8 +43,10 @@ defineProps<Props>()
     white-space: nowrap;
     text-wrap: nowrap;
 
-    &:after {
-      content: "\00a0";
+    &:not(:last-child) {
+      &:after {
+        content: "\00a0";
+      }
     }
   }
 }

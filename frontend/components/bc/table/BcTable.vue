@@ -20,7 +20,7 @@ const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSiz
 const expandedRows = ref<Record<any, boolean>>({})
 
 const allExpanded = computed(() => {
-  if (!props.expandable || !props.dataKey) {
+  if (!props.expandable || !props.dataKey || !props.data?.data?.length) {
     return false
   }
   return !!props.data?.data?.every((item) => {

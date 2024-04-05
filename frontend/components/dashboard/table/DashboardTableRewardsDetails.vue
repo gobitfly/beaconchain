@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
+import type BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -67,12 +68,14 @@ const data = computed(() => {
     {
       svg: IconSlotSync,
       label: $t('dashboard.validator.rewards.sync'),
-      value: details.value.sync
+      value: details.value.sync,
+      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.sync', ['no-wrap'])
     },
     {
       svg: IconSlotSlashing,
       label: $t('dashboard.validator.rewards.slashing'),
-      value: details.value.slashing
+      value: details.value.slashing,
+      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.slashing', ['slash-after no-wrap', ' no-wrap'])
     },
     {
       icon: faSnooze,
@@ -80,7 +83,7 @@ const data = computed(() => {
       value: details.value.attestations_head // TODO: replace with inactivity once we get it
     },
     {
-      svg: faSigma,
+      icon: faSigma,
       label: $t('dashboard.validator.rewards.total'),
       value: {
         income: totalElCl(props.row.reward)
@@ -106,7 +109,7 @@ const openDuties = () => {
       <div>
         <div class="small-screen-value">
           <div class="label">
-            {{ $t('common.age') }}
+            <b>{{ $t('common.age') }}</b>
           </div>
           <div class="value">
             <BcFormatTimePassed :value="row.epoch" />
@@ -114,7 +117,7 @@ const openDuties = () => {
         </div>
         <div class="small-screen-value">
           <div class="label">
-            {{ $t('dashboard.validator.col.duty') }}
+            <b>{{ $t('dashboard.validator.col.duty') }}</b>
           </div>
           <div class="value">
             <DashboardTableValueDuty :duty="row.duty" class="detail-duty" />
@@ -135,7 +138,14 @@ const openDuties = () => {
             </div>
           </div>
           <div class="col count">
-            <div v-for="item in data?.rewards" :key="item.label" class="row">
+            <BcTooltip
+              v-for="item in data?.rewards"
+              :key="item.label"
+              :text="item.tooltip"
+              class="row"
+              :render-text-as-html="true"
+              tooltip-class="text-align-left"
+            >
               <DashboardTableEfficiency
                 v-if="item.value.status_count"
                 :success="item.value.status_count.success"
@@ -144,7 +154,7 @@ const openDuties = () => {
               <div v-if="item.isTotal">
                 <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
               </div>
-            </div>
+            </BcTooltip>
           </div>
           <div class="col value">
             <BcFormatValue
@@ -167,7 +177,7 @@ const openDuties = () => {
       </div>
     </div>
     <div v-else>
-      <BcLoadingSpinner />
+      <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
     </div>
   </div>
 </template>
@@ -178,13 +188,18 @@ const openDuties = () => {
   background-color: var(--container-background);
 }
 
+.spinner{
+  padding: var(--padding-large);
+}
+
 .details-container {
   padding: 14px 28px;
 
   .small-screen-value {
     display: none;
     margin-bottom: var(--padding-large);
-    width: 100%;
+    width: 360px;
+    justify-content: space-between;
 
     .label {
       width: 90px;
@@ -192,6 +207,19 @@ const openDuties = () => {
 
     .value {
       flex-grow: 1;
+      text-align: right;
+
+      :deep(.detail-duty) {
+        justify-content: flex-end;
+
+        .group {
+          &:nth-child(2) {
+            &:after {
+              content: unset;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -203,6 +231,7 @@ const openDuties = () => {
 
     .rewards-group {
       display: flex;
+      width: 360px;
 
       .col {
 
@@ -214,7 +243,13 @@ const openDuties = () => {
 
           &:last-child {
             border-top: solid 1px var(--container-border-color);
+            font-weight: var(--standard_text_medium_font_weight);
           }
+        }
+
+        &.count {
+          display: flex;
+          flex-direction: column;
         }
 
         &.value {
@@ -233,15 +268,18 @@ const openDuties = () => {
     }
 
     .proposer-group {
+      width: 360px;
+
       .row {
         height: 32px;
-        padding: var(--padding-small);
+        padding: var(--padding-small) 0;
         display: flex;
         justify-content: space-between;
         width: 330px;
 
         &:last-child {
           border-top: solid 1px var(--container-border-color);
+          font-weight: var(--standard_text_medium_font_weight);
         }
       }
     }
@@ -251,19 +289,30 @@ const openDuties = () => {
 @media screen and (max-width: 1180px) {
 
   .details-container {
+    .small-screen-value {
+      display: flex;
+    }
+  }
+}
+
+@media screen and (max-width: 900px) {
+
+  .details-container {
     width: 400px;
     padding: var(--padding) var(--padding-large);
 
     .rewards-container {
       flex-direction: column-reverse;
       gap: var(--padding-large);
-      widows: 100%;
+      width: 100%;
 
       .rewards-group {
         width: 100%;
       }
 
       .proposer-group {
+        width: 100%;
+
         .row {
           width: 100%;
         }
@@ -272,17 +321,15 @@ const openDuties = () => {
   }
 }
 
-@media screen and (max-width: 980px) {
-  .details-container {
-    .small-screen-value {
-      display: flex;
-    }
-  }
-}
-
 @media screen and (max-width: 420px) {
   .details-container {
     width: 100%;
+  }
+
+  .details-container {
+    .small-screen-value {
+      width: 100%;
+    }
   }
 }
 </style>

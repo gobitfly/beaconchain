@@ -111,7 +111,7 @@ const rowClass = (data:SummaryRow) => {
     </BcTable>
   </div>
   <div v-else>
-    ... TODO: loading ...
+    <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
   </div>
 </template>
 
@@ -123,6 +123,10 @@ const rowClass = (data:SummaryRow) => {
   @media (max-width: 1180px) {
     flex-direction: column;
   }
+}
+
+.spinner{
+  padding: var(--padding-large);
 }
 
 :deep(.summary-details-table) {
