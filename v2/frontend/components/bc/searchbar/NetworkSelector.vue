@@ -35,10 +35,10 @@ onMounted(() => {
 
 function selectionHasChanged () {
   if (!componentIsReady) {
-    // ensures that we do not emit change-events during the initialization of the drop-down (see above)
+    // ensures that we do not emit change-events during the initialization of the drop-down (see the code in onMounted)
     return
   }
-
+  console.log('Network selector')
   everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.length)
   for (const nw in state) {
     state[nw] = vueMultiselectSelectedOptions.value.includes(nw)

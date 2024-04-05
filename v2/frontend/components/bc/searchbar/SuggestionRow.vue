@@ -53,7 +53,7 @@ function formatEmbeddedIdentificationCell () : string {
 <template>
   <div
     v-if="barStyle == SearchbarStyle.Gaudy || barStyle == SearchbarStyle.Discreet"
-    class="row-gaudyordiscreet"
+    class="rowstyle-gaudyordiscreet"
     :class="barStyle"
   >
     <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
@@ -63,17 +63,27 @@ function formatEmbeddedIdentificationCell () : string {
     <div v-else class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
     </div>
-    <div class="cell-name" :class="barStyle">
-      <BcSearchbarMiddleEllipsis>{{ suggestion.output.name }}</BcSearchbarMiddleEllipsis>
-    </div>
-    <div class="cell-blockchaininfo" :class="barStyle">
-      <span v-if="suggestion.output.description !== ''" class="cell-bi-description" :class="barStyle">
-        <BcSearchbarMiddleEllipsis>{{ suggestion.output.description }}</BcSearchbarMiddleEllipsis>
-      </span>
-      <span v-if="suggestion.output.lowLevelData !== ''" class="cell-bi-lowleveldata" :class="[barStyle,(suggestion.output.description !== '')?'greyish':'']">
-        <BcSearchbarMiddleEllipsis :width-is-fixed="true">{{ suggestion.output.lowLevelData }}</BcSearchbarMiddleEllipsis>
-      </span>
-    </div>
+    <BcSearchbarMiddleEllipsis
+      class="cell-name"
+      :class="barStyle"
+      :text="suggestion.output.name"
+    />
+    <BcSearchbarMiddleEllipsis class="group-blockchaininfo" :class="barStyle">
+      <BcSearchbarMiddleEllipsis
+        v-if="suggestion.output.description !== ''"
+        :text="suggestion.output.description"
+        :dont-clip-under="16"
+        :max-flex-grow="1"
+        class="cell-bi-description"
+        :class="barStyle"
+      />
+      <BcSearchbarMiddleEllipsis
+        v-if="suggestion.output.lowLevelData !== ''"
+        :text="suggestion.output.lowLevelData"
+        class="cell-bi-lowleveldata"
+        :class="[barStyle,(suggestion.output.description !== '')?'greyish':'']"
+      />
+    </BcSearchbarMiddleEllipsis>
     <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
         {{ CategoryInfo[TypeInfo[resultType].category].title }}
@@ -83,7 +93,7 @@ function formatEmbeddedIdentificationCell () : string {
 
   <div
     v-else-if="barStyle == SearchbarStyle.Embedded"
-    class="row-embedded"
+    class="rowstyle-embedded"
     :class="barStyle"
   >
     <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
@@ -96,12 +106,12 @@ function formatEmbeddedIdentificationCell () : string {
     <div class="cell-subcategory" :class="barStyle">
       {{ formatEmbeddedSubcategoryCell() }}
     </div>
-    <div class="cell-blockchaininfo-common cell-bi-identification" :class="barStyle">
-      <BcSearchbarMiddleEllipsis :width-is-fixed="true">
-        {{ formatEmbeddedIdentificationCell() }}
-      </BcSearchbarMiddleEllipsis>
-    </div>
-    <div v-if="suggestion.output.description !== ''" class="cell-blockchaininfo-common cell-bi-description" :class="barStyle">
+    <BcSearchbarMiddleEllipsis
+      class="cells-blockchaininfo-common cell-bi-identification"
+      :class="barStyle"
+      :text="formatEmbeddedIdentificationCell()"
+    />
+    <div v-if="suggestion.output.description !== ''" class="cells-blockchaininfo-common cell-bi-description" :class="barStyle">
       {{ formatEmbeddedDescriptionCell() }}
     </div>
   </div>
@@ -111,10 +121,11 @@ function formatEmbeddedIdentificationCell () : string {
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-@mixin common-to-both-rows {
+@mixin common-to-both-rowstyles {
   cursor: pointer;
   display: grid;
-  min-width: 0;
+  position: relative;
+  right: 0px;
   margin-left: 4px;
   padding-left: 4px;
   margin-right: 4px;
@@ -185,7 +196,6 @@ function formatEmbeddedIdentificationCell () : string {
   .cell-subcategory {
     grid-column: 2;
     grid-row: 1;
-    display: inline-block;
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
@@ -194,8 +204,8 @@ function formatEmbeddedIdentificationCell () : string {
 
 // specific style for the gaudy and discreet modes
 
-.row-gaudyordiscreet {
-  @include common-to-both-rows;
+.rowstyle-gaudyordiscreet {
+  @include common-to-both-rowstyles;
 
   @media (min-width: 600px) { // large screen
     &.gaudy {
@@ -211,9 +221,10 @@ function formatEmbeddedIdentificationCell () : string {
 
   .cell-name {
     font-weight: var(--roboto-medium);
+    margin-right: 16px;
   }
 
-  .cell-blockchaininfo {
+  .group-blockchaininfo {
     grid-column: 3;
     grid-row: 1;
     display: flex;
@@ -229,24 +240,22 @@ function formatEmbeddedIdentificationCell () : string {
     margin-top: auto;
     margin-bottom: auto;
     font-weight: var(--roboto-medium);
-    white-space: nowrap;
+    white-space: nowrap;  // this has an effect on a large screen in gaudy mode only, it makes sure that the two spans (description + lowleveldata) stay on the same line
 
     .cell-bi-description {
-      display: flex;
-      max-width: 100%;
+      position: relative;
       @media (min-width: 600px) { // large screen
         &.gaudy {
-          max-width: 27%;
+          margin-right: 0.5em;
         }
       }
-      position: relative;
-      margin-right: 0.8ch;
     }
 
     .cell-bi-lowleveldata {
-      display: flex;
       position: relative;
       flex-grow: 1;
+      text-align: justify;
+      text-justify: inter-character;
       &.greyish.gaudy {
         color: var(--searchbar-text-detail-gaudy);
       }
@@ -291,8 +300,8 @@ function formatEmbeddedIdentificationCell () : string {
 
 // specific style for the embedded mode
 
-.row-embedded {
-  @include common-to-both-rows;
+.rowstyle-embedded {
+  @include common-to-both-rowstyles;
 
   @media (min-width: 600px) { // large screen
     grid-template-columns: 40px 106px auto min-content;
@@ -310,19 +319,15 @@ function formatEmbeddedIdentificationCell () : string {
     }
   }
 
-  .cell-blockchaininfo-common {
+  .cells-blockchaininfo-common {
     display: flex;
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
-    white-space: nowrap;
-    grid-row: 1;
   }
 
   .cell-bi-identification {
-    position: relative;
     @media (min-width: 600px) { // large screen
-      grid-row: 1;
       grid-column: 3;
       font-weight: var(--roboto-medium);
     }
@@ -332,14 +337,16 @@ function formatEmbeddedIdentificationCell () : string {
       font-weight: var(--roboto-regular);
     }
     width: 100%;
+    text-align: justify;
+    text-justify: inter-character;
   }
 
   .cell-bi-description {
-    position: relative;
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }
     @media (max-width: 600px) { // mobile
+      grid-row: 1;
       grid-column: 3;
       color: var(--searchbar-text-detail-gaudy);
     }

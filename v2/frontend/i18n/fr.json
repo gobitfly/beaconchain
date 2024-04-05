@@ -61,9 +61,6 @@
       "related_to_account": "correspondant au compte à ajouter.",
       "one_result_hidden": "résultat caché",
       "several_results_hidden": "résultats cachés",
-      "by_your_filters": "par vos filtres",
-      "shows": "Montre",
-      "this_type": "ce type de résultats :",
-      "these_types": "ces types de résultats :"
+      "by_your_filters": "par vos filtres"
     }
   }
