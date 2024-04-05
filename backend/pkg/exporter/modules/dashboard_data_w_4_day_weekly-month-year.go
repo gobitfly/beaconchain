@@ -169,7 +169,6 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
-					SUM(blocks_el_reward) as blocks_el_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -186,7 +185,11 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 					SUM(attestation_head_executed) as attestation_head_executed,
 					SUM(attestation_source_executed) as attestation_source_executed,
 					SUM(attestation_target_executed) as attestation_target_executed,
-					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum
+					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
+					SUM(slasher_reward) as slasher_reward,
+					MAX(slashed_by) as slashed_by,
+					MAX(slashed_violation) as slashed_violation,
+					MAX(last_executed_duty_epoch) as last_executed_duty_epoch		
 				FROM validator_dashboard_data_daily
 				WHERE day >= $1 AND day <= $2
 				GROUP BY validator_index
@@ -210,7 +213,6 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
-				blocks_el_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -229,7 +231,11 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				attestation_head_executed,
 				attestation_source_executed,
 				attestation_target_executed,
-				optimal_inclusion_delay_sum
+				optimal_inclusion_delay_sum,
+				slasher_reward,
+				slashed_by,
+				slashed_violation,
+				last_executed_duty_epoch
 			)
 			SELECT 
 				aggregate.validator_index,
@@ -250,7 +256,6 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
-				blocks_el_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -269,7 +274,11 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				attestation_head_executed,
 				attestation_source_executed,
 				attestation_target_executed,
-				optimal_inclusion_delay_sum
+				optimal_inclusion_delay_sum,
+				slasher_reward,
+				slashed_by,
+				slashed_violation,
+				last_executed_duty_epoch
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index

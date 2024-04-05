@@ -198,7 +198,6 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
-					SUM(blocks_el_reward) as blocks_el_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -215,7 +214,11 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 					SUM(attestation_head_executed) as attestation_head_executed,
 					SUM(attestation_source_executed) as attestation_source_executed,
 					SUM(attestation_target_executed) as attestation_target_executed,
-					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum
+					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
+					SUM(slasher_reward) as slasher_reward,
+					MAX(slashed_by) as slashed_by,
+					MAX(slashed_violation) as slashed_violation,
+					MAX(last_executed_duty_epoch) as last_executed_duty_epoch					
 				FROM validator_dashboard_data_epoch
 				WHERE epoch >= $1 AND epoch < $2
 				GROUP BY validator_index
@@ -239,7 +242,6 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
-				blocks_el_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -258,7 +260,11 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestation_head_executed,
 				attestation_source_executed,
 				attestation_target_executed,
-				optimal_inclusion_delay_sum
+				optimal_inclusion_delay_sum,
+				slashed_by,
+				slashed_violation,
+				slasher_reward,
+				last_executed_duty_epoch
 			)
 			SELECT 
 				$1,
@@ -279,7 +285,6 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
-				blocks_el_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -298,7 +303,11 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestation_head_executed,
 				attestation_source_executed,
 				attestation_target_executed,
-				optimal_inclusion_delay_sum
+				optimal_inclusion_delay_sum,
+				slashed_by,
+				slashed_violation,
+				slasher_reward,
+				last_executed_duty_epoch
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
@@ -318,7 +327,6 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				blocks_scheduled = EXCLUDED.blocks_scheduled,
 				blocks_proposed = EXCLUDED.blocks_proposed,
 				blocks_cl_reward = EXCLUDED.blocks_cl_reward,
-				blocks_el_reward = EXCLUDED.blocks_el_reward,
 				sync_scheduled = EXCLUDED.sync_scheduled,
 				sync_executed = EXCLUDED.sync_executed,
 				sync_rewards = EXCLUDED.sync_rewards,
@@ -338,6 +346,10 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				attestation_source_executed = EXCLUDED.attestation_source_executed,
 				attestation_target_executed = EXCLUDED.attestation_target_executed,
 				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum,
+				slashed_by = EXCLUDED.slashed_by,
+				slashed_violation = EXCLUDED.slashed_violation,
+				slasher_reward = EXCLUDED.slasher_reward,
+				last_executed_duty_epoch = EXCLUDED.last_executed_duty_epoch,
 				epoch_end = EXCLUDED.epoch_end
 	`, epochStart, epochEnd)
 

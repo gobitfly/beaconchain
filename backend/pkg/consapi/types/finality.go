@@ -4,16 +4,16 @@ package types
 type StandardFinalityCheckpointsResponse struct {
 	Data struct {
 		PreviousJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
+			Epoch uint64      `json:"epoch,string"`
+			Root  bytesHexStr `json:"root"`
 		} `json:"previous_justified"`
 		CurrentJustified struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
+			Epoch uint64      `json:"epoch,string"`
+			Root  bytesHexStr `json:"root"`
 		} `json:"current_justified"`
 		Finalized struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
+			Epoch uint64      `json:"epoch,string"`
+			Root  bytesHexStr `json:"root"`
 		} `json:"finalized"`
 	} `json:"data"`
 }

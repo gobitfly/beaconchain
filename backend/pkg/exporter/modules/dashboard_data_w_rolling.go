@@ -224,7 +224,6 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
-					SUM(blocks_el_reward) as blocks_el_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -241,7 +240,11 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					SUM(attestation_head_executed) as attestation_head_executed,
 					SUM(attestation_source_executed) as attestation_source_executed,
 					SUM(attestation_target_executed) as attestation_target_executed,
-					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum
+					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
+					SUM(slasher_reward) as slasher_reward,
+					MAX(slashed_by) as slashed_by,
+					MAX(slashed_violation) as slashed_violation,
+					MAX(last_executed_duty_epoch) as last_executed_duty_epoch		
 				FROM validator_dashboard_data_epoch
 				WHERE epoch >= $1 AND epoch <= $2
 				GROUP BY validator_index
@@ -264,7 +267,6 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
-					SUM(blocks_el_reward) as blocks_el_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -280,7 +282,11 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					SUM(attestation_head_executed) as attestation_head_executed,
 					SUM(attestation_source_executed) as attestation_source_executed,
 					SUM(attestation_target_executed) as attestation_target_executed,
-					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum
+					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
+					SUM(slasher_reward) as slasher_reward,
+					MAX(slashed_by) as slashed_by,
+					MAX(slashed_violation) as slashed_violation,
+					MAX(last_executed_duty_epoch) as last_executed_duty_epoch
 				FROM validator_dashboard_data_epoch
 				WHERE epoch >= $3 AND epoch <= $4
 				GROUP BY validator_index
@@ -305,7 +311,6 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					COALESCE(aggregate_head.blocks_scheduled, 0) - COALESCE(aggregate_tail.blocks_scheduled, 0) as blocks_scheduled,
 					COALESCE(aggregate_head.blocks_proposed, 0) - COALESCE(aggregate_tail.blocks_proposed, 0) as blocks_proposed,
 					COALESCE(aggregate_head.blocks_cl_reward, 0) - COALESCE(aggregate_tail.blocks_cl_reward, 0) as blocks_cl_reward,
-					COALESCE(aggregate_head.blocks_el_reward, 0) - COALESCE(aggregate_tail.blocks_el_reward, 0) as blocks_el_reward,
 					COALESCE(aggregate_head.sync_scheduled, 0) - COALESCE(aggregate_tail.sync_scheduled, 0) as sync_scheduled,
 					COALESCE(aggregate_head.sync_executed, 0) - COALESCE(aggregate_tail.sync_executed, 0) as sync_executed,
 					COALESCE(aggregate_head.sync_rewards, 0) - COALESCE(aggregate_tail.sync_rewards, 0) as sync_rewards,
@@ -324,7 +329,11 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					COALESCE(aggregate_head.attestation_head_executed, 0) - COALESCE(aggregate_tail.attestation_head_executed, 0) as attestation_head_executed,
 					COALESCE(aggregate_head.attestation_source_executed, 0) - COALESCE(aggregate_tail.attestation_source_executed, 0) as attestation_source_executed,
 					COALESCE(aggregate_head.attestation_target_executed, 0) - COALESCE(aggregate_tail.attestation_target_executed, 0) as attestation_target_executed,
-					COALESCE(aggregate_head.optimal_inclusion_delay_sum, 0) - COALESCE(aggregate_tail.optimal_inclusion_delay_sum, 0) as optimal_inclusion_delay_sum
+					COALESCE(aggregate_head.optimal_inclusion_delay_sum, 0) - COALESCE(aggregate_tail.optimal_inclusion_delay_sum, 0) as optimal_inclusion_delay_sum,
+					COALESCE(aggregate_head.slasher_reward, 0) - COALESCE(aggregate_tail.slasher_reward, 0) as slasher_reward,
+					aggregate_head.slashed_by,
+					aggregate_head.slashed_violation,
+					aggregate_head.last_executed_duty_epoch
 				FROM aggregate_head
 				LEFT JOIN aggregate_tail ON aggregate_head.validator_index = aggregate_tail.validator_index
 				LEFT JOIN footer_balance_starts ON aggregate_head.validator_index = footer_balance_starts.validator_index
@@ -346,7 +355,6 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					blocks_scheduled = COALESCE(%[1]s.blocks_scheduled, 0) + result.blocks_scheduled,
 					blocks_proposed = COALESCE(%[1]s.blocks_proposed, 0) + result.blocks_proposed,
 					blocks_cl_reward = COALESCE(%[1]s.blocks_cl_reward, 0) + result.blocks_cl_reward,
-					blocks_el_reward = COALESCE(%[1]s.blocks_el_reward, 0) + result.blocks_el_reward,
 					sync_scheduled = COALESCE(%[1]s.sync_scheduled, 0) + result.sync_scheduled,
 					sync_executed = COALESCE(%[1]s.sync_executed, 0) + result.sync_executed,
 					sync_rewards = COALESCE(%[1]s.sync_rewards, 0) + result.sync_rewards,
@@ -366,7 +374,11 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 					attestation_target_executed = COALESCE(%[1]s.attestation_target_executed, 0) + result.attestation_target_executed,
 					optimal_inclusion_delay_sum = COALESCE(%[1]s.optimal_inclusion_delay_sum, 0) + result.optimal_inclusion_delay_sum,
 					epoch_end = result.epoch_end,
-					epoch_start = result.epoch_start
+					epoch_start = result.epoch_start,
+					slasher_reward = COALESCE(%[1]s.slasher_reward, 0) + result.slasher_reward,
+					slashed_by = COALESCE(result.slashed_by, %[1]s.slashed_by),
+					slashed_violation = COALESCE(result.slashed_violation, %[1]s.slashed_violation),
+					last_executed_duty_epoch = result.last_executed_duty_epoch
 				FROM result
 				WHERE %[1]s.validator_index = result.validator_index;
 			
