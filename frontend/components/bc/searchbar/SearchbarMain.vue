@@ -124,7 +124,7 @@ function updateGlobalState (state : States) {
   if (state === globalState.value.state) {
     // we make sure that Vue re-renders the drop-down although the state does not change
     globalState.value.state = States.UpdateIncoming
-    nextTick().then(() => updateGlobalState(state))
+    nextTick(() => updateGlobalState(state))
   } else {
     globalState.value.state = state
   }
@@ -731,7 +731,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     border: none;
     box-shadow: none;
     background-color: transparent;
-    color: var(--input-placeholder-text-color);
+
     &.gaudy {
       height: 40px;
       padding-right: 41px;
@@ -739,6 +739,10 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     &.discreet {
       height: 34px;
       padding-right: 35px;
+      color: var(--searchbar-text-discreet);
+      ::placeholder {
+        color: var(--light-grey-4);
+      }
     }
     &.embedded {
       height: 30px;
@@ -821,17 +825,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
       position: relative;
       display: flex;
       flex-direction: column;
-      width: 100%;
 
       .type-container {
         position: relative;
         display: flex;
         flex-direction: column;
-        width: 100%;
 
         .suggestionrow-container {
           position: relative;
-          width: 100%;
 
           .separation-between-suggestions {
             position: relative;
@@ -852,7 +853,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     }
 
     .info {
-      width: 100%;
+      position: relative;
       @include fonts.standard_text;
       color: var(--text-color-disabled);
       justify-content: center;
@@ -866,6 +867,8 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
         margin-bottom: auto;
         margin-top: auto;
       }
+      padding-left: 6px;
+      padding-right: 6px;
     }
   }
 }

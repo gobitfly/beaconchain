@@ -337,9 +337,6 @@
     "related_to_account": "related to the account that you want to add.",
     "one_result_hidden": "result hidden",
     "several_results_hidden": "results hidden",
-    "by_your_filters": "by your filters",
-    "shows": "Shows",
-    "this_type": "this type of results:",
-    "these_types": "these types of results:"
+    "by_your_filters": "by your filters"
   }
 }

@@ -2,20 +2,17 @@
 import {
   Category,
   CategoryInfo,
-  TypeInfo,
-  getListOfResultTypesInCategory,
   SearchbarStyle
 } from '~/types/searchbar'
 
-const { t: $t } = useI18n()
 const emit = defineEmits(['change'])
 const props = defineProps<{
-    initialState: Record<string, boolean>, // each field will have a stringifyEnum(Category) as key and the state of the option as value
+    initialState: Record<string, boolean>, // each field has a stringifyEnum(Category) as key and the state of the option as value
     barStyle: SearchbarStyle
  }>()
 
 let componentIsReady = false
-const state = ref<Record<string, boolean>>({}) // each field will have a stringifyEnum(Category) as key and the state of the option as value
+const state = ref<Record<string, boolean>>({}) // each field has a stringifyEnum(Category) as key and the state of the option as value
 
 onMounted(() => {
   componentIsReady = false
@@ -24,51 +21,29 @@ onMounted(() => {
 })
 
 function selectionHasChanged () {
-  if (componentIsReady) { // ensures that we do not emit change-events during the initialization of the buttons (see above)
+  if (componentIsReady) { // ensures that we do not emit change-events during the initialization of the buttons (see the code in onMounted)
+    console.log('Category selector')
     emit('change', state.value)
   }
-}
-
-function explainWhatFilterDoes (category : Category) : string {
-  let hint = $t('search_bar.shows') + ' '
-
-  if (category === Category.Validators) {
-    hint += $t('search_bar.this_type') + ' '
-    hint += 'Validator'
-  } else {
-    const list = getListOfResultTypesInCategory(category, false)
-
-    hint += (list.length === 1 ? $t('search_bar.this_type') : $t('search_bar.these_types')) + ' '
-    for (let i = 0; i < list.length; i++) {
-      hint += TypeInfo[list[i]].title
-      if (i < list.length - 1) {
-        hint += ', '
-      }
-    }
-  }
-
-  return hint
 }
 </script>
 
 <template>
   <div>
     <span v-for="filter of Object.keys(state)" :key="filter">
-      <BcTooltip :text="explainWhatFilterDoes(Number(filter) as Category)">
-        <label class="filter-button">
-          <input
-            v-model="state[filter]"
-            type="checkbox"
-            class="hiddencheckbox"
-            :true-value="true"
-            :false-value="false"
-            @change="selectionHasChanged"
-          >
-          <span class="face" :class="barStyle">
-            {{ CategoryInfo[Number(filter) as Category].filterLabel }}
-          </span>
-        </label>
-      </BcTooltip>
+      <label class="filter-button">
+        <input
+          v-model="state[filter]"
+          type="checkbox"
+          class="hiddencheckbox"
+          :true-value="true"
+          :false-value="false"
+          @change="selectionHasChanged"
+        >
+        <span class="face" :class="barStyle">
+          {{ CategoryInfo[Number(filter) as Category].filterLabel }}
+        </span>
+      </label>
     </span>
   </div>
 </template>
