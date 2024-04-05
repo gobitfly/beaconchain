@@ -58,12 +58,12 @@ async function createDashboard () {
   visible.value = false
   const matchingType = route.name === 'dashboard-id' && type.value === 'validator'
 
-  const key = matchingType && !isLoggedIn.value ? dashboardKey.value : undefined
+  const publicKey = matchingType && !isLoggedIn.value ? dashboardKey.value : undefined
   if (type.value === 'account') {
     if (!name.value) {
       return
     }
-    const response = await createAccountDashboard(name.value, key)
+    const response = await createAccountDashboard(name.value, publicKey)
 
     router.push(`/account-dashboard/${response?.hash ?? response?.id ?? 1}`)
   } else if (type.value === 'validator') {
@@ -71,7 +71,7 @@ async function createDashboard () {
       return
     }
 
-    const response = await createValidatorDashboard(name.value, network.value, key)
+    const response = await createValidatorDashboard(name.value, network.value, publicKey)
     if (matchingType && publicEntities.value?.length && response?.id) {
       await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators: publicEntities.value, group_id: '0' } }, { dashboardKey: response.id })
     }

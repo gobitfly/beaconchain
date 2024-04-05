@@ -36,9 +36,11 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 
 onMounted(() => {
   if (!dashboardKey.value) {
+    // we we don't have a key and no validator dashboard we we show the create panel
     if (!dashboards.value?.validator_dashboards?.length) {
       showDashboardCreation('panel')
     } else {
+      // if we have a validator dashboard, but none selected we select the first
       const ext = dashboards.value.validator_dashboards[0] as ExtendedDashboard
       setDashboardKey(ext.hash ?? ext.id.toString())
     }
@@ -47,7 +49,9 @@ onMounted(() => {
 
 watch(dashboardKey, (newKey, oldKey) => {
   if (!isLoggedIn.value) {
+    // We update the key for our public dashboard
     const ext = dashboards.value?.validator_dashboards?.[0] as ExtendedDashboard
+    // If the old key does not match the dashboards key then it probabbly means we opened a different pub. dashboard as a link
     if (ext && (!ext.hash || (ext.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
     }

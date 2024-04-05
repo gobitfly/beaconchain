@@ -32,6 +32,7 @@ export function useUserDashboardStore () {
     return dashboards.value
   }
 
+  // Public dashboards are saved in a cookie (so that it's accessable during SSR)
   function saveToCookie () {
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
@@ -39,7 +40,9 @@ export function useUserDashboardStore () {
   async function createValidatorDashboard (name: string, network: ValidatorDashboardNetwork, dashboardKey?: string):Promise<ExtendedDashboard |undefined> {
     // TODO: implement real mapping of network id's once backend is ready for it (will not be part of first release)
     warn(`we are currently ignoring the network ${network}`)
+
     if (!isLoggedIn.value) {
+      // Create public Validator dashboard
       const db:ExtendedDashboard = { id: 0, name, hash: dashboardKey ?? '' }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
@@ -48,6 +51,7 @@ export function useUserDashboardStore () {
       saveToCookie()
       return db
     }
+    // Create user specific Validator dashboard
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: '0' } })
     if (res.data) {
       data.value = {
@@ -63,6 +67,7 @@ export function useUserDashboardStore () {
 
   async function createAccountDashboard (name: string, dashboardKey?: string):Promise<ExtendedDashboard |undefined> {
     if (!isLoggedIn.value) {
+      // Create public account dashboard
       const db:ExtendedDashboard = { id: 0, name, hash: dashboardKey ?? '' }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
@@ -71,6 +76,7 @@ export function useUserDashboardStore () {
       saveToCookie()
       return db
     }
+    // Create user specific account dashboard
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { body: { name } })
     if (res.data) {
       data.value = {
@@ -84,6 +90,7 @@ export function useUserDashboardStore () {
     }
   }
 
+  // Update the hash (=hashed list of id's) of a specific public dashboard
   function updateHash (type: DashboardType, hash: string) {
     if (type === 'validator') {
       const db:ExtendedDashboard = { id: 0, name: 'default', ...dashboards.value?.validator_dashboards?.[0], hash }
