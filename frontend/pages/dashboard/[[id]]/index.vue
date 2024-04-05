@@ -36,11 +36,11 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 
 onMounted(() => {
   if (!dashboardKey.value) {
-    // we we don't have a key and no validator dashboard we we show the create panel
+    // we don't have a key and no validator dashboard: show the create panel
     if (!dashboards.value?.validator_dashboards?.length) {
       showDashboardCreation('panel')
     } else {
-      // if we have a validator dashboard, but none selected we select the first
+      // if we have a validator dashboard but none selected: select the first
       const ext = dashboards.value.validator_dashboards[0] as ExtendedDashboard
       setDashboardKey(ext.hash ?? ext.id.toString())
     }
