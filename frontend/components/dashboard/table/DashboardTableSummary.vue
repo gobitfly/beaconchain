@@ -21,7 +21,7 @@ const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | u
 
 const { overview } = useValidatorDashboardOverviewStore()
 
-const { width, isMobile } = useWindowSize()
+const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     validator: width.value >= 1400,
@@ -59,17 +59,6 @@ const groupNameLabel = (groupId?: number) => {
     return `${groupId}` // fallback if we could not match the group name
   }
   return `${group.name}`
-}
-
-const groupIdLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
-    return
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (group && isMobile.value) {
-    return
-  }
-  return ` (ID: ${groupId})`
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -129,8 +118,7 @@ const groupsEnabled = computed(() => isLoggedIn.value && !isPublic.value)
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
-                  groupIdLabel(slotProps.data.group_id) }}</span>
+                {{ groupNameLabel(slotProps.data.group_id) }}
               </template>
             </Column>
             <Column
