@@ -380,7 +380,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	var indices []uint64
-	var publicKeys [][]byte
+	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
 		indices, publicKeys = checkValidatorList(&err, validatorsParam)
 		if err != nil {
