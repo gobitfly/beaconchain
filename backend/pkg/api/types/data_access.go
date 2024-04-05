@@ -9,6 +9,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {
 	Column T
@@ -59,4 +60,10 @@ type CLDepositsCursor struct {
 	GenericCursor
 	Slot      int64
 	SlotIndex int64
+}
+
+type ValidatorsCursor struct {
+	GenericCursor
+
+	Index uint64
 }

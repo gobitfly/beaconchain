@@ -238,6 +238,14 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 	}
 }
 
+func SliceToMap[T comparable](s []T) map[T]bool {
+	m := make(map[T]bool)
+	for _, v := range s {
+		m[v] = true
+	}
+	return m
+}
+
 func DataStructure[T any](s []T) []interface{} {
 	ds := make([]interface{}, len(s))
 	for i, v := range s {
@@ -275,7 +283,7 @@ func StringToCursor[T t.CursorLike](str string) (T, error) {
 	return cursor, nil
 }
 
-func GetPagingFromData[T t.CursorLike](data []interface{}, usedCursor T, direction enums.SortOrder, hasMoreData bool) (*t.Paging, error) {
+func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction enums.SortOrder, hasMoreData bool) (*t.Paging, error) {
 	if !hasMoreData && !usedCursor.IsValid() {
 		return nil, nil
 	}
