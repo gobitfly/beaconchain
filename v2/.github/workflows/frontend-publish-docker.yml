@@ -8,6 +8,7 @@ on:
       - 'frontend/**'
     branches:
       - main
+      - improve-ci
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
@@ -47,8 +48,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5.1.0
         with:
-          context: "{{defaultContext}}"
-          file: backend/Dockerfile
+          context: .
+          file: frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
