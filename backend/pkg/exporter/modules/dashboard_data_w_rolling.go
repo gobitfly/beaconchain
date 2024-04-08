@@ -169,20 +169,28 @@ func (d *RollingAggregator) Aggregate(days int, tableName string) error {
 func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEpoch uint64, tableName string) ([]uint64, error) {
 	bounds, err := d.getCurrentRollingBounds(nil, tableName)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if err != sql.ErrNoRows {
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to get latest exported rolling %dd bounds", days))
 		}
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to get latest exported rolling %dd bounds", days))
-	}
-	if bounds.EpochEnd == 0 && bounds.EpochStart == 0 {
-		return nil, nil
 	}
 
 	offset, err := d.bootstrapTableToHeadOffset(intendedHeadEpoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get bootstrap offset")
 	}
-	d.log.Infof("bootstrap Offset for rolling %dd: %d", days, offset)
+
+	needsBootstrap := int64(intendedHeadEpoch-bounds.EpochEnd) >= int64(d.getBootstrapOnEpochsBehind())
+
+	d.log.Infof("bootstrap Offset for rolling %dd: %d. Needs bootstrap: %v", days, offset, needsBootstrap)
+	// if rolling table is empty / not bootstrapped yet or needs a bootstrap assume bounds of what the would be after a bootstrap
+	if (bounds.EpochEnd == 0 && bounds.EpochStart == 0) || needsBootstrap {
+		bounds.EpochEnd = intendedHeadEpoch + 1 - uint64(offset) // rolling bounds are exclusive
+		start := int64(bounds.EpochEnd - utils.EpochsPerDay()*uint64(days))
+		if start < 0 {
+			start = 0
+		}
+		bounds.EpochStart = uint64(start)
+	}
 
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, intendedHeadEpoch, offset)
 
