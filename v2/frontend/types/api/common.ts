@@ -71,3 +71,23 @@ export interface SearchResult {
 export interface SearchResponse {
   data: SearchResult[];
 }
+export interface ValidatorHistoryEvent {
+  status: 'success' | 'partial' | 'failed';
+  income: string /* decimal.Decimal */;
+}
+export interface ValidatorHistoryProposal {
+  status: 'success' | 'partial' | 'failed' | 'orphaned';
+  el_income: string /* decimal.Decimal */;
+  cl_attestation_inclusion_income: string /* decimal.Decimal */;
+  cl_sync_inclusion_income: string /* decimal.Decimal */;
+  cl_slashing_inclusion_income: string /* decimal.Decimal */;
+}
+export interface ValidatorHistoryDuties {
+  attestation_source?: ValidatorHistoryEvent;
+  attestation_target?: ValidatorHistoryEvent;
+  attestation_head?: ValidatorHistoryEvent;
+  sync?: ValidatorHistoryEvent;
+  slashing?: ValidatorHistoryEvent;
+  proposal?: ValidatorHistoryProposal;
+  sync_count?: number /* uint64 */; // count of successful sync duties for the epoch
+}
