@@ -283,6 +283,20 @@ func StringToCursor[T t.CursorLike](str string) (T, error) {
 	return cursor, nil
 }
 
+func GetAndSetField(read reflect.Value, field string, target reflect.Value) error {
+	v := read.Elem().FieldByName(field)
+	if !v.IsValid() {
+		return fmt.Errorf("field %s not found in target", field)
+	}
+	t := target.Elem().FieldByName(field)
+	// type equal?
+	if v.Type() != t.Type() {
+		return fmt.Errorf("field %s type mismatch", field)
+	}
+	t.Set(v)
+	return nil
+}
+
 func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction enums.SortOrder, hasMoreData bool) (*t.Paging, error) {
 	if !hasMoreData && !usedCursor.IsValid() {
 		return nil, nil
@@ -317,10 +331,10 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction 
 
 		// generate next cursor
 		for _, c := range columns {
-			// extract value from data interface. think of it as v := data[li].Column
-			v := reflect.ValueOf(data[li]).FieldByName(c).Int()
-			// store value in target. think of it as cursor.Column = v
-			reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+			err := GetAndSetField(reflect.ValueOf(&data[li]), c, reflect.ValueOf(&cursor))
+			if err != nil {
+				return nil, fmt.Errorf("failed to set field %s: %w", c, err)
+			}
 		}
 
 		next_cursor, err := CursorToString[T](cursor)
@@ -338,8 +352,10 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction 
 
 		// generate prev cursor
 		for _, c := range columns {
-			v := reflect.ValueOf(data[0]).FieldByName(c).Int()
-			reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+			err := GetAndSetField(reflect.ValueOf(&data[0]), c, reflect.ValueOf(&cursor))
+			if err != nil {
+				return nil, fmt.Errorf("failed to set field %s: %w", c, err)
+			}
 		}
 		prev_cursor, err := CursorToString[T](cursor)
 		if err != nil {
