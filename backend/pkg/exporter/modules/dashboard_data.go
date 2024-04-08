@@ -1035,7 +1035,6 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
 					continue
 				}
-				return nil, err
 			}
 
 			validator_index := pubkeyToIndexMapEnd[string(depositData.Data.Pubkey)]
