@@ -65,5 +65,5 @@ type CLDepositsCursor struct {
 type ValidatorsCursor struct {
 	GenericCursor
 
-	Index uint64
+	Index uint64 `json:"vi"`
 }

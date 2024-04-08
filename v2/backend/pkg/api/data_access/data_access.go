@@ -693,7 +693,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	// Initialize the cursor
 	var currentCursor t.ValidatorsCursor
 	var err error
-	if cursor == "" {
+	if cursor != "" {
 		currentCursor, err = utils.StringToCursor[t.ValidatorsCursor](cursor)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorsCursor: %w", err)
@@ -721,7 +721,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			g.name AS group_name
 		FROM users_val_dashboards_validators v
 		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
-		WHERE dashboard_id = $1
+		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}
 
@@ -751,10 +751,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			validators = append(validators, validator.Index)
 		}
 	}
+	var paging t.Paging
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, nil, nil
+		return nil, &paging, nil
 	}
 
 	// Get the current validator state
@@ -865,12 +866,17 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return false
 	})
 
+	// reverse data if direction cursor is opposite of sort direction
+	if currentCursor.IsValid() && currentDirection != currentCursor.Direction {
+		slices.Reverse(data)
+	}
+
 	// Find the index for the cursor and limit the data
 	var cursorIndex uint64
 	if currentCursor.IsValid() {
 		for idx, row := range data {
 			if row.Index == currentCursor.Index {
-				cursorIndex = uint64(idx)
+				cursorIndex = uint64(idx + 1)
 				break
 			}
 		}
@@ -887,7 +893,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	moreDataFlag := len(cursorData) > int(limit)
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// no paging required
-		return result, nil, nil
+		return result, &paging, nil
 	}
 
 	// remove the last entry from data as it is only required for the check
@@ -896,7 +902,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		cursorData = cursorData[:len(cursorData)-1]
 	}
 
-	// did we receive a cursor with a direction that is different than the overall request one? if yes invert data so it matches the overall one again
+	// flip it back if flipped
 	if currentCursor.IsValid() && currentDirection != currentCursor.Direction {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
