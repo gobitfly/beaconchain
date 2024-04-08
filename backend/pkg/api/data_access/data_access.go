@@ -1976,16 +1976,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 }
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	// WIP cursor, search
-	/*c, err2 := utils.StringToCursor[t.GenericCursor](cursor)
-	f := []struct {
-		ValidatorIndex int
-		Epoch          int
-	}{{100, 2}, {1000, 100}}
-	_, err := utils.GetPagingFromData[t.GenericCursor](utils.DataStructure(f), enums.ASC)
-	if err != nil {
-		return nil, nil, err
+	/*var currentCursor t.BlocksCursor
+
+	if cursor != "" {
+		currentCursor, err := utils.StringToCursor[t.BlocksCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
+		}
 	}*/
+
 	validatorGroupMap, validators, err := d.getDashboardValidatorGroups(dashboardId)
 	if err != nil || len(validators) == 0 {
 		return nil, nil, err
@@ -2003,23 +2002,51 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		GraffitiText string        `db:"graffiti_text"`
 	}, 0)
 
-	err = d.readerDb.Select(&proposals, `
-		SELECT
-			proposer,
-			epoch,
-			slot,
-			status,
-			exec_block_number,
-			exec_fee_recipient,
-			relays_blocks.value AS mev_reward,
-			COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
-			graffiti_text
-		FROM blocks
-		LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
-		WHERE proposer = ANY($1)
-		ORDER BY slot ASC
+	query := `
+	SELECT
+		proposer,
+		epoch,
+		slot,
+		status,
+		exec_block_number,
+		exec_fee_recipient,
+		relays_blocks.value AS mev_reward,
+		COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
+		graffiti_text
+	FROM blocks
+	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+	WHERE proposer = ANY($1)
+	`
+	// multi-sort disabled as discussed
+	order := `ORDER BY `
+	if len(sort) > 0 {
+		switch sort[0].Column {
+		case enums.VDBBlockProposer:
+			order += `proposer`
+		case enums.VDBBlockGroup:
+			// TODO join tables
+			order += ``
+		case enums.VDBBlockStatus:
+			order += `status`
+		case enums.VDBBlockProposerReward:
+			// TODO reward data is split between multiple tables, sum them up
+			order += `mev_reward`
+		default:
+			order += `slot`
+		}
+		if sort[0].Desc {
+			order += ` DESC`
+		} else {
+			order += ` ASC`
+		}
+	} else {
+		order += `slot DESC`
+	}
+	limitStr := `
 		LIMIT $2
-		`, pq.Array(validators), limit)
+	`
+
+	err = d.readerDb.Select(&proposals, query+order+limitStr, pq.Array(validators), limit)
 	if err != nil {
 		return nil, nil, err
 	}
