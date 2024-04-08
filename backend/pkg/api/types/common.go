@@ -102,12 +102,12 @@ type ValidatorHistoryProposal struct {
 }
 
 type ValidatorHistoryDuties struct {
-	AttestationSource ValidatorHistoryEvent    `json:"attestation_source,omitempty"`
-	AttestationTarget ValidatorHistoryEvent    `json:"attestation_target,omitempty"`
-	AttestationHead   ValidatorHistoryEvent    `json:"attestation_head,omitempty"`
-	Sync              ValidatorHistoryEvent    `json:"sync,omitempty"`
-	Slashing          ValidatorHistoryEvent    `json:"slashing,omitempty"`
-	Proposal          ValidatorHistoryProposal `json:"proposal,omitempty"`
+	AttestationSource *ValidatorHistoryEvent    `json:"attestation_source,omitempty"`
+	AttestationTarget *ValidatorHistoryEvent    `json:"attestation_target,omitempty"`
+	AttestationHead   *ValidatorHistoryEvent    `json:"attestation_head,omitempty"`
+	Sync              *ValidatorHistoryEvent    `json:"sync,omitempty"`
+	Slashing          *ValidatorHistoryEvent    `json:"slashing,omitempty"`
+	Proposal          *ValidatorHistoryProposal `json:"proposal,omitempty"`
 
 	SyncCount uint64 `json:"sync_count,omitempty"` // count of successful sync duties for the epoch
 }
