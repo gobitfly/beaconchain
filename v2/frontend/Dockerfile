@@ -6,7 +6,7 @@ WORKDIR /usr/src/nuxt-app
 COPY . .
 
 WORKDIR /usr/src/nuxt-app/frontend
-RUN --mount=type=secret,id=NPMRC_FILE,target=/usr/src/nuxt-app/.npmrc \
+RUN --mount=type=secret,id=NPMRC_FILE,target=/usr/src/nuxt-app/frontend/.npmrc \
     npm ci && npm cache clean --force
 RUN npm run build
 
