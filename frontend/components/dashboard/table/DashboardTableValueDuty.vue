@@ -11,23 +11,19 @@ defineProps<Props>()
   <div v-if="duty" class="duty">
     <div class="group">
       {{ $t('dashboard.validator.rewards.attestation') }}
-      (
-      <BcFormatPercent :percent="duty.attestation" :fixed="0" :precision="0" />),
+      <BcFormatPercent class="round-brackets" :percent="duty.attestation" :fixed="0" :precision="0" />,
     </div>
     <div class="group">
       {{ $t('dashboard.validator.rewards.proposal') }}
-      (
-      <BcFormatPercent :percent="duty.proposal" :fixed="0" :precision="0" />),
+      <BcFormatPercent class="round-brackets" :percent="duty.proposal" :fixed="0" :precision="0" />,
     </div>
     <div class="group">
       {{ $t('dashboard.validator.rewards.sync_committee') }}
-      (
-      <BcFormatPercent :percent="duty.sync" :fixed="0" :precision="0" />),
+      <BcFormatPercent class="round-brackets" :percent="duty.sync" :fixed="0" :precision="0" />,
     </div>
     <div class="group">
       {{ $t('dashboard.validator.rewards.slashing') }}
-      (
-      <BcFormatNumber :value="duty.slashing" />)
+      <BcFormatNumber class="round-brackets" :value="duty.slashing" />
     </div>
   </div>
 </template>

@@ -50,3 +50,12 @@
     content: " / ";
   }
 }
+
+.round-brackets {
+  &:before {
+    content: "(";
+  }
+  &:after {
+    content: ")";
+  }
+}
