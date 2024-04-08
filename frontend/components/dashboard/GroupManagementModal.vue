@@ -6,7 +6,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { warn } from 'vue'
 import { BcDialogConfirm } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
@@ -37,6 +36,7 @@ const newGroupName = ref<string>('')
 const search = ref<string>()
 const sortField = ref<string>()
 const sortOrder = ref<number | null>()
+const hasNoOpenDialogs = ref(true)
 
 const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   let groups = (overview.value?.groups ?? [])
@@ -45,7 +45,7 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
     groups = groups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
   }
   if (sortField.value?.length && sortOrder.value) {
-    groups = orderBy(groups, sortField.value, getSortOrder())
+    groups = orderBy(groups, sortField.value, getSortOrder(sortOrder.value))
   }
   const totalCount = groups.length
   return {
@@ -82,23 +82,25 @@ const addGroup = async () => {
   newGroupName.value = ''
 }
 
-const editGroup = (row: VDBOverviewGroup, newName?: string) => {
-  // TODO: Implement group renaming once the backend supports it.
-  warn(`Edit group ${row.name} [${row.id}] -> ${newName}`)
+const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'PUT', body: { name: newName } }, { dashboardKey: props.dashboardKey, groupId: row.id })
+  refreshOverview(props.dashboardKey)
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_DELETE, undefined, { dashboardKey: props.dashboardKey, groupId: row.id })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'DELETE' }, { dashboardKey: props.dashboardKey, groupId: row.id })
   refreshOverview(props.dashboardKey)
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
+  hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.validator.group_management.remove_title')
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      response?.data && removeGroupConfirmed(row)
     },
-    onClose: response => response?.data && removeGroupConfirmed(row),
     data: {
+      title: $t('dashboard.validator.group_management.remove_title'),
       question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
     }
   })
@@ -134,6 +136,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 <template>
   <BcDialog
     v-model="visible"
+    :close-on-escape="hasNoOpenDialogs"
     :header="$t('dashboard.validator.group_management.title')"
     class="validator-group-managment-modal-container"
     @update:visible="(visible: boolean)=>!visible && resetData()"
@@ -263,6 +266,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 
 :global(.validator-group-managment-modal-container .edit-group ){
   max-width: 201px;
+  height: 27px;
   width: 201px;
 }
 

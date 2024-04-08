@@ -55,6 +55,9 @@
     .p-dialog-title {
       @include fonts.dialog_header;
     }
+    .p-dialog-header-close {
+      display: none;
+    }
   }
   &.p-dialog-header-hidden {
     .p-dialog-header {
