@@ -700,9 +700,9 @@ type Data struct {
 	proposerAssignments      *constypes.StandardProposerAssignmentsResponse
 	syncCommitteeAssignments *constypes.StandardSyncCommitteesResponse
 	attestationRewards       *constypes.StandardAttestationRewardsResponse
-	beaconBlockData          map[uint8]*constypes.StandardBeaconSlotResponse           // do not use map index
-	beaconBlockRewardData    map[uint8]*constypes.StandardBlockRewardsResponse         // do not use map index
-	syncCommitteeRewardData  map[uint8]*constypes.StandardSyncCommitteeRewardsResponse // do not use map index
+	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
 	attestationAssignments   map[uint64]uint32
 	missedslots              map[uint64]bool
 }
@@ -722,9 +722,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	}
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
-	result.beaconBlockData = make(map[uint8]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
-	result.beaconBlockRewardData = make(map[uint8]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
-	result.syncCommitteeRewardData = make(map[uint8]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
+	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
+	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
+	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
 	result.attestationAssignments = make(map[uint64]uint32)
 	result.missedslots = make(map[uint64]bool, slotsPerEpoch*2)
 
@@ -877,7 +877,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			}
 			block.Data.Signature = nil // remove signature to save memory
 			mutex.Lock()
-			result.beaconBlockData[uint8(slot%254)] = block
+			result.beaconBlockData[slot] = block
 			mutex.Unlock()
 
 			blockReward, err := cl.GetPropoalRewards(slot)
@@ -886,7 +886,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				return err
 			}
 			mutex.Lock()
-			result.beaconBlockRewardData[uint8(slot%254)] = blockReward
+			result.beaconBlockRewardData[slot] = blockReward
 			mutex.Unlock()
 
 			syncRewards, err := cl.GetSyncRewards(slot)
@@ -895,7 +895,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				return err
 			}
 			mutex.Lock()
-			result.syncCommitteeRewardData[uint8(slot%254)] = syncRewards
+			result.syncCommitteeRewardData[slot] = syncRewards
 			mutex.Unlock()
 
 			return nil
