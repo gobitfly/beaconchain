@@ -36,6 +36,9 @@ type RollingAggregatorInt interface {
 
 	// get the threshold on how many epochs you can be behind without bootstrap or at which distance there will be a bootstrap
 	getBootstrapOnEpochsBehind() uint64
+
+	// gets the aggegate bounds for a given epoch in the bootstrap table. Is useful if you want to know what aggregate an epoch is part of
+	getBootstrapBounds(epoch uint64) (uint64, uint64)
 }
 
 // Returns the epoch range of a current exported rolling table
@@ -184,12 +187,15 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 	d.log.Infof("bootstrap Offset for rolling %dd: %d. Needs bootstrap: %v", days, offset, needsBootstrap)
 	// if rolling table is empty / not bootstrapped yet or needs a bootstrap assume bounds of what the would be after a bootstrap
 	if (bounds.EpochEnd == 0 && bounds.EpochStart == 0) || needsBootstrap {
-		bounds.EpochEnd = intendedHeadEpoch + 1 - uint64(offset) // rolling bounds are exclusive
+		bounds.EpochEnd = intendedHeadEpoch + 1 // rolling bounds are exclusive
+
+		// start = get start patition of epoch start like below
 		start := int64(bounds.EpochEnd - utils.EpochsPerDay()*uint64(days))
 		if start < 0 {
 			start = 0
 		}
-		bounds.EpochStart = uint64(start)
+		startBound, _ := d.getBootstrapBounds(uint64(start))
+		bounds.EpochStart = startBound
 	}
 
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, intendedHeadEpoch, offset)

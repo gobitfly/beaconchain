@@ -93,10 +93,10 @@ func (d *epochToHourAggregator) aggregate1h() error {
 		return fmt.Errorf("gaps in dashboard epoch, skipping for now: %v", gaps) // sanity, this should never happen
 	}
 
-	_, currentEndBound := d.getHourAggregateBounds(currentExportedEpoch)
+	_, currentEndBound := getHourAggregateBounds(currentExportedEpoch)
 
 	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += getHourAggregateWidth() {
-		boundsStart, boundsEnd := d.getHourAggregateBounds(epoch)
+		boundsStart, boundsEnd := getHourAggregateBounds(epoch)
 		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last hour entry since it is complete")
 			continue
@@ -111,7 +111,7 @@ func (d *epochToHourAggregator) aggregate1h() error {
 	return nil
 }
 
-func (d *epochToHourAggregator) getHourAggregateBounds(epoch uint64) (uint64, uint64) {
+func getHourAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
 	epoch += offset                                                               // offset to utc
 	startOfPartition := epoch / getHourAggregateWidth() * getHourAggregateWidth() // inclusive
