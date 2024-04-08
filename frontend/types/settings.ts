@@ -1,6 +1,6 @@
 export type GlobalSetting = 'age-format'
 
-export type AgeFormat = 'absolut' | 'relative'
+export type AgeFormat = 'absolute' | 'relative'
 
 interface SettingsGetter {
   <T>(value?: string): T;
@@ -12,8 +12,8 @@ interface SettingsSetter {
 
 type SettingsConfig = {
   default: unknown,
-  parse?: SettingsGetter,
-  toString?: SettingsSetter
+  parseValue?: SettingsGetter,
+  valueToString?: SettingsSetter
 }
 
 export const SettingDefaults:Record<GlobalSetting, SettingsConfig> = {

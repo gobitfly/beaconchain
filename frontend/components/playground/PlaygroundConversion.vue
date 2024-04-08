@@ -152,7 +152,7 @@ const onCurrencyChange = (event: Event) => {
   </div>
   <div>
     latest Epoch absolute ->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" format="absolut" />
+    <BcFormatTimePassed :value="latestState?.currentEpoch" format="absolute" />
   </div>
   <div>
     latest Epoch relative ->
