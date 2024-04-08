@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
 import { type AgeFormat } from '~/types/settings'
-import { formatEpochToRelative } from '~/utils/format'
+import { formatEpochToDateTime } from '~/utils/format'
 
 interface Props {
   value?: number,
@@ -31,7 +31,7 @@ const label = computed(() => {
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
   switch (props.type) {
     default:
-      return formatEpochToRelative(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      return formatEpochToDateTime(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
   }
 })
 </script>

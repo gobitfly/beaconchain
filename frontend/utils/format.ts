@@ -116,7 +116,7 @@ export function formatToRelative (targetTimestamp?: number, baseTimestamp?: numb
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
-export function formatEpochToRelative (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
   const ts = epochToTs(epoch)
   if (ts === undefined) {
     return undefined
@@ -124,18 +124,12 @@ export function formatEpochToRelative (epoch: number, timestamp?: number, format
   if (format === 'relative') {
     return formatToRelative(ts * 1000, timestamp, style, locales)
   } else {
-    return formatTs(ts, locales, true)
+    return formatTs(ts, locales, withTime)
   }
 }
 
-export function formatEpochToDate (epoch: number, locales: string): string | undefined {
-  const ts = epochToTs(epoch)
-  if (ts === undefined) {
-    return undefined
-  }
-
-  const date = formatTs(ts, locales)
-  return `${date}`
+export function formatEpochToDate (epoch: number, locales: string): string | null |undefined {
+  return formatEpochToDateTime(epoch, undefined, 'absolute', undefined, locales, false)
 }
 
 export function formattedNumberToHtml (value?:string):string | undefined {
