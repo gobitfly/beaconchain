@@ -247,6 +247,13 @@ const openDuties = () => {
           }
         }
 
+        &.icon{
+          svg{
+            height: 14px;
+            width: 18px;
+          }
+        }
+
         &.count {
           display: flex;
           flex-direction: column;
@@ -257,7 +264,6 @@ const openDuties = () => {
           flex-direction: column;
           flex-grow: 1;
           align-items: flex-end;
-          max-width: 120px;
 
           >div {
             width: 100%;
