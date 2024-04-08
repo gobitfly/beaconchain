@@ -41,7 +41,8 @@
     "first": "First",
     "last": "Last",
     "of": "of",
-    "showing": "Showing {from} to {to} of {total}"
+    "showing": "Showing {from} to {to} of {total}",
+    "age": "Age"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -133,7 +134,6 @@
     "notifications": "Notifications",
     "group": {
       "selection": {
-        "group": "Group",
         "all": "All groups",
         "default": "Default",
         "placeholder": "Select group", 

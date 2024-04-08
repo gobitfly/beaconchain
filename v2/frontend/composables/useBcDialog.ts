@@ -25,7 +25,6 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
       }
       dialogRef.value.options.props.dismissableMask = true
       dialogRef.value.options.props.modal = true
-      dialogRef.value.options.props.closable = false
       dialogRef.value.options.props.draggable = false
       dialogRef.value.options.props.position = position.value
     }

@@ -1,5 +1,6 @@
 import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
+import type { AgeFormat } from '~/types/settings'
 
 const { epochToTs } = useNetwork()
 
@@ -90,13 +91,21 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
   return `${left}.${dec}`
 }
 
-export function formatTs (ts: number, locales: string): string {
+export function formatTs (ts: number, locales: string, includeTime?: boolean): string {
+  const timeOptions: Intl.DateTimeFormatOptions = includeTime
+    ? {
+        hour: 'numeric',
+        minute: 'numeric'
+      }
+    : {}
   const options: Intl.DateTimeFormatOptions = {
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
+    ...timeOptions
   }
-  return new Date(ts * 1000).toLocaleDateString(locales, options)
+  const date = new Date(ts * 1000)
+  return includeTime ? date.toLocaleString(locales, options) : date.toLocaleDateString(locales, options)
 }
 
 export function formatToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
@@ -107,22 +116,20 @@ export function formatToRelative (targetTimestamp?: number, baseTimestamp?: numb
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
-export function formatEpochToRelative (epoch: number, timestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
   const ts = epochToTs(epoch)
   if (ts === undefined) {
     return undefined
   }
-  return formatToRelative(ts * 1000, timestamp, style, locales)
+  if (format === 'relative') {
+    return formatToRelative(ts * 1000, timestamp, style, locales)
+  } else {
+    return formatTs(ts, locales, withTime)
+  }
 }
 
-export function formatEpochToDate (epoch: number, locales: string): string | undefined {
-  const ts = epochToTs(epoch)
-  if (ts === undefined) {
-    return undefined
-  }
-
-  const date = formatTs(ts, locales)
-  return `${date}`
+export function formatEpochToDate (epoch: number, locales: string): string | null |undefined {
+  return formatEpochToDateTime(epoch, undefined, 'absolute', undefined, locales, false)
 }
 
 export function formattedNumberToHtml (value?:string):string | undefined {

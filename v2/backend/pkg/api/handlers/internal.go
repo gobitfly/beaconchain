@@ -228,6 +228,45 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 	returnCreated(w, response)
 }
 
+func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+	var err error
+	vars := mux.Vars(r)
+	dashboardId := checkDashboardPrimaryId(&err, vars["dashboard_id"])
+	groupId := checkExistingGroupId(&err, vars["group_id"])
+	req := struct {
+		Name string `json:"name"`
+	}{}
+	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+		returnInternalServerError(w, bodyErr)
+		return
+	}
+	name := checkNameNotEmpty(&err, req.Name)
+	if err != nil {
+		returnBadRequest(w, err)
+		return
+	}
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !groupExists {
+		returnNotFound(w, errors.New("group not found"))
+		return
+	}
+	data, err := h.dai.UpdateValidatorDashboardGroup(dashboardId, uint64(groupId), name)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.ApiResponse{
+		Data: data,
+	}
+
+	returnOk(w, response)
+}
+
 func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
@@ -341,7 +380,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	var indices []uint64
-	var publicKeys [][]byte
+	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
 		indices, publicKeys = checkValidatorList(&err, validatorsParam)
 		if err != nil {
