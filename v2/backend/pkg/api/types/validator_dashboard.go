@@ -102,27 +102,23 @@ type VDBGroupRewardsData struct {
 	AttestationsHead   VDBGroupRewardsDetails `json:"attestations_head"`
 	Sync               VDBGroupRewardsDetails `json:"sync"`
 	Slashing           VDBGroupRewardsDetails `json:"slashing"`
+	Inactivity         VDBGroupRewardsDetails `json:"inactivity"`
 	Proposal           VDBGroupRewardsDetails `json:"proposal"`
-	ProposalElReward   decimal.Decimal        `json:"proposal_el_reward"`
+
+	ProposalElReward            decimal.Decimal `json:"proposal_el_reward"`
+	ProposalClAttIncReward      decimal.Decimal `json:"proposal_cl_att_inc_reward"`
+	ProposalClSyncIncReward     decimal.Decimal `json:"proposal_cl_sync_inc_reward"`
+	ProposalClSlashingIncReward decimal.Decimal `json:"proposal_cl_slashing_inc_reward"`
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
 type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
 
 // Duties Modal
-type VDBEpochDutiesItem struct {
-	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
-	Reward decimal.Decimal `json:"reward"`
-}
-type VDBEpochDutiesTableRow struct {
-	Validator uint64 `json:"validator"`
 
-	AttestationsSource VDBEpochDutiesItem `json:"attestations_source"`
-	AttestationsTarget VDBEpochDutiesItem `json:"attestations_target"`
-	AttestationsHead   VDBEpochDutiesItem `json:"attestations_head"`
-	Proposal           VDBEpochDutiesItem `json:"proposal"`
-	Sync               VDBEpochDutiesItem `json:"sync"`
-	Slashing           VDBEpochDutiesItem `json:"slashing"`
+type VDBEpochDutiesTableRow struct {
+	Validator uint64                 `json:"validator"`
+	Duties    ValidatorHistoryDuties `json:"duties"`
 }
 type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
@@ -144,8 +140,8 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 // ------------------------------------------------------------
 // Heatmap Tab
 type VDBHeatmapCell struct {
-	X     uint64  `json:"x" ts_doc:"Epoch"`
-	Y     uint64  `json:"y" ts_doc:"Group ID"`
+	X     uint64  `json:"x"`     // Epoch
+	Y     uint64  `json:"y"`     // Group ID
 	Value float64 `json:"value"` // Attestaton Rewards
 }
 type VDBHeatmap struct {

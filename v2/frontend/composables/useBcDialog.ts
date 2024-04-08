@@ -1,6 +1,7 @@
+import type { DialogProps } from 'primevue/dialog'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
-export function useBcDialog <T> () {
+export function useBcDialog <T> (dialogProps?: DialogProps) {
   const { width } = useWindowSize()
 
   const props = ref<T>()
@@ -17,11 +18,13 @@ export function useBcDialog <T> () {
   onBeforeMount(() => {
     if (dialogRef?.value?.options) {
       if (!dialogRef.value.options.props) {
-        dialogRef.value.options.props = {}
+        dialogRef.value.options.props = { }
+      }
+      if (dialogProps) {
+        dialogRef.value.options.props = { ...dialogRef.value.options.props, ...dialogProps }
       }
       dialogRef.value.options.props.dismissableMask = true
       dialogRef.value.options.props.modal = true
-      dialogRef.value.options.props.closable = false
       dialogRef.value.options.props.draggable = false
       dialogRef.value.options.props.position = position.value
     }

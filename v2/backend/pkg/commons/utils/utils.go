@@ -19,6 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -267,17 +269,23 @@ func StringToCursor[T t.CursorLike](str string) (T, error) {
 	if err != nil {
 		return cursor, fmt.Errorf("failed to unmarshal decoded base64 string: %w", err)
 	}
+	// set valid flag to true
+	reflect.ValueOf(&cursor).Elem().FieldByName("Valid").SetBool(true)
 
 	return cursor, nil
 }
 
-func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortOrder) (*t.Paging, error) {
+func GetPagingFromData[T t.CursorLike](data []interface{}, usedCursor T, direction enums.SortOrder, hasMoreData bool) (*t.Paging, error) {
+	if !hasMoreData && !usedCursor.IsValid() {
+		return nil, nil
+	}
 	li := len(data) - 1
 	if li < 0 {
-		return nil, fmt.Errorf("cant generate paging for slice with less than 2 items")
+		return nil, fmt.Errorf("cant generate paging for slice with less than 1 item")
 	}
 
 	var cursor T
+	var paging t.Paging
 	fields := reflect.Indirect(reflect.ValueOf(cursor)).Type()
 	columns := make([]string, 0)
 
@@ -289,35 +297,50 @@ func GetPagingFromData[T t.CursorLike](data []interface{}, direction enums.SortO
 		}
 		columns = append(columns, n)
 	}
+	isSameDirection := usedCursor.GetDirection() == direction
+	haveCursor := usedCursor.IsValid()
+	// NEXT CURSOR : required if we:
+	// 1. have more data and no cursor
+	// 2. or have more data and a cursor and said cursor is in the same direction
+	// 3. or have a cursor and it is in the opposite direction
+	if (hasMoreData && (!haveCursor || haveCursor && isSameDirection)) || (haveCursor && !isSameDirection) {
+		// set cursor direction
+		reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction))
 
-	// generate next cursor
-	for _, c := range columns {
-		// extract value from data interface. think of it as v := data[li].Column
-		v := reflect.ValueOf(data[li]).FieldByName(c).Int()
-		// store value in target. think of it as cursor.Column = v
-		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+		// generate next cursor
+		for _, c := range columns {
+			// extract value from data interface. think of it as v := data[li].Column
+			v := reflect.ValueOf(data[li]).FieldByName(c).Int()
+			// store value in target. think of it as cursor.Column = v
+			reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+		}
+
+		next_cursor, err := CursorToString[T](cursor)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate next_cursor: %w", err)
+		}
+		paging.NextCursor = next_cursor
+	}
+	// PREV CURSOR : required if we:
+	// 1. have a cursor and it is in the same direction
+	// 2. or have more data and a cursor and said cursor is in the opposite direction
+	if (haveCursor && isSameDirection) || (hasMoreData && haveCursor && !isSameDirection) {
+		// flip direction of prev cursor
+		reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction.Invert()))
+
+		// generate prev cursor
+		for _, c := range columns {
+			v := reflect.ValueOf(data[0]).FieldByName(c).Int()
+			reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
+		}
+		prev_cursor, err := CursorToString[T](cursor)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate prev_cursor: %w", err)
+		}
+		paging.PrevCursor = prev_cursor
 	}
 
-	next_cursor, err := CursorToString[T](cursor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate next_cursor: %w", err)
-	}
-
-	// generate prev cursor
-	for _, c := range columns {
-		v := reflect.ValueOf(data[0]).FieldByName(c).Int()
-		reflect.ValueOf(&cursor).Elem().FieldByName(c).SetInt(v)
-	}
-
-	prev_cursor, err := CursorToString[T](cursor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate prev_cursor: %w", err)
-	}
-
-	return &t.Paging{
-		NextCursor: next_cursor,
-		PrevCursor: prev_cursor,
-	}, nil
+	return &paging, nil
 }
 
 func GetEpochOffsetGenesis() uint64 {
@@ -326,4 +349,12 @@ func GetEpochOffsetGenesis() uint64 {
 	genesisTs := Config.Chain.GenesisTimestamp
 	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
 	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+}
+
+func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error) {
+	if !IsValidWithdrawalCredentialsAddress(hexutil.Encode(withCred)) {
+		return nil, fmt.Errorf("invalid withdrawal credentials for address: %s", hexutil.Encode(withCred))
+	}
+	addr := common.BytesToAddress(withCred[12:])
+	return &addr, nil
 }
