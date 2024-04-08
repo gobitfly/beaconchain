@@ -36,7 +36,7 @@ const key = computed<DashboardKey>(() => {
 })
 
 const moreButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 475) {
+  if (width.value < 525) {
     return [
       {
         label: '',
@@ -61,7 +61,7 @@ const moreButtons = computed<MenuBarEntry[] | undefined>(() => {
 })
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 760) {
+  if (width.value < 850) {
     return [
       {
         label: 'Manage',
@@ -271,10 +271,17 @@ onMounted(() => {
     display: flex;
     gap: var(--padding-large);
 
+    max-width: 900px;
+    @media (max-width: 1260px) {
+      max-width: calc(100% - (var(--padding)*3) - var(--padding-large) - 330px);
+    }
+    @media (max-width: 849px) {
+      max-width: calc(100% - (var(--padding)*2) - var(--padding-large) - 110px);
+    }
+
     .name {
       margin-top: 0;
-      overflow: hidden;
-      text-overflow: ellipsis; // TODO: Fix ellipsis handling
+      @include utils.truncate-text;
     }
 
     .button-container{
