@@ -16,6 +16,9 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   }
 
   async function getDetails () {
+    if (data.value[getKey()]) {
+      return data.value[getKey()]
+    }
     const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS, undefined, { dashboardKey, groupId, epoch })
     data.value = { ...data.value, [getKey()]: res.data }
     return res.data

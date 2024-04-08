@@ -32,6 +32,10 @@
   white-space: nowrap;
 }
 
+.text-disabled{
+  color: var(--text-color-disabled);
+}
+
 .positive {
   color: var(--positive-color);
 }
@@ -39,6 +43,7 @@
 .negative {
   color: var(--negative-color);
 }
+
 .comma {
   &:before {
     content: ",";
@@ -58,4 +63,10 @@
   &:after {
     content: ")";
   }
+}
+
+@mixin set-all-width($width) {
+  width: $width;
+  max-width: $width;
+  min-width: $width;
 }

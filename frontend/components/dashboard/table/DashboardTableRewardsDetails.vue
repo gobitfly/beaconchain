@@ -24,15 +24,15 @@ const data = computed(() => {
   const proposer = [
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_att'),
-      value: details.value.proposal_el_reward
+      value: details.value.proposal_cl_att_inc_reward
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_sync'),
-      value: details.value.proposal_el_reward
+      value: details.value.proposal_cl_sync_inc_reward
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_slash'),
-      value: details.value.proposal_el_reward
+      value: details.value.proposal_cl_slashing_inc_reward
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_el'),
@@ -40,7 +40,7 @@ const data = computed(() => {
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_total'),
-      value: details.value.proposal_el_reward
+      value: details.value.proposal.income
     }
   ]
 
@@ -80,13 +80,13 @@ const data = computed(() => {
     {
       icon: faSnooze,
       label: $t('dashboard.validator.rewards.inactivity'),
-      value: details.value.attestations_head // TODO: replace with inactivity once we get it
+      value: details.value.inactivity
     },
     {
       icon: faSigma,
       label: $t('dashboard.validator.rewards.total'),
       value: {
-        income: totalElCl(props.row.reward)
+        income: totalElCl(props.row.reward)?.toString() || '0'
       } as Partial<VDBGroupRewardsDetails>,
       isTotal: true
     }
@@ -146,13 +146,16 @@ const openDuties = () => {
               :render-text-as-html="true"
               tooltip-class="text-align-left"
             >
+              <div v-if="item.isTotal">
+                <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
+              </div>
               <DashboardTableEfficiency
-                v-if="item.value.status_count"
+                v-else-if="item.value.status_count"
                 :success="item.value.status_count.success"
                 :failed="item.value.status_count.failed"
               />
-              <div v-if="item.isTotal">
-                <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
+              <div v-else class="text-disabled">
+                0 / 0
               </div>
             </BcTooltip>
           </div>
@@ -161,17 +164,18 @@ const openDuties = () => {
               v-for="item in data?.rewards"
               :key="item.label"
               :value="item.value.income"
-              :use-colors="true"
-              :options="{ addPlus: true }"
+              :use-colors="item.value.income !== '0'"
+              :class="{'text-disabled': item.value.income === '0'}"
+              :options="{ addPlus: true, fixedDecimalCount: 5 }"
             />
           </div>
         </div>
         <div class="proposer-group">
-          <div v-for="item in data?.proposer" :key="item.label" class="row">
+          <div v-for="item in data?.proposer" :key="item.label" class="row" :class="{'text-disabled': item.value === '0'}">
             <div class="label">
               {{ item.label }}
             </div>
-            <BcFormatValue :value="item.value" :use-colors="true" :options="{ addPlus: true }" />
+            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="{ addPlus: true, fixedDecimalCount: 5 }" />
           </div>
         </div>
       </div>

@@ -258,21 +258,18 @@ const findNextEpochDuties = (epoch: number) => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/utils.scss";
 :deep(.rewards-table) {
   --col-width: 154px;
 
   .epoch,
   .age {
-    width: 80px;
-    max-width: 80px;
-    min-width: 80px;
+    @include utils.set-all-width(80px);
   }
 
   .group_id,
   .reward {
-    width: 120px;
-    max-width: 120px;
-    min-width: 120px;
+    @include utils.set-all-width(120px);
   }
 
   .time-passed {
@@ -282,9 +279,7 @@ const findNextEpochDuties = (epoch: number) => {
   tr:not(.p-datatable-row-expansion) {
     @media (max-width: 1300px) {
       .duty {
-        width: 300px;
-        max-width: 300px;
-        min-width: 300px;
+      @include utils.set-all-width(300px);
       }
     }
   }
