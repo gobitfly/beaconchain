@@ -60,3 +60,12 @@ type CLDepositsCursor struct {
 	Slot      int64
 	SlotIndex int64
 }
+
+type BlocksCursor struct {
+	GenericCursor
+	Validator int64
+	Group     int64
+	Slot      int64 // basically the same as Block, Epoch, Age
+	Status    int64
+	Reward    int64
+}
