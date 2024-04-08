@@ -115,19 +115,10 @@ type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupR
 type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
 
 // Duties Modal
-type VDBEpochDutiesItem struct {
-	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
-	Reward decimal.Decimal `json:"reward"`
-}
-type VDBEpochDutiesTableRow struct {
-	Validator uint64 `json:"validator"`
 
-	AttestationsSource VDBEpochDutiesItem `json:"attestations_source"`
-	AttestationsTarget VDBEpochDutiesItem `json:"attestations_target"`
-	AttestationsHead   VDBEpochDutiesItem `json:"attestations_head"`
-	Proposal           VDBEpochDutiesItem `json:"proposal"`
-	Sync               VDBEpochDutiesItem `json:"sync"`
-	Slashing           VDBEpochDutiesItem `json:"slashing"`
+type VDBEpochDutiesTableRow struct {
+	Validator uint64                 `json:"validator"`
+	Duties    ValidatorHistoryDuties `json:"duties"`
 }
 type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
@@ -149,8 +140,8 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 // ------------------------------------------------------------
 // Heatmap Tab
 type VDBHeatmapCell struct {
-	X     uint64  `json:"x" ts_doc:"Epoch"`
-	Y     uint64  `json:"y" ts_doc:"Group ID"`
+	X     uint64  `json:"x"`     // Epoch
+	Y     uint64  `json:"y"`     // Group ID
 	Value float64 `json:"value"` // Attestaton Rewards
 }
 type VDBHeatmap struct {

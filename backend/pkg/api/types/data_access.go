@@ -24,7 +24,7 @@ type VDBId struct {
 }
 
 type VDBValidator struct {
-	Index uint64 `db:"validator_index"`
+	Index uint64 `db:"validatorindex"`
 }
 
 type DashboardInfo struct {
@@ -33,13 +33,30 @@ type DashboardInfo struct {
 }
 
 type CursorLike interface {
-	isCursor() bool
+	IsCursor() bool
+	IsValid() bool
+	GetDirection() enums.SortOrder
 }
 
 type GenericCursor struct {
 	Direction enums.SortOrder `json:"d"`
+	Valid     bool            `json:"-"`
 }
 
-func (b GenericCursor) isCursor() bool {
+func (c GenericCursor) IsCursor() bool {
 	return true
+}
+
+func (c GenericCursor) IsValid() bool {
+	return c.Valid
+}
+
+func (c GenericCursor) GetDirection() enums.SortOrder {
+	return c.Direction
+}
+
+type CLDepositsCursor struct {
+	GenericCursor
+	Slot      int64
+	SlotIndex int64
 }
