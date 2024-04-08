@@ -57,52 +57,6 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
 ) PARTITION BY range (epoch);
 
 
-CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
-    validator_index int NOT NULL,
-    epoch_start int NOT NULL, -- incl
-    epoch_end int NOT NULL, -- excl
-    attestations_source_reward int ,
-    attestations_target_reward int,
-    attestations_head_reward int,
-    attestations_inactivity_reward int,
-    attestations_inclusion_reward int,
-    attestations_reward int,
-    attestations_ideal_source_reward int,
-    attestations_ideal_target_reward int,
-    attestations_ideal_head_reward int,
-    attestations_ideal_inactivity_reward int,
-    attestations_ideal_inclusion_reward int,
-    attestations_ideal_reward int,
-    blocks_scheduled smallint,
-    blocks_proposed smallint,
-    blocks_cl_reward BIGINT, -- gwei
-    blocks_el_reward NUMERIC, -- wei
-    sync_scheduled smallint,
-    sync_executed smallint,
-    sync_rewards BIGINT,
-    slashed BOOLEAN,
-    balance_start BIGINT,
-    balance_end BIGINT,
-    deposits_count smallint,
-    deposits_amount BIGINT,
-    withdrawals_count smallint,
-    withdrawals_amount BIGINT,
-    inclusion_delay_sum int,
-    sync_chance double precision, 
-    block_chance double precision, 
-    attestations_scheduled smallint,
-    attestations_executed smallint,
-    attestation_head_executed smallint,
-    attestation_source_executed smallint,
-    attestation_target_executed smallint,
-    optimal_inclusion_delay_sum int,
-    slashed_by int,
-    slashed_violation smallint, -- 0: attestation, 1: block
-    slasher_reward BIGINT, -- gwei
-    last_executed_duty_epoch int,
-    primary key (validator_index)
-);
-
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     validator_index int NOT NULL,
     epoch_start int NOT NULL, -- incl
@@ -196,6 +150,53 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
     last_executed_duty_epoch int,
     primary key (day, validator_index)
 ) PARTITION BY range(day);
+
+
+CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
+    validator_index int NOT NULL,
+    epoch_start int NOT NULL, -- incl
+    epoch_end int NOT NULL, -- excl
+    attestations_source_reward int ,
+    attestations_target_reward int,
+    attestations_head_reward int,
+    attestations_inactivity_reward int,
+    attestations_inclusion_reward int,
+    attestations_reward int,
+    attestations_ideal_source_reward int,
+    attestations_ideal_target_reward int,
+    attestations_ideal_head_reward int,
+    attestations_ideal_inactivity_reward int,
+    attestations_ideal_inclusion_reward int,
+    attestations_ideal_reward int,
+    blocks_scheduled smallint,
+    blocks_proposed smallint,
+    blocks_cl_reward BIGINT, -- gwei
+    blocks_el_reward NUMERIC, -- wei
+    sync_scheduled smallint,
+    sync_executed smallint,
+    sync_rewards BIGINT,
+    slashed BOOLEAN,
+    balance_start BIGINT,
+    balance_end BIGINT,
+    deposits_count smallint,
+    deposits_amount BIGINT,
+    withdrawals_count smallint,
+    withdrawals_amount BIGINT,
+    inclusion_delay_sum int,
+    sync_chance double precision, 
+    block_chance double precision, 
+    attestations_scheduled smallint,
+    attestations_executed smallint,
+    attestation_head_executed smallint,
+    attestation_source_executed smallint,
+    attestation_target_executed smallint,
+    optimal_inclusion_delay_sum int,
+    slashed_by int,
+    slashed_violation smallint, -- 0: attestation, 1: block
+    slasher_reward BIGINT, -- gwei
+    last_executed_duty_epoch int,
+    primary key (validator_index)
+);
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_weekly (
     validator_index int NOT NULL,

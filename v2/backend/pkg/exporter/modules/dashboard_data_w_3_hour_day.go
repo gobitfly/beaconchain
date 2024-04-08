@@ -86,7 +86,7 @@ func (d *hourToDayAggregator) rolling24hAggregate() error {
 	return d.rollingAggregator.Aggregate(1, "validator_dashboard_data_rolling_daily")
 }
 
-func (d *hourToDayAggregator) getDayAggregateBounds(epoch uint64) (uint64, uint64) {
+func getDayAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
 	epoch += offset                                                             // offset to utc
 	startOfPartition := epoch / GetDayAggregateWidth() * GetDayAggregateWidth() // inclusive
@@ -113,10 +113,10 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 		return errors.Wrap(err, "failed to get latest hourly epoch")
 	}
 
-	_, currentEndBound := d.getDayAggregateBounds(latestExportedHour.EpochStart)
+	_, currentEndBound := getDayAggregateBounds(latestExportedHour.EpochStart)
 
 	for epoch := latestExportedDay.EpochStart; epoch <= currentEndBound; epoch += GetDayAggregateWidth() {
-		boundsStart, boundsEnd := d.getDayAggregateBounds(epoch)
+		boundsStart, boundsEnd := getDayAggregateBounds(epoch)
 		if latestExportedDay.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last day entry since it is complete")
 			continue
@@ -370,6 +370,10 @@ func dayToDDMMYY(day time.Time) string {
 
 type DayRollingAggregatorImpl struct {
 	log ModuleLog
+}
+
+func (d *DayRollingAggregatorImpl) getBootstrapBounds(epoch uint64) (uint64, uint64) {
+	return getHourAggregateBounds(epoch)
 }
 
 func (d *DayRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {

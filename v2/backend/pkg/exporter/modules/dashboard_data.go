@@ -92,7 +92,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 46
+		//d.headEpochQueue <- 8118
 		d.processHeadQueue()
 	}()
 
@@ -513,7 +513,7 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get last exported epoch")
 	}
-	currentStartBound, _ := d.epochToHour.getHourAggregateBounds(currentExportedEpoch)
+	currentStartBound, _ := getHourAggregateBounds(currentExportedEpoch)
 
 	// Performance improvement for backfilling, no need to aggregate day after each epoch, we can update once per hour
 	if workingOnHead || currentStartBound != lastExportedHour {
