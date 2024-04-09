@@ -6,6 +6,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
+import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -154,8 +155,10 @@ const findNextEpochDuties = (epoch: number) => {
               field="age"
               body-class="age"
               header-class="age"
-              :header="$t('common.age')"
             >
+              <template #header>
+                <BcTableAgeHeader />
+              </template>
               <template #body="slotProps">
                 <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
               </template>
@@ -262,8 +265,7 @@ const findNextEpochDuties = (epoch: number) => {
 :deep(.rewards-table) {
   --col-width: 154px;
 
-  .epoch,
-  .age {
+  .epoch {
     @include utils.set-all-width(80px);
   }
 
