@@ -839,6 +839,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		}
 	}
 
+	// no data found (searched for something that does not exist)
+	if len(data) == 0 {
+		return nil, &paging, nil
+	}
+
 	// Sort the result
 	isort.Slice(data, func(i, j int) bool {
 		switch sort.Column {
@@ -866,31 +871,36 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return false
 	})
 
-	// reverse data if direction cursor is opposite of sort direction
-	if currentCursor.IsValid() && currentDirection != currentCursor.Direction {
-		slices.Reverse(data)
-	}
-
 	// Find the index for the cursor and limit the data
 	var cursorIndex uint64
 	if currentCursor.IsValid() {
 		for idx, row := range data {
 			if row.Index == currentCursor.Index {
-				cursorIndex = uint64(idx + 1)
+				cursorIndex = uint64(idx)
 				break
 			}
 		}
 	}
-	limitCutoff := utilMath.MinU64(cursorIndex+limit+1, uint64(len(data)))
-	result := data[cursorIndex:limitCutoff]
 
-	cursorData := make([]t.ValidatorsCursor, len(result))
-	for idx, row := range result {
-		cursorData[idx] = t.ValidatorsCursor{Index: row.Index}
+	doReverse := currentCursor.IsValid() && currentDirection != currentCursor.Direction
+	var result []t.VDBManageValidatorsTableRow
+	if doReverse {
+		// opposite direction
+		var limitCutoff uint64
+		if cursorIndex > limit+1 {
+			limitCutoff = cursorIndex - limit - 1
+		}
+		result = data[limitCutoff:cursorIndex]
+	} else {
+		if currentCursor.IsValid() {
+			cursorIndex++
+		}
+		limitCutoff := utilMath.MinU64(cursorIndex+limit+1, uint64(len(data)))
+		result = data[cursorIndex:limitCutoff]
 	}
 
 	// flag if above limit
-	moreDataFlag := len(cursorData) > int(limit)
+	moreDataFlag := len(result) > int(limit)
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// no paging required
 		return result, &paging, nil
@@ -898,17 +908,14 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 
 	// remove the last entry from data as it is only required for the check
 	if moreDataFlag {
-		result = result[:len(result)-1]
-		cursorData = cursorData[:len(cursorData)-1]
+		if doReverse {
+			result = result[1:]
+		} else {
+			result = result[:len(result)-1]
+		}
 	}
 
-	// flip it back if flipped
-	if currentCursor.IsValid() && currentDirection != currentCursor.Direction {
-		slices.Reverse(result)
-		slices.Reverse(cursorData)
-	}
-
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, currentDirection, moreDataFlag)
+	p, err := utils.GetPagingFromData(result, currentCursor, currentDirection, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
