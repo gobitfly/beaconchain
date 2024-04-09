@@ -42,11 +42,13 @@ const groupName = computed(() => {
   return group?.name || `${props.groupId}`
 })
 
+const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
+
 </script>
 <template>
   <div class="validator_column">
     <div class="validators">
-      <template v-for="v in props.validators" :key="v">
+      <template v-for="v in cappedValidators" :key="v">
         <NuxtLink :to="`/validator/${v}`" target="_blank" class="link validator_link" :no-prefetch="true">
           {{ v }}
         </NuxtLink>
