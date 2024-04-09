@@ -5,6 +5,11 @@ export type DashboardKey = string
 
 export type DashboardType = 'validator' | 'account'
 
+export enum COOKIE_DASHBOARD_ID{
+  VALIDATOR = -2,
+  ACCOUNT = -3,
+}
+
 // TODO: once the search PR is finished check if we can get these from somewhere else
 export type ValidatorDashboardNetwork = 'ethereum' | 'gnosis'
 

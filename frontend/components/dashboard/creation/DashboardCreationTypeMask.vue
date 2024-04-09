@@ -33,7 +33,7 @@ const continueDisabled = computed(() => {
       </div>
       <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
       <div class="row-container">
-        <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
+        <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
         <Button class="button" :disabled="continueDisabled" @click="emit('next')">
           {{ $t('navigation.continue') }}
         </Button>

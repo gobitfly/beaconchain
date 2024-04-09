@@ -28,7 +28,7 @@ function show () {
 
   state.value = 'type'
   type.value = ''
-  name.value = ''
+  name.value = isLoggedIn.value ? '' : 'cookie'
   network.value = undefined
 }
 

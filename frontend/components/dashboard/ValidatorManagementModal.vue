@@ -186,9 +186,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const MaxValidatorsPerDashboard = 1000
+const maxValidatorsPerDashboard = computed(() => isLoggedIn.value ? 1000 : 20)
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxValidatorsPerDashboard)
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxValidatorsPerDashboard.value)
 
 </script>
 
@@ -213,7 +213,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: replace input once Searchbar is finished -->
           <InputText v-model="selectedValidator" class="search-input" placeholder="Placeholder input (will be replaced once the searchbar is finished)" />
-          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator" @click="addValidator">
+          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator || premiumLimit" @click="addValidator">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
           <!-- end of temp -->
@@ -334,9 +334,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     </BcTableControl>
     <template #footer>
       <div class="footer">
-        <div v-if="MaxValidatorsPerDashboard" class="left">
+        <div v-if="maxValidatorsPerDashboard" class="left">
           <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="MaxValidatorsPerDashboard" default="0" /></span>
+            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />

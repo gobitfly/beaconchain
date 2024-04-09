@@ -3,7 +3,7 @@ import { warn } from 'vue'
 import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
-import type { DashboardType, CookieDashboard, ValidatorDashboardNetwork } from '~/types/dashboard'
+import { type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -44,7 +44,7 @@ export function useUserDashboardStore () {
 
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
-      const cd:CookieDashboard = { id: 0, name, hash: dashboardKey ?? '' }
+      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name, hash: dashboardKey ?? '' }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [cd]
@@ -69,7 +69,7 @@ export function useUserDashboardStore () {
   async function createAccountDashboard (name: string, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     if (!isLoggedIn.value) {
       // Create local account dashboard
-      const cd:CookieDashboard = { id: 0, name, hash: dashboardKey ?? '' }
+      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.ACCOUNT, name: 'cookie', hash: dashboardKey ?? '' }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [cd]
@@ -94,13 +94,13 @@ export function useUserDashboardStore () {
   // Update the hash (=hashed list of id's) of a specific local dashboard
   function updateHash (type: DashboardType, hash: string) {
     if (type === 'validator') {
-      const cd:CookieDashboard = { id: 0, name: 'default', ...dashboards.value?.validator_dashboards?.[0], hash }
+      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: 'default', ...dashboards.value?.validator_dashboards?.[0], hash }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [cd]
       }
     } else {
-      const cd:CookieDashboard = { id: 0, name: 'default', ...dashboards.value?.account_dashboards?.[0], hash }
+      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.ACCOUNT, name: 'default', ...dashboards.value?.account_dashboards?.[0], hash }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [cd]
