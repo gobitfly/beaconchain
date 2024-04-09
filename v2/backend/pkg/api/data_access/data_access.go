@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	isort "sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	utilMath "github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/shopspring/decimal"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
@@ -53,7 +55,7 @@ type DataAccessor interface {
 	GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
 	AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error)
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
-	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
+	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
 
 	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error)
 	UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error)
@@ -337,11 +339,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 	}
 
 	// Create a map to remove potential duplicates
-	validatorResultMap := make(map[t.VDBValidator]bool)
-	for _, v := range validators {
-		validatorResultMap[v] = true
-	}
-
+	validatorResultMap := utils.SliceToMap(validators)
 	result := maps.Keys(validatorResultMap)
 
 	return result, nil
@@ -379,7 +377,6 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 
 func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
-	const defaultGrpName = "default"
 
 	tx, err := d.alloyWriter.Beginx()
 	if err != nil {
@@ -401,7 +398,7 @@ func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string,
 	_, err = tx.Exec(`
 		INSERT INTO users_val_dashboards_groups (dashboard_id, name)
 			VALUES ($1, $2)
-	`, result.Id, defaultGrpName)
+	`, result.Id, t.DefaultGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -686,24 +683,45 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 	return nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// TODO: implement sorting, filtering & paging
+func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+	// Convert direction from bool to enum
+	currentDirection := enums.SortOrderColumns.Asc
+	if sort.Desc {
+		currentDirection = enums.SortOrderColumns.Desc
+	}
 
-	validatorGroupMap := make(map[uint64]uint64)
+	// Initialize the cursor
+	var currentCursor t.ValidatorsCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.ValidatorsCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorsCursor: %w", err)
+		}
+	}
+
+	type ValidatorGroupInfo struct {
+		GroupId   uint64
+		GroupName string
+	}
+	validatorGroupMap := make(map[uint64]ValidatorGroupInfo)
 	var validators []uint64
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
 		queryResult := []struct {
 			ValidatorIndex uint64 `db:"validator_index"`
 			GroupId        uint64 `db:"group_id"`
+			GroupName      string `db:"group_name"`
 		}{}
 
 		validatorsQuery := `
 		SELECT 
-			validator_index,
-			group_id
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1
+			v.validator_index,
+			v.group_id,
+			g.name AS group_name
+		FROM users_val_dashboards_validators v
+		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}
 
@@ -717,20 +735,27 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		}
 
 		for _, res := range queryResult {
-			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validatorGroupMap[res.ValidatorIndex] = ValidatorGroupInfo{
+				GroupId:   res.GroupId,
+				GroupName: res.GroupName,
+			}
 			validators = append(validators, res.ValidatorIndex)
 		}
 	} else {
-		// In case a list of validators is provided, set the group to default 0
+		// In case a list of validators is provided, set the group to the default
 		for _, validator := range dashboardId.Validators {
-			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validatorGroupMap[validator.Index] = ValidatorGroupInfo{
+				GroupId:   t.DefaultGroupId,
+				GroupName: t.DefaultGroupName,
+			}
 			validators = append(validators, validator.Index)
 		}
 	}
+	var paging t.Paging
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, nil, nil
+		return nil, &paging, nil
 	}
 
 	// Get the current validator state
@@ -754,16 +779,18 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
 	}
 
-	// Fill the result
-	result := make([]t.VDBManageValidatorsTableRow, len(validators))
-	for idx, validator := range validators {
+	// Fill the data
+	data := []t.VDBManageValidatorsTableRow{}
+	for _, validator := range validators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 
-		result[idx].Index = validator
-		result[idx].PublicKey = t.PubKey(hexutil.Encode(metadata.PublicKey))
-		result[idx].GroupId = validatorGroupMap[validator]
-		result[idx].Balance = utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
-		result[idx].WithdrawalCredential = t.Hash(hexutil.Encode(metadata.WithdrawalCredentials))
+		row := t.VDBManageValidatorsTableRow{
+			Index:                validator,
+			PublicKey:            t.PubKey(hexutil.Encode(metadata.PublicKey)),
+			GroupId:              validatorGroupMap[validator].GroupId,
+			Balance:              utils.GWeiToWei(big.NewInt(int64(metadata.Balance))),
+			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
+		}
 
 		status := ""
 		switch constypes.ValidatorStatus(metadata.Status) {
@@ -772,7 +799,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		case constypes.PendingQueued:
 			status = "pending"
 			if metadata.Queues.ActivationIndex.Valid {
-				result[idx].QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+				row.QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
 			}
 		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
 			var lastAttestionSlot uint32
@@ -793,14 +820,107 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 				status = "exited"
 			}
 		}
-		result[idx].Status = status
+		row.Status = status
+
+		if search == "" {
+			data = append(data, row)
+		} else {
+			index, err := strconv.ParseUint(search, 10, 64)
+			indexSearch := err == nil && index == row.Index
+
+			pubKey := strings.ToLower(strings.TrimPrefix(search, "0x"))
+			pubkeySearch := pubKey == strings.TrimPrefix(string(row.PublicKey), "0x")
+
+			groupNameSearch := search == validatorGroupMap[validator].GroupName
+
+			if indexSearch || pubkeySearch || groupNameSearch {
+				data = append(data, row)
+			}
+		}
 	}
 
-	paging := &t.Paging{
-		TotalCount: uint64(len(result)),
+	// no data found (searched for something that does not exist)
+	if len(data) == 0 {
+		return nil, &paging, nil
 	}
 
-	return result, paging, nil
+	// Sort the result
+	isort.Slice(data, func(i, j int) bool {
+		switch sort.Column {
+		case enums.VDBManageValidatorsIndex:
+			if data[i].Index != data[j].Index {
+				return (data[i].Index < data[j].Index) != sort.Desc
+			}
+		case enums.VDBManageValidatorsPublicKey:
+			if data[i].PublicKey != data[j].PublicKey {
+				return (data[i].PublicKey < data[j].PublicKey) != sort.Desc
+			}
+		case enums.VDBManageValidatorsBalance:
+			if data[i].Balance.Cmp(data[j].Balance) != 0 {
+				return (data[i].Balance.Cmp(data[j].Balance) < 0) != sort.Desc
+			}
+		case enums.VDBManageValidatorsStatus:
+			if data[i].Status != data[j].Status {
+				return (data[i].Status < data[j].Status) != sort.Desc
+			}
+		case enums.VDBManageValidatorsWithdrawalCredential:
+			if data[i].WithdrawalCredential != data[j].WithdrawalCredential {
+				return (data[i].WithdrawalCredential < data[j].WithdrawalCredential) != sort.Desc
+			}
+		}
+		return false
+	})
+
+	// Find the index for the cursor and limit the data
+	var cursorIndex uint64
+	if currentCursor.IsValid() {
+		for idx, row := range data {
+			if row.Index == currentCursor.Index {
+				cursorIndex = uint64(idx)
+				break
+			}
+		}
+	}
+
+	doReverse := currentCursor.IsValid() && currentDirection != currentCursor.Direction
+	var result []t.VDBManageValidatorsTableRow
+	if doReverse {
+		// opposite direction
+		var limitCutoff uint64
+		if cursorIndex > limit+1 {
+			limitCutoff = cursorIndex - limit - 1
+		}
+		result = data[limitCutoff:cursorIndex]
+	} else {
+		if currentCursor.IsValid() {
+			cursorIndex++
+		}
+		limitCutoff := utilMath.MinU64(cursorIndex+limit+1, uint64(len(data)))
+		result = data[cursorIndex:limitCutoff]
+	}
+
+	// flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// no paging required
+		return result, &paging, nil
+	}
+
+	// remove the last entry from data as it is only required for the check
+	if moreDataFlag {
+		if doReverse {
+			result = result[1:]
+		} else {
+			result = result[:len(result)-1]
+		}
+	}
+
+	p, err := utils.GetPagingFromData(result, currentCursor, currentDirection, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
@@ -1014,10 +1134,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 		return nil, err
 	}
 
-	validatorsMap := make(map[uint32]bool, len(validatorsArray))
-	for _, validatorIndex := range validatorsArray {
-		validatorsMap[validatorIndex] = true
-	}
+	validatorsMap := utils.SliceToMap(validatorsArray)
 
 	// Get min/max slot/epoch
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
