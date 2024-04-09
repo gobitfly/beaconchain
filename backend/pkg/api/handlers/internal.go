@@ -364,7 +364,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 		returnBadRequest(w, err)
 		return
 	}
-	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -380,7 +380,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 	var err error
 	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	var indices []uint64
-	var publicKeys [][]byte
+	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
 		indices, publicKeys = checkValidatorList(&err, validatorsParam)
 		if err != nil {

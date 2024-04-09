@@ -40,7 +40,7 @@ func (d *DummyService) GetValidatorDashboardInfoByPublicId(publicDashboardId t.V
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys [][]byte) ([]t.VDBValidator, error) {
+func (d *DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	r := []t.VDBValidator{}
 	err := commonFakeData(&r)
 	return r, err
@@ -94,7 +94,7 @@ func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimar
 	return r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	r := []t.VDBManageValidatorsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
