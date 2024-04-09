@@ -839,6 +839,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		}
 	}
 
+	// no data found (searched for something that does not exist)
+	if len(data) == 0 {
+		return nil, &paging, nil
+	}
+
 	// Sort the result
 	isort.Slice(data, func(i, j int) bool {
 		switch sort.Column {
