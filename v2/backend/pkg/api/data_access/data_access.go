@@ -866,7 +866,6 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return false
 	})
 
-
 	// Find the index for the cursor and limit the data
 	var cursorIndex uint64
 	if currentCursor.IsValid() {
@@ -894,7 +893,6 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		limitCutoff := utilMath.MinU64(cursorIndex+limit+1, uint64(len(data)))
 		result = data[cursorIndex:limitCutoff]
 	}
-
 
 	// flag if above limit
 	moreDataFlag := len(result) > int(limit)
