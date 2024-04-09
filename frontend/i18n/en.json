@@ -127,6 +127,21 @@
       }
     }
   },
+  "validator": {
+    "duty": {
+      "attestation_missed": "Attestation missed",
+      "attestation_included": "Attestation included",
+      "head": "Head",
+      "source": "Source",
+      "target": "Target",
+      "proposal_success": "You proposed a block",
+      "proposal_failed": "You missed a block",
+      "proposal_orphaned": "Your block was orphaned",
+      "slashing_success": "You slashed a validator",
+      "slashing_failed": "You got slashed",
+      "slashing_partial": "You slashed a validator and got slashed"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",

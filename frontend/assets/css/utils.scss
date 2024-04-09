@@ -35,6 +35,15 @@
 .negative{
   color: var(--negative-color);
 }
+
+.mixed {
+  color: var(--orange);
+}
+
+.orphaned {
+  color: var(--purple);
+}
+
 .comma{
   &:before{
     content: ',';
