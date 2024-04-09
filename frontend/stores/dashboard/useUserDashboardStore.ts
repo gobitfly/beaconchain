@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
-import type { DashboardType, ExtendedDashboard, ValidatorDashboardNetwork } from '~/types/dashboard'
+import { COOKIE_KEY } from '~/types/cookie'
+import type { DashboardType, CookieDashboard, ValidatorDashboardNetwork } from '~/types/dashboard'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -13,7 +14,7 @@ export function useUserDashboardStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userDashboardStore())
   const { isLoggedIn } = useUserStore()
-  const dashboardCookie = useCookie('user-dashboards')
+  const dashboardCookie = useCookie(COOKIE_KEY.USER_DASHBOARDS)
 
   const dashboards = computed(() => data.value)
 
@@ -37,19 +38,19 @@ export function useUserDashboardStore () {
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
 
-  async function createValidatorDashboard (name: string, network: ValidatorDashboardNetwork, dashboardKey?: string):Promise<ExtendedDashboard |undefined> {
+  async function createValidatorDashboard (name: string, network: ValidatorDashboardNetwork, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     // TODO: implement real mapping of network id's once backend is ready for it (will not be part of first release)
     warn(`we are currently ignoring the network ${network}`)
 
     if (!isLoggedIn.value) {
-      // Create public Validator dashboard
-      const db:ExtendedDashboard = { id: 0, name, hash: dashboardKey ?? '' }
+      // Create local Validator dashboard
+      const cd:CookieDashboard = { id: 0, name, hash: dashboardKey ?? '' }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [db]
+        validator_dashboards: [cd]
       }
       saveToCookie()
-      return db
+      return cd
     }
     // Create user specific Validator dashboard
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: '0' } })
@@ -65,16 +66,16 @@ export function useUserDashboardStore () {
     }
   }
 
-  async function createAccountDashboard (name: string, dashboardKey?: string):Promise<ExtendedDashboard |undefined> {
+  async function createAccountDashboard (name: string, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     if (!isLoggedIn.value) {
-      // Create public account dashboard
-      const db:ExtendedDashboard = { id: 0, name, hash: dashboardKey ?? '' }
+      // Create local account dashboard
+      const cd:CookieDashboard = { id: 0, name, hash: dashboardKey ?? '' }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
-        account_dashboards: [db]
+        account_dashboards: [cd]
       }
       saveToCookie()
-      return db
+      return cd
     }
     // Create user specific account dashboard
     const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { body: { name } })
@@ -90,19 +91,19 @@ export function useUserDashboardStore () {
     }
   }
 
-  // Update the hash (=hashed list of id's) of a specific public dashboard
+  // Update the hash (=hashed list of id's) of a specific local dashboard
   function updateHash (type: DashboardType, hash: string) {
     if (type === 'validator') {
-      const db:ExtendedDashboard = { id: 0, name: 'default', ...dashboards.value?.validator_dashboards?.[0], hash }
+      const cd:CookieDashboard = { id: 0, name: 'default', ...dashboards.value?.validator_dashboards?.[0], hash }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [db]
+        validator_dashboards: [cd]
       }
     } else {
-      const db:ExtendedDashboard = { id: 0, name: 'default', ...dashboards.value?.account_dashboards?.[0], hash }
+      const cd:CookieDashboard = { id: 0, name: 'default', ...dashboards.value?.account_dashboards?.[0], hash }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
-        account_dashboards: [db]
+        account_dashboards: [cd]
       }
     }
     saveToCookie()

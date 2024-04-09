@@ -9,7 +9,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
 import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
-import { type ExtendedDashboard } from '~/types/dashboard'
+import { type CookieDashboard } from '~/types/dashboard'
 
 const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
 
@@ -35,14 +35,14 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 }
 
 onMounted(() => {
-  if (!dashboardKey.value) {
+  if (dashboardKey.value === undefined) {
     // we don't have a key and no validator dashboard: show the create panel
     if (!dashboards.value?.validator_dashboards?.length) {
       showDashboardCreation('panel')
     } else {
       // if we have a validator dashboard but none selected: select the first
-      const ext = dashboards.value.validator_dashboards[0] as ExtendedDashboard
-      setDashboardKey(ext.hash ?? ext.id.toString())
+      const cd = dashboards.value.validator_dashboards[0] as CookieDashboard
+      setDashboardKey(cd.hash ?? cd.id.toString())
     }
   }
 })
@@ -50,9 +50,9 @@ onMounted(() => {
 watch(dashboardKey, (newKey, oldKey) => {
   if (!isLoggedIn.value) {
     // We update the key for our public dashboard
-    const ext = dashboards.value?.validator_dashboards?.[0] as ExtendedDashboard
+    const cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
     // If the old key does not match the dashboards key then it probabbly means we opened a different pub. dashboard as a link
-    if (ext && (!ext.hash || (ext.hash ?? '') === (oldKey ?? ''))) {
+    if (cd && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
     }
   }

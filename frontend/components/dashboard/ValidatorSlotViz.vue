@@ -4,12 +4,15 @@ import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotViz
 
 const { dashboardKey } = useDashboardKey()
 
-const { tick } = useInterval(12)
+const { tick, resetTick } = useInterval(12)
 
 const { slotViz, refreshSlotViz } = useValidatorSlotVizStore()
 await useAsyncData('validator_dashboard_slot_viz', () => refreshSlotViz(dashboardKey.value))
 
-watch(() => [dashboardKey.value, tick.value], () => {
+watch(() => [dashboardKey.value, tick.value], (newValue, oldValue) => {
+  if (oldValue && newValue[0] !== oldValue[0]) {
+    resetTick()
+  }
   refreshSlotViz(dashboardKey.value)
 }, { immediate: true })
 

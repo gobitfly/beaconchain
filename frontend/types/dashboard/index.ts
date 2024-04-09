@@ -18,15 +18,7 @@ export type DashboardKeyData = {
   removeEntities:(list:string[]) =>void,
 }
 
-export interface ExtendedDashboard extends Dashboard{
+// For not logged in Users we store the Dashboard in Cookies
+export interface CookieDashboard extends Dashboard{
   hash?: string;
 }
-
-/*
-export type ExtendedDashboard = {
-  id: number ;
-  name: string;
-  hash?: string
-}
-
-*/

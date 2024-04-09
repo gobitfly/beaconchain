@@ -3,7 +3,7 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { type InternalGetValidatorDashboardSlotVizResponse, type SlotVizEpoch } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
 
-useDashboardKeyProvider(undefined, '100')
+const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
 const { latestState, refreshLatestState } = useLatestStateStore()
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
@@ -15,7 +15,7 @@ await Promise.all([
     const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>('./mock/dashboard/slotViz.json')
     slotVizData.value = res.data
   }),
-  useAsyncData('validator_dashboard_overview', () => refreshOverview('100'))
+  useAsyncData('validator_dashboard_overview', () => refreshOverview(dashboardKey.value))
 ])
 
 onMounted(async () => {
@@ -52,9 +52,6 @@ onMounted(async () => {
       </TabPanel>
       <TabPanel header="Slot Viz">
         <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
-      </TabPanel>
-      <TabPanel header="Summary">
-        <PlaygroundDashboardValidatorSummary />
       </TabPanel>
       <TabPanel header="Manage Validators">
         <PlaygroundDashboardValidatorManageValidators />

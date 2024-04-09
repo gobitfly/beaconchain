@@ -1,27 +1,32 @@
 import { pullAll, union } from 'lodash-es'
 import { provide, warn } from 'vue'
+import { COOKIE_KEY } from '~/types/cookie'
 import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
 export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
   const dashboardKey = ref(mockKey)
-  const dashboardKeyCookie = useCookie(`${type}-dashboard-key`)
+  const dashboardKeyCookie = useCookie(type === 'account' ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY)
   const { isLoggedIn } = useUserStore()
 
   const setDashboardKey = (key: string) => {
+    if (!route.name) {
+      warn('route name missing', route)
+    }
     const newRoute = router.resolve({ name: route.name!, params: { id: key } })
     dashboardKey.value = key
     if (process.client) {
       // we only want to change the url in the browser and don't want to trigger a page refresh
       history.replaceState({}, '', newRoute.fullPath)
-    } else {
-      // if we get here on the server then we have no history
-      router.push(newRoute)
     }
+    dashboardKeyCookie.value = dashboardKey.value
   }
 
-  watch(() => route, (r) => {
-    if (!r.params.id) {
+  const initialCheck = () => {
+    if (mockKey) {
+      return
+    }
+    if (!route.params.id && dashboardKey.value !== undefined) {
       if (!dashboardKeyCookie.value) {
         return
       }
@@ -31,13 +36,13 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
       }
       return
     }
-    if (Array.isArray(r.params.id)) {
-      dashboardKey.value = toBase64Url(r.params.id.join(','))
+    if (Array.isArray(route.params.id)) {
+      setDashboardKey(toBase64Url(route.params.id.join(',')))
     } else {
-      dashboardKey.value = r.params.id
+      setDashboardKey(route.params.id)
     }
-    dashboardKeyCookie.value = dashboardKey.value
-  }, { immediate: true })
+  }
+  initialCheck()
 
   const isPublic = computed(() => {
     const id = parseInt(dashboardKey.value)
@@ -53,10 +58,8 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
   })
 
   const updateEntities = (list:string[]) => {
-    if (!route.name) {
-      warn('route name missing', route)
-    }
-    const key = toBase64Url(list.filter(s => !!s).join(','))
+    const filtered = list.filter(s => !!s).join(',')
+    const key = toBase64Url(filtered)
     setDashboardKey(key)
   }
 

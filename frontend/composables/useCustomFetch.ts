@@ -1,4 +1,5 @@
 import type { NitroFetchOptions } from 'nitropack'
+import { COOKIE_KEY } from '~/types/cookie'
 import type { LoginResponse } from '~/types/user'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
@@ -130,9 +131,9 @@ const mapping: Record<string, MappingData> = {
 }
 
 export function useCustomFetch () {
-  const refreshToken = useCookie('refreshToken')
+  const refreshToken = useCookie(COOKIE_KEY.REFRESH_TOKEN)
   // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
-  const accessToken = useCookie('accessToken')
+  const accessToken = useCookie(COOKIE_KEY.ACCESS_TOKEN)
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 

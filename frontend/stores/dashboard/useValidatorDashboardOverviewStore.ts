@@ -15,6 +15,7 @@ export function useValidatorDashboardOverviewStore () {
 
   async function refreshOverview (key: DashboardKey) {
     if (!key) {
+      data.value = undefined
       return
     }
     const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })

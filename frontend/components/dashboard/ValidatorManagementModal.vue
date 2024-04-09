@@ -29,7 +29,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
 const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
@@ -149,6 +149,8 @@ const loadData = async () => {
       data.value = result
       selected.value = []
     }
+  } else {
+    data.value = { paging: {}, data: [] }
   }
 }
 
@@ -187,8 +189,6 @@ const total = computed(() => addUpValues(overview.value?.validators))
 const MaxValidatorsPerDashboard = 1000
 
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxValidatorsPerDashboard)
-
-const groupsEnabled = computed(() => isLoggedIn.value && !isPublic.value)
 
 </script>
 

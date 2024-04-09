@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type Menubar from 'primevue/menubar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import { type ExtendedDashboard } from '~/types/dashboard'
+import { type CookieDashboard } from '~/types/dashboard'
 
 const { width } = useWindowSize()
 
@@ -64,12 +64,12 @@ const items = computed<MenuBarEntry[]>(() => {
     }
   }
   addToSortedItems(0, dashboards.value?.validator_dashboards.map((db) => {
-    const extended = db as ExtendedDashboard
-    return { label: extended.name || `${$t('dashboard.validator_dashboard')} ${extended.id}`, route: `/dashboard/${extended.hash || extended.id}` }
+    const cd = db as CookieDashboard
+    return { label: cd.name || `${$t('dashboard.validator_dashboard')} ${cd.id}`, route: `/dashboard/${cd.hash ?? cd.id}` }
   }))
   addToSortedItems(3, dashboards.value?.account_dashboards.map((db) => {
-    const extended = db as ExtendedDashboard
-    return { label: extended.name || `${$t('dashboard.account_dashboard')} ${extended.id}`, route: `/account/${extended.hash || extended.id}` }
+    const extended = db as CookieDashboard
+    return { label: extended.name || `${$t('dashboard.account_dashboard')} ${extended.id}`, route: `/account/${extended.hash ?? extended.id}` }
   }))
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 

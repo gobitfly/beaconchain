@@ -14,5 +14,9 @@ export function useInterval (seconds: number) {
     }
   })
 
-  return { tick }
+  const resetTick = () => {
+    tick.value = timestamp.value
+  }
+
+  return { tick, resetTick }
 }

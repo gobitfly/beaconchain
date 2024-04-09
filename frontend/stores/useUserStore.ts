@@ -24,7 +24,7 @@ export function useUserStore () {
 
   // TODO: Faking logged in User for now, if xUserId is set
   const user = computed(() => {
-    return xUserId.value ? { user_id: xUserId, user_name: `Test User [${xUserId}]` } : undefined
+    return xUserId.value ? { user_id: xUserId, user_name: `Test User [${xUserId.value}]` } : undefined
   })
 
   const isLoggedIn = computed(() => !!user.value)

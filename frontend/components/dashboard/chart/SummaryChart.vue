@@ -30,11 +30,11 @@ use([
 
 const { fetch } = useCustomFetch()
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const data = ref<ChartData<number> | undefined >()
 await useAsyncData('validator_overview', async () => {
-  if (dashboardKey.value === undefined) {
+  if (!dashboardKey.value) {
     data.value = undefined
     return
   }
@@ -77,11 +77,12 @@ const option = computed(() => {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
       let name = allGroups
-      if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
+      if (!groupsEnabled) {
+        name = $t('dashboard.validator.summary.chart.efficiency')
+      } else if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
         const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
-
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',

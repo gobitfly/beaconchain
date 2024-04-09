@@ -6,13 +6,11 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
-const { isLoggedIn } = useUserStore()
-const { isPublic } = useDashboardKey()
 
 const store = useValidatorDashboardSummaryStore()
 const { getSummary } = store
@@ -84,8 +82,6 @@ const getRowClass = (row: VDBSummaryTableRow) => {
     return 'total-row'
   }
 }
-
-const groupsEnabled = computed(() => isLoggedIn.value && !isPublic.value)
 
 </script>
 <template>
@@ -169,7 +165,7 @@ const groupsEnabled = computed(() => isLoggedIn.value && !isPublic.value)
               <template #body="slotProps">
                 <DashboardTableValidators
                   :validators="slotProps.data.validators"
-                  :group-id="slotProps.data.group_id"
+                  :group-id="groupsEnabled ? slotProps.data.group_id : undefined"
                   context="group"
                 />
               </template>
