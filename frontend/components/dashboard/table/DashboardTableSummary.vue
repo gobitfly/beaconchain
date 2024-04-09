@@ -6,6 +6,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { getGroupLabel } from '~/utils/dashbaord/group'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -53,14 +54,7 @@ const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefine
 })
 
 const groupNameLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
-    return `${$t('dashboard.validator.summary.total_group_name')}`
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (!group) {
-    return `${groupId}` // fallback if we could not match the group name
-  }
-  return `${group.name}`
+  return getGroupLabel($t, groupId, overview.value?.groups)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -189,22 +183,18 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/utils.scss";
 :deep(.summary_table) {
   --col-width: 216px;
 
   td:has(.validator_column) {
-    width: var(--col-width);
-    max-width: var(--col-width);
-    min-width: var(--col-width);
+    @include utils.set-all-width(var(--col-width));
   }
 
   td,
   th {
     &:not(.expander):not(:last-child) {
-      width: var(--col-width);
-      max-width: var(--col-width);
-      min-width: var(--col-width);
-
+      @include utils.set-all-width(var(--col-width));
     }
   }
 

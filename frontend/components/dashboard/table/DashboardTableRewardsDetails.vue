@@ -20,7 +20,6 @@ const data = computed(() => {
     return
   }
 
-  // TODO: check where to get the data, once the api structs have changed
   const proposer = [
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_att'),
@@ -90,7 +89,15 @@ const data = computed(() => {
       } as Partial<VDBGroupRewardsDetails>,
       isTotal: true
     }
-  ]
+  ].map((reward) => {
+    const hasNoReward = reward.isTotal ? reward.value.income === '0' : (!reward?.value?.status_count?.failed && !reward?.value?.status_count?.success)
+    const className = hasNoReward ? 'text-disabled' : ''
+    return {
+      ...reward,
+      hasNoReward,
+      className
+    }
+  })
   return {
     proposer,
     rewards
@@ -127,13 +134,13 @@ const openDuties = () => {
       <div class="rewards-container">
         <div class="rewards-group">
           <div class="col icon">
-            <div v-for="item in data?.rewards" :key="item.label" class="row">
+            <div v-for="item in data?.rewards" :key="item.label" class="row" :class="item.className">
               <component :is="item.svg" v-if="item.svg" />
               <FontAwesomeIcon v-if="item.icon" :icon="item.icon" />
             </div>
           </div>
           <div class="col label">
-            <div v-for="item in data?.rewards" :key="item.label" class="label">
+            <div v-for="item in data?.rewards" :key="item.label" class="label" :class="item.className">
               {{ item.label }}
             </div>
           </div>
@@ -146,13 +153,13 @@ const openDuties = () => {
               :render-text-as-html="true"
               tooltip-class="text-align-left"
             >
-              <div v-if="item.isTotal">
+              <div v-if="item.isTotal" :class="item.className">
                 <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
               </div>
               <DashboardTableEfficiency
-                v-else-if="item.value.status_count"
-                :success="item.value.status_count.success"
-                :failed="item.value.status_count.failed"
+                v-else-if="!item.hasNoReward"
+                :success="item.value?.status_count?.success!"
+                :failed="item.value?.status_count?.failed!"
               />
               <div v-else class="text-disabled">
                 0 / 0
@@ -165,7 +172,7 @@ const openDuties = () => {
               :key="item.label"
               :value="item.value.income"
               :use-colors="item.value.income !== '0'"
-              :class="{'text-disabled': item.value.income === '0'}"
+              :class="item.className"
               :options="{ addPlus: true, fixedDecimalCount: 5 }"
             />
           </div>

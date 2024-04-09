@@ -7,6 +7,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
+import { getGroupLabel } from '~/utils/dashbaord/group'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -51,16 +52,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  if (groupId === DAHSHBOARDS_ALL_GROUPS_ID) {
-    return `${$t('dashboard.validator.summary.total_group_name')}`
-  } else if (groupId === DAHSHBOARDS_NEXT_EPOCH_ID) {
-    return '-'
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (!group) {
-    return `${groupId}` // fallback if we could not match the group name
-  }
-  return `${group.name}`
+  return getGroupLabel($t, groupId, overview.value?.groups)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
