@@ -89,12 +89,12 @@ type SearchResponse struct {
 }
 
 type ValidatorHistoryEvent struct {
-	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed'"`
+	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed'" faker:"oneof: success, partial, failed"`
 	Income decimal.Decimal `json:"income"`
 }
 
 type ValidatorHistoryProposal struct {
-	Status                       string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
+	Status                       string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'" faker:"oneof: success, partial, failed, orphaned"`
 	ElIncome                     decimal.Decimal `json:"el_income"`
 	ClAttestationInclusionIncome decimal.Decimal `json:"cl_attestation_inclusion_income"`
 	ClSyncInclusionIncome        decimal.Decimal `json:"cl_sync_inclusion_income"`
