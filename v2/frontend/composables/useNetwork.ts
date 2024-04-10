@@ -16,5 +16,5 @@ export function useNetwork () {
     return 24 * 60 * 60 / (slotsPerEpoch * secondsPerSlot)
   }
 
-  return { epochToTs, epochsPerDay }
+  return { epochToTs, epochsPerDay, slotsPerEpoch }
 }
