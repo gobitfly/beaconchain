@@ -10,7 +10,7 @@ await useAsyncData('latest_state', () => refreshLatestState())
   <div class="header top">
     <div class="content">
       <div>Current Epoch: {{ latestState?.currentEpoch }}</div>
-      <BcSearchbarGeneral v-if="!props.isHomePage" location="header" />
+      <BcSearchbarGeneral v-if="!props.isHomePage" bar-style="discreet" />
       <NuxtLink to="/login">
         Login
       </NuxtLink>

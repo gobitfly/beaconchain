@@ -1,20 +1,10 @@
 <script setup lang="ts">
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/networks'
-const props = defineProps({ location: { type: String, required: true } })
 
-let searchbarStyle : SearchbarStyle
+defineProps<{ barStyle: 'gaudy' | 'discreet' }>()
 
-switch (props.location) {
-  case 'page' :
-    searchbarStyle = SearchbarStyle.Gaudy
-    break
-  case 'header' :
-    searchbarStyle = SearchbarStyle.Discreet
-    break
-}
-
-function redirectToRelevantPage (wanted : string, type : ResultType, chain : ChainIDs) {
+async function redirectToRelevantPage (wanted : string, type : ResultType, chain : ChainIDs) {
   let path : string
   let q = ''
   const networkPath = '/networks' + ChainInfo[chain].path
@@ -76,18 +66,18 @@ function redirectToRelevantPage (wanted : string, type : ResultType, chain : Cha
   }
 
   if (q !== '') {
-    navigateTo({ path, query: { q } })
+    await navigateTo({ path, query: { q } })
   } else {
-    navigateTo({ path })
+    await navigateTo({ path })
   }
 }
 </script>
 
 <template>
   <BcSearchbarMain
-    :bar-style="searchbarStyle"
+    :bar-style="barStyle as SearchbarStyle"
     :bar-purpose="SearchbarPurpose.General"
-    :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
+    :pick-by-default="pickHighestPriorityAmongBestMatchings"
     @go="redirectToRelevantPage"
   />
 </template>

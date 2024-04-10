@@ -56,8 +56,8 @@ export enum ResultType {
   ValidatorsByName = 'validators_by_name'
 }
 
-// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of Matching elements
-// and the function returns one Matching element.
+// The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
+// and the function returns one `Matching` element (or undefined).
 export interface Matching {
   closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
   network: ChainIDs, // the network that this result belongs to
@@ -66,9 +66,9 @@ export interface Matching {
 /* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
    element from this list (or undefined). This list is passed in parameter `possibilities` as a simplified view of the actual list of
    results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar
-   triggers the event `@go` to call your handler with the actual data of the result that you picked. If you return `undefined` instead
+   triggers the event `@go` to call your handler with the actual data of the matching that you picked. If you return `undefined` instead
    of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
-   You will find futher below a function named pickHighestPriorityAmongMostRelevantMatchings. It is an example that you can use directly. */
+   You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
 export interface SearchAheadSingleResult {
@@ -406,7 +406,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: FillFrom.SASRstr_value }
   },
   [ResultType.ValidatorsByGraffiti]: {
-    title: 'Validator by graffito',
+    title: 'Validator by graffiti',
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9999,
@@ -436,15 +436,6 @@ export function isOutputAnAPIresponse (type : ResultType, resultSuggestionOutput
     default:
       return false
   }
-}
-
-export function getListOfCategories () : Category[] {
-  const list : Category[] = []
-
-  for (const cat in Category) {
-    list.push(Category[cat as keyof typeof Category])
-  }
-  return list
 }
 
 const listOfResultTypesAsDeclared : ResultType[] = []
@@ -482,18 +473,13 @@ export function getListOfResultTypesInCategory (category: Category, sortByPriori
 }
 
 // This is an example of function that <BcSearchbarMain> needs in its props `pick-by-default`. You can design a function fulfilling your needs
-// or simply give this one (after importing pickHighestPriorityAmongMostRelevantMatchings at the top of your script setup) if it does what you
+// or simply give this one (after importing pickHighestPriorityAmongBestMatchings at the top of your script setup) if it does what you
 // need.
-// The purpose of the function given to props `pick-by-default` is to pick a result when the user presses Enter instead of clicking a result in
-// the drop-down. Note: if your function returns `undefined` it means that either no result suits you or you want to deactivate Enter.
-export function pickHighestPriorityAmongMostRelevantMatchings (possibilities : Matching[]) : Matching|undefined {
-  // What this funtion works with:
-  //   `possibilities` contains an abstract representation of the possible results sorted by network and type priority (the order appearing in
-  //   the drop-down). We must select one of them or we can return `undefined` if no result suits us or if we want to deactivate Enter.
+export function pickHighestPriorityAmongBestMatchings (possibilities : Matching[]) : Matching|undefined {
   // What we implemented in this example function:
   //   We look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
   //   If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority). This
-  //   happens for example when the user input corresponds to both a validator index and a block number.
+  //   happens for example when the user input corresponds to both a validator index and a block number, or both a graffiti and a token name, etc.
   let bestMatchWithHigherPriority = possibilities[0]
   for (const possibility of possibilities) {
     if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
