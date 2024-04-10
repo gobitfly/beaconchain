@@ -20,16 +20,16 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true     // prod: false
-const debugTargetBackfillEpoch = uint64(450) // prod: 0
-const debugSetBackfillCompleted = false      // prod: true
-const debugSkipOldEpochClear = false         // prod: false
-const debugAddToColumnEngine = true          // prod: true?
+const debugAggregateMidEveryEpoch = true   // prod: false
+const debugTargetBackfillEpoch = uint64(0) // prod: 0
+const debugSetBackfillCompleted = false    // prod: true
+const debugSkipOldEpochClear = false       // prod: false
+const debugAddToColumnEngine = false       // prod: true?
 
 // ----------- END OF DEBUG FLAGS ------------
 
 const epochFetchParallelism = 6
-const epochWriteParallelism = 4
+const epochWriteParallelism = 3
 const databaseAggregationParallelism = 3
 
 type dashboardData struct {
@@ -316,7 +316,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64
 
 		// Step 2: process data
 		errGroup = &errgroup.Group{}
-		errGroup.SetLimit(epochFetchParallelism / 2) // mitigate short ram spike
+		errGroup.SetLimit(epochWriteParallelism / 2) // mitigate short ram spike
 		for i := 0; i < len(datas); i++ {
 			i := i
 			errGroup.Go(func() error {
@@ -813,9 +813,6 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 			return err
 		}
-		for i := 0; i < len(result.endBalances.Data); i++ {
-			result.endBalances.Data[i].Validator.WithdrawalCredentials = nil // save memory
-		}
 		d.log.Debugf("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
 		return nil
 	})
@@ -830,9 +827,6 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			if err != nil {
 				d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 				return err
-			}
-			for i := 0; i < len(result.startBalances.Data); i++ {
-				result.startBalances.Data[i].Validator.WithdrawalCredentials = nil // save memory
 			}
 			d.log.Debugf("retrieved start balances using state at slot %d in %v", firstSlotOfPreviousEpoch, time.Since(start))
 			return nil
@@ -883,7 +877,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
 				return errors.New("can not get block data")
 			}
-			block.Data.Signature = nil // remove signature to save memory
+
 			mutex.Lock()
 			result.beaconBlockData[slot] = block
 			mutex.Unlock()
@@ -976,7 +970,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		if validatorIndex >= sizeInt {
 			return nil, errors.New("proposer index out of range")
 		}
-		validatorsData[validatorIndex].SyncScheduled.Int32 = int32(len(data.beaconBlockData)) // take into account missed slots
+		validatorsData[validatorIndex].SyncScheduled.Int16 = int16(len(data.beaconBlockData)) // take into account missed slots
 		validatorsData[validatorIndex].SyncScheduled.Valid = true
 	}
 
@@ -1006,7 +1000,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			validatorsData[validator_index].SyncReward.Valid = true
 
 			if syncReward > 0 {
-				validatorsData[validator_index].SyncExecuted.Int32++
+				validatorsData[validator_index].SyncExecuted.Int16++
 				validatorsData[validator_index].SyncExecuted.Valid = true
 			}
 		}
@@ -1051,7 +1045,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				return nil, errors.New("proposer index out of range")
 			}
 
-			validatorsData[validator_index].DepositsAmount.Int64 += int64(depositData.Data.Amount)
+			validatorsData[validator_index].DepositsAmount.Int32 += int32(depositData.Data.Amount)
 			validatorsData[validator_index].DepositsAmount.Valid = true
 
 			validatorsData[validator_index].DepositsCount.Int16++
@@ -1064,7 +1058,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			if validator_index >= size {
 				return nil, errors.New("proposer index out of range")
 			}
-			validatorsData[validator_index].WithdrawalsAmount.Int64 += int64(withdrawal.Amount)
+			validatorsData[validator_index].WithdrawalsAmount.Int32 += int32(withdrawal.Amount)
 			validatorsData[validator_index].WithdrawalsAmount.Valid = true
 
 			validatorsData[validator_index].WithdrawalsCount.Int16++
@@ -1085,8 +1079,8 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						return nil, errors.New("proposer index out of range")
 					}
 
-					validatorsData[validator_index].InclusionDelaySum = sql.NullInt64{
-						Int64: int64(block.Data.Message.Slot - attestation.Data.Slot - 1),
+					validatorsData[validator_index].InclusionDelaySum = sql.NullInt32{
+						Int32: int32(block.Data.Message.Slot - attestation.Data.Slot - 1),
 						Valid: true,
 					}
 
@@ -1101,7 +1095,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						}
 					}
 
-					validatorsData[validator_index].OptimalInclusionDelay = sql.NullInt64{Int64: int64(optimalInclusionDistance), Valid: true}
+					validatorsData[validator_index].OptimalInclusionDelay = sql.NullInt32{Int32: int32(optimalInclusionDistance), Valid: true}
 				}
 			}
 		}
@@ -1131,24 +1125,24 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			return nil, errors.New("proposer index out of range")
 		}
 
-		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt64{Int64: attestationReward.Head, Valid: true}
-		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt64{Int64: attestationReward.Source, Valid: true}
-		validatorsData[validator_index].AttestationsTargetReward = sql.NullInt64{Int64: attestationReward.Target, Valid: true}
-		validatorsData[validator_index].AttestationsInactivityPenalty = sql.NullInt64{Int64: attestationReward.Inactivity, Valid: true}
-		validatorsData[validator_index].AttestationsInclusionsReward = sql.NullInt64{Int64: attestationReward.InclusionDelay, Valid: true}
+		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt32{Int32: attestationReward.Head, Valid: true}
+		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt32{Int32: attestationReward.Source, Valid: true}
+		validatorsData[validator_index].AttestationsTargetReward = sql.NullInt32{Int32: attestationReward.Target, Valid: true}
+		validatorsData[validator_index].AttestationsInactivityPenalty = sql.NullInt32{Int32: attestationReward.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsInclusionsReward = sql.NullInt32{Int32: attestationReward.InclusionDelay, Valid: true}
 		validatorsData[validator_index].AttestationReward = sql.NullInt64{
-			Int64: attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay,
+			Int64: int64(attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay),
 			Valid: true,
 		}
 		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validator_index].Validator.EffectiveBalance)]]
-		validatorsData[validator_index].AttestationsIdealHeadReward = sql.NullInt64{Int64: idealRewardsOfValidator.Head, Valid: true}
-		validatorsData[validator_index].AttestationsIdealTargetReward = sql.NullInt64{Int64: idealRewardsOfValidator.Target, Valid: true}
-		validatorsData[validator_index].AttestationsIdealSourceReward = sql.NullInt64{Int64: idealRewardsOfValidator.Source, Valid: true}
-		validatorsData[validator_index].AttestationsIdealInactivityPenalty = sql.NullInt64{Int64: idealRewardsOfValidator.Inactivity, Valid: true}
-		validatorsData[validator_index].AttestationsIdealInclusionsReward = sql.NullInt64{Int64: idealRewardsOfValidator.InclusionDelay, Valid: true}
+		validatorsData[validator_index].AttestationsIdealHeadReward = sql.NullInt32{Int32: idealRewardsOfValidator.Head, Valid: true}
+		validatorsData[validator_index].AttestationsIdealTargetReward = sql.NullInt32{Int32: idealRewardsOfValidator.Target, Valid: true}
+		validatorsData[validator_index].AttestationsIdealSourceReward = sql.NullInt32{Int32: idealRewardsOfValidator.Source, Valid: true}
+		validatorsData[validator_index].AttestationsIdealInactivityPenalty = sql.NullInt32{Int32: idealRewardsOfValidator.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsIdealInclusionsReward = sql.NullInt32{Int32: idealRewardsOfValidator.InclusionDelay, Valid: true}
 
 		validatorsData[validator_index].AttestationIdealReward = sql.NullInt64{
-			Int64: idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay,
+			Int64: int64(idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay),
 			Valid: true,
 		}
 
@@ -1209,17 +1203,17 @@ type EpochParallelGroup struct {
 }
 
 type validatorDashboardDataRow struct {
-	AttestationsSourceReward           sql.NullInt64 //done
-	AttestationsTargetReward           sql.NullInt64 //done
-	AttestationsHeadReward             sql.NullInt64 //done
-	AttestationsInactivityPenalty      sql.NullInt64 //done
-	AttestationsInclusionsReward       sql.NullInt64 //done
+	AttestationsSourceReward           sql.NullInt32 //done
+	AttestationsTargetReward           sql.NullInt32 //done
+	AttestationsHeadReward             sql.NullInt32 //done
+	AttestationsInactivityPenalty      sql.NullInt32 //done
+	AttestationsInclusionsReward       sql.NullInt32 //done
 	AttestationReward                  sql.NullInt64 //done
-	AttestationsIdealSourceReward      sql.NullInt64 //done
-	AttestationsIdealTargetReward      sql.NullInt64 //done
-	AttestationsIdealHeadReward        sql.NullInt64 //done
-	AttestationsIdealInactivityPenalty sql.NullInt64 //done
-	AttestationsIdealInclusionsReward  sql.NullInt64 //done
+	AttestationsIdealSourceReward      sql.NullInt32 //done
+	AttestationsIdealTargetReward      sql.NullInt32 //done
+	AttestationsIdealHeadReward        sql.NullInt32 //done
+	AttestationsIdealInactivityPenalty sql.NullInt32 //done
+	AttestationsIdealInclusionsReward  sql.NullInt32 //done
 	AttestationIdealReward             sql.NullInt64 //done
 
 	AttestationsScheduled     sql.NullInt16 //done
@@ -1236,8 +1230,8 @@ type validatorDashboardDataRow struct {
 
 	BlocksClReward sql.NullInt64 // done
 
-	SyncScheduled sql.NullInt32 // done
-	SyncExecuted  sql.NullInt32 // done
+	SyncScheduled sql.NullInt16 // done
+	SyncExecuted  sql.NullInt16 // done
 	SyncReward    sql.NullInt64 // done
 	SyncChance    float64       // done
 
@@ -1250,13 +1244,13 @@ type validatorDashboardDataRow struct {
 	BalanceEnd   uint64 // done
 
 	DepositsCount  sql.NullInt16 // done
-	DepositsAmount sql.NullInt64 // done
+	DepositsAmount sql.NullInt32 // done
 
 	WithdrawalsCount  sql.NullInt16 // done
-	WithdrawalsAmount sql.NullInt64 // done
+	WithdrawalsAmount sql.NullInt32 // done
 
-	InclusionDelaySum     sql.NullInt64 // done
-	OptimalInclusionDelay sql.NullInt64 // done
+	InclusionDelaySum     sql.NullInt32 // done
+	OptimalInclusionDelay sql.NullInt32 // done
 }
 
 const SLASHED_VIOLATION_ATTESTATION = 1

@@ -146,6 +146,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string) error {
 	// bounds for what to aggregate and remove from the tail of the rolling 24h
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, currentEpochHead, bootstrapOffset)
 
+	d.log.Infof("rolling %dd epochs: %d - %d, %d - %d", days, aggHeadEpochStart, aggHeadEpochEnd, aggTailEpochStart, aggTailEpochEnd)
 	// sanity check if all tail epochs are present in db
 	missing, err := getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 	if err != nil {
@@ -187,7 +188,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 	d.log.Infof("bootstrap Offset for rolling %dd: %d. Needs bootstrap: %v", days, offset, needsBootstrap)
 	// if rolling table is empty / not bootstrapped yet or needs a bootstrap assume bounds of what the would be after a bootstrap
 	if (bounds.EpochEnd == 0 && bounds.EpochStart == 0) || needsBootstrap {
-		startBound, endBounds := d.getBootstrapBounds(intendedHeadEpoch+1, uint64(days)) // exclusive
+		startBound, endBounds := d.getBootstrapBounds(intendedHeadEpoch, uint64(days))
 		bounds.EpochStart = startBound
 		bounds.EpochEnd = endBounds
 		d.log.Infof("bootstrap bounds for rolling %dd: %d - %d | current Head (excl): %v", days, bounds.EpochStart, bounds.EpochEnd, intendedHeadEpoch+1)
