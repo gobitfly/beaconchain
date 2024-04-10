@@ -53,7 +53,7 @@
   "validator_state": {
     "active": "active",
     "withdrawn": "withdrawn",
-    "online": "online",
+    "online": "active",
     "offline": "offline",
     "pending": "pending",
     "exited": "exited",
