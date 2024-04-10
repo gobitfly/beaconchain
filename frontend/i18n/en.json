@@ -136,6 +136,7 @@
       "target": "Target",
       "proposal_success": "You proposed a block",
       "proposal_failed": "You missed a block",
+      "proposal_partial": "You missed a block and you missed a block",
       "proposal_orphaned": "Your block was orphaned",
       "slashing_success": "You slashed a validator",
       "slashing_failed": "You got slashed",
