@@ -51,7 +51,7 @@ const mapped = computed(() => {
   }
   const sync = mapSuccess(props?.data?.sync?.status)
   if (sync.status && props?.data?.sync_count !== undefined) {
-    const success = (props?.data?.sync_count || 0)
+    const success = props.data.sync_count
     const failed = slotsPerEpoch - success
     sync.tooltip = `${success} / ${failed}`
   }
