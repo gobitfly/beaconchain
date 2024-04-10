@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
@@ -179,7 +179,7 @@ func checkUint(handlerErr *error, param, paramName string) uint64 {
 
 type validatorSet struct {
 	Indexes    []uint64
-	PublicKeys [][]byte
+	PublicKeys []string
 }
 
 // parseDashboardId is a helper function to validate the string dashboard id param.
@@ -357,22 +357,22 @@ func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.S
 	return sorts
 }
 
-func checkValidatorList(handlerErr *error, validators string) ([]uint64, [][]byte) {
+func checkValidatorList(handlerErr *error, validators string) ([]uint64, []string) {
 	return checkValidatorArray(handlerErr, strings.Split(validators, ","))
 }
 
-func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, [][]byte) {
+func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, []string) {
 	var indexes []uint64
-	var publicKeys [][]byte
+	var publicKeys []string
 	for _, v := range validators {
 		if reNumber.MatchString(v) {
 			indexes = append(indexes, checkUint(handlerErr, v, "validators"))
 		} else if reValidatorPubkey.MatchString(v) {
-			bytes, err := hex.DecodeString(v[2:])
+			_, err := hexutil.Decode(v)
 			if err != nil {
 				joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
 			}
-			publicKeys = append(publicKeys, bytes)
+			publicKeys = append(publicKeys, v)
 		} else {
 			joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
 		}

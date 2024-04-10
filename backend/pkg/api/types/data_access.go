@@ -9,6 +9,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {
 	Column T
@@ -53,4 +54,16 @@ func (c GenericCursor) IsValid() bool {
 
 func (c GenericCursor) GetDirection() enums.SortOrder {
 	return c.Direction
+}
+
+type CLDepositsCursor struct {
+	GenericCursor
+	Slot      int64
+	SlotIndex int64
+}
+
+type ValidatorsCursor struct {
+	GenericCursor
+
+	Index uint64 `json:"vi"`
 }

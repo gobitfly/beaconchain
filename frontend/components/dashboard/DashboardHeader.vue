@@ -75,11 +75,11 @@ const items = computed<MenuBarEntry[]>(() => {
       }
     }
   }
-  addToSortedItems(0, dashboards.value?.validator_dashboards.map((db) => {
+  addToSortedItems(0, dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
     return { label: getDashboardName(cd), route: `/dashboard/${cd.hash ?? cd.id}` }
   }))
-  addToSortedItems(3, dashboards.value?.account_dashboards.map((db) => {
+  addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
     const cd = db as CookieDashboard
     return { label: getDashboardName(cd), route: `/account/${cd.hash ?? cd.id}` }
   }))

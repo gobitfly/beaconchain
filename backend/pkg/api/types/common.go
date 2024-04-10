@@ -2,6 +2,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 // frontend can ignore ApiResponse type, it's just for the backend
@@ -84,4 +86,28 @@ type SearchResult struct {
 
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
+}
+
+type ValidatorHistoryEvent struct {
+	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed'"`
+	Income decimal.Decimal `json:"income"`
+}
+
+type ValidatorHistoryProposal struct {
+	Status                       string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
+	ElIncome                     decimal.Decimal `json:"el_income"`
+	ClAttestationInclusionIncome decimal.Decimal `json:"cl_attestation_inclusion_income"`
+	ClSyncInclusionIncome        decimal.Decimal `json:"cl_sync_inclusion_income"`
+	ClSlashingInclusionIncome    decimal.Decimal `json:"cl_slashing_inclusion_income"`
+}
+
+type ValidatorHistoryDuties struct {
+	AttestationSource *ValidatorHistoryEvent    `json:"attestation_source,omitempty"`
+	AttestationTarget *ValidatorHistoryEvent    `json:"attestation_target,omitempty"`
+	AttestationHead   *ValidatorHistoryEvent    `json:"attestation_head,omitempty"`
+	Sync              *ValidatorHistoryEvent    `json:"sync,omitempty"`
+	Slashing          *ValidatorHistoryEvent    `json:"slashing,omitempty"`
+	Proposal          *ValidatorHistoryProposal `json:"proposal,omitempty"`
+
+	SyncCount uint64 `json:"sync_count,omitempty"` // count of successful sync duties for the epoch
 }
