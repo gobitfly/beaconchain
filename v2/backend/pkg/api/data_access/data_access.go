@@ -1976,14 +1976,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 }
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	/*var currentCursor t.BlocksCursor
+	var err error
+	var currentCursor t.BlocksCursor
 
+	// TODO @LuccaBitfly move validation to handler
 	if cursor != "" {
-		currentCursor, err := utils.StringToCursor[t.BlocksCursor](cursor)
-		if err != nil {
+		if currentCursor, err = utils.StringToCursor[t.BlocksCursor](cursor); err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
 		}
-	}*/
+	}
 
 	validatorGroupMap, validators, err := d.getDashboardValidatorGroups(dashboardId)
 	if err != nil || len(validators) == 0 {
@@ -1991,15 +1992,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 
 	proposals := make([]struct {
-		Proposer     uint64        `db:"proposer"`
+		Proposer     int64         `db:"proposer"`
 		Epoch        uint64        `db:"epoch"`
-		Slot         uint64        `db:"slot"`
-		Status       uint64        `db:"status"`
+		Slot         int64         `db:"slot"`
+		Status       int64         `db:"status"`
 		Block        sql.NullInt64 `db:"exec_block_number"`
 		FeeRecipient []byte        `db:"exec_fee_recipient"`
 		Mev          sql.NullInt64 `db:"mev_reward"`
 		MevRecipient []byte        `db:"proposer_fee_recipient"`
 		GraffitiText string        `db:"graffiti_text"`
+		Group        int64
+		// TODO fill this properly, used for cursor atm
+		Reward int64
 	}, 0)
 
 	query := `
@@ -2015,40 +2019,69 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		graffiti_text
 	FROM blocks
 	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
-	WHERE proposer = ANY($1)
 	`
+	params := []interface{}{pq.Array(validators)}
+	where := `WHERE proposer = ANY($1) `
+	orderBy := `ORDER BY `
 	// multi-sort disabled as discussed
-	order := `ORDER BY `
 	if len(sort) > 0 {
+		sortOrder := ` ASC`
+		if sort[0].Desc {
+			sortOrder = ` DESC`
+		}
+		val := int64(-1)
+		sortColName := `slot`
 		switch sort[0].Column {
 		case enums.VDBBlockProposer:
-			order += `proposer`
+			sortColName = `proposer`
+			val = currentCursor.Proposer
 		case enums.VDBBlockGroup:
 			// TODO join tables
-			order += ``
+			sortColName = ``
+			val = currentCursor.Group
 		case enums.VDBBlockStatus:
-			order += `status`
+			sortColName = `status`
+			val = currentCursor.Status
 		case enums.VDBBlockProposerReward:
 			// TODO reward data is split between multiple tables, sum them up
-			order += `mev_reward`
-		default:
-			order += `slot`
+			sortColName = `mev_reward`
+			val = currentCursor.Reward
 		}
-		if sort[0].Desc {
-			order += ` DESC`
-		} else {
-			order += ` ASC`
+		onlyPrimarySort := sortColName == `slot`
+		orderBy += sortColName + sortOrder
+		if !onlyPrimarySort {
+			orderBy += `, slot DESC`
+		}
+		if currentCursor.IsValid() {
+			sign := ` <`
+			if currentCursor.Direction == enums.ASC {
+				sign = ` >`
+			}
+			params = append(params, currentCursor.Slot)
+			where += `AND `
+			if onlyPrimarySort {
+				where += `slot` + sign + ` $2`
+			} else {
+				// WIP
+				where += `slot < $2 AND ` + sortColName + sign + `= $3 `
+				params = append(params, val)
+			}
 		}
 	} else {
-		order += `slot DESC`
+		orderBy += `slot DESC`
 	}
-	limitStr := `
-		LIMIT $2
-	`
+	params = append(params, limit+1)
+	limitStr := fmt.Sprintf(`
+		LIMIT $%d
+	`, len(params))
 
-	err = d.readerDb.Select(&proposals, query+order+limitStr, pq.Array(validators), limit)
+	err = d.readerDb.Select(&proposals, query+where+orderBy+limitStr, params...)
 	if err != nil {
 		return nil, nil, err
+	}
+	moreDataFlag := len(proposals) > int(limit)
+	if moreDataFlag {
+		proposals = proposals[:len(proposals)-1]
 	}
 
 	blocksNoRelay := make([]uint64, 0, len(proposals))
@@ -2063,10 +2096,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
-		data[i].GroupId = validatorGroupMap[proposal.Proposer]
-		data[i].Proposer = proposal.Proposer
+		data[i].GroupId = validatorGroupMap[uint64(proposal.Proposer)]
+		data[i].Proposer = uint64(proposal.Proposer)
 		data[i].Epoch = proposal.Epoch
-		data[i].Slot = proposal.Slot
+		data[i].Slot = uint64(proposal.Slot)
 		switch proposal.Status {
 		case 0:
 			data[i].Status = "scheduled"
@@ -2112,7 +2145,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	for i := range data {
 		data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
 	}
-	return data, &t.Paging{}, err
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return data, &t.Paging{}, nil
+	}
+	p, err := utils.GetPagingFromData(utils.DataStructure(proposals), currentCursor, currentCursor.Direction, moreDataFlag)
+	return data, p, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
