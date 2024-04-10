@@ -67,3 +67,10 @@ type ValidatorsCursor struct {
 
 	Index uint64 `json:"vi"`
 }
+
+type User struct {
+	Id        uint64 `db:"id"`
+	Password  string `db:"password"`
+	ProductId string `db:"product_id"`
+	UserGroup string `db:"user_group"`
+}

@@ -35,6 +35,7 @@ import (
 )
 
 type DataAccessor interface {
+	GetUserInfo(email string) (*t.User, error)
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
 
@@ -282,6 +283,10 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 }
 
 //////////////////// 		Data Access
+
+func (d *DataAccessService) GetUserInfo(email string) (*t.User, error) {
+	return d.dummy.GetUserInfo(email)
+}
 
 func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}

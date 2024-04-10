@@ -28,6 +28,12 @@ func (d *DummyService) CloseDataAccessService() {
 	// nothing to close
 }
 
+func (d *DummyService) GetUserInfo(email string) (*t.User, error) {
+	r := t.User{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
 func (d *DummyService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	r := t.DashboardInfo{}
 	err := commonFakeData(&r)
