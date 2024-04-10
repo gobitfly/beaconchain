@@ -50,7 +50,7 @@ const mapped = computed(() => {
     slashing.tooltip = $t(`validator.duty.slashing_${slashing.status}`)
   }
   const sync = mapSuccess(props?.data?.sync?.status)
-  if (sync.status) {
+  if (sync.status && props?.data?.sync_count !== undefined) {
     const success = (props?.data?.sync_count || 0)
     const failed = slotsPerEpoch - success
     sync.tooltip = `${success} / ${failed}`
