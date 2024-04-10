@@ -63,9 +63,11 @@ type CLDepositsCursor struct {
 
 type BlocksCursor struct {
 	GenericCursor
-	Validator int64
-	Group     int64
-	Slot      int64 // basically the same as Block, Epoch, Age
-	Status    int64
-	Reward    int64
+	Slot int64 // basically the same as Block, Epoch, Age; mandatory, used to index
+
+	// optional, max one of those (for now)
+	Proposer int64
+	Group    int64
+	Status   int64
+	Reward   int64
 }
