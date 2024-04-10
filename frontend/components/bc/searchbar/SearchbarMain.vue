@@ -32,13 +32,7 @@ const props = defineProps<{
   barStyle: SearchbarStyle, // look of the bar
   barPurpose: SearchbarPurpose, // what the bar will be used for
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
-  pickByDefault: PickingCallBackFunction /* When the user presses Enter, this callback function receives a simplified representation of
-   the suggested results and returns one element from this list (or undefined). This list is passed in the parameter (of type Matching[])
-   as a simplified view of the actual list of results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority.
-   After you return a matching, the bar triggers the event `@go` to call your handler with the actual data of the result that you picked.
-   If you return undefined instead of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
-   In file searchbar.ts you will find a function named pickHighestPriorityAmongMostRelevantMatchings. It is an example that you can use
-   directly by writing `pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"`. */
+  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
 }>()
 const emit = defineEmits(['go'])
 
@@ -73,14 +67,13 @@ const globalState = ref<GlobalState>({
 })
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
+const inputField = ref<HTMLInputElement>()
 
-const zindexCorrectionClass = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
+const classWhenDropdownIsOpened = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
 
 const userFilters = {
   networks: {} as Record<string, boolean>, // each field will have a stringifyEnum(ChainIDs) as key and the state of the option as value
-  noNetworkIsSelected: true,
-  categories: {} as Record<string, boolean>, // each field will have a stringifyEnum(Category) as key and the state of the button as value
-  noCategoryIsSelected: true
+  categories: {} as Record<string, boolean> // each field will have a stringifyEnum(Category) as key and the state of the button as value
 }
 
 const results = {
@@ -144,13 +137,11 @@ onMounted(() => {
   for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
     userFilters.categories[stringifyEnum(s)] = false
   }
-  userFilters.noCategoryIsSelected = true
   // creates the fields storing the state of the network drop-down, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
   for (const nw of networks) {
     userFilters.networks[stringifyEnum(nw)] = false
   }
-  userFilters.noNetworkIsSelected = true
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
@@ -233,6 +224,21 @@ function updateBarAfterSearchAhead (howSearchWent : ResultState) {
   }
 }
 
+function handleKeyPressInInputField (key : string) {
+  switch (key) {
+    case 'Enter' :
+      userPressedSearchButtonOrEnter()
+      break
+    case 'Escape' :
+      inputField.value?.blur()
+      globalState.value.showDropdown = false
+      break
+    default:
+      inputMightHaveChanged()
+      break
+  }
+}
+
 function userPressedSearchButtonOrEnter () {
   switch (globalState.value.state) {
     case States.InputIsEmpty : // the user enjoys the sounds of clicks
@@ -300,25 +306,16 @@ function inputMightHaveChanged () {
 }
 
 function networkFilterHasChanged (state : Record<string, boolean>) {
-  let noNetworkIsSelected = true
-
   for (const nw in userFilters.networks) {
     userFilters.networks[nw] = state[nw]
-    noNetworkIsSelected &&= !state[nw]
   }
-  userFilters.noNetworkIsSelected = noNetworkIsSelected
-
   refreshOutputArea()
 }
 
 function categoryFilterHasChanged (state : Record<string, boolean>) {
-  let noCategoryIsSelected = true
   for (const cat in userFilters.categories) {
     userFilters.categories[cat] = state[cat]
-    noCategoryIsSelected &&= !state[cat]
   }
-  userFilters.noCategoryIsSelected = noCategoryIsSelected
-
   refreshOutputArea()
 }
 
@@ -340,6 +337,16 @@ function filterAndOrganizeResults () {
     return
   }
 
+  // determining whether filters are used
+  let noNetworkIsSelected = true
+  for (const nw in userFilters.networks) {
+    noNetworkIsSelected &&= !userFilters.networks[nw]
+  }
+  let noCategoryIsSelected = true
+  for (const cat in userFilters.categories) {
+    noCategoryIsSelected &&= !userFilters.categories[cat]
+  }
+
   for (const finding of results.raw.data) {
     const type = finding.type as ResultType
 
@@ -359,8 +366,8 @@ function filterAndOrganizeResults () {
     let place : OrganizedResults
     const stringifyedChainId = stringifyEnum(chainId)
     const stringifyedCategory = stringifyEnum(TypeInfo[type].category)
-    const acceptTheChainID = (stringifyedChainId in userFilters.networks && (userFilters.networks[stringifyedChainId] || userFilters.noNetworkIsSelected)) || chainId === ChainIDs.Any
-    const acceptTheCategory = stringifyedCategory in userFilters.categories && (userFilters.categories[stringifyedCategory] || userFilters.noCategoryIsSelected)
+    const acceptTheChainID = (stringifyedChainId in userFilters.networks && (userFilters.networks[stringifyedChainId] || noNetworkIsSelected)) || chainId === ChainIDs.Any
+    const acceptTheCategory = stringifyedCategory in userFilters.categories && (userFilters.categories[stringifyedCategory] || noCategoryIsSelected)
     if (acceptTheChainID && acceptTheCategory) {
       place = results.organized.in
       results.organized.howManyResultsIn++
@@ -577,7 +584,7 @@ function informationIfHiddenResults () : string {
   return info
 }
 
-// This padding a leading zero is required otherwise the fields in a Record whose keys are
+// This leading zero is required otherwise the fields in a Record whose keys are
 // well-formatted numbers would get sorted lexicographically... for some reason.
 function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string {
   return '0' + String(enumValue)
@@ -586,20 +593,21 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, zindexCorrectionClass]">
+    <div class="whole-component" :class="[barStyle, classWhenDropdownIsOpened]">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
-        <InputText
+        <input
+          ref="inputField"
           v-model="inputted"
-          class="input-field"
+          class="p-inputtext input-field"
           :class="barStyle"
           type="text"
           :placeholder="inputPlaceHolder()"
-          @keyup="(e) => {if (e.key === 'Enter') {userPressedSearchButtonOrEnter()} else {inputMightHaveChanged()}}"
+          @keyup="(e) => handleKeyPressInInputField(e.key)"
           @focus="globalState.showDropdown = true"
-        />
+        >
         <BcSearchbarButton
           class="searchbutton"
-          :class="[barStyle, zindexCorrectionClass]"
+          :class="[barStyle, classWhenDropdownIsOpened]"
           :bar-style="barStyle"
           :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
@@ -714,7 +722,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
   }
   &.discreet {
     background-color: var(--searchbar-background-discreet);
-    border: none;
+    border: 1px solid transparent;
     &.dropdown-is-opened {
       border: 1px solid var(--searchbar-background-hover-discreet);
     }
@@ -726,11 +734,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
   width: 100%;
 
   .input-field {
+    display:inline-block;
     left: 0;
     width: 100%;
     border: none;
     box-shadow: none;
     background-color: transparent;
+    padding-top: 0px;
+    padding-bottom: 0px;
 
     &.gaudy {
       height: 40px;

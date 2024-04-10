@@ -13,7 +13,7 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
@@ -219,7 +219,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             :bar-style="SearchbarStyle.Embedded"
             :bar-purpose="SearchbarPurpose.Validators"
             :only-networks="[ChainIDs.Ethereum]"
-            :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
+            :pick-by-default="pickHighestPriorityAmongBestMatchings"
             class="search-bar"
             @go="addValidator"
           />

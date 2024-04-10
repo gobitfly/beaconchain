@@ -172,14 +172,14 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         Toggle loading
       </Button>
       <div class="element_container">
-        <BcLoadingSpinner :loading="true" />
-        <BcLoadingSpinner :loading="true" size="small" style="color: lightblue;" />
-        <BcLoadingSpinner :loading="true" size="large" />
+        <BcLoadingSpinner :loading="loading" />
+        <BcLoadingSpinner :loading="loading" size="small" style="color: lightblue;" />
+        <BcLoadingSpinner :loading="loading" size="large" />
         <div class="box">
-          <BcLoadingSpinner :loading="true" alignment="center" />
+          <BcLoadingSpinner :loading="loading" alignment="center" />
         </div>
         <div class="box">
-          <BcLoadingSpinner :loading="true" size="full" />
+          <BcLoadingSpinner :loading="loading" size="full" />
         </div>
       </div>
     </TabPanel>

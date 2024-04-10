@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongMostRelevantMatchings } from '~/types/searchbar'
+import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const selectedAccount = ref<string>('')
@@ -50,7 +50,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
     <BcSearchbarMain
       :bar-style="SearchbarStyle.Embedded"
       :bar-purpose="SearchbarPurpose.Accounts"
-      :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
+      :pick-by-default="pickHighestPriorityAmongBestMatchings"
       @go="userSelectedAnAccount"
     />
   </div>
@@ -62,7 +62,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
       :bar-style="SearchbarStyle.Embedded"
       :bar-purpose="SearchbarPurpose.Validators"
       :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
-      :pick-by-default="pickHighestPriorityAmongMostRelevantMatchings"
+      :pick-by-default="pickHighestPriorityAmongBestMatchings"
       @go="userSelectedValidator"
     />
   </div>
