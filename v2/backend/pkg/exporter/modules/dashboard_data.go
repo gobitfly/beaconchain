@@ -20,13 +20,15 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true
-const debugTargetBackfillEpoch = uint64(0)
-const debugSetBackfillCompleted = false
+const debugAggregateMidEveryEpoch = true     // prod: false
+const debugTargetBackfillEpoch = uint64(450) // prod: 0
+const debugSetBackfillCompleted = false      // prod: true
+const debugSkipOldEpochClear = false         // prod: false
+const debugAddToColumnEngine = true          // prod: true?
 
 // ----------- END OF DEBUG FLAGS ------------
 
-const epochFetchParallelism = 4
+const epochFetchParallelism = 6
 const epochWriteParallelism = 4
 const databaseAggregationParallelism = 3
 
@@ -92,7 +94,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 8118
+		//d.headEpochQueue <- 8144
 		d.processHeadQueue()
 	}()
 
@@ -811,6 +813,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
 			return err
 		}
+		for i := 0; i < len(result.endBalances.Data); i++ {
+			result.endBalances.Data[i].Validator.WithdrawalCredentials = nil // save memory
+		}
 		d.log.Debugf("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
 		return nil
 	})
@@ -825,6 +830,9 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			if err != nil {
 				d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 				return err
+			}
+			for i := 0; i < len(result.startBalances.Data); i++ {
+				result.startBalances.Data[i].Validator.WithdrawalCredentials = nil // save memory
 			}
 			d.log.Debugf("retrieved start balances using state at slot %d in %v", firstSlotOfPreviousEpoch, time.Since(start))
 			return nil
@@ -934,16 +942,17 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				activeCount++
 				validatorsData[i].AttestationsScheduled = sql.NullInt16{Int16: 1, Valid: true}
 			}
+		} else {
+			pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
 		}
+
 		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
-
-		pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
 	}
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	for validator_index := range validatorsData {
-		validatorsData[validator_index].SyncChance = float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(activeCount) / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
+		validatorsData[validator_index].SyncChance = float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(activeCount) // / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
 		validatorsData[validator_index].BlockChance = float64(utils.Config.Chain.ClConfig.SlotsPerEpoch) / float64(activeCount)
 	}
 
@@ -1125,7 +1134,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt64{Int64: attestationReward.Head, Valid: true}
 		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt64{Int64: attestationReward.Source, Valid: true}
 		validatorsData[validator_index].AttestationsTargetReward = sql.NullInt64{Int64: attestationReward.Target, Valid: true}
-		validatorsData[validator_index].AttestationsInactivityReward = sql.NullInt64{Int64: attestationReward.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsInactivityPenalty = sql.NullInt64{Int64: attestationReward.Inactivity, Valid: true}
 		validatorsData[validator_index].AttestationsInclusionsReward = sql.NullInt64{Int64: attestationReward.InclusionDelay, Valid: true}
 		validatorsData[validator_index].AttestationReward = sql.NullInt64{
 			Int64: attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay,
@@ -1135,7 +1144,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[validator_index].AttestationsIdealHeadReward = sql.NullInt64{Int64: idealRewardsOfValidator.Head, Valid: true}
 		validatorsData[validator_index].AttestationsIdealTargetReward = sql.NullInt64{Int64: idealRewardsOfValidator.Target, Valid: true}
 		validatorsData[validator_index].AttestationsIdealSourceReward = sql.NullInt64{Int64: idealRewardsOfValidator.Source, Valid: true}
-		validatorsData[validator_index].AttestationsIdealInactivityReward = sql.NullInt64{Int64: idealRewardsOfValidator.Inactivity, Valid: true}
+		validatorsData[validator_index].AttestationsIdealInactivityPenalty = sql.NullInt64{Int64: idealRewardsOfValidator.Inactivity, Valid: true}
 		validatorsData[validator_index].AttestationsIdealInclusionsReward = sql.NullInt64{Int64: idealRewardsOfValidator.InclusionDelay, Valid: true}
 
 		validatorsData[validator_index].AttestationIdealReward = sql.NullInt64{
@@ -1200,18 +1209,18 @@ type EpochParallelGroup struct {
 }
 
 type validatorDashboardDataRow struct {
-	AttestationsSourceReward          sql.NullInt64 //done
-	AttestationsTargetReward          sql.NullInt64 //done
-	AttestationsHeadReward            sql.NullInt64 //done
-	AttestationsInactivityReward      sql.NullInt64 //done
-	AttestationsInclusionsReward      sql.NullInt64 //done
-	AttestationReward                 sql.NullInt64 //done
-	AttestationsIdealSourceReward     sql.NullInt64 //done
-	AttestationsIdealTargetReward     sql.NullInt64 //done
-	AttestationsIdealHeadReward       sql.NullInt64 //done
-	AttestationsIdealInactivityReward sql.NullInt64 //done
-	AttestationsIdealInclusionsReward sql.NullInt64 //done
-	AttestationIdealReward            sql.NullInt64 //done
+	AttestationsSourceReward           sql.NullInt64 //done
+	AttestationsTargetReward           sql.NullInt64 //done
+	AttestationsHeadReward             sql.NullInt64 //done
+	AttestationsInactivityPenalty      sql.NullInt64 //done
+	AttestationsInclusionsReward       sql.NullInt64 //done
+	AttestationReward                  sql.NullInt64 //done
+	AttestationsIdealSourceReward      sql.NullInt64 //done
+	AttestationsIdealTargetReward      sql.NullInt64 //done
+	AttestationsIdealHeadReward        sql.NullInt64 //done
+	AttestationsIdealInactivityPenalty sql.NullInt64 //done
+	AttestationsIdealInclusionsReward  sql.NullInt64 //done
+	AttestationIdealReward             sql.NullInt64 //done
 
 	AttestationsScheduled     sql.NullInt16 //done
 	AttestationsExecuted      sql.NullInt16 //done

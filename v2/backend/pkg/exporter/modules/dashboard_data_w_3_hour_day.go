@@ -372,8 +372,16 @@ type DayRollingAggregatorImpl struct {
 	log ModuleLog
 }
 
-func (d *DayRollingAggregatorImpl) getBootstrapBounds(epoch uint64) (uint64, uint64) {
-	return getHourAggregateBounds(epoch)
+// returns both start_epochs
+func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch uint64, _ uint64) (uint64, uint64) {
+	currentStartBounds, _ := getHourAggregateBounds(latestExportedHourEpoch)
+
+	dayOldEpoch := int64(currentStartBounds - utils.EpochsPerDay())
+	if dayOldEpoch < 0 {
+		dayOldEpoch = 0
+	}
+	dayOldBoundsStart, _ := getHourAggregateBounds(uint64(dayOldEpoch))
+	return dayOldBoundsStart, currentStartBounds
 }
 
 func (d *DayRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
@@ -393,21 +401,17 @@ func (d *DayRollingAggregatorImpl) bootstrapTableToHeadOffset(currentHead uint64
 func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {
-		d.log.Infof("rolling 24h aggregate took %v", time.Since(startTime))
+		d.log.Infof("bootstrap 24h aggregate took %v", time.Since(startTime))
 	}()
 
 	latestHourlyEpochBounds, err := edb.GetLastExportedHour()
 	if err != nil && err != sql.ErrNoRows {
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
-	latestHourlyEpoch := latestHourlyEpochBounds.EpochStart
 
-	dayOldHourlyEpoch, err := edb.Get24hOldHourlyEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get 24h old dashboard epoch")
-	}
+	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochStart, 1)
 
-	d.log.Infof("latestHourlyEpoch: %d, dayOldHourlyEpoch: %d", latestHourlyEpoch, dayOldHourlyEpoch)
+	d.log.Infof("latestHourlyEpoch: %d, dayOldHourlyEpoch: %d", latestHourlyEpoch, dayOldBoundsStart)
 
 	_, err = tx.Exec(`TRUNCATE validator_dashboard_data_rolling_daily`)
 	if err != nil {
@@ -556,7 +560,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
-	`, dayOldHourlyEpoch, latestHourlyEpoch)
+	`, dayOldBoundsStart, latestHourlyEpoch)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert rolling 24h aggregate")
