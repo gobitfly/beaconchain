@@ -27,7 +27,7 @@ func newEpochWriter(d *dashboardData) *epochWriter {
 }
 
 const PartitionEpochWidth = 3
-const retentionBuffer = 2 * 80
+const retentionBuffer = 1.3
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {
 	return uint64(float64(utils.EpochsPerDay()) / 24 * retentionBuffer)
@@ -40,6 +40,10 @@ func (d *epochWriter) getPartitionRange(epoch uint64) (uint64, uint64) {
 }
 
 func (d *epochWriter) clearOldEpochs(removeBelowEpoch int64) error {
+	if debugSkipOldEpochClear {
+		return nil
+	}
+
 	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_epoch")
 	if err != nil {
 		return errors.Wrap(err, "failed to get partitions")
@@ -71,6 +75,12 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 
 	d.mutex.Lock()
 	err := d.createEpochPartition(startOfPartition, endOfPartition)
+	if epoch == startOfPartition && debugAddToColumnEngine {
+		err = edb.AddToColumnEngine(fmt.Sprintf("validator_dashboard_data_epoch_%d_%d", startOfPartition, endOfPartition), "epoch")
+		if err != nil {
+			d.log.Warnf("Failed to add epoch to column engine: %v", err)
+		}
+	}
 	d.mutex.Unlock()
 	if err != nil {
 		return errors.Wrap(err, "failed to create epoch partition")
@@ -147,13 +157,13 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].AttestationsSourceReward,
 				data[i].AttestationsTargetReward,
 				data[i].AttestationsHeadReward,
-				data[i].AttestationsInactivityReward,
+				data[i].AttestationsInactivityPenalty,
 				data[i].AttestationsInclusionsReward,
 				data[i].AttestationReward,
 				data[i].AttestationsIdealSourceReward,
 				data[i].AttestationsIdealTargetReward,
 				data[i].AttestationsIdealHeadReward,
-				data[i].AttestationsIdealInactivityReward,
+				data[i].AttestationsIdealInactivityPenalty,
 				data[i].AttestationsIdealInclusionsReward,
 				data[i].AttestationIdealReward,
 				data[i].BlockScheduled,

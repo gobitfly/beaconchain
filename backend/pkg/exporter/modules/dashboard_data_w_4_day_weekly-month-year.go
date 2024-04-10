@@ -99,8 +99,15 @@ type MultipleDaysRollingAggregatorImpl struct {
 	log ModuleLog
 }
 
-func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64) (uint64, uint64) {
-	return getDayAggregateBounds(epoch)
+// returns both start_epochs
+func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64, days uint64) (uint64, uint64) {
+	todayStart, _ := getDayAggregateBounds(epoch)
+	start := int64(epoch - days*utils.EpochsPerDay())
+	if start < 0 {
+		start = 0
+	}
+	xDayOldStart, _ := getDayAggregateBounds(uint64(start))
+	return xDayOldStart, todayStart
 }
 
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
