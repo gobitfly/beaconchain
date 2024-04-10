@@ -116,7 +116,7 @@ const mapped = computed(() => {
 .duty-status-container {
   background-color: var(--subcontainer-background);
   border-radius: var(--border-radius);
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   color: var(--text-color-disabled);
   height: 20px;

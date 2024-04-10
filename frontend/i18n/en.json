@@ -1,5 +1,5 @@
 {
-  "locales" : {
+  "locales": {
     "date": "en-US"
   },
   "common": {
@@ -18,7 +18,7 @@
     "average": "Average",
     "index": "Index",
     "edit": "Edit",
-    "true": "True", 
+    "true": "True",
     "false": "False"
   },
   "clipboard": {
@@ -48,9 +48,9 @@
   },
   "premium": {
     "title": "beaconcha.in Premium",
-    "description":"Monitoring without limits on web and mobile.",
-    "subscribe":"Subscribe to Premium",
-    "unlock":"Unlock Full Features"
+    "description": "Monitoring without limits on web and mobile.",
+    "subscribe": "Subscribe to Premium",
+    "unlock": "Unlock Full Features"
   },
   "validator_state": {
     "active": "active",
@@ -118,13 +118,13 @@
         "orphaned": "Network orphaned slot {slot}"
       },
       "status": {
-        "scheduled":{
-          "no_duties":["You have", "no scheduled", "duties"],
-          "has_duties":["You have", "scheduled", "duties"]
-        }, 
+        "scheduled": {
+          "no_duties": ["You have", "no scheduled", "duties"],
+          "has_duties": ["You have", "scheduled", "duties"]
+        },
         "no_duties": ["You had", "no", "duties"],
-        "duties_some":["You missed", "some", "duties"],
-        "duties_success":["All of your duties were", "successful", ""],
+        "duties_some": ["You missed", "some", "duties"],
+        "duties_success": ["All of your duties were", "successful", ""],
         "duties_failed": ["All of your duties were", "missed", ""]
       }
     }
@@ -154,7 +154,7 @@
       "selection": {
         "all": "All groups",
         "default": "Default",
-        "placeholder": "Select group", 
+        "placeholder": "Select group",
         "dialog": {
           "title": "Edit Groups",
           "assign-group": "Assign to group",
@@ -177,14 +177,14 @@
     "validator": {
       "manage-validators": "Manage Validators",
       "manage-groups": "Manage Groups",
-      "management":{
+      "management": {
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",
         "validators_added": "validators added",
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
-      "group_management":{
+      "group_management": {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
         "validators_added": "validators added",
@@ -193,8 +193,8 @@
         "remove_title": "Remove Groups",
         "new_group_placeholder": "New group name",
         "remove_text": "Do you want to remove group {group} from your dashboard?",
-        "col":{
-          "name": "Name", 
+        "col": {
+          "name": "Name",
           "id": "Group Id",
           "count": "Amount"
         }
@@ -240,7 +240,7 @@
           "apr": "APR",
           "luck": "Luck"
         },
-        "chart":{
+        "chart": {
           "all_groups": "All Groups",
           "efficiency": "Efficiency"
         }
@@ -263,6 +263,17 @@
         "sync": {
           "title": "Sync Committee Efficiency: ",
           "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
+        }
+      },
+      "duties": {
+        "title": "Epoch",
+        "validators": "Validators",
+        "search_placeholder": "Index, Public Key",
+        "col": {
+          "duties": "Duties",
+          "result": "Result",
+          "rewards": "Rewards",
+          "validator": "Validator"
         }
       }
     }
