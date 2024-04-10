@@ -81,10 +81,10 @@ const mapped = computed(() => {
             {{ mapped.total.tooltipTitle }}
           </b>
           <div class="head">
-            <b>{{ $t('validator.duty.head') }}:</b> {{ mapped.head.success }}
+            <b>{{ $t('validator.duty.head') }}:</b> {{ $t(`common.${mapped.head.success}`) }}
           </div>
-          <div><b>{{ $t('validator.duty.source') }}:</b> {{ mapped.source.success }}</div>
-          <div><b>{{ $t('validator.duty.target') }}:</b> {{ mapped.target.success }}</div>
+          <div><b>{{ $t('validator.duty.source') }}:</b> {{ $t(`common.${mapped.source.success}`) }}</div>
+          <div><b>{{ $t('validator.duty.target') }}:</b> {{ $t(`common.${mapped.target.success}`) }}</div>
         </div>
       </template>
       <div class="attestations group" :class="mapped.total.className">
