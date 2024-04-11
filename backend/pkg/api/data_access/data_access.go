@@ -949,7 +949,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	}
 
 	pubkeys := []struct {
-		ValidatorIndex uint64 `db:"validatorindex"`
+		ValidatorIndex uint64 `db:"validator_index"`
 		Pubkey         []byte `db:"pubkey"`
 	}{}
 
@@ -961,10 +961,10 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	// Query to find the pubkey for each validator index
 	pubkeysQuery := `
 		SELECT
-			validatorindex,
+			validator_index,
 			pubkey
 		FROM validators
-		WHERE validatorindex = ANY($1)
+		WHERE validator_index = ANY($1)
 	`
 
 	// Query to add the validators to the dashboard and group
@@ -1140,7 +1140,10 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
-	minEpoch := headEpoch - 2
+	minEpoch := uint64(0)
+	if headEpoch > 1 {
+		minEpoch = headEpoch - 2
+	}
 	maxEpoch := headEpoch + 1
 
 	maxValidatorsInResponse := 6

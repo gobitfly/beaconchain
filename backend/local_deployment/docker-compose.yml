@@ -1,4 +1,3 @@
-version: '3'
 x-service: &default-service
   image: golang:1.20
   working_dir: /app
@@ -30,8 +29,14 @@ services:
   # frontend-data-updater:
   #   <<: *default-service
   #   command: go run ./cmd/frontend-data-updater -config /app/local_deployment/config.yml
-  # frontend:
-  #   <<: *default-service
-  #   command: go run ./cmd/explorer -config /app/local_deployment/config.yml
-  #   environment:
-  #     - FRONTEND_ENABLED=true
+  frontend:
+    image: ghcr.io/gobitfly/beaconchain_frontend:main
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_PUBLIC_API_CLIENT="http://172.17.0.1:8080/api/i/"
+      - NUXT_PUBLIC_LEGACY_API_CLIENT="http://172.17.0.1:8080/"
+      - NUXT_PRIVATE_API_SERVER="http://172.17.0.1:8080/api/i/"
+      - NUXT_PRIVATE_LEGACY_API_SERVER="http://172.17.0.1:8080/"
+      - NUXT_PUBLIC_API_KEY="xxx"
+      - NUXT_PUBLIC_X_USER_ID=1
