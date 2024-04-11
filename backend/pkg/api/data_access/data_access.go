@@ -2053,19 +2053,19 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			orderBy += `, slot DESC`
 		}
 		if currentCursor.IsValid() {
-			sign := ` <`
-			if currentCursor.Direction == enums.ASC {
-				sign = ` >`
+			sign := ` > `
+			if sort[0].Desc {
+				sign = ` < `
 			}
 			params = append(params, currentCursor.Slot)
-			where += `AND `
+			where += `AND (`
 			if onlyPrimarySort {
-				where += `slot` + sign + ` $2`
+				where += `slot` + sign + `$2`
 			} else {
-				// WIP
-				where += `slot < $2 AND ` + sortColName + sign + `= $3 `
+				where += `(slot < $2 AND ` + sortColName + ` = $3) OR ` + sortColName + sign + `$3`
 				params = append(params, val)
 			}
+			where += `) `
 		}
 	} else {
 		orderBy += `slot DESC`
@@ -2093,6 +2093,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 	// (non-mev) tx reward is in bt
 	indexedBlocksNoRelay, err := d.bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
+	if err != nil {
+		return nil, nil, err
+	}
 	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
