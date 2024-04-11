@@ -80,9 +80,9 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 			end_epoch as (
 				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch <= $2 AND epoch >= $1
 			),
-			balance_starts as ( -- we dont need this for updating, only for bootstraping
-				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
-			),
+			--balance_starts as ( -- we dont need this for updating, only for bootstraping
+			--	SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
+			--),
 			balance_ends as (
 				SELECT validator_index, balance_end FROM validator_dashboard_data_epoch WHERE epoch = (SELECT epoch FROM end_epoch)
 			),
@@ -195,7 +195,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 				sync_executed,
 				sync_rewards,
 				slashed,
-				balance_start,
+				32e9, --balance_start,
 				balance_end,
 				deposits_count,
 				deposits_amount,
@@ -215,7 +215,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 				slashed_violation,
 				last_executed_duty_epoch
 			FROM aggregate
-			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
+			--LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
 			ON CONFLICT (validator_index) DO UPDATE SET
 				attestations_source_reward = COALESCE(validator_dashboard_data_rolling_total.attestations_source_reward, 0) + COALESCE(EXCLUDED.attestations_source_reward, 0),

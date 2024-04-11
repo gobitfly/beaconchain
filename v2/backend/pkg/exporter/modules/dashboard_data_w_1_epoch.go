@@ -27,7 +27,7 @@ func newEpochWriter(d *dashboardData) *epochWriter {
 }
 
 const PartitionEpochWidth = 3
-const retentionBuffer = 1.1
+const retentionBuffer = 1.1 // do not go below 1
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {
 	return uint64(float64(utils.EpochsPerDay()) / 24 * retentionBuffer)

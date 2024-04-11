@@ -94,7 +94,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 2943
+		//d.headEpochQueue <- 2955
 		d.processHeadQueue()
 	}()
 
@@ -538,7 +538,7 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 			return nil
 		})
 
-		errGroup.Go(func() error {
+		errGroup.Go(func() error { // so this could be parallel IF we dont need to bootstrap. Room for improvement?
 			err := d.epochToHour.aggregate1h() // will aggregate last hour too if it hasn't completed yet
 			if err != nil {
 				return errors.Wrap(err, "failed to aggregate 1h")
@@ -580,19 +580,25 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 
 // This function contains more heavy aggregation like rolling 7d, 30d, 90d
 // As is this will also be called every epoch too (as long as exporter is on head, otherwise not), but it could be called less frequent too
+// Assumes that aggregatePerEpoch has been called before this!
 func (d *dashboardData) aggregateMid() error {
 	start := time.Now()
 	defer func() {
 		d.log.Infof("all of mid aggregation took %v", time.Since(start))
 	}()
 
-	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get last exported epoch")
-	}
-
+	var err error
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(databaseAggregationParallelism)
+
+	errGroup.Go(func() error {
+		err := d.hourToDay.rolling24hAggregate()
+		if err != nil {
+			return errors.Wrap(err, "failed to rolling 24h aggregate")
+		}
+		d.log.Infof("finished dayAggregate rolling 24h")
+		return nil
+	})
 
 	errGroup.Go(func() error {
 		err = d.dayUp.rolling7dAggregate()
@@ -617,6 +623,11 @@ func (d *dashboardData) aggregateMid() error {
 		}
 		return nil
 	})
+
+	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		return errors.Wrap(err, "failed to get last exported epoch")
+	}
 
 	err = errGroup.Wait()
 	if err != nil {

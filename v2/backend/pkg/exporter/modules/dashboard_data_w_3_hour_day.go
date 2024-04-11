@@ -46,17 +46,6 @@ func (d *hourToDayAggregator) dayAggregate(workingOnHead bool) error {
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(databaseAggregationParallelism)
 
-	if workingOnHead {
-		errGroup.Go(func() error {
-			err := d.rolling24hAggregate()
-			if err != nil {
-				return errors.Wrap(err, "failed to rolling 24h aggregate")
-			}
-			d.log.Infof("finished dayAggregate rolling 24h")
-			return nil
-		})
-	}
-
 	errGroup.Go(func() error {
 		err := d.utcDayAggregate()
 		if err != nil {
@@ -122,6 +111,10 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 			continue
 		}
 
+		if boundsStart > latestExportedDay.EpochStart {
+			continue // nothing to do
+		}
+
 		err = d.aggregateUtcDaySpecific(boundsStart, boundsEnd)
 		if err != nil {
 			d.log.Error(err, "failed to aggregate utc day specific", 0)
@@ -139,6 +132,15 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 	err := d.createDayPartition(partitionStartRange, partitionEndRange)
 	if err != nil {
 		return errors.Wrap(err, "failed to create day partition")
+	}
+
+	// sanity check see if tail validator_dashboard_data_hourly epoch_start exists
+	var found bool
+	err = db.AlloyWriter.Get(&found, `
+		SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1 
+	`, firstEpochOfDay)
+	if err != nil || !found {
+		return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", firstEpochOfDay))
 	}
 
 	tx, err := db.AlloyWriter.Beginx()
@@ -388,16 +390,6 @@ func (d *DayRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
 	return getHourAggregateWidth()
 }
 
-func (d *DayRollingAggregatorImpl) bootstrapTableToHeadOffset(currentHead uint64) (int64, error) {
-	lastExportedHour, err := edb.GetLastExportedHour()
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to get latest hourly epoch")
-	}
-
-	// modulo in case the current epoch triggers a new aggregation, so offset of getHourAggregateWidth() is actually offset 0
-	return (int64(currentHead) - (int64(lastExportedHour.EpochEnd) - 1)) % int64(getHourAggregateWidth()), nil
-}
-
 func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {
@@ -410,6 +402,14 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	}
 
 	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochStart, 1)
+
+	var found bool
+	err = db.AlloyWriter.Get(&found, `
+		SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1 
+	`, dayOldBoundsStart)
+	if err != nil || !found {
+		return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", dayOldBoundsStart))
+	}
 
 	d.log.Infof("latestHourlyEpoch: %d, dayOldHourlyEpoch: %d", latestHourlyEpoch, dayOldBoundsStart)
 
