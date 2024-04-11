@@ -114,16 +114,6 @@ func (d *MultipleDaysRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 
 	return utils.EpochsPerDay()
 }
 
-func (d *MultipleDaysRollingAggregatorImpl) bootstrapTableToHeadOffset(currentHead uint64) (int64, error) {
-	latestExportedDay, err := edb.GetLastExportedDay()
-	if err != nil && err != sql.ErrNoRows {
-		return 0, errors.Wrap(err, "failed to get latest daily epoch")
-	}
-
-	// modulo in case epoch completes a day, an offset of 225 on eth mainnet would be an offset of 0 in this case
-	return (int64(currentHead) - (int64(latestExportedDay.EpochEnd) - 1)) % int64(GetDayAggregateWidth()), nil
-}
-
 func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {
