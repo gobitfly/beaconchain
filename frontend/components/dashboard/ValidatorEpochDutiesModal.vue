@@ -4,7 +4,6 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { InternalGetValidatorDashboardDutiesResponse } from '~/types/api/validator_dashboard'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
-import { totalDutyRewards } from '~/utils/dashboard/validator'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -150,11 +149,7 @@ watch([title, size], () => {
           </Column>
           <Column field="rewards" :sortable="!size.expandable" :header="$t('dashboard.validator.duties.col.rewards')">
             <template #body="slotProps">
-              <BcFormatValue
-                :value="totalDutyRewards(slotProps.data.duties)"
-                :use-colors="true"
-                :options="{ addPlus: true, fixedDecimalCount: 5 }"
-              />
+              <ValidatorTableDutyRewards :data="slotProps.data.duties" />
             </template>
           </Column>
           <template #expansion="slotProps">

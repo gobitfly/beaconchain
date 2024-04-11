@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import BcTooltip from '~/components/bc/BcTooltip.vue'
-import type SlotVizIcon from '~/components/slot/viz/SlotVizIcon.vue'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
 
 interface Props {
