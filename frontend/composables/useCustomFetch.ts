@@ -11,6 +11,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_modify',
+  DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
@@ -52,6 +53,11 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
     path: 'validator-dashboards/{dashboard_id}/validators',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/validators`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
+    path: 'validator-dashboards/{dashboard_id}/blocks',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/blocks`,
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {

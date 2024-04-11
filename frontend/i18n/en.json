@@ -3,6 +3,7 @@
     "date": "en-US"
   },
   "common": {
+    "block": "Block",
     "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator",
@@ -129,6 +130,11 @@
       }
     }
   },
+  "block":{
+    "col":{
+      "proposer": "Proposer"
+    }
+  },
   "validator": {
     "duty": {
       "attestation_missed": "Attestation missed",
@@ -184,6 +190,12 @@
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
+      "blocks":{
+        "title": "Blocks",
+        "search_placeholder": "Block Number / Graffiti / Property",
+        "el_rewards": "Execution Layer Reward",
+        "cl_rewards": "Consensus Layer Reward"
+      },
       "group_management":{
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
@@ -216,7 +228,8 @@
         "efficiency_last_7d": "Efficiency (7d)",
         "efficiency_last_30d": "Efficiency (30d)",
         "efficiency_all_time": "Efficiency (All Time)",
-        "validators": "Validators"
+        "validators": "Validators",
+        "rewards": "Rewards"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
