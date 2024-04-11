@@ -395,7 +395,7 @@ func (d *DayRollingAggregatorImpl) bootstrapTableToHeadOffset(currentHead uint64
 	}
 
 	// modulo in case the current epoch triggers a new aggregation, so offset of getHourAggregateWidth() is actually offset 0
-	return (int64(currentHead) - (int64(lastExportedHour.EpochStart) - 1)) % int64(getHourAggregateWidth()), nil
+	return (int64(currentHead) - (int64(lastExportedHour.EpochEnd) - 1)) % int64(getHourAggregateWidth()), nil
 }
 
 func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {

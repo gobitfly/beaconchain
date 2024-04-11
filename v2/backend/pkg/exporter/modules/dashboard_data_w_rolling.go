@@ -32,6 +32,7 @@ type RollingAggregatorInt interface {
 	// return the number of epochs the current head is ahead of the bootstrap table
 	// this is the same number the tail of the bootstrap table is below the target tail end
 	// this is useful to know how many recent tail epochs you need to fetch
+	// for example will return offset 1 if current exported epoch is 10 and currentHead is 11
 	bootstrapTableToHeadOffset(currentHead uint64) (int64, error)
 
 	// get the threshold on how many epochs you can be behind without bootstrap or at which distance there will be a bootstrap
@@ -65,7 +66,7 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 
 	// limit to last offset epochs as the rest will not be relevant after bootstrapping
 	if aggTailEpochEnd-aggTailEpochStart > offset { //int64(getHourAggregateWidth()) {
-		aggTailEpochStart = aggTailEpochEnd - offset
+		aggTailEpochStart = aggTailEpochEnd - (offset - 1) // as returned args are incl
 	}
 	return aggTailEpochStart, aggTailEpochEnd
 }
@@ -117,19 +118,19 @@ func (d *RollingAggregator) Aggregate(days int, tableName string) error {
 		}
 
 		d.log.Infof("rolling %dd bootstraping finished", days)
-	}
 
-	if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-utils.EpochsPerDay() == bounds.EpochStart { // todo check bounds ok?
-		log.Infof("rolling %dd is up to date, nothing to do", days)
-		err = tx.Commit()
-		if err != nil {
-			return errors.Wrap(err, "failed to commit transaction")
+		if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-utils.EpochsPerDay() == bounds.EpochStart {
+			log.Infof("rolling %dd is up to date, nothing to do", days)
+			err = tx.Commit()
+			if err != nil {
+				return errors.Wrap(err, "failed to commit transaction")
+			}
+			return nil
 		}
-		return nil
 	}
 
-	if !bootstrap && bounds.EpochEnd-bounds.EpochStart != utils.EpochsPerDay()*uint64(days) { // todo need EpochEnd is excl so -1 to get the inclusive epoch number?
-		log.Warnf("rolling %dd boundaries are out of bounds (%d-%d, %d), this is expected after bootstrap, but not after that. Keep an eye on it", days, bounds.EpochStart, bounds.EpochEnd, bounds.EpochEnd-bounds.EpochStart-1)
+	if !bootstrap && bounds.EpochEnd-bounds.EpochStart != utils.EpochsPerDay()*uint64(days) {
+		log.Warnf("rolling %dd boundaries are out of bounds (%d-%d, %d), this is expected after bootstrap, but not after that. Keep an eye on it", days, bounds.EpochStart, bounds.EpochEnd, bounds.EpochEnd-bounds.EpochStart)
 	}
 
 	// how many epochs will the epochs table be ahead of the aggregated table
@@ -354,7 +355,6 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 					attestation_target_executed = COALESCE(v.attestation_target_executed, 0) + result.attestation_target_executed,
 					optimal_inclusion_delay_sum = COALESCE(v.optimal_inclusion_delay_sum, 0) + result.optimal_inclusion_delay_sum,
 					epoch_end = result.epoch_end,
-					epoch_start = result.epoch_start,
 					slasher_reward = COALESCE(v.slasher_reward, 0) + result.slasher_reward,
 					slashed_by = COALESCE(result.slashed_by, v.slashed_by),
 					slashed_violation = COALESCE(result.slashed_violation, v.slashed_violation),
