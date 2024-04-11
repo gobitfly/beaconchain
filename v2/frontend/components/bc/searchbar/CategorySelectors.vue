@@ -7,33 +7,32 @@ import {
 
 const emit = defineEmits(['change'])
 const props = defineProps<{
-    initialState: Record<string, boolean>, // each field has a stringifyEnum(Category) as key and the state of the option as value
-    barStyle: SearchbarStyle
- }>()
+  liveState: Record<string, boolean>, // each field has a stringifyEnum(Category) as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+  barStyle: SearchbarStyle
+}>()
 
-let componentIsReady = false
-const state = ref<Record<string, boolean>>({}) // each field has a stringifyEnum(Category) as key and the state of the option as value
+const { t } = useI18n()
+
+const stateRef = ref<Record<string, boolean>>({}) // each field has a stringifyEnum(Category) as key and the state of the option as value
 
 onMounted(() => {
-  componentIsReady = false
-  state.value = { ...props.initialState }
-  componentIsReady = true
+  stateRef.value = props.liveState
+})
+watch(props, () => {
+  stateRef.value = props.liveState
 })
 
 function selectionHasChanged () {
-  if (componentIsReady) { // ensures that we do not emit change-events during the initialization of the buttons (see the code in onMounted)
-    console.log('Category selector')
-    emit('change', state.value)
-  }
+  emit('change')
 }
 </script>
 
 <template>
   <div>
-    <span v-for="filter of Object.keys(state)" :key="filter">
+    <span v-for="filter of Object.keys(stateRef)" :key="filter">
       <label class="filter-button">
         <input
-          v-model="state[filter]"
+          v-model="stateRef[filter]"
           type="checkbox"
           class="hiddencheckbox"
           :true-value="true"
@@ -41,7 +40,7 @@ function selectionHasChanged () {
           @change="selectionHasChanged"
         >
         <span class="face" :class="barStyle">
-          {{ CategoryInfo[Number(filter) as Category].filterLabel }}
+          {{ t(...CategoryInfo[Number(filter) as Category].filterLabel) }}
         </span>
       </label>
     </span>
@@ -87,15 +86,14 @@ function selectionHasChanged () {
     display: none;
     width: 0;
     height: 0;
-  }
-
-  .hiddencheckbox:checked + .face {
-    background-color: var(--button-color-active);
-    &:hover {
-      background-color: var(--button-color-hover);
-    }
-    &:active {
-      background-color: var(--button-color-pressed);
+    &:checked + .face {
+      background-color: var(--button-color-active);
+      &:hover {
+        background-color: var(--button-color-hover);
+      }
+      &:active {
+        background-color: var(--button-color-pressed);
+      }
     }
   }
 }

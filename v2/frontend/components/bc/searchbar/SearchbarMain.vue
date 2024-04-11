@@ -4,18 +4,19 @@ import {
   Category,
   SubCategory,
   ResultType,
-  FillFrom,
+  type FillFrom,
   type HowToFillresultSuggestionOutput,
   type ResultSuggestionOutput,
   CategoryInfo,
   SubCategoryInfo,
   TypeInfo,
   getListOfResultTypes,
-  isOutputAnAPIresponse,
-  type SearchAheadSingleResult,
-  type SearchAheadResult,
+  wasOutputDataGivenByTheAPI,
+  type SingleAPIresult,
+  type SearchAheadAPIresponse,
   type ResultSuggestion,
   type OrganizedResults,
+  Indirect,
   SearchbarStyle,
   SearchbarPurpose,
   SearchbarPurposeInfo,
@@ -26,7 +27,8 @@ import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/netwo
 
 const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
 
-const { t: $t } = useI18n()
+const { t } = useI18n()
+
 const { fetch } = useCustomFetch()
 const props = defineProps<{
   barStyle: SearchbarStyle, // look of the bar
@@ -77,7 +79,7 @@ const userFilters = {
 }
 
 const results = {
-  raw: { data: [] } as SearchAheadResult, // response of the API, without structure nor order
+  raw: { data: [] } as SearchAheadAPIresponse, // response of the API, without structure nor order
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered-in results, organized
     howManyResultsIn: 0,
@@ -180,10 +182,10 @@ SearchRequestPeriodicity
 
 async function searchAhead () : Promise<ResultState> {
   const startInput = inputted.value
-  let received : SearchAheadResult | undefined
+  let received : SearchAheadAPIresponse | undefined
 
   try {
-    received = await fetch<SearchAheadResult>(API_PATH.SEARCH, {
+    received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: {
@@ -305,20 +307,6 @@ function inputMightHaveChanged () {
   }
 }
 
-function networkFilterHasChanged (state : Record<string, boolean>) {
-  for (const nw in userFilters.networks) {
-    userFilters.networks[nw] = state[nw]
-  }
-  refreshOutputArea()
-}
-
-function categoryFilterHasChanged (state : Record<string, boolean>) {
-  for (const cat in userFilters.categories) {
-    userFilters.categories[cat] = state[cat]
-  }
-  refreshOutputArea()
-}
-
 function refreshOutputArea () {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
@@ -349,9 +337,8 @@ function filterAndOrganizeResults () {
 
   for (const finding of results.raw.data) {
     const type = finding.type as ResultType
-
     // getting organized information from the finding
-    const toBeAdded = convertOneSearchAheadResultIntoResultSuggestion(finding)
+    const toBeAdded = convertSingleAPIresultIntoResultSuggestion(finding)
     if (!toBeAdded) {
       continue
     }
@@ -362,12 +349,16 @@ function filterAndOrganizeResults () {
     } else {
       chainId = finding.chain_id as ChainIDs
     }
-    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized object
-    let place : OrganizedResults
+    // discarding findings that our configuration (given in the props) forbids
     const stringifyedChainId = stringifyEnum(chainId)
     const stringifyedCategory = stringifyEnum(TypeInfo[type].category)
-    const acceptTheChainID = (stringifyedChainId in userFilters.networks && (userFilters.networks[stringifyedChainId] || noNetworkIsSelected)) || chainId === ChainIDs.Any
-    const acceptTheCategory = stringifyedCategory in userFilters.categories && (userFilters.categories[stringifyedCategory] || noCategoryIsSelected)
+    if ((chainId !== ChainIDs.Any && !(stringifyedChainId in userFilters.networks)) || !(stringifyedCategory in userFilters.categories)) {
+      continue
+    }
+    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized objects
+    let place : OrganizedResults
+    const acceptTheChainID = userFilters.networks[stringifyedChainId] || noNetworkIsSelected || chainId === ChainIDs.Any
+    const acceptTheCategory = userFilters.categories[stringifyedCategory] || noCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       place = results.organized.in
       results.organized.howManyResultsIn++
@@ -414,7 +405,7 @@ function filterAndOrganizeResults () {
 // If the result JSON from the API is somehow unexpected, the function returns `undefined`.
 // The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestion.output
 // object are given by the filling information in TypeInfo[<result type>].howToFillresultSuggestionOutput in types/searchbar.ts
-function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : SearchAheadSingleResult) : ResultSuggestion | undefined {
+function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : SingleAPIresult) : ResultSuggestion | undefined {
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
     return undefined
@@ -426,7 +417,7 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
 
   for (const k in howToFillresultSuggestionOutput) {
     const key = k as keyof HowToFillresultSuggestionOutput
-    const data = getAPIdata(apiResponseElement, howToFillresultSuggestionOutput[key])
+    const data = realizeData(apiResponseElement, howToFillresultSuggestionOutput[key])
     if (data === undefined) {
       warn('The API returned a search-ahead result of type ', type, ' with a missing field.')
       return undefined
@@ -439,12 +430,12 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   // This is expected to happen in one case: when the back-end does not know the name of a contract, it returns ''
   let nameWasUnknown = false
   if (output.name === '') {
-    output.name = TypeInfo[type].title
+    output.name = t(...TypeInfo[type].title)
     nameWasUnknown = true
   }
 
   // retrieving the data that identifies this very result in the back-end (will be given to the callback function `@go`)
-  const queryParam = getAPIdata(apiResponseElement, TypeInfo[type].queryParamField) as string
+  const queryParam = realizeData(apiResponseElement, TypeInfo[type].queryParamField) as string
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
@@ -452,12 +443,12 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
     count = (apiResponseElement.num_value === undefined) ? NaN : apiResponseElement.num_value
   }
 
-  // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti).
+  // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti and token names).
   // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions by relevance when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
   for (const k in output) {
     const key = k as keyof HowToFillresultSuggestionOutput
-    if (isOutputAnAPIresponse(type, key)) {
+    if (wasOutputDataGivenByTheAPI(type, key)) {
       const cl = resemblanceWithInput(output[key])
       if (cl < closeness) {
         closeness = cl
@@ -468,19 +459,19 @@ function convertOneSearchAheadResultIntoResultSuggestion (apiResponseElement : S
   return { output, nameWasUnknown, queryParam, closeness, count, rawResult: apiResponseElement }
 }
 
-function getAPIdata (apiResponseElement : SearchAheadSingleResult, fillFrom : FillFrom | string) : string | undefined {
+function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFrom) : string | undefined {
   const type = apiResponseElement.type as ResultType
-  let sourceField : keyof SearchAheadSingleResult
+  let sourceField : keyof SingleAPIresult
 
-  switch (fillFrom) {
-    case FillFrom.SASRstr_value : sourceField = 'str_value'; break
-    case FillFrom.SASRnum_value : sourceField = 'num_value'; break
-    case FillFrom.SASRhash_value : sourceField = 'hash_value'; break
-    case FillFrom.CategoryTitle : return CategoryInfo[TypeInfo[type].category].title
-    case FillFrom.SubCategoryTitle : return SubCategoryInfo[TypeInfo[type].subCategory].title
-    case FillFrom.TypeTitle : return TypeInfo[type].title
+  switch (dataSource) {
+    case Indirect.SASRstr_value : sourceField = 'str_value'; break
+    case Indirect.SASRnum_value : sourceField = 'num_value'; break
+    case Indirect.SASRhash_value : sourceField = 'hash_value'; break
+    case Indirect.CategoryTitle : return t(...CategoryInfo[TypeInfo[type].category].title)
+    case Indirect.SubCategoryTitle : return t(...SubCategoryInfo[TypeInfo[type].subCategory].title)
+    case Indirect.TypeTitle : return t(...TypeInfo[type].title)
     default :
-      return fillFrom as string // this is a predefined text, hard-coded in object TypeInfo defined in searchbar.ts
+      return (dataSource === '') ? '' : t(...dataSource)
   }
 
   if (apiResponseElement[sourceField] !== undefined) {
@@ -536,35 +527,35 @@ function mustCategoryFiltersBeShown () : boolean {
 
 function inputPlaceHolder () : string {
   switch (props.barPurpose) {
-    case SearchbarPurpose.General : return $t('search_bar.general_placeholder')
-    case SearchbarPurpose.Accounts : return $t('search_bar.account_placeholder')
-    case SearchbarPurpose.Validators : return $t('search_bar.validator_placeholder')
+    case SearchbarPurpose.General : return t('search_bar.general_placeholder')
+    case SearchbarPurpose.Accounts : return t('search_bar.account_placeholder')
+    case SearchbarPurpose.Validators : return t('search_bar.validator_placeholder')
   }
   return '' // cannot happen but the static analysis thinks it can
 }
 
 function informationIfInputIsEmpty () : string {
-  const info = $t('search_bar.type_something') + ' '
+  const info = t('search_bar.type_something') + ' '
 
   switch (props.barPurpose) {
-    case SearchbarPurpose.General : return info + $t('search_bar.and_use_filters')
-    case SearchbarPurpose.Accounts : return info + $t('search_bar.related_to_account')
-    case SearchbarPurpose.Validators : return info + $t('search_bar.related_to_validator')
+    case SearchbarPurpose.General : return info + t('search_bar.and_use_filters')
+    case SearchbarPurpose.Accounts : return info + t('search_bar.related_to_account')
+    case SearchbarPurpose.Validators : return info + t('search_bar.related_to_validator')
   }
   return info // cannot happen but the static analysis thinks it can
 }
 
 function areThereResultsHiddenByUser () : boolean {
-  return (mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()) && results.organized.howManyResultsOut > 0
+  return results.organized.howManyResultsOut > 0
 }
 
 function informationIfNoResult () : string {
-  let info = $t('search_bar.no_result_matches') + ' '
+  let info = t('search_bar.no_result_matches') + ' '
 
   if (areThereResultsHiddenByUser()) {
-    info += $t('search_bar.your_filters')
+    info += t('search_bar.your_filters')
   } else {
-    info += $t('search_bar.your_input')
+    info += t('search_bar.your_input')
   }
 
   return info
@@ -573,10 +564,10 @@ function informationIfNoResult () : string {
 function informationIfHiddenResults () : string {
   let info = String(results.organized.howManyResultsOut) + ' '
 
-  info += (results.organized.howManyResultsOut === 1 ? $t('search_bar.one_result_hidden') : $t('search_bar.several_results_hidden'))
+  info += (results.organized.howManyResultsOut === 1 ? t('search_bar.one_result_hidden') : t('search_bar.several_results_hidden'))
 
   if (results.organized.howManyResultsIn !== 0) {
-    info = '+' + info + ' ' + $t('search_bar.by_your_filters')
+    info = '+' + info + ' ' + t('search_bar.by_your_filters')
   } else {
     info = '(' + info + ')'
   }
@@ -619,16 +610,16 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
             class="filter-networks"
-            :initial-state="userFilters.networks"
+            :live-state="userFilters.networks"
             :bar-style="barStyle"
-            @change="networkFilterHasChanged"
+            @change="refreshOutputArea"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
             class="filter-categories"
-            :initial-state="userFilters.categories"
+            :live-state="userFilters.categories"
             :bar-style="barStyle"
-            @change="categoryFilterHasChanged"
+            @change="refreshOutputArea"
           />
         </div>
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
@@ -659,14 +650,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
             {{ informationIfInputIsEmpty() }}
           </div>
           <div v-else-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
-            {{ $t('search_bar.searching') }}
+            {{ t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
-            {{ $t('search_bar.something_wrong') }}
+            {{ t('search_bar.something_wrong') }}
             <IconErrorFace :inline="true" />
             <br>
-            {{ $t('search_bar.try_again') }}
+            {{ t('search_bar.try_again') }}
           </div>
         </div>
       </div>
@@ -727,159 +718,159 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
       border: 1px solid var(--searchbar-background-hover-discreet);
     }
   }
-}
 
-.whole-component .input-and-button {
-  display: block;
-  width: 100%;
-
-  .input-field {
-    display:inline-block;
-    left: 0;
+  .input-and-button {
+    display: block;
     width: 100%;
-    border: none;
-    box-shadow: none;
-    background-color: transparent;
-    padding-top: 0px;
-    padding-bottom: 0px;
 
-    &.gaudy {
-      height: 40px;
-      padding-right: 41px;
-    }
-    &.discreet {
-      height: 34px;
-      padding-right: 35px;
-      color: var(--searchbar-text-discreet);
-      ::placeholder {
-        color: var(--light-grey-4);
+    .input-field {
+      display:inline-block;
+      left: 0;
+      width: 100%;
+      border: none;
+      box-shadow: none;
+      background-color: transparent;
+      padding-top: 0px;
+      padding-bottom: 0px;
+
+      &.gaudy {
+        height: 40px;
+        padding-right: 41px;
+      }
+      &.discreet {
+        height: 34px;
+        padding-right: 35px;
+        color: var(--searchbar-text-discreet);
+        ::placeholder {
+          color: var(--light-grey-4);
+        }
+      }
+      &.embedded {
+        height: 30px;
+        padding-right: 31px;
       }
     }
-    &.embedded {
-      height: 30px;
-      padding-right: 31px;
+
+    .searchbutton {
+      position: absolute;
+      &.gaudy {
+        right: -1px;
+        top: -1px;
+        width: 42px;
+        height: 42px;
+      }
+      &.discreet {
+        right: 0px;
+        top: 0px;
+        width: 34px;
+        height: 34px;
+      }
+      &.embedded {
+        right: -1px;
+        top: -1px;
+        width: 32px;
+        height: 32px;
+      }
     }
   }
 
-  .searchbutton {
-    position: absolute;
-    &.gaudy {
-      right: -1px;
-      top: -1px;
-      width: 42px;
-      height: 42px;
-    }
-    &.discreet {
-      right: 0px;
-      top: 0px;
-      width: 34px;
-      height: 34px;
-    }
-    &.embedded {
-      right: -1px;
-      top: -1px;
-      width: 32px;
-      height: 32px;
-    }
-  }
-}
-
-.whole-component .drop-down {
-  position: relative;
-  width: 100%;
-  padding-bottom: 4px;
-
-  .separation {
+  .drop-down {
     position: relative;
-    margin-left: 8px;
-    margin-right: 8px;
-    height: 1px;
-    margin-bottom: 10px;
-    &.gaudy {
-      background-color: var(--input-border-color);
-    }
-    &.discreet {
-      background-color: var(--searchbar-background-hover-discreet);
-    }
-    &.embedded {
-      background-color: var(--input-border-color);
-    }
-  }
+    width: 100%;
+    padding-bottom: 4px;
 
-  .filter-area {
-    display: flex;
-    row-gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-
-    .filter-networks {
-      margin-left: 6px;
-    }
-    .filter-categories {
-      margin-left: 6px;
-    }
-  }
-
-  .output-area {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    min-height: 128px;
-    max-height: 270px;  // the height of the filter section is subtracted
-    overflow: auto;
-    @include fonts.standard_text;
-    &.discreet {
-      color: var(--searchbar-text-discreet);
+    .separation {
+      position: relative;
+      margin-left: 8px;
+      margin-right: 8px;
+      height: 1px;
+      margin-bottom: 10px;
+      &.gaudy {
+        background-color: var(--input-border-color);
+      }
+      &.discreet {
+        background-color: var(--searchbar-background-hover-discreet);
+      }
+      &.embedded {
+        background-color: var(--input-border-color);
+      }
     }
 
-    .network-container {
+    .filter-area {
+      display: flex;
+      row-gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+
+      .filter-networks {
+        margin-left: 6px;
+      }
+      .filter-categories {
+        margin-left: 6px;
+      }
+    }
+
+    .output-area {
       position: relative;
       display: flex;
       flex-direction: column;
+      min-height: 128px;
+      max-height: 270px;  // the height of the filter section is subtracted
+      overflow: auto;
+      @include fonts.standard_text;
+      &.discreet {
+        color: var(--searchbar-text-discreet);
+      }
 
-      .type-container {
+      .network-container {
         position: relative;
         display: flex;
         flex-direction: column;
 
-        .suggestionrow-container {
+        .type-container {
           position: relative;
+          display: flex;
+          flex-direction: column;
 
-          .separation-between-suggestions {
+          .suggestionrow-container {
             position: relative;
-            display: none;
-            margin-left: 8px;
-            margin-right: 8px;
-            height: 0.9px;
 
-            &.embedded {
-              @media (max-width: 600px) { // mobile
-                display: block;
+            .separation-between-suggestions {
+              position: relative;
+              display: none;
+              margin-left: 8px;
+              margin-right: 8px;
+              height: 0.9px;
+
+              &.embedded {
+                @media (max-width: 600px) { // mobile
+                  display: block;
+                }
+                background-color: var(--input-border-color);
               }
-              background-color: var(--input-border-color);
             }
           }
         }
       }
-    }
 
-    .info {
-      position: relative;
-      @include fonts.standard_text;
-      color: var(--text-color-disabled);
-      justify-content: center;
-      text-align: center;
-      align-items: center;
-      &.bottom {
-        padding-top: 6px;
-        margin-top: auto;
+      .info {
+        position: relative;
+        @include fonts.standard_text;
+        color: var(--text-color-disabled);
+        justify-content: center;
+        text-align: center;
+        align-items: center;
+        &.bottom {
+          padding-top: 6px;
+          margin-top: auto;
+        }
+        &.center {
+          margin-bottom: auto;
+          margin-top: auto;
+        }
+        padding-left: 6px;
+        padding-right: 6px;
       }
-      &.center {
-        margin-bottom: auto;
-        margin-top: auto;
-      }
-      padding-left: 6px;
-      padding-right: 6px;
     }
   }
 }

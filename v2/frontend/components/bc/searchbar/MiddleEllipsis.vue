@@ -133,7 +133,6 @@ watch(() => { return props.text }, () => { // reacts to changes of text
 
 const resizingObserver = new ResizeObserver(() => { // will react to changes of width
   updateContent()
-  console.log('resizing')
 })
 
 function isSizeDefined () : boolean {

@@ -5,10 +5,11 @@ import {
   SubCategoryInfo,
   TypeInfo,
   ResultType,
-  isOutputAnAPIresponse,
+  wasOutputDataGivenByTheAPI,
   type ResultSuggestion,
   SearchbarStyle,
-  SearchbarPurpose
+  SearchbarPurpose,
+  getI18nPathOfTranslatableLitteral
 } from '~/types/searchbar'
 
 const props = defineProps<{
@@ -19,34 +20,36 @@ const props = defineProps<{
     barPurpose: SearchbarPurpose
 }>()
 
+const { t } = useI18n()
+
 function formatEmbeddedSubcategoryCell () : string {
-  const label = SubCategoryInfo[TypeInfo[props.resultType].subCategory].title
+  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.resultType].subCategory].title)
+  let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
 
   if (props.suggestion.count >= 2) {
-    return String(props.suggestion.count) + ' ' + label + 's'
+    label = String(props.suggestion.count) + ' ' + label
   }
-
   return label
 }
 
+function formatEmbeddedIdentificationCell () : string {
+  if (wasOutputDataGivenByTheAPI(props.resultType, 'name') && !props.suggestion.nameWasUnknown) {
+    return props.suggestion.output.name
+  }
+  return props.suggestion.output.lowLevelData
+}
+
 function formatEmbeddedDescriptionCell () : string {
-  if (isOutputAnAPIresponse(props.resultType, 'description')) {
+  if (wasOutputDataGivenByTheAPI(props.resultType, 'description')) {
     // we tell the user what is the data that they see (ex: "Index" for a validator index)
     switch (props.resultType) {
       case ResultType.ValidatorsByIndex :
       case ResultType.ValidatorsByPubkey :
-        return 'Index ' + props.suggestion.output.description
+        return t('common.index') + ' ' + props.suggestion.output.description
       // more cases might arise in the future
     }
   }
   return props.suggestion.output.description
-}
-
-function formatEmbeddedIdentificationCell () : string {
-  if (isOutputAnAPIresponse(props.resultType, 'name') && !props.suggestion.nameWasUnknown) {
-    return props.suggestion.output.name
-  }
-  return props.suggestion.output.lowLevelData
 }
 </script>
 
@@ -86,7 +89,7 @@ function formatEmbeddedIdentificationCell () : string {
     </BcSearchbarMiddleEllipsis>
     <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
-        {{ CategoryInfo[TypeInfo[resultType].category].title }}
+        {{ t(...CategoryInfo[TypeInfo[resultType].category].title) }}
       </span>
     </div>
   </div>
