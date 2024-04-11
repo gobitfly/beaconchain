@@ -12,18 +12,9 @@ const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
-const store = useValidatorDashboardSummaryDetailsStore()
-const { getKey, getDetails } = store
-const { detailsMap } = storeToRefs(store)
-
-const key = computed(() => getKey(props.dashboardKey, props.row.group_id))
-
-watch(key, () => {
-  getDetails(props.dashboardKey, props.row.group_id)
-}, { immediate: true })
+const { details: summary } = useValidatorDashboardSummaryDetailsStore(props.dashboardKey, props.row.group_id)
 
 const isWideEnough = computed(() => width.value >= 1400)
-const summary = computed(() => detailsMap.value[key.value])
 
 const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4

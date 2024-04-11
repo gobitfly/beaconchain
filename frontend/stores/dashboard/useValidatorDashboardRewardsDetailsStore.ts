@@ -16,6 +16,7 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   }
 
   async function getDetails () {
+    // Rewards of an epoch will not change, so we only need to load the data once
     if (data.value[getKey()]) {
       return data.value[getKey()]
     }
@@ -24,7 +25,8 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
     return res.data
   }
 
-  watch(() => getKey(), getDetails, { immediate: true })
+  // in the component where the store is used the properties will not change so we just need to load the data initially
+  getDetails()
 
   const details = computed<VDBGroupRewardsData | undefined>(() => {
     return data.value[getKey()]

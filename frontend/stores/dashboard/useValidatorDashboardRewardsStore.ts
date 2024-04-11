@@ -5,28 +5,31 @@ import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 
 const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards', () => {
-  const dataMap = ref < Record<DashboardKey, InternalGetValidatorDashboardRewardsResponse >>({})
-  const queryMap = ref < Record<DashboardKey, TableQueryParams | undefined >>({})
+  const data = ref < InternalGetValidatorDashboardRewardsResponse>()
+  const query = ref < TableQueryParams>()
 
-  return { dataMap, queryMap }
+  return { data, query }
 })
 
-export function useValidatorDashboardRewardsStore (dashboardKey: DashboardKey) {
+export function useValidatorDashboardRewardsStore () {
   const { fetch } = useCustomFetch()
-  const { dataMap, queryMap } = storeToRefs(validatorDashboardRewardsStore())
+  const { data, query: storedQuery } = storeToRefs(validatorDashboardRewardsStore())
 
   const { slotViz } = useValidatorSlotVizStore()
 
-  const rewards = computed(() => dataMap.value[dashboardKey])
-  const query = computed(() => queryMap.value[dashboardKey])
+  const rewards = computed(() => data.value)
+  const query = computed(() => storedQuery.value)
 
-  async function getRewards (query?: TableQueryParams) {
+  async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (dashboardKey === undefined) {
       return undefined
     }
-    queryMap.value = { ...queryMap.value, [dashboardKey]: query }
-
+    storedQuery.value = query
     const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS, undefined, { dashboardKey }, query)
+
+    if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
+      return // in case some query params change while loading
+    }
 
     // If we are on the first page we get the next Epoch slot viz data and create a future entry
     if (!query?.cursor && slotViz.value && res.data?.length) {
@@ -38,7 +41,7 @@ export function useValidatorDashboardRewardsStore (dashboardKey: DashboardKey) {
       }
     }
 
-    dataMap.value = { ...dataMap.value, [dashboardKey]: res }
+    data.value = res
     return res
   }
 

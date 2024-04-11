@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import SummaryChart from '../chart/SummaryChart.vue'
-import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
@@ -17,9 +17,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const store = useValidatorDashboardSummaryStore()
-const { getSummary } = store
-const { summaryMap, queryMap } = storeToRefs(store)
+const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -49,30 +47,26 @@ watch(query, (q) => {
   }
 }, { immediate: true })
 
-const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
-  return summaryMap.value?.[props.dashboardKey]
-})
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, overview.value?.groups)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySort(sort, lastQuery?.value))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryCursor(value, lastQuery?.value))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryPageSize(value, lastQuery?.value))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySearch(value, lastQuery?.value))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {

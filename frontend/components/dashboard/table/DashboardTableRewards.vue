@@ -18,7 +18,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore(props.dashboardKey)
+const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
@@ -47,7 +47,7 @@ watch(() => props.dashboardKey, () => {
 
 watch(query, (q) => {
   if (q) {
-    getRewards(q)
+    getRewards(props.dashboardKey, q)
   }
 }, { immediate: true })
 
