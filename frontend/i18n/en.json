@@ -18,7 +18,9 @@
     "id": "ID",
     "average": "Average",
     "index": "Index",
-    "edit": "Edit"
+    "edit": "Edit",
+    "true": "True", 
+    "false": "False"
   },
   "clipboard": {
     "copy": "Copy to clipboard",
@@ -54,7 +56,7 @@
   "validator_state": {
     "active": "active",
     "withdrawn": "withdrawn",
-    "online": "online",
+    "online": "active",
     "offline": "offline",
     "pending": "pending",
     "exited": "exited",
@@ -126,6 +128,22 @@
         "duties_success": ["All of your duties were", "successful", ""],
         "duties_failed": ["All of your duties were", "missed", ""]
       }
+    }
+  },
+  "validator": {
+    "duty": {
+      "attestation_missed": "Attestation missed",
+      "attestation_included": "Attestation included",
+      "head": "Head",
+      "source": "Source",
+      "target": "Target",
+      "proposal_success": "You proposed a block",
+      "proposal_failed": "You missed a block",
+      "proposal_partial": "You proposed a block and you missed a block",
+      "proposal_orphaned": "Your block was orphaned",
+      "slashing_success": "You slashed a validator",
+      "slashing_failed": "You got slashed",
+      "slashing_partial": "You slashed a validator and got slashed"
     }
   },
   "dashboard": {

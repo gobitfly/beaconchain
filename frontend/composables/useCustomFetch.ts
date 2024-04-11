@@ -168,7 +168,7 @@ export function useCustomFetch () {
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${url.origin}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
     const method = map.method || 'GET'
