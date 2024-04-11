@@ -2,16 +2,19 @@
 CL_PORT=$(kurtosis enclave inspect my-testnet | grep 4000/tcp | tr -s ' ' | cut -d " " -f 6 | sed -e 's/http\:\/\/127.0.0.1\://' | head -n 1)
 echo "CL Node port is $CL_PORT"
 
-EL_PORT=$(kurtosis enclave inspect my-testnet | grep 8545/tcp | tr -s ' ' | cut -d " " -f 5 | sed -e 's/127.0.0.1\://' | head -n 1)
+EL_PORT=$(kurtosis enclave inspect my-testnet | grep 8545/tcp | tr -s ' ' | cut -d " " -f 5 | sed -e 's/http\:\/\/127.0.0.1\://' | head -n 1)
 echo "EL Node port is $EL_PORT"
 
-REDIS_PORT=$(kurtosis enclave inspect my-testnet | grep 6379/tcp | tr -s ' ' | cut -d " " -f 6 | sed -e 's/tcp\:\/\/127.0.0.1\://' | head -n 1)
+REDIS_PORT=$(kurtosis port print my-testnet redis redis --format number)
 echo "Redis port is $REDIS_PORT"
 
-POSTGRES_PORT=$(kurtosis enclave inspect my-testnet | grep 5432/tcp | tr -s ' ' | cut -d " " -f 6 | sed -e 's/postgresql\:\/\/127.0.0.1\://' | head -n 1)
+POSTGRES_PORT=$(kurtosis port print my-testnet postgres postgres --format number)
 echo "Postgres port is $POSTGRES_PORT"
 
-LBT_PORT=$(kurtosis enclave inspect my-testnet | grep 9000/tcp | tr -s ' ' | cut -d " " -f 6 | sed -e 's/tcp\:\/\/127.0.0.1\://' | tail -n 1)
+ALLOY_PORT=$(kurtosis port print my-testnet alloy alloy --format number)
+echo "Alloy port is $ALLOY_PORT"
+
+LBT_PORT=$(kurtosis port print my-testnet littlebigtable littlebigtable --format number)
 echo "Little bigtable port is $LBT_PORT"
 
 cat <<EOF > .env
@@ -19,6 +22,7 @@ CL_PORT=$CL_PORT
 EL_PORT=$EL_PORT
 REDIS_PORT=$REDIS_PORT
 POSTGRES_PORT=$POSTGRES_PORT
+ALLOY_PORT=$ALLOY_PORT
 LBT_PORT=$LBT_PORT
 EOF
 
@@ -46,6 +50,18 @@ writerDatabase:
   name: db
   host: 127.0.0.1
   port: "$POSTGRES_PORT"
+  user: postgres
+  password: "pass"
+alloyReader:
+  name: alloy
+  host: 127.0.0.1
+  port: "$ALLOY_PORT"
+  user: postgres
+  password: "pass"
+alloyWriter:
+  name: alloy
+  host: 127.0.0.1
+  port: "$ALLOY_PORT"
   user: postgres
   password: "pass"
 bigtable:
@@ -116,3 +132,10 @@ echo "bigtable schema initialization completed"
 echo "provisioning postgres db schema"
 go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema
 echo "postgres db schema initialization completed"
+
+echo "provisioning alloy db schema"
+cd ../perfTesting
+go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable
+cd ../backend/db_migrations
+goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
+echo "alloy db schema initialization completed"

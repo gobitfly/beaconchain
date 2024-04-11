@@ -8,10 +8,10 @@
         "cl_client_image": "sigp/lighthouse:latest",
         "cl_client_log_level": "",
         "beacon_extra_params": ["--reconstruct-historic-states"],
-        "el_extra_params": ["--http.api='admin,eth,net,debug,txpool' --syncmode full --gcmode archive"],
+        "el_extra_params": ["--http.api='admin,eth,net,debug,txpool' --syncmode full"],
         "validator_extra_params": [],
         "builder_network_params": null,
-        "count": 1
+        "count": 2
       }
     ],
     "network_params": {
@@ -22,7 +22,7 @@
       "seconds_per_slot": 12,
       "genesis_delay": 10,
       "capella_fork_epoch": 0,
-      "deneb_fork_epoch": 999999999,
+      "deneb_fork_epoch": 0,
       "electra_fork_epoch": 999999999
     },
     "global_client_log_level": "info",

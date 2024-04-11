@@ -13,6 +13,18 @@ writerDatabase:
   port: {{.DBPort}}
   user: postgres
   password: "pass"
+alloyReader:
+  name: alloy
+  host: {{.DBHost}}
+  port: {{.DBPort}}
+  user: postgres
+  password: "pass"
+alloyWriter:
+  name: alloy
+  host: {{.DBHost}}
+  port: {{.DBPort}}
+  user: postgres
+  password: "pass"
 bigtable:
   project: explorer
   instance: explorer
