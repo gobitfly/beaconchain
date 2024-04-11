@@ -71,7 +71,7 @@ export interface Matching {
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
-export interface SearchAheadSingleResult {
+export interface SingleAPIresult {
   chain_id: number,
   type: string,
   str_value?: string,
@@ -79,8 +79,8 @@ export interface SearchAheadSingleResult {
   hash_value?: string
 }
 
-export interface SearchAheadResult {
-  data?: SearchAheadSingleResult[],
+export interface SearchAheadAPIresponse {
+  data?: SingleAPIresult[],
   error?: string
 }
 
@@ -91,8 +91,8 @@ export type ResultSuggestionOutput = {
   lowLevelData : string
 }
 
-// The next 2 types will determine what data we must write into the differient fields of ResultSuggestionOutput after the API responded
-export enum FillFrom {
+// This type determines different sources that we can retrieve data from, mainly to fill the fields of ResultSuggestionOutput after the API responded
+export enum Indirect {
   SASRstr_value,
   SASRnum_value,
   SASRhash_value,
@@ -100,10 +100,18 @@ export enum FillFrom {
   SubCategoryTitle,
   TypeTitle
 }
+// The following 3 definitions will be used as parameters of function `t()` of I18n.
+export type TranslatableLitteral = [string, number] // you will have to destructure the parameters with an ellipsis, like so: t(...myTranslatableLitteral)
+const SINGULAR = 1
+const PLURAL = 2 // Any number greater than 1 is good, this is just for I18n to show the plural form of the litteral constants that we define through the rest of the file.
+// Hint: if you need to get the path of a TranslatableLitteral to give it to I18n (typically to change a singular into plural or vice-versa), use our function getI18nPathOfTranslatableLitteral() defined further below
+// this type determines all the possible ways to fill the fields of ResultSuggestionOutput after the API responded
+export type FillFrom = Indirect | TranslatableLitteral | ''
+
 export interface HowToFillresultSuggestionOutput {
-  name : FillFrom | string,
-  description : FillFrom | string,
-  lowLevelData : FillFrom | string,
+  name : FillFrom,
+  description : FillFrom,
+  lowLevelData : FillFrom,
 }
 
 export interface ResultSuggestion {
@@ -112,7 +120,7 @@ export interface ResultSuggestion {
   queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
   closeness: number, // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
   count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
-  rawResult: SearchAheadSingleResult // reference to the original data given by the API
+  rawResult: SingleAPIresult // reference to the original data given by the API
 }
 
 export interface OrganizedResults {
@@ -145,293 +153,293 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
 }
 
 interface CategoryInfoFields {
-  title : string,
-  filterLabel : string
+  title : TranslatableLitteral,
+  filterLabel : TranslatableLitteral
 }
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
-  [Category.Tokens]: { title: 'ERC-20 Tokens', filterLabel: 'Tokens' },
-  [Category.NFTs]: { title: 'NFTs', filterLabel: 'NFTs' },
-  [Category.Protocol]: { title: 'Protocol', filterLabel: 'Protocol' },
-  [Category.Addresses]: { title: 'Addresses', filterLabel: 'Addresses' },
-  [Category.Validators]: { title: 'Validators', filterLabel: 'Validators' }
+  [Category.Tokens]: { title: ['common.erc20token', PLURAL], filterLabel: ['common.token', PLURAL] },
+  [Category.NFTs]: { title: ['common.nft', PLURAL], filterLabel: ['common.nft', PLURAL] },
+  [Category.Protocol]: { title: ['common.protocol', SINGULAR], filterLabel: ['common.protocol', SINGULAR] },
+  [Category.Addresses]: { title: ['common.address', PLURAL], filterLabel: ['common.address', PLURAL] },
+  [Category.Validators]: { title: ['common.validator', PLURAL], filterLabel: ['common.validator', PLURAL] }
 }
 
 interface SubCategoryInfoFields {
-  title : string
+  title : TranslatableLitteral
 }
 export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
-  [SubCategory.Tokens]: { title: 'Token' },
-  [SubCategory.NFTs]: { title: 'NFT' },
-  [SubCategory.Epochs]: { title: 'Epoch' },
-  [SubCategory.SlotsAndBlocks]: { title: 'Slot/Block' },
-  [SubCategory.Transactions]: { title: 'Transaction' },
-  [SubCategory.Batches]: { title: 'Batch' },
-  [SubCategory.Contracts]: { title: 'Contract' },
-  [SubCategory.Accounts]: { title: 'Account' },
-  [SubCategory.EnsOverview]: { title: 'ENS Overview' },
-  [SubCategory.Graffiti]: { title: 'Graffiti' },
-  [SubCategory.Validators]: { title: 'Validator' }
+  [SubCategory.Tokens]: { title: ['common.token', SINGULAR] },
+  [SubCategory.NFTs]: { title: ['common.nft', SINGULAR] },
+  [SubCategory.Epochs]: { title: ['common.epoch', SINGULAR] },
+  [SubCategory.SlotsAndBlocks]: { title: ['common.slot_block', SINGULAR] },
+  [SubCategory.Transactions]: { title: ['common.transaction', SINGULAR] },
+  [SubCategory.Batches]: { title: ['common.batch', SINGULAR] },
+  [SubCategory.Contracts]: { title: ['common.contract', SINGULAR] },
+  [SubCategory.Accounts]: { title: ['common.account', SINGULAR] },
+  [SubCategory.EnsOverview]: { title: ['search_bar.ens_overview', SINGULAR] },
+  [SubCategory.Graffiti]: { title: ['common.graffiti', SINGULAR] },
+  [SubCategory.Validators]: { title: ['common.validator', SINGULAR] }
 }
 
 interface TypeInfoFields {
-  title: string,
+  title: TranslatableLitteral,
   category: Category,
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
   countable: boolean, // whether it is possible for the API to find several identical results of this type and count them
-  queryParamField : FillFrom, // name of the field in SearchAheadSingleResult whose data identifies precisely the result in the back-end (this data will be passed to your `@go` call-back function when a result suggestion has been chosen)
-  howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestionOutput
+  queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end (this data will be passed to your `@go` call-back function when a result suggestion has been chosen)
+  howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   [ResultType.Tokens]: {
-    title: 'ERC-20 token',
+    title: ['common.erc20token', SINGULAR],
     category: Category.Tokens,
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRstr_value, // this tells us that field `str_value` in SearchAheadSingleResult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
-    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in SearchAheadSingleResult, and `lowLevelData` will be filled with `hash_value`
+    queryParamField: Indirect.SASRstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
+    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
   },
   [ResultType.NFTs]: {
-    title: 'ERC-721 & ERC-1155 token (NFT)',
+    title: ['common.nft_as_token', SINGULAR],
     category: Category.NFTs,
     subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.Epochs]: {
-    title: 'Epoch',
+    title: ['common.epoch', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.Slots]: {
-    title: 'Slot',
+    title: ['common.slot', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.Blocks]: {
-    title: 'Block',
+    title: ['common.block', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.BlockRoots]: {
-    title: 'Block root',
+    title: ['common.block_root', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.StateRoots]: {
-    title: 'State root',
+    title: ['common.state_root', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.Transactions]: {
-    title: 'Transaction',
+    title: ['common.transaction', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: '', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.TransactionBatches]: {
-    title: 'Tx Batch',
+    title: ['common.tx_batch', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.StateBatches]: {
-    title: 'State batch',
+    title: ['common.state_batch', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: FillFrom.SASRnum_value, lowLevelData: '' }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
   [ResultType.Contracts]: {
-    title: 'Contract',
+    title: ['common.contract', SINGULAR],
     category: Category.Addresses,
     subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
   [ResultType.Accounts]: {
-    title: 'Account',
+    title: ['common.account', SINGULAR],
     category: Category.Addresses,
     subCategory: SubCategory.Accounts,
     priority: 2,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: '', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.EnsAddresses]: {
-    title: 'ENS address',
+    title: ['common.ens_address', SINGULAR],
     category: Category.Addresses,
     subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SASRstr_value, description: '', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.EnsOverview]: {
-    title: 'Overview of ENS domain',
+    title: ['common.overview_of_ens', SINGULAR],
     category: Category.Addresses,
     subCategory: SubCategory.EnsOverview,
     priority: 15,
     belongsToAllNetworks: true,
     countable: false,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRstr_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRstr_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.Graffiti]: {
-    title: 'Graffiti',
+    title: ['common.graffiti', SINGULAR],
     category: Category.Protocol,
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.TypeTitle, description: 'Blocks with', lowLevelData: FillFrom.SASRstr_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.SASRstr_value }
   },
   [ResultType.ValidatorsByIndex]: {
-    title: 'Validator by index',
+    title: ['search_bar.validator_by_index', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRnum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.ValidatorsByPubkey]: {
-    title: 'Validator by public key',
+    title: ['search_bar.validator_by_public_key', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
     countable: false,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: FillFrom.SASRnum_value, lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.ValidatorsByDepositAddress]: {
-    title: 'Validator by deposit address',
+    title: ['search_bar.validator_by_deposit_address', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Deposited by', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.ValidatorsByDepositEnsName]: {
-    title: 'Validator by ENS of the deposit address',
+    title: ['search_bar.validator_by_deposit_ens', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Deposited by', lowLevelData: FillFrom.SASRstr_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRstr_value }
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
-    title: 'Validator by withdrawal credential',
+    title: ['search_bar.validator_by_credential', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Credential', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
-    title: 'Validator by withdrawal address',
+    title: ['search_bar.validator_by_withdrawal_address', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: FillFrom.SASRhash_value }
+    queryParamField: Indirect.SASRhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRhash_value }
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
-    title: 'Validator by ENS of the withdrawal address',
+    title: ['search_bar.validator_by_withdrawal_ens', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Withdrawn to', lowLevelData: FillFrom.SASRstr_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRstr_value }
   },
   [ResultType.ValidatorsByGraffiti]: {
-    title: 'Validator by graffiti',
+    title: ['search_bar.validator_by_graffiti', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Block graffiti', lowLevelData: FillFrom.SASRstr_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
   },
   [ResultType.ValidatorsByName]: {
-    title: 'Validator by name',
+    title: ['search_bar.validator_by_name', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
     countable: true,
-    queryParamField: FillFrom.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: FillFrom.SubCategoryTitle, description: 'Named', lowLevelData: FillFrom.SASRstr_value }
+    queryParamField: Indirect.SASRstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
   }
 }
 
-export function isOutputAnAPIresponse (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
+export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
-    case FillFrom.SASRstr_value :
-    case FillFrom.SASRnum_value :
-    case FillFrom.SASRhash_value :
+    case Indirect.SASRstr_value :
+    case Indirect.SASRnum_value :
+    case Indirect.SASRhash_value :
       return true
     default:
       return false
@@ -487,4 +495,9 @@ export function pickHighestPriorityAmongBestMatchings (possibilities : Matching[
     }
   }
   return bestMatchWithHigherPriority
+}
+
+// Returns the I18n path of a TranslatableLitteral, to give it to t(). Useful to display the litteral in singular or in plural with respect to your needs.
+export function getI18nPathOfTranslatableLitteral (litteral: TranslatableLitteral) : string {
+  return litteral[0] as string
 }

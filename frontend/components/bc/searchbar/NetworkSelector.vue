@@ -4,46 +4,45 @@ import { ChainIDs, ChainInfo } from '~/types/networks'
 
 const emit = defineEmits(['change'])
 const props = defineProps<{
-  initialState: Record<string, boolean>, // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts)
+  liveState: Record<string, boolean>, // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts) and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
   barStyle: SearchbarStyle
 }>()
 
-let vueMultiselectAllOptions : {name: string, label: string}[] = []
+const { t } = useI18n()
+
+const vueMultiselectAllOptions = ref<{name: string, label: string}[]>()
 const vueMultiselectSelectedOptions = ref<string[]>([])
 
-let componentIsReady = false
-const state : Record<string, boolean> = {} // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts)
+let statePtr : Record<string, boolean> = {} // each key is a stringifyed chain ID and the state of the option as value
 const everyNetworkIsSelected = ref<boolean>(false)
 
 onMounted(() => {
-  componentIsReady = false
+  initialize()
+})
+watch(props, () => {
+  initialize()
+})
 
-  vueMultiselectAllOptions = []
+function initialize () {
+  vueMultiselectAllOptions.value = []
   vueMultiselectSelectedOptions.value = []
+  statePtr = props.liveState
 
-  for (const nw in props.initialState) {
-    state[nw] = props.initialState[nw]
-    vueMultiselectAllOptions.push({ name: nw, label: ChainInfo[Number(nw) as ChainIDs].description })
-    if (state[nw]) {
+  for (const nw in statePtr) {
+    vueMultiselectAllOptions.value.push({ name: nw, label: ChainInfo[Number(nw) as ChainIDs].description })
+    if (statePtr[nw]) {
       vueMultiselectSelectedOptions.value.push(nw)
     }
   }
-  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.length)
-
-  componentIsReady = true
-})
+  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value.length)
+}
 
 function selectionHasChanged () {
-  if (!componentIsReady) {
-    // ensures that we do not emit change-events during the initialization of the drop-down (see the code in onMounted)
-    return
+  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value?.length)
+  for (const nw in statePtr) {
+    statePtr[nw] = vueMultiselectSelectedOptions.value.includes(nw)
   }
-  console.log('Network selector')
-  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.length)
-  for (const nw in state) {
-    state[nw] = vueMultiselectSelectedOptions.value.includes(nw)
-  }
-  emit('change', state)
+  emit('change')
 }
 </script>
 
@@ -54,12 +53,12 @@ function selectionHasChanged () {
     :options="vueMultiselectAllOptions"
     option-value="name"
     option-label="label"
-    placeholder="Networks:&nbsp;all"
+    :placeholder="t('search_bar.network_filter_label')+'&nbsp;'+t('search_bar.all_networks')"
     :variant="'filled'"
     display="comma"
     :show-toggle-all="false"
     :max-selected-labels="1"
-    :selected-items-label="'Networks: ' + (everyNetworkIsSelected ? 'all' : '{0}')"
+    :selected-items-label="t('search_bar.network_filter_label') + ' ' + (everyNetworkIsSelected ? t('search_bar.all_networks') : '{0}')"
     append-to="self"
     @change="selectionHasChanged"
     @click="(e : Event) => e.stopPropagation()"
