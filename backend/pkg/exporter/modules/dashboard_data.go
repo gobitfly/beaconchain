@@ -94,7 +94,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 8144
+		//d.headEpochQueue <- 2943
 		d.processHeadQueue()
 	}()
 
@@ -310,7 +310,10 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64
 			// provide data from the previous epochs
 			for i := 1; i < len(datas); i++ {
 				datas[i].DataRaw.startBalances = datas[i-1].DataRaw.endBalances
-				datas[i].DataRaw.missedslots = datas[i-1].DataRaw.missedslots
+
+				for slot := range datas[i-1].DataRaw.missedslots {
+					datas[i].DataRaw.missedslots[slot] = true
+				}
 			}
 		}
 

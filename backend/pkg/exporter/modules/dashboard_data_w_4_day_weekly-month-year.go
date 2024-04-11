@@ -121,7 +121,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrapTableToHeadOffset(currentHe
 	}
 
 	// modulo in case epoch completes a day, an offset of 225 on eth mainnet would be an offset of 0 in this case
-	return (int64(currentHead) - (int64(latestExportedDay.EpochStart) - 1)) % int64(GetDayAggregateWidth()), nil
+	return (int64(currentHead) - (int64(latestExportedDay.EpochEnd) - 1)) % int64(GetDayAggregateWidth()), nil
 }
 
 func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
