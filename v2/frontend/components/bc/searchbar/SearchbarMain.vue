@@ -402,7 +402,7 @@ function filterAndOrganizeResults () {
 }
 
 // This function takes a single result element returned by the API and organizes it into an element simpler to handle by the
-// code of the search bar because more... organized.
+// code of the search bar (because it is more... organized).
 // If the result JSON from the API is somehow unexpected, the function returns `undefined`.
 // The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestion.output
 // object are given by the filling information in TypeInfo[<result type>].howToFillresultSuggestionOutput in types/searchbar.ts
@@ -506,10 +506,11 @@ function mustCategoryFiltersBeShown () : boolean {
   return Object.keys(userFilters.categories).length >= 2
 }
 
-const classIfDropdownIsOpened = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
+const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
 
 const classIfDropdownContainsSomething = computed(() => {
-  return mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty ? 'dropdown-contains-something' : ''
+  const dropDownContainsSomething = mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty
+  return dropDownContainsSomething ? 'dropdown-contains-something' : ''
 })
 
 function inputPlaceHolder () : string {
@@ -559,7 +560,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, classIfDropdownIsOpened]">
+    <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <input
           ref="inputField"
@@ -573,7 +574,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
         >
         <BcSearchbarButton
           class="searchbutton"
-          :class="[barStyle, classIfDropdownIsOpened]"
+          :class="[barStyle, classForDropdownOpenedOrClosed]"
           :bar-style="barStyle"
           :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
@@ -675,8 +676,24 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 .whole-component {
   @include main.container;
   position: absolute;
-  left: 0px;
   right: 0px;
+  &.gaudy,
+  &.discreet {
+    left: 0px;
+  }
+  &.embedded {
+    @media (min-width: 450px) { // large window/screen
+      left: 0px;
+    }
+    @media (max-width: 450px) { // narrow window/screen
+      &.dropdown-is-closed {
+        left: 0px;
+      }
+      &.dropdown-is-opened {
+        width: 300px;
+      }
+    }
+  }
 
   &.gaudy,
   &.embedded {
