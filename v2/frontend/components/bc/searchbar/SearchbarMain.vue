@@ -36,10 +36,14 @@ const props = defineProps<{
   barPurpose: SearchbarPurpose, // what the bar will be used for
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
   pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
+  keepDropdownOpen? : boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
-const emit = defineEmits<{(e: 'go', wanted : string, type : ResultType, chain : ChainIDs, count : number) : any}>()
+const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 
-defineExpose<{hideResult : typeof hideResult}>({ hideResult })
+defineExpose<{
+  hideResult : typeof hideResult,
+  closeDropdown : typeof closeDropdown
+}>({ hideResult, closeDropdown })
 
 enum ResultState {
   Obtained, Outdated, Error
@@ -89,38 +93,37 @@ const results = {
   }
 }
 
-function cleanUp (forcedReset : boolean, closeDropDown : boolean) {
+function cleanUp (forcedReset : boolean, doNotCloseDropdown : boolean) {
   if (forcedReset || props.barPurpose === SearchbarPurpose.General) {
     // we empty the input and close the drop-down
     lastKnownInput = ''
     inputted.value = ''
     resetGlobalState(States.InputIsEmpty)
   }
-  if (closeDropDown) {
-    globalState.value.showDropdown = false
+  if (!props.keepDropdownOpen && !doNotCloseDropdown) {
+    closeDropdown()
   }
 }
 
-function hideResult (wanted : string, type : ResultType, chain : ChainIDs, count : number) {
+function hideResult (whichOne : ResultSuggestion) {
   if (!results.raw.data) {
     return
   }
-  const toBeRemoved = results.raw.data.findIndex(r =>
-    realizeData(r, TypeInfo[type].queryParamField) === wanted &&
-    (chain === ChainIDs.Any || r.chain_id as ChainIDs === chain) &&
-    r.type as ResultType === type &&
-    (!isResultCountable(type) || (!r.num_value && isNaN(count)) || count === r.num_value)
-  )
+  const toBeRemoved = results.raw.data.indexOf(whichOne.rawResult)
   if (toBeRemoved >= 0) {
     results.raw.data.splice(toBeRemoved, 1)
     refreshOutputArea()
   }
 }
 
+function closeDropdown () {
+  globalState.value.showDropdown = false
+}
+
 /**
  *
  * @param state the new state that the search-bar enters
- * @returns old state, so you can read it after the call if needed
+ * @returns old state, so you can read it after the call if you need
  */
 function resetGlobalState (state : States) : GlobalState {
   const previousState = { ...globalState.value }
@@ -174,7 +177,7 @@ function listenToClicks (event : Event) {
       dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
-  globalState.value.showDropdown = false
+  closeDropdown()
 }
 
 // We work with an Interval Timer because:
@@ -246,7 +249,7 @@ function handleKeyPressInInputField (key : string) {
       break
     case 'Escape' :
       inputField.value?.blur()
-      globalState.value.showDropdown = false
+      closeDropdown()
       break
     default:
       inputMightHaveChanged()
@@ -296,15 +299,15 @@ function userPressedSearchButtonOrEnter () {
     const network = toConsider.networks.find(nw => nw.chainId === picked.network)!
     const type = network.types.find(ty => ty.type === picked.type)!
     // calling back parent's function taking action with the result
-    emit('go', type.suggestions[0].queryParam, type.type, network.chainId, type.suggestions[0].count)
-    cleanUp(false, props.barPurpose !== SearchbarPurpose.Accounts && props.barPurpose !== SearchbarPurpose.Validators)
+    emit('go', type.suggestions[0])
+    cleanUp(false, false)
   }
 }
 
-function userClickedSuggestion (chain : ChainIDs, type : ResultType, suggestion : ResultSuggestion) {
+function userClickedSuggestion (suggestion : ResultSuggestion) {
   // calls back parent's function and cleans up
-  emit('go', suggestion.queryParam, type, chain, suggestion.count)
-  cleanUp(false, props.barPurpose !== SearchbarPurpose.Accounts && props.barPurpose !== SearchbarPurpose.Validators)
+  emit('go', suggestion)
+  cleanUp(false, false)
 }
 
 function inputMightHaveChanged () {
@@ -313,7 +316,7 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp(true, false)
+    cleanUp(true, true)
   } else {
     // we order a search (the timer will launch it)
     resetGlobalState(States.SearchRequestWillBeSent)
@@ -349,28 +352,20 @@ function filterAndOrganizeResults () {
   }
 
   for (const finding of results.raw.data) {
-    const type = finding.type as ResultType
     // getting organized information from the finding
     const toBeAdded = convertSingleAPIresultIntoResultSuggestion(finding)
     if (!toBeAdded) {
       continue
     }
-    // determining the network that the finding belongs to
-    let chainId : ChainIDs
-    if (TypeInfo[type].belongsToAllNetworks) {
-      chainId = ChainIDs.Any
-    } else {
-      chainId = finding.chain_id as ChainIDs
-    }
     // discarding findings that our configuration (given in the props) forbids
-    const stringifyedChainId = stringifyEnum(chainId)
-    const stringifyedCategory = stringifyEnum(TypeInfo[type].category)
-    if ((chainId !== ChainIDs.Any && !(stringifyedChainId in userFilters.networks)) || !(stringifyedCategory in userFilters.categories)) {
+    const stringifyedChainId = stringifyEnum(toBeAdded.chainId)
+    const stringifyedCategory = stringifyEnum(TypeInfo[toBeAdded.type].category)
+    if ((toBeAdded.chainId !== ChainIDs.Any && !(stringifyedChainId in userFilters.networks)) || !(stringifyedCategory in userFilters.categories)) {
       continue
     }
     // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized objects
     let place : OrganizedResults
-    const acceptTheChainID = userFilters.networks[stringifyedChainId] || noNetworkIsSelected || chainId === ChainIDs.Any
+    const acceptTheChainID = userFilters.networks[stringifyedChainId] || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
     const acceptTheCategory = userFilters.categories[stringifyedCategory] || noCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       place = results.organized.in
@@ -380,18 +375,18 @@ function filterAndOrganizeResults () {
       results.organized.howManyResultsOut++
     }
     // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
-    let existingNetwork = place.networks.findIndex(nwElem => nwElem.chainId === chainId)
+    let existingNetwork = place.networks.findIndex(nwElem => nwElem.chainId === toBeAdded.chainId)
     if (existingNetwork < 0) {
       existingNetwork = -1 + place.networks.push({
-        chainId,
+        chainId: toBeAdded.chainId,
         types: []
       })
     }
     // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
-    let existingType = place.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === type)
+    let existingType = place.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === toBeAdded.type)
     if (existingType < 0) {
       existingType = -1 + place.networks[existingNetwork].types.push({
-        type,
+        type: toBeAdded.type,
         suggestions: []
       })
     }
@@ -425,6 +420,13 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
   }
 
   const type = apiResponseElement.type as ResultType
+  let chainId : ChainIDs
+  if (TypeInfo[type].belongsToAllNetworks) {
+    chainId = ChainIDs.Any
+  } else {
+    chainId = apiResponseElement.chain_id as ChainIDs
+  }
+
   const howToFillresultSuggestionOutput = TypeInfo[type].howToFillresultSuggestionOutput
   const output = {} as ResultSuggestionOutput
 
@@ -447,7 +449,7 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
     nameWasUnknown = true
   }
 
-  // retrieving the data that identifies this very result in the back-end (will be given to the callback function `@go`)
+  // retrieving the data that identifies this very result in the back-end (will be important for the callback function `@go`)
   const queryParam = realizeData(apiResponseElement, TypeInfo[type].queryParamField) as string
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
@@ -469,7 +471,7 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
     }
   }
 
-  return { output, nameWasUnknown, queryParam, closeness, count, rawResult: apiResponseElement }
+  return { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement, nameWasUnknown }
 }
 
 function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFrom) : string | undefined {
@@ -616,11 +618,9 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
               <div v-for="(suggestion, i) of typ.suggestions" :key="i" class="suggestionrow-container" :class="barStyle">
                 <BcSearchbarSuggestionRow
                   :suggestion="suggestion"
-                  :chain-id="network.chainId"
-                  :result-type="typ.type"
                   :bar-style="barStyle"
                   :bar-purpose="barPurpose"
-                  @click="userClickedSuggestion(network.chainId, typ.type, suggestion)"
+                  @click="userClickedSuggestion(suggestion)"
                 />
                 <div class="separation-between-suggestions" :class="barStyle" />
               </div>

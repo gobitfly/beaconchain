@@ -14,8 +14,6 @@ import {
 
 const props = defineProps<{
     suggestion: ResultSuggestion,
-    chainId: ChainIDs,
-    resultType: ResultType,
     barStyle: SearchbarStyle,
     barPurpose: SearchbarPurpose
 }>()
@@ -23,7 +21,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 function formatEmbeddedSubcategoryCell () : string {
-  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.resultType].subCategory].title)
+  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title)
   let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
 
   if (props.suggestion.count >= 2) {
@@ -33,16 +31,16 @@ function formatEmbeddedSubcategoryCell () : string {
 }
 
 function formatEmbeddedIdentificationCell () : string {
-  if (wasOutputDataGivenByTheAPI(props.resultType, 'name') && !props.suggestion.nameWasUnknown) {
+  if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'name') && !props.suggestion.nameWasUnknown) {
     return props.suggestion.output.name
   }
   return props.suggestion.output.lowLevelData
 }
 
 function formatEmbeddedDescriptionCell () : string {
-  if (wasOutputDataGivenByTheAPI(props.resultType, 'description')) {
+  if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'description')) {
     // we tell the user what is the data that they see (ex: "Index" for a validator index)
-    switch (props.resultType) {
+    switch (props.suggestion.type) {
       case ResultType.ValidatorsByIndex :
       case ResultType.ValidatorsByPubkey :
         return t('common.index') + ' ' + props.suggestion.output.description
@@ -59,12 +57,12 @@ function formatEmbeddedDescriptionCell () : string {
     class="rowstyle-gaudyordiscreet"
     :class="barStyle"
   >
-    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
-      <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
+      <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
     </div>
     <div v-else class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
+      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell-name"
@@ -89,7 +87,7 @@ function formatEmbeddedDescriptionCell () : string {
     </BcSearchbarMiddleEllipsis>
     <div class="cell-category" :class="barStyle">
       <span class="category-label" :class="barStyle">
-        {{ t(...CategoryInfo[TypeInfo[resultType].category].title) }}
+        {{ t(...CategoryInfo[TypeInfo[props.suggestion.type].category].title) }}
       </span>
     </div>
   </div>
@@ -99,12 +97,12 @@ function formatEmbeddedDescriptionCell () : string {
     class="rowstyle-embedded"
     :class="barStyle"
   >
-    <div v-if="chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon not-alone" />
-      <IconNetwork :chain-id="chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
+      <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
     </div>
     <div v-else class="cell-icons" :class="barStyle">
-      <BcSearchbarTypeIcons :type="resultType" class="type-icon alone" />
+      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <div class="cell-subcategory" :class="barStyle">
       {{ formatEmbeddedSubcategoryCell() }}

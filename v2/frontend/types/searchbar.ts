@@ -116,11 +116,13 @@ export interface HowToFillresultSuggestionOutput {
 
 export interface ResultSuggestion {
   output: ResultSuggestionOutput,
-  nameWasUnknown : boolean,
-  queryParam: string, // data returned by the API that identifies this very result in the back-end (will be given to the callback function `@go`)
-  closeness: number, // how close the suggested result is to the user input (important for graffiti, later for other things if the back-end evolves to find other approximate results)
+  queryParam: string, // Data returned by the API that identifies this very result in the back-end. This is the most important data for callback function '@go' given in the props of the Searchbar component.
+  closeness: number, // How close the suggested result is to the user input (important for graffitis and token names, later for other things if the back-end evolves to find other approximate results).
   count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
-  rawResult: SingleAPIresult // reference to the original data given by the API
+  chainId : ChainIDs, // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
+  type : ResultType, // Tells what thing(s) this result corresponds to.
+  rawResult: SingleAPIresult // Original data given by the API. For internal use.
+  nameWasUnknown : boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not. For internal use.
 }
 
 export interface OrganizedResults {
@@ -188,7 +190,7 @@ interface TypeInfoFields {
   priority: number,
   belongsToAllNetworks: boolean,
   countable: boolean, // whether it is possible for the API to find several identical results of this type and count them
-  queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end (this data will be passed to your `@go` call-back function when a result suggestion has been chosen)
+  queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
   howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
 }
 
@@ -436,7 +438,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
 }
 
 export interface SearchBar extends ComponentPublicInstance {
-  hideResult : (wanted : string, type : ResultType, chain : ChainIDs, count : number) => void
+  hideResult : (whichOne : ResultSuggestion) => void,
+  closeDropdown : () => void
 }
 
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
