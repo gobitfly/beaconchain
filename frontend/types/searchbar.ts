@@ -134,7 +134,7 @@ export interface OrganizedResults {
 }
 
 interface SearchbarPurposeInfoField {
-  searchable : Category[], // List of categories that the bar can search in. They will appear on the screen in the same order as in this list.
+  searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
   unsearchable : ResultType[] // List of types that the bar will not search for.
 }
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
@@ -480,14 +480,18 @@ export function getListOfResultTypesInCategory (category: Category, sortByPriori
   return searchableTypesPerCategory[category]
 }
 
-// This is an example of function that <BcSearchbarMain> needs in its props `pick-by-default`. You can design a function fulfilling your needs
-// or simply give this one (after importing pickHighestPriorityAmongBestMatchings at the top of your script setup) if it does what you
-// need.
+/**
+ * This is an example of function that `<BcSearchbarMain>` needs in its props `pick-by-default`. You can design a function fulfilling your needs
+ * or simply give this one (after importing `pickHighestPriorityAmongBestMatchings` at the top of your script setup) if it does what you
+ * need.
+ * What we implemented in this example function:
+ * We look for the matching that matches the best with the user input (this is known through the field `Matching.closeness`).
+ * If several matchings with this best closeness value exist, we catch the first one (so the one having the highest priority). This
+ * happens for example when the user input corresponds to both a validator index and a block number, or both a graffiti and a token name, etc.
+ * @param possibilities here the function receives the list of matchings (representing result suggestions)
+ * @returns the matching fulfilling the criteria explained above
+ */
 export function pickHighestPriorityAmongBestMatchings (possibilities : Matching[]) : Matching|undefined {
-  // What we implemented in this example function:
-  //   We look for the possibility that matches the best with the user input (this is known through the field `Matching.closeness`).
-  //   If several possibilities with this best closeness value exist, we catch the first one (so the one having the highest priority). This
-  //   happens for example when the user input corresponds to both a validator index and a block number, or both a graffiti and a token name, etc.
   let bestMatchWithHigherPriority = possibilities[0]
   for (const possibility of possibilities) {
     if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
@@ -497,7 +501,9 @@ export function pickHighestPriorityAmongBestMatchings (possibilities : Matching[
   return bestMatchWithHigherPriority
 }
 
-// Returns the I18n path of a TranslatableLitteral, to give it to t(). Useful to display the litteral in singular or in plural with respect to your needs.
+/**
+ * @returns the I18n path of a TranslatableLitteral that you can give to t(). Useful to display the litteral in singular or in plural with respect to your needs.
+ */
 export function getI18nPathOfTranslatableLitteral (litteral: TranslatableLitteral) : string {
   return litteral[0] as string
 }
