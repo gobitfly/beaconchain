@@ -13,7 +13,7 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
@@ -93,28 +93,36 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(props.dashboardKey)
 }
 
-const addValidator = (wanted : string, type : ResultType, chain : ChainIDs, count : number) => {
-  switch (type) {
-    case ResultType.ValidatorsByIndex : // `wanted` contains the index of the validator
-    case ResultType.ValidatorsByPubkey : // `wanted` contains the pubkey of the validator
-      selectedValidator.value = wanted
+const addValidator = (result : ResultSuggestion) => {
+  switch (result.type) {
+    case ResultType.ValidatorsByIndex : // `result.queryParam` contains the index of the validator
+    case ResultType.ValidatorsByPubkey : // `result.queryParam` contains the pubkey of the validator
+      selectedValidator.value = result.queryParam
       break
     // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys :
-    case ResultType.ValidatorsByDepositAddress : // `wanted` contains the address that was used to deposit the 32 ETH
-    case ResultType.ValidatorsByDepositEnsName : // `wanted` contains the ENS name that was used to deposit the 32 ETH
-    case ResultType.ValidatorsByWithdrawalCredential : // `wanted` contains the withdrawal credential
-    case ResultType.ValidatorsByWithdrawalAddress : // `wanted` contains the withdrawal address
-    case ResultType.ValidatorsByWithdrawalEnsName : // `wanted` contains the ENS name of the withdrawal address
-    case ResultType.ValidatorsByGraffiti : // `wanted` contains the graffiti used to sign blocks
-      selectedValidator.value = wanted // TODO: maybe handle these cases differently? (because `wanted` identifies a list of validators instead of a single index/pubkey)
+    case ResultType.ValidatorsByDepositAddress : // `result.queryParam` contains the address that was used to deposit
+    case ResultType.ValidatorsByDepositEnsName : // `result.queryParam` contains the ENS name that was used to deposit
+    case ResultType.ValidatorsByWithdrawalCredential : // `result.queryParam` contains the withdrawal credential
+    case ResultType.ValidatorsByWithdrawalAddress : // `result.queryParam` contains the withdrawal address
+    case ResultType.ValidatorsByWithdrawalEnsName : // `result.queryParam` contains the ENS name of the withdrawal address
+    case ResultType.ValidatorsByGraffiti : // `result.queryParam` contains the graffiti used to sign blocks
+      selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
       break
     default :
       return
   }
+  // When the result is a batch of validators, result.count is the size of the batch.
 
   changeGroup([selectedValidator.value], selectedGroup.value)
 
-  searchBar.value!.hideResult(wanted, type, chain, count) // to hide the result in the drop-down so the user can easily identify which validators he can still add
+  // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
+  searchBar.value!.hideResult(result)
+  // You do not have to call it here, you can do it later, for example after getting confirmation that the validator is added into the database.
+
+  // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
+  // If it happens that you want to close the dropdown, you can call this method:
+  // searchBar.value!.closeDropdown()
+  // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
 }
 
 const editSelected = () => {
@@ -222,6 +230,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             :bar-purpose="SearchbarPurpose.Validators"
             :only-networks="[ChainIDs.Ethereum]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
+            :keep-dropdown-open="true"
             class="search-bar"
             @go="addValidator"
           />

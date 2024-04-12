@@ -1,65 +1,65 @@
 <script setup lang="ts">
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/networks'
+import { SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { ChainInfo } from '~/types/networks'
 
 defineProps<{ barStyle: 'gaudy' | 'discreet' }>()
 
-async function redirectToRelevantPage (wanted : string, type : ResultType, chain : ChainIDs) {
+async function redirectToRelevantPage (result : ResultSuggestion) {
   let path : string
   let q = ''
-  const networkPath = '/networks' + ChainInfo[chain].path
+  const networkPath = '/networks' + ChainInfo[result.chainId].path
 
-  switch (type) {
+  switch (result.type) {
     case ResultType.Tokens :
     case ResultType.NFTs :
-      path = '/token/' + wanted
+      path = '/token/' + result.queryParam
       break
     case ResultType.Epochs :
-      path = networkPath + '/epoch/' + wanted
+      path = networkPath + '/epoch/' + result.queryParam
       break
     case ResultType.Slots :
-      path = networkPath + '/slot/' + wanted
+      path = networkPath + '/slot/' + result.queryParam
       break
     case ResultType.Blocks :
-      path = networkPath + '/block/' + wanted
+      path = networkPath + '/block/' + result.queryParam
       break
     case ResultType.BlockRoots :
     case ResultType.StateRoots :
     case ResultType.Transactions :
-      path = networkPath + '/tx/' + wanted
+      path = networkPath + '/tx/' + result.queryParam
       break
     case ResultType.TransactionBatches :
-      path = networkPath + '/transactionbatch/' + wanted
+      path = networkPath + '/transactionbatch/' + result.queryParam
       break
     case ResultType.StateBatches :
-      path = networkPath + '/batch/' + wanted
+      path = networkPath + '/batch/' + result.queryParam
       break
     case ResultType.Contracts :
     case ResultType.Accounts :
     case ResultType.EnsAddresses :
-      path = '/address/' + wanted
+      path = '/address/' + result.queryParam
       break
     case ResultType.EnsOverview :
-      path = '/ens/' + wanted
+      path = '/ens/' + result.queryParam
       break
     case ResultType.Graffiti :
       path = networkPath + '/slots'
-      q = wanted
+      q = result.queryParam
       break
     case ResultType.ValidatorsByIndex :
     case ResultType.ValidatorsByPubkey :
-      path = networkPath + '/validator/' + wanted
+      path = networkPath + '/validator/' + result.queryParam
       break
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
       path = networkPath + '/validators/deposits'
-      q = wanted
+      q = result.queryParam
       break
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
       path = networkPath + '/validators/withdrawals'
-      q = wanted
+      q = result.queryParam
       break
     default :
       return

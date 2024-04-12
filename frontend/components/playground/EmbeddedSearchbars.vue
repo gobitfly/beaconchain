@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const selectedAccount = ref<string>('')
@@ -7,8 +7,8 @@ const selectedValidator = ref<string>('')
 const accountSearchBar = ref<SearchBar>()
 const validatorSearchBar = ref<SearchBar>()
 
-function userSelectedAnAccount (wanted : string, type : ResultType, chain : ChainIDs, count : number) {
-  switch (type) {
+function userSelectedAnAccount (result : ResultSuggestion) {
+  switch (result.type) {
     case ResultType.Accounts :
     case ResultType.Contracts :
     case ResultType.EnsAddresses :
@@ -17,30 +17,28 @@ function userSelectedAnAccount (wanted : string, type : ResultType, chain : Chai
     default :
       return
   }
-
-  selectedAccount.value = 'You selected ' + wanted + ' on chain ' + chain + '.'
-  accountSearchBar.value!.hideResult(wanted, type, chain, count)
+  selectedAccount.value = 'You selected ' + result.queryParam + ' on chain ' + result.chainId + '.'
+  accountSearchBar.value!.hideResult(result)
 }
 
-function userSelectedValidator (wanted : string, type : ResultType, chain : ChainIDs, count : number) { // parameter `count` tells how many validators are in the batch (1 if no batch)
-  switch (type) {
-    case ResultType.ValidatorsByIndex : // `wanted` contains the index of the validator
-    case ResultType.ValidatorsByPubkey : // `wanted` contains the pubkey of the validator
+function userSelectedValidator (result : ResultSuggestion) {
+  switch (result.type) {
+    case ResultType.ValidatorsByIndex :
+    case ResultType.ValidatorsByPubkey :
       break
-    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys :
-    case ResultType.ValidatorsByDepositAddress : // `wanted` contains the address that was used to deposit the 32 ETH
-    case ResultType.ValidatorsByDepositEnsName : // `wanted` contains the ENS name that was used to deposit the 32 ETH
-    case ResultType.ValidatorsByWithdrawalCredential : // `wanted` contains the withdrawal credential
-    case ResultType.ValidatorsByWithdrawalAddress : // `wanted` contains the withdrawal address
-    case ResultType.ValidatorsByWithdrawalEnsName : // `wanted` contains the ENS name of the withdrawal address
-    case ResultType.ValidatorsByGraffiti : // `wanted` contains the graffiti used to sign blocks
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByGraffiti :
       break
     default :
       return
   }
-
-  selectedValidator.value = 'You selected ' + wanted + ' on chain ' + chain + '. Number of validators: ' + count
-  validatorSearchBar.value!.hideResult(wanted, type, chain, count)
+  selectedValidator.value = 'You selected ' + result.queryParam + ' on chain ' + result.chainId + '. Number of validators: ' + result.count
+  validatorSearchBar.value!.hideResult(result)
+  validatorSearchBar.value!.closeDropdown()
 }
 </script>
 
@@ -56,6 +54,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
       :bar-style="SearchbarStyle.Embedded"
       :bar-purpose="SearchbarPurpose.Accounts"
       :pick-by-default="pickHighestPriorityAmongBestMatchings"
+      :keep-dropdown-open="true"
       @go="userSelectedAnAccount"
     />
   </div>
@@ -69,6 +68,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
       :bar-purpose="SearchbarPurpose.Validators"
       :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
       :pick-by-default="pickHighestPriorityAmongBestMatchings"
+      :keep-dropdown-open="true"
       @go="userSelectedValidator"
     />
   </div>
