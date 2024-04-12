@@ -435,6 +435,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   }
 }
 
+export interface SearchBar extends ComponentPublicInstance {
+  hideResult : (wanted : string, type : ResultType, chain : ChainIDs, count : number) => void
+}
+
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
     case Indirect.SASRstr_value :

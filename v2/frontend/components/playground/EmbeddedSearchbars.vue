@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const selectedAccount = ref<string>('')
 const selectedValidator = ref<string>('')
+const accountSearchBar = ref<SearchBar>()
+const validatorSearchBar = ref<SearchBar>()
 
-function userSelectedAnAccount (wanted : string, type : ResultType, chain : ChainIDs) {
+function userSelectedAnAccount (wanted : string, type : ResultType, chain : ChainIDs, count : number) {
   switch (type) {
     case ResultType.Accounts :
     case ResultType.Contracts :
@@ -17,6 +19,7 @@ function userSelectedAnAccount (wanted : string, type : ResultType, chain : Chai
   }
 
   selectedAccount.value = 'You selected ' + wanted + ' on chain ' + chain + '.'
+  accountSearchBar.value!.hideResult(wanted, type, chain, count)
 }
 
 function userSelectedValidator (wanted : string, type : ResultType, chain : ChainIDs, count : number) { // parameter `count` tells how many validators are in the batch (1 if no batch)
@@ -37,6 +40,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
   }
 
   selectedValidator.value = 'You selected ' + wanted + ' on chain ' + chain + '. Number of validators: ' + count
+  validatorSearchBar.value!.hideResult(wanted, type, chain, count)
 }
 </script>
 
@@ -48,6 +52,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
     Accounts: <span>{{ selectedAccount }}</span>
     <br><br>
     <BcSearchbarMain
+      ref="accountSearchBar"
       :bar-style="SearchbarStyle.Embedded"
       :bar-purpose="SearchbarPurpose.Accounts"
       :pick-by-default="pickHighestPriorityAmongBestMatchings"
@@ -59,6 +64,7 @@ function userSelectedValidator (wanted : string, type : ResultType, chain : Chai
     Validators: <span>{{ selectedValidator }}</span>
     <br><br>
     <BcSearchbarMain
+      ref="validatorSearchBar"
       :bar-style="SearchbarStyle.Embedded"
       :bar-purpose="SearchbarPurpose.Validators"
       :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"

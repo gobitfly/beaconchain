@@ -39,6 +39,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{(e: 'go', wanted : string, type : ResultType, chain : ChainIDs, count : number) : any}>()
 
+defineExpose<{hideResult : typeof hideResult}>({ hideResult })
+
 enum ResultState {
   Obtained, Outdated, Error
 }
@@ -87,21 +89,31 @@ const results = {
   }
 }
 
-function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRemove? : ResultSuggestion) {
+function cleanUp (forcedReset : boolean, closeDropDown : boolean) {
   if (forcedReset || props.barPurpose === SearchbarPurpose.General) {
     // we empty the input and close the drop-down
     lastKnownInput = ''
     inputted.value = ''
     resetGlobalState(States.InputIsEmpty)
-    if (closeDropDown) {
-      globalState.value.showDropdown = false
-    }
-  } else if (props.barPurpose === SearchbarPurpose.Accounts || props.barPurpose === SearchbarPurpose.Validators) {
-    // we remove the result and refresh the drop-down with the new list of results
-    if (suggestionToRemove && results.raw.data) {
-      results.raw.data.splice(results.raw.data.indexOf(suggestionToRemove.rawResult), 1)
-      refreshOutputArea()
-    }
+  }
+  if (closeDropDown) {
+    globalState.value.showDropdown = false
+  }
+}
+
+function hideResult (wanted : string, type : ResultType, chain : ChainIDs, count : number) {
+  if (!results.raw.data) {
+    return
+  }
+  const toBeRemoved = results.raw.data.findIndex(r =>
+    realizeData(r, TypeInfo[type].queryParamField) === wanted &&
+    (chain === ChainIDs.Any || r.chain_id as ChainIDs === chain) &&
+    r.type as ResultType === type &&
+    (!isResultCountable(type) || (!r.num_value && isNaN(count)) || count === r.num_value)
+  )
+  if (toBeRemoved >= 0) {
+    results.raw.data.splice(toBeRemoved, 1)
+    refreshOutputArea()
   }
 }
 
@@ -285,14 +297,14 @@ function userPressedSearchButtonOrEnter () {
     const type = network.types.find(ty => ty.type === picked.type)!
     // calling back parent's function taking action with the result
     emit('go', type.suggestions[0].queryParam, type.type, network.chainId, type.suggestions[0].count)
-    cleanUp(false, false, type.suggestions[0])
+    cleanUp(false, props.barPurpose !== SearchbarPurpose.Accounts && props.barPurpose !== SearchbarPurpose.Validators)
   }
 }
 
 function userClickedSuggestion (chain : ChainIDs, type : ResultType, suggestion : ResultSuggestion) {
   // calls back parent's function and cleans up
   emit('go', suggestion.queryParam, type, chain, suggestion.count)
-  cleanUp(false, true, suggestion)
+  cleanUp(false, props.barPurpose !== SearchbarPurpose.Accounts && props.barPurpose !== SearchbarPurpose.Validators)
 }
 
 function inputMightHaveChanged () {
@@ -565,7 +577,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
         <input
           ref="inputField"
           v-model="inputted"
-          class="p-inputtext input-field"
+          class="p-inputtext inputfield"
           :class="barStyle"
           type="text"
           :placeholder="inputPlaceHolder()"
@@ -682,7 +694,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     left: 0px;
   }
   &.embedded {
-    @media (min-width: 450px) { // large window/screen
+    @media (min-width: 450px) { // large enough window/screen
       left: 0px;
     }
     @media (max-width: 450px) { // narrow window/screen
@@ -712,7 +724,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     display: block;
     width: 100%;
 
-    .input-field {
+    .inputfield {
       display:inline-block;
       left: 0;
       width: 100%;

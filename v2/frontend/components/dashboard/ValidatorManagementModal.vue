@@ -13,7 +13,7 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
@@ -41,6 +41,7 @@ const selectedValidator = ref<string>('')
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
+const searchBar = ref<SearchBar>()
 
 const size = computed(() => {
   return {
@@ -113,7 +114,7 @@ const addValidator = (wanted : string, type : ResultType, chain : ChainIDs, coun
 
   changeGroup([selectedValidator.value], selectedGroup.value)
 
-  return { chain, count } // There is actually nothing to return, I write this dummy line to avoid a warning about unused parameters. TODO: remove this line and the parameters that you do not need.
+  searchBar.value!.hideResult(wanted, type, chain, count) // to hide the result in the drop-down so the user can easily identify which validators he can still add
 }
 
 const editSelected = () => {
@@ -216,6 +217,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
+            ref="searchBar"
             :bar-style="SearchbarStyle.Embedded"
             :bar-purpose="SearchbarPurpose.Validators"
             :only-networks="[ChainIDs.Ethereum]"
