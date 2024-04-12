@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { warn } from 'vue'
+import { levenshteinDistance } from '~/utils/misc'
 import {
   Category,
   SubCategory,
@@ -36,7 +37,7 @@ const props = defineProps<{
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
   pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
 }>()
-const emit = defineEmits(['go'])
+const emit = defineEmits<{(e: 'go', wanted : string, type : ResultType, chain : ChainIDs, count : number) : any}>()
 
 enum ResultState {
   Obtained, Outdated, Error
@@ -53,7 +54,7 @@ enum States {
 
 interface GlobalState {
   state : States,
-  callAgainFunctionUserPressedSearchButtonOrEnter: boolean
+  functionToCallAfterResultsGetOrganized: Function | null
   showDropdown: boolean
 }
 
@@ -64,14 +65,12 @@ const inputted = ref('')
 let lastKnownInput = ''
 const globalState = ref<GlobalState>({
   state: States.InputIsEmpty,
-  callAgainFunctionUserPressedSearchButtonOrEnter: false,
+  functionToCallAfterResultsGetOrganized: null,
   showDropdown: false
 })
 const dropDown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 const inputField = ref<HTMLInputElement>()
-
-const classWhenDropdownIsOpened = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
 
 const userFilters = {
   networks: {} as Record<string, boolean>, // each field will have a stringifyEnum(ChainIDs) as key and the state of the option as value
@@ -88,7 +87,7 @@ const results = {
   }
 }
 
-function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRemove : ResultSuggestion | undefined) {
+function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRemove? : ResultSuggestion) {
   if (forcedReset || props.barPurpose === SearchbarPurpose.General) {
     // we empty the input and close the drop-down
     lastKnownInput = ''
@@ -106,17 +105,22 @@ function cleanUp (forcedReset : boolean, closeDropDown : boolean, suggestionToRe
   }
 }
 
+/**
+ *
+ * @param state the new state that the search-bar enters
+ * @returns old state, so you can read it after the call if needed
+ */
 function resetGlobalState (state : States) : GlobalState {
   const previousState = { ...globalState.value }
 
-  globalState.value.callAgainFunctionUserPressedSearchButtonOrEnter = false
+  globalState.value.functionToCallAfterResultsGetOrganized = null
   updateGlobalState(state)
 
   return previousState
 }
 
 function updateGlobalState (state : States) {
-  if (state === globalState.value.state) {
+  if (state === globalState.value.state && state !== States.UpdateIncoming) {
     // we make sure that Vue re-renders the drop-down although the state does not change
     globalState.value.state = States.UpdateIncoming
     nextTick(() => updateGlobalState(state))
@@ -161,11 +165,7 @@ function listenToClicks (event : Event) {
   globalState.value.showDropdown = false
 }
 
-// In the V1, the server was receiving a request between 1.5 and 3.5 seconds after the user inputted something, depending on the length of the input.
-// Therefore, the average delay was ~2.5 s for the user as well as for the server. Most of the time the delay was shorter because the 3.5 s delay
-// was only for entries of size 1.
-// This less-than-2.5s-on-average delay arised from a Timeout Timer.
-// For the V2, I propose to work with an Interval Timer because:
+// We work with an Interval Timer because:
 // - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
 // - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
 setInterval(() => {
@@ -173,15 +173,15 @@ setInterval(() => {
     return
   }
   updateGlobalState(States.WaitingForResults)
-  // These two calls run in a separate thread. They request results from the API and then update the drop-down.
+  // These two calls are performed outside the timer (they request results from the API and then update the drop-down)
   searchAhead().then(updateBarAfterSearchAhead)
-  // the timer returns immediately
+  // so the timer returns immediately.
 },
 SearchRequestPeriodicity
 )
 
 async function searchAhead () : Promise<ResultState> {
-  const startInput = inputted.value
+  const inputWhenAPIgotCalled = inputted.value
   let received : SearchAheadAPIresponse | undefined
 
   try {
@@ -197,7 +197,7 @@ async function searchAhead () : Promise<ResultState> {
   } catch (error) {
     received = undefined
   }
-  if (inputted.value !== startInput) { // important: errors are ignored if outdated
+  if (inputted.value !== inputWhenAPIgotCalled) { // important: errors are ignored if outdated
     return ResultState.Outdated
   }
   if (!received || received.error !== undefined || received.data === undefined) {
@@ -215,14 +215,15 @@ function updateBarAfterSearchAhead (howSearchWent : ResultState) {
     case ResultState.Outdated :
       // nothing to do
       return
-    case ResultState.Obtained :
+    case ResultState.Obtained : {
       filterAndOrganizeResults()
-      // we change the state of the component to States.ApiHasResponded and we check whether callAgainFunctionUserPressedSearchButtonOrEnter was true before the change
-      if (resetGlobalState(States.ApiHasResponded).callAgainFunctionUserPressedSearchButtonOrEnter) {
-      // userPressedSearchButtonOrEnter() asked to be called again because the user pressed Enter or the search button but the results were still pending
-        userPressedSearchButtonOrEnter()
+      // we change the state of the component to States.ApiHasResponded and we check whether a function is waiting for the results
+      const previousState = resetGlobalState(States.ApiHasResponded)
+      if (previousState.functionToCallAfterResultsGetOrganized) {
+        previousState.functionToCallAfterResultsGetOrganized()
       }
       break
+    }
   }
 }
 
@@ -243,18 +244,18 @@ function handleKeyPressInInputField (key : string) {
 
 function userPressedSearchButtonOrEnter () {
   switch (globalState.value.state) {
-    case States.InputIsEmpty : // the user enjoys the sounds of clicks
+    case States.InputIsEmpty : // the user enjoys the sound of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
       resetGlobalState(States.SearchRequestWillBeSent) // we order a new search (the timer will launch it)
       return
     case States.SearchRequestWillBeSent :
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
-      globalState.value.callAgainFunctionUserPressedSearchButtonOrEnter = true // we ask the timer to call this function again when the communication with the API is complete
+      globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
       return // in the meantime, we do not proceed further
   }
   // from here, we know that the user pressed Enter or clicked the search button to be redirected by us to the most relevant page
-
+  globalState.value.functionToCallAfterResultsGetOrganized = null
   if (results.organized.howManyResultsIn === 0 && !areThereResultsHiddenByUser()) {
     // nothing matching the input has been found
     return
@@ -280,11 +281,11 @@ function userPressedSearchButtonOrEnter () {
   const picked = props.pickByDefault(possibilities)
   if (picked) {
     // retrieving the result corresponding to the choice
-    const network = toConsider.networks.find(nw => nw.chainId === picked.network)
-    const type = network?.types.find(ty => ty.type === picked.type)
+    const network = toConsider.networks.find(nw => nw.chainId === picked.network)!
+    const type = network.types.find(ty => ty.type === picked.type)!
     // calling back parent's function taking action with the result
-    emit('go', type?.suggestions[0].queryParam, type?.type, network?.chainId, type?.suggestions[0].count)
-    cleanUp(false, false, type?.suggestions[0])
+    emit('go', type.suggestions[0].queryParam, type.type, network.chainId, type.suggestions[0].count)
+    cleanUp(false, false, type.suggestions[0])
   }
 }
 
@@ -300,7 +301,7 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp(true, false, undefined)
+    cleanUp(true, false)
   } else {
     // we order a search (the timer will launch it)
     resetGlobalState(States.SearchRequestWillBeSent)
@@ -449,7 +450,7 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
   for (const k in output) {
     const key = k as keyof HowToFillresultSuggestionOutput
     if (wasOutputDataGivenByTheAPI(type, key)) {
-      const cl = resemblanceWithInput(output[key])
+      const cl = levenshteinDistance(inputted.value, output[key])
       if (cl < closeness) {
         closeness = cl
       }
@@ -481,26 +482,6 @@ function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFro
   return undefined
 }
 
-// Calculates the Levenshtein distance between the parameter and the user input.
-// lower value means better similarity and vice-versa
-function resemblanceWithInput (str2 : string) : number {
-  const str1 = inputted.value
-  const dist = []
-
-  for (let i = 0; i <= str1.length; i++) {
-    dist[i] = [i]
-    for (let j = 1; j <= str2.length; j++) {
-      if (i === 0) {
-        dist[i][j] = j
-      } else {
-        const subst = (str1[i - 1] === str2[j - 1]) ? 0 : 1
-        dist[i][j] = Math.min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + subst)
-      }
-    }
-  }
-  return dist[str1.length][str2.length]
-}
-
 function isResultCountable (type : ResultType | undefined) : boolean {
   if (type !== undefined) {
     return TypeInfo[type].countable
@@ -525,24 +506,18 @@ function mustCategoryFiltersBeShown () : boolean {
   return Object.keys(userFilters.categories).length >= 2
 }
 
+const classIfDropdownIsOpened = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : '')
+
+const classIfDropdownContainsSomething = computed(() => {
+  return mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty ? 'dropdown-contains-something' : ''
+})
+
 function inputPlaceHolder () : string {
   switch (props.barPurpose) {
     case SearchbarPurpose.General : return t('search_bar.general_placeholder')
     case SearchbarPurpose.Accounts : return t('search_bar.account_placeholder')
     case SearchbarPurpose.Validators : return t('search_bar.validator_placeholder')
   }
-  return '' // cannot happen but the static analysis thinks it can
-}
-
-function informationIfInputIsEmpty () : string {
-  const info = t('search_bar.type_something') + ' '
-
-  switch (props.barPurpose) {
-    case SearchbarPurpose.General : return info + t('search_bar.and_use_filters')
-    case SearchbarPurpose.Accounts : return info + t('search_bar.related_to_account')
-    case SearchbarPurpose.Validators : return info + t('search_bar.related_to_validator')
-  }
-  return info // cannot happen but the static analysis thinks it can
 }
 
 function areThereResultsHiddenByUser () : boolean {
@@ -584,7 +559,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, classWhenDropdownIsOpened]">
+    <div class="whole-component" :class="[barStyle, classIfDropdownIsOpened]">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <input
           ref="inputField"
@@ -598,14 +573,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
         >
         <BcSearchbarButton
           class="searchbutton"
-          :class="[barStyle, classWhenDropdownIsOpened]"
+          :class="[barStyle, classIfDropdownIsOpened]"
           :bar-style="barStyle"
           :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropdown" ref="dropDown" class="drop-down" :class="barStyle">
-        <div class="separation" :class="barStyle" />
+      <div v-if="globalState.showDropdown" ref="dropDown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
+        <div v-if="classIfDropdownContainsSomething" class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
@@ -646,10 +621,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
-          <div v-if="globalState.state === States.InputIsEmpty" class="info center">
-            {{ informationIfInputIsEmpty() }}
-          </div>
-          <div v-else-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
+          <div v-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
             {{ t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
@@ -774,10 +746,12 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     }
   }
 
-  .drop-down {
+  .dropdown {
     position: relative;
     width: 100%;
-    padding-bottom: 4px;
+    &.dropdown-contains-something {
+      padding-bottom: 4px;
+    }
 
     .separation {
       position: relative;
@@ -798,9 +772,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
     .filter-area {
       display: flex;
-      row-gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 8px;
 
       .filter-networks {
         margin-left: 6px;
@@ -814,8 +786,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
       position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 128px;
-      max-height: 270px;  // the height of the filter section is subtracted
+      max-height: 270px;
       overflow: auto;
       @include fonts.standard_text;
       &.discreet {

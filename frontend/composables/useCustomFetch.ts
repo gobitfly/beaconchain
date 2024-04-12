@@ -1,6 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
-import { simulateAPIresponseForTheSearchBar } from '~/components/bc/searchbar/simulateapiresponse'
+import { simulateAPIresponseForTheSearchBar } from '~/public/mock/simulateapiresponse'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
