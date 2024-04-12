@@ -239,11 +239,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
           </BcTable>
         </ClientOnly>
       </template>
-      <template #chart>
-        <div class="chart-container">
-          <!--TODO: chart-->
-        </div>
-      </template>
     </BcTableControl>
   </div>
 </template>
@@ -319,10 +314,5 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       word-break: break-all;
     }
   }
-}
-
-.chart-container {
-  width: 100%;
-  height: 625px;
 }
 </style>
