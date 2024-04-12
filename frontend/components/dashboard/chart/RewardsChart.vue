@@ -3,7 +3,7 @@
 import { h, render } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
+import { BarChart } from 'echarts/charts'
 import {
   TooltipComponent,
   LegendComponent,
@@ -14,14 +14,14 @@ import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
+import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
-import { type ChartData } from '~/types/api/common'
+import { type InternalGetValidatorDashboardRewardsChartResponse, type RewardsChartData } from '~/types/api/validator_dashboard'
+import { type ChartSeries } from '~/types/api/common'
 
 use([
   CanvasRenderer,
-  LineChart,
+  BarChart,
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
@@ -30,22 +30,22 @@ use([
 
 const { fetch } = useCustomFetch()
 
+// TODO: replace with new DashboardKey system
 interface Props {
   dashboardKey: DashboardKey
 }
 const props = defineProps<Props>()
 
-const key = computed(() => props.dashboardKey)
+const data = ref<RewardsChartData | undefined >()
 
-const data = ref<ChartData<number, ''> | undefined >()
-await useAsyncData('validator_summary_rewards_chart', async () => {
-  if (key.value === undefined) {
+await useAsyncData('validator_dashboard_rewards_chart', async () => {
+  if (props.dashboardKey === undefined) {
     data.value = undefined
     return
   }
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: key.value })
+  const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART, undefined, { dashboardKey: props.dashboardKey })
   data.value = res.data
-}, { watch: [key], server: false })
+}, { watch: [props], server: false })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
@@ -54,7 +54,7 @@ const colorMode = useColorMode()
 
 const colors = computed(() => {
   return {
-    groups: getSummaryChartGroupColors(colorMode.value),
+    data: getRewardChartColors(),
     label: getSummaryChartTextColor(colorMode.value),
     background: getSummaryChartTooltipBackgroundColor(colorMode.value)
   }
@@ -71,10 +71,12 @@ const option = computed(() => {
     return undefined
   }
 
-  interface SeriesObject {
-    data: number[];
-    type: string;
+  interface SeriesObject extends ChartSeries<string, 'el' | 'cl'> {
     name: string;
+    category: number;
+    color: string;
+    type: 'bar';
+    stack: 'x';
   }
 
   const series: SeriesObject[] = []
@@ -86,10 +88,15 @@ const option = computed(() => {
         const group = overview.value?.groups.find(group => group.id === element.id)
         name = group?.name || element.id.toString()
       }
-
+      const id = `${element.property}|${element.id}`
       const newObj: SeriesObject = {
+        id,
+        category: element.id,
+        property: element.property,
         data: element.data,
-        type: 'line',
+        stack: 'x',
+        color: colors.value.data[element.property ?? 'cl'],
+        type: 'bar',
         name
       }
       series.push(newObj)
@@ -98,10 +105,10 @@ const option = computed(() => {
 
   return {
     grid: {
-      containLabel: true,
-      top: 10,
+      containLabel: true
+      /* top: 10,
       left: '5%',
-      right: '5%'
+      right: '5%' */
     },
     xAxis: {
       type: 'category',
@@ -130,7 +137,7 @@ const option = computed(() => {
       minInterval: 50,
       silent: true,
       axisLabel: {
-        formatter: '{value} %',
+        formatter: '{value} GWEI',
         fontSize: textSize
       },
       splitLine: {
@@ -146,7 +153,6 @@ const option = computed(() => {
       fontWeight: fontWeightLight,
       color: colors.value.label
     },
-    color: colors.value.groups,
     legend: {
       type: 'scroll',
       orient: 'horizontal',
@@ -163,7 +169,7 @@ const option = computed(() => {
       padding: 0,
       borderColor: colors.value.background,
       valueFormatter: (value: number) => {
-        return `${value}% ${$t('dashboard.validator.summary.chart.efficiency')}`
+        return `${value} GWEI`
       },
       formatter (params : any) : HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)

@@ -24,3 +24,10 @@ export function getSummaryChartTooltipBackgroundColor (theme: string) {
     return styles.getPropertyValue('--light-grey')
   }
 }
+
+export function getRewardChartColors () {
+  return {
+    el: 'var(--primary-orange)',
+    cl: 'var(--melllow-blue)'
+  }
+}
