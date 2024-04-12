@@ -314,8 +314,8 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, hasMoreDat
 	// NEXT CURSOR : required if we:
 	// 1. have more data and no cursor
 	// 2. or have more data and a cursor and said cursor is not reversed
-	// 3. or have a cursor and it is reversed
-	if (hasMoreData && (!haveCursor || haveCursor && !dataIsReversed)) || (haveCursor && dataIsReversed) {
+	// 3. or have a cursor which is reversed
+	if (hasMoreData && (!haveCursor || haveCursor && !dataIsReversed)) || (dataIsReversed) {
 		// set cursor direction
 		reflect.ValueOf(&cursor).Elem().FieldByName("Reverse").Set(reflect.ValueOf(false))
 
@@ -335,8 +335,8 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, hasMoreDat
 	}
 	// PREV CURSOR : required if we:
 	// 1. have a cursor and it is not reversed
-	// 2. or have more data and a cursor and said cursor is reversed
-	if (haveCursor && !dataIsReversed) || (hasMoreData && haveCursor && dataIsReversed) {
+	// 2. or have more data and cursor is reversed
+	if (haveCursor && !dataIsReversed) || (hasMoreData && dataIsReversed) {
 		// flip direction of prev cursor
 		reflect.ValueOf(&cursor).Elem().FieldByName("Reverse").Set(reflect.ValueOf(true))
 
