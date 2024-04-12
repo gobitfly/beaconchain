@@ -21,7 +21,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -246,15 +245,6 @@ func SliceToMap[T comparable](s []T) map[T]bool {
 	return m
 }
 
-func DataStructure[T any](s []T) []interface{} {
-	ds := make([]interface{}, len(s))
-	for i, v := range s {
-		ds[i] = v
-	}
-
-	return ds
-}
-
 func CursorToString[T t.CursorLike](cursor T) (string, error) {
 	bin, err := json.Marshal(cursor)
 	if err != nil {
@@ -297,7 +287,7 @@ func GetAndSetField(read reflect.Value, field string, target reflect.Value) erro
 	return nil
 }
 
-func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction enums.SortOrder, hasMoreData bool) (*t.Paging, error) {
+func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, hasMoreData bool) (*t.Paging, error) {
 	if !hasMoreData && !usedCursor.IsValid() {
 		return nil, nil
 	}
@@ -319,15 +309,15 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction 
 		}
 		columns = append(columns, n)
 	}
-	isSameDirection := usedCursor.GetDirection() == direction
+	dataIsReversed := usedCursor.IsReverse()
 	haveCursor := usedCursor.IsValid()
 	// NEXT CURSOR : required if we:
 	// 1. have more data and no cursor
-	// 2. or have more data and a cursor and said cursor is in the same direction
-	// 3. or have a cursor and it is in the opposite direction
-	if (hasMoreData && (!haveCursor || haveCursor && isSameDirection)) || (haveCursor && !isSameDirection) {
+	// 2. or have more data and a cursor and said cursor is not reversed
+	// 3. or have a cursor and it is reversed
+	if (hasMoreData && (!haveCursor || haveCursor && !dataIsReversed)) || (haveCursor && dataIsReversed) {
 		// set cursor direction
-		reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction))
+		reflect.ValueOf(&cursor).Elem().FieldByName("Reverse").Set(reflect.ValueOf(false))
 
 		// generate next cursor
 		for _, c := range columns {
@@ -344,11 +334,11 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, direction 
 		paging.NextCursor = next_cursor
 	}
 	// PREV CURSOR : required if we:
-	// 1. have a cursor and it is in the same direction
-	// 2. or have more data and a cursor and said cursor is in the opposite direction
-	if (haveCursor && isSameDirection) || (hasMoreData && haveCursor && !isSameDirection) {
+	// 1. have a cursor and it is not reversed
+	// 2. or have more data and a cursor and said cursor is reversed
+	if (haveCursor && !dataIsReversed) || (hasMoreData && haveCursor && dataIsReversed) {
 		// flip direction of prev cursor
-		reflect.ValueOf(&cursor).Elem().FieldByName("Direction").Set(reflect.ValueOf(direction.Invert()))
+		reflect.ValueOf(&cursor).Elem().FieldByName("Reverse").Set(reflect.ValueOf(true))
 
 		// generate prev cursor
 		for _, c := range columns {
