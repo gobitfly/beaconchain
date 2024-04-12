@@ -1,15 +1,15 @@
 {
     "participants": [
       {
-        "el_client_type": "geth",
-        "el_client_image": "ethereum/client-go:latest",
-        "el_client_log_level": "",
-        "cl_client_type": "lighthouse",
-        "cl_client_image": "sigp/lighthouse:latest",
-        "cl_client_log_level": "",
-        "beacon_extra_params": ["--reconstruct-historic-states"],
+        "el_type": "geth",
+        "el_image": "ethereum/client-go:latest",
+        "el_log_level": "",
+        "cl_type": "lighthouse",
+        "cl_image": "sigp/lighthouse:latest",
+        "cl_log_level": "",
+        "cl_extra_params": ["--reconstruct-historic-states"],
         "el_extra_params": ["--http.api='admin,eth,net,debug,txpool' --syncmode full"],
-        "validator_extra_params": [],
+        "vc_extra_params": [],
         "builder_network_params": null,
         "count": 2
       }
