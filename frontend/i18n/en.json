@@ -132,7 +132,8 @@
   },
   "block":{
     "col":{
-      "proposer": "Proposer"
+      "proposer": "Proposer",
+      "graffiti": "Graffiti"
     }
   },
   "validator": {
