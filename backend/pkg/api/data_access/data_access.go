@@ -949,7 +949,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	}
 
 	pubkeys := []struct {
-		ValidatorIndex uint64 `db:"validator_index"`
+		ValidatorIndex uint64 `db:"validatorindex"`
 		Pubkey         []byte `db:"pubkey"`
 	}{}
 
@@ -961,10 +961,10 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	// Query to find the pubkey for each validator index
 	pubkeysQuery := `
 		SELECT
-			validator_index,
+			validatorindex,
 			pubkey
 		FROM validators
-		WHERE validator_index = ANY($1)
+		WHERE validatorindex = ANY($1)
 	`
 
 	// Query to add the validators to the dashboard and group

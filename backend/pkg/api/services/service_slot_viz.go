@@ -71,7 +71,10 @@ func (s *Services) updateSlotVizData() error {
 		// Get min/max slot/epoch
 		headEpoch := cache.LatestEpoch.Get()
 
-		minEpoch := headEpoch - 2
+		minEpoch := uint64(0)
+		if headEpoch > 1 {
+			minEpoch = headEpoch - 2
+		}
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
