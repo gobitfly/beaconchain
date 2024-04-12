@@ -19,9 +19,15 @@ type ModuleInterface interface {
 	Init() error
 	GetName() string // Used for logging
 
-	// !Do not block in this functions for an extended period of time!
+	// -- !Do not block in this functions for an extended period of time! --
+
 	OnHead(*types.StandardEventHeadResponse) error
+
+	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
+	// An epoch becomes finalized once the next epoch gets justified
+	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
 	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error
+
 	OnChainReorg(*types.StandardEventChainReorg) error
 }
 

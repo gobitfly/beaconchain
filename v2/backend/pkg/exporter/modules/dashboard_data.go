@@ -94,7 +94,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 2955
+		//d.headEpochQueue <- 256
 		d.processHeadQueue()
 	}()
 
@@ -960,7 +960,6 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	for validator_index := range validatorsData {
-		validatorsData[validator_index].SyncChance = float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(activeCount) // / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
 		validatorsData[validator_index].BlockChance = float64(utils.Config.Chain.ClConfig.SlotsPerEpoch) / float64(activeCount)
 	}
 
@@ -1247,7 +1246,6 @@ type validatorDashboardDataRow struct {
 	SyncScheduled sql.NullInt16 // done
 	SyncExecuted  sql.NullInt16 // done
 	SyncReward    sql.NullInt64 // done
-	SyncChance    float64       // done
 
 	SlasherRewards   sql.NullInt64 // done
 	Slashed          bool          // done
