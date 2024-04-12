@@ -5,7 +5,7 @@ import {
   SearchbarStyle
 } from '~/types/searchbar'
 
-const emit = defineEmits(['change'])
+const emit = defineEmits<{(e: 'change') : void}>()
 const props = defineProps<{
   liveState: Record<string, boolean>, // each field has a stringifyEnum(Category) as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
   barStyle: SearchbarStyle
@@ -13,11 +13,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const stateRef = ref<Record<string, boolean>>({}) // each field has a stringifyEnum(Category) as key and the state of the option as value
+const stateRef = ref<Record<string, boolean>>(props.liveState) // each field has a stringifyEnum(Category) as key and the state of the option as value
 
-onMounted(() => {
-  stateRef.value = props.liveState
-})
 watch(props, () => {
   stateRef.value = props.liveState
 })
@@ -56,6 +53,7 @@ function selectionHasChanged () {
 
   .face{
     display: inline-block;
+    cursor: pointer;
     border-radius: 10px;
     height: 17px;
     padding-top: 2.5px;
@@ -64,6 +62,7 @@ function selectionHasChanged () {
     text-align: center;
     margin-right: 6px;
     transition: 0.2s;
+    margin-bottom: 8px;
 
     &.gaudy {
       color: var(--primary-contrast-color);

@@ -2,7 +2,7 @@
 import { SearchbarStyle } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
-const emit = defineEmits(['change'])
+const emit = defineEmits<{(e: 'change') : void}>()
 const props = defineProps<{
   liveState: Record<string, boolean>, // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts) and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
   barStyle: SearchbarStyle
@@ -14,11 +14,13 @@ const vueMultiselectAllOptions = ref<{name: string, label: string}[]>()
 const vueMultiselectSelectedOptions = ref<string[]>([])
 
 let statePtr : Record<string, boolean> = {} // each key is a stringifyed chain ID and the state of the option as value
-const everyNetworkIsSelected = ref<boolean>(false)
 
-onMounted(() => {
-  initialize()
+const everyNetworkIsSelected = computed(() => {
+  return (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value?.length)
 })
+
+initialize()
+
 watch(props, () => {
   initialize()
 })
@@ -34,11 +36,9 @@ function initialize () {
       vueMultiselectSelectedOptions.value.push(nw)
     }
   }
-  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value.length)
 }
 
 function selectionHasChanged () {
-  everyNetworkIsSelected.value = (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value?.length)
   for (const nw in statePtr) {
     statePtr[nw] = vueMultiselectSelectedOptions.value.includes(nw)
   }
@@ -74,6 +74,7 @@ function selectionHasChanged () {
   width: 128px;
   height: 20px;
   border-radius: 10px;
+  margin-bottom: 8px;
 
   .p-multiselect-trigger {
     width: 1.5rem;
