@@ -111,7 +111,7 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 			continue
 		}
 
-		if boundsStart > latestExportedDay.EpochStart {
+		if boundsStart > latestExportedHour.EpochStart {
 			continue // nothing to do
 		}
 
@@ -187,7 +187,6 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 					SUM(withdrawals_count) as withdrawals_count,
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(sync_chance) as sync_chance,
 					SUM(block_chance) as block_chance,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
@@ -234,7 +233,6 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				sync_chance,
 				block_chance,
 				attestations_scheduled,
 				attestations_executed,
@@ -278,7 +276,6 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				sync_chance,
 				block_chance,
 				attestations_scheduled,
 				attestations_executed,
@@ -320,7 +317,6 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 				withdrawals_count = EXCLUDED.withdrawals_count,
 				withdrawals_amount = EXCLUDED.withdrawals_amount,
 				inclusion_delay_sum = EXCLUDED.inclusion_delay_sum,
-				sync_chance = EXCLUDED.sync_chance,
 				block_chance = EXCLUDED.block_chance,
 				attestations_scheduled = EXCLUDED.attestations_scheduled,
 				attestations_executed = EXCLUDED.attestations_executed,
@@ -456,7 +452,6 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 					SUM(withdrawals_count) as withdrawals_count,
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(sync_chance) as sync_chance,
 					SUM(block_chance) as block_chance,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
@@ -502,7 +497,6 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				sync_chance,
 				block_chance,
 				attestations_scheduled,
 				attestations_executed,
@@ -545,7 +539,6 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				sync_chance,
 				block_chance,
 				attestations_scheduled,
 				attestations_executed,

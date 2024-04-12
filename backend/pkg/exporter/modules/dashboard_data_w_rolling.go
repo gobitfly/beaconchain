@@ -102,6 +102,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to bootstrap rolling %dd aggregate", days))
 		}
+
 		bounds, err = d.getCurrentRollingBounds(tx, tableName)
 		if err != nil {
 			return errors.Wrap(err, "failed to get current rolling bounds")
@@ -275,7 +276,6 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 					SUM(withdrawals_count) as withdrawals_count,
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(sync_chance) as sync_chance,
 					SUM(block_chance) as block_chance,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
@@ -320,7 +320,6 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				sync_chance,
 				block_chance,
 				attestations_scheduled,
 				attestations_executed,
@@ -362,7 +361,6 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 				COALESCE(aggregate_head.withdrawals_count, 0) as withdrawals_count,
 				COALESCE(aggregate_head.withdrawals_amount, 0) as withdrawals_amount,
 				COALESCE(aggregate_head.inclusion_delay_sum, 0) as inclusion_delay_sum,
-				COALESCE(aggregate_head.sync_chance, 0) as sync_chance,
 				COALESCE(aggregate_head.block_chance, 0) as block_chance,
 				COALESCE(aggregate_head.attestations_scheduled, 0) as attestations_scheduled,
 				COALESCE(aggregate_head.attestations_executed, 0) as attestations_executed,
@@ -402,7 +400,6 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 					withdrawals_count = COALESCE(%[1]s.withdrawals_count, 0) + EXCLUDED.withdrawals_count,
 					withdrawals_amount = COALESCE(%[1]s.withdrawals_amount, 0) + EXCLUDED.withdrawals_amount,
 					inclusion_delay_sum = COALESCE(%[1]s.inclusion_delay_sum, 0) + EXCLUDED.inclusion_delay_sum,
-					sync_chance = COALESCE(%[1]s.sync_chance, 0) + EXCLUDED.sync_chance,
 					block_chance = COALESCE(%[1]s.block_chance, 0) + EXCLUDED.block_chance,
 					attestations_scheduled = COALESCE(%[1]s.attestations_scheduled, 0) + EXCLUDED.attestations_scheduled,
 					attestations_executed = COALESCE(%[1]s.attestations_executed, 0) + EXCLUDED.attestations_executed,
@@ -479,7 +476,6 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					SUM(withdrawals_count) as withdrawals_count,
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(sync_chance) as sync_chance,
 					SUM(block_chance) as block_chance,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
@@ -523,7 +519,6 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					COALESCE(aggregate_tail.withdrawals_count, 0) as withdrawals_count,
 					COALESCE(aggregate_tail.withdrawals_amount, 0) as withdrawals_amount,
 					COALESCE(aggregate_tail.inclusion_delay_sum, 0) as inclusion_delay_sum,
-					COALESCE(aggregate_tail.sync_chance, 0) as sync_chance,
 					COALESCE(aggregate_tail.block_chance, 0) as block_chance,
 					COALESCE(aggregate_tail.attestations_scheduled, 0) as attestations_scheduled,
 					COALESCE(aggregate_tail.attestations_executed, 0) as attestations_executed,
@@ -561,7 +556,6 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					withdrawals_count = COALESCE(v.withdrawals_count, 0) - result.withdrawals_count,
 					withdrawals_amount = COALESCE(v.withdrawals_amount, 0) - result.withdrawals_amount,
 					inclusion_delay_sum = COALESCE(v.inclusion_delay_sum, 0) - result.inclusion_delay_sum,
-					sync_chance = COALESCE(v.sync_chance, 0) - result.sync_chance,
 					block_chance = COALESCE(v.block_chance, 0) - result.block_chance,
 					attestations_scheduled = COALESCE(v.attestations_scheduled, 0) - result.attestations_scheduled,
 					attestations_executed = COALESCE(v.attestations_executed, 0) - result.attestations_executed,
