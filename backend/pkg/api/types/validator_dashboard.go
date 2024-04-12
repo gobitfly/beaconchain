@@ -130,7 +130,7 @@ type VDBBlocksTableRow struct {
 	Epoch           uint64                     `json:"epoch"`
 	Slot            uint64                     `json:"slot"`
 	Block           uint64                     `json:"block"`
-	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
+	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'" faker:"oneof: success, missed, orphaned, scheduled"`
 	RewardRecipient Address                    `json:"reward_recipient"`
 	Reward          ClElValue[decimal.Decimal] `json:"reward"`
 	Graffiti        string                     `json:"graffiti"`
