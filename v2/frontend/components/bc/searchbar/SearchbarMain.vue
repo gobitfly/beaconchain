@@ -1,4 +1,60 @@
 <script setup lang="ts">
+/*
+Usage
+-----
+
+In your <script setup>, write:
+  const mySearchbar = ref<SearchBar>()
+
+In your template, write:
+  <BcSearchbarMain
+    ref="mySearchbar"
+    :bar-style="SearchbarStyle.<what you want to see>"
+    :bar-purpose="SearchbarPurpose.<what you need to do>"
+    :pick-by-default="<function that picks a result on behalf of the user when they press Enter or the search-button>"
+    @go="<your function doing something when a result is selected>"
+  />
+
+There are more props that you can give to configure the search bar:
+  :only-networks="[<list of chain IDs that the bar is authorized to search over>]" // Without this props, the bar searches over all networks.
+  :keep-dropdown-open="true" // When the user selects a result, the drop-down does not close.
+
+The list of possible values for :bar-style is in enum `SearchbarStyle` in file `searchbar.ts`.
+The list of possible values for :bar-purpose is in enum `SearchbarPurpose` in file `searchbar.ts`.
+You can write your own function for `:pick-by-default`, or give the example function written in `searchbar.ts` if it suits your needs:
+   :pick-by-default="pickHighestPriorityAmongBestMatchings"
+
+The handler that you give to props `@go` receives one parameter:
+  function myHandler (result : ResultSuggestion)
+To get a description of the information carried in the parameter, look at the comments in type `ResultSuggestion` in `searchbar.ts`.
+
+The search-bar offers methods that you can call for further tailoring:
+  mySearchbar.value!.hideResult(whichOne : ResultSuggestion) // Removes a result from the drop-down. The result is one of those that you obtained in your `@go` handler.
+  mySearchbar.value!.closeDropdown() // Useful when you gave `:keep-dropdown-open="true"` in the props but you still need to close the drop-down in certain cases.
+  mySearchbar.value!.empty() // By itself, the search-bar never empties its input field nor its drop-down. You can still clear the search-bar with this method if you want the user to retype from scratch.
+
+Changing the behavior of the search bar thanks to `searchbar.ts`
+----------------------------------------------------------------
+`searchbar.ts` has been designed as a "configuration file" for the search bar.
+
+For example, in this file, you can create a new `:bar-purpose` if needed:
+  1. Add a purpose name into the `SearchbarPurpose` enum.
+  2. Define this purpose into the `SearchbarPurposeInfo` record.
+
+If the protocol to communicate with the API changes, it might not be necessary to modify the code of the search-bar. It was developped to be as versatile as possible.
+For example, if the API returns a new type of result:
+  1. Add this type into the `ResultType` enum of `searchbar.ts`.
+  2. Tell the bar how to read/display it by adding a new entry in the `TypeInfo` record.
+
+If the API gets the ability to return a new field in some or all elements of its response array:
+  1. Write the name of the new field in `SingleAPIresult`.
+  2. Create a reference to it in `Indirect`.
+  3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
+
+If for some type of result you want to change the information / order of the information that the user sees in the suggestion row of the drop-down:
+  1. Locate this result type in record `TypeInfo`.
+  2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
+*/
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
@@ -319,7 +375,7 @@ function userPressedSearchButtonOrEnter () {
 
 function userClickedSuggestion (suggestion : ResultSuggestion) {
   lastClickWasInTheResultList = true
-  // calls back parent's function and cleans up
+  // calls back parent's function taking action with the result
   if (!props.keepDropdownOpen) {
     closeDropdown()
   }
@@ -540,14 +596,6 @@ const classIfDropdownContainsSomething = computed(() => {
   return dropdownContainsSomething ? 'dropdown-contains-something' : ''
 })
 
-function inputPlaceHolder () : string {
-  switch (props.barPurpose) {
-    case SearchbarPurpose.GlobalSearch : return t('search_bar.general_placeholder')
-    case SearchbarPurpose.AccountAddition : return t('search_bar.account_placeholder')
-    case SearchbarPurpose.ValidatorAddition : return t('search_bar.validator_placeholder')
-  }
-}
-
 function areThereResultsHiddenByUser () : boolean {
   return results.organized.howManyResultsOut > 0
 }
@@ -595,7 +643,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           class="p-inputtext inputfield"
           :class="barStyle"
           type="text"
-          :placeholder="inputPlaceHolder()"
+          :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
           @keyup="(e) => handleKeyPressInInputField(e.key)"
           @focus="globalState.showDropdown = true"
         >
