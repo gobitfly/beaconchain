@@ -5,7 +5,7 @@ export enum SearchbarStyle {
   Discreet = 'discreet',
   Embedded = 'embedded'
 }
-export enum SearchbarPurpose { General, Accounts, Validators }
+export enum SearchbarPurpose { GlobalSearch, AccountAddition, ValidatorAddition }
 
 export enum Category {
   Tokens,
@@ -137,20 +137,24 @@ export interface OrganizedResults {
 
 interface SearchbarPurposeInfoField {
   searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
-  unsearchable : ResultType[] // List of types that the bar will not search for.
+  unsearchable : ResultType[], // List of types that the bar will not search for.
+  button : 'search' | 'add'
 }
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
-  [SearchbarPurpose.General]: {
+  [SearchbarPurpose.GlobalSearch]: {
     searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
-    unsearchable: []
+    unsearchable: [],
+    button: 'search'
   },
-  [SearchbarPurpose.Accounts]: {
+  [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
-    unsearchable: [ResultType.EnsOverview]
+    unsearchable: [ResultType.EnsOverview],
+    button: 'add'
   },
-  [SearchbarPurpose.Validators]: {
+  [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
-    unsearchable: []
+    unsearchable: [],
+    button: 'add'
   }
 }
 
@@ -440,6 +444,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
 export interface ExposedSearchbarMethods { // for internal use
   hideResult : (whichOne : ResultSuggestion) => void,
   closeDropdown : () => void
+  empty : () => void
 }
 export interface SearchBar // your ref to the search-bar component must be of this type
        extends ComponentPublicInstance, ExposedSearchbarMethods {}

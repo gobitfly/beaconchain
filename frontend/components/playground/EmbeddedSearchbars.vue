@@ -52,7 +52,7 @@ function userSelectedValidator (result : ResultSuggestion) {
     <BcSearchbarMain
       ref="accountSearchBar"
       :bar-style="SearchbarStyle.Embedded"
-      :bar-purpose="SearchbarPurpose.Accounts"
+      :bar-purpose="SearchbarPurpose.AccountAddition"
       :pick-by-default="pickHighestPriorityAmongBestMatchings"
       :keep-dropdown-open="true"
       @go="userSelectedAnAccount"
@@ -65,7 +65,7 @@ function userSelectedValidator (result : ResultSuggestion) {
     <BcSearchbarMain
       ref="validatorSearchBar"
       :bar-style="SearchbarStyle.Embedded"
-      :bar-purpose="SearchbarPurpose.Validators"
+      :bar-purpose="SearchbarPurpose.ValidatorAddition"
       :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
       :pick-by-default="pickHighestPriorityAmongBestMatchings"
       :keep-dropdown-open="true"
