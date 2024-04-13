@@ -50,6 +50,7 @@ If the API gets the ability to return a new field in some or all elements of its
   1. Write the name of the new field in `SingleAPIresult`.
   2. Create a reference to it in `Indirect`.
   3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
+  4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`
 
 If for some type of result you want to change the information / order of the information that the user sees in the suggestion row of the drop-down:
   1. Locate this result type in record `TypeInfo`.
