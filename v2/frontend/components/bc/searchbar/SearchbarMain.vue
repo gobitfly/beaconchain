@@ -54,6 +54,15 @@ If the API gets the ability to return a new field in some or all elements of its
 If for some type of result you want to change the information / order of the information that the user sees in the suggestion row of the drop-down:
   1. Locate this result type in record `TypeInfo`.
   2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
+
+If you want to add or remove a filter button:
+  A. Either you simply need create or modify a purpose to see more/less filters (see above)
+  B. or
+    1. Add/remove an entry in enum `Category`.
+    2. Add/remove the corresponding category-title and button-label in enum `CategoryInfo`.
+    3. You might need to add/remove an entry in `SubCategoryInfo`.
+    4. Update (add/remove/change) all relevant entries in record `TypeInfo` to take properly into account your new categorization of the result types.
+    5. Update the entries of `SearchbarPurposeInfo` to take into account the new/removed category.
 */
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
