@@ -41,7 +41,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 
-defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown })
+defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
 enum ResultState {
   Obtained, Outdated, Error
@@ -92,18 +92,6 @@ const results = {
   }
 }
 
-function cleanUp (reset : boolean, close : boolean) {
-  if (reset) {
-    // we empty the input and close the drop-down
-    lastKnownInput = ''
-    inputted.value = ''
-    resetGlobalState(States.InputIsEmpty)
-  }
-  if (close) {
-    closeDropdown()
-  }
-}
-
 function hideResult (whichOne : ResultSuggestion) {
   if (!results.raw.data) {
     return
@@ -117,6 +105,21 @@ function hideResult (whichOne : ResultSuggestion) {
 
 function closeDropdown () {
   globalState.value.showDropdown = false
+}
+
+function empty () {
+  lastKnownInput = ''
+  inputted.value = ''
+  resetGlobalState(States.InputIsEmpty)
+  results.raw = {}
+  clearOrganizedResults()
+}
+
+function clearOrganizedResults () {
+  results.organized.in = { networks: [] }
+  results.organized.out = { networks: [] }
+  results.organized.howManyResultsIn = 0
+  results.organized.howManyResultsOut = 0
 }
 
 /**
@@ -169,6 +172,7 @@ onMounted(() => {
 onUnmounted(() => {
   lastClickWasInTheResultList = false
   document.removeEventListener('click', listenToClicks)
+  empty()
 })
 
 // closes the drop-down if the user interacts with another part of the page
@@ -306,16 +310,20 @@ function userPressedSearchButtonOrEnter () {
     const network = toConsider.networks.find(nw => nw.chainId === picked.network)!
     const type = network.types.find(ty => ty.type === picked.type)!
     // calling back parent's function taking action with the result
+    if (!props.keepDropdownOpen) {
+      closeDropdown()
+    }
     emit('go', type.suggestions[0])
-    cleanUp(props.barPurpose === SearchbarPurpose.General, !props.keepDropdownOpen)
   }
 }
 
 function userClickedSuggestion (suggestion : ResultSuggestion) {
   lastClickWasInTheResultList = true
   // calls back parent's function and cleans up
+  if (!props.keepDropdownOpen) {
+    closeDropdown()
+  }
   emit('go', suggestion)
-  cleanUp(props.barPurpose === SearchbarPurpose.General, !props.keepDropdownOpen)
 }
 
 function inputMightHaveChanged () {
@@ -324,7 +332,7 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp(true, false)
+    empty()
   } else {
     // we order a search (the timer will launch it)
     resetGlobalState(States.SearchRequestMustBeSent)
@@ -340,10 +348,7 @@ function refreshOutputArea () {
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
 function filterAndOrganizeResults () {
-  results.organized.in = { networks: [] }
-  results.organized.out = { networks: [] }
-  results.organized.howManyResultsIn = 0
-  results.organized.howManyResultsOut = 0
+  clearOrganizedResults()
 
   if (results.raw.data === undefined) {
     return
@@ -509,7 +514,7 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     return TypeInfo[type].countable
   }
   // from here, there is uncertainty but we must simply tell whether counting is possible for some results
-  if (props.barPurpose === SearchbarPurpose.General) {
+  if (props.barPurpose === SearchbarPurpose.GlobalSearch) {
     return false // we do not ask the API to count identical results when the bar is versatile (general bar to search anything on the blockchain)
   }
   for (const type of searchableTypes) {
@@ -537,9 +542,9 @@ const classIfDropdownContainsSomething = computed(() => {
 
 function inputPlaceHolder () : string {
   switch (props.barPurpose) {
-    case SearchbarPurpose.General : return t('search_bar.general_placeholder')
-    case SearchbarPurpose.Accounts : return t('search_bar.account_placeholder')
-    case SearchbarPurpose.Validators : return t('search_bar.validator_placeholder')
+    case SearchbarPurpose.GlobalSearch : return t('search_bar.general_placeholder')
+    case SearchbarPurpose.AccountAddition : return t('search_bar.account_placeholder')
+    case SearchbarPurpose.ValidatorAddition : return t('search_bar.validator_placeholder')
   }
 }
 
@@ -702,10 +707,10 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
     left: 0px;
   }
   &.embedded {
-    @media (min-width: 450px) { // large enough window/screen
+    @media (min-width: 470px) { // large enough window/screen
       left: 0px;
     }
-    @media (max-width: 450px) { // narrow window/screen
+    @media (max-width: 469.9px) { // narrow window/screen
       &.dropdown-is-closed {
         left: 0px;
       }
@@ -729,12 +734,14 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
   }
 
   .input-and-button {
-    display: block;
-    width: 100%;
+    position: relative;
+    left: 0px;
+    right: 0px;
 
     .inputfield {
       display:inline-block;
-      left: 0;
+      position: relative;
+      box-sizing: border-box;
       width: 100%;
       border: none;
       box-shadow: none;
@@ -785,7 +792,8 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
   .dropdown {
     position: relative;
-    width: 100%;
+    left: 0px;
+    right: 0px;
     &.dropdown-contains-something {
       padding-bottom: 4px;
     }
@@ -848,7 +856,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
               display: none;
               margin-left: 8px;
               margin-right: 8px;
-              height: 0.9px;
+              height: 1px;
 
               &.embedded {
                 @media (max-width: 600px) { // mobile

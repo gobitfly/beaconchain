@@ -76,7 +76,7 @@ async function redirectToRelevantPage (result : ResultSuggestion) {
 <template>
   <BcSearchbarMain
     :bar-style="barStyle as SearchbarStyle"
-    :bar-purpose="SearchbarPurpose.General"
+    :bar-purpose="SearchbarPurpose.GlobalSearch"
     :pick-by-default="pickHighestPriorityAmongBestMatchings"
     @go="redirectToRelevantPage"
   />

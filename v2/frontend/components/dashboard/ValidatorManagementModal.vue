@@ -227,7 +227,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <BcSearchbarMain
             ref="searchBar"
             :bar-style="SearchbarStyle.Embedded"
-            :bar-purpose="SearchbarPurpose.Validators"
+            :bar-purpose="SearchbarPurpose.ValidatorAddition"
             :only-networks="[ChainIDs.Ethereum]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :keep-dropdown-open="true"
