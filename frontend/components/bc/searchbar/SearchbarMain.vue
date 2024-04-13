@@ -22,7 +22,8 @@ import {
   SearchbarPurpose,
   SearchbarPurposeInfo,
   type Matching,
-  type PickingCallBackFunction
+  type PickingCallBackFunction,
+  type ExposedSearchbarMethods
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
@@ -40,10 +41,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 
-defineExpose<{
-  hideResult : typeof hideResult,
-  closeDropdown : typeof closeDropdown
-}>({ hideResult, closeDropdown })
+defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown })
 
 enum ResultState {
   Obtained, Outdated, Error
@@ -51,7 +49,7 @@ enum ResultState {
 
 enum States {
   InputIsEmpty,
-  SearchRequestWillBeSent,
+  SearchRequestMustBeSent,
   WaitingForResults,
   ApiHasResponded,
   Error,
@@ -74,7 +72,8 @@ const globalState = ref<GlobalState>({
   functionToCallAfterResultsGetOrganized: null,
   showDropdown: false
 })
-const dropDown = ref<HTMLDivElement>()
+let lastClickWasInTheResultList = false // this will help the click event-handler in case a result is removed from the drop-down before it runs, making the drop-down shorter so the click might seem to be outside
+const dropdown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 const inputField = ref<HTMLInputElement>()
 
@@ -93,14 +92,14 @@ const results = {
   }
 }
 
-function cleanUp (forcedReset : boolean, doNotCloseDropdown : boolean) {
-  if (forcedReset || props.barPurpose === SearchbarPurpose.General) {
+function cleanUp (reset : boolean, close : boolean) {
+  if (reset) {
     // we empty the input and close the drop-down
     lastKnownInput = ''
     inputted.value = ''
     resetGlobalState(States.InputIsEmpty)
   }
-  if (!props.keepDropdownOpen && !doNotCloseDropdown) {
+  if (close) {
     closeDropdown()
   }
 }
@@ -168,13 +167,20 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  lastClickWasInTheResultList = false
   document.removeEventListener('click', listenToClicks)
 })
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (!dropDown.value || !inputFieldAndButton.value ||
-      dropDown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
+  if (lastClickWasInTheResultList) {
+    // if a result has been removed from the drop-down before this event handler had the opportunity to run, the drop-down appears shorter here so the click might seem to be outside
+    event.stopPropagation()
+    lastClickWasInTheResultList = false
+    return
+  }
+  if (!dropdown.value || !inputFieldAndButton.value ||
+      dropdown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
   closeDropdown()
@@ -184,7 +190,7 @@ function listenToClicks (event : Event) {
 // - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
 // - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
 setInterval(() => {
-  if (globalState.value.state !== States.SearchRequestWillBeSent) {
+  if (globalState.value.state !== States.SearchRequestMustBeSent) {
     return
   }
   updateGlobalState(States.WaitingForResults)
@@ -258,19 +264,20 @@ function handleKeyPressInInputField (key : string) {
 }
 
 function userPressedSearchButtonOrEnter () {
+  globalState.value.functionToCallAfterResultsGetOrganized = null
   switch (globalState.value.state) {
     case States.InputIsEmpty : // the user enjoys the sound of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
-      resetGlobalState(States.SearchRequestWillBeSent) // we order a new search (the timer will launch it)
+      resetGlobalState(States.SearchRequestMustBeSent) // we order a new search (the timer will launch it)
       return
-    case States.SearchRequestWillBeSent :
+    case States.SearchRequestMustBeSent :
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
       globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
       return // in the meantime, we do not proceed further
   }
   // from here, we know that the user pressed Enter or clicked the search button to be redirected by us to the most relevant page
-  globalState.value.functionToCallAfterResultsGetOrganized = null
+
   if (results.organized.howManyResultsIn === 0 && !areThereResultsHiddenByUser()) {
     // nothing matching the input has been found
     return
@@ -283,7 +290,7 @@ function userPressedSearchButtonOrEnter () {
     // we default to the filtered-out results if there are results but the drop down does not show them
     toConsider = results.organized.out
   }
-  // Builds the list of matchings that the parent component will need to pick one by default (in callback function `props.pickByDefault()`).
+  // Builds the list of matchings that the parent component will need when picking one by default (in callback function `props.pickByDefault()`).
   // We guarantee props.pickByDefault() that the list is ordered by network and type priority (the sorting is done in `filterAnsdOrganizeResults()`).
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
@@ -300,14 +307,15 @@ function userPressedSearchButtonOrEnter () {
     const type = network.types.find(ty => ty.type === picked.type)!
     // calling back parent's function taking action with the result
     emit('go', type.suggestions[0])
-    cleanUp(false, false)
+    cleanUp(props.barPurpose === SearchbarPurpose.General, !props.keepDropdownOpen)
   }
 }
 
 function userClickedSuggestion (suggestion : ResultSuggestion) {
+  lastClickWasInTheResultList = true
   // calls back parent's function and cleans up
   emit('go', suggestion)
-  cleanUp(false, false)
+  cleanUp(props.barPurpose === SearchbarPurpose.General, !props.keepDropdownOpen)
 }
 
 function inputMightHaveChanged () {
@@ -316,10 +324,10 @@ function inputMightHaveChanged () {
   }
   lastKnownInput = inputted.value
   if (inputted.value.length === 0) {
-    cleanUp(true, true)
+    cleanUp(true, false)
   } else {
     // we order a search (the timer will launch it)
-    resetGlobalState(States.SearchRequestWillBeSent)
+    resetGlobalState(States.SearchRequestMustBeSent)
   }
 }
 
@@ -523,8 +531,8 @@ function mustCategoryFiltersBeShown () : boolean {
 const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
 
 const classIfDropdownContainsSomething = computed(() => {
-  const dropDownContainsSomething = mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty
-  return dropDownContainsSomething ? 'dropdown-contains-something' : ''
+  const dropdownContainsSomething = mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty
+  return dropdownContainsSomething ? 'dropdown-contains-something' : ''
 })
 
 function inputPlaceHolder () : string {
@@ -594,7 +602,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropdown" ref="dropDown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
+      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
         <div v-if="classIfDropdownContainsSomething" class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
@@ -634,7 +642,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
-          <div v-if="globalState.state === States.SearchRequestWillBeSent || globalState.state === States.WaitingForResults" class="info center">
+          <div v-if="globalState.state === States.SearchRequestMustBeSent || globalState.state === States.WaitingForResults" class="info center">
             {{ t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>

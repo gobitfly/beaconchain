@@ -437,10 +437,12 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   }
 }
 
-export interface SearchBar extends ComponentPublicInstance {
+export interface ExposedSearchbarMethods { // for internal use
   hideResult : (whichOne : ResultSuggestion) => void,
   closeDropdown : () => void
 }
+export interface SearchBar // your ref to the search-bar component must be of this type
+       extends ComponentPublicInstance, ExposedSearchbarMethods {}
 
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
