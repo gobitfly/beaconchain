@@ -35,14 +35,10 @@ The search-bar offers methods that you can call for further tailoring:
 
 Changing the behavior of the search bar thanks to `searchbar.ts`
 ----------------------------------------------------------------
-`searchbar.ts` has been designed as a "configuration file" for the search bar.
+`searchbar.ts` has been designed as a "configuration file" for the search bar. For example, if the protocol to communicate with the API changes, it might
+not be necessary to modify the code of the search-bar. It was developped to be as configurable as possible:
 
-For example, in this file, you can create a new `:bar-purpose` if needed:
-  1. Add a purpose name into the `SearchbarPurpose` enum.
-  2. Define this purpose into the `SearchbarPurposeInfo` record.
-
-If the protocol to communicate with the API changes, it might not be necessary to modify the code of the search-bar. It was developped to be as versatile as possible.
-For example, if the API returns a new type of result:
+If the API returns a new type of result:
   1. Add this type into the `ResultType` enum of `searchbar.ts`.
   2. Tell the bar how to read/display it by adding a new entry in the `TypeInfo` record.
 
@@ -52,18 +48,28 @@ If the API gets the ability to return a new field in some or all elements of its
   3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
   4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`
 
-If for some type of result you want to change the information / order of the information that the user sees in the suggestion row of the drop-down:
+If for some type of result you want to change the information / order of the information that the user sees in the corresponding suggestion rows of the drop-down:
   1. Locate this result type in record `TypeInfo`.
   2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
 
+You can create a new `:bar-purpose` if needed:
+  1. Add a purpose name into the `SearchbarPurpose` enum of `searchbar.ts`.
+  2. Define this purpose into the `SearchbarPurposeInfo` record.
+
 If you want to add or remove a filter button:
-  A. Either you simply need create or modify a purpose to see more/less filters (see above)
-  B. or
+  A. Either you simply need create or modify a purpose to see more/less filters (see above).
+  B. Or:
     1. Add/remove an entry in enum `Category`.
     2. Add/remove the corresponding category-title and button-label in enum `CategoryInfo`.
     3. You might need to add/remove an entry in `SubCategoryInfo`.
     4. Update (add/remove/change) all relevant entries in record `TypeInfo` to take properly into account your new categorization of the result types.
     5. Update the entries of `SearchbarPurposeInfo` to take into account the new/removed category.
+
+If you want to change the order of the results in the drop-down, it is a bit less straightforward:
+  - To change the order of the results inside each network set, modify the values of fields `priority` in the `TypeInfo` record of `searchbar.ts`.
+  - Changing the order of the networks sets is a different task. You would need to change the `priority` fields in the `ChainInfo` record of `networks.ts`.
+  Note that if different types or networks have the same priority, two results of these types/networks will appear in the drop-down in the order of their `closeness` values
+  (a measure of similarity to the user input).
 */
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
@@ -171,6 +177,7 @@ function hideResult (whichOne : ResultSuggestion) {
 
 function closeDropdown () {
   globalState.value.showDropdown = false
+  inputField.value?.blur()
 }
 
 function empty () {
@@ -324,7 +331,6 @@ function handleKeyPressInInputField (key : string) {
       userPressedSearchButtonOrEnter()
       break
     case 'Escape' :
-      inputField.value?.blur()
       closeDropdown()
       break
     default:
@@ -473,15 +479,16 @@ function filterAndOrganizeResults () {
     place.networks[existingNetwork].types[existingType].suggestions.push(toBeAdded)
   }
 
-  // This sorting orders the displayed results and is fundamental for function userPressedSearchButtonOrEnter(). Do not alter the sorting without considering the needs of that function.
+  // This sorting orders the list of results in the drop down and is fundamental for userPressedSearchButtonOrEnter() as well as props.pickByDefault().
+  // Do not alter this sorting without considering the needs of those functions or updating the comments guiding the developpers using the search-bar.
   function sortResults (place : OrganizedResults) {
-    place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority)
     for (const network of place.networks) {
-      network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority)
       for (const type of network.types) {
         type.suggestions.sort((a, b) => a.closeness - b.closeness)
       }
+      network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority || a.suggestions[0].closeness - b.suggestions[0].closeness)
     }
+    place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority || TypeInfo[a.types[0].type].priority - TypeInfo[b.types[0].type].priority || a.types[0].suggestions[0].closeness - b.types[0].suggestions[0].closeness)
   }
   sortResults(results.organized.in)
   sortResults(results.organized.out)
