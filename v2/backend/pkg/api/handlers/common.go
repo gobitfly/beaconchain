@@ -275,8 +275,8 @@ func checkExistingGroupId(handlerErr *error, param string) int64 {
 	return id
 }
 
-func checkValidatorDashboardPublicId(handlerErr *error, publicId string) string {
-	return checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id")
+func checkValidatorDashboardPublicId(handlerErr *error, publicId string) types.VDBIdPublic {
+	return types.VDBIdPublic(checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
 func checkPagingParams(handlerErr *error, q url.Values) Paging {

@@ -119,13 +119,13 @@ func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrima
 	return &r, err
 }
 
-func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	r := t.VDBPostPublicIdData{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
+func (d *DummyService) RemoveValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) error {
 	return nil
 }
 
