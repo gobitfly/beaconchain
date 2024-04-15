@@ -19,6 +19,11 @@ export function useValue () {
       const target: Currency = options?.targetCurrency || (useNative ? source : currency.value)
       let value = typeof wei === 'string' ? BigNumber.from(wei) : wei
       if (value.isZero()) {
+        if (options?.fixedDecimalCount) {
+          return {
+            label: withCurrency(`0.${nZeros(options?.fixedDecimalCount)}`, target)
+          }
+        }
         return {
           label: withCurrency('0', target)
         }

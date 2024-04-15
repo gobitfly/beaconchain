@@ -65,14 +65,14 @@ type DataAccessor interface {
 
 	GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error)
-	GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error)
+	GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error)
 	GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error)
 
 	GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error)
-	GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error)
+	GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error)
 
-	GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error)
+	GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error)
 
 	GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error)
 
@@ -1843,8 +1843,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 // for summary charts: series id is group id, no stack
 
-func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
-	ret := &t.ChartData[int]{}
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
+	ret := &t.ChartData[int, float64]{}
 
 	type queryResult struct {
 		StartEpoch            uint64          `db:"epoch_start"`
@@ -1927,14 +1927,13 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	})
 
 	ret.Categories = epochsArray
-	ret.Series = make([]t.ChartSeries[int], 0, len(groupsArray))
+	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
-	seriesMap := make(map[uint64]*t.ChartSeries[int])
+	seriesMap := make(map[uint64]*t.ChartSeries[int, float64])
 	for group := range groups {
-		series := t.ChartSeries[int]{
-			Id:    int(group),
-			Stack: "",
-			Data:  make([]float64, 0, len(epochsMap)),
+		series := t.ChartSeries[int, float64]{
+			Id:   int(group),
+			Data: make([]float64, 0, len(epochsMap)),
 		}
 		seriesMap[group] = &series
 	}
@@ -2041,16 +2040,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	return d.dummy.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
 }
 
-func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
+func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
 	// TODO @recy21
 	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
-	// series id is group id, series stack is 'execution' or 'consensus'
+	// series id is group id, series property is 'cl' or 'el'
 	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)
 }
 
-func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	// TODO @recy21
-	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, cursor, sort, search, limit)
+	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, groupId, cursor, sort, search, limit)
 }
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, sort []t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {

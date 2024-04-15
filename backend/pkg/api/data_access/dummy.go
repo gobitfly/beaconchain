@@ -5,6 +5,7 @@ import (
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/shopspring/decimal"
 )
 
 type DummyService struct {
@@ -143,8 +144,8 @@ func (d *DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, gr
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
-	r := t.ChartData[int]{}
+func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
+	r := t.ChartData[int, float64]{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -169,13 +170,13 @@ func (d *DummyService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, gr
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int], error) {
-	r := t.ChartData[int]{}
+func (d *DummyService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
+	r := t.ChartData[int, decimal.Decimal]{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	r := []t.VDBEpochDutiesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)

@@ -14,6 +14,7 @@ export enum COOKIE_DASHBOARD_ID{
 export type ValidatorDashboardNetwork = 'ethereum' | 'gnosis'
 
 export const DAHSHBOARDS_ALL_GROUPS_ID = -1
+export const DAHSHBOARDS_NEXT_EPOCH_ID = -2
 
 export type DashboardKeyData = {
   dashboardKey:globalThis.Ref<string>,

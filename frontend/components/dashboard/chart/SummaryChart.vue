@@ -32,7 +32,7 @@ const { fetch } = useCustomFetch()
 
 const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
-const data = ref<ChartData<number> | undefined >()
+const data = ref<ChartData<number, number> | undefined >()
 await useAsyncData('validator_overview', async () => {
   if (!dashboardKey.value) {
     data.value = undefined

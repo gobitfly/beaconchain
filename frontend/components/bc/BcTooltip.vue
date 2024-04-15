@@ -9,6 +9,7 @@ interface Props {
   hide?: boolean,
   tooltipClass?: string,
   fitContent?: boolean,
+  renderTextAsHtml?: boolean,
   scrollContainer?: string // query selector for scrollable parent container
 }
 
@@ -167,7 +168,13 @@ onUnmounted(() => {
               <b v-if="props.title">
                 {{ props.title }}
               </b>
-              {{ text }}
+              <template v-if="renderTextAsHtml && text">
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <span v-html="text" />
+              </template>
+              <template v-else>
+                {{ text }}
+              </template>
             </span>
           </slot>
         </div>

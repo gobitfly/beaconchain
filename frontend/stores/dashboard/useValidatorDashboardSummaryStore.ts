@@ -3,25 +3,35 @@ import type { InternalGetValidatorDashboardSummaryResponse } from '~/types/api/v
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 
-export const useValidatorDashboardSummaryStore = defineStore('validator_dashboard_sumary_store', () => {
+const validatorDashboardSummaryStore = defineStore('validator_dashboard_sumary_store', () => {
+  const data = ref < InternalGetValidatorDashboardSummaryResponse>()
+  const query = ref < TableQueryParams>()
+
+  return { data, query }
+})
+
+export function useValidatorDashboardSummaryStore () {
   const { fetch } = useCustomFetch()
-  const summaryMap = ref < Record<DashboardKey, InternalGetValidatorDashboardSummaryResponse >>({})
-  const queryMap = ref < Record<DashboardKey, TableQueryParams | undefined >>({})
+
+  const { data, query: storedQuery } = storeToRefs(validatorDashboardSummaryStore())
+
+  const summary = computed(() => data.value)
+  const query = computed(() => storedQuery.value)
 
   async function getSummary (dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
       return
     }
-    queryMap.value = { ...queryMap.value, [dashboardKey]: query }
+    storedQuery.value = query
 
     const res = await fetch<InternalGetValidatorDashboardSummaryResponse>(API_PATH.DASHBOARD_SUMMARY, undefined, { dashboardKey }, query)
 
-    if (JSON.stringify(queryMap.value[dashboardKey]) !== JSON.stringify(query)) {
+    if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
-    summaryMap.value = { ...summaryMap.value, [dashboardKey]: res }
+    data.value = res
     return res
   }
 
-  return { summaryMap, queryMap, getSummary }
-})
+  return { summary, query, getSummary }
+}

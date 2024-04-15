@@ -228,7 +228,7 @@ const data = computed(() => {
   </span>
 </template>
 
-<style>
+<style lang="scss" scoped>
 .row {
   text-wrap: nowrap;
   min-width: 100%;
