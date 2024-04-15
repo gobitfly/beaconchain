@@ -100,7 +100,7 @@ function formatDescriptionCell () : string {
     class="rowstyle-subcategoryidentificationdescription"
     :class="barStyle"
   >
-    <!-- In this mode, we show less information in the cells and they are filled by formating functions -->
+    <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
     <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
