@@ -523,7 +523,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -626,7 +626,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardRewards(*dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardRewards(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -702,7 +702,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, groupId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -729,7 +729,7 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardBlocks(*dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardBlocks(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -852,7 +852,7 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(*dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
