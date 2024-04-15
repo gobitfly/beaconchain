@@ -37,7 +37,7 @@ const props = defineProps<Props>()
 
 const key = computed(() => props.dashboardKey)
 
-const data = ref<ChartData<number> | undefined >()
+const data = ref<ChartData<number, number> | undefined >()
 await useAsyncData('validator_overview', async () => {
   if (key.value === undefined) {
     data.value = undefined

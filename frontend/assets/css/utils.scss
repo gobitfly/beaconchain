@@ -4,48 +4,107 @@
   text-overflow: ellipsis;
 }
 
-.truncate-text{
+.truncate-text {
   @include truncate-text;
 }
 
-.pointer { 
+.text-align-left {
+  text-align: left;
+}
+
+.pointer {
   cursor: pointer;
 }
 
 .dots-before {
-  &:before{
-    content: '\2026'
+  &:before {
+    content: "\2026";
   }
 }
 
 .dots-after {
-  &:after{
-    content: '\2026'
+  &:after {
+    content: "\2026";
   }
 }
 
-.no-wrap{
+.no-wrap {
   white-space: nowrap;
 }
 
-.positive {  
+.text-disabled{
+  color: var(--text-color-disabled);
+}
+
+.positive {
   color: var(--positive-color);
 }
 
-.negative{
+.negative {
   color: var(--negative-color);
 }
 
-.mixed {
-  color: var(--orange);
+.partial {
+  color: var(--partial-color);
 }
 
 .orphaned {
-  color: var(--purple);
+  color: var(--orphaned-color);
 }
 
-.comma{
-  &:before{
-    content: ',';
+@mixin positive-background() {  
+  background-color: var(--positive-color);
+  color: var(--positive-contrast-color);
+}
+
+@mixin negative-background(){
+  background-color: var(--negative-color);
+  color: var(--negative-contrast-color);
+}
+
+@mixin partial-background() {
+  background-color: var(--partial-color);
+  color: var(--partial-contrast-color);
+}
+
+@mixin orphaned-background() {
+  background-color: var(--orphaned-color);
+  color: var(--orphaned-contrast-color);
+}
+
+@mixin dark-tag-background() {
+  background-color: var(--dark-tag-color);
+  color: var(--dark-tag-contrast-color);
+}
+
+@mixin light-tag-background() {
+  background-color: var(--light-tag-color);
+  color: var(--light-tag-contrast-color);
+}
+
+.comma {
+  &:before {
+    content: ",";
   }
+}
+
+.slash-after {
+  &:after {
+    content: " / ";
+  }
+}
+
+.round-brackets {
+  &:before {
+    content: "(";
+  }
+  &:after {
+    content: ")";
+  }
+}
+
+@mixin set-all-width($width) {
+  width: $width;
+  max-width: $width;
+  min-width: $width;
 }
