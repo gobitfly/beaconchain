@@ -17,7 +17,6 @@ type endpoint struct {
 }
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *mux.Router {
-
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()

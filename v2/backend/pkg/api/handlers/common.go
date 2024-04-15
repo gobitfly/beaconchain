@@ -234,7 +234,7 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
-	return nil, errorMsgParsingId
+	return nil, errMsgParsingId
 }
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
@@ -455,10 +455,6 @@ func returnBadRequest(w http.ResponseWriter, err error) {
 
 func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
-}
-
-func returnForbidden(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusForbidden, err)
 }
 
 func returnNotFound(w http.ResponseWriter, err error) {
