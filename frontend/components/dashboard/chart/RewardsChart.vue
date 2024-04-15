@@ -14,10 +14,11 @@ import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
+import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor, getRewardChartColors } from '~/utils/colors'
 import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData, type ChartSeries } from '~/types/api/common'
+import type { ExtendedLabel } from '~/types/value'
 
 use([
   CanvasRenderer,
@@ -52,6 +53,8 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
 
+const { converter } = useValue()
+
 const colors = computed(() => {
   return {
     data: getRewardChartColors(),
@@ -71,13 +74,14 @@ const option = computed(() => {
     return undefined
   }
 
-  interface SeriesObject extends ChartSeries<string, string> {
+  interface SeriesObject extends ChartSeries<string, number> {
     name: string;
     category: number;
     color: string;
     type: 'bar';
     stack: 'x';
   }
+  const dataMap: Record<string, ExtendedLabel> = {}
 
   const series: SeriesObject[] = []
   if (data.value?.series) {
@@ -93,7 +97,11 @@ const option = computed(() => {
         id,
         category: element.id,
         property: element.property,
-        data: element.data,
+        data: element.data.map((wei) => {
+          const value = converter.value.weiToValue(wei, { fixedDecimalCount: 5 })
+          dataMap[id] = value
+          return parseFloat(`${value.label}`)
+        }),
         stack: 'x',
         color: element.property === 'cl' ? colors.value.data.cl : colors.value.data.el,
         type: 'bar',
