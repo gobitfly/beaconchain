@@ -34,10 +34,13 @@ const currentSlotId = computed(() => {
 
   for (let i = 0; i < props.data.length; i++) {
     const row = props.data[i]
-    for (let j = (row.slots?.length ?? 0) - 1; j >= 0; j--) {
-      if (row.slots?.[j].status === 'scheduled') {
-        id = row.slots?.[j].slot
-      } else if (row.slots?.[j].status !== 'scheduled') {
+    if (!row.slots?.length) {
+      continue
+    }
+    for (let j = row.slots.length - 1; j >= 0; j--) {
+      if (row.slots[j].status === 'scheduled') {
+        id = row.slots[j].slot
+      } else {
         return id
       }
     }
