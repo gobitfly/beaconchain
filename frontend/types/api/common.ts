@@ -54,7 +54,7 @@ export interface PeriodicValues<T extends any> {
 }
 export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
   id: I; // id may be a string or an int
-  stack?: string; // for stacking bar charts
+  property?: string; // for stacking bar charts
   data: D[]; // y-axis values
 }
 export interface ChartData<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
