@@ -364,7 +364,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 		returnBadRequest(w, err)
 		return
 	}
-	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -693,6 +693,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 		return
 	}
 	q := r.URL.Query()
+	groupId := checkGroupId(&err, q.Get("group_id"), allowEmpty)
 	epoch := checkUint(&err, vars["epoch"], "epoch")
 	pagingParams := checkPagingParams(&err, q)
 	sort := checkSort[enums.VDBDutiesColumn](&err, q.Get("sort"))
@@ -701,7 +702,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleError(w, err)
 		return

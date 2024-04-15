@@ -94,7 +94,7 @@ func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimar
 	return r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort []t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	r := []t.VDBManageValidatorsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -175,7 +175,7 @@ func (d *DummyService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, sort []t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	r := []t.VDBEpochDutiesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
