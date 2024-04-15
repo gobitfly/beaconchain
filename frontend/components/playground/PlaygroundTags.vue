@@ -25,8 +25,8 @@ const blockStati: BlockStatus[] = ['missed', 'orphaned', 'scheduled', 'success']
       <BcTableTag :color="color" :label="color" size="compact" />
       <BcTableTag :color="color" :label="color" size="compact" />
       <BcTableTag :color="color" :label="color" :icon="faAnchor" size="compact" />
-      <BcTableTag :color="color" :label="color.substring(0,2)" size="circle" tooltip="color" />
-      <BcTableTag :color="color" :icon="faAnchor" size="circle" tooltip="color" />
+      <BcTableTag :color="color" :label="color.substring(0,2)" size="circle" :tooltip="color" />
+      <BcTableTag :color="color" :icon="faAnchor" size="circle" :tooltip="color" />
     </div>
   </div>
   <h1>Custom colors</h1>

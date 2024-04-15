@@ -32,6 +32,7 @@ defineProps<Props>()
   border-radius: 10px;
   font-size: var(--small_text_font_weight);
   font-weight: var(--small_text_bold_font_weight);
+  cursor: default;
 
   svg {
     margin-left: var(--padding-small);
