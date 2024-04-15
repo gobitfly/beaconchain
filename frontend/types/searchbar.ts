@@ -11,9 +11,10 @@ export enum SearchbarPurpose {
   ValidatorAddition
 }
 
+// List of the possible ways to organise the information in each row of the result-suggestion list.
 export enum SuggestionrowCells {
-  NameDescriptionLowlevelCategory,
-  SubcategoryIdentificationDescription
+  NameDescriptionLowlevelCategory, // this mode displays everything
+  SubcategoryIdentificationDescription // shows less information, and this information is a bit different from what the complete mode shows
   // If you add here a display-mode, update the `SearchbarPurposeInfo` record to tell SuggestionRow.vue which display-mode
   // it should use, and then implement this mode in the `<template>` of SuggestionRow.vue.
 }
@@ -151,7 +152,7 @@ interface SearchbarPurposeInfoField {
   unsearchable : ResultType[], // List of types that the bar will not search for.
   button : 'search' | 'add', // Utility of the button.
   placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
-  cellsInSuggestionRows : SuggestionrowCells
+  cellsInSuggestionRows : SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
 }
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
   [SearchbarPurpose.GlobalSearch]: {
