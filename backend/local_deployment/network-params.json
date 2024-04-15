@@ -8,7 +8,7 @@
         "cl_image": "sigp/lighthouse:latest",
         "cl_log_level": "",
         "cl_extra_params": ["--reconstruct-historic-states"],
-        "el_extra_params": ["--http.api='admin,eth,net,debug,txpool' --syncmode full"],
+        "el_extra_params": ["--http.api='admin,eth,net,debug,txpool'",  "--gcmode archive"],
         "vc_extra_params": [],
         "builder_network_params": null,
         "count": 2

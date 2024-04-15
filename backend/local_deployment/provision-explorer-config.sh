@@ -37,6 +37,7 @@ EOL
 touch config.yml
 
 cat >config.yml <<EOL
+justV2: false
 chain:
   clConfigPath: 'node'
   elConfigPath: 'local_deployment/elconfig.json'
