@@ -108,3 +108,17 @@
   max-width: $width;
   min-width: $width;
 }
+
+@keyframes blinking {
+  0% {
+    opacity: 0.2;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.blinking-animation {
+  animation: blinking 1s alternate infinite;
+}
