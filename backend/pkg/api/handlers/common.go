@@ -237,6 +237,26 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 	return nil, errorMsgParsingId
 }
 
+// handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
+// it should be used as the last validation step for all internal dashboard handlers.
+func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+	// validate dashboard id param
+	dashboardIdParam, err := parseDashboardId(param)
+	if err != nil {
+		return nil, err
+	}
+	// convert to VDBId
+	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	if err != nil {
+		return nil, err
+	}
+	return dashboardId, nil
+}
+
+func checkDashboardPrimaryId(handlerErr *error, param string) types.VDBIdPrimary {
+	return types.VDBIdPrimary(checkUint(handlerErr, param, "dashboard_id"))
+}
+
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
 func checkGroupId(handlerErr *error, param string, allowEmpty bool) int64 {

@@ -94,6 +94,8 @@ type DataAccessService struct {
 	writerDb                *sqlx.DB
 	alloyReader             *sqlx.DB
 	alloyWriter             *sqlx.DB
+	userReader              *sqlx.DB
+	userWriter              *sqlx.DB
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
 
@@ -175,6 +177,29 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
 			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 			SSL:          cfg.AlloyReader.SSL,
+		})
+	}()
+
+	// Initialize the user database
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dataAccessService.userReader, dataAccessService.userWriter = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.Frontend.ReaderDatabase.Name,
+			Password:     cfg.Frontend.ReaderDatabase.Password,
+			Name:         cfg.Frontend.ReaderDatabase.Name,
+			Host:         cfg.Frontend.ReaderDatabase.Host,
+			Port:         cfg.Frontend.ReaderDatabase.Port,
+			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.Frontend.WriterDatabase.Name,
+			Password:     cfg.Frontend.WriterDatabase.Password,
+			Name:         cfg.Frontend.WriterDatabase.Name,
+			Host:         cfg.Frontend.WriterDatabase.Host,
+			Port:         cfg.Frontend.WriterDatabase.Port,
+			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
 		})
 	}()
 
@@ -285,6 +310,7 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 //////////////////// 		Data Access
 
 func (d *DataAccessService) GetUserInfo(email string) (*t.User, error) {
+	// TODO @recy21
 	return d.dummy.GetUserInfo(email)
 }
 

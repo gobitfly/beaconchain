@@ -9,7 +9,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-func newSessionManager(redisEndpoint string) *scs.SessionManager {
+func NewSessionManager(redisEndpoint string) *scs.SessionManager {
 	pool := &redis.Pool{
 		MaxIdle: 10,
 		Dial: func() (redis.Conn, error) {
