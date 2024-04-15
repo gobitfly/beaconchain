@@ -683,12 +683,6 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// Convert direction from bool to enum
-	currentDirection := enums.SortOrderColumns.Asc
-	if colSort.Desc {
-		currentDirection = enums.SortOrderColumns.Desc
-	}
-
 	// Initialize the cursor
 	var currentCursor t.ValidatorsCursor
 	var err error
@@ -881,9 +875,8 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		}
 	}
 
-	doReverse := currentCursor.IsValid() && currentDirection != currentCursor.Direction
 	var result []t.VDBManageValidatorsTableRow
-	if doReverse {
+	if currentCursor.IsReverse() {
 		// opposite direction
 		var limitCutoff uint64
 		if cursorIndex > limit+1 {
@@ -907,14 +900,14 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 
 	// remove the last entry from data as it is only required for the check
 	if moreDataFlag {
-		if doReverse {
+		if currentCursor.IsReverse() {
 			result = result[1:]
 		} else {
 			result = result[:len(result)-1]
 		}
 	}
 
-	p, err := utils.GetPagingFromData(result, currentCursor, currentDirection, moreDataFlag)
+	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
@@ -2151,8 +2144,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		params = append(params, currentCursor.Slot, currentCursor.SlotIndex)
 	}
 
-	if currentCursor.IsValid() && currentCursor.Direction == enums.ASC ||
-		!currentCursor.IsValid() && currentDirection == enums.ASC {
+	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
@@ -2208,13 +2200,13 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		data = data[:len(data)-1]
 	}
 
-	if currentCursor.IsValid() && currentDirection != currentCursor.Direction {
+	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
 		slices.Reverse(data)
 	}
 
-	p, err := utils.GetPagingFromData(utils.DataStructure(data), currentCursor, currentDirection, moreDataFlag)
+	p, err := utils.GetPagingFromData(data, currentCursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
