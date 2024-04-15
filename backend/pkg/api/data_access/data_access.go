@@ -2215,74 +2215,26 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO: implement sorting, filtering & paging
+	// TODO: Implement sensible group_name sorting and limiting
 
-	validatorGroupMap := make(map[uint64]uint64)
-	var validators []uint64
-	if dashboardId.Validators == nil {
-		// Get the validators and their groups in case a dashboard id is provided
-		queryResult := []struct {
-			ValidatorIndex uint64 `db:"validator_index"`
-			GroupId        uint64 `db:"group_id"`
-		}{}
+	var paging t.Paging
 
-		validatorsQuery := `
-			SELECT
-			    validator_index,
-			    group_id
-			FROM
-			    users_val_dashboards_validators
-			WHERE
-			    dashboard_id = $1`
-
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
+	// Initialize the cursor
+	var currentCursor t.WithdrawalsCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.WithdrawalsCursor](cursor)
 		if err != nil {
-			return nil, nil, err
-		}
-
-		for _, res := range queryResult {
-			validatorGroupMap[res.ValidatorIndex] = res.GroupId
-			validators = append(validators, res.ValidatorIndex)
-		}
-	} else {
-		// In case a list of validators is provided, set the group to default 0
-		for _, validator := range dashboardId.Validators {
-			validatorGroupMap[validator.Index] = t.DefaultGroupId
-			validators = append(validators, validator.Index)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
 		}
 	}
 
-	if len(validators) == 0 {
-		// Return if there are no validators
-		return nil, nil, nil
-	}
-
-	// Get the withdrawals for the validators
-	queryResult := []struct {
-		ValidatorIndex uint64 `db:"validator_index"`
-		Epoch          uint64 `db:"epoch"`
-		Amount         int64  `db:"withdrawals_amount"`
-	}{}
-	err := d.alloyReader.Select(&queryResult, `
-		SELECT
-		    validator_index,
-			epoch,
-		    withdrawals_amount
-		FROM
-		    validator_dashboard_data_epoch
-		WHERE
-		    validator_index = ANY ($1) AND withdrawals_amount > 0`, pq.Array(validators))
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, nil
-		}
-		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
-	}
-
-	// Get the validators with withdrawals
-	validatorsWithWithdrawals := make(map[uint64]bool, 0)
-	for _, withdrawal := range queryResult {
-		validatorsWithWithdrawals[withdrawal.ValidatorIndex] = true
+	// Prepare the sorting
+	sortSearchDirection := ">"
+	sortSearchOrder := " ASC"
+	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+		sortSearchDirection = "<"
+		sortSearchOrder = " DESC"
 	}
 
 	// Get the current validator state
@@ -2292,17 +2244,192 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		return nil, nil, err
 	}
 
-	// Get the withdrawal addresses for the validators
-	withdrawalAddresses := make(map[uint64]string)
-	addressEns := make(map[string]string)
-	for validator := range validatorsWithWithdrawals {
-		withdrawalCredentials := validatorMapping.ValidatorMetadata[validator].WithdrawalCredentials
-		withdrawalAddress, err := utils.GetAddressOfWithdrawalCredentials(withdrawalCredentials)
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid withdrawal credentials for validator %d: %s", validator, hexutil.Encode(withdrawalCredentials))
+	// Analyze the search term
+	indexSearch := int64(-1)
+	if search != "" {
+		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			if !strings.HasPrefix(search, "0x") {
+				search = "0x" + search
+			}
+			search = strings.ToLower(search)
+			if utils.IsHash(search) {
+				indexSearch = int64(*validatorMapping.ValidatorIndices[search])
+			}
+		} else if index, err := strconv.ParseUint(search, 10, 64); err != nil {
+			indexSearch = int64(index)
+		} else {
+			return nil, &paging, nil
 		}
-		withdrawalAddresses[validator] = hexutil.Encode(withdrawalAddress.Bytes())
-		addressEns[hexutil.Encode(withdrawalAddress.Bytes())] = ""
+	}
+
+	type ValidatorGroupInfo struct {
+		GroupId   uint64
+		GroupName string
+	}
+	validatorGroupMap := make(map[uint64]ValidatorGroupInfo)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+			GroupName      string `db:"group_name"`
+		}{}
+
+		queryArgs := []interface{}{dashboardId.Id}
+		validatorsQuery := fmt.Sprintf(`
+			SELECT 
+				v.validator_index,
+				v.group_id,
+				g.group_name
+			FROM users_val_dashboards_validators v
+			INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+			WHERE v.dashboard_id = $%d
+			`, len(queryArgs))
+
+		if indexSearch != -1 {
+			queryArgs = append(queryArgs, indexSearch)
+			validatorsQuery += fmt.Sprintf(" AND v.validator_index = $%d", len(queryArgs))
+		}
+
+		// If we sort by group we can already filter here to reduce the number of validators if there is a cursor
+		if currentCursor.IsValid() && colSort.Column == enums.VDBWithdrawalsColumns.Group {
+			queryArgs = append(queryArgs, currentCursor.GroupName, currentCursor.Index)
+			validatorsQuery += fmt.Sprintf(` AND g.group_name%[1]s$%[2]d OR (g.group_name=$%[2]d AND v.validator_index%[1]s=$%[3]d)
+				ORDER BY g.group_name %[4]s, v.validator_index %[4]s`, sortSearchDirection, len(queryArgs)-1, len(queryArgs), sortSearchOrder)
+		}
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = ValidatorGroupInfo{
+				GroupId:   res.GroupId,
+				GroupName: res.GroupName,
+			}
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default values
+		for _, validator := range dashboardId.Validators {
+			if indexSearch != -1 && validator.Index != uint64(indexSearch) {
+				continue
+			}
+			validatorGroupMap[validator.Index] = ValidatorGroupInfo{
+				GroupId:   t.DefaultGroupId,
+				GroupName: t.DefaultGroupName,
+			}
+			validators = append(validators, validator.Index)
+		}
+		if colSort.Column == enums.VDBWithdrawalsColumns.Group {
+			// A sorting by group name is meaningless here, sort by the second priority validator index instead
+			colSort.Column = enums.VDBWithdrawalsColumns.Index
+		}
+	}
+
+	if len(validators) == 0 {
+		// Return if there are no validators
+		return nil, &paging, nil
+	}
+
+	// Get the withdrawals for the validators
+	queryResult := []struct {
+		BlockSlot       uint64 `db:"block_slot"`
+		WithdrawalIndex uint64 `db:"withdrawalindex"`
+		ValidatorIndex  uint64 `db:"validatorindex"`
+		Address         []byte `db:"address"`
+		Amount          uint64 `db:"amount"`
+	}{}
+
+	withdrawalsQuery := `
+		SELECT
+		    w.block_slot,
+			w.withdrawalindex,
+			w.validatorindex,
+			w.address,
+			w.amount
+		FROM
+		    blocks_withdrawals w
+		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		`
+	queryParams := []interface{}{}
+
+	// Limit the query to relevant validators
+	queryParams = append(queryParams, pq.Array(validators))
+	whereQuery := fmt.Sprintf(`
+		WHERE
+		    validator_index = ANY ($%d)`, len(queryParams))
+
+	// Limit the query using the search term if it is an address
+	if utils.IsEth1Address(search) {
+		searchAddress, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decode search term %s as address: %w", search, err)
+		}
+		queryParams = append(queryParams, searchAddress)
+		whereQuery += fmt.Sprintf(" AND w.address = $%d", len(queryParams))
+	}
+
+	// Limit the query using sorting and the cursor
+	orderQuery := ""
+	sortColName := ""
+	sortColCursor := interface{}(nil)
+	if colSort.Column != enums.VDBWithdrawalsColumns.Group {
+		// Special handling for group name sorting
+		firstVal := validators[0]
+		otherVal := validators[1:]
+
+		queryParams = append(queryParams, firstVal, otherVal, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
+
+	} else {
+		switch colSort.Column {
+		case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
+			sortColName = "w.block_slot"
+			sortColCursor = currentCursor.Slot
+		case enums.VDBWithdrawalsColumns.Index:
+			sortColName = "w.validatorindex"
+			sortColCursor = currentCursor.Index
+		case enums.VDBWithdrawalsColumns.Recipient:
+			sortColName = "w.address"
+			sortColCursor = currentCursor.Recipient
+		case enums.VDBWithdrawalsColumns.Amount:
+			sortColName = "w.amount"
+			sortColCursor = currentCursor.Amount
+		}
+
+		// The additional WHERE requirement is
+		// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
+		// with the > flipped if the sort is descending
+		queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
+		whereQuery += fmt.Sprintf(" AND %[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (block_slot%[2]s$%[4]d OR (block_slot=$%[4]d AND withdrawalindex%[2]s$%[5]d)))",
+			sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+
+		// The ordering is
+		// ORDER BY sortCol ASC, block_slot ASC, withdrawalindex ASC
+		// with the ASC flipped if the sort is descending
+		orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, block_slot %[2]s, withdrawalindex %[2]s",
+			sortColName, sortSearchOrder)
+	}
+
+	limitQuery := fmt.Sprintf(" LIMIT %d", limit+1)
+
+	withdrawalsQuery += whereQuery + orderQuery + limitQuery
+
+	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &paging, nil
+		}
+		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
+	}
+
+	// Prepare the ENS map
+	addressEns := make(map[string]string)
+	for _, withdrawal := range queryResult {
+		address := hexutil.Encode(withdrawal.Address)
+		addressEns[address] = ""
 	}
 
 	// Get the ENS names for the addresses
@@ -2312,23 +2439,53 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	// Create the result
 	result := make([]t.VDBWithdrawalsTableRow, 0)
+	cursorData := make([]t.WithdrawalsCursor, 0)
 	for _, withdrawal := range queryResult {
-		address := withdrawalAddresses[withdrawal.ValidatorIndex]
+		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   withdrawal.Epoch,
+			Epoch:   withdrawal.BlockSlot % utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Slot:    withdrawal.BlockSlot,
 			Index:   withdrawal.ValidatorIndex,
-			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
+			GroupId: validatorGroupMap[withdrawal.ValidatorIndex].GroupId,
 			Recipient: t.Address{
 				Hash: t.Hash(address),
 				Ens:  addressEns[address],
 			},
-			Amount: decimal.NewFromInt(withdrawal.Amount),
+			Amount: utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+		})
+		cursorData = append(cursorData, t.WithdrawalsCursor{
+			Slot:            withdrawal.BlockSlot,
+			WithdrawalIndex: withdrawal.WithdrawalIndex,
+			Index:           withdrawal.ValidatorIndex,
+			GroupName:       validatorGroupMap[withdrawal.ValidatorIndex].GroupName,
+			Recipient:       withdrawal.Address,
+			Amount:          withdrawal.Amount,
 		})
 	}
 
-	paging := &t.Paging{
-		TotalCount: uint64(len(result)),
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
 	}
 
-	return result, paging, nil
+	// Remove the last entry from data as it is only required for the check
+	if moreDataFlag {
+		result = result[:len(result)-1]
+		cursorData = cursorData[:len(cursorData)-1]
+	}
+
+	// Reverse the data if the cursor is reversed to correct it to the requested direction
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+		slices.Reverse(cursorData)
+	}
+
+	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
