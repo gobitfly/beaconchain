@@ -20,7 +20,7 @@ const mapped = computed(() => {
         className = 'positive'
         break
       case 'partial':
-        className = 'mixed'
+        className = 'partial'
         break
       case 'failed':
         className = 'negative'

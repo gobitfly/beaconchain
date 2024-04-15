@@ -14,6 +14,8 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
+  DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
+  DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
@@ -92,8 +94,18 @@ const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
-    path: '/validator-dashboards/{dashboardKey}/summary?',
+    path: '/validator-dashboards/{dashboardKey}/summary',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
+    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
+    path: '/validator-dashboards/{dashboardKey}/rewards',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards`,
     mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
@@ -162,7 +174,7 @@ export function useCustomFetch () {
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.protocol}${url.host}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${url.origin}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
     const method = map.method || 'GET'
