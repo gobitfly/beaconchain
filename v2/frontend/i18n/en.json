@@ -19,7 +19,7 @@
     "average": "Average",
     "index": "Index",
     "edit": "Edit",
-    "true": "True", 
+    "true": "True",
     "false": "False"
   },
   "clipboard": {
@@ -77,6 +77,14 @@
     "all_time": "All time",
     "total": "All Time",
     "all": "All Time"
+  },
+  "block": {
+    "status": {
+      "missed": "Missed",
+      "orphaned": "Orphaned",
+      "scheduled": "Scheduled",
+      "success": "Proposed"
+    }
   },
   "slotViz": {
     "head": "Head",
