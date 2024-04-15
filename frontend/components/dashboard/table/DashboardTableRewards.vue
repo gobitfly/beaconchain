@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
@@ -9,10 +8,7 @@ import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashbaord/group'
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -41,13 +37,13 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(dashboardKey, () => {
   loadData()
 }, { immediate: true })
 
 watch(query, (q) => {
   if (q) {
-    getRewards(props.dashboardKey, q)
+    getRewards(dashboardKey.value, q)
   }
 }, { immediate: true })
 
@@ -238,7 +234,7 @@ const findNextEpochDuties = (epoch: number) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails :dashboard-key="dashboardKey" :row="slotProps.data" />
+              <DashboardTableRewardsDetails :row="slotProps.data" />
             </template>
           </BcTable>
         </ClientOnly>

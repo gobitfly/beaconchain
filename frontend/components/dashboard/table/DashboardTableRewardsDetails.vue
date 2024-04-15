@@ -3,17 +3,17 @@ import { faArrowUpRightFromSquare, faSigma, faSnooze } from '@fortawesome/pro-so
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  dashboardKey: DashboardKey
   row: VDBRewardsTableRow
 }
 const props = defineProps<Props>()
 
+const { dashboardKey } = useDashboardKey()
+
 const { t: $t } = useI18n()
-const { details } = useValidatorDashboardRewardsDetailsStore(props.dashboardKey, props.row.group_id, props.row.epoch)
+const { details } = useValidatorDashboardRewardsDetailsStore(dashboardKey.value, props.row.group_id, props.row.epoch)
 
 const data = computed(() => {
   if (!details.value) {

@@ -100,7 +100,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
           </template>
-          <DashboardTableRewards :dashboard-key="key" />
+          <DashboardTableRewards />
         </TabPanel>
         <TabPanel>
           <template #header>
