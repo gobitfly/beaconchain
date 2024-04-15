@@ -187,6 +187,7 @@ export type InternalGetValidatorDashboardConsensusLayerDepositsResponse = ApiPag
  */
 export interface VDBWithdrawalsTableRow {
   epoch: number /* uint64 */;
+  slot: number /* uint64 */;
   index: number /* uint64 */;
   group_id: number /* uint64 */;
   recipient: Address;
