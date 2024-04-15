@@ -65,15 +65,15 @@ type PeriodicValues[T any] struct {
 	Last30d T `json:"last_30d"`
 }
 
-type ChartSeries[T int | string] struct {
-	Id    T         `json:"id"`              // id may be a string or an int
-	Stack string    `json:"stack,omitempty"` // for stacking bar charts
-	Data  []float64 `json:"data"`            // y-axis values
+type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
+	Id       I      `json:"id"`              // id may be a string or an int
+	Property string `json:"stack,omitempty"` // for stacking bar charts
+	Data     []D    `json:"data"`            // y-axis values
 }
 
-type ChartData[T int | string] struct {
-	Categories []uint64         `json:"categories"` // x-axis
-	Series     []ChartSeries[T] `json:"series"`
+type ChartData[I int | string, D float64 | decimal.Decimal] struct {
+	Categories []uint64            `json:"categories"` // x-axis
+	Series     []ChartSeries[I, D] `json:"series"`
 }
 
 type SearchResult struct {
