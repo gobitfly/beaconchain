@@ -10,15 +10,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type contextKey string
-
 const (
 	authenticatedKey = "authenticated"
 	userIdKey        = "user_id"
 	subscriptionKey  = "subscription"
 	userGroupKey     = "user_group"
-
-	validatorDashboardIdKey contextKey = "dashboard_id"
 )
 
 func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
