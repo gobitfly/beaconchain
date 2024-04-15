@@ -79,14 +79,6 @@
     "total": "All Time",
     "all": "All Time"
   },
-  "block": {
-    "status": {
-      "missed": "Missed",
-      "orphaned": "Orphaned",
-      "scheduled": "Scheduled",
-      "success": "Proposed"
-    }
-  },
   "slotViz": {
     "head": "Head",
     "tooltip": {
@@ -140,6 +132,12 @@
     }
   },
   "block":{
+    "status": {
+      "missed": "Missed",
+      "orphaned": "Orphaned",
+      "scheduled": "Scheduled",
+      "success": "Proposed"
+    },
     "col":{
       "proposer": "Proposer",
       "graffiti": "Graffiti"
