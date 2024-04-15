@@ -174,7 +174,6 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO check if user is authorized for this dashboard
 	err = h.dai.RemoveValidatorDashboard(dashboardId)
 	if err != nil {
 		handleError(w, err)
@@ -198,7 +197,6 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		returnBadRequest(w, err)
 		return
 	}
-	// TODO check if user is authorized for this dashboard
 	// TODO check group limit reached
 	data, err := h.dai.CreateValidatorDashboardGroup(dashboardId, name)
 	if err != nil {
@@ -265,7 +263,6 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 		returnBadRequest(w, errors.New("cannot delete default group"))
 		return
 	}
-	// TODO check if user is authorized for this dashboard
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
 		handleError(w, err)
@@ -319,7 +316,6 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		handleError(w, err)
 		return
 	}
-	// TODO check if user is authorized for this dashboard
 	// TODO check validator limit reached
 	data, err := h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 	if err != nil {
@@ -378,7 +374,6 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 		handleError(w, err)
 		return
 	}
-	// TODO check if user is authorized for this dashboard
 	err = h.dai.RemoveValidatorDashboardValidators(dashboardId, validators)
 	if err != nil {
 		handleError(w, err)
@@ -439,8 +434,6 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		return
 	}
 
-	// TODO check if user is authorized for this dashboard
-
 	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
 		handleError(w, err)
@@ -462,8 +455,6 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 		returnBadRequest(w, err)
 		return
 	}
-
-	// TODO check if user is authorized for this dashboard
 
 	err = h.dai.RemoveValidatorDashboardPublicId(publicDashboardId)
 	if err != nil {

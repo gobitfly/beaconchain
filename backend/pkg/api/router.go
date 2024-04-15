@@ -161,14 +161,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/multisig-safes/{address}/transactions", hs.PublicGetMultisigSafeTransactions, nil},
 		{http.MethodGet, "/multisig-transactions/{hash}/confirmations", hs.PublicGetMultisigTransactionConfirmations, nil},
 	}
-	for _, endpoint := range endpoints {
-		if endpoint.PublicHandler != nil {
-			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)
-		}
-		if endpoint.InternalHander != nil {
-			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
-		}
-	}
+	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
 }
 
 func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
@@ -216,6 +209,17 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		}
 		if endpoint.InternalHander != nil {
 			internalDashboardRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
+		}
+	}
+}
+
+func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {
+	for _, endpoint := range endpoints {
+		if endpoint.PublicHandler != nil {
+			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)
+		}
+		if endpoint.InternalHander != nil {
+			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
 		}
 	}
 }
