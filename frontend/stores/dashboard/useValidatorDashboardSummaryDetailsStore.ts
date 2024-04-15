@@ -16,6 +16,9 @@ export function useValidatorDashboardSummaryDetailsStore (dashboardKey: Dashboar
   }
 
   async function getDetails () {
+    // values might change so we reload whenever requested
+    // values are cached in store to avoid loading spinner on expanding/collapsing rows though
+
     const res = await fetch<InternalGetValidatorDashboardGroupSummaryResponse>(API_PATH.DASHBOARD_SUMMARY_DETAILS, undefined, { dashboardKey, groupId })
     data.value = { ...data.value, [getKey()]: res.data }
     return res.data
