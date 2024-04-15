@@ -8,6 +8,7 @@ const { createValidatorDashboard, createAccountDashboard } = useUserDashboardSto
 
 interface Props {
   displayType: DashboardCreationDisplayType,
+  initiallyVisislbe?: boolean
 }
 const props = defineProps<Props>()
 
@@ -35,6 +36,9 @@ function show () {
 defineExpose({
   show
 })
+if (props.initiallyVisislbe) {
+  show()
+}
 
 function onNext () {
   if (state.value === 'type') {

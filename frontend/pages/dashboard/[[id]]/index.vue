@@ -8,7 +8,6 @@ import {
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardCreationController } from '#components'
-import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
 import { type CookieDashboard } from '~/types/dashboard'
 
 const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
@@ -24,22 +23,15 @@ await Promise.all([
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)
 
-const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
-function showDashboardCreation (type: DashboardCreationDisplayType) {
-  if (type === 'panel') {
-    dashboardCreationControllerPanel.value?.show()
-  } else {
-    dashboardCreationControllerModal.value?.show()
-  }
+function showDashboardCreationDialog () {
+  dashboardCreationControllerModal.value?.show()
 }
 
 onMounted(() => {
-  if (dashboardKey.value === undefined) {
+  if (dashboardKey.value === '') {
     // we don't have a key and no validator dashboard: show the create panel
-    if (!dashboards.value?.validator_dashboards?.length) {
-      showDashboardCreation('panel')
-    } else {
+    if (dashboards.value?.validator_dashboards?.length) {
       // if we have a validator dashboard but none selected: select the first
       const cd = dashboards.value.validator_dashboards[0] as CookieDashboard
       setDashboardKey(cd.hash ?? cd.id.toString())
@@ -63,9 +55,9 @@ watch(dashboardKey, (newKey, oldKey) => {
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
       <DashboardCreationController
-        ref="dashboardCreationControllerPanel"
         class="panel-controller"
         :display-type="'panel'"
+        :initially-visislbe="true"
       />
     </BcPageWrapper>
   </div>
@@ -79,7 +71,7 @@ watch(dashboardKey, (newKey, oldKey) => {
     />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreation('modal')" />
+        <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
       <div class="edit-buttons-row">

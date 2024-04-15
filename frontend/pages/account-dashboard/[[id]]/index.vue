@@ -1,19 +1,13 @@
 <script setup lang="ts">
 import type { DashboardCreationController } from '#components'
-import { type DashboardCreationDisplayType } from '~/types/dashboard/creation'
 
 const { dashboardKey } = useDashboardKeyProvider('account')
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this
-const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
-function showDashboardCreation (type: DashboardCreationDisplayType) {
-  if (type === 'panel') {
-    dashboardCreationControllerPanel.value?.show()
-  } else {
-    dashboardCreationControllerModal.value?.show()
-  }
+function showDashboardCreation () {
+  dashboardCreationControllerModal.value?.show()
 }
 
 </script>
@@ -21,14 +15,19 @@ function showDashboardCreation (type: DashboardCreationDisplayType) {
 <template>
   <div v-if="dashboardKey==''">
     <BcPageWrapper>
-      <DashboardCreationController ref="dashboardCreationControllerPanel" class="panel-controller" :display-type="'panel'" />
+      <DashboardCreationController
+        ref="dashboardCreationControllerPanel"
+        class="panel-controller"
+        :display-type="'panel'"
+        :initially-visislbe="true"
+      />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreation('modal')" />
+        <DashboardHeader @show-creation="showDashboardCreation()" />
       </template>
       <h1>Account Dashboard {{ dashboardKey }}</h1>
     </BcPageWrapper>
