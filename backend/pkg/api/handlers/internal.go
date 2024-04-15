@@ -416,7 +416,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	_ = checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
@@ -432,6 +432,14 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	if err != nil {
 		returnBadRequest(w, err)
 		return
+	}
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(publicDashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if dashboardInfo.Id != dashboardId {
+		returnNotFound(w, errors.New("public id not found"))
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.GroupNames)
@@ -449,11 +457,19 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	_ = checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
 	publicDashboardId := checkValidatorDashboardPublicId(&err, vars["public_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
+	}
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(publicDashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if dashboardInfo.Id != dashboardId {
+		returnNotFound(w, errors.New("public id not found"))
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(publicDashboardId)

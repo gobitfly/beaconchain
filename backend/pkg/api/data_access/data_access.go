@@ -59,8 +59,8 @@ type DataAccessor interface {
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, sort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
 
 	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error)
-	UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error)
-	RemoveValidatorDashboardPublicId(publicDashboardId string) error
+	UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error)
+	RemoveValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) error
 
 	GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error)
 
@@ -1108,7 +1108,7 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 	return result, nil
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId string, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
@@ -1138,7 +1138,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId s
 	return result, nil
 }
 
-func (d *DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId string) error {
+func (d *DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) error {
 	// Delete the public validator dashboard
 	result, err := d.alloyWriter.Exec(`
 		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
