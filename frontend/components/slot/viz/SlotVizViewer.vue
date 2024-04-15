@@ -26,6 +26,24 @@ const icons:{ component: Component, value: SlotVizCategories }[] = [
   }
 ]
 
+const currentSlotId = computed(() => {
+  if (!props.data?.length) {
+    return
+  }
+  let id = -1
+
+  for (let i = 0; i < props.data.length; i++) {
+    const row = props.data[i]
+    for (let j = (row.slots?.length ?? 0) - 1; j >= 0; j--) {
+      if (row.slots?.[j].status === 'scheduled') {
+        id = row.slots?.[j].slot
+      } else if (row.slots?.[j].status !== 'scheduled') {
+        return id
+      }
+    }
+  }
+})
+
 </script>
 <template>
   <div id="slot-viz" class="content">
@@ -42,7 +60,7 @@ const icons:{ component: Component, value: SlotVizCategories }[] = [
         <BcToggleMultiBar v-model="selectedCategoris" :icons="icons" />
       </div>
       <div v-for="row in props.data" :key="row.epoch" class="row">
-        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categoris="selectedCategoris" />
+        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categoris="selectedCategoris" :current-slot-id="currentSlotId" />
       </div>
     </div>
   </div>
