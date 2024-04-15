@@ -4,35 +4,43 @@
   text-overflow: ellipsis;
 }
 
-.truncate-text{
+.truncate-text {
   @include truncate-text;
 }
 
-.pointer { 
+.text-align-left {
+  text-align: left;
+}
+
+.pointer {
   cursor: pointer;
 }
 
 .dots-before {
-  &:before{
-    content: '\2026'
+  &:before {
+    content: "\2026";
   }
 }
 
 .dots-after {
-  &:after{
-    content: '\2026'
+  &:after {
+    content: "\2026";
   }
 }
 
-.no-wrap{
+.no-wrap {
   white-space: nowrap;
 }
 
-.positive {  
+.text-disabled{
+  color: var(--text-color-disabled);
+}
+
+.positive {
   color: var(--positive-color);
 }
 
-.negative{
+.negative {
   color: var(--negative-color);
 }
 
@@ -44,8 +52,29 @@
   color: var(--purple);
 }
 
-.comma{
-  &:before{
-    content: ',';
+.comma {
+  &:before {
+    content: ",";
   }
+}
+
+.slash-after {
+  &:after {
+    content: " / ";
+  }
+}
+
+.round-brackets {
+  &:before {
+    content: "(";
+  }
+  &:after {
+    content: ")";
+  }
+}
+
+@mixin set-all-width($width) {
+  width: $width;
+  max-width: $width;
+  min-width: $width;
 }
