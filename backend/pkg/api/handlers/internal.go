@@ -114,7 +114,7 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 // --------------------------------------
 // Validator Dashboards
 
-var errorMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
+var errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var err error
