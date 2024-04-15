@@ -72,7 +72,7 @@ export function useUserDashboardStore () {
       return key
     }
 
-    return dashboards.value?.validator_dashboards.find(d => d.id === key)?.name
+    return dashboards.value?.validator_dashboards.find(d => d.id === key)?.name || `${$t('dashboard.validator_dashboard')} ${key}`
   }
 
   return { dashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard, getValidatorDashboardName }
