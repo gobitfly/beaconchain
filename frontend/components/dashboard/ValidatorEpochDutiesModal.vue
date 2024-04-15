@@ -67,18 +67,17 @@ watch(() => [props.value, query.value], () => {
 
 const mapDuties = (duties: ValidatorHistoryDuties) => {
   const list = []
-  // TODO: remove the .slice(-12) hack once the rewards table is merged as the translations are from there
   if (duties.attestation_head || duties.attestation_source || duties.attestation_target) {
-    list.push($t('dashboard.validator.rewards.attestation').slice(-12))
+    list.push($t('dashboard.validator.rewards.attestation'))
   }
   if (duties.proposal) {
-    list.push($t('dashboard.validator.rewards.proposal').slice(-12))
+    list.push($t('dashboard.validator.rewards.proposal'))
   }
   if (duties.sync) {
-    list.push($t('dashboard.validator.rewards.sync_committee').slice(-12))
+    list.push($t('dashboard.validator.rewards.sync_committee'))
   }
   if (duties.slashing) {
-    list.push($t('dashboard.validator.rewards.slashing').slice(-12))
+    list.push($t('dashboard.validator.rewards.slashing'))
   }
   return list.join(', ')
 }
