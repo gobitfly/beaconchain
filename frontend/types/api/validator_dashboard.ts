@@ -64,7 +64,7 @@ export interface VDBGroupSummaryData {
   all_time: VDBGroupSummaryColumn;
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
-export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, ''>>; // line chart, series id is group id, no stack
+export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
 export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<number /* uint64 */[]>;
 /**
  * ------------------------------------------------------------
@@ -101,8 +101,7 @@ export interface VDBGroupRewardsData {
   proposal_cl_slashing_inc_reward: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardGroupRewardsResponse = ApiDataResponse<VDBGroupRewardsData>;
-export type RewardsChartData = ChartData<number, 'el' | 'cl'>
-export type InternalGetValidatorDashboardRewardsChartResponse = ApiDataResponse<RewardsChartData>; // bar chart, series id is group id, stack is 'execution' or 'consensus'
+export type InternalGetValidatorDashboardRewardsChartResponse = ApiDataResponse<ChartData<number /* int */, string /* decimal.Decimal */>>; // bar chart, series id is group id, property is 'el' or 'cl'
 export interface VDBEpochDutiesTableRow {
   validator: number /* uint64 */;
   duties: ValidatorHistoryDuties;

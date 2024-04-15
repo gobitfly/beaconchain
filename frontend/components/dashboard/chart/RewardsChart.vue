@@ -16,8 +16,8 @@ import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
 import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import { type InternalGetValidatorDashboardRewardsChartResponse, type RewardsChartData } from '~/types/api/validator_dashboard'
-import { type ChartSeries } from '~/types/api/common'
+import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
+import { type ChartData, type ChartSeries } from '~/types/api/common'
 
 use([
   CanvasRenderer,
@@ -36,7 +36,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const data = ref<RewardsChartData | undefined >()
+const data = ref<ChartData<number, string> | undefined >()
 
 await useAsyncData('validator_dashboard_rewards_chart', async () => {
   if (props.dashboardKey === undefined) {
@@ -71,7 +71,7 @@ const option = computed(() => {
     return undefined
   }
 
-  interface SeriesObject extends ChartSeries<string, 'el' | 'cl'> {
+  interface SeriesObject extends ChartSeries<string, string> {
     name: string;
     category: number;
     color: string;
@@ -95,7 +95,7 @@ const option = computed(() => {
         property: element.property,
         data: element.data,
         stack: 'x',
-        color: colors.value.data[element.property ?? 'cl'],
+        color: element.property === 'cl' ? colors.value.data.cl : colors.value.data.el,
         type: 'bar',
         name
       }
