@@ -5,7 +5,18 @@ export enum SearchbarStyle {
   Discreet = 'discreet',
   Embedded = 'embedded'
 }
-export enum SearchbarPurpose { GlobalSearch, AccountAddition, ValidatorAddition }
+export enum SearchbarPurpose {
+  GlobalSearch,
+  AccountAddition,
+  ValidatorAddition
+}
+
+export enum SuggestionrowCells {
+  NameDescriptionLowlevelCategory,
+  SubcategoryIdentificationDescription
+  // If you add here a display-mode, update the `SearchbarPurposeInfo` record to tell SuggestionRow.vue which display-mode
+  // it should use, and then implement this mode in the `<template>` of SuggestionRow.vue.
+}
 
 export enum Category {
   Tokens,
@@ -139,26 +150,30 @@ interface SearchbarPurposeInfoField {
   searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
   unsearchable : ResultType[], // List of types that the bar will not search for.
   button : 'search' | 'add', // Utility of the button.
-  placeHolder : string // I18n path of the hint to display in the input field when it is empty.
+  placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
+  cellsInSuggestionRows : SuggestionrowCells
 }
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
   [SearchbarPurpose.GlobalSearch]: {
     searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
     unsearchable: [],
     button: 'search',
-    placeHolder: 'search_bar.general_placeholder'
+    placeHolder: 'search_bar.general_placeholder',
+    cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory
   },
   [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
     unsearchable: [ResultType.EnsOverview],
     button: 'add',
-    placeHolder: 'search_bar.account_placeholder'
+    placeHolder: 'search_bar.account_placeholder',
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
   },
   [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
     unsearchable: [],
     button: 'add',
-    placeHolder: 'search_bar.validator_placeholder'
+    placeHolder: 'search_bar.validator_placeholder',
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
   }
 }
 
