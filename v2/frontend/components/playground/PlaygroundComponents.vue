@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Tags">
+      <PlaygroundTags />
+    </TabPanel>
     <TabPanel header="Duty Status">
       <PlaygroundDutyStatus />
     </TabPanel>
