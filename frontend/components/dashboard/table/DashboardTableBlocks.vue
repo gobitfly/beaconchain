@@ -5,6 +5,8 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
+import { BcFormatHash } from '#components'
+import { getGroupLabel } from '~/utils/dashbaord/group'
 
 // TODO: replace with dashboardKey provider once it's merged
 interface Props {
@@ -26,7 +28,7 @@ const colsVisible = computed(() => {
   return {
     slot: width.value > 960,
     age: width.value > 880,
-    recipient: width.value > 800,
+    rewardsRecipient: width.value > 800,
     status: width.value > 700,
     mobileStatus: width.value < 1000,
     rewards: width.value > 600,
@@ -52,15 +54,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  // Todo: use getGroupLabel funciton once Rewards Table PR is merged.
-  if (groupId === undefined) {
-    return ''
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (!group) {
-    return `${groupId}` // fallback if we could not match the group name
-  }
-  return `${group.name}`
+  return getGroupLabel($t, groupId, overview.value?.groups)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -115,7 +109,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="proposer" :sortable="true" :header="$t('block.col.proposer')">
+            <Column
+              field="proposer"
+              :sortable="true"
+              :header="$t('block.col.proposer')"
+              body-class="proposer"
+              header-class="proposer"
+            >
               <template #body="slotProps">
                 <NuxtLink
                   :to="`/validator/${slotProps.data.proposer}`"
@@ -123,7 +123,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   class="link"
                   :no-prefetch="true"
                 >
-                  <BcFormatNumber :value="slotProps.data.proposer" />
+                  <BcFormatNumber :value="slotProps.data.proposer" default="-" />
                 </NuxtLink>
               </template>
             </Column>
@@ -143,14 +143,14 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             <Column v-if="colsVisible.slot" field="slot" :sortable="true" :header="$t('common.slot')">
               <template #body="slotProps">
                 <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
-                  <BcFormatNumber :value="slotProps.data.slot" />
+                  <BcFormatNumber :value="slotProps.data.slot" default="-" />
                 </NuxtLink>
               </template>
             </Column>
             <Column field="block" :sortable="true" :header="$t('common.block')">
               <template #body="slotProps">
                 <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
-                  <BcFormatNumber :value="slotProps.data.block" />
+                  <BcFormatNumber :value="slotProps.data.block" default="-" />
                 </NuxtLink>
               </template>
             </Column>
@@ -170,18 +170,27 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :body-class="{ 'status-mobile': colsVisible.mobileStatus }"
             >
               <template #body="slotProps">
-                <!--TODO: use status render once merged-->
-                <span :class="{ 'status-mobile': colsVisible.mobileStatus }" />
-                {{ slotProps.data.status }}
+                <BlockTableStatus :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.rewardsRecipient"
+              field="reward_recipient"
+              :sortable="true"
+              :header="$t('dashboard.validator.col.reward_recipient')"
+            >
+              <template #body="slotProps">
+                <BcFormatHash v-if="slotProps.data.reward_recipient?.hash" class="reward_recipient" :hash="slotProps.data.reward_recipient?.hash" :ens="slotProps.data.reward_recipient?.ens" />
+                <span v-else>-</span>
               </template>
             </Column>
             <Column
               v-if="colsVisible.rewards"
-              field="reward_cl"
+              field="reward"
               :sortable="true"
               body-class="reward"
               header-class="reward"
-              :header="$t('dashboard.validator.col.rewards')"
+              :header="$t('dashboard.validator.col.proposer_rewards')"
             >
               <template #body="slotProps">
                 <BlockTableRewardItem :reward="slotProps.data.reward" />
@@ -194,7 +203,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     {{ $t('common.slot') }}:
                   </div>
                   <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
-                    <BcFormatNumber :value="slotProps.data.slot" />
+                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
                   </NuxtLink>
                 </div>
                 <div class="row">
@@ -202,27 +211,33 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     {{ $t('common.epoch') }}:
                   </div>
                   <NuxtLink :to="`/epoch/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
-                    <BcFormatNumber :value="slotProps.data.epoch" />
+                    <BcFormatNumber :value="slotProps.data.epoch" default="-" />
                   </NuxtLink>
                 </div>
-                <div v-if="!colsVisible.age" class="row">
+                <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
                     <BcTableAgeHeader />
                   </div>
                   <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
                 </div>
-                <div v-if="!colsVisible.status" class="row">
+                <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.status') }}:
                   </div>
                   <div class="value">
-                    <!--TODO: use status render once merged-->
-                    {{ slotProps.data.status }}
+                    <BlockTableStatus :status="slotProps.data.status" :mobile="false" />
                   </div>
                 </div>
-                <div v-if="!colsVisible.rewards" class="row">
+                <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.rewards') }}:
+                    {{ $t('dashboard.validator.col.reward_recipient') }}:
+                  </div>
+                  <BcFormatHash v-if="slotProps.data.reward_recipient?.hash" class="reward_recipient" :hash="slotProps.data.reward_recipient?.hash" :ens="slotProps.data.reward_recipient?.ens" />
+                  <span v-else>-</span>
+                </div>
+                <div v-if="!colsVisible.slot" class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.proposer_rewards') }}:
                   </div>
                   <BlockTableRewardItem :reward="slotProps.data.reward" />
                 </div>
@@ -248,29 +263,24 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
 
 :deep(.block-table) {
 
+  .proposer {
+    @include utils.set-all-width(110px);
+  }
+
   .group-id {
-    //TODO: @include utils.set-all-width(120px);
-    max-width: 120px;
-    width: 120px;
-    min-width: 120px;
+    @include utils.set-all-width(120px);
     @include utils.truncate-text;
   }
 
   @media (max-width: 399px) {
     .group-id {
-      //TODO: @include utils.set-all-width(80px);
-      max-width: 80px;
-      width: 80px;
-      min-width: 80px;
+      @include utils.set-all-width(80px);
       @include utils.truncate-text;
     }
   }
 
   .status-mobile {
-    //TODO: @include utils.set-all-width(40px);
-    max-width: 40px;
-    width: 40px;
-    min-width: 40px;
+    @include utils.set-all-width(40px);
     @include utils.truncate-text;
   }
 
@@ -289,9 +299,12 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   }
 }
 
+.reward_recipient{
+    @include utils.set-all-width(120px);
+}
+
 .expansion {
   display: flex;
-  align-items: center;
   flex-direction: column;
   gap: var(--padding-small);
   padding: var(--padding) 41px;

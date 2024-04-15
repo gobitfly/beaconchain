@@ -200,7 +200,7 @@
       },
       "blocks":{
         "title": "Blocks",
-        "search_placeholder": "Block Number / Graffiti / Property",
+        "search_placeholder": "Index, Public Key, Group",
         "el_rewards": "Execution Layer Reward",
         "cl_rewards": "Consensus Layer Reward"
       },
@@ -268,7 +268,9 @@
         "efficiency_last_30d": "Efficiency (30d)",
         "efficiency_all_time": "Efficiency (All Time)",
         "validators": "Validators",
-        "rewards": "Rewards"
+        "rewards": "Rewards",
+        "reward_recipient": "Rewards Recipient",
+        "proposer_rewards": "Proposer Rewards"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
