@@ -42,6 +42,7 @@ defineProps<Props>()
 
   >div:last-child {
     font-size: var(--small_text_font_size);
+    color: var(--text-color-discreet);
   }
 }
 </style>
