@@ -66,9 +66,9 @@ type PeriodicValues[T any] struct {
 }
 
 type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
-	Id       I      `json:"id"`              // id may be a string or an int
-	Property string `json:"stack,omitempty"` // for stacking bar charts
-	Data     []D    `json:"data"`            // y-axis values
+	Id       I      `json:"id"`                 // id may be a string or an int
+	Property string `json:"property,omitempty"` // for stacking bar charts
+	Data     []D    `json:"data"`               // y-axis values
 }
 
 type ChartData[I int | string, D float64 | decimal.Decimal] struct {
