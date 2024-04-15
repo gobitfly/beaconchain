@@ -70,7 +70,7 @@ type VDBGroupSummaryData struct {
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
+type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
 type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
 
@@ -112,7 +112,7 @@ type VDBGroupRewardsData struct {
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
-type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
+type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int, decimal.Decimal]] // bar chart, series id is group id, property is 'el' or 'cl'
 
 // Duties Modal
 

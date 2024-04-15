@@ -52,14 +52,14 @@ export interface PeriodicValues<T extends any> {
   last_7d: T;
   last_30d: T;
 }
-export interface ChartSeries<T extends number /* int */ | string> {
-  id: T; // id may be a string or an int
+export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
+  id: I; // id may be a string or an int
   stack?: string; // for stacking bar charts
-  data: number /* float64 */[]; // y-axis values
+  data: D[]; // y-axis values
 }
-export interface ChartData<T extends number /* int */ | string> {
+export interface ChartData<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
   categories: number /* uint64 */[]; // x-axis
-  series: ChartSeries<T>[];
+  series: ChartSeries<I, D>[];
 }
 export interface SearchResult {
   type: string;
