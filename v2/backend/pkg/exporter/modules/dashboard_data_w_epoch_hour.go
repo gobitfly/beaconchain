@@ -300,7 +300,9 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 	// Clear old epoch partitions
 	var delEpoch uint64
 	for i := uint64(0); ; i += PartitionEpochWidth {
-		delEpoch = epochStart - d.epochWriter.getRetentionEpochDuration() - i
+		if epochStart >= d.epochWriter.getRetentionEpochDuration()-i {
+			delEpoch = epochStart - d.epochWriter.getRetentionEpochDuration() - i
+		}
 
 		startOfPartition, endOfPartition := d.epochWriter.getPartitionRange(delEpoch)
 		err := d.epochWriter.deleteEpochPartition(startOfPartition, endOfPartition)

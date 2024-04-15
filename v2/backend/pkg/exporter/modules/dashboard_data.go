@@ -59,6 +59,11 @@ func (d *dashboardData) backfillEpochData() {
 		return
 	}
 
+	if res.Data.Finalized.Root == "0x0000000000000000000000000000000000000000000000000000000000000000" {
+		d.log.Info("network not finalized yet, skipping epoch backfill")
+		return
+	}
+
 	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, d.epochWriter.getRetentionEpochDuration())
 	if err != nil {
 		d.log.Error(err, "failed to get epoch gaps", 0)
@@ -70,7 +75,7 @@ func (d *dashboardData) backfillEpochData() {
 
 		for _, gap := range gaps {
 			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
-			if gap < res.Data.Finalized.Epoch-d.epochWriter.getRetentionEpochDuration() {
+			if gap < res.Data.Finalized.Epoch-d.epochWriter.getRetentionEpochDuration() && res.Data.Finalized.Epoch > d.epochWriter.getRetentionEpochDuration() {
 				continue
 			}
 
@@ -201,7 +206,10 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	var err error
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
-	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
+	var firstSlotOfPreviousEpoch uint64
+	if firstSlotOfEpoch > 0 {
+		firstSlotOfPreviousEpoch = firstSlotOfEpoch - 1
+	}
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
@@ -215,7 +223,11 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
 	errGroup.Go(func() error {
 		// retrieve the validator balances at the start of the epoch
 		start := time.Now()
-		result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+		if firstSlotOfPreviousEpoch == 0 {
+			result.startBalances, err = d.CL.GetValidators("genesis", nil, nil)
+		} else {
+			result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+		}
 		if err != nil {
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 			return err

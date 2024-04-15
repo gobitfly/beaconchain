@@ -206,7 +206,9 @@ func (d *hourToDayAggregator) rolling24hAggregate() {
 	//Clear old partitions
 	var delEpoch uint64
 	for i := uint64(0); ; i += HourAggregateWidth {
-		delEpoch = dayOldHourlyEpoch - d.epochToHour.getHourRetentionDurationEpochs() - i
+		if dayOldHourlyEpoch >= d.epochToHour.getHourRetentionDurationEpochs()-i {
+			delEpoch = dayOldHourlyEpoch - d.epochToHour.getHourRetentionDurationEpochs() - i
+		}
 
 		startOfPartition, endOfPartition := d.epochToHour.GetHourPartitionRange(delEpoch)
 		err := d.epochToHour.deleteHourlyPartition(startOfPartition, endOfPartition)

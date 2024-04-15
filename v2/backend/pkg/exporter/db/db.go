@@ -890,7 +890,7 @@ func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, e
 		return nil, err
 	}
 
-	if minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration {
+	if (minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration) && targetEpoch > retainEpochDuration {
 		minEpoch = targetEpoch - retainEpochDuration
 	}
 
