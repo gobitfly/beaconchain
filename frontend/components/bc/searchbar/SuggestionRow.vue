@@ -9,6 +9,8 @@ import {
   type ResultSuggestion,
   SearchbarStyle,
   SearchbarPurpose,
+  SearchbarPurposeInfo,
+  SuggestionrowCells,
   getI18nPathOfTranslatableLitteral
 } from '~/types/searchbar'
 
@@ -20,7 +22,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-function formatEmbeddedSubcategoryCell () : string {
+function formatSubcategoryCell () : string {
   const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title)
   let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
 
@@ -30,14 +32,14 @@ function formatEmbeddedSubcategoryCell () : string {
   return label
 }
 
-function formatEmbeddedIdentificationCell () : string {
+function formatIdentificationCell () : string {
   if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'name') && !props.suggestion.nameWasUnknown) {
     return props.suggestion.output.name
   }
   return props.suggestion.output.lowLevelData
 }
 
-function formatEmbeddedDescriptionCell () : string {
+function formatDescriptionCell () : string {
   if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'description')) {
     // we tell the user what is the data that they see (ex: "Index" for a validator index)
     switch (props.suggestion.type) {
@@ -53,10 +55,11 @@ function formatEmbeddedDescriptionCell () : string {
 
 <template>
   <div
-    v-if="barStyle == SearchbarStyle.Gaudy || barStyle == SearchbarStyle.Discreet"
-    class="rowstyle-gaudyordiscreet"
+    v-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory"
+    class="rowstyle-namedescriptionlowlevelcategory"
     :class="barStyle"
   >
+    <!-- In this mode, all possible cells are shown (as originally designed on Figma) -->
     <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
@@ -93,10 +96,11 @@ function formatEmbeddedDescriptionCell () : string {
   </div>
 
   <div
-    v-else-if="barStyle == SearchbarStyle.Embedded"
-    class="rowstyle-embedded"
+    v-else-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription"
+    class="rowstyle-subcategoryidentificationdescription"
     :class="barStyle"
   >
+    <!-- In this mode, we show less information in the cells and they are filled by formating functions -->
     <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
@@ -105,24 +109,27 @@ function formatEmbeddedDescriptionCell () : string {
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <div class="cell-subcategory" :class="barStyle">
-      {{ formatEmbeddedSubcategoryCell() }}
+      {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
       class="cells-blockchaininfo-common cell-bi-identification"
       :class="barStyle"
-      :text="formatEmbeddedIdentificationCell()"
+      :text="formatIdentificationCell()"
     />
     <div v-if="suggestion.output.description !== ''" class="cells-blockchaininfo-common cell-bi-description" :class="barStyle">
-      {{ formatEmbeddedDescriptionCell() }}
+      {{ formatDescriptionCell() }}
     </div>
   </div>
+
+  <!-- If you want to show other cells or change their format, it might be good to implement a new mode here instead of modiying the modes above.
+       To make the bar use your new mode, add its name into the `SuggestionrowCells` enum in `searchbar.ts`, and update the `SearchbarPurposeInfo` record there. -->
 </template>
 
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
 
-@mixin common-to-both-rowstyles {
+@mixin common-to-all-rowstyles {
   cursor: pointer;
   display: grid;
   position: relative;
@@ -203,10 +210,10 @@ function formatEmbeddedDescriptionCell () : string {
   }
 }
 
-// specific style for the gaudy and discreet modes
+// specific style when SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory
 
-.rowstyle-gaudyordiscreet {
-  @include common-to-both-rowstyles;
+.rowstyle-namedescriptionlowlevelcategory {
+  @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
     &.gaudy {
@@ -299,10 +306,10 @@ function formatEmbeddedDescriptionCell () : string {
   }
 }
 
-// specific style for the embedded mode
+// specific style when SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription
 
-.rowstyle-embedded {
-  @include common-to-both-rowstyles;
+.rowstyle-subcategoryidentificationdescription {
+  @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
     grid-template-columns: 40px 106px auto min-content;
