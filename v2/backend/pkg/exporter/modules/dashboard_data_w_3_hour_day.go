@@ -102,20 +102,6 @@ func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error
 			continue
 		}
 
-		// if boundsStart > latestExportedHour.EpochStart {
-		// 	continue // nothing to do
-		// }
-
-		// // define start bounds as latestExportedDay.EpochEnd for first iteration
-		// if epoch == latestExportedDay.EpochStart {
-		// 	boundsStart = latestExportedDay.EpochEnd
-		// }
-
-		// // scope down to max hour exported epoch
-		// if latestExportedHour.EpochEnd >= boundsStart && latestExportedHour.EpochEnd < boundsEnd {
-		// 	boundsEnd = latestExportedHour.EpochEnd
-		// }
-
 		// define start bounds as lastHourExported.EpochEnd for first iteration
 		if epoch == latestExportedDay.EpochStart {
 			boundsStart = latestExportedDay.EpochEnd
@@ -144,15 +130,6 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 	if err != nil {
 		return errors.Wrap(err, "failed to create day partition")
 	}
-
-	// // sanity check see if tail validator_dashboard_data_hourly epoch_start exists
-	// var found bool
-	// err = db.AlloyWriter.Get(&found, `
-	// 	SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1
-	// `, firstEpochOfDay)
-	// if err != nil || !found {
-	// 	return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", firstEpochOfDay))
-	// }
 
 	boundsStart, _ := getDayAggregateBounds(firstEpochOfDay)
 

@@ -89,16 +89,6 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		// err := d.aggregatePerEpoch(true)
-		// if err != nil {
-		// 	d.log.Fatal(err, "failed to aggregate", 0)
-		// }
-
-		// err = d.aggregateMid()
-		// if err != nil {
-		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
-		// }
-
 		d.headEpochQueue <- 151
 		d.processHeadQueue()
 	}()
@@ -593,8 +583,8 @@ func (d *dashboardData) aggregatePerEpoch(isHeadProcessorQueue bool, updateRolli
 }
 
 // This function contains more heavy aggregation like rolling 7d, 30d, 90d
-// As is this will also be called every epoch too (as long as exporter is on head, otherwise not), but it could be called less frequent too
-// Assumes that aggregatePerEpoch has been called before this!
+// This function assumes that epoch aggregation is finished before calling THOUGH it could run in parallel
+// as long as the rolling tables do not require a bootstrap
 func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) error {
 	start := time.Now()
 	defer func() {
