@@ -22,14 +22,14 @@ import (
 
 // -------------- DEBUG FLAGS ----------------
 const debugAggregateMidEveryEpoch = true     // prod: false
-const debugTargetBackfillEpoch = uint64(150) // prod: 0
+const debugTargetBackfillEpoch = uint64(500) // prod: 0
 const debugSetBackfillCompleted = false      // prod: true
 const debugSkipOldEpochClear = false         // prod: false
 const debugAddToColumnEngine = false         // prod: true?
 
 // ----------- END OF DEBUG FLAGS ------------
 
-const epochFetchParallelism = 6
+const epochFetchParallelism = 7
 const epochWriteParallelism = 3
 const databaseAggregationParallelism = 3
 
@@ -89,7 +89,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		d.headEpochQueue <- 151
+		d.headEpochQueue <- 501
 		d.processHeadQueue()
 	}()
 
@@ -227,6 +227,8 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64, epochFetchParallelism int, nextDataChan chan []DataEpoch) {
 	// group epochs into parallel worker groups
 	groups := getEpochParallelGroups(epochs, epochFetchParallelism)
+	numberOfEpochsToFetch := len(epochs)
+	epochsFetched := 0
 
 	for _, gapGroup := range groups {
 		errGroup := &errgroup.Group{}
@@ -328,7 +330,14 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64
 
 		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
 
-		d.log.Infof("epoch data fetcher, fetched data for epochs %v in %v", gapGroup.Epochs, time.Since(start))
+		epochsFetched += len(datas)
+		remaining := numberOfEpochsToFetch - epochsFetched
+		remainingTimeEst := time.Duration(0)
+		if remaining > 0 {
+			remainingTimeEst = time.Duration(time.Since(start).Nanoseconds() / int64(len(datas)) * int64(remaining))
+		}
+
+		d.log.Infof("epoch data fetcher, fetched %v epochs %v in %v. Remaining: %v (%v)", len(datas), gapGroup.Epochs, time.Since(start), remaining, remainingTimeEst)
 
 		nextDataChan <- datas
 	}
@@ -440,6 +449,14 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 			d.log.Info("storage got data, writing epoch data")
 			d.writeEpochDatas(datas)
+
+			// _, utcEndsBound := getDayAggregateBounds(datas[len(datas)-1].Epoch)
+			// doRollingUpdate := false
+			// if utcEndsBound == datas[len(datas)-1].Epoch+1 { // excl
+			// 	// if last exported epoch is an utc end bound, we can aggregate rolling windows via bootstrap
+			// 	doRollingUpdate = true
+			// 	d.log.Infof("BOOTSTRAPPING ROLLING WINDOWS!")
+			// }
 
 			d.log.Info("storage writing done, aggregate")
 			for {
@@ -713,6 +730,7 @@ type Data struct {
 	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
 	attestationAssignments   map[uint64]uint32
 	missedslots              map[uint64]bool
+	genesis                  bool
 }
 
 // Data for a single validator
@@ -724,10 +742,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
 
-	firstSlotOfPreviousEpoch := firstSlotOfEpoch - 1
-	if firstSlotOfEpoch == 0 {
-		firstSlotOfPreviousEpoch = 0
-	}
+	firstSlotOfPreviousEpoch := int64(firstSlotOfEpoch) - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
 	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
@@ -829,7 +844,12 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		errGroup.Go(func() error {
 			// retrieve the validator balances at the start of the epoch
 			start := time.Now()
-			result.startBalances, err = cl.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+			if firstSlotOfPreviousEpoch < 0 {
+				result.startBalances, err = d.CL.GetValidators("genesis", nil, nil)
+				result.genesis = true
+			} else {
+				result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+			}
 			if err != nil {
 				d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
 				return err
@@ -942,6 +962,11 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				activeCount++
 				validatorsData[i].AttestationsScheduled = sql.NullInt16{Int16: 1, Valid: true}
 			}
+
+			if data.genesis {
+				validatorsData[i].DepositsCount = sql.NullInt16{Int16: 1, Valid: true}
+				validatorsData[i].DepositsAmount = sql.NullInt64{Int64: int64(data.startBalances.Data[i].Validator.EffectiveBalance), Valid: true}
+			}
 		} else {
 			pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
 		}
@@ -1050,7 +1075,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				return nil, errors.New("proposer index out of range")
 			}
 
-			validatorsData[validator_index].DepositsAmount.Int32 += int32(depositData.Data.Amount)
+			validatorsData[validator_index].DepositsAmount.Int64 += int64(depositData.Data.Amount)
 			validatorsData[validator_index].DepositsAmount.Valid = true
 
 			validatorsData[validator_index].DepositsCount.Int16++
@@ -1063,7 +1088,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			if validator_index >= size {
 				return nil, errors.New("proposer index out of range")
 			}
-			validatorsData[validator_index].WithdrawalsAmount.Int32 += int32(withdrawal.Amount)
+			validatorsData[validator_index].WithdrawalsAmount.Int64 += int64(withdrawal.Amount)
 			validatorsData[validator_index].WithdrawalsAmount.Valid = true
 
 			validatorsData[validator_index].WithdrawalsCount.Int16++
@@ -1248,10 +1273,10 @@ type validatorDashboardDataRow struct {
 	BalanceEnd   uint64 // done
 
 	DepositsCount  sql.NullInt16 // done
-	DepositsAmount sql.NullInt32 // done
+	DepositsAmount sql.NullInt64 // done
 
 	WithdrawalsCount  sql.NullInt16 // done
-	WithdrawalsAmount sql.NullInt32 // done
+	WithdrawalsAmount sql.NullInt64 // done
 
 	InclusionDelaySum     sql.NullInt32 // done
 	OptimalInclusionDelay sql.NullInt32 // done

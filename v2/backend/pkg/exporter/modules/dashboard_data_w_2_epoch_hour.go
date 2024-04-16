@@ -98,6 +98,10 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 			continue
 		}
 
+		if epoch > currentExportedEpoch {
+			break
+		}
+
 		// define start bounds as lastHourExported.EpochEnd for first iteration
 		if epoch == lastHourExported.EpochStart {
 			boundsStart = lastHourExported.EpochEnd

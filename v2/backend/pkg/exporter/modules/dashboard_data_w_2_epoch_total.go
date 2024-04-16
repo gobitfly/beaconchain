@@ -69,10 +69,28 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 	defer utils.Rollback(tx)
 
 	d.log.Infof("aggregating total (from: %d) up to %d", epochStart, epochEnd)
-	err = d.dayUp.rollingAggregator.addToRolling(tx, "validator_dashboard_data_rolling_total", epochStart, epochEnd, 0)
-	if err != nil {
-		return errors.Wrap(err, "failed to add to rolling total")
-	}
+
+	err = AddToRollingCustom(tx, CustomRolling{
+		StartEpoch:      epochStart,
+		EndEpoch:        epochEnd,
+		StartBoundEpoch: 0,
+		TableFrom:       "validator_dashboard_data_epoch",
+		TableTo:         "validator_dashboard_data_rolling_total",
+		TailBalancesQuery: `
+			balance_start_epochs as (
+				SELECT validator_index, MIN(epoch) as epoch FROM validator_dashboard_data_epoch WHERE epoch >= $1 AND epoch <= $2 AND balance_start IS NOT NULL
+				GROUP BY validator_index
+			),
+			balance_starts as (
+					SELECT validator_index, balance_start FROM balance_start_epochs LEFT JOIN validator_dashboard_data_epoch USING (validator_index, epoch)
+			),`,
+		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
+		TailBalancesInsertColumnQuery: "balance_start,",
+		TableFromEpochColumn:          "epoch",
+		Log:                           d.log,
+		TableConflict:                 "(validator_index)",
+	})
+
 	if err != nil {
 		return err
 	}
