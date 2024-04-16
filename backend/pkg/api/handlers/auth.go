@@ -27,7 +27,7 @@ func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 
 	return types.User{
-		Id:        uint64(userId),
+		Id:        userId,
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
