@@ -10,6 +10,7 @@ import (
 )
 
 func NewSessionManager(redisEndpoint string) *scs.SessionManager {
+	// TODO: replace redis with user db down the line (or replace sessions with oauth2)
 	pool := &redis.Pool{
 		MaxIdle: 10,
 		Dial: func() (redis.Conn, error) {
@@ -18,12 +19,14 @@ func NewSessionManager(redisEndpoint string) *scs.SessionManager {
 	}
 
 	scs := scs.New()
-	scs.Lifetime = time.Hour * 24 * 7
+	// TODO: change to 1 week before merging
+	scs.Lifetime = time.Minute * 10
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
 	scs.Cookie.SameSite = http.SameSiteLaxMode
-	scs.Cookie.Secure = true
+	// TODO: change to true before merging
+	scs.Cookie.Secure = false
 
 	scs.Store = redisstore.New(pool)
 

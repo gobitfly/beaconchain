@@ -169,7 +169,7 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 
 func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var err error
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		returnBadRequest(w, err)
 		return
@@ -184,7 +184,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 
 func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name string `json:"name"`
 	}{}
@@ -214,7 +214,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkDashboardPrimaryId(&err, vars["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, vars["dashboard_id"])
 	groupId := checkExistingGroupId(&err, vars["group_id"])
 	req := struct {
 		Name string `json:"name"`
@@ -253,7 +253,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	groupId := checkExistingGroupId(&err, vars["group_id"])
 	if err != nil {
 		returnBadRequest(w, err)
@@ -283,7 +283,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 
 func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
@@ -359,7 +359,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var err error
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	var indices []uint64
 	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
@@ -385,7 +385,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	var err error
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
@@ -416,7 +416,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
@@ -457,7 +457,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vars := mux.Vars(r)
-	dashboardId := checkDashboardPrimaryId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
 	publicDashboardId := checkValidatorDashboardPublicId(&err, vars["public_id"])
 	if err != nil {
 		returnBadRequest(w, err)
