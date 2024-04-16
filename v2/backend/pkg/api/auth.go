@@ -30,3 +30,18 @@ func NewSessionManager(redisEndpoint string, secure bool) *scs.SessionManager {
 
 	return scs
 }
+
+func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			query := r.URL.Query().Get("api_key")
+
+			if header != "Bearer "+apiKey && query != apiKey {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
