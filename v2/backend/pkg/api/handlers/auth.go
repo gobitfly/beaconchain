@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -67,6 +68,11 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	// fetch user
 	user, err := h.dai.GetUserInfo(email)
+	if errors.Is(err, dataaccess.ErrNotFound) {
+		returnBadRequest(w, errors.New("invalid email or password"))
+		return
+	}
+
 	if err != nil {
 		handleError(w, err)
 		return

@@ -19,14 +19,12 @@ func NewSessionManager(redisEndpoint string) *scs.SessionManager {
 	}
 
 	scs := scs.New()
-	// TODO: change to 1 week before merging
-	scs.Lifetime = time.Minute * 10
+	scs.Lifetime = time.Hour * 24 * 7
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
 	scs.Cookie.SameSite = http.SameSiteLaxMode
-	// TODO: change to true before merging
-	scs.Cookie.Secure = false
+	scs.Cookie.Secure = true
 
 	scs.Store = redisstore.New(pool)
 
