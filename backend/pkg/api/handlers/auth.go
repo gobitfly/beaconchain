@@ -18,13 +18,13 @@ const (
 )
 
 func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
-	authenticated := h.scs.GetBool(r.Context(), "authenticated")
+	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
 	if !authenticated {
 		return types.User{}, errors.New("not authenticated")
 	}
-	userId := h.scs.GetInt64(r.Context(), "user_id")
-	subscription := h.scs.GetString(r.Context(), "subscription")
-	userGroup := h.scs.GetString(r.Context(), "user_group")
+	userId := h.scs.Get(r.Context(), userIdKey).(uint64)
+	subscription := h.scs.GetString(r.Context(), subscriptionKey)
+	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 
 	return types.User{
 		Id:        uint64(userId),

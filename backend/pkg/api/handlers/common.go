@@ -253,7 +253,7 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	return dashboardId, nil
 }
 
-func checkDashboardPrimaryId(handlerErr *error, param string) types.VDBIdPrimary {
+func checkPrimaryDashboardId(handlerErr *error, param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(checkUint(handlerErr, param, "dashboard_id"))
 }
 
@@ -471,6 +471,10 @@ func returnInternalServerError(w http.ResponseWriter, err error) {
 }
 
 func handleError(w http.ResponseWriter, err error) {
+	if errors.Is(err, dataaccess.ErrNotFound) {
+		returnNotFound(w, err)
+		return
+	}
 	// TODO @recy21 define error types in data access package
 	// TODO @LuccaBitfly handle specific data access errors
 	returnInternalServerError(w, err)

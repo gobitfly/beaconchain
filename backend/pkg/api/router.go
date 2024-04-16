@@ -49,6 +49,9 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
+		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
+		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
+
 		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},

@@ -136,70 +136,79 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.WriterDatabase.Username,
-			Password:     cfg.WriterDatabase.Password,
-			Name:         cfg.WriterDatabase.Name,
-			Host:         cfg.WriterDatabase.Host,
-			Port:         cfg.WriterDatabase.Port,
-			MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-		}, &types.DatabaseConfig{
-			Username:     cfg.ReaderDatabase.Username,
-			Password:     cfg.ReaderDatabase.Password,
-			Name:         cfg.ReaderDatabase.Name,
-			Host:         cfg.ReaderDatabase.Host,
-			Port:         cfg.ReaderDatabase.Port,
-			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-		})
+		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(
+			&types.DatabaseConfig{
+				Username:     cfg.WriterDatabase.Username,
+				Password:     cfg.WriterDatabase.Password,
+				Name:         cfg.WriterDatabase.Name,
+				Host:         cfg.WriterDatabase.Host,
+				Port:         cfg.WriterDatabase.Port,
+				MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+			},
+			&types.DatabaseConfig{
+				Username:     cfg.ReaderDatabase.Username,
+				Password:     cfg.ReaderDatabase.Password,
+				Name:         cfg.ReaderDatabase.Name,
+				Host:         cfg.ReaderDatabase.Host,
+				Port:         cfg.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+			},
+		)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.AlloyWriter.Username,
-			Password:     cfg.AlloyWriter.Password,
-			Name:         cfg.AlloyWriter.Name,
-			Host:         cfg.AlloyWriter.Host,
-			Port:         cfg.AlloyWriter.Port,
-			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-			SSL:          cfg.AlloyWriter.SSL,
-		}, &types.DatabaseConfig{
-			Username:     cfg.AlloyReader.Username,
-			Password:     cfg.AlloyReader.Password,
-			Name:         cfg.AlloyReader.Name,
-			Host:         cfg.AlloyReader.Host,
-			Port:         cfg.AlloyReader.Port,
-			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-			SSL:          cfg.AlloyReader.SSL,
-		})
+		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(
+			&types.DatabaseConfig{
+				Username:     cfg.AlloyWriter.Username,
+				Password:     cfg.AlloyWriter.Password,
+				Name:         cfg.AlloyWriter.Name,
+				Host:         cfg.AlloyWriter.Host,
+				Port:         cfg.AlloyWriter.Port,
+				MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
+				MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
+				SSL:          cfg.AlloyWriter.SSL,
+			},
+			&types.DatabaseConfig{
+				Username:     cfg.AlloyReader.Username,
+				Password:     cfg.AlloyReader.Password,
+				Name:         cfg.AlloyReader.Name,
+				Host:         cfg.AlloyReader.Host,
+				Port:         cfg.AlloyReader.Port,
+				MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
+				MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
+				SSL:          cfg.AlloyReader.SSL,
+			},
+		)
 	}()
 
 	// Initialize the user database
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.userReader, dataAccessService.userWriter = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.Frontend.ReaderDatabase.Name,
-			Password:     cfg.Frontend.ReaderDatabase.Password,
-			Name:         cfg.Frontend.ReaderDatabase.Name,
-			Host:         cfg.Frontend.ReaderDatabase.Host,
-			Port:         cfg.Frontend.ReaderDatabase.Port,
-			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-		}, &types.DatabaseConfig{
-			Username:     cfg.Frontend.WriterDatabase.Name,
-			Password:     cfg.Frontend.WriterDatabase.Password,
-			Name:         cfg.Frontend.WriterDatabase.Name,
-			Host:         cfg.Frontend.WriterDatabase.Host,
-			Port:         cfg.Frontend.WriterDatabase.Port,
-			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
-		})
+		dataAccessService.userReader, dataAccessService.userWriter = db.MustInitDB(
+			&types.DatabaseConfig{
+				Username:     cfg.Frontend.WriterDatabase.Username,
+				Password:     cfg.Frontend.WriterDatabase.Password,
+				Name:         cfg.Frontend.WriterDatabase.Name,
+				Host:         cfg.Frontend.WriterDatabase.Host,
+				Port:         cfg.Frontend.WriterDatabase.Port,
+				MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
+			},
+			&types.DatabaseConfig{
+				Username:     cfg.Frontend.ReaderDatabase.Username,
+				Password:     cfg.Frontend.ReaderDatabase.Password,
+				Name:         cfg.Frontend.ReaderDatabase.Name,
+				Host:         cfg.Frontend.ReaderDatabase.Host,
+				Port:         cfg.Frontend.ReaderDatabase.Port,
+				MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+			},
+		)
 	}()
 
 	// Initialize the bigtable
@@ -266,6 +275,8 @@ func (d *DataAccessService) CloseDataAccessService() {
 	}
 }
 
+var ErrNotFound = errors.New("not found")
+
 //////////////////// 		Helper functions
 
 func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
@@ -310,7 +321,28 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 
 func (d *DataAccessService) GetUserInfo(email string) (*t.User, error) {
 	// TODO @recy21
-	return d.dummy.GetUserInfo(email)
+	result := &t.User{}
+	err := d.userReader.Get(result, `
+		WITH
+			latest_and_greatest_sub AS (
+				SELECT user_id, product_id FROM users_app_subscriptions 
+				left join users on users.id = user_id 
+				WHERE users.email = $1 AND active = true
+				ORDER BY CASE product_id
+					WHEN 'whale' THEN 1
+					WHEN 'goldfish' THEN 2
+					WHEN 'plankton' THEN 3
+					ELSE 4  -- For any other product_id values
+				END, users_app_subscriptions.created_at DESC LIMIT 1
+			)
+		SELECT users.id as id, password, COALESCE(product_id, '') as product_id, COALESCE(user_group, '') AS user_group 
+		FROM users
+		left join latest_and_greatest_sub on latest_and_greatest_sub.user_id = users.id  
+		WHERE email = $1`, email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
+	}
+	return result, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
@@ -324,7 +356,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary
 		WHERE id = $1
 	`, dashboardId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("dashboard with id %d not found, err: %w", dashboardId, err)
+		return nil, fmt.Errorf("%w: dashboard with id %v not found", ErrNotFound, dashboardId)
 	}
 	return result, err
 }
@@ -341,7 +373,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 		WHERE uvds.public_id = $1
 	`, publicDashboardId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("dashboard with public id %s not found, err: %w", publicDashboardId, err)
+		return nil, fmt.Errorf("%w: dashboard with public id %v not found", ErrNotFound, publicDashboardId)
 	}
 	return result, err
 }
@@ -1124,7 +1156,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t
 	`, name, showGroupNames, publicDashboardId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("public dashboard id %v does not exist, cannot update it", publicDashboardId)
+			return nil, fmt.Errorf("%w: public dashboard id %v not found", ErrNotFound, publicDashboardId)
 		}
 		return nil, err
 	}
