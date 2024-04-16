@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashbaord/group'
 
-// TODO: replace with dashboardKey provider once it's merged
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -43,13 +38,13 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(dashboardKey, () => {
   loadData()
 }, { immediate: true })
 
 watch(query, (q) => {
   if (q) {
-    getBlocks(props.dashboardKey, q)
+    getBlocks(dashboardKey.value, q)
   }
 }, { immediate: true })
 
