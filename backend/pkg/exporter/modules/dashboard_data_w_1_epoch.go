@@ -76,7 +76,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 	d.mutex.Lock()
 	err := d.createEpochPartition(startOfPartition, endOfPartition)
 	if epoch == startOfPartition && debugAddToColumnEngine {
-		err = edb.AddToColumnEngine(fmt.Sprintf("validator_dashboard_data_epoch_%d_%d", startOfPartition, endOfPartition), "epoch")
+		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("validator_dashboard_data_epoch_%d_%d", startOfPartition, endOfPartition))
 		if err != nil {
 			d.log.Warnf("Failed to add epoch to column engine: %v", err)
 		}

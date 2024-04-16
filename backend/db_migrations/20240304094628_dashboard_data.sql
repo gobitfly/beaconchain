@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     primary key (validator_index, epoch)
 ) PARTITION BY range (epoch);
 
+CREATE INDEX validator_dashboard_data_epoch_epoch_idx ON validator_dashboard_data_epoch (epoch);
+
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     validator_index int NOT NULL,

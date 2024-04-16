@@ -25,7 +25,7 @@ func newEpochToTotalAggregator(d *dashboardData) *epochToTotalAggregator {
 }
 
 // Assumes no gaps in epochs
-func (d *epochToTotalAggregator) aggregateTotal() error {
+func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -37,11 +37,6 @@ func (d *epochToTotalAggregator) aggregateTotal() error {
 	lastTotalExported, err := edb.GetLastExportedTotalEpoch()
 	if err != nil && err != sql.ErrNoRows {
 		return errors.Wrap(err, "failed to get last exported total epoch")
-	}
-
-	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
 	if currentExportedEpoch < lastTotalExported.EpochEnd {
@@ -74,15 +69,21 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 	defer utils.Rollback(tx)
 
 	d.log.Infof("aggregating total (from: %d) up to %d", epochStart, epochEnd)
+	err = d.dayUp.rollingAggregator.addToRolling(tx, "validator_dashboard_data_rolling_total", epochStart, epochEnd, 0)
+	if err != nil {
+		return errors.Wrap(err, "failed to add to rolling total")
+	}
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 
 	_, err = tx.Exec(`
 		WITH
 			end_epoch as (
 				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch <= $2 AND epoch >= $1
 			),
-			--balance_starts as ( -- we dont need this for updating, only for bootstraping
-			--	SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
-			--),
 			balance_ends as (
 				SELECT validator_index, balance_end FROM validator_dashboard_data_epoch WHERE epoch = (SELECT epoch FROM end_epoch)
 			),
@@ -193,7 +194,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 				sync_executed,
 				sync_rewards,
 				slashed,
-				32e9, --balance_start,
+				0, --balance_start as 0 for all validators, including genesis validators to unify calculation with this data,
 				balance_end,
 				deposits_count,
 				deposits_amount,
@@ -212,7 +213,6 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 				slashed_violation,
 				last_executed_duty_epoch
 			FROM aggregate
-			--LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
 			ON CONFLICT (validator_index) DO UPDATE SET
 				attestations_source_reward = COALESCE(validator_dashboard_data_rolling_total.attestations_source_reward, 0) + COALESCE(EXCLUDED.attestations_source_reward, 0),

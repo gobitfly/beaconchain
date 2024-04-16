@@ -937,3 +937,12 @@ func AddToColumnEngine(table, columns string) error {
 		`, table, columns))
 	return err
 }
+
+func AddToColumnEngineAllColumns(table string) error {
+	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		SELECT google_columnar_engine_add(
+			relation => '%s'
+		);
+		`, table))
+	return err
+}
