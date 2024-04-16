@@ -152,19 +152,6 @@ func (d *dashboardData) processHeadQueue() {
 				stage = 3
 			}
 
-			// only aggregate more intense data if we are close to head finalization
-			// if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1 { // todo remove debug field
-			// 	if stage <= 3 {
-			// 		err := d.aggregateMid()
-			// 		if err != nil {
-			// 			d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
-			// 			time.Sleep(time.Second * 10)
-			// 			continue
-			// 		}
-			// 		stage = 4
-			// 	}
-			// }
-
 			break
 		}
 
@@ -650,21 +637,10 @@ func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) err
 		return nil
 	})
 
-	// currentExportedEpoch, err := edb.GetLatestDashboardEpoch(nil)
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to get last exported epoch")
-	// }
-
 	err := errGroup.Wait()
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate")
 	}
-
-	// // clear old individual epochs. Do this here since the rolling aggregates relies on it being available
-	// err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to clear old epochs")
-	// }
 
 	return nil
 }
