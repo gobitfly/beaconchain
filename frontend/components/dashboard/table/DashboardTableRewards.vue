@@ -234,7 +234,7 @@ const findNextEpochDuties = (epoch: number) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails :row="slotProps.data" />
+              <DashboardTableRewardsDetails :row="slotProps.data" :group-name="groupNameLabel(slotProps.data.group_id)" />
             </template>
           </BcTable>
         </ClientOnly>

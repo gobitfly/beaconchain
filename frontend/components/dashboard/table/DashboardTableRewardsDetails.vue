@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { faArrowUpRightFromSquare, faSigma, faSnooze } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
+import { DashboardValidatorEpochDutiesModal, IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
   row: VDBRewardsTableRow
+  groupName?: string
 }
 const props = defineProps<Props>()
 
@@ -14,6 +15,8 @@ const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useI18n()
 const { details } = useValidatorDashboardRewardsDetailsStore(dashboardKey.value, props.row.group_id, props.row.epoch)
+
+const dialog = useDialog()
 
 const data = computed(() => {
   if (!details.value) {
@@ -105,8 +108,14 @@ const data = computed(() => {
 })
 
 const openDuties = () => {
-  // TODO: implement modal
-  alert('open details')
+  dialog.open(DashboardValidatorEpochDutiesModal, {
+    data: {
+      dashboardKey: dashboardKey.value,
+      groupId: props.row.group_id,
+      groupName: props.groupName,
+      epoch: props.row.epoch
+    }
+  })
 }
 
 </script>
