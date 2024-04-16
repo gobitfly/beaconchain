@@ -1,6 +1,6 @@
 import type { Dashboard } from '../api/dashboard'
 
-// can be ether a dashboard id or a list of hashed validators
+// can be either a dashboard id or a list of hashed validators
 export type DashboardKey = string
 
 export type DashboardType = 'validator' | 'account'
