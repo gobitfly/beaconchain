@@ -4,6 +4,7 @@
   },
   "common": {
     "age": "Age",
+    "block": "Block",
     "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator",
@@ -78,14 +79,6 @@
     "total": "All Time",
     "all": "All Time"
   },
-  "block": {
-    "status": {
-      "missed": "Missed",
-      "orphaned": "Orphaned",
-      "scheduled": "Scheduled",
-      "success": "Proposed"
-    }
-  },
   "slotViz": {
     "head": "Head",
     "tooltip": {
@@ -136,6 +129,18 @@
         "duties_success": ["All of your duties were", "successful", ""],
         "duties_failed": ["All of your duties were", "missed", ""]
       }
+    }
+  },
+  "block":{
+    "status": {
+      "missed": "Missed",
+      "orphaned": "Orphaned",
+      "scheduled": "Scheduled",
+      "success": "Proposed"
+    },
+    "col":{
+      "proposer": "Proposer",
+      "graffiti": "Graffiti"
     }
   },
   "validator": {
@@ -205,6 +210,12 @@
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
+      "blocks":{
+        "title": "Blocks",
+        "search_placeholder": "Index, Public Key, Group",
+        "el_rewards": "Execution Layer Reward",
+        "cl_rewards": "Consensus Layer Reward"
+      },
       "rewards": {
         "title": "Rewards",
         "search_placeholder": "Epoch, Index, Pubkey, Group",
@@ -268,7 +279,10 @@
         "efficiency_last_7d": "Efficiency (7d)",
         "efficiency_last_30d": "Efficiency (30d)",
         "efficiency_all_time": "Efficiency (All Time)",
-        "validators": "Validators"
+        "validators": "Validators",
+        "rewards": "Rewards",
+        "reward_recipient": "Rewards Recipient",
+        "proposer_rewards": "Proposer Rewards"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
