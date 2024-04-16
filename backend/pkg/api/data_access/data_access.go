@@ -1153,8 +1153,11 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 		epoch := maxEpoch - epochIdx
 		epochToIndexMap[epoch] = epochIdx
 
-		// Set the epoch number
+		// Set the epoch number and state if it is the head
 		slotVizEpochs[epochIdx].Epoch = epoch
+		if epoch == headEpoch {
+			slotVizEpochs[epochIdx].State = "head"
+		}
 
 		// every validator can only attest once per epoch
 		// attestedValidators := make(map[uint32]bool, len(validatorsArray))
