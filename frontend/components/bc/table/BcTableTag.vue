@@ -26,7 +26,7 @@ defineProps<Props>()
   min-width: 80px;
   height: 20px;
   padding: 0 14px;
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 10px;

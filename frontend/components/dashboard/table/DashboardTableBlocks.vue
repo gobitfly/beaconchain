@@ -26,13 +26,13 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    slot: width.value > 960,
-    age: width.value > 880,
-    rewardsRecipient: width.value > 800,
-    status: width.value > 700,
-    mobileStatus: width.value < 1000,
-    rewards: width.value > 600,
-    groupSort: width.value > 400
+    slot: width.value > 1010,
+    age: width.value > 930,
+    rewardsRecipient: width.value > 850,
+    status: width.value > 750,
+    mobileStatus: width.value < 1060,
+    rewards: width.value > 650,
+    groupSort: width.value > 450
   }
 })
 
@@ -154,7 +154,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </NuxtLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" :sortable="true" field="age" body-class="age" header-class="age">
+            <Column v-if="colsVisible.age" field="age" body-class="age" header-class="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -167,7 +167,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="status"
               :sortable="!colsVisible.mobileStatus"
               :header="$t('dashboard.validator.col.status')"
-              :body-class="colsVisible.mobileStatus ? 'status-mobile': ''"
+              :body-class="colsVisible.mobileStatus ? 'status-mobile' : ''"
             >
               <template #body="slotProps">
                 <BlockTableStatus :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
@@ -176,11 +176,18 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             <Column
               v-if="colsVisible.rewardsRecipient"
               field="reward_recipient"
+              header-class="reward_recipient"
               :sortable="true"
               :header="$t('dashboard.validator.col.reward_recipient')"
             >
               <template #body="slotProps">
-                <BcFormatHash v-if="slotProps.data.reward_recipient?.hash" class="reward_recipient" :hash="slotProps.data.reward_recipient?.hash" :ens="slotProps.data.reward_recipient?.ens" />
+                <BcFormatHash
+                  v-if="slotProps.data.reward_recipient?.hash"
+                  type="address"
+                  class="reward_recipient"
+                  :hash="slotProps.data.reward_recipient?.hash"
+                  :ens="slotProps.data.reward_recipient?.ens"
+                />
                 <span v-else>-</span>
               </template>
             </Column>
@@ -232,7 +239,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.reward_recipient') }}:
                   </div>
-                  <BcFormatHash v-if="slotProps.data.reward_recipient?.hash" class="reward_recipient" :hash="slotProps.data.reward_recipient?.hash" :ens="slotProps.data.reward_recipient?.ens" />
+                  <BcFormatHash
+                    v-if="slotProps.data.reward_recipient?.hash"
+                    type="address"
+                    class="reward_recipient"
+                    :hash="slotProps.data.reward_recipient?.hash"
+                    :ens="slotProps.data.reward_recipient?.ens"
+                  />
                   <span v-else>-</span>
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
@@ -288,6 +301,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
     white-space: nowrap;
   }
 
+  .reward,
+  .reward_recipient {
+    .p-column-title {
+      @include utils.truncate-text;
+    }
+  }
+
   .future-row {
     td {
 
@@ -299,8 +319,8 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   }
 }
 
-.reward_recipient{
-    @include utils.set-all-width(120px);
+.reward_recipient {
+  @include utils.set-all-width(120px);
 }
 
 .expansion {
