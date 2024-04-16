@@ -48,9 +48,14 @@ If the API gets the ability to return a new field in some or all elements of its
   3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
   4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`
 
-If for some type of result you want to change the information / order of the information that the user sees in the corresponding suggestion rows of the drop-down:
+If for some type of result you want to change the information / order of the information that the user sees in the corresponding rows of the result-suggestion list:
   1. Locate this result type in record `TypeInfo`.
   2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
+
+If you want to change in depth the whole result-suggestion list (to change how every row displays the information):
+  1. Add a display-mode in the `SuggestionrowCells` enum in `searchbar.ts`
+  2. Update the `SearchbarPurposeInfo` record there to tell the bar which Purpose must use your new mode.
+  3. Implement this mode in a new root `<div>` at the end of the `<template>` of `SuggestionRow.vue`.
 
 You can create a new `:bar-purpose` if needed:
   1. Add a purpose name into the `SearchbarPurpose` enum of `searchbar.ts`.
