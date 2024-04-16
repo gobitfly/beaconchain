@@ -52,11 +52,11 @@ export function useValue () {
         maxDecimalCount = Math.min(maxDecimalCount, 2)
       }
       if (useNative && (!options?.minUnit || options?.minUnit !== 'MAIN')) {
-        if (options?.fixedUnit === 'WEI' || ((!options?.minUnit || options?.minUnit === 'WEI') && lessThanGwei(value.abs(), maxDecimalCount))) {
+        if (options?.fixedUnit === 'WEI' || ((!options?.minUnit || options?.minUnit === 'WEI') && lessThanGwei(value.abs(), options?.minUnitDecimalCount ?? maxDecimalCount))) {
           value = value.mul(OneEther)
           maxDecimalCount = 0
           currencyLabel = 'WEI'
-        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThanEth(value.abs(), maxDecimalCount))) {
+        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThanEth(value.abs(), options?.minUnitDecimalCount ?? maxDecimalCount))) {
           value = value.mul(OneGwei)
           currencyLabel = 'GWEI'
         }
