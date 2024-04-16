@@ -210,7 +210,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
                   </NuxtLink>
                 </div>
