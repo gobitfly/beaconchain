@@ -282,6 +282,10 @@ type CustomRolling struct {
 // This method is the bread and butter of all aggregation. It is used by rolling window aggregation to add to head,
 // it is used by total to add to head, it is used by utc day and hour aggregation to add to head
 func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
+	if custom.TailBalancesInsertColumnQuery == "" {
+		custom.TailBalancesInsertColumnQuery = "null,"
+	}
+
 	tmpl := `
 		WITH
 			head_balance_ends as (
@@ -355,7 +359,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				sync_rewards,
 				slashed,
 				balance_end,
-				{{ .TailBalancesInsertColumnQuery }} -- balance_start
+				balance_start,
 				deposits_count,
 				deposits_amount,
 				withdrawals_count,
