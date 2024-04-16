@@ -189,7 +189,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.userReader, dataAccessService.userWriter = db.MustInitDB(
+		dataAccessService.userWriter, dataAccessService.userReader = db.MustInitDB(
 			&types.DatabaseConfig{
 				Username:     cfg.Frontend.WriterDatabase.Username,
 				Password:     cfg.Frontend.WriterDatabase.Password,
