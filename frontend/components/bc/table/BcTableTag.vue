@@ -30,7 +30,7 @@ defineProps<Props>()
   justify-content: center;
   align-items: center;
   border-radius: 10px;
-  font-size: var(--small_text_font_weight);
+  font-size: var(--small_text_font_size);
   font-weight: var(--small_text_bold_font_weight);
   cursor: default;
 
