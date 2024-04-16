@@ -68,13 +68,12 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	// fetch user
 	user, err := h.dai.GetUserInfo(email)
-	if errors.Is(err, dataaccess.ErrNotFound) {
-		returnBadRequest(w, errors.New("invalid email or password"))
-		return
-	}
-
 	if err != nil {
-		handleError(w, err)
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			returnBadRequest(w, errors.New("invalid email or password"))
+		} else {
+			handleError(w, err)
+		}
 		return
 	}
 
