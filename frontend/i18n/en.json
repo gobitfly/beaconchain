@@ -157,6 +157,16 @@
       "slashing_success": "You slashed a validator",
       "slashing_failed": "You got slashed",
       "slashing_partial": "You slashed a validator and got slashed"
+    }, 
+    "rewards":{
+      "total": "Total",
+      "attestation_head": "Attestation Head",
+      "attestation_source": "Attestation Source",
+      "attestation_target": "Attestation Target",
+      "proposer_el": "Proposer EL Reward",
+      "proposer_attestation": "Proposer Att. Reward",
+      "proposer_sync": "Proposer Sync. Reward:",
+      "proposer_slashing": "Proposer Slashing Reward"
     }
   },
   "dashboard": {
@@ -231,7 +241,7 @@
           ]
         }
       },
-      "group_management": {
+      "group_management":  {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
         "validators_added": "validators added",
@@ -317,6 +327,16 @@
         "sync": {
           "title": "Sync Committee Efficiency: ",
           "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
+        }
+      },
+      "duties": {
+        "title": "Epoch",
+        "search_placeholder": "Index, Public Key",
+        "col": {
+          "duties": "Duties",
+          "result": "Result",
+          "rewards": "Rewards",
+          "validator": "Validator"
         }
       }
     }

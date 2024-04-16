@@ -110,6 +110,9 @@ watch(() => props.expandable, (expandable) => {
       <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />
     </template>
 
+    <template #loading>
+      <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
+    </template>
     <template #footer>
       <BcTablePager
         v-if="data?.paging"
