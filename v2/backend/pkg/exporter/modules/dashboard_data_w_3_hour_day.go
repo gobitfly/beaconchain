@@ -11,7 +11,6 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 type hourToDayAggregator struct {
@@ -39,25 +38,13 @@ func GetDayAggregateWidth() uint64 {
 	return utils.EpochsPerDay()
 }
 
-func (d *hourToDayAggregator) dayAggregate(workingOnHead bool) error {
+func (d *hourToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(databaseAggregationParallelism)
-
-	errGroup.Go(func() error {
-		err := d.utcDayAggregate()
-		if err != nil {
-			return errors.Wrap(err, "failed to utc day aggregate")
-		}
-		d.log.Infof("finished dayAggregate errgroup utc")
-		return nil
-	})
-
-	err := errGroup.Wait()
+	err := d.utcDayAggregate(currentExportedEpoch)
 	if err != nil {
-		return errors.Wrap(err, "failed to wait for day aggregation")
+		return errors.Wrap(err, "failed to utc day aggregate")
 	}
 
 	d.log.Infof("finished dayAggregate all finished")
@@ -71,8 +58,8 @@ func (d *hourToDayAggregator) getMissingRolling24TailEpochs(intendedHeadEpoch ui
 	return d.rollingAggregator.getMissingRollingTailEpochs(1, intendedHeadEpoch, "validator_dashboard_data_rolling_daily")
 }
 
-func (d *hourToDayAggregator) rolling24hAggregate() error {
-	return d.rollingAggregator.Aggregate(1, "validator_dashboard_data_rolling_daily")
+func (d *hourToDayAggregator) rolling24hAggregate(currentEpochHead uint64) error {
+	return d.rollingAggregator.Aggregate(1, "validator_dashboard_data_rolling_daily", currentEpochHead)
 }
 
 func getDayAggregateBounds(epoch uint64) (uint64, uint64) {
@@ -86,7 +73,7 @@ func getDayAggregateBounds(epoch uint64) (uint64, uint64) {
 	return startOfPartition - offset, endOfPartition - offset
 }
 
-func (d *hourToDayAggregator) utcDayAggregate() error {
+func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error {
 	startTime := time.Now()
 	defer func() {
 		d.log.Infof("utc day aggregate took %v", time.Since(startTime))
@@ -97,12 +84,16 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 		return errors.Wrap(err, "failed to get latest daily epoch")
 	}
 
-	latestExportedHour, err := edb.GetLastExportedHour()
+	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(latestExportedDay.EpochEnd))
 	if err != nil {
-		return errors.Wrap(err, "failed to get latest hourly epoch")
+		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}
 
-	_, currentEndBound := getDayAggregateBounds(latestExportedHour.EpochStart)
+	if len(gaps) > 0 {
+		return fmt.Errorf("gaps in dashboard epoch for utc day agg, skipping for now: %v", gaps) // sanity, this should never happen
+	}
+
+	_, currentEndBound := getDayAggregateBounds(currentExportedEpoch)
 
 	for epoch := latestExportedDay.EpochStart; epoch <= currentEndBound; epoch += GetDayAggregateWidth() {
 		boundsStart, boundsEnd := getDayAggregateBounds(epoch)
@@ -111,8 +102,28 @@ func (d *hourToDayAggregator) utcDayAggregate() error {
 			continue
 		}
 
-		if boundsStart > latestExportedHour.EpochStart {
-			continue // nothing to do
+		// if boundsStart > latestExportedHour.EpochStart {
+		// 	continue // nothing to do
+		// }
+
+		// // define start bounds as latestExportedDay.EpochEnd for first iteration
+		// if epoch == latestExportedDay.EpochStart {
+		// 	boundsStart = latestExportedDay.EpochEnd
+		// }
+
+		// // scope down to max hour exported epoch
+		// if latestExportedHour.EpochEnd >= boundsStart && latestExportedHour.EpochEnd < boundsEnd {
+		// 	boundsEnd = latestExportedHour.EpochEnd
+		// }
+
+		// define start bounds as lastHourExported.EpochEnd for first iteration
+		if epoch == latestExportedDay.EpochStart {
+			boundsStart = latestExportedDay.EpochEnd
+		}
+
+		// scope down to max currentExportedEpoch (since epoch data is inclusive, add 1)
+		if currentExportedEpoch+1 >= boundsStart && currentExportedEpoch+1 < boundsEnd {
+			boundsEnd = currentExportedEpoch + 1
 		}
 
 		err = d.aggregateUtcDaySpecific(boundsStart, boundsEnd)
@@ -134,14 +145,16 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 		return errors.Wrap(err, "failed to create day partition")
 	}
 
-	// sanity check see if tail validator_dashboard_data_hourly epoch_start exists
-	var found bool
-	err = db.AlloyWriter.Get(&found, `
-		SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1 
-	`, firstEpochOfDay)
-	if err != nil || !found {
-		return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", firstEpochOfDay))
-	}
+	// // sanity check see if tail validator_dashboard_data_hourly epoch_start exists
+	// var found bool
+	// err = db.AlloyWriter.Get(&found, `
+	// 	SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1
+	// `, firstEpochOfDay)
+	// if err != nil || !found {
+	// 	return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", firstEpochOfDay))
+	// }
+
+	boundsStart, _ := getDayAggregateBounds(firstEpochOfDay)
 
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
@@ -149,13 +162,37 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 	}
 	defer utils.Rollback(tx)
 
+	err = AddToRollingCustom(tx, CustomRolling{
+		StartEpoch:           firstEpochOfDay,
+		EndEpoch:             lastEpochOfDay - 1, // rolling arg is inclusive
+		StartBoundEpoch:      int64(boundsStart),
+		TableFrom:            "validator_dashboard_data_epoch",
+		TableTo:              "validator_dashboard_data_daily",
+		TableFromEpochColumn: "epoch",
+		Log:                  d.log,
+		TailBalancesQuery: `balance_starts as (
+				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $3
+		),`,
+		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
+		TailBalancesInsertColumnQuery: `balance_start,`,
+		TableDayColum:                 "day,",
+		TableDayValue:                 fmt.Sprintf("'%s' as day,", utils.EpochToTime(boundsStart).Format("2006-01-02")),
+		TableConflict:                 "(day, validator_index)",
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "failed to insert daily aggregate")
+	}
+
+	return tx.Commit()
+
 	_, err = tx.Exec(`
 		WITH
 			end_epoch as (
-				SELECT max(epoch_start) as epoch, max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly where epoch_start >= $1 AND epoch_start < $2
+				SELECT max(epoch_start) as epoch, max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly where epoch_start >= $4 AND epoch_start < $2
 			),
 			balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_hourly WHERE epoch_start = $1
+				SELECT validator_index, balance_start FROM validator_dashboard_data_hourly WHERE epoch_start = $4
 			),
 			balance_ends as (
 				SELECT validator_index, balance_end FROM validator_dashboard_data_hourly WHERE epoch_start = (SELECT epoch FROM end_epoch)
@@ -247,7 +284,7 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 			)
 			SELECT 
 				$3,
-				$1,
+				$4,
 				(SELECT epoch_end FROM end_epoch), -- exclusive, hence use epoch_end
 				aggregate.validator_index,
 				attestations_source_reward,
@@ -291,46 +328,44 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
 			ON CONFLICT (day, validator_index) DO UPDATE SET
-				attestations_source_reward = EXCLUDED.attestations_source_reward,
-				attestations_target_reward = EXCLUDED.attestations_target_reward,
-				attestations_head_reward = EXCLUDED.attestations_head_reward,
-				attestations_inactivity_reward = EXCLUDED.attestations_inactivity_reward,
-				attestations_inclusion_reward = EXCLUDED.attestations_inclusion_reward,
-				attestations_reward = EXCLUDED.attestations_reward,
-				attestations_ideal_source_reward = EXCLUDED.attestations_ideal_source_reward,
-				attestations_ideal_target_reward = EXCLUDED.attestations_ideal_target_reward,
-				attestations_ideal_head_reward = EXCLUDED.attestations_ideal_head_reward,
-				attestations_ideal_inactivity_reward = EXCLUDED.attestations_ideal_inactivity_reward,
-				attestations_ideal_inclusion_reward = EXCLUDED.attestations_ideal_inclusion_reward,
-				attestations_ideal_reward = EXCLUDED.attestations_ideal_reward,
-				blocks_scheduled = EXCLUDED.blocks_scheduled,
-				blocks_proposed = EXCLUDED.blocks_proposed,
-				blocks_cl_reward = EXCLUDED.blocks_cl_reward,
-				sync_scheduled = EXCLUDED.sync_scheduled,
-				sync_executed = EXCLUDED.sync_executed,
-				sync_rewards = EXCLUDED.sync_rewards,
-				slashed = EXCLUDED.slashed,
-				balance_start = EXCLUDED.balance_start,
+				attestations_source_reward = validator_dashboard_data_daily.attestations_source_reward + EXCLUDED.attestations_source_reward,
+				attestations_target_reward = validator_dashboard_data_daily.attestations_target_reward + EXCLUDED.attestations_target_reward,
+				attestations_head_reward = validator_dashboard_data_daily.attestations_head_reward + EXCLUDED.attestations_head_reward,
+				attestations_inactivity_reward = validator_dashboard_data_daily.attestations_inactivity_reward + EXCLUDED.attestations_inactivity_reward,
+				attestations_inclusion_reward = validator_dashboard_data_daily.attestations_inclusion_reward + EXCLUDED.attestations_inclusion_reward,
+				attestations_reward = validator_dashboard_data_daily.attestations_reward + EXCLUDED.attestations_reward,
+				attestations_ideal_source_reward = validator_dashboard_data_daily.attestations_ideal_source_reward + EXCLUDED.attestations_ideal_source_reward,
+				attestations_ideal_target_reward = validator_dashboard_data_daily.attestations_ideal_target_reward + EXCLUDED.attestations_ideal_target_reward,
+				attestations_ideal_head_reward = validator_dashboard_data_daily.attestations_ideal_head_reward + EXCLUDED.attestations_ideal_head_reward,
+				attestations_ideal_inactivity_reward = validator_dashboard_data_daily.attestations_ideal_inactivity_reward + EXCLUDED.attestations_ideal_inactivity_reward,
+				attestations_ideal_inclusion_reward = validator_dashboard_data_daily.attestations_ideal_inclusion_reward + EXCLUDED.attestations_ideal_inclusion_reward,
+				attestations_ideal_reward = validator_dashboard_data_daily.attestations_ideal_reward + EXCLUDED.attestations_ideal_reward,
+				blocks_scheduled = validator_dashboard_data_daily.blocks_scheduled + EXCLUDED.blocks_scheduled,
+				blocks_proposed = validator_dashboard_data_daily.blocks_proposed + EXCLUDED.blocks_proposed,
+				blocks_cl_reward = validator_dashboard_data_daily.blocks_cl_reward + EXCLUDED.blocks_cl_reward,
+				sync_scheduled = validator_dashboard_data_daily.sync_scheduled + EXCLUDED.sync_scheduled,
+				sync_executed = validator_dashboard_data_daily.sync_executed + EXCLUDED.sync_executed,
+				sync_rewards = validator_dashboard_data_daily.sync_rewards + EXCLUDED.sync_rewards,
+				slashed = COALESCE(validator_dashboard_data_daily.slashed, EXCLUDED.slashed),
 				balance_end = EXCLUDED.balance_end,
-				deposits_count = EXCLUDED.deposits_count,
-				deposits_amount = EXCLUDED.deposits_amount,
-				withdrawals_count = EXCLUDED.withdrawals_count,
-				withdrawals_amount = EXCLUDED.withdrawals_amount,
-				inclusion_delay_sum = EXCLUDED.inclusion_delay_sum,
-				block_chance = EXCLUDED.block_chance,
-				attestations_scheduled = EXCLUDED.attestations_scheduled,
-				attestations_executed = EXCLUDED.attestations_executed,
-				attestation_head_executed = EXCLUDED.attestation_head_executed,
-				attestation_source_executed = EXCLUDED.attestation_source_executed,
-				attestation_target_executed = EXCLUDED.attestation_target_executed,
-				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum,
-				epoch_start = EXCLUDED.epoch_start,
-				epoch_end = EXCLUDED.epoch_end,
-				slasher_reward = EXCLUDED.slasher_reward,
-				slashed_by = EXCLUDED.slashed_by,
-				slashed_violation = EXCLUDED.slashed_violation,
-				last_executed_duty_epoch = EXCLUDED.last_executed_duty_epoch
-	`, firstEpochOfDay, lastEpochOfDay, utils.EpochToTime(firstEpochOfDay))
+				deposits_count = validator_dashboard_data_daily.deposits_count + EXCLUDED.deposits_count,
+				deposits_amount = validator_dashboard_data_daily.deposits_amount + EXCLUDED.deposits_amount,
+				withdrawals_count = validator_dashboard_data_daily.withdrawals_count + EXCLUDED.withdrawals_count,
+				withdrawals_amount = validator_dashboard_data_daily.withdrawals_amount + EXCLUDED.withdrawals_amount,
+				inclusion_delay_sum = validator_dashboard_data_daily.inclusion_delay_sum + EXCLUDED.inclusion_delay_sum,
+				block_chance = validator_dashboard_data_daily.block_chance + EXCLUDED.block_chance,
+				attestations_scheduled = validator_dashboard_data_daily.attestations_scheduled + EXCLUDED.attestations_scheduled,
+				attestations_executed = validator_dashboard_data_daily.attestations_executed + EXCLUDED.attestations_executed,
+				attestation_head_executed = validator_dashboard_data_daily.attestation_head_executed + EXCLUDED.attestation_head_executed,
+				attestation_source_executed = validator_dashboard_data_daily.attestation_source_executed + EXCLUDED.attestation_source_executed,
+				attestation_target_executed = validator_dashboard_data_daily.attestation_target_executed + EXCLUDED.attestation_target_executed,
+				optimal_inclusion_delay_sum = validator_dashboard_data_daily.optimal_inclusion_delay_sum + EXCLUDED.optimal_inclusion_delay_sum,
+				slasher_reward = validator_dashboard_data_daily.slasher_reward + EXCLUDED.slasher_reward,
+				slashed_by = COALESCE(validator_dashboard_data_daily.slashed_by, EXCLUDED.slashed_by),
+				slashed_violation = COALESCE(validator_dashboard_data_daily.slashed_violation, EXCLUDED.slashed_violation),
+				last_executed_duty_epoch = COALESCE(validator_dashboard_data_daily.last_executed_duty_epoch, EXCLUDED.last_executed_duty_epoch),
+				epoch_end = EXCLUDED.epoch_end
+	`, firstEpochOfDay, lastEpochOfDay, utils.EpochToTime(boundsStart), boundsStart)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert daily aggregate")

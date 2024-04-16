@@ -57,7 +57,7 @@ func (d *epochToHourAggregator) clearOldHourAggregations(removeBelowEpoch int64)
 }
 
 // Assumes no gaps in epochs
-func (d *epochToHourAggregator) aggregate1h() error {
+func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -70,11 +70,6 @@ func (d *epochToHourAggregator) aggregate1h() error {
 	lastHourExported, err := edb.GetLastExportedHour()
 	if err != nil && err != sql.ErrNoRows {
 		return errors.Wrap(err, "failed to get latest dashboard hourly epoch")
-	}
-
-	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
 	differenceToCurrentEpoch := currentExportedEpoch + 1 - lastHourExported.EpochEnd // epochEnd is excl hence the +1
@@ -97,9 +92,20 @@ func (d *epochToHourAggregator) aggregate1h() error {
 
 	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += getHourAggregateWidth() {
 		boundsStart, boundsEnd := getHourAggregateBounds(epoch)
+		d.log.Infof("epoch: %d, boundsStart: %d, boundsEnd: %d |  lastHourExported: %v", epoch, boundsStart, boundsEnd, lastHourExported)
 		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last hour entry since it is complete")
 			continue
+		}
+
+		// define start bounds as lastHourExported.EpochEnd for first iteration
+		if epoch == lastHourExported.EpochStart {
+			boundsStart = lastHourExported.EpochEnd
+		}
+
+		// scope down to max currentExportedEpoch (since epoch data is inclusive, add 1)
+		if currentExportedEpoch+1 >= boundsStart && currentExportedEpoch+1 < boundsEnd {
+			boundsEnd = currentExportedEpoch + 1
 		}
 
 		err = d.aggregate1hSpecific(boundsStart, boundsEnd)
@@ -107,6 +113,8 @@ func (d *epochToHourAggregator) aggregate1h() error {
 			return errors.Wrap(err, "failed to aggregate 1h")
 		}
 	}
+
+	d.log.Info("finished 1h aggregation")
 
 	return nil
 }
@@ -153,6 +161,7 @@ func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStart
 	return err
 }
 
+// epochStart incl, epochEnd excl
 func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
@@ -167,15 +176,50 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 		return errors.Wrap(err, fmt.Sprintf("failed to create hourly partition, startRange: %d, endRange: %d", partitionStartRange, partitionEndRange))
 	}
 
+	boundsStart, _ := getHourAggregateBounds(epochStart)
+
+	if epochStart == partitionStartRange && debugAddToColumnEngine {
+		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("validator_dashboard_data_hourly_%d_%d", partitionStartRange, partitionEndRange))
+		if err != nil {
+			d.log.Warnf("Failed to add epoch to column engine: %v", err)
+		}
+	}
+
 	d.log.Infof("aggregating 1h specific, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
+
+	err = AddToRollingCustom(tx, CustomRolling{
+		StartEpoch:           epochStart,
+		EndEpoch:             epochEnd - 1, // rolling arg is inclusive
+		StartBoundEpoch:      int64(boundsStart),
+		TableFrom:            "validator_dashboard_data_epoch",
+		TableTo:              "validator_dashboard_data_hourly",
+		TableFromEpochColumn: "epoch",
+		Log:                  d.log,
+		TailBalancesQuery: `balance_starts as (
+				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $3
+		),`,
+		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
+		TailBalancesInsertColumnQuery: `balance_start,`,
+		TableConflict:                 "(epoch_start, validator_index)",
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "failed to insert hourly data")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
+	}
+	return nil
 
 	_, err = tx.Exec(`
 		WITH
 			end_epoch as (
-				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch < $2 AND epoch >= $1
+				SELECT max(epoch) as epoch FROM validator_dashboard_data_epoch where epoch < $2 AND epoch >= $3
 			),
 			balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $1
+				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $3
 			),
 			balance_ends as (
 				SELECT validator_index, balance_end FROM validator_dashboard_data_epoch WHERE epoch = (SELECT epoch FROM end_epoch)
@@ -265,8 +309,8 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 				last_executed_duty_epoch
 			)
 			SELECT 
-				$1,
-				(SELECT epoch FROM end_epoch) + 1 as epoch, -- exclusive, todo double check
+				$3,
+				(SELECT epoch FROM end_epoch) + 1 as epoch, -- exclusive
 				aggregate.validator_index,
 				attestations_source_reward,
 				attestations_target_reward,
@@ -309,45 +353,44 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
 			ON CONFLICT (epoch_start, validator_index) DO UPDATE SET
-				attestations_source_reward = EXCLUDED.attestations_source_reward,
-				attestations_target_reward = EXCLUDED.attestations_target_reward,
-				attestations_head_reward = EXCLUDED.attestations_head_reward,
-				attestations_inactivity_reward = EXCLUDED.attestations_inactivity_reward,
-				attestations_inclusion_reward = EXCLUDED.attestations_inclusion_reward,
-				attestations_reward = EXCLUDED.attestations_reward,
-				attestations_ideal_source_reward = EXCLUDED.attestations_ideal_source_reward,
-				attestations_ideal_target_reward = EXCLUDED.attestations_ideal_target_reward,
-				attestations_ideal_head_reward = EXCLUDED.attestations_ideal_head_reward,
-				attestations_ideal_inactivity_reward = EXCLUDED.attestations_ideal_inactivity_reward,
-				attestations_ideal_inclusion_reward = EXCLUDED.attestations_ideal_inclusion_reward,
-				attestations_ideal_reward = EXCLUDED.attestations_ideal_reward,
-				blocks_scheduled = EXCLUDED.blocks_scheduled,
-				blocks_proposed = EXCLUDED.blocks_proposed,
-				blocks_cl_reward = EXCLUDED.blocks_cl_reward,
-				sync_scheduled = EXCLUDED.sync_scheduled,
-				sync_executed = EXCLUDED.sync_executed,
-				sync_rewards = EXCLUDED.sync_rewards,
-				slashed = EXCLUDED.slashed,
-				balance_start = EXCLUDED.balance_start,
+				attestations_source_reward = validator_dashboard_data_hourly.attestations_source_reward + EXCLUDED.attestations_source_reward,
+				attestations_target_reward = validator_dashboard_data_hourly.attestations_target_reward + EXCLUDED.attestations_target_reward,
+				attestations_head_reward = validator_dashboard_data_hourly.attestations_head_reward + EXCLUDED.attestations_head_reward,
+				attestations_inactivity_reward = validator_dashboard_data_hourly.attestations_inactivity_reward + EXCLUDED.attestations_inactivity_reward,
+				attestations_inclusion_reward = validator_dashboard_data_hourly.attestations_inclusion_reward + EXCLUDED.attestations_inclusion_reward,
+				attestations_reward = validator_dashboard_data_hourly.attestations_reward + EXCLUDED.attestations_reward,
+				attestations_ideal_source_reward = validator_dashboard_data_hourly.attestations_ideal_source_reward + EXCLUDED.attestations_ideal_source_reward,
+				attestations_ideal_target_reward = validator_dashboard_data_hourly.attestations_ideal_target_reward + EXCLUDED.attestations_ideal_target_reward,
+				attestations_ideal_head_reward = validator_dashboard_data_hourly.attestations_ideal_head_reward + EXCLUDED.attestations_ideal_head_reward,
+				attestations_ideal_inactivity_reward = validator_dashboard_data_hourly.attestations_ideal_inactivity_reward + EXCLUDED.attestations_ideal_inactivity_reward,
+				attestations_ideal_inclusion_reward = validator_dashboard_data_hourly.attestations_ideal_inclusion_reward + EXCLUDED.attestations_ideal_inclusion_reward,
+				attestations_ideal_reward = validator_dashboard_data_hourly.attestations_ideal_reward + EXCLUDED.attestations_ideal_reward,
+				blocks_scheduled = validator_dashboard_data_hourly.blocks_scheduled + EXCLUDED.blocks_scheduled,
+				blocks_proposed = validator_dashboard_data_hourly.blocks_proposed + EXCLUDED.blocks_proposed,
+				blocks_cl_reward = validator_dashboard_data_hourly.blocks_cl_reward + EXCLUDED.blocks_cl_reward,
+				sync_scheduled = validator_dashboard_data_hourly.sync_scheduled + EXCLUDED.sync_scheduled,
+				sync_executed = validator_dashboard_data_hourly.sync_executed + EXCLUDED.sync_executed,
+				sync_rewards = validator_dashboard_data_hourly.sync_rewards + EXCLUDED.sync_rewards,
+				slashed = COALESCE(validator_dashboard_data_hourly.slashed, EXCLUDED.slashed),
 				balance_end = EXCLUDED.balance_end,
-				deposits_count = EXCLUDED.deposits_count,
-				deposits_amount = EXCLUDED.deposits_amount,
-				withdrawals_count = EXCLUDED.withdrawals_count,
-				withdrawals_amount = EXCLUDED.withdrawals_amount,
-				inclusion_delay_sum = EXCLUDED.inclusion_delay_sum,
-				block_chance = EXCLUDED.block_chance,
-				attestations_scheduled = EXCLUDED.attestations_scheduled,
-				attestations_executed = EXCLUDED.attestations_executed,
-				attestation_head_executed = EXCLUDED.attestation_head_executed,
-				attestation_source_executed = EXCLUDED.attestation_source_executed,
-				attestation_target_executed = EXCLUDED.attestation_target_executed,
-				optimal_inclusion_delay_sum = EXCLUDED.optimal_inclusion_delay_sum,
-				slashed_by = EXCLUDED.slashed_by,
-				slashed_violation = EXCLUDED.slashed_violation,
-				slasher_reward = EXCLUDED.slasher_reward,
-				last_executed_duty_epoch = EXCLUDED.last_executed_duty_epoch,
+				deposits_count = validator_dashboard_data_hourly.deposits_count + EXCLUDED.deposits_count,
+				deposits_amount = validator_dashboard_data_hourly.deposits_amount + EXCLUDED.deposits_amount,
+				withdrawals_count = validator_dashboard_data_hourly.withdrawals_count + EXCLUDED.withdrawals_count,
+				withdrawals_amount = validator_dashboard_data_hourly.withdrawals_amount + EXCLUDED.withdrawals_amount,
+				inclusion_delay_sum = validator_dashboard_data_hourly.inclusion_delay_sum + EXCLUDED.inclusion_delay_sum,
+				block_chance = validator_dashboard_data_hourly.block_chance + EXCLUDED.block_chance,
+				attestations_scheduled = validator_dashboard_data_hourly.attestations_scheduled + EXCLUDED.attestations_scheduled,
+				attestations_executed = validator_dashboard_data_hourly.attestations_executed + EXCLUDED.attestations_executed,
+				attestation_head_executed = validator_dashboard_data_hourly.attestation_head_executed + EXCLUDED.attestation_head_executed,
+				attestation_source_executed = validator_dashboard_data_hourly.attestation_source_executed + EXCLUDED.attestation_source_executed,
+				attestation_target_executed = validator_dashboard_data_hourly.attestation_target_executed + EXCLUDED.attestation_target_executed,
+				optimal_inclusion_delay_sum = validator_dashboard_data_hourly.optimal_inclusion_delay_sum + EXCLUDED.optimal_inclusion_delay_sum,
+				slasher_reward = validator_dashboard_data_hourly.slasher_reward + EXCLUDED.slasher_reward,
+				slashed_by = COALESCE(validator_dashboard_data_hourly.slashed_by, EXCLUDED.slashed_by),
+				slashed_violation = COALESCE(validator_dashboard_data_hourly.slashed_violation, EXCLUDED.slashed_violation),
+				last_executed_duty_epoch = COALESCE(validator_dashboard_data_hourly.last_executed_duty_epoch, EXCLUDED.last_executed_duty_epoch),
 				epoch_end = EXCLUDED.epoch_end
-	`, epochStart, epochEnd)
+	`, epochStart, epochEnd, boundsStart)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert hourly data")

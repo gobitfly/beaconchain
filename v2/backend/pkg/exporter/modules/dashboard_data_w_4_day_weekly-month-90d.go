@@ -33,16 +33,16 @@ func newDayUpAggregator(d *dashboardData) *dayUpAggregator {
 	}
 }
 
-func (d *dayUpAggregator) rolling7dAggregate() error {
-	return d.aggregateRollingXDays(7, "validator_dashboard_data_rolling_weekly")
+func (d *dayUpAggregator) rolling7dAggregate(currentEpochHead uint64) error {
+	return d.aggregateRollingXDays(7, "validator_dashboard_data_rolling_weekly", currentEpochHead)
 }
 
-func (d *dayUpAggregator) rolling30dAggregate() error {
-	return d.aggregateRollingXDays(30, "validator_dashboard_data_rolling_monthly")
+func (d *dayUpAggregator) rolling30dAggregate(currentEpochHead uint64) error {
+	return d.aggregateRollingXDays(30, "validator_dashboard_data_rolling_monthly", currentEpochHead)
 }
 
-func (d *dayUpAggregator) rolling90dAggregate() error {
-	return d.aggregateRollingXDays(90, "validator_dashboard_data_rolling_90d")
+func (d *dayUpAggregator) rolling90dAggregate(currentEpochHead uint64) error {
+	return d.aggregateRollingXDays(90, "validator_dashboard_data_rolling_90d", currentEpochHead)
 }
 
 func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
@@ -80,7 +80,7 @@ func (d *dayUpAggregator) getMissingRollingXDaysTailEpochs(days int, intendedHea
 	return d.rollingAggregator.getMissingRollingTailEpochs(days, intendedHeadEpoch, tableName)
 }
 
-func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string) error {
+func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string, currentEpochHead uint64) error {
 	d.setupMutex.Lock()
 	if _, ok := d.mutexes[tableName]; !ok {
 		d.mutexes[tableName] = &sync.Mutex{}
@@ -90,7 +90,7 @@ func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string) erro
 	d.mutexes[tableName].Lock()
 	defer d.mutexes[tableName].Unlock()
 
-	return d.rollingAggregator.Aggregate(days, tableName)
+	return d.rollingAggregator.Aggregate(days, tableName, currentEpochHead)
 }
 
 // -- rolling aggregate --

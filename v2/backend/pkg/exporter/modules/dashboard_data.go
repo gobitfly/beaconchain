@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -20,11 +21,11 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true   // prod: false
-const debugTargetBackfillEpoch = uint64(0) // prod: 0
-const debugSetBackfillCompleted = false    // prod: true
-const debugSkipOldEpochClear = false       // prod: false
-const debugAddToColumnEngine = false       // prod: true?
+const debugAggregateMidEveryEpoch = true     // prod: false
+const debugTargetBackfillEpoch = uint64(150) // prod: 0
+const debugSetBackfillCompleted = false      // prod: true
+const debugSkipOldEpochClear = false         // prod: false
+const debugAddToColumnEngine = false         // prod: true?
 
 // ----------- END OF DEBUG FLAGS ------------
 
@@ -62,6 +63,10 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
+		_, err := db.AlloyWriter.Exec("SET work_mem TO '256MB';")
+		if err != nil {
+			d.log.Fatal(err, "failed to set work_mem", 0)
+		}
 		for {
 			var upToEpochPtr *uint64 = nil    // nil will backfill back to head
 			if debugTargetBackfillEpoch > 0 { // todo remove
@@ -94,7 +99,7 @@ func (d *dashboardData) Init() error {
 		// 	d.log.Fatal(err, "failed to aggregate mid", 0)
 		// }
 
-		//d.headEpochQueue <- 256
+		d.headEpochQueue <- 151
 		d.processHeadQueue()
 	}()
 
@@ -138,7 +143,7 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			if stage <= 2 {
-				err := d.aggregatePerEpoch(true)
+				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1)
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
@@ -148,17 +153,17 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			// only aggregate more intense data if we are close to head finalization
-			if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1 { // todo remove debug field
-				if stage <= 3 {
-					err := d.aggregateMid()
-					if err != nil {
-						d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
-						time.Sleep(time.Second * 10)
-						continue
-					}
-					stage = 4
-				}
-			}
+			// if debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1 { // todo remove debug field
+			// 	if stage <= 3 {
+			// 		err := d.aggregateMid()
+			// 		if err != nil {
+			// 			d.log.Error(err, "failed to aggregate mid", 0, map[string]interface{}{"epoch": epoch})
+			// 			time.Sleep(time.Second * 10)
+			// 			continue
+			// 		}
+			// 		stage = 4
+			// 	}
+			// }
 
 			break
 		}
@@ -417,12 +422,22 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 		if err != nil {
 			return false, errors.Wrap(err, "failed to get finalized checkpoint")
 		}
+		if utils.IsByteArrayAllZero(res.Data.Finalized.Root) {
+			return false, errors.New("network not finalized yet")
+		}
 		upToEpoch = &res.Data.Finalized.Epoch
 	}
 
 	latestExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
+	}
+
+	if latestExportedEpoch > 0 {
+		err = d.aggregatePerEpoch(false, false)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to aggregate")
+		}
 	}
 
 	gaps, err := edb.GetDashboardEpochGapsBetween(*upToEpoch, int64(latestExportedEpoch))
@@ -451,7 +466,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 			d.log.Info("storage writing done, aggregate")
 			for {
-				err = d.aggregatePerEpoch(false)
+				err = d.aggregatePerEpoch(false, false)
 				if err != nil {
 					d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
 					time.Sleep(time.Second * 10)
@@ -513,7 +528,9 @@ func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
 var lastExportedHour uint64 = ^uint64(0)
 
 // Contains all aggregation logic that should happen for every new exported epoch
-func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
+// isHeadProcessorQueue specifies whether we are in backfill mode or on head mode - does NOT mean we are at head
+// updateRollingWindows specifies whether we should update rolling windows
+func (d *dashboardData) aggregatePerEpoch(isHeadProcessorQueue bool, updateRollingWindows bool) error {
 	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return errors.Wrap(err, "failed to get last exported epoch")
@@ -521,7 +538,7 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 	currentStartBound, _ := getHourAggregateBounds(currentExportedEpoch)
 
 	// Performance improvement for backfilling, no need to aggregate day after each epoch, we can update once per hour
-	if workingOnHead || currentStartBound != lastExportedHour {
+	if isHeadProcessorQueue || currentStartBound != lastExportedHour {
 		start := time.Now()
 		defer func() {
 			d.log.Infof("all of epoch based aggregation took %v", time.Since(start))
@@ -531,20 +548,24 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 		errGroup := &errgroup.Group{}
 		errGroup.SetLimit(databaseAggregationParallelism)
 		errGroup.Go(func() error {
-			err := d.epochToTotal.aggregateTotal()
+			err := d.epochToTotal.aggregateTotal(currentExportedEpoch)
 			if err != nil {
 				return errors.Wrap(err, "failed to aggregate total")
 			}
 			return nil
 		})
 
-		errGroup.Go(func() error { // so this could be parallel IF we dont need to bootstrap. Room for improvement?
-			err := d.epochToHour.aggregate1h() // will aggregate last hour too if it hasn't completed yet
+		// below: so this could be parallel IF we dont need to bootstrap. Room for improvement?
+		errGroup.Go(func() error { // can run in parallel with aggregateRollingWindows as long as no bootstrap is required, otherwise must be sequential
+			err := d.epochToHour.aggregate1h(currentExportedEpoch) // will aggregate last hour too if it hasn't completed yet
 			if err != nil {
 				return errors.Wrap(err, "failed to aggregate 1h")
 			}
+			return nil
+		})
 
-			err = d.hourToDay.dayAggregate(workingOnHead)
+		errGroup.Go(func() error { // can run in parallel with aggregateRollingWindowsas long as no bootstrap is required, otherwise must be sequential
+			err := d.hourToDay.dayAggregate(currentExportedEpoch)
 			if err != nil {
 				return errors.Wrap(err, "failed to aggregate day")
 			}
@@ -555,17 +576,23 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate")
 		}
+
 		lastExportedHour = currentStartBound
+
+		if updateRollingWindows {
+			// todo you could add it to the err group above IF no bootstrap is needed.
+
+			err = d.aggregateRollingWindows(currentExportedEpoch)
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate rolling windows")
+			}
+		}
 
 		d.log.Infof("cleaning old epochs")
 
-		if !workingOnHead {
-			// clear old individual epochs when we are not at head, this is useful to clear up old epochs during backfill
-			// but should not be done when on head since epoch data is needed for mid aggregation (rolling) data.
-			err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
-			if err != nil {
-				return errors.Wrap(err, "failed to clear old epochs")
-			}
+		err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
+		if err != nil {
+			return errors.Wrap(err, "failed to clear old epochs")
 		}
 
 		// clear old hourly aggregated epochs, do not remove epochs from epoch table here as these are needed for Mid aggregation
@@ -581,18 +608,17 @@ func (d *dashboardData) aggregatePerEpoch(workingOnHead bool) error {
 // This function contains more heavy aggregation like rolling 7d, 30d, 90d
 // As is this will also be called every epoch too (as long as exporter is on head, otherwise not), but it could be called less frequent too
 // Assumes that aggregatePerEpoch has been called before this!
-func (d *dashboardData) aggregateMid() error {
+func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) error {
 	start := time.Now()
 	defer func() {
 		d.log.Infof("all of mid aggregation took %v", time.Since(start))
 	}()
 
-	var err error
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(databaseAggregationParallelism)
 
 	errGroup.Go(func() error {
-		err := d.hourToDay.rolling24hAggregate()
+		err := d.hourToDay.rolling24hAggregate(currentExportedEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to rolling 24h aggregate")
 		}
@@ -601,7 +627,7 @@ func (d *dashboardData) aggregateMid() error {
 	})
 
 	errGroup.Go(func() error {
-		err = d.dayUp.rolling7dAggregate()
+		err := d.dayUp.rolling7dAggregate(currentExportedEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate 7d")
 		}
@@ -609,7 +635,7 @@ func (d *dashboardData) aggregateMid() error {
 	})
 
 	errGroup.Go(func() error {
-		err = d.dayUp.rolling30dAggregate()
+		err := d.dayUp.rolling30dAggregate(currentExportedEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate 30d")
 		}
@@ -617,28 +643,28 @@ func (d *dashboardData) aggregateMid() error {
 	})
 
 	errGroup.Go(func() error {
-		err = d.dayUp.rolling90dAggregate()
+		err := d.dayUp.rolling90dAggregate(currentExportedEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate 90d")
 		}
 		return nil
 	})
 
-	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to get last exported epoch")
-	}
+	// currentExportedEpoch, err := edb.GetLatestDashboardEpoch(nil)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to get last exported epoch")
+	// }
 
-	err = errGroup.Wait()
+	err := errGroup.Wait()
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate")
 	}
 
-	// clear old individual epochs. Do this here since the rolling aggregates relies on it being available
-	err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
-	if err != nil {
-		return errors.Wrap(err, "failed to clear old epochs")
-	}
+	// // clear old individual epochs. Do this here since the rolling aggregates relies on it being available
+	// err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to clear old epochs")
+	// }
 
 	return nil
 }
