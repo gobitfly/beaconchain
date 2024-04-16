@@ -16,7 +16,7 @@ import (
 )
 
 /**
-This file handles the logic for rolling aggregation for 24h, 7d, 31d and 90d but not total, see dashboard_data_w_2_epoch_total.go for that.
+This file handles the logic for rolling aggregation for 24h, 7d, 31d and 90d. Total also relies on the AddRollingCustom method as well as the day and hour aggregate.
 The way this works is by adding new epochs to the rolling table and removing the old epochs at the end so that the time duration of rolling stays constant.
 
 If the rolling tables fall out of sync due to long offline time or initial sync, the tables are bootstrapped. This bootstrap method must be provided,
@@ -63,6 +63,7 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 	return aggTailEpochStart, aggTailEpochEnd
 }
 
+// Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHead uint64) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
@@ -262,22 +263,24 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 }
 
 type CustomRolling struct {
-	Log                           ModuleLog
-	StartEpoch                    uint64 // incl
-	EndEpoch                      uint64 // incl
-	StartBoundEpoch               int64
-	TableFrom                     string
-	TableTo                       string
-	TailBalancesQuery             string
-	TailBalancesJoinQuery         string
-	TailBalancesInsertColumnQuery string
-	TableDayColum                 string
-	TableDayValue                 string
-	TableFromEpochColumn          string
-	TableConflict                 string
+	Log                  ModuleLog // for logging, must provide
+	StartEpoch           uint64    // incl, must be provided
+	EndEpoch             uint64    // incl, must be provided
+	StartBoundEpoch      int64     // incl, must be provided
+	TableFrom            string    // must provide
+	TableTo              string    // must provide
+	TableFromEpochColumn string    // must provide
+	TableConflict        string    // must provide
+
+	TailBalancesQuery             string // optional
+	TailBalancesJoinQuery         string // optional
+	TailBalancesInsertColumnQuery string // optional
+	TableDayColum                 string // optional
+	TableDayValue                 string // optional
 }
 
-// startEpoch, endEpoch uint64, tailStart int64, tailBalancesQuery, tailBalanceJoinQuery, tailBalanceInsertQuery string
+// This method is the bread and butter of all aggregation. It is used by rolling window aggregation to add to head,
+// it is used by total to add to head, it is used by utc day and hour aggregation to add to head
 func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	tmpl := `
 		WITH

@@ -92,7 +92,7 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 
 	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += getHourAggregateWidth() {
 		boundsStart, boundsEnd := getHourAggregateBounds(epoch)
-		d.log.Infof("epoch: %d, boundsStart: %d, boundsEnd: %d |  lastHourExported: %v", epoch, boundsStart, boundsEnd, lastHourExported)
+		//d.log.Infof("epoch: %d, boundsStart: %d, boundsEnd: %d |  lastHourExported: %v", epoch, boundsStart, boundsEnd, lastHourExported)
 		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last hour entry since it is complete")
 			continue
