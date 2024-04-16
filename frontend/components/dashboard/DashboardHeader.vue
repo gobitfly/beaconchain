@@ -154,16 +154,18 @@ const title = computed(() => {
 
 .header-container {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  margin-bottom: var(--padding-large);
 
   .dashboard-title {
-    margin-bottom: var(--padding-large);
+    @include utils.truncate-text;
   }
 
   .dashboard-buttons {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     gap: var(--padding);
 
     .button-content {

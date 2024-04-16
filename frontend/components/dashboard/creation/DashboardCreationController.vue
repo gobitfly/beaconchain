@@ -76,7 +76,7 @@ async function createDashboard () {
     }
 
     const response = await createValidatorDashboard(name.value, network.value, publicKey)
-    if (matchingType && publicEntities.value?.length && response?.id) {
+    if (matchingType && publicEntities.value?.length && response?.id && response.id > 0) {
       await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators: publicEntities.value, group_id: '0' } }, { dashboardKey: response.id })
     }
     router.push(`/dashboard/${response?.hash ?? response?.id ?? 1}`)

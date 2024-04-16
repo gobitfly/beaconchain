@@ -15,9 +15,9 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 use([
   CanvasRenderer,
@@ -76,12 +76,11 @@ const option = computed(() => {
   if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
-      let name = allGroups
+      let name:string
       if (!groupsEnabled) {
         name = $t('dashboard.validator.summary.chart.efficiency')
-      } else if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        const group = overview.value?.groups.find(group => group.id === element.id)
-        name = group?.name || element.id.toString()
+      } else {
+        name = getGroupLabel($t, element.id, overview.value?.groups, allGroups)
       }
       const newObj: SeriesObject = {
         data: element.data,
