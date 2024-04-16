@@ -136,7 +136,6 @@ const option = computed(() => {
       }
     },
     yAxis: {
-      name: $t('dashboard.validator.summary.chart.efficiency'),
       nameLocation: 'center',
       nameTextStyle: {
         padding: [0, 0, 30, 0]

@@ -27,7 +27,7 @@ export function getSummaryChartTooltipBackgroundColor (theme: string) {
 
 export function getRewardChartColors () {
   return {
-    el: 'var(--primary-orange)',
-    cl: 'var(--melllow-blue)'
+    el: '#ffaa31',
+    cl: '#7DB5EC'
   }
 }
