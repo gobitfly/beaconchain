@@ -26,11 +26,11 @@ defineProps<Props>()
   min-width: 80px;
   height: 20px;
   padding: 0 14px;
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 10px;
-  font-size: var(--small_text_font_weight);
+  font-size: var(--small_text_font_size);
   font-weight: var(--small_text_bold_font_weight);
   cursor: default;
 
