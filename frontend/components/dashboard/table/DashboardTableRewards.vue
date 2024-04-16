@@ -6,7 +6,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
-import { getGroupLabel } from '~/utils/dashbaord/group'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { dashboardKey } = useDashboardKey()
 

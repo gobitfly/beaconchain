@@ -5,7 +5,7 @@ import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import { getGroupLabel } from '~/utils/dashbaord/group'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 

@@ -27,7 +27,9 @@ export function useUserStore () {
     return xUserId.value ? { user_id: xUserId, user_name: `Test User [${xUserId.value}]` } : undefined
   })
 
-  const isLoggedIn = computed(() => !!user.value)
+  const isLoggedIn = computed(() => {
+    return !!user.value
+  })
 
   return { doLogin, user, isLoggedIn }
 }

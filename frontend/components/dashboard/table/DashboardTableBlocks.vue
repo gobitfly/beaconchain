@@ -5,7 +5,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
-import { getGroupLabel } from '~/utils/dashbaord/group'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { dashboardKey } = useDashboardKey()
 

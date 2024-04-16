@@ -186,9 +186,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => isLoggedIn.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxValidatorsPerDashboard.value)
+const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
 </script>
 
@@ -336,7 +336,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
       <div class="footer">
         <div v-if="maxValidatorsPerDashboard" class="left">
           <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
+            <span><BcFormatNumber :value="total" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />
