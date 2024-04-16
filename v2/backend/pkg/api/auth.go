@@ -9,7 +9,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-func NewSessionManager(redisEndpoint string) *scs.SessionManager {
+func NewSessionManager(redisEndpoint string, secure bool) *scs.SessionManager {
 	// TODO: replace redis with user db down the line (or replace sessions with oauth2)
 	pool := &redis.Pool{
 		MaxIdle: 10,
@@ -24,7 +24,7 @@ func NewSessionManager(redisEndpoint string) *scs.SessionManager {
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
 	scs.Cookie.SameSite = http.SameSiteLaxMode
-	scs.Cookie.Secure = true
+	scs.Cookie.Secure = secure
 
 	scs.Store = redisstore.New(pool)
 
