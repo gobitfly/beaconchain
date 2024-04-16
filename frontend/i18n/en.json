@@ -317,7 +317,6 @@
       },
       "duties": {
         "title": "Epoch",
-        "validators": "Validators",
         "search_placeholder": "Index, Public Key",
         "col": {
           "duties": "Duties",

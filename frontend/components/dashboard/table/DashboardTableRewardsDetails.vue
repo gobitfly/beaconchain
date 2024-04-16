@@ -7,7 +7,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  dashboardKey: DashboardKey
+  dashboardKey: DashboardKey // TODO: apply new dashboardKey handling once that PR is merged
   row: VDBRewardsTableRow
   groupName?: string
 }

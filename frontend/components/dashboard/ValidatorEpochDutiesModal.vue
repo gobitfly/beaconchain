@@ -24,6 +24,7 @@ interface Props {
 
 const { props, setHeader } = useBcDialog<Props>({ showHeader: size.value.expandable, contentClass: 'epoch-duties-modal' })
 
+const isLoading = ref(false)
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 
@@ -51,6 +52,7 @@ const setSearch = (value?: string) => {
 
 const loadData = async () => {
   if (props.value?.dashboardKey) {
+    isLoading.value = !data.value
     const testQ = JSON.stringify(query.value)
     const result = await fetch<InternalGetValidatorDashboardDutiesResponse>(API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY, { query: { ...query.value, group_id: props.value.groupId } }, { dashboardKey: props.value.dashboardKey, epoch: props.value.epoch }, query.value)
 
@@ -58,6 +60,7 @@ const loadData = async () => {
     if (testQ === JSON.stringify(query.value)) {
       data.value = result
     }
+    isLoading.value = false
   }
 }
 
@@ -84,7 +87,7 @@ const mapDuties = (duties: ValidatorHistoryDuties) => {
 
 const title = computed(() => {
   let t = $t('dashboard.validator.duties.title')
-  if (props.value?.groupName) {
+  if (props.value?.groupName && !size.value.expandable) {
     t += ` (${props.value.groupName})`
   }
   return t
@@ -100,7 +103,7 @@ watch([title, size], () => {
   <BcTableControl :search-placeholder="$t('dashboard.validator.duties.search_placeholder')" @set-search="setSearch">
     <template v-if="size.expandable" #header-left>
       <div class="small-title">
-        {{ $t('dashboard.validator.duties.validators') }}
+        {{ props?.groupName }}
       </div>
     </template>
     <template v-else #header-center>
@@ -117,6 +120,7 @@ watch([title, size], () => {
           :expandable="size.expandable"
           class="duties-table"
           :cursor="cursor"
+          :loading="isLoading"
           :page-size="pageSize"
           @set-cursor="setCursor"
           @sort="onSort"
