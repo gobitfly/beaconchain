@@ -167,7 +167,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="status"
               :sortable="!colsVisible.mobileStatus"
               :header="$t('dashboard.validator.col.status')"
-              :body-class="{ 'status-mobile': colsVisible.mobileStatus }"
+              :body-class="colsVisible.mobileStatus ? 'status-mobile': ''"
             >
               <template #body="slotProps">
                 <BlockTableStatus :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
