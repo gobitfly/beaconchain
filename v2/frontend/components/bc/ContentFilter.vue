@@ -16,18 +16,19 @@ const filter = ref<string>('')
 </script>
 
 <template>
-  <span class="filter_elements_container">
+  <div class="filter_elements_container">
     <InputText v-model="filter" :placeholder="props.searchPlaceholder" :class="{visible:filterVisible}" :disabled="!filterVisible" @input="$emit('filter-changed', filter)" />
     <Button class="p-button-icon-only" :class="{filter_visible:filterVisible}" @click="filterVisible=!filterVisible">
       <FontAwesomeIcon :icon="faMagnifyingGlass" />
     </Button>
-  </span>
+  </div>
 </template>
 
 <style lang="scss">
   .filter_elements_container {
     display: flex;
     justify-content: flex-end;
+    position: relative;
 
     > :first-child{
       border-top-right-radius: 0;
@@ -36,13 +37,15 @@ const filter = ref<string>('')
       width: 0;
       opacity: 0;
       padding: 0;
+      position: absolute;
+      right: 100%;
       transition:
         width 0.2s ease-in-out,
         opacity 0.01s ease-in-out 0.19s,
         padding 0.2s ease-in-out;
 
       &.visible {
-        width: 100%;
+        width: 188px;
         opacity: 100%;
         padding: 4px;
 
