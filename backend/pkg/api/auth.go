@@ -23,7 +23,7 @@ func NewSessionManager(redisEndpoint string, secure bool) *scs.SessionManager {
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
-	scs.Cookie.SameSite = http.SameSiteLaxMode
+	scs.Cookie.SameSite = http.SameSiteNoneMode
 	scs.Cookie.Secure = secure
 
 	scs.Store = redisstore.New(pool)
