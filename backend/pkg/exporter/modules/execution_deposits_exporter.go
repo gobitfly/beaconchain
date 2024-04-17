@@ -51,7 +51,6 @@ type executionDepositsExporter struct {
 }
 
 func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
-
 	return &executionDepositsExporter{
 		ModuleContext:          moduleContext,
 		Client:                 moduleContext.ConsClient,
@@ -141,7 +140,6 @@ func (d *executionDepositsExporter) GetName() string {
 }
 
 func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
-
 	return nil // nop
 }
 
