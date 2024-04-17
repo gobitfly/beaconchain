@@ -429,6 +429,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
 }
 
 .add-row {
+  position:relative;
   display: flex;
   justify-content: space-between;
   align-items: center;

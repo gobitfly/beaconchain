@@ -4,7 +4,7 @@ import { ChainIDs, ChainInfo } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 const props = defineProps<{
-  liveState: Record<string, boolean>, // each key is a stringifyed chain ID (as enumerated in ChainIDs in networks.ts) and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+  liveState: Map<ChainIDs, boolean>, // each key is a chain ID (as enumerated in ChainIDs in networks.ts) and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
   barStyle: SearchbarStyle
 }>()
 
@@ -13,34 +13,34 @@ const { t } = useI18n()
 const vueMultiselectAllOptions = ref<{name: string, label: string}[]>()
 const vueMultiselectSelectedOptions = ref<string[]>([])
 
-let statePtr : Record<string, boolean> = {} // each key is a stringifyed chain ID and the state of the option as value
+const stateRef = ref<Map<ChainIDs, boolean>>(props.liveState) // getting back the reactivity of the props, so if the parent changes something, we react
 
 const everyNetworkIsSelected = computed(() => {
   return (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value?.length)
 })
 
-initialize()
-
 watch(props, () => {
+  stateRef.value = props.liveState
   initialize()
 })
+
+initialize()
 
 function initialize () {
   vueMultiselectAllOptions.value = []
   vueMultiselectSelectedOptions.value = []
-  statePtr = props.liveState
 
-  for (const nw in statePtr) {
-    vueMultiselectAllOptions.value.push({ name: nw, label: ChainInfo[Number(nw) as ChainIDs].description })
-    if (statePtr[nw]) {
-      vueMultiselectSelectedOptions.value.push(nw)
+  for (const nw of stateRef.value) {
+    vueMultiselectAllOptions.value.push({ name: String(nw[0]), label: ChainInfo[nw[0]].description })
+    if (nw[1]) {
+      vueMultiselectSelectedOptions.value.push(String(nw[0]))
     }
   }
 }
 
 function selectionHasChanged () {
-  for (const nw in statePtr) {
-    statePtr[nw] = vueMultiselectSelectedOptions.value.includes(nw)
+  for (const nw of stateRef.value) {
+    stateRef.value.set(nw[0], vueMultiselectSelectedOptions.value.includes(String(nw[0])))
   }
   emit('change')
 }
