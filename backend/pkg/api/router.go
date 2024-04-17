@@ -6,6 +6,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -31,6 +32,14 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.Sess
 }
 
 func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
+	if len(allowedHosts) == 0 {
+		log.Warn("CORS allowed hosts not set, allowing all origins")
+		return gorillaHandlers.CORS(
+			gorillaHandlers.AllowedOrigins([]string{"*"}),
+			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
+			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		)
+	}
 	return gorillaHandlers.CORS(
 		gorillaHandlers.AllowedOrigins(allowedHosts),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
