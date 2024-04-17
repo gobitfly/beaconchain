@@ -41,23 +41,23 @@ defineProps<{
     font-size: 18px;
     color: var(--text-color);
     background-color: transparent;
-    &:hover {
+    /*&:hover {
       background-color: var(--dropdown-background-hover);
     }
     &:active {
       background-color: var(--button-color-pressed);
-    }
+    }*/
   }
   &.discreet {
     font-size: 15px;
     color: var(--input-placeholder-text-color);
     background-color: transparent;
-    &:hover {
+    /*&:hover {
       background-color: var(--searchbar-background-hover-discreet);
     }
     &:active {
       background-color: var(--button-color-pressed);
-    }
+    }*/
   }
 }
 </style>
