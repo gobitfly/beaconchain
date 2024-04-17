@@ -26,6 +26,10 @@ func WarnWithStackTrace(err error, errorMsg interface{}, callerSkip int, additio
 	logErrorInfo(err, callerSkip, additionalInfos...).Warn(errorMsg)
 }
 
+func Info(args ...interface{}) {
+	logrus.Info(args...)
+}
+
 func Infof(format string, args ...interface{}) {
 	logrus.Infof(format, args...)
 }
@@ -37,6 +41,10 @@ func InfoWithFields(additionalInfos Fields, msg string) {
 	}
 
 	logFields.Infof(msg)
+}
+
+func Warn(args ...interface{}) {
+	logrus.Warn(args...)
 }
 
 func Warnf(format string, args ...interface{}) {
