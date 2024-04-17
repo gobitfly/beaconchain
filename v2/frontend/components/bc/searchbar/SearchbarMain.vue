@@ -265,7 +265,7 @@ function inputMightHaveChanged () {
   if (inputted.value.length === 0) {
     empty()
   } else {
-    updateGlobalState(States.WaitingForResults)
+    resetGlobalState(States.WaitingForResults)
     debouncer.bounce(inputted.value, false, true)
     // the debouncer will run callAPIthenOrganizeResultsThenCallBack()
   }
@@ -292,7 +292,7 @@ function userPressedSearchButtonOrEnter () {
     case States.InputIsEmpty : // the user enjoys the sound of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
-      updateGlobalState(States.WaitingForResults)
+      resetGlobalState(States.WaitingForResults)
       callAPIthenOrganizeResultsThenCallBack() // we start a new search
       return
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
@@ -365,7 +365,7 @@ async function callAPIthenOrganizeResultsThenCallBack () {
   } catch (error) {
     received = undefined
   }
-  if (inputted.value !== inputWhenAPIgotCalled) { // result/error outdated. Important: errors are ignored because based on an outdated input.
+  if (inputted.value !== inputWhenAPIgotCalled) { // result/error outdated. If there is an error, we ignore it because it is based on an outdated input.
     return
   }
   if (!received || received.error !== undefined || received.data === undefined) {
