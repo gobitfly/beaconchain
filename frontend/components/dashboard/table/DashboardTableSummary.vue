@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import SummaryChart from '../chart/SummaryChart.vue'
-import type { InternalGetValidatorDashboardSummaryResponse, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { getGroupLabel } from '~/utils/dashbaord/group'
 
 interface Props {
   dashboardKey: DashboardKey
@@ -16,14 +17,12 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const store = useValidatorDashboardSummaryStore()
-const { getSummary } = store
-const { summaryMap, queryMap } = storeToRefs(store)
+const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
 
-const { width, isMobile } = useWindowSize()
+const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     validator: width.value >= 1400,
@@ -31,14 +30,14 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
+const loadData = (q?: TableQueryParams) => {
+  if (!q) {
+    q = query.value ? { ...query.value } : { limit: pageSize.value }
   }
-  setQuery(query, true, true)
+  setQuery(q, true, true)
 }
 
-watch(() => props.dashboardKey, () => {
+watch(() => [props.dashboardKey, overview.value], () => {
   loadData()
 }, { immediate: true })
 
@@ -48,48 +47,26 @@ watch(query, (q) => {
   }
 }, { immediate: true })
 
-const summary = computed<InternalGetValidatorDashboardSummaryResponse | undefined>(() => {
-  return summaryMap.value?.[props.dashboardKey]
-})
-
 const groupNameLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
-    return `${$t('dashboard.validator.summary.total_group_name')}`
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (!group) {
-    return `${groupId}` // fallback if we could not match the group name
-  }
-  return `${group.name}`
-}
-
-const groupIdLabel = (groupId?: number) => {
-  if (groupId === undefined || groupId < 0) {
-    return
-  }
-  const group = overview.value?.groups?.find(g => g.id === groupId)
-  if (group && isMobile.value) {
-    return
-  }
-  return ` (ID: ${groupId})`
+  return getGroupLabel($t, groupId, overview.value?.groups)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySort(sort, lastQuery?.value))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryCursor(value, lastQuery?.value))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, queryMap.value[props.dashboardKey]))
+  loadData(setQueryPageSize(value, lastQuery?.value))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, queryMap.value[props.dashboardKey]))
+  loadData(setQuerySearch(value, lastQuery?.value))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
@@ -128,8 +105,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                {{ groupNameLabel(slotProps.data.group_id) }}<span class="discreet">{{
-                  groupIdLabel(slotProps.data.group_id) }}</span>
+                {{ groupNameLabel(slotProps.data.group_id) }}
               </template>
             </Column>
             <Column
@@ -201,22 +177,18 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/utils.scss";
 :deep(.summary_table) {
   --col-width: 216px;
 
   td:has(.validator_column) {
-    width: var(--col-width);
-    max-width: var(--col-width);
-    min-width: var(--col-width);
+    @include utils.set-all-width(var(--col-width));
   }
 
   td,
   th {
     &:not(.expander):not(:last-child) {
-      width: var(--col-width);
-      max-width: var(--col-width);
-      min-width: var(--col-width);
-
+      @include utils.set-all-width(var(--col-width));
     }
   }
 

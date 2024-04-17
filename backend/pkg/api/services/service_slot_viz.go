@@ -56,7 +56,7 @@ func (s *Services) updateSlotVizData() error {
 	gOuter.Go(func() error {
 		startTime := time.Now()
 		var err error
-		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(s.readerDb, s.getMaxValidatorDutiesInfoSlot())
+		validatorDutiesInfo, err = db.GetValidatorDutiesInfo(s.getMaxValidatorDutiesInfoSlot())
 		if err != nil {
 			return errors.Wrap(err, "error getting validator duties info")
 		}

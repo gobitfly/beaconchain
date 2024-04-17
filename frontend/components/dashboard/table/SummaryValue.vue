@@ -130,7 +130,7 @@ const data = computed(() => {
     :context="data.context"
     :group-id="props.row.group_id"
   />
-  <div v-else-if="data?.attestationEfficiency" class="info_row">
+  <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
       <FontAwesomeIcon class="link" :icon="faInfoCircle" />
@@ -226,7 +226,7 @@ const data = computed(() => {
   </span>
 </template>
 
-<style>
+<style lang="scss" scoped>
 .row {
   text-wrap: nowrap;
   min-width: 100%;

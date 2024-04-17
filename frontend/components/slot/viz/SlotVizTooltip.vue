@@ -169,11 +169,11 @@ const data = computed(() => {
             <div class="value-col">
               <span :class="row.class">{{ row.dutyText }}</span>
               <div v-if="row.validators?.length" class="validators">
-                <span v-for="validator in row.validators" :key="validator">
+                <span v-for="(validator, vIndex) in row.validators" :key="validator">
                   <NuxtLink :to="`/validator/${validator}`" target="_blank" class="link">
                     {{ validator }}
                   </NuxtLink>
-                  <span>, </span>
+                  <span v-if="vIndex < row.validators.length -1 || row.andMore">, </span>
                 </span>
                 <span v-if="row.andMore"> ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }} </span>
               </div>
