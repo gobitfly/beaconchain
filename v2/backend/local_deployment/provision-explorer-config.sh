@@ -75,6 +75,7 @@ eth1GethEndpoint: 'http://127.0.0.1:$EL_PORT'
 redisCacheEndpoint: '127.0.0.1:$REDIS_PORT'
 tieredCacheProvider: 'redis'
 frontend:
+  debug: true
   siteDomain: "localhost:8080"
   siteName: 'Open Source Ethereum (ETH) Testnet Explorer' # Name of the site, displayed in the title tag
   siteSubtitle: "Showing a local testnet."
@@ -140,3 +141,9 @@ go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/
 cd ../backend/db_migrations
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
 echo "alloy db schema initialization completed"
+
+echo "adding test user"
+HASHED_PW=$(htpasswd -nbBC 10 user pass | cut -d ":" -sf 2)
+psql postgres://postgres:pass@localhost:$POSTGRES_PORT/db?sslmode=disable -c "INSERT INTO users(password, email, email_confirmed) \
+VALUES ('$HASHED_PW', 'test@beaconcha.in', true);"
+echo "created test user with email 'test@beaconcha.in' and password 'pass' "
