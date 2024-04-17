@@ -2245,7 +2245,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 			Slot:                 uint64(row.Slot),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
 			Amount:               row.Amount,
-			Signature:            t.Hash(hexutil.Encode(row.WithdrawalCredential)),
+			Signature:            t.Hash(hexutil.Encode(row.Signature)),
 		}
 		if row.GroupId.Valid {
 			responseData[i].GroupId = uint64(row.GroupId.Int64)
