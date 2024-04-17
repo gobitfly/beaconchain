@@ -212,7 +212,6 @@ const (
 	VDBWithdrawalSlot
 	VDBWithdrawalAge
 	VDBWithdrawalIndex
-	VDBWithdrawalGroup
 	VDBWithdrawalRecipient
 	VDBWithdrawalAmount
 )
@@ -231,8 +230,6 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 		return VDBWithdrawalAge
 	case "index":
 		return VDBWithdrawalIndex
-	case "group_name":
-		return VDBWithdrawalGroup
 	case "recipient":
 		return VDBWithdrawalRecipient
 	case "amount":
@@ -247,7 +244,6 @@ var VDBWithdrawalsColumns = struct {
 	Slot      VDBWithdrawalsColumn
 	Age       VDBWithdrawalsColumn
 	Index     VDBWithdrawalsColumn
-	Group     VDBWithdrawalsColumn
 	Recipient VDBWithdrawalsColumn
 	Amount    VDBWithdrawalsColumn
 }{
@@ -255,7 +251,6 @@ var VDBWithdrawalsColumns = struct {
 	VDBWithdrawalSlot,
 	VDBWithdrawalAge,
 	VDBWithdrawalIndex,
-	VDBWithdrawalGroup,
 	VDBWithdrawalRecipient,
 	VDBWithdrawalAmount,
 }
