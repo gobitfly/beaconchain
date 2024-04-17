@@ -2,15 +2,15 @@ import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
 
 const userStore = defineStore('user-store', () => {
-  const { public: { xUserId } } = useRuntimeConfig()
-  return { data: xUserId }
+  const sessionCookie = useCookie('session_id')
+  return { data: sessionCookie }
 })
 
 export function useUserStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userStore())
 
-  const xUserId = computed(() => data.value)
+  const sessionCookie = computed(() => data.value)
 
   async function doLogin (email: string, password: string) {
     await fetch<LoginResponse>(API_PATH.LOGIN, {
@@ -21,9 +21,9 @@ export function useUserStore () {
     })
   }
 
-  // TODO: Faking logged in User for now, if xUserId is set
+  // TODO: Find a way to check if the user is logged in
   const user = computed(() => {
-    return xUserId ? { user_id: xUserId, user_name: `Test User [${xUserId}]` } : undefined
+    return sessionCookie.value ? { user_id: sessionCookie, user_name: 'Logged in User' } : undefined
   })
 
   const isLoggedIn = computed(() => !!user.value)

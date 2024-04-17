@@ -24,7 +24,6 @@ export default defineNuxtConfig({
     public: {
       apiClient: '',
       legacyApiClient: '',
-      xUserId: '',
       apiKey: '',
       gitVersion
     },
