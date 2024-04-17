@@ -51,7 +51,7 @@ func main() {
 	sessionManager := api.NewSessionManager(cfg.RedisCacheEndpoint, !cfg.Frontend.Debug)
 
 	router := api.NewApiRouter(dataAccessor, sessionManager)
-	router.Use(api.CorsMiddleware, api.GetAuthMiddleware(cfg.ApiKeySecret))
+	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts), api.GetAuthMiddleware(cfg.ApiKeySecret))
 
 	srv := &http.Server{
 		Handler:      router,
