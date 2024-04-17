@@ -1,6 +1,6 @@
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
 
-const probabilityOfNoResultOrError = 0.1
+const probabilityOfNoResultOrError = 0.0
 
 export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadAPIresponse {
   const searched = body?.input as string
@@ -8,10 +8,10 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const countIdenticalResults = body?.count as boolean
   const response : SearchAheadAPIresponse = {}; response.data = []
 
-  if (Math.random() < probabilityOfNoResultOrError) {
+  if (Math.random() < probabilityOfNoResultOrError / 2) {
     return {}
   }
-  if (Math.random() < probabilityOfNoResultOrError) {
+  if (Math.random() < probabilityOfNoResultOrError / 2) {
     return response
   }
 

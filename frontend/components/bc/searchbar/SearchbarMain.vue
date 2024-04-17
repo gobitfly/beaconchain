@@ -149,7 +149,7 @@ const globalState = ref<GlobalState>({
   functionToCallAfterResultsGetOrganized: null,
   showDropdown: false
 })
-let lastClickWasInTheResultList = false // this will help the click event-handler in case a result is removed from the drop-down before it runs, making the drop-down shorter so the click might seem to be outside
+
 const dropdown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 const inputField = ref<HTMLInputElement>()
@@ -248,19 +248,12 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  lastClickWasInTheResultList = false
   document.removeEventListener('click', listenToClicks)
   empty()
 })
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (lastClickWasInTheResultList) {
-    // if a result has been removed from the drop-down before this event handler had the opportunity to run, the drop-down appears shorter here so the click might seem to be outside
-    event.stopPropagation()
-    lastClickWasInTheResultList = false
-    return
-  }
   if (!dropdown.value || !inputFieldAndButton.value ||
       dropdown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
@@ -395,7 +388,6 @@ function userPressedSearchButtonOrEnter () {
 }
 
 function userClickedSuggestion (suggestion : ResultSuggestion) {
-  lastClickWasInTheResultList = true
   // calls back parent's function taking action with the result
   if (!props.keepDropdownOpen) {
     closeDropdown()
@@ -657,7 +649,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
 
 <template>
   <div class="anchor" :class="barStyle">
-    <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]">
+    <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <input
           ref="inputField"
@@ -696,16 +688,16 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           />
         </div>
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
-          <div v-for="network of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
-            <div v-for="typ of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <div v-for="(suggestion, i) of typ.suggestions" :key="i" class="suggestionrow-container" :class="barStyle">
+          <div v-for="(network, k) of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
+            <div v-for="(typ, j) of network.types" :key="typ.type" class="type-container" :class="barStyle">
+              <div v-for="(suggestion, i) of typ.suggestions" :key="suggestion.queryParam" class="suggestionrow-container" :class="barStyle">
+                <div v-if="i+j+k > 0" class="separation-between-suggestions" :class="barStyle" />
                 <BcSearchbarSuggestionRow
                   :suggestion="suggestion"
                   :bar-style="barStyle"
                   :bar-purpose="barPurpose"
-                  @click="userClickedSuggestion(suggestion)"
+                  @click="(e : Event) => {e.stopPropagation(); userClickedSuggestion(suggestion)}"
                 />
-                <div class="separation-between-suggestions" :class="barStyle" />
               </div>
             </div>
           </div>
