@@ -37,7 +37,7 @@ type VDBSlotVizSlot struct {
 }
 type SlotVizEpoch struct {
 	Epoch    uint64           `json:"epoch"`
-	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized'" faker:"oneof: scheduled, head, justifying, justified, finalized"` // only on landing page
+	State    string           `json:"state,omitempty" tstype:"'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized'" faker:"oneof: scheduled, head, justifying, justified, finalized"` // all on landing page, only 'head' on dashboard page
 	Progress float64          `json:"progress,omitempty"`                                                                                                                                        // only on landing page
 	Slots    []VDBSlotVizSlot `json:"slots,omitempty" faker:"slice_len=32"`                                                                                                                      // only on dashboard page
 }

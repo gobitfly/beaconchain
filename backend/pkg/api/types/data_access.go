@@ -78,3 +78,10 @@ type WithdrawalsCursor struct {
 	Recipient       []byte
 	Amount          uint64
 }
+
+type User struct {
+	Id        uint64 `db:"id"`
+	Password  string `db:"password"`
+	ProductId string `db:"product_id"`
+	UserGroup string `db:"user_group"`
+}
