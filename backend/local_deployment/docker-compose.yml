@@ -1,9 +1,9 @@
 x-service: &default-service
   image: golang:1.21
-  working_dir: /app
+  working_dir: /app/backend
   network_mode: "host"
   volumes:
-    - ../.:/app
+    - ../../.:/app
     - /tmp/go-cache:/go
     - /tmp/go-build-cache:/root/.cache/go-build
 services:
@@ -14,24 +14,24 @@ services:
     command: /bin/bash -c "git config --global --add safe.directory '*' && make -B all"
   indexer:
     <<: *default-service
-    command: go run ./cmd/exporter -config /app/local_deployment/config.yml
+    command: go run ./cmd/exporter -config /app/backend/local_deployment/config.yml
     environment:
       - INDEXER_ENABLED=true
   eth1indexer:
     <<: *default-service
-    command: go run ./cmd/eth1indexer -config /app/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
+    command: go run ./cmd/eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
   rewards-exporter:
     <<: *default-service
-    command: go run ./cmd/rewards_exporter -config /app/local_deployment/config.yml
+    command: go run ./cmd/rewards_exporter -config /app/backend/local_deployment/config.yml
   statistics:
     <<: *default-service
-    command: go run ./cmd/statistics -config /app/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
+    command: go run ./cmd/statistics -config /app/backend/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
   # frontend-data-updater:
   #   <<: *default-service
   #   command: go run ./cmd/frontend-data-updater -config /app/local_deployment/config.yml
   api:
     <<: *default-service
-    command: go run ./cmd/api -config /app/local_deployment/config.yml
+    command: go run ./cmd/api -config /app/backend/local_deployment/config.yml
   frontend:
     image: ghcr.io/gobitfly/beaconchain_frontend:main
     ports:
