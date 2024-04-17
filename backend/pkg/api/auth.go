@@ -24,11 +24,13 @@ func NewSessionManager(cfg *types.Config) *scs.SessionManager {
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
-	scs.Cookie.Secure = !cfg.Frontend.Debug
 	sameSite := http.SameSiteLaxMode
+	secure := !cfg.Frontend.Debug
 	if cfg.Frontend.SessionSameSiteNone {
 		sameSite = http.SameSiteNoneMode
+		secure = true
 	}
+	scs.Cookie.Secure = secure
 	scs.Cookie.SameSite = sameSite
 
 	scs.Store = redisstore.New(pool)
