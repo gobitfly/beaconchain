@@ -23,7 +23,7 @@ import (
 // -------------- DEBUG FLAGS ----------------
 const debugAggregateMidEveryEpoch = true                             // prod: false
 const debugTargetBackfillEpoch = uint64(0)                           // prod: 0
-const debugSetBackfillCompleted = false                              // prod: true
+const debugSetBackfillCompleted = true                               // prod: true
 const debugSkipOldEpochClear = false                                 // prod: false
 const debugAddToColumnEngine = false                                 // prod: true?
 const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: true
@@ -90,7 +90,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		//d.headEpochQueue <- 601
+		//d.headEpochQueue <- 602
 		d.processHeadQueue()
 	}()
 
@@ -202,10 +202,18 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 		return missingTails[i] < missingTails[j]
 	})
 
-	d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", missingTails, headEpoch)
+	hasHeadAlreadyExported, err := edb.HasDashboardDataForEpoch(headEpoch)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if head epoch has dashboard data")
+	}
 
 	// append head
-	missingTails = append(missingTails, headEpoch)
+	if !hasHeadAlreadyExported {
+		missingTails = append(missingTails, headEpoch)
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", missingTails, headEpoch)
+	} else {
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: -", missingTails)
+	}
 
 	var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
 	go func() {
