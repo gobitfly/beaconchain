@@ -229,7 +229,7 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 		}
 	}
 	if headEpochEnd >= headEpochStart {
-		err := d.addToRolling(tx, tableName, headEpochStart, headEpochEnd, tailEpochStart)
+		err := d.addToRolling(tx, tableName, headEpochStart, headEpochEnd, tailEpochEnd)
 		if err != nil {
 			return errors.Wrap(err, "failed to add epochs to rolling")
 		}
@@ -239,21 +239,21 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 }
 
 // Inserts new validators or updated existing ones into the rolling table
-func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpoch, endEpoch uint64, tailStart int64) error {
+func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpoch, endEpoch uint64, tailEnd int64) error {
 	startTime := time.Now()
 	d.log.Infof("add to rolling %s epochs: %d - %d", tableName, startEpoch, endEpoch)
 	defer func() {
 		d.log.Infof("added to rolling %s took %v", tableName, time.Since(startTime))
 	}()
 
-	if tailStart < 0 {
-		tailStart = 0
+	if tailEnd+1 < 0 {
+		tailEnd = 0
 	}
 
 	return AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           startEpoch,
 		EndEpoch:             endEpoch,
-		StartBoundEpoch:      tailStart,
+		StartBoundEpoch:      tailEnd + 1, // since tail is inclusive (remove), we need to set the start_epoch for new inserts to tail + 1
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              tableName,
 		TableFromEpochColumn: "epoch",
