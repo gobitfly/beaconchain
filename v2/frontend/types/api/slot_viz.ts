@@ -42,7 +42,7 @@ export interface VDBSlotVizSlot {
 }
 export interface SlotVizEpoch {
   epoch: number /* uint64 */;
-  state?: 'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized'; // only on landing page
+  state?: 'scheduled' | 'head' | 'justifying' | 'justified' | 'finalized'; // all on landing page, only 'head' on dashboard page
   progress?: number /* float64 */; // only on landing page
   slots?: VDBSlotVizSlot[]; // only on dashboard page
 }

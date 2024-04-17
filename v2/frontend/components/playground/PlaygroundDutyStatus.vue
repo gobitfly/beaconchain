@@ -95,6 +95,7 @@ const data: ValidatorHistoryDuties[] = [
   <div class="container">
     <div v-for="(duty, index) in data" :key="index" class="item">
       <ValidatorTableDutyStatus :data="duty" :compact="index===1" />
+      <ValidatorTableDutyRewards :data="duty" />
     </div>
   </div>
 </template>
@@ -105,6 +106,8 @@ const data: ValidatorHistoryDuties[] = [
 
   .item{
     flex-grow: 0;
+    display: inline-flex;
+    gap: 10px;
     padding: 10px;
     margin: 10px;
     border: solid 1px beige;

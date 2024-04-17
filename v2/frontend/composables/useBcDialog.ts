@@ -9,9 +9,14 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
 
   const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
 
-  const setHeader = (header: string) => {
+  const setHeader = (header: string, show: boolean = true) => {
     if (dialogRef?.value?.options?.props) {
-      dialogRef.value.options.props!.header = header
+      if (show) {
+        dialogRef.value.options.props.showHeader = true
+        dialogRef.value.options.props!.header = header
+      } else {
+        dialogRef.value.options.props.showHeader = false
+      }
     }
   }
 

@@ -238,7 +238,7 @@ const findNextEpochDuties = (epoch: number) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails :dashboard-key="dashboardKey" :row="slotProps.data" />
+              <DashboardTableRewardsDetails :dashboard-key="dashboardKey" :row="slotProps.data" :group-name="groupNameLabel(slotProps.data.group_id)" />
             </template>
           </BcTable>
         </ClientOnly>
