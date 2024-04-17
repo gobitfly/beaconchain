@@ -7,37 +7,38 @@ import {
 
 const emit = defineEmits<{(e: 'change') : void}>()
 const props = defineProps<{
-  liveState: Record<string, boolean>, // each field has a stringifyEnum(Category) as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+  liveState: Map<Category, boolean>, // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
   barStyle: SearchbarStyle
 }>()
 
 const { t } = useI18n()
 
-const stateRef = ref<Record<string, boolean>>(props.liveState) // each field has a stringifyEnum(Category) as key and the state of the option as value
+const stateRef = ref<Map<Category, boolean>>(props.liveState) // getting back the reactivity of the props, so if the parent changes something, we react
 
 watch(props, () => {
   stateRef.value = props.liveState
 })
 
-function selectionHasChanged () {
+function selectionHasChanged (category : Category, selected : boolean) {
+  stateRef.value.set(category, selected)
   emit('change')
 }
 </script>
 
 <template>
   <div>
-    <span v-for="filter of Object.keys(stateRef)" :key="filter">
+    <span v-for="filter of stateRef" :key="filter[0]">
       <label class="filter-button">
         <input
-          v-model="stateRef[filter]"
           type="checkbox"
           class="hiddencheckbox"
           :true-value="true"
           :false-value="false"
-          @change="selectionHasChanged"
+          :checked="filter[1]"
+          :onchange="(e:any) => selectionHasChanged(filter[0], e.target.checked)"
         >
         <span class="face" :class="barStyle">
-          {{ t(...CategoryInfo[Number(filter) as Category].filterLabel) }}
+          {{ t(...CategoryInfo[filter[0]].filterLabel) }}
         </span>
       </label>
     </span>

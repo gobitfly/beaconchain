@@ -80,7 +80,6 @@ import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
   Category,
-  SubCategory,
   ResultType,
   type FillFrom,
   type HowToFillresultSuggestionOutput,
@@ -104,7 +103,7 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
 
-const SearchRequestPeriodicity = 2 * 1000 // 2 seconds
+const MinimumTimeBetweenAPIcalls = 1000 // ms
 
 const { t } = useI18n()
 
@@ -120,13 +119,8 @@ const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 
 defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
-enum ResultState {
-  Obtained, Outdated, Error
-}
-
 enum States {
   InputIsEmpty,
-  SearchRequestMustBeSent,
   WaitingForResults,
   ApiHasResponded,
   Error,
@@ -142,6 +136,9 @@ interface GlobalState {
 let searchableTypes : ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
+const debouncer = useDebounceValue<string>('', MinimumTimeBetweenAPIcalls)
+watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
+
 const inputted = ref('')
 let lastKnownInput = ''
 const globalState = ref<GlobalState>({
@@ -155,8 +152,8 @@ const inputFieldAndButton = ref<HTMLDivElement>()
 const inputField = ref<HTMLInputElement>()
 
 const userFilters = {
-  networks: {} as Record<string, boolean>, // each field will have a stringifyEnum(ChainIDs) as key and the state of the option as value
-  categories: {} as Record<string, boolean> // each field will have a stringifyEnum(Category) as key and the state of the button as value
+  networks: new Map<ChainIDs, boolean>(), // each entry will have a chain ID as key and the state of the option as value
+  categories: new Map<Category, boolean>() // each entry will have a Category as key and the state of the button as value
 }
 
 const results = {
@@ -234,14 +231,14 @@ onMounted(() => {
       allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
     }
   }
-  // creates the fields storing the state of the category-filter buttons, and deselect them
+  // creates the entries storing the state of the category-filter buttons, and deselect them
   for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
-    userFilters.categories[stringifyEnum(s)] = false
+    userFilters.categories.set(s, false)
   }
-  // creates the fields storing the state of the network drop-down, and deselect all networks
+  // creates the entries storing the state of the network drop-down, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
   for (const nw of networks) {
-    userFilters.networks[stringifyEnum(nw)] = false
+    userFilters.networks.set(nw, false)
   }
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
@@ -261,66 +258,18 @@ function listenToClicks (event : Event) {
   closeDropdown()
 }
 
-// We work with an Interval Timer because:
-// - it makes sure that requests are not sent to the server more often than every 2 s (equivalent to V1),
-// - while offering the user an average waiting time of only 1 second through the magic of statistics (better than V1).
-setInterval(() => {
-  if (globalState.value.state !== States.SearchRequestMustBeSent) {
+function inputMightHaveChanged () {
+  if (inputted.value === lastKnownInput) {
     return
   }
-  updateGlobalState(States.WaitingForResults)
-  // These two calls are performed outside the timer (they request results from the API and then update the drop-down)
-  searchAhead().then(updateBarAfterSearchAhead)
-  // so the timer returns immediately.
-},
-SearchRequestPeriodicity
-)
-
-async function searchAhead () : Promise<ResultState> {
-  const inputWhenAPIgotCalled = inputted.value
-  let received : SearchAheadAPIresponse | undefined
-
-  try {
-    received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: {
-        input: inputted.value,
-        types: searchableTypes,
-        count: isResultCountable(undefined)
-      }
-    })
-  } catch (error) {
-    received = undefined
+  if (inputted.value.length === 0) {
+    empty()
+  } else {
+    updateGlobalState(States.WaitingForResults)
+    debouncer.bounce(inputted.value, false, true)
+    // the debouncer will run callAPIthenOrganizeResultsThenCallBack()
   }
-  if (inputted.value !== inputWhenAPIgotCalled) { // important: errors are ignored if outdated
-    return ResultState.Outdated
-  }
-  if (!received || received.error !== undefined || received.data === undefined) {
-    return ResultState.Error
-  }
-  results.raw = received
-  return ResultState.Obtained
-}
-
-function updateBarAfterSearchAhead (howSearchWent : ResultState) {
-  switch (howSearchWent) {
-    case ResultState.Error :
-      resetGlobalState(States.Error) // the user will see an error message
-      break
-    case ResultState.Outdated :
-      // nothing to do
-      return
-    case ResultState.Obtained : {
-      filterAndOrganizeResults()
-      // we change the state of the component to States.ApiHasResponded and we check whether a function is waiting for the results
-      const previousState = resetGlobalState(States.ApiHasResponded)
-      if (previousState.functionToCallAfterResultsGetOrganized) {
-        previousState.functionToCallAfterResultsGetOrganized()
-      }
-      break
-    }
-  }
+  lastKnownInput = inputted.value
 }
 
 function handleKeyPressInInputField (key : string) {
@@ -343,9 +292,9 @@ function userPressedSearchButtonOrEnter () {
     case States.InputIsEmpty : // the user enjoys the sound of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
-      resetGlobalState(States.SearchRequestMustBeSent) // we order a new search (the timer will launch it)
+      updateGlobalState(States.WaitingForResults)
+      callAPIthenOrganizeResultsThenCallBack() // we start a new search
       return
-    case States.SearchRequestMustBeSent :
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
       globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
       return // in the meantime, we do not proceed further
@@ -365,25 +314,22 @@ function userPressedSearchButtonOrEnter () {
     toConsider = results.organized.out
   }
   // Builds the list of matchings that the parent component will need when picking one by default (in callback function `props.pickByDefault()`).
-  // We guarantee props.pickByDefault() that the list is ordered by network and type priority (the sorting is done in `filterAnsdOrganizeResults()`).
+  // We guarantee props.pickByDefault() that the list is ordered by network and type priority (the sorting is done in `filterAndOrganizeResults()`).
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestions` (see the sorting done in `filterAnsdOrganizeResults()`)
-      possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type })
+      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
+      possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type, s: type.suggestions[0] } as Matching)
     }
   }
   // calling back parent's function in charge of making a choice
   const picked = props.pickByDefault(possibilities)
   if (picked) {
-    // retrieving the result corresponding to the choice
-    const network = toConsider.networks.find(nw => nw.chainId === picked.network)!
-    const type = network.types.find(ty => ty.type === picked.type)!
-    // calling back parent's function taking action with the result
     if (!props.keepDropdownOpen) {
       closeDropdown()
     }
-    emit('go', type.suggestions[0])
+    // calling back parent's function taking action with the result
+    emit('go', (picked as any).s as ResultSuggestion)
   }
 }
 
@@ -395,24 +341,43 @@ function userClickedSuggestion (suggestion : ResultSuggestion) {
   emit('go', suggestion)
 }
 
-function inputMightHaveChanged () {
-  if (inputted.value === lastKnownInput) {
-    return
-  }
-  lastKnownInput = inputted.value
-  if (inputted.value.length === 0) {
-    empty()
-  } else {
-    // we order a search (the timer will launch it)
-    resetGlobalState(States.SearchRequestMustBeSent)
-  }
-}
-
 function refreshOutputArea () {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
   // refreshes the output area in the drop-down
   updateGlobalState(globalState.value.state)
+}
+
+async function callAPIthenOrganizeResultsThenCallBack () {
+  const inputWhenAPIgotCalled = inputted.value
+  let received : SearchAheadAPIresponse | undefined
+
+  try {
+    received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        input: inputted.value,
+        types: searchableTypes,
+        count: isResultCountable(undefined)
+      }
+    })
+  } catch (error) {
+    received = undefined
+  }
+  if (inputted.value !== inputWhenAPIgotCalled) { // result/error outdated. Important: errors are ignored because based on an outdated input.
+    return
+  }
+  if (!received || received.error !== undefined || received.data === undefined) {
+    resetGlobalState(States.Error) // the user will see an error message
+    return
+  }
+
+  results.raw = received
+  filterAndOrganizeResults()
+  const previousState = resetGlobalState(States.ApiHasResponded)
+
+  previousState.functionToCallAfterResultsGetOrganized?.()
 }
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
@@ -425,70 +390,72 @@ function filterAndOrganizeResults () {
 
   // determining whether filters are used
   let noNetworkIsSelected = true
-  for (const nw in userFilters.networks) {
-    noNetworkIsSelected &&= !userFilters.networks[nw]
+  for (const nw of userFilters.networks) {
+    noNetworkIsSelected &&= !nw[1]
   }
   let noCategoryIsSelected = true
-  for (const cat in userFilters.categories) {
-    noCategoryIsSelected &&= !userFilters.categories[cat]
+  for (const cat of userFilters.categories) {
+    noCategoryIsSelected &&= !cat[1]
   }
 
+  const resultsIn : ResultSuggestion[] = []
+  const resultsOut : ResultSuggestion[] = []
+  // filling those two lists
   for (const finding of results.raw.data) {
-    // getting organized information from the finding
     const toBeAdded = convertSingleAPIresultIntoResultSuggestion(finding)
     if (!toBeAdded) {
       continue
     }
     // discarding findings that our configuration (given in the props) forbids
-    const stringifyedChainId = stringifyEnum(toBeAdded.chainId)
-    const stringifyedCategory = stringifyEnum(TypeInfo[toBeAdded.type].category)
-    if ((toBeAdded.chainId !== ChainIDs.Any && !(stringifyedChainId in userFilters.networks)) || !(stringifyedCategory in userFilters.categories)) {
+    const category = TypeInfo[toBeAdded.type].category
+    if ((toBeAdded.chainId !== ChainIDs.Any && !userFilters.networks.has(toBeAdded.chainId)) || !userFilters.categories.has(category)) {
       continue
     }
-    // determining whether the finding is filtered in or out, pointing `place` to the corresponding organized objects
-    let place : OrganizedResults
-    const acceptTheChainID = userFilters.networks[stringifyedChainId] || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
-    const acceptTheCategory = userFilters.categories[stringifyedCategory] || noCategoryIsSelected
+    // determining whether the finding is filtered in or out, sending it to the corresponding list
+    const acceptTheChainID = userFilters.networks.get(toBeAdded.chainId) || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
+    const acceptTheCategory = userFilters.categories.get(category) || noCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
-      place = results.organized.in
-      results.organized.howManyResultsIn++
+      resultsIn.push(toBeAdded)
     } else {
-      place = results.organized.out
-      results.organized.howManyResultsOut++
+      resultsOut.push(toBeAdded)
     }
-    // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
-    let existingNetwork = place.networks.findIndex(nwElem => nwElem.chainId === toBeAdded.chainId)
-    if (existingNetwork < 0) {
-      existingNetwork = -1 + place.networks.push({
-        chainId: toBeAdded.chainId,
-        types: []
-      })
-    }
-    // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
-    let existingType = place.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === toBeAdded.type)
-    if (existingType < 0) {
-      existingType = -1 + place.networks[existingNetwork].types.push({
-        type: toBeAdded.type,
-        suggestions: []
-      })
-    }
-    // now we can insert the finding at the right place in the organized results
-    place.networks[existingNetwork].types[existingType].suggestions.push(toBeAdded)
   }
 
+  sortResults(resultsIn)
+  sortResults(resultsOut)
+  fillOrganizedResults(resultsIn, results.organized.in)
+  fillOrganizedResults(resultsOut, results.organized.out)
+  results.organized.howManyResultsIn = resultsIn.length
+  results.organized.howManyResultsOut = resultsOut.length
+
   // This sorting orders the list of results in the drop down and is fundamental for userPressedSearchButtonOrEnter() as well as props.pickByDefault().
-  // Do not alter this sorting without considering the needs of those functions or updating the comments guiding the developpers using the search-bar.
-  function sortResults (place : OrganizedResults) {
-    for (const network of place.networks) {
-      for (const type of network.types) {
-        type.suggestions.sort((a, b) => a.closeness - b.closeness)
-      }
-      network.types.sort((a, b) => TypeInfo[a.type].priority - TypeInfo[b.type].priority || a.suggestions[0].closeness - b.suggestions[0].closeness)
-    }
-    place.networks.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority || TypeInfo[a.types[0].type].priority - TypeInfo[b.types[0].type].priority || a.types[0].suggestions[0].closeness - b.types[0].suggestions[0].closeness)
+  // Do not alter this sorting without considering the needs of those functions and updating the comments guiding the developpers using the search-bar.
+  function sortResults (list : ResultSuggestion[]) {
+    list.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority || TypeInfo[a.type].priority - TypeInfo[b.type].priority || a.closeness - b.closeness)
   }
-  sortResults(results.organized.in)
-  sortResults(results.organized.out)
+
+  function fillOrganizedResults (linearSource : ResultSuggestion[], organizedDestination : OrganizedResults) {
+    for (const toBeAdded of linearSource) {
+      // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
+      let existingNetwork = organizedDestination.networks.findIndex(nwElem => nwElem.chainId === toBeAdded.chainId)
+      if (existingNetwork < 0) {
+        existingNetwork = -1 + organizedDestination.networks.push({
+          chainId: toBeAdded.chainId,
+          types: []
+        })
+      }
+      // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
+      let existingType = organizedDestination.networks[existingNetwork].types.findIndex(tyElem => tyElem.type === toBeAdded.type)
+      if (existingType < 0) {
+        existingType = -1 + organizedDestination.networks[existingNetwork].types.push({
+          type: toBeAdded.type,
+          suggestions: []
+        })
+      }
+      // now we can insert the finding at the right place in the organized results
+      organizedDestination.networks[existingNetwork].types[existingType].suggestions.push(toBeAdded)
+    }
+  }
 }
 
 // This function takes a single result element returned by the API and organizes it into an element simpler to handle by the
@@ -596,11 +563,11 @@ function isResultCountable (type : ResultType | undefined) : boolean {
 }
 
 function mustNetworkFilterBeShown () : boolean {
-  return Object.keys(userFilters.networks).length >= 2 && !allTypesBelongToAllNetworks
+  return userFilters.networks.size >= 2 && !allTypesBelongToAllNetworks
 }
 
 function mustCategoryFiltersBeShown () : boolean {
-  return Object.keys(userFilters.categories).length >= 2
+  return userFilters.categories.size >= 2
 }
 
 const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
@@ -639,16 +606,10 @@ function informationIfHiddenResults () : string {
 
   return info
 }
-
-// This leading zero is required otherwise the fields in a Record whose keys are
-// well-formatted numbers would get sorted lexicographically... for some reason.
-function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string {
-  return '0' + String(enumValue)
-}
 </script>
 
 <template>
-  <div class="anchor" :class="barStyle">
+  <div class="anchor" :class="[barStyle, classForDropdownOpenedOrClosed]">
     <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
       <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
         <input
@@ -709,7 +670,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
           </div>
         </div>
         <div v-else class="output-area" :class="barStyle">
-          <div v-if="globalState.state === States.SearchRequestMustBeSent || globalState.state === States.WaitingForResults" class="info center">
+          <div v-if="globalState.state === States.WaitingForResults" class="info center">
             {{ t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="default" />
           </div>
@@ -735,6 +696,13 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
   margin: auto;
   &.embedded {
     height: 30px;
+    &.dropdown-is-opened {
+      @media (max-width: 469.9px) { // narrow window/screen
+        position: absolute;
+        left: 0px;
+        right: 0px;
+      }
+    }
   }
   &.discreet {
     height: 34px;
@@ -764,23 +732,7 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
   @include main.container;
   position: absolute;
   right: 0px;
-  &.gaudy,
-  &.discreet {
-    left: 0px;
-  }
-  &.embedded {
-    @media (min-width: 470px) { // large enough window/screen
-      left: 0px;
-    }
-    @media (max-width: 469.9px) { // narrow window/screen
-      &.dropdown-is-closed {
-        left: 0px;
-      }
-      &.dropdown-is-opened {
-        width: 300px;
-      }
-    }
-  }
+  left: 0px;
 
   &.gaudy,
   &.embedded {
@@ -826,6 +778,10 @@ function stringifyEnum (enumValue : Category | SubCategory | ChainIDs) : string 
       &.embedded {
         height: 30px;
         padding-right: 31px;
+      }
+
+      &:placeholder-shown {
+        text-overflow: ellipsis;
       }
     }
 

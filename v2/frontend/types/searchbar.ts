@@ -70,7 +70,7 @@ export enum ResultType {
 
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
 // and the function returns one `Matching` element (or undefined).
-export interface Matching {
+export type Matching = {
   closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
   network: ChainIDs, // the network that this result belongs to
   type: ResultType // the type of the result
