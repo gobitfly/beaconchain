@@ -11,6 +11,9 @@ useHead({
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
+const { getUser } = useUserStore()
+
+useAsyncData('get_user', () => getUser(), { server: false })
 
 </script>
 

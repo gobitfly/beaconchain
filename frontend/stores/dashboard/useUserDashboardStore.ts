@@ -19,6 +19,7 @@ export function useUserDashboardStore () {
   const dashboards = computed(() => data.value)
 
   async function refreshDashboards () {
+    console.log('refreshDashboards', isLoggedIn.value)
     if (isLoggedIn.value) {
       const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
       data.value = res.data

@@ -16,7 +16,7 @@ const { isLoggedIn } = useUserStore()
 const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
-  useAsyncData('user_dashboards', () => refreshDashboards()),
+  useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] }),
   useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
 ])
 
@@ -53,6 +53,7 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
+    <div>len: {{ dashboards?.validator_dashboards?.length }} loged in{{ isLoggedIn }}</div>
     <BcPageWrapper>
       <DashboardCreationController
         class="panel-controller"
