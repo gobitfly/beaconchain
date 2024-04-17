@@ -1,257 +1,370 @@
 package modules
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
-	"regexp"
+	"sync"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-
-	"github.com/ethereum/go-ethereum"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"golang.org/x/exp/maps"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/contracts/deposit_contract"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
-var eth1LookBack = uint64(100)
-var eth1MaxFetch = uint64(1000)
-var eth1DepositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
-var eth1DepositContractFirstBlock uint64
-var eth1DepositContractAddress common.Address
-var eth1Client *ethclient.Client
-var eth1RPCClient *gethrpc.Client
-var infuraToMuchResultsErrorRE = regexp.MustCompile("query returned more than [0-9]+ results")
-var gethRequestEntityTooLargeRE = regexp.MustCompile("413 Request Entity Too Large")
+// if we ever end up in a situation where we possibly have gaps in the data remember: the merkletree_index is unique.
+// if one is missing, simple take the blocks from the merkletree_index before and after and fetch the deposits again.
 
-// eth1DepositsExporter regularly fetches the depositcontract-logs of the
-// last 100 blocks and exports the deposits into the database.
-// If a reorg of the eth1-chain happened within these 100 blocks it will delete
-// removed deposits.
-func eth1DepositsExporter() {
-	eth1DepositContractAddress = common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress)
-	eth1DepositContractFirstBlock = utils.Config.Indexer.Eth1DepositContractFirstBlock
+type executionDepositsExporter struct {
+	ModuleContext
+	Client                 rpc.Client
+	ErigonClient           *gethrpc.Client
+	GethClient             *gethrpc.Client
+	LogClient              *ethclient.Client
+	LogFilterer            *deposit_contract.DepositContractFilterer
+	DepositContractAddress common.Address
+	LastExportedBlock      uint64
+	ExportMutex            *sync.Mutex
+	StopEarlyMutex         *sync.Mutex
+	StopEarly              context.CancelFunc
+	Signer                 gethtypes.Signer
+}
+
+func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
+
+	return &executionDepositsExporter{
+		ModuleContext:          moduleContext,
+		Client:                 moduleContext.ConsClient,
+		DepositContractAddress: common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress),
+		LastExportedBlock:      0,
+		ExportMutex:            &sync.Mutex{},
+		StopEarlyMutex:         &sync.Mutex{},
+	}
+}
+
+func (d *executionDepositsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
+	return nil // nop
+}
+
+func (d *executionDepositsExporter) Init() error {
+	d.Signer = gethtypes.NewCancunSigner(big.NewInt(int64(utils.Config.Chain.ClConfig.DepositChainID)))
 
 	rpcClient, err := gethrpc.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
 		log.Fatal(err, "new exporter geth client error", 0)
 	}
-	eth1RPCClient = rpcClient
+	d.GethClient = rpcClient
+
 	client := ethclient.NewClient(rpcClient)
-	eth1Client = client
-
-	lastFetchedBlock := uint64(0)
-
-	for {
-		t0 := time.Now()
-
-		var lastDepositBlock uint64
-		err = db.WriterDb.Get(&lastDepositBlock, "select coalesce(max(block_number),0) from eth1_deposits")
-		if err != nil {
-			log.Error(err, "error retrieving highest block_number of eth1-deposits from db", 0)
-			time.Sleep(time.Second * 5)
-			continue
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		header, err := eth1Client.HeaderByNumber(ctx, nil)
-		if err != nil {
-			log.Error(err, "error getting header from eth1-client", 0)
-			cancel()
-			time.Sleep(time.Second * 5)
-			continue
-		}
-		cancel()
-
-		blockHeight := header.Number.Uint64()
-
-		fromBlock := lastDepositBlock + 1
-		toBlock := blockHeight
-
-		// start from the first block
-		if fromBlock < eth1DepositContractFirstBlock {
-			fromBlock = eth1DepositContractFirstBlock
-		}
-		// make sure we are progressing even if there are no deposits in the last batch
-		if fromBlock < lastFetchedBlock+1 {
-			fromBlock = lastFetchedBlock + 1
-		}
-		// if we are not synced to the head yet fetch missing blocks in batches of size 1000
-		if toBlock > fromBlock+eth1MaxFetch {
-			toBlock = fromBlock + eth1MaxFetch
-		}
-		if toBlock > blockHeight {
-			toBlock = blockHeight
-		}
-		// if we are synced to the head look at the last 100 blocks
-		if toBlock < fromBlock+eth1LookBack {
-			if toBlock > eth1LookBack {
-				fromBlock = toBlock - eth1LookBack
-			} else {
-				fromBlock = 0
-			}
-		}
-
-		depositsToSave, err := fetchEth1Deposits(fromBlock, toBlock)
-		if err != nil {
-			if infuraToMuchResultsErrorRE.MatchString(err.Error()) || gethRequestEntityTooLargeRE.MatchString(err.Error()) {
-				toBlock = fromBlock + 100
-				if toBlock > blockHeight {
-					toBlock = blockHeight
-				}
-				log.Infof("limiting block-range to %v-%v when fetching eth1-deposits due to too much results", fromBlock, toBlock)
-				depositsToSave, err = fetchEth1Deposits(fromBlock, toBlock)
-			}
-			if err != nil {
-				log.Error(err, "error fetching eth1-deposits", 0, map[string]interface{}{"fromBlock": fromBlock, "toBlock": toBlock})
-				time.Sleep(time.Second * 5)
-				continue
-			}
-		}
-
-		err = saveEth1Deposits(depositsToSave)
-		if err != nil {
-			log.Error(err, "error saving eth1-deposits", 0)
-			time.Sleep(time.Second * 5)
-			continue
-		}
-
-		if len(depositsToSave) > 0 {
-			err = aggregateDeposits()
-			if err != nil {
-				log.Error(err, "error saving eth1-deposits-leaderboard", 0)
-				time.Sleep(time.Second * 5)
-				continue
-			}
-		}
-
-		// make sure we are progressing even if there are no deposits in the last batch
-		lastFetchedBlock = toBlock
-
-		if len(depositsToSave) > 0 {
-			log.InfoWithFields(log.Fields{
-				"duration":      time.Since(t0),
-				"blockHeight":   blockHeight,
-				"fromBlock":     fromBlock,
-				"toBlock":       toBlock,
-				"depositsSaved": len(depositsToSave),
-			}, "exported eth1-deposits")
-		}
-
-		// progress faster if we are not synced to head yet
-		if blockHeight != toBlock {
-			time.Sleep(time.Second * 5)
-			continue
-		}
-
-		time.Sleep(time.Minute)
+	d.LogClient = client
+	filterer, err := deposit_contract.NewDepositContractFilterer(d.DepositContractAddress, d.LogClient)
+	if err != nil {
+		return err
 	}
+	d.LogFilterer = filterer
+
+	erigonClient, err := gethrpc.Dial(utils.Config.Eth1ErigonEndpoint)
+	if err != nil {
+		log.Fatal(err, "new exporter erigon client error", 0)
+	}
+	d.ErigonClient = erigonClient
+
+	// check if any log_index is missing, if yes we have to do a soft re-export
+	// ideally i would check for gaps in the merkletree-index column, but this is extremely annoying as its stored as little endian bytes in the db
+	var isV2Check bool
+	err = db.WriterDb.Get(&isV2Check, "select count(*) = count(log_index) as is_v2 from eth1_deposits")
+	if err != nil {
+		return err
+	}
+
+	if isV2Check {
+		// get latest block from db
+		err = db.WriterDb.Get(&d.LastExportedBlock, "select block_number from eth1_deposits order by block_number desc limit 1")
+		if err != nil {
+			if err == sql.ErrNoRows {
+				d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
+			} else {
+				return err
+			}
+		}
+	} else {
+		log.Warnf("log_index is missing in eth1_deposits table, starting from the beginning")
+		d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
+	}
+
+	log.Infof("initialized execution deposits exporter with last exported block: %v", d.LastExportedBlock)
+
+	// quick kick-start
+	go func() {
+		err := d.OnFinalizedCheckpoint(nil)
+		if err != nil {
+			log.Error(err, "error during kick-start", 0)
+		}
+	}()
+
+	return nil
 }
 
-func fetchEth1Deposits(fromBlock, toBlock uint64) (depositsToSave []*types.Eth1Deposit, err error) {
+func (d *executionDepositsExporter) GetName() string {
+	return "ExecutionDeposits-Exporter"
+}
+
+func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
+
+	return nil // nop
+}
+
+// can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
+func (d *executionDepositsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
+	// important: have to fetch the actual finalized epoch because even tho its called on finalized checkpoint it actually emits for each justified epoch
+	// so we have to do an extra request to get the actual latest finalized epoch
+	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	if err != nil {
+		return err
+	}
+
+	var nearestELBlock sql.NullInt64
+	err = db.ReaderDb.Get(&nearestELBlock, "select exec_block_number from blocks where slot <= $1 and exec_block_number > 0 order by slot desc limit 1", res.Data.Finalized.Epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	if err != nil {
+		return err
+	}
+	if !nearestELBlock.Valid {
+		return fmt.Errorf("no block found for finalized epoch %v", res.Data.Finalized.Epoch)
+	}
+	log.Debugf("exporting execution layer deposits till block %v", nearestELBlock.Int64)
+
+	err = d.exportTillBlock(uint64(nearestELBlock.Int64))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// this is basically synchronous, each time it gets called it will kill the previous export and replace it with itself
+func (d *executionDepositsExporter) exportTillBlock(block uint64) (err error) {
+	// following blocks if a previous function call is still waiting for an export to stop early
+	d.StopEarlyMutex.Lock()
+	if d.StopEarly != nil {
+		// this will run even if the previous export has already finished
+		// preventing this would require an overly complex solution
+		log.Debugf("asking potentially running export to stop early")
+		d.StopEarly()
+	}
+
+	// following blocks as long as the running export hasn't finished yet
+	d.ExportMutex.Lock()
+	ctx, cancel := context.WithCancel(context.Background())
+	d.StopEarly = cancel
+	// we have over taken and allow potentially newer function calls to signal us to stop early
+	d.StopEarlyMutex.Unlock()
+
+	blockOffset := d.LastExportedBlock + 1
+	blockTarget := block
+
+	defer d.ExportMutex.Unlock()
+
+	log.Infof("exporting execution layer deposits from %v to %v", blockOffset, blockTarget)
+
+	depositsToSave := make([]*types.ELDeposit, 0)
+
+	for blockOffset < blockTarget {
+		tmpBlockTarget := blockOffset + 1000
+		if tmpBlockTarget > blockTarget {
+			tmpBlockTarget = blockTarget
+		}
+		log.Debugf("fetching deposits from %v to %v", blockOffset, tmpBlockTarget)
+		tmp, err := d.fetchDeposits(blockOffset, tmpBlockTarget)
+		if err != nil {
+			return err
+		}
+		depositsToSave = append(depositsToSave, tmp...)
+		blockOffset = tmpBlockTarget
+
+		select {
+		case <-ctx.Done(): // a newer function call has asked us to stop early
+			log.Warnf("stop early signal received, stopping export early")
+			blockTarget = tmpBlockTarget
+		default:
+			continue
+		}
+	}
+
+	log.Debugf("saving %v deposits", len(depositsToSave))
+	err = d.saveDeposits(depositsToSave)
+	if err != nil {
+		return err
+	}
+
+	d.LastExportedBlock = blockTarget
+
+	if len(depositsToSave) > 0 {
+		err = d.aggregateDeposits()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/// --- utils ---
+
+func (d *executionDepositsExporter) fetchDeposits(fromBlock, toBlock uint64) (depositsToSave []*types.ELDeposit, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	topic := common.BytesToHash(eth1DepositEventSignature[:])
-	qry := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			eth1DepositContractAddress,
-		},
-		FromBlock: new(big.Int).SetUint64(fromBlock),
-		ToBlock:   new(big.Int).SetUint64(toBlock),
-		Topics:    [][]common.Hash{{topic}},
-	}
-
-	depositLogs, err := eth1Client.FilterLogs(ctx, qry)
+	depositLogIterator, err := d.LogFilterer.FilterDepositEvent(&bind.FilterOpts{Start: fromBlock, End: &toBlock, Context: ctx})
 	if err != nil {
-		return depositsToSave, fmt.Errorf("error getting logs from eth1-client: %w", err)
+		return nil, fmt.Errorf("error getting logs from execution layer client: %w", err)
 	}
 
-	blocksToFetch := []uint64{}
-	txsToFetch := []string{}
+	blocksToFetch := make(map[uint64]bool)
+	txsToFetch := make(map[string]bool)
 
 	domain, err := utils.GetSigningDomain()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, depositLog := range depositLogs {
-		if depositLog.Topics[0] != eth1DepositEventSignature {
-			continue
+	for depositLogIterator.Next() {
+		if depositLogIterator.Event == nil {
+			return nil, fmt.Errorf("nil deposit-log")
 		}
-		pubkey, withdrawalCredentials, amount, signature, merkletreeIndex, err := deposit.UnpackDepositLogData(depositLog.Data)
-		if err != nil {
-			return depositsToSave, fmt.Errorf("error unpacking eth1-deposit-log: %x: %w", depositLog.Data, err)
-		}
-		err = deposit.VerifyDepositSignature(&ethpb.Deposit_Data{
-			PublicKey:             pubkey,
-			WithdrawalCredentials: withdrawalCredentials,
-			Amount:                bytesutil.FromBytes8(amount),
-			Signature:             signature,
+
+		depositLog :=
+			depositLogIterator.Event
+		err = utils.VerifyDepositSignature(&phase0.DepositData{
+			PublicKey:             phase0.BLSPubKey(depositLog.Pubkey),
+			WithdrawalCredentials: depositLog.WithdrawalCredentials,
+			Amount:                phase0.Gwei(binary.LittleEndian.Uint64(depositLog.Amount)),
+			Signature:             phase0.BLSSignature(depositLog.Signature),
 		}, domain)
 		validSignature := err == nil
-		blocksToFetch = append(blocksToFetch, depositLog.BlockNumber)
-		txsToFetch = append(txsToFetch, depositLog.TxHash.Hex())
-		depositsToSave = append(depositsToSave, &types.Eth1Deposit{
-			TxHash:                depositLog.TxHash.Bytes(),
-			TxIndex:               uint64(depositLog.TxIndex),
-			BlockNumber:           depositLog.BlockNumber,
-			PublicKey:             pubkey,
-			WithdrawalCredentials: withdrawalCredentials,
-			Amount:                bytesutil.FromBytes8(amount),
-			Signature:             signature,
-			MerkletreeIndex:       merkletreeIndex,
-			Removed:               depositLog.Removed,
+
+		blocksToFetch[depositLog.Raw.BlockNumber] = true
+		txsToFetch[depositLog.Raw.TxHash.Hex()] = true
+
+		depositsToSave = append(depositsToSave, &types.ELDeposit{
+			TxHash:                depositLog.Raw.TxHash.Bytes(),
+			TxIndex:               uint64(depositLog.Raw.TxIndex),
+			LogIndex:              uint64(depositLog.Raw.Index),
+			BlockNumber:           depositLog.Raw.BlockNumber,
+			PublicKey:             depositLog.Pubkey,
+			WithdrawalCredentials: depositLog.WithdrawalCredentials,
+			Amount:                binary.LittleEndian.Uint64(depositLog.Amount),
+			Signature:             depositLog.Signature,
+			MerkletreeIndex:       depositLog.Index,
+			Removed:               depositLog.Raw.Removed,
 			ValidSignature:        validSignature,
 		})
 	}
 
-	headers, txs, err := eth1BatchRequestHeadersAndTxs(blocksToFetch, txsToFetch)
-	if err != nil {
-		return depositsToSave, fmt.Errorf("error getting eth1-blocks: %w\nblocks to fetch: %v\n tx to fetch: %v", err, blocksToFetch, txsToFetch)
+	if err := depositLogIterator.Error(); err != nil {
+		return nil, fmt.Errorf("error iterating over execution layer deposit-logs: %w", err)
 	}
 
-	for _, d := range depositsToSave {
-		// get corresponding block (for the tx-time)
-		b, exists := headers[d.BlockNumber]
-		if !exists {
-			return depositsToSave, fmt.Errorf("error getting block for eth1-deposit: block does not exist in fetched map")
-		}
-		d.BlockTs = int64(b.Time)
+	if len(depositsToSave) == 0 {
+		return nil, nil
+	}
 
-		// get corresponding tx (for input and from-address)
-		tx, exists := txs[fmt.Sprintf("0x%x", d.TxHash)]
+	log.Infof("found %v execution layer deposits between block %v and %v", len(depositsToSave), fromBlock, toBlock)
+
+	headers, txs, err := d.batchRequestHeadersAndTxs(maps.Keys(blocksToFetch), maps.Keys(txsToFetch))
+	if err != nil {
+		return nil, fmt.Errorf("error getting execution layer blocks: %w\nblocks to fetch: %v\n tx to fetch: %v", err, blocksToFetch, txsToFetch)
+	}
+
+	txsToTrace := make(map[string][]int)
+
+	depositAddress := d.DepositContractAddress.Bytes()
+	for i, deposit := range depositsToSave {
+		// get corresponding block (for the tx-time)
+		b, exists := headers[deposit.BlockNumber]
 		if !exists {
-			return depositsToSave, fmt.Errorf("error getting tx for eth1-deposit: tx does not exist in fetched map")
+			return nil, fmt.Errorf("error getting block for execution layer deposit: block does not exist in fetched map")
 		}
-		d.TxInput = tx.Data()
-		chainID := tx.ChainId()
-		if chainID == nil {
-			return depositsToSave, fmt.Errorf("error getting tx-chainId for eth1-deposit")
+		deposit.BlockTs = int64(b.Time)
+
+		txHash := fmt.Sprintf("0x%x", deposit.TxHash)
+		tx, exists := txs[txHash]
+		if !exists {
+			return nil, fmt.Errorf("error getting tx for execution layer deposit: tx does not exist in fetched map")
 		}
-		signer := gethtypes.NewCancunSigner(chainID)
-		sender, err := signer.Sender(tx)
+		sender, err := d.Signer.Sender(tx)
 		if err != nil {
-			return depositsToSave, fmt.Errorf("error getting sender for eth1-deposit (txHash: %x, chainID: %v): %w", d.TxHash, chainID, err)
+			return nil, fmt.Errorf("error getting sender for execution layer deposit (txHash: %x): %w", deposit.TxHash, err)
 		}
-		d.FromAddress = sender.Bytes()
+		deposit.FromAddress = sender.Bytes()
+		if !bytes.Equal(tx.To().Bytes(), depositAddress) {
+			deposit.ToAddress = tx.To().Bytes()
+			txsToTrace[txHash] = append(txsToTrace[txHash], i)
+		}
+	}
+
+	if len(txsToTrace) > 0 {
+		if utils.Config.Indexer.DoNotTraceDeposits {
+			log.Warnf("deposit tracing is disabled. remove indexer.doNotTraceDeposits to enable. already exported deposits won't be affected by the state of this flag.")
+			return depositsToSave, nil
+		}
+		// trace tnxs to get msg.sender for deposits
+		traces, err := d.getDepositTraces(maps.Keys(txsToTrace))
+		if err != nil {
+			return nil, fmt.Errorf("error getting traces for execution layer deposits: %w", err)
+		}
+
+		for txHash, depositIndices := range txsToTrace {
+			trace, exists := traces[txHash]
+			if !exists {
+				return nil, fmt.Errorf("error getting traces for execution layer deposit: tx does not exist in fetched map")
+			}
+			for _, i := range depositIndices {
+				d := depositsToSave[i]
+				// find a trace that matches the event
+				for ti, t := range trace {
+					// if everything matches we can be sure that this is the correct trace
+					if bytes.Equal(t.Pubkey, d.PublicKey) &&
+						bytes.Equal(t.Signature, d.Signature) &&
+						bytes.Equal(t.WithdrawalCredentials, d.WithdrawalCredentials) &&
+						t.Value == d.Amount {
+						d.MsgSender = t.From
+						// remove trace from list
+						traces[txHash] = append(traces[txHash][:ti], traces[txHash][ti+1:]...)
+						break
+					}
+				}
+				if d.MsgSender == nil {
+					return nil, fmt.Errorf("error getting msg.sender for execution layer deposit: no trace matched the deposit")
+				}
+			}
+			if len(traces[txHash]) > 0 {
+				// warn if there are still traces left
+				log.Warnf("still %v traces left for tx %v, ignoring. @devs consider looking into this if it does occur", len(traces[txHash]), txHash)
+			}
+		}
 	}
 
 	return depositsToSave, nil
 }
 
-func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
+func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDeposit) error {
 	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -261,7 +374,6 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (
 			tx_hash,
-			tx_input,
 			tx_index,
 			block_number,
 			block_ts,
@@ -273,11 +385,14 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 			signature,
 			merkletree_index,
 			removed,
-			valid_signature
+			valid_signature,
+			msg_sender,
+			to_address,
+			log_index
 		)
-		VALUES ($1, $2, $3, $4, TO_TIMESTAMP($5), $6, ENCODE($7, 'hex'), $8, $9, $10, $11, $12, $13, $14)
-		ON CONFLICT (tx_hash, merkletree_index) DO UPDATE SET
-			tx_input               = EXCLUDED.tx_input,
+		VALUES ($1, $2, $3, TO_TIMESTAMP($4), $5, ENCODE($6, 'hex'), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		ON CONFLICT (merkletree_index) DO UPDATE SET
+			tx_hash                = EXCLUDED.tx_hash,
 			tx_index               = EXCLUDED.tx_index,
 			block_number           = EXCLUDED.block_number,
 			block_ts               = EXCLUDED.block_ts,
@@ -287,33 +402,92 @@ func saveEth1Deposits(depositsToSave []*types.Eth1Deposit) error {
 			withdrawal_credentials = EXCLUDED.withdrawal_credentials,
 			amount                 = EXCLUDED.amount,
 			signature              = EXCLUDED.signature,
-			merkletree_index       = EXCLUDED.merkletree_index,
 			removed                = EXCLUDED.removed,
-			valid_signature        = EXCLUDED.valid_signature`)
+			valid_signature        = EXCLUDED.valid_signature,
+			msg_sender             = EXCLUDED.msg_sender,
+			to_address             = EXCLUDED.to_address,
+			log_index              = EXCLUDED.log_index`)
 	if err != nil {
 		return err
 	}
 	defer insertDepositStmt.Close()
 
 	for _, d := range depositsToSave {
-		_, err := insertDepositStmt.Exec(d.TxHash, d.TxInput, d.TxIndex, d.BlockNumber, d.BlockTs, d.FromAddress, d.FromAddress, d.PublicKey, d.WithdrawalCredentials, d.Amount, d.Signature, d.MerkletreeIndex, d.Removed, d.ValidSignature)
+		_, err := insertDepositStmt.Exec(d.TxHash, d.TxIndex, d.BlockNumber, d.BlockTs, d.FromAddress, d.FromAddress, d.PublicKey, d.WithdrawalCredentials, d.Amount, d.Signature, d.MerkletreeIndex, d.Removed, d.ValidSignature, d.MsgSender, d.ToAddress, d.LogIndex)
 		if err != nil {
-			return fmt.Errorf("error saving eth1-deposit to db: %v: %w", fmt.Sprintf("%x", d.TxHash), err)
+			return fmt.Errorf("error saving execution layer deposit to db: %v: %w", fmt.Sprintf("%x", d.TxHash), err)
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("error committing db-tx for eth1-deposits: %w", err)
+		return fmt.Errorf("error committing db-tx for execution layer deposits: %w", err)
 	}
 
 	return nil
 }
 
-// eth1BatchRequestHeadersAndTxs requests the block range specified in the arguments.
+func (d *executionDepositsExporter) batchRequestTraces(txsToTrace []string) (map[string]*[]*rpc.ParityTraceResult, error) {
+	elems := make([]gethrpc.BatchElem, 0, len(txsToTrace))
+	traces := make(map[string]*[]*rpc.ParityTraceResult, len(txsToTrace))
+	errors := make([]error, 0, len(txsToTrace))
+
+	for _, txHash := range txsToTrace {
+		trace := make([]*rpc.ParityTraceResult, 0)
+		err := error(nil)
+		elems = append(elems, gethrpc.BatchElem{
+			Method: "trace_transaction",
+			Args:   []interface{}{txHash},
+			Result: &trace,
+			Error:  err,
+		})
+		traces[txHash] = &trace
+		errors = append(errors, err)
+	}
+
+	lenElems := len(elems)
+
+	if lenElems == 0 {
+		return traces, nil
+	}
+
+	for i := 0; (i * 32) < lenElems; i++ {
+		start := (i * 32)
+		end := start + 32
+
+		if end > lenElems {
+			end = lenElems
+		}
+		startTime := time.Now()
+		log.Debugf("batch-requesting %v traces (from %v to %v)", len(txsToTrace), start, end)
+		ioErr := d.ErigonClient.BatchCall(elems[start:end])
+		log.Debugf("batch-requesting %v traces took %v", len(txsToTrace), time.Since(startTime))
+		if ioErr != nil {
+			return nil, ioErr
+		}
+	}
+
+	for _, e := range errors {
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	return traces, nil
+}
+
+type ELDepositTrace struct {
+	From                  []byte
+	Value                 uint64
+	Pubkey                []byte
+	WithdrawalCredentials []byte
+	Signature             []byte
+}
+
+// batchRequestHeadersAndTxs requests the block range specified in the arguments.
 // Instead of requesting each block in one call, it batches all requests into a single rpc call.
 // This code is shamelessly stolen and adapted from https://github.com/prysmaticlabs/prysm/blob/2eac24c/beacon-chain/powchain/service.go#L473
-func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethtypes.Header, map[string]*gethtypes.Transaction, error) {
+func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) (map[uint64]*gethtypes.Header, map[string]*gethtypes.Transaction, error) {
 	elems := make([]gethrpc.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
 	headers := make(map[uint64]*gethtypes.Header, len(blocksToFetch))
 	txs := make(map[string]*gethtypes.Transaction, len(txsToFetch))
@@ -359,7 +533,7 @@ func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) 
 			end = lenElems
 		}
 
-		ioErr := eth1RPCClient.BatchCall(elems[start:end])
+		ioErr := d.GethClient.BatchCall(elems[start:end])
 		if ioErr != nil {
 			return nil, nil, ioErr
 		}
@@ -374,7 +548,80 @@ func eth1BatchRequestHeadersAndTxs(blocksToFetch []uint64, txsToFetch []string) 
 	return headers, txs, nil
 }
 
-func aggregateDeposits() error {
+// automatically filters out unwanted traces (e.g. not deposit calls)
+func (d *executionDepositsExporter) getDepositTraces(txsToTrace []string) (filteredTraces map[string][]ELDepositTrace, err error) {
+	log.Debugf("tracing %v txs", len(txsToTrace))
+	start := time.Now()
+	filteredTraces = make(map[string][]ELDepositTrace, 0)
+	var oneGwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
+
+	encodedDepositContractAddress := hexutil.Encode(d.DepositContractAddress.Bytes())
+	parsed, err := deposit_contract.DepositContractMetaData.GetAbi()
+	if err != nil {
+		return nil, fmt.Errorf("error getting deposit-contract-abi: %w", err)	
+	}
+	depositMethod, ok := parsed.Methods["deposit"]
+	if !ok {
+		return nil, fmt.Errorf("error getting deposit-method from deposit-contract-abi")
+	}
+	depositFunctionSignature := hexutil.Encode(depositMethod.ID)
+
+	traces, err := d.batchRequestTraces(txsToTrace)
+	if err != nil {
+		return nil, fmt.Errorf("error getting traces: %w", err)
+	}
+
+	for txHash, trace := range traces {
+		for _, t := range *trace {
+			// ignore failed calls
+			if t.Error != "" || t.Type != "call" || t.Action.CallType != "call" || t.Action.To != encodedDepositContractAddress || len(t.Action.Input) < 8+2 || t.Action.Input[:8+2] != depositFunctionSignature {
+				continue
+			}
+			// lets unwrap the input
+			decodedData, err := hex.DecodeString(t.Action.Input[8+2:])
+			if err != nil {
+				return nil, fmt.Errorf("error decoding input: %w", err)
+			}
+			res := make(map[string]interface{})
+			err = depositMethod.Inputs.UnpackIntoMap(res, decodedData)
+			if err != nil {
+				return nil, fmt.Errorf("error unpacking input: %w", err)
+			}
+			// everything will be bytes
+			pubkey, ok := res["pubkey"]
+			if !ok {
+				return nil, fmt.Errorf("pubkey not found in deposit-method")
+			}
+			withdrawalCredentials, ok := res["withdrawal_credentials"]
+			if !ok {
+				return nil, fmt.Errorf("withdrawal_credentials not found in deposit-method")
+			}
+			signature, ok := res["signature"]
+			if !ok {
+				return nil, fmt.Errorf("signature not found in deposit-method")
+			}
+			value, err := hexutil.DecodeBig(t.Action.Value)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding value: %w", err)
+			}
+
+			filteredTraces[txHash] = append(filteredTraces[txHash], ELDepositTrace{
+				From:                  hexutil.MustDecode(t.Action.From),
+				Value:                 new(big.Int).Div(value, oneGwei).Uint64(),
+				Pubkey:                pubkey.([]byte),
+				WithdrawalCredentials: withdrawalCredentials.([]byte),
+				Signature:             signature.([]byte),
+			})
+		}
+	}
+
+	log.Debugf("tracing took %v", time.Since(start))
+
+	return filteredTraces, nil
+}
+
+func (d *executionDepositsExporter) aggregateDeposits() error {
+	/// this could be a materialized view
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("exporter_aggregate_eth1_deposits").Observe(time.Since(start).Seconds())
