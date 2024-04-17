@@ -7,3 +7,4 @@ export type DashboardType = 'validator' | 'account'
 export type ValidatorDashboardNetwork = 'ethereum' | 'gnosis'
 
 export const DAHSHBOARDS_ALL_GROUPS_ID = -1
+export const DAHSHBOARDS_NEXT_EPOCH_ID = -2

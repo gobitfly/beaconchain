@@ -332,6 +332,14 @@ func (s SortOrder) Invert() SortOrder {
 	return ASC
 }
 
+var SortOrderColumns = struct {
+	Asc  SortOrder
+	Desc SortOrder
+}{
+	ASC,
+	DESC,
+}
+
 // ----------------
 // Summary Dashboard Table Enums
 

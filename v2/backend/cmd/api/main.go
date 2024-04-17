@@ -40,15 +40,17 @@ func main() {
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
-	var dai dataaccess.DataAccessor
+	var dataAccessor dataaccess.DataAccessor
 	if dummyApi {
-		dai = dataaccess.NewDummyService()
+		dataAccessor = dataaccess.NewDummyService()
 	} else {
-		dai = dataaccess.NewDataAccessService(cfg)
+		dataAccessor = dataaccess.NewDataAccessService(cfg)
 	}
-	defer dai.CloseDataAccessService()
+	defer dataAccessor.CloseDataAccessService()
 
-	router := api.NewApiRouter(dai, cfg)
+	sessionManager := api.NewSessionManager(cfg.RedisCacheEndpoint, !cfg.Frontend.Debug)
+
+	router := api.NewApiRouter(dataAccessor, sessionManager)
 	router.Use(api.CorsMiddleware, api.GetAuthMiddleware(cfg.ApiKeySecret))
 
 	srv := &http.Server{

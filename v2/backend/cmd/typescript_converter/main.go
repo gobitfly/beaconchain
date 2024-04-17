@@ -30,7 +30,7 @@ var typeMappings = map[string]string{
 // Expects the following flags:
 // -out: Output folder for the generated TypeScript file
 
-// Standard usage (execute in backend folder): go run cmd/typescript-converter/main.go -out ../frontend/types/api
+// Standard usage (execute in backend folder): go run cmd/typescript_converter/main.go -out ../frontend/types/api
 
 func main() {
 	var out string
