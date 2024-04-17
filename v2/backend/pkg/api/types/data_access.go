@@ -75,7 +75,6 @@ type WithdrawalsCursor struct {
 	Slot            uint64
 	WithdrawalIndex uint64
 	Index           uint64
-	GroupName       string
 	Recipient       []byte
 	Amount          uint64
 }
