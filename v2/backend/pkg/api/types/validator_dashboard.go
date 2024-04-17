@@ -70,7 +70,7 @@ type VDBGroupSummaryData struct {
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int]] // line chart, series id is group id, no stack
+type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
 type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
 
@@ -102,27 +102,23 @@ type VDBGroupRewardsData struct {
 	AttestationsHead   VDBGroupRewardsDetails `json:"attestations_head"`
 	Sync               VDBGroupRewardsDetails `json:"sync"`
 	Slashing           VDBGroupRewardsDetails `json:"slashing"`
+	Inactivity         VDBGroupRewardsDetails `json:"inactivity"`
 	Proposal           VDBGroupRewardsDetails `json:"proposal"`
-	ProposalElReward   decimal.Decimal        `json:"proposal_el_reward"`
+
+	ProposalElReward            decimal.Decimal `json:"proposal_el_reward"`
+	ProposalClAttIncReward      decimal.Decimal `json:"proposal_cl_att_inc_reward"`
+	ProposalClSyncIncReward     decimal.Decimal `json:"proposal_cl_sync_inc_reward"`
+	ProposalClSlashingIncReward decimal.Decimal `json:"proposal_cl_slashing_inc_reward"`
 }
 type InternalGetValidatorDashboardGroupRewardsResponse ApiDataResponse[VDBGroupRewardsData]
 
-type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int]] // bar chart, series id is group id, stack is 'execution' or 'consensus'
+type InternalGetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int, decimal.Decimal]] // bar chart, series id is group id, property is 'el' or 'cl'
 
 // Duties Modal
-type VDBEpochDutiesItem struct {
-	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'"`
-	Reward decimal.Decimal `json:"reward"`
-}
-type VDBEpochDutiesTableRow struct {
-	Validator uint64 `json:"validator"`
 
-	AttestationsSource VDBEpochDutiesItem `json:"attestations_source"`
-	AttestationsTarget VDBEpochDutiesItem `json:"attestations_target"`
-	AttestationsHead   VDBEpochDutiesItem `json:"attestations_head"`
-	Proposal           VDBEpochDutiesItem `json:"proposal"`
-	Sync               VDBEpochDutiesItem `json:"sync"`
-	Slashing           VDBEpochDutiesItem `json:"slashing"`
+type VDBEpochDutiesTableRow struct {
+	Validator uint64                 `json:"validator"`
+	Duties    ValidatorHistoryDuties `json:"duties"`
 }
 type InternalGetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
 
@@ -134,7 +130,7 @@ type VDBBlocksTableRow struct {
 	Epoch           uint64                     `json:"epoch"`
 	Slot            uint64                     `json:"slot"`
 	Block           uint64                     `json:"block"`
-	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'"`
+	Status          string                     `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'" faker:"oneof: success, missed, orphaned, scheduled"`
 	RewardRecipient Address                    `json:"reward_recipient"`
 	Reward          ClElValue[decimal.Decimal] `json:"reward"`
 	Graffiti        string                     `json:"graffiti"`
@@ -144,8 +140,8 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 // ------------------------------------------------------------
 // Heatmap Tab
 type VDBHeatmapCell struct {
-	X     uint64  `json:"x" ts_doc:"Epoch"`
-	Y     uint64  `json:"y" ts_doc:"Group ID"`
+	X     uint64  `json:"x"`     // Epoch
+	Y     uint64  `json:"y"`     // Group ID
 	Value float64 `json:"value"` // Attestaton Rewards
 }
 type VDBHeatmap struct {
@@ -205,6 +201,7 @@ type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingRespon
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
 	Epoch     uint64          `json:"epoch"`
+	Slot      uint64          `json:"slot"`
 	Index     uint64          `json:"index"`
 	GroupId   uint64          `json:"group_id"`
 	Recipient Address         `json:"recipient"`

@@ -22,6 +22,7 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -610,7 +611,7 @@ func GetEnsNameForAddress(address common.Address) (name *string, err error) {
 	return name, err
 }
 
-func GetEnsNamesForAddress(addressMap map[string]string) error {
+func GetEnsNamesForAddresses(addressMap map[string]string) error {
 	if len(addressMap) == 0 {
 		return nil
 	}
@@ -620,8 +621,12 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 	}
 	dbAddresses := []pair{}
 	addresses := make([][]byte, 0, len(addressMap))
-	for add := range addressMap {
-		addresses = append(addresses, []byte(add))
+	for address := range addressMap {
+		add, err := hexutil.Decode(address)
+		if err != nil {
+			return err
+		}
+		addresses = append(addresses, add)
 	}
 
 	err := ReaderDb.Select(&dbAddresses, `
@@ -636,7 +641,7 @@ func GetEnsNamesForAddress(addressMap map[string]string) error {
 		return err
 	}
 	for _, foundling := range dbAddresses {
-		addressMap[string(foundling.Address)] = foundling.EnsName
+		addressMap[hexutil.Encode(foundling.Address)] = foundling.EnsName
 	}
 	return nil
 }

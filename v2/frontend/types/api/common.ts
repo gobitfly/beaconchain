@@ -52,14 +52,14 @@ export interface PeriodicValues<T extends any> {
   last_7d: T;
   last_30d: T;
 }
-export interface ChartSeries<T extends number /* int */ | string> {
-  id: T; // id may be a string or an int
-  stack?: string; // for stacking bar charts
-  data: number /* float64 */[]; // y-axis values
+export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
+  id: I; // id may be a string or an int
+  property?: string; // for stacking bar charts
+  data: D[]; // y-axis values
 }
-export interface ChartData<T extends number /* int */ | string> {
+export interface ChartData<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
   categories: number /* uint64 */[]; // x-axis
-  series: ChartSeries<T>[];
+  series: ChartSeries<I, D>[];
 }
 export interface SearchResult {
   type: string;
@@ -70,4 +70,24 @@ export interface SearchResult {
 }
 export interface SearchResponse {
   data: SearchResult[];
+}
+export interface ValidatorHistoryEvent {
+  status: 'success' | 'partial' | 'failed';
+  income: string /* decimal.Decimal */;
+}
+export interface ValidatorHistoryProposal {
+  status: 'success' | 'partial' | 'failed' | 'orphaned';
+  el_income: string /* decimal.Decimal */;
+  cl_attestation_inclusion_income: string /* decimal.Decimal */;
+  cl_sync_inclusion_income: string /* decimal.Decimal */;
+  cl_slashing_inclusion_income: string /* decimal.Decimal */;
+}
+export interface ValidatorHistoryDuties {
+  attestation_source?: ValidatorHistoryEvent;
+  attestation_target?: ValidatorHistoryEvent;
+  attestation_head?: ValidatorHistoryEvent;
+  sync?: ValidatorHistoryEvent;
+  slashing?: ValidatorHistoryEvent;
+  proposal?: ValidatorHistoryProposal;
+  sync_count?: number /* uint64 */; // count of successful sync duties for the epoch
 }

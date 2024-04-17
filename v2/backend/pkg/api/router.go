@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
+	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gorilla/mux"
 )
 
@@ -16,38 +16,24 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dai dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
-	handlerService := handlers.NewHandlerService(dai)
+func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *mux.Router {
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()
+
+	internalRouter.Use(sessionManager.LoadAndSave)
+	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
 	addRoutes(handlerService, publicRouter, internalRouter)
 
 	return router
 }
 
-// TODO replace with proper auth
-func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			header := r.Header.Get("Authorization")
-			query := r.URL.Query().Get("api_key")
-
-			if header != "Bearer "+apiKey && query != apiKey {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -58,149 +44,172 @@ func CorsMiddleware(next http.Handler) http.Handler {
 }
 
 func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
+	addValidatorDashboardRoutes(hs, publicRouter, internalRouter)
 	endpoints := []endpoint{
-		{"GET", "/healthz", hs.PublicGetHealthz, nil},
-		{"GET", "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
+		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
+		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
-		{"POST", "/oauth/token", hs.PublicPostOauthToken, nil},
+		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
+		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
-		{"GET", "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
+		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
-		{"POST", "/account-dashboards", hs.PublicPostAccountDashboards, hs.InternalPostAccountDashboards},
-		{"GET", "/account-dashboards/{dashboard_id}", hs.PublicGetAccountDashboard, hs.InternalGetAccountDashboard},
-		{"DELETE", "/account-dashboards/{dashboard_id}", hs.PublicDeleteAccountDashboard, hs.InternalDeleteAccountDashboard},
-		{"POST", "/account-dashboards/{dashboard_id}/groups", hs.PublicPostAccountDashboardGroups, hs.InternalPostAccountDashboardGroups},
-		{"DELETE", "/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicDeleteAccountDashboardGroups, hs.InternalDeleteAccountDashboardGroups},
-		{"POST", "/account-dashboards/{dashboard_id}/accounts", hs.PublicPostAccountDashboardAccounts, hs.InternalPostAccountDashboardAccounts},
-		{"GET", "/account-dashboards/{dashboard_id}/accounts", hs.PublicGetAccountDashboardAccounts, hs.InternalGetAccountDashboardAccounts},
-		{"DELETE", "/account-dashboards/{dashboard_id}/accounts", hs.PublicDeleteAccountDashboardAccounts, hs.InternalDeleteAccountDashboardAccounts},
-		{"PUT", "/account-dashboards/{dashboard_id}/accounts/{address}", hs.PublicPutAccountDashboardAccount, hs.InternalPutAccountDashboardAccount},
-		{"POST", "/account-dashboards/{dashboard_id}/public-ids", hs.PublicPostAccountDashboardPublicIds, hs.InternalPostAccountDashboardPublicIds},
-		{"PUT", "/account-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicPutAccountDashboardPublicId, hs.InternalPutAccountDashboardPublicId},
-		{"DELETE", "/account-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteAccountDashboardPublicId, hs.InternalDeleteAccountDashboardPublicId},
-		{"GET", "/account-dashboards/{dashboard_id}/transactions", hs.PublicGetAccountDashboardTransactions, hs.InternalGetAccountDashboardTransactions},
-		{"PUT", "/account-dashboards/{dashboard_id}/transactions/settings", hs.PublicPutAccountDashboardTransactionsSettings, hs.InternalPutAccountDashboardTransactionsSettings},
+		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
-		{"POST", "/validator-dashboards", hs.PublicPostValidatorDashboards, hs.InternalPostValidatorDashboards},
-		{"GET", "/validator-dashboards/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
-		{"DELETE", "/validator-dashboards/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
-		{"POST", "/validator-dashboards/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
-		{"DELETE", "/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroups, hs.InternalDeleteValidatorDashboardGroups},
-		{"POST", "/validator-dashboards/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
-		{"GET", "/validator-dashboards/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
-		{"DELETE", "/validator-dashboards/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
-		{"POST", "/validator-dashboards/{dashboard_id}/public-ids", hs.PublicPostValidatorDashboardPublicIds, hs.InternalPostValidatorDashboardPublicIds},
-		{"PUT", "/validator-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicPutValidatorDashboardPublicId, hs.InternalPutValidatorDashboardPublicId},
-		{"DELETE", "/validator-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
-		{"GET", "/validator-dashboards/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
-		{"GET", "/validator-dashboards/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
-		{"GET", "/validator-dashboards/{dashboard_id}/validator-indices", nil, hs.InternalGetValidatorDashboardValidatorIndices},
-		{"GET", "/validator-dashboards/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
-		{"GET", "/validator-dashboards/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
-		{"GET", "/validator-dashboards/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
-		{"GET", "/validator-dashboards/{dashboard_id}/groups/{group_id}/rewards", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},
-		{"GET", "/validator-dashboards/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
-		{"GET", "/validator-dashboards/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
-		{"GET", "/validator-dashboards/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{"GET", "/validator-dashboards/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
-		{"GET", "/validator-dashboards/{dashboard_id}/groups/{group_id}/heatmap", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
-		{"GET", "/validator-dashboards/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
-		{"GET", "/validator-dashboards/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
-		{"GET", "/validator-dashboards/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
+		{http.MethodPost, "/account-dashboards", hs.PublicPostAccountDashboards, hs.InternalPostAccountDashboards},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}", hs.PublicGetAccountDashboard, hs.InternalGetAccountDashboard},
+		{http.MethodDelete, "/account-dashboards/{dashboard_id}", hs.PublicDeleteAccountDashboard, hs.InternalDeleteAccountDashboard},
+		{http.MethodPost, "/account-dashboards/{dashboard_id}/groups", hs.PublicPostAccountDashboardGroups, hs.InternalPostAccountDashboardGroups},
+		{http.MethodDelete, "/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicDeleteAccountDashboardGroups, hs.InternalDeleteAccountDashboardGroups},
+		{http.MethodPost, "/account-dashboards/{dashboard_id}/accounts", hs.PublicPostAccountDashboardAccounts, hs.InternalPostAccountDashboardAccounts},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}/accounts", hs.PublicGetAccountDashboardAccounts, hs.InternalGetAccountDashboardAccounts},
+		{http.MethodDelete, "/account-dashboards/{dashboard_id}/accounts", hs.PublicDeleteAccountDashboardAccounts, hs.InternalDeleteAccountDashboardAccounts},
+		{http.MethodPut, "/account-dashboards/{dashboard_id}/accounts/{address}", hs.PublicPutAccountDashboardAccount, hs.InternalPutAccountDashboardAccount},
+		{http.MethodPost, "/account-dashboards/{dashboard_id}/public-ids", hs.PublicPostAccountDashboardPublicIds, hs.InternalPostAccountDashboardPublicIds},
+		{http.MethodPut, "/account-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicPutAccountDashboardPublicId, hs.InternalPutAccountDashboardPublicId},
+		{http.MethodDelete, "/account-dashboards/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteAccountDashboardPublicId, hs.InternalDeleteAccountDashboardPublicId},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}/transactions", hs.PublicGetAccountDashboardTransactions, hs.InternalGetAccountDashboardTransactions},
+		{http.MethodPut, "/account-dashboards/{dashboard_id}/transactions/settings", hs.PublicPutAccountDashboardTransactionsSettings, hs.InternalPutAccountDashboardTransactionsSettings},
 
-		{"GET", "/networks/{network}/validators", hs.PublicGetNetworkValidators, nil},
-		{"GET", "/networks/{network}/validators/{validator}", hs.PublicGetNetworkValidator, nil},
-		{"GET", "/networks/{network}/validators/{validator}/duties", hs.PublicGetNetworkValidatorDuties, nil},
-		{"GET", "/networks/{network}/addresses/{address}/validators", hs.PublicGetNetworkAddressValidators, nil},
-		{"GET", "/networks/{network}/withdrawal-credentials/{credential}/validators", hs.PublicGetNetworkWithdrawalCredentialValidators, nil},
-		{"GET", "/networks/{network}/validator-statuses", hs.PublicGetNetworkValidatorStatuses, nil},
-		{"GET", "/networks/{network}/validator-leaderboard", hs.PublicGetNetworkValidatorLeaderboard, nil},
-		{"GET", "/networks/{network}/validator-queue", hs.PublicGetNetworkValidatorQueue, nil},
+		{http.MethodGet, "/networks/{network}/validators", hs.PublicGetNetworkValidators, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}", hs.PublicGetNetworkValidator, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/duties", hs.PublicGetNetworkValidatorDuties, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/validators", hs.PublicGetNetworkAddressValidators, nil},
+		{http.MethodGet, "/networks/{network}/withdrawal-credentials/{credential}/validators", hs.PublicGetNetworkWithdrawalCredentialValidators, nil},
+		{http.MethodGet, "/networks/{network}/validator-statuses", hs.PublicGetNetworkValidatorStatuses, nil},
+		{http.MethodGet, "/networks/{network}/validator-leaderboard", hs.PublicGetNetworkValidatorLeaderboard, nil},
+		{http.MethodGet, "/networks/{network}/validator-queue", hs.PublicGetNetworkValidatorQueue, nil},
 
-		{"GET", "/networks/{network}/epochs", hs.PublicGetNetworkEpochs, nil},
-		{"GET", "/networks/{network}/epochs/{epoch}", hs.PublicGetNetworkEpoch, nil},
+		{http.MethodGet, "/networks/{network}/epochs", hs.PublicGetNetworkEpochs, nil},
+		{http.MethodGet, "/networks/{network}/epochs/{epoch}", hs.PublicGetNetworkEpoch, nil},
 
-		{"GET", "/networks/{network}/blocks", hs.PublicGetNetworkBlocks, nil},
-		{"GET", "/networks/{network}/blocks/{block}", hs.PublicGetNetworkBlock, nil},
-		{"GET", "/networks/{network}/slots", hs.PublicGetNetworkSlots, nil},
-		{"GET", "/networks/{network}/slots/{slot}", hs.PublicGetNetworkSlot, nil},
-		{"GET", "/networks/{network}/validators/{validator}/blocks", hs.PublicGetNetworkValidatorBlocks, nil},
-		{"GET", "/networks/{network}/addresses/{address}/priority-fee-blocks", hs.PublicGetNetworkAddressPriorityFeeBlocks, nil},
-		{"GET", "/networks/{network}/addresses/{address}/proposer-reward-blocks", hs.PublicGetNetworkAddressProposerRewardBlocks, nil},
-		{"GET", "/networks/{network}/forked-blocks", hs.PublicGetNetworkForkedBlocks, nil},
-		{"GET", "/networks/{network}/forked-blocks/{block}", hs.PublicGetNetworkForkedBlock, nil},
-		{"GET", "/networks/{network}/forked-slots/{slot}", hs.PublicGetNetworkForkedSlot, nil},
-		{"GET", "/networks/{network}/block-sizes", hs.PublicGetNetworkBlockSizes, nil},
+		{http.MethodGet, "/networks/{network}/blocks", hs.PublicGetNetworkBlocks, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}", hs.PublicGetNetworkBlock, nil},
+		{http.MethodGet, "/networks/{network}/slots", hs.PublicGetNetworkSlots, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}", hs.PublicGetNetworkSlot, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/blocks", hs.PublicGetNetworkValidatorBlocks, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/priority-fee-blocks", hs.PublicGetNetworkAddressPriorityFeeBlocks, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/proposer-reward-blocks", hs.PublicGetNetworkAddressProposerRewardBlocks, nil},
+		{http.MethodGet, "/networks/{network}/forked-blocks", hs.PublicGetNetworkForkedBlocks, nil},
+		{http.MethodGet, "/networks/{network}/forked-blocks/{block}", hs.PublicGetNetworkForkedBlock, nil},
+		{http.MethodGet, "/networks/{network}/forked-slots/{slot}", hs.PublicGetNetworkForkedSlot, nil},
+		{http.MethodGet, "/networks/{network}/block-sizes", hs.PublicGetNetworkBlockSizes, nil},
 
-		{"GET", "/networks/{network}/validators/{validator}/attestations", hs.PublicGetNetworkValidatorAttestations, nil},
-		{"GET", "/networks/{network}/epochs/{epoch}/attestations", hs.PublicGetNetworkEpochAttestations, nil},
-		{"GET", "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, nil},
-		{"GET", "/networks/{network}/blocks/{block}/attestations", hs.PublicGetNetworkBlockAttestations, nil},
-		{"GET", "/networks/{network}/aggregated-attestations", hs.PublicGetNetworkAggregatedAttestations, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/attestations", hs.PublicGetNetworkValidatorAttestations, nil},
+		{http.MethodGet, "/networks/{network}/epochs/{epoch}/attestations", hs.PublicGetNetworkEpochAttestations, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/attestations", hs.PublicGetNetworkBlockAttestations, nil},
+		{http.MethodGet, "/networks/{network}/aggregated-attestations", hs.PublicGetNetworkAggregatedAttestations, nil},
 
-		{"GET", "/networks/{network}/ethstore/{day}", hs.PublicGetNetworkEthStore, nil},
-		{"GET", "/networks/{network}/validators/{validator}/reward-history", hs.PublicGetNetworkValidatorRewardHistory, nil},
-		{"GET", "/networks/{network}/validators/{validator}/balance-history", hs.PublicGetNetworkValidatorBalanceHistory, nil},
-		{"GET", "/networks/{network}/validators/{validator}/performance-history", hs.PublicGetNetworkValidatorPerformanceHistory, nil},
+		{http.MethodGet, "/networks/{network}/ethstore/{day}", hs.PublicGetNetworkEthStore, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/reward-history", hs.PublicGetNetworkValidatorRewardHistory, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/balance-history", hs.PublicGetNetworkValidatorBalanceHistory, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/performance-history", hs.PublicGetNetworkValidatorPerformanceHistory, nil},
 
-		{"GET", "/networks/{network}/slashings", hs.PublicGetNetworkSlashings, nil},
-		{"GET", "/networks/{network}/validators/{validator}/slashings", hs.PublicGetNetworkValidatorSlashings, nil},
+		{http.MethodGet, "/networks/{network}/slashings", hs.PublicGetNetworkSlashings, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/slashings", hs.PublicGetNetworkValidatorSlashings, nil},
 
-		{"GET", "/networks/{network}/deposits", hs.PublicGetNetworkDeposits, nil},
-		{"GET", "/networks/{network}/validators/{validator}/deposits", hs.PublicGetNetworkValidatorDeposits, nil},
-		{"GET", "/networks/{network}/transactions/{hash}/deposits", hs.PublicGetNetworkTransactionDeposits, nil},
+		{http.MethodGet, "/networks/{network}/deposits", hs.PublicGetNetworkDeposits, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/deposits", hs.PublicGetNetworkValidatorDeposits, nil},
+		{http.MethodGet, "/networks/{network}/transactions/{hash}/deposits", hs.PublicGetNetworkTransactionDeposits, nil},
 
-		{"GET", "/networks/{network}/withdrawals", hs.PublicGetNetworkWithdrawals, nil},
-		{"GET", "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, nil},
-		{"GET", "/networks/{network}/blocks/{block}/withdrawals", hs.PublicGetNetworkBlockWithdrawals, nil},
-		{"GET", "/networks/{network}/validators/{validator}/withdrawals", hs.PublicGetNetworkValidatorWithdrawals, nil},
-		{"GET", "/networks/{network}/withdrawal-credentials/{credential}/withdrawals", hs.PublicGetNetworkWithdrawalCredentialWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/withdrawals", hs.PublicGetNetworkWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/withdrawals", hs.PublicGetNetworkBlockWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/withdrawals", hs.PublicGetNetworkValidatorWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/withdrawal-credentials/{credential}/withdrawals", hs.PublicGetNetworkWithdrawalCredentialWithdrawals, nil},
 
-		{"GET", "/networks/{network}/voluntary-exits", hs.PublicGetNetworkVoluntaryExits, nil},
-		{"GET", "/networks/{network}/epochs/{epoch}/voluntary-exits", hs.PublicGetNetworkEpochVoluntaryExits, nil},
-		{"GET", "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, nil},
-		{"GET", "/networks/{network}/blocks/{block}/voluntary-exits", hs.PublicGetNetworkBlockVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/voluntary-exits", hs.PublicGetNetworkVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/epochs/{epoch}/voluntary-exits", hs.PublicGetNetworkEpochVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/voluntary-exits", hs.PublicGetNetworkBlockVoluntaryExits, nil},
 
-		{"GET", "/networks/{network}/addresses/{address}/balance-history", hs.PublicGetNetworkAddressBalanceHistory, nil},
-		{"GET", "/networks/{network}/addresses/{address}/token-supply-history", hs.PublicGetNetworkAddressTokenSupplyHistory, nil},
-		{"GET", "/networks/{network}/addresses/{address}/event-logs", hs.PublicGetNetworkAddressEventLogs, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/balance-history", hs.PublicGetNetworkAddressBalanceHistory, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/token-supply-history", hs.PublicGetNetworkAddressTokenSupplyHistory, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/event-logs", hs.PublicGetNetworkAddressEventLogs, nil},
 
-		{"GET", "/networks/{network}/transactions", hs.PublicGetNetworkTransactions, nil},
-		{"GET", "/networks/{network}/transactions/{hash}", hs.PublicGetNetworkTransaction, nil},
-		{"GET", "/networks/{network}/addresses/{address}/transactions", hs.PublicGetNetworkAddressTransactions, nil},
-		{"GET", "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, nil},
-		{"GET", "/networks/{network}/blocks/{block}/transactions", hs.PublicGetNetworkBlockTransactions, nil},
-		{"GET", "/networks/{network}/blocks/{block}/blobs", hs.PublicGetNetworkBlockBlobs, nil},
+		{http.MethodGet, "/networks/{network}/transactions", hs.PublicGetNetworkTransactions, nil},
+		{http.MethodGet, "/networks/{network}/transactions/{hash}", hs.PublicGetNetworkTransaction, nil},
+		{http.MethodGet, "/networks/{network}/addresses/{address}/transactions", hs.PublicGetNetworkAddressTransactions, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/transactions", hs.PublicGetNetworkBlockTransactions, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/blobs", hs.PublicGetNetworkBlockBlobs, nil},
 
-		{"GET", "/networks/{network}/handlerService-changes", hs.PublicGetNetworkBlsChanges, nil},
-		{"GET", "/networks/{network}/epochs/{epoch}/handlerService-changes", hs.PublicGetNetworkEpochBlsChanges, nil},
-		{"GET", "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, nil},
-		{"GET", "/networks/{network}/blocks/{block}/handlerService-changes", hs.PublicGetNetworkBlockBlsChanges, nil},
-		{"GET", "/networks/{network}/validators/{validator}/handlerService-changes", hs.PublicGetNetworkValidatorBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/handlerService-changes", hs.PublicGetNetworkBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/epochs/{epoch}/handlerService-changes", hs.PublicGetNetworkEpochBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/handlerService-changes", hs.PublicGetNetworkBlockBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/validators/{validator}/handlerService-changes", hs.PublicGetNetworkValidatorBlsChanges, nil},
 
-		{"GET", "/networks/ethereum/addresses/{address}/ens", hs.PublicGetNetworkAddressEns, nil},
-		{"GET", "/networks/ethereum/ens/{ens_name}", hs.PublicGetNetworkEns, nil},
+		{http.MethodGet, "/networks/ethereum/addresses/{address}/ens", hs.PublicGetNetworkAddressEns, nil},
+		{http.MethodGet, "/networks/ethereum/ens/{ens_name}", hs.PublicGetNetworkEns, nil},
 
-		{"GET", "/networks/{layer_2_network}/batches", hs.PublicGetNetworkBatches, nil},
-		{"GET", "/networks/{layer_2_network}/layer1-to-layer2-transactions", hs.PublicGetNetworkLayer1ToLayer2Transactions, nil},
-		{"GET", "/networks/{layer_2_network}/layer2-to-layer1-transactions", hs.PublicGetNetworkLayer2ToLayer1Transactions, nil},
+		{http.MethodGet, "/networks/{layer_2_network}/batches", hs.PublicGetNetworkBatches, nil},
+		{http.MethodGet, "/networks/{layer_2_network}/layer1-to-layer2-transactions", hs.PublicGetNetworkLayer1ToLayer2Transactions, nil},
+		{http.MethodGet, "/networks/{layer_2_network}/layer2-to-layer1-transactions", hs.PublicGetNetworkLayer2ToLayer1Transactions, nil},
 
-		{"POST", "/networks/{network}/broadcasts", hs.PublicPostNetworkBroadcasts, nil},
-		{"GET", "/eth-price-history", hs.PublicGetEthPriceHistory, nil},
+		{http.MethodPost, "/networks/{network}/broadcasts", hs.PublicPostNetworkBroadcasts, nil},
+		{http.MethodGet, "/eth-price-history", hs.PublicGetEthPriceHistory, nil},
 
-		{"GET", "/networks/{network}/gasnow", hs.PublicGetNetworkGasNow, nil},
-		{"GET", "/networks/{network}/average-gas-limit-history", hs.PublicGetNetworkAverageGasLimitHistory, nil},
-		{"GET", "/networks/{network}/gas-used-history", hs.PublicGetNetworkGasUsedHistory, nil},
+		{http.MethodGet, "/networks/{network}/gasnow", hs.PublicGetNetworkGasNow, nil},
+		{http.MethodGet, "/networks/{network}/average-gas-limit-history", hs.PublicGetNetworkAverageGasLimitHistory, nil},
+		{http.MethodGet, "/networks/{network}/gas-used-history", hs.PublicGetNetworkGasUsedHistory, nil},
 
-		{"GET", "/rocket-pool/nodes", hs.PublicGetRocketPoolNodes, nil},
-		{"GET", "/rocket-pool/minipools", hs.PublicGetRocketPoolMinipools, nil},
+		{http.MethodGet, "/rocket-pool/nodes", hs.PublicGetRocketPoolNodes, nil},
+		{http.MethodGet, "/rocket-pool/minipools", hs.PublicGetRocketPoolMinipools, nil},
 
-		{"GET", "/networks/{network}/sync-committee/{period}", hs.PublicGetNetworkSyncCommittee, nil},
+		{http.MethodGet, "/networks/{network}/sync-committee/{period}", hs.PublicGetNetworkSyncCommittee, nil},
 
-		{"GET", "/multisig-safes/{address}", hs.PublicGetMultisigSafe, nil},
-		{"GET", "/multisig-safes/{address}/transactions", hs.PublicGetMultisigSafeTransactions, nil},
-		{"GET", "/multisig-transactions/{hash}/confirmations", hs.PublicGetMultisigTransactionConfirmations, nil},
+		{http.MethodGet, "/multisig-safes/{address}", hs.PublicGetMultisigSafe, nil},
+		{http.MethodGet, "/multisig-safes/{address}/transactions", hs.PublicGetMultisigSafeTransactions, nil},
+		{http.MethodGet, "/multisig-transactions/{hash}/confirmations", hs.PublicGetMultisigTransactionConfirmations, nil},
 	}
+	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
+}
+
+func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
+	vdbPath := "/validator-dashboards"
+	publicRouter.HandleFunc(vdbPath, hs.PublicPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
+	internalRouter.HandleFunc(vdbPath, hs.InternalPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
+
+	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
+	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
+	// add middleware to check if user has access to dashboard
+	publicDashboardRouter.Use(hs.VDBAuthMiddleware)
+	internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+
+	endpoints := []endpoint{
+		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
+		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
+		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
+		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
+		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroups, hs.InternalDeleteValidatorDashboardGroups},
+		{http.MethodPost, "/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
+		{http.MethodGet, "/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
+		{http.MethodDelete, "/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
+		{http.MethodPost, "/{dashboard_id}/public-ids", hs.PublicPostValidatorDashboardPublicIds, hs.InternalPostValidatorDashboardPublicIds},
+		{http.MethodPut, "/{dashboard_id}/public-ids/{public_id}", hs.PublicPutValidatorDashboardPublicId, hs.InternalPutValidatorDashboardPublicId},
+		{http.MethodDelete, "/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
+		{http.MethodGet, "/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
+		{http.MethodGet, "/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
+		{http.MethodGet, "/{dashboard_id}/validator-indices", nil, hs.InternalGetValidatorDashboardValidatorIndices},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
+		{http.MethodGet, "/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
+		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/rewards/{epoch}", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},
+		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
+		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
+		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
+		{http.MethodGet, "/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
+		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
+		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
+		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
+	}
+	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
+}
+
+func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {
 	for _, endpoint := range endpoints {
 		if endpoint.PublicHandler != nil {
 			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)

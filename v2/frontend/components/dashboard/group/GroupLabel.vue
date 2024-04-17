@@ -22,5 +22,5 @@ const name = computed(() => {
 </script>
 
 <template>
-  <span><span>{{ name }}</span> <span v-if="group.id >= 0" class="discreet">(ID: {{ group.id }})</span></span>
+  <span>{{ name }}</span>
 </template>
