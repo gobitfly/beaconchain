@@ -21,15 +21,16 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true     // prod: false
-const debugTargetBackfillEpoch = uint64(500) // prod: 0
-const debugSetBackfillCompleted = false      // prod: true
-const debugSkipOldEpochClear = false         // prod: false
-const debugAddToColumnEngine = false         // prod: true?
+const debugAggregateMidEveryEpoch = true   // prod: false
+const debugTargetBackfillEpoch = uint64(0) // prod: 0
+const debugSetBackfillCompleted = false    // prod: true
+const debugSkipOldEpochClear = false       // prod: false
+const debugAddToColumnEngine = false       // prod: true?
+const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true
 
 // ----------- END OF DEBUG FLAGS ------------
 
-const epochFetchParallelism = 7
+const epochFetchParallelism = 6
 const epochWriteParallelism = 3
 const databaseAggregationParallelism = 3
 
@@ -89,7 +90,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		d.headEpochQueue <- 501
+		//d.headEpochQueue <- 594
 		d.processHeadQueue()
 	}()
 
@@ -420,7 +421,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	}
 
 	if latestExportedEpoch > 0 {
-		err = d.aggregatePerEpoch(false, false)
+		err = d.aggregatePerEpoch(true, false)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to aggregate")
 		}
@@ -447,32 +448,55 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 			d.log.Info("storage waiting for data from fetcher")
 			datas := <-nextDataChan
 
-			d.log.Info("storage got data, writing epoch data")
-			d.writeEpochDatas(datas)
+			done := containsEpoch(datas, gaps[len(gaps)-1])
 
-			// _, utcEndsBound := getDayAggregateBounds(datas[len(datas)-1].Epoch)
-			// doRollingUpdate := false
-			// if utcEndsBound == datas[len(datas)-1].Epoch+1 { // excl
-			// 	// if last exported epoch is an utc end bound, we can aggregate rolling windows via bootstrap
-			// 	doRollingUpdate = true
-			// 	d.log.Infof("BOOTSTRAPPING ROLLING WINDOWS!")
-			// }
+			// If one epoch containing an UTC boundary epoch we do a bootstrap aggregation for the rolling windows
+			// since this an exact utc bounds (and hence also an hour bounds) we do not need any tail epochs to calculate the rolling window
+			if debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch {
+				for i, data := range datas {
+					if _, utcEndBound := getDayAggregateBounds(data.Epoch); utcEndBound-1 == data.Epoch {
+						d.log.Infof("BOOTSTRAPPING ROLLING WINDOWS! Epoch %d contains an UTC boundary epoch", data.Epoch)
+						// write subset
+						d.writeEpochDatas(datas[:i+1])
+						for {
+							err = d.aggregatePerEpoch(true, true)
+							if err != nil {
+								d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
+								time.Sleep(time.Second * 10)
+								continue
+							}
+							break
+						}
 
-			d.log.Info("storage writing done, aggregate")
-			for {
-				err = d.aggregatePerEpoch(false, false)
-				if err != nil {
-					d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
-					time.Sleep(time.Second * 10)
-					continue
+						if len(datas) > i+1 {
+							datas = datas[i+1:]
+						} else {
+							datas = nil
+						}
+						break
+					}
 				}
-				break
 			}
 
-			d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
+			if len(datas) > 0 {
+				d.log.Info("storage got data, writing epoch data")
+				d.writeEpochDatas(datas)
+
+				d.log.Info("storage writing done, aggregate")
+				for {
+					err = d.aggregatePerEpoch(false, false)
+					if err != nil {
+						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					break
+				}
+				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
+			}
 
 			// has written last entry in gaps
-			if containsEpoch(datas, gaps[len(gaps)-1]) {
+			if done {
 				break
 			}
 		}
@@ -522,9 +546,9 @@ func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
 var lastExportedHour uint64 = ^uint64(0)
 
 // Contains all aggregation logic that should happen for every new exported epoch
-// isHeadProcessorQueue specifies whether we are in backfill mode or on head mode - does NOT mean we are at head
+// forceAggregate triggers an aggregation, use this when calling on head.
 // updateRollingWindows specifies whether we should update rolling windows
-func (d *dashboardData) aggregatePerEpoch(isHeadProcessorQueue bool, updateRollingWindows bool) error {
+func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWindows bool) error {
 	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return errors.Wrap(err, "failed to get last exported epoch")
@@ -532,7 +556,7 @@ func (d *dashboardData) aggregatePerEpoch(isHeadProcessorQueue bool, updateRolli
 	currentStartBound, _ := getHourAggregateBounds(currentExportedEpoch)
 
 	// Performance improvement for backfilling, no need to aggregate day after each epoch, we can update once per hour
-	if isHeadProcessorQueue || currentStartBound != lastExportedHour {
+	if forceAggregate || currentStartBound != lastExportedHour {
 		start := time.Now()
 		defer func() {
 			d.log.Infof("all of epoch based aggregation took %v", time.Since(start))

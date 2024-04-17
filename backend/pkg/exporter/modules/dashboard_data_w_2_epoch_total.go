@@ -71,24 +71,28 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 	d.log.Infof("aggregating total (from: %d) up to %d", epochStart, epochEnd)
 
 	err = AddToRollingCustom(tx, CustomRolling{
-		StartEpoch:      epochStart,
-		EndEpoch:        epochEnd,
-		StartBoundEpoch: 0,
-		TableFrom:       "validator_dashboard_data_epoch",
-		TableTo:         "validator_dashboard_data_rolling_total",
-		TailBalancesQuery: `
-			balance_start_epochs as (
-				SELECT validator_index, MIN(epoch) as epoch FROM validator_dashboard_data_epoch WHERE epoch >= $1 AND epoch <= $2 AND balance_start IS NOT NULL
-				GROUP BY validator_index
-			),
-			balance_starts as (
-					SELECT validator_index, balance_start FROM balance_start_epochs LEFT JOIN validator_dashboard_data_epoch USING (validator_index, epoch)
-			),`,
-		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
-		TailBalancesInsertColumnQuery: "balance_start,",
+		StartEpoch:                    epochStart,
+		EndEpoch:                      epochEnd,
+		StartBoundEpoch:               0,
+		TableFrom:                     "validator_dashboard_data_epoch",
+		TableTo:                       "validator_dashboard_data_rolling_total",
+		TailBalancesInsertColumnQuery: "0 as balance_start,", // Since all validators start with a 0 balance until deposit is voted in, we can just set it to 0. Genesis validators will be set to 0 to unify the data access approach
 		TableFromEpochColumn:          "epoch",
 		Log:                           d.log,
 		TableConflict:                 "(validator_index)",
+
+		// This may come in handy at some point so leaving it there if you need the first value in an epoch range for a given validator
+
+		// TailBalancesQuery: `
+		// 	balance_start_epochs as (
+		// 		SELECT validator_index, MIN(epoch) as epoch FROM validator_dashboard_data_epoch WHERE epoch >= $1 AND epoch <= $2 AND balance_start IS NOT NULL
+		// 		GROUP BY validator_index
+		// 	),
+		// 	balance_starts as (
+		// 			SELECT validator_index, balance_start FROM balance_start_epochs LEFT JOIN validator_dashboard_data_epoch USING (validator_index, epoch)
+		// 	),`,
+		// TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
+		//TailBalancesInsertColumnQuery: "balance_start,",
 	})
 
 	if err != nil {

@@ -105,7 +105,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 			return errors.Wrap(err, "failed to get current rolling bounds")
 		}
 
-		d.log.Infof("rolling %dd bootstraping finished", days)
+		d.log.Infof("rolling %dd bootstraping finished, currentHead: %v | bounds: %v | Epochs Per Day: %v", days, currentEpochHead, bounds, utils.EpochsPerDay())
 
 		if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-utils.EpochsPerDay() == bounds.EpochStart {
 			log.Infof("rolling %dd is up to date, nothing to do", days) // perfect bounds after bootstrap, lucky day, done here
@@ -156,17 +156,17 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	// Handles special case after bootstrap, as validators that joined during boot strap window are not in the tails table
 	// and hence will not get their epoch_start updated. Also handles super rare case where validator joined and exited during
 	// bootstrap window so we just set the epoch_start for all validators to the correct one after bootstrap
-	if bootstrap {
-		start := aggTailEpochEnd + 1
-		if start < 0 {
-			start = 0
-		}
+	// if bootstrap {
+	// 	start := aggTailEpochEnd + 1
+	// 	if start < 0 {
+	// 		start = 0
+	// 	}
 
-		_, err = tx.Exec(fmt.Sprintf(`UPDATE %s set epoch_start = $1`, tableName), start) // aggTailEpoch is incl so +1 is the real inclusive start epoch
-		if err != nil {
-			return errors.Wrap(err, "failed to update epoch start")
-		}
-	}
+	// 	_, err = tx.Exec(fmt.Sprintf(`UPDATE %s set epoch_start = $1`, tableName), start) // aggTailEpoch is incl so +1 is the real inclusive start epoch
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "failed to update epoch start")
+	// 	}
+	// }
 
 	// Sanity check
 	sanityBounds, err := d.getCurrentRollingBounds(tx, tableName)
