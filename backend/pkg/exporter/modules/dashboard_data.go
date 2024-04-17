@@ -90,7 +90,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		//d.headEpochQueue <- 602
+		//d.headEpochQueue <- 603
 		d.processHeadQueue()
 	}()
 
@@ -134,7 +134,7 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			if stage <= 2 {
-				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1)
+				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1, false)
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
@@ -434,7 +434,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	}
 
 	if latestExportedEpoch > 0 {
-		err = d.aggregatePerEpoch(true, false)
+		err = d.aggregatePerEpoch(true, false, true)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to aggregate")
 		}
@@ -472,7 +472,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 						// write subset
 						d.writeEpochDatas(datas[:i+1])
 						for {
-							err = d.aggregatePerEpoch(true, true)
+							err = d.aggregatePerEpoch(true, true, false)
 							if err != nil {
 								d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
 								time.Sleep(time.Second * 10)
@@ -497,7 +497,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 				d.log.Info("storage writing done, aggregate")
 				for {
-					err = d.aggregatePerEpoch(false, false)
+					err = d.aggregatePerEpoch(false, false, false)
 					if err != nil {
 						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
 						time.Sleep(time.Second * 10)
@@ -561,7 +561,7 @@ var lastExportedHour uint64 = ^uint64(0)
 // Contains all aggregation logic that should happen for every new exported epoch
 // forceAggregate triggers an aggregation, use this when calling on head.
 // updateRollingWindows specifies whether we should update rolling windows
-func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWindows bool) error {
+func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWindows bool, preventClearOldEpochs bool) error {
 	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return errors.Wrap(err, "failed to get last exported epoch")
@@ -621,9 +621,11 @@ func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWind
 
 		d.log.Infof("cleaning old epochs")
 
-		err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
-		if err != nil {
-			return errors.Wrap(err, "failed to clear old epochs")
+		if !preventClearOldEpochs {
+			err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
+			if err != nil {
+				return errors.Wrap(err, "failed to clear old epochs")
+			}
 		}
 
 		// clear old hourly aggregated epochs, do not remove epochs from epoch table here as these are needed for Mid aggregation
