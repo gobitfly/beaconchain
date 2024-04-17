@@ -231,7 +231,7 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 		return VDBWithdrawalAge
 	case "index":
 		return VDBWithdrawalIndex
-	case "group_id":
+	case "group_name":
 		return VDBWithdrawalGroup
 	case "recipient":
 		return VDBWithdrawalRecipient

@@ -2215,8 +2215,6 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO: Implement sensible group_name sorting and limiting
-
 	var paging t.Paging
 
 	// Initialize the cursor
@@ -2237,27 +2235,33 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		sortSearchOrder = " DESC"
 	}
 
-	// Get the current validator state
-	validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseLock()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Analyze the search term
 	indexSearch := int64(-1)
 	if search != "" {
 		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			// Ensure that we have a "0x" prefix for the search term
 			if !strings.HasPrefix(search, "0x") {
 				search = "0x" + search
 			}
 			search = strings.ToLower(search)
 			if utils.IsHash(search) {
-				indexSearch = int64(*validatorMapping.ValidatorIndices[search])
+				// Get the current validator state
+				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+				defer releaseLock()
+				if err != nil {
+					return nil, nil, err
+				}
+				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+					indexSearch = int64(*index)
+				} else {
+					// No validator index for pubkey found, return empty results
+					return nil, &paging, nil
+				}
 			}
-		} else if index, err := strconv.ParseUint(search, 10, 64); err != nil {
+		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(index)
 		} else {
+			// No allowed search term found, return empty results
 			return nil, &paging, nil
 		}
 	}
@@ -2281,7 +2285,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			SELECT 
 				v.validator_index,
 				v.group_id,
-				g.group_name
+				g.name AS group_name
 			FROM users_val_dashboards_validators v
 			INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
 			WHERE v.dashboard_id = $%d
@@ -2292,11 +2296,16 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			validatorsQuery += fmt.Sprintf(" AND v.validator_index = $%d", len(queryArgs))
 		}
 
-		// If we sort by group we can already filter here to reduce the number of validators if there is a cursor
-		if currentCursor.IsValid() && colSort.Column == enums.VDBWithdrawalsColumns.Group {
-			queryArgs = append(queryArgs, currentCursor.GroupName, currentCursor.Index)
-			validatorsQuery += fmt.Sprintf(` AND g.group_name%[1]s$%[2]d OR (g.group_name=$%[2]d AND v.validator_index%[1]s=$%[3]d)
-				ORDER BY g.group_name %[4]s, v.validator_index %[4]s`, sortSearchDirection, len(queryArgs)-1, len(queryArgs), sortSearchOrder)
+		// If we sort by group we must already filter and order here
+		if colSort.Column == enums.VDBWithdrawalsColumns.Group {
+			if currentCursor.IsValid() {
+				// If we have a valid cursor only check the results before/after it
+				queryArgs = append(queryArgs, currentCursor.GroupName, currentCursor.Index)
+				validatorsQuery += fmt.Sprintf(` AND (g.name%[1]s$%[2]d OR (g.name=$%[2]d AND v.validator_index%[1]s=$%[3]d))`,
+					sortSearchDirection, len(queryArgs)-1, len(queryArgs))
+
+			}
+			validatorsQuery += fmt.Sprintf(` ORDER BY g.name %[1]s, v.validator_index %[1]s`, sortSearchOrder)
 		}
 
 		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
@@ -2360,7 +2369,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	queryParams = append(queryParams, pq.Array(validators))
 	whereQuery := fmt.Sprintf(`
 		WHERE
-		    validator_index = ANY ($%d)`, len(queryParams))
+		    validatorindex = ANY ($%d)`, len(queryParams))
 
 	// Limit the query using the search term if it is an address
 	if utils.IsEth1Address(search) {
@@ -2376,13 +2385,17 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	orderQuery := ""
 	sortColName := ""
 	sortColCursor := interface{}(nil)
-	if colSort.Column != enums.VDBWithdrawalsColumns.Group {
+	if colSort.Column == enums.VDBWithdrawalsColumns.Group {
 		// Special handling for group name sorting
-		firstVal := validators[0]
-		otherVal := validators[1:]
-
-		queryParams = append(queryParams, firstVal, otherVal, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
-
+		if currentCursor.IsValid() {
+			// If we have a valid cursor only check the results before/after it
+			queryParams = append(queryParams, validators[0], pq.Array(validators[1:]), currentCursor.Slot, currentCursor.WithdrawalIndex)
+			whereQuery += fmt.Sprintf(" AND (w.validatorindex=$%[2]d AND (w.block_slot%[1]s$%[4]d OR (block_slot=$%[4]d AND withdrawalindex%[1]s$%[5]d)) OR w.validatorindex=ANY($%[3]d))",
+				sortSearchDirection, len(queryParams)-3, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+		}
+		queryParams = append(queryParams, pq.Array(validators))
+		orderQuery = fmt.Sprintf(" ORDER BY array_position($%[2]d, w.validatorindex), block_slot %[1]s, withdrawalindex %[1]s",
+			sortSearchOrder, len(queryParams))
 	} else {
 		switch colSort.Column {
 		case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
@@ -2399,25 +2412,40 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			sortColCursor = currentCursor.Amount
 		}
 
-		// The additional WHERE requirement is
-		// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
-		// with the > flipped if the sort is descending
-		queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
-		whereQuery += fmt.Sprintf(" AND %[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (block_slot%[2]s$%[4]d OR (block_slot=$%[4]d AND withdrawalindex%[2]s$%[5]d)))",
-			sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+		if colSort.Column == enums.VDBWithdrawalsColumns.Epoch ||
+			colSort.Column == enums.VDBWithdrawalsColumns.Slot ||
+			colSort.Column == enums.VDBWithdrawalsColumns.Age {
+			if currentCursor.IsValid() {
+				// If we have a valid cursor only check the results before/after it
+				queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
+				whereQuery += fmt.Sprintf(" AND (block_slot%[1]s$%[2]d OR (block_slot=$%[2]d AND withdrawalindex%[1]s$%[3]d))",
+					sortSearchDirection, len(queryParams)-1, len(queryParams))
+			}
+			orderQuery = fmt.Sprintf(" ORDER BY block_slot %[1]s, withdrawalindex %[1]s", sortSearchOrder)
+		} else {
+			if currentCursor.IsValid() {
+				// If we have a valid cursor only check the results before/after it
+				queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
 
-		// The ordering is
-		// ORDER BY sortCol ASC, block_slot ASC, withdrawalindex ASC
-		// with the ASC flipped if the sort is descending
-		orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, block_slot %[2]s, withdrawalindex %[2]s",
-			sortColName, sortSearchOrder)
+				// The additional WHERE requirement is
+				// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
+				// with the > flipped if the sort is descending
+				whereQuery += fmt.Sprintf(" AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (block_slot%[2]s$%[4]d OR (block_slot=$%[4]d AND withdrawalindex%[2]s$%[5]d))))",
+					sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+			}
+			// The ordering is
+			// ORDER BY sortColName ASC, block_slot ASC, withdrawalindex ASC
+			// with the ASC flipped if the sort is descending
+			orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, block_slot %[2]s, withdrawalindex %[2]s",
+				sortColName, sortSearchOrder)
+		}
 	}
 
 	limitQuery := fmt.Sprintf(" LIMIT %d", limit+1)
 
 	withdrawalsQuery += whereQuery + orderQuery + limitQuery
 
-	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams)
+	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &paging, nil
@@ -2443,7 +2471,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	for _, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   withdrawal.BlockSlot % utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Epoch:   withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 			Slot:    withdrawal.BlockSlot,
 			Index:   withdrawal.ValidatorIndex,
 			GroupId: validatorGroupMap[withdrawal.ValidatorIndex].GroupId,
