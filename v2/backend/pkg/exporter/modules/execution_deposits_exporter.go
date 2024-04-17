@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -46,6 +47,7 @@ type executionDepositsExporter struct {
 	StopEarlyMutex         *sync.Mutex
 	StopEarly              context.CancelFunc
 	Signer                 gethtypes.Signer
+	DepositMethod          abi.Method
 }
 
 func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
@@ -86,6 +88,17 @@ func (d *executionDepositsExporter) Init() error {
 		log.Fatal(err, "new exporter erigon client error", 0)
 	}
 	d.ErigonClient = erigonClient
+
+	// get deposit method
+	parsed, err := deposit_contract.DepositContractMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+	depositMethod, ok := parsed.Methods["deposit"]
+	if !ok {
+		return fmt.Errorf("error getting deposit-method from deposit-contract-abi")
+	}
+	d.DepositMethod = depositMethod
 
 	// check if any log_index is missing, if yes we have to do a soft re-export
 	// ideally i would check for gaps in the merkletree-index column, but this is extremely annoying as its stored as little endian bytes in the db
@@ -482,6 +495,7 @@ type ELDepositTrace struct {
 	Pubkey                []byte
 	WithdrawalCredentials []byte
 	Signature             []byte
+	DepositDataRoot       [32]byte
 }
 
 // batchRequestHeadersAndTxs requests the block range specified in the arguments.
@@ -550,21 +564,12 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 
 // automatically filters out unwanted traces (e.g. not deposit calls)
 func (d *executionDepositsExporter) getDepositTraces(txsToTrace []string) (filteredTraces map[string][]ELDepositTrace, err error) {
-	log.Debugf("tracing %v txs", len(txsToTrace))
-	start := time.Now()
+	oneGwei := new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
+	depositFunctionSignature := hexutil.Encode(d.DepositMethod.ID)
 	filteredTraces = make(map[string][]ELDepositTrace, 0)
-	var oneGwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
 
-	encodedDepositContractAddress := hexutil.Encode(d.DepositContractAddress.Bytes())
-	parsed, err := deposit_contract.DepositContractMetaData.GetAbi()
-	if err != nil {
-		return nil, fmt.Errorf("error getting deposit-contract-abi: %w", err)	
-	}
-	depositMethod, ok := parsed.Methods["deposit"]
-	if !ok {
-		return nil, fmt.Errorf("error getting deposit-method from deposit-contract-abi")
-	}
-	depositFunctionSignature := hexutil.Encode(depositMethod.ID)
+	start := time.Now()
+	log.Debugf("tracing %v txs", len(txsToTrace))
 
 	traces, err := d.batchRequestTraces(txsToTrace)
 	if err != nil {
@@ -574,44 +579,36 @@ func (d *executionDepositsExporter) getDepositTraces(txsToTrace []string) (filte
 	for txHash, trace := range traces {
 		for _, t := range *trace {
 			// ignore failed calls
-			if t.Error != "" || t.Type != "call" || t.Action.CallType != "call" || t.Action.To != encodedDepositContractAddress || len(t.Action.Input) < 8+2 || t.Action.Input[:8+2] != depositFunctionSignature {
+			if t.Error != "" || t.Type != "call" || t.Action.CallType != "call" || common.HexToAddress(t.Action.To) != d.DepositContractAddress || len(t.Action.Input) < 8+2 || t.Action.Input[:8+2] != depositFunctionSignature {
 				continue
 			}
 			// lets unwrap the input
-			decodedData, err := hex.DecodeString(t.Action.Input[8+2:])
+			data, err := hex.DecodeString(t.Action.Input[8+2:])
 			if err != nil {
 				return nil, fmt.Errorf("error decoding input: %w", err)
 			}
-			res := make(map[string]interface{})
-			err = depositMethod.Inputs.UnpackIntoMap(res, decodedData)
-			if err != nil {
-				return nil, fmt.Errorf("error unpacking input: %w", err)
-			}
-			// everything will be bytes
-			pubkey, ok := res["pubkey"]
-			if !ok {
-				return nil, fmt.Errorf("pubkey not found in deposit-method")
-			}
-			withdrawalCredentials, ok := res["withdrawal_credentials"]
-			if !ok {
-				return nil, fmt.Errorf("withdrawal_credentials not found in deposit-method")
-			}
-			signature, ok := res["signature"]
-			if !ok {
-				return nil, fmt.Errorf("signature not found in deposit-method")
-			}
+
 			value, err := hexutil.DecodeBig(t.Action.Value)
 			if err != nil {
 				return nil, fmt.Errorf("error decoding value: %w", err)
 			}
 
-			filteredTraces[txHash] = append(filteredTraces[txHash], ELDepositTrace{
-				From:                  hexutil.MustDecode(t.Action.From),
-				Value:                 new(big.Int).Div(value, oneGwei).Uint64(),
-				Pubkey:                pubkey.([]byte),
-				WithdrawalCredentials: withdrawalCredentials.([]byte),
-				Signature:             signature.([]byte),
-			})
+			unpackedData, err := d.DepositMethod.Inputs.Unpack(data)
+			if err != nil {
+				return nil, fmt.Errorf("error unpacking input: %w", err)
+			}
+
+			res := ELDepositTrace{
+				From:  hexutil.MustDecode(t.Action.From),
+				Value: new(big.Int).Div(value, oneGwei).Uint64(),
+			}
+
+			err = d.DepositMethod.Inputs.Copy(&res, unpackedData)
+			if err != nil {
+				return nil, fmt.Errorf("error copying input: %w", err)
+			}
+
+			filteredTraces[txHash] = append(filteredTraces[txHash], res)
 		}
 	}
 
