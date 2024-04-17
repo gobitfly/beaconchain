@@ -21,12 +21,12 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true   // prod: false
-const debugTargetBackfillEpoch = uint64(0) // prod: 0
-const debugSetBackfillCompleted = false    // prod: true
-const debugSkipOldEpochClear = false       // prod: false
-const debugAddToColumnEngine = false       // prod: true?
-const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true
+const debugAggregateMidEveryEpoch = true                             // prod: false
+const debugTargetBackfillEpoch = uint64(0)                           // prod: 0
+const debugSetBackfillCompleted = false                              // prod: true
+const debugSkipOldEpochClear = false                                 // prod: false
+const debugAddToColumnEngine = false                                 // prod: true?
+const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: true
 
 // ----------- END OF DEBUG FLAGS ------------
 
@@ -90,7 +90,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		//d.headEpochQueue <- 594
+		//d.headEpochQueue <- 601
 		d.processHeadQueue()
 	}()
 
@@ -185,8 +185,13 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 		return errors.Wrap(err, "failed to get missing day tail epochs")
 	}
 
+	dayMissingHeads, err := d.dayUp.getMissingRollingDayHeadEpochs(headEpoch)
+	if err != nil {
+		return errors.Wrap(err, "failed to get missing day head epochs")
+	}
+
 	// merge
-	missingTails = append(missingTails, daysMissingTails...)
+	missingTails = append(missingTails, deduplicate(append(daysMissingTails, dayMissingHeads...))...)
 
 	if len(missingTails) > 10 {
 		d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")
@@ -197,7 +202,7 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 		return missingTails[i] < missingTails[j]
 	})
 
-	d.log.Infof("fetch missing tail epochs: %v | fetch head: %d", missingTails, headEpoch)
+	d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", missingTails, headEpoch)
 
 	// append head
 	missingTails = append(missingTails, headEpoch)

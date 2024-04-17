@@ -59,7 +59,26 @@ func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint6
 		return nil, errors.Wrap(err, "failed to get missing 90d tail epochs")
 	}
 
-	d.log.Infof("missing 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+	d.log.Infof("missing tail 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+
+	return deduplicate(append(append(week, month...), ninety...)), nil
+}
+
+func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
+	week, err := d.getMissingRollingXDaysHeadEpochs(7, intendedHeadEpoch-1, "validator_dashboard_data_rolling_weekly")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get missing 7d head epochs")
+	}
+	month, err := d.getMissingRollingXDaysHeadEpochs(30, intendedHeadEpoch-1, "validator_dashboard_data_rolling_monthly")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get missing 30d head epochs")
+	}
+	ninety, err := d.getMissingRollingXDaysHeadEpochs(90, intendedHeadEpoch-1, "validator_dashboard_data_rolling_90d")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get missing 90d head epochs")
+	}
+
+	d.log.Infof("missing head 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
 
 	return deduplicate(append(append(week, month...), ninety...)), nil
 }
@@ -78,6 +97,20 @@ func deduplicate(slice []uint64) []uint64 {
 
 func (d *dayUpAggregator) getMissingRollingXDaysTailEpochs(days int, intendedHeadEpoch uint64, tableName string) ([]uint64, error) {
 	return d.rollingAggregator.getMissingRollingTailEpochs(days, intendedHeadEpoch, tableName)
+}
+
+func (d *dayUpAggregator) getMissingRollingXDaysHeadEpochs(days int, intendedHeadEpoch uint64, tableName string) ([]uint64, error) {
+	bounds, err := d.rollingAggregator.getCurrentRollingBounds(nil, tableName)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to get latest exported rolling %dd bounds", days))
+		}
+	}
+
+	if bounds.EpochEnd <= 0 || intendedHeadEpoch-bounds.EpochEnd < d.epochWriter.getRetentionEpochDuration() {
+		return nil, nil
+	}
+	return getMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch))
 }
 
 func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string, currentEpochHead uint64) error {
