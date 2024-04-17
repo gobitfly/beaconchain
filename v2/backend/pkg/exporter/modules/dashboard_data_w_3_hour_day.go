@@ -90,7 +90,7 @@ func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error
 	}
 
 	if len(gaps) > 0 {
-		return fmt.Errorf("gaps in dashboard epoch for utc day agg, skipping for now: %v", gaps) // sanity, this should never happen
+		return fmt.Errorf("gaps in dashboard epoch for utc day agg, skipping for now: %v (%v-%v)", gaps, latestExportedDay.EpochEnd, currentExportedEpoch) // sanity, this should never happen
 	}
 
 	_, currentEndBound := getDayAggregateBounds(currentExportedEpoch)
@@ -100,10 +100,6 @@ func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error
 		if latestExportedDay.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last day entry since it is complete")
 			continue
-		}
-
-		if epoch > currentExportedEpoch {
-			break
 		}
 
 		// define start bounds as lastHourExported.EpochEnd for first iteration
@@ -203,7 +199,7 @@ type DayRollingAggregatorImpl struct {
 func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch uint64, _ uint64) (uint64, uint64) {
 	currentStartBounds, _ := getHourAggregateBounds(latestExportedHourEpoch)
 
-	dayOldEpoch := int64(currentStartBounds - utils.EpochsPerDay())
+	dayOldEpoch := int64(latestExportedHourEpoch - utils.EpochsPerDay())
 	if dayOldEpoch < 0 {
 		dayOldEpoch = 0
 	}
@@ -226,7 +222,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 		return errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochStart, 1)
+	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochEnd, 1)
 
 	var found bool
 	err = db.AlloyWriter.Get(&found, `
@@ -236,7 +232,8 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 		return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", dayOldBoundsStart))
 	}
 
-	d.log.Infof("latestHourlyEpoch: %d, dayOldHourlyEpoch: %d", latestHourlyEpoch, dayOldBoundsStart)
+	latestHourlyStartBound, _ := getHourAggregateBounds(latestHourlyEpoch - 1) // excl
+	d.log.Infof("latestHourlyEpoch (excl): %d, dayOldHourlyEpoch: %d, latestHourlyStartBound (incl): %d", latestHourlyEpoch, dayOldBoundsStart, latestHourlyStartBound)
 
 	_, err = tx.Exec(`TRUNCATE validator_dashboard_data_rolling_daily`)
 	if err != nil {
@@ -246,7 +243,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	_, err = tx.Exec(`
 		WITH
 			epoch_ends as (
-				SELECT epoch_end FROM validator_dashboard_data_hourly WHERE epoch_start = $2 LIMIT 1
+				SELECT max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly WHERE epoch_start = $2 LIMIT 1
 			),
 			balance_starts as (
 				SELECT validator_index, balance_start FROM validator_dashboard_data_hourly WHERE epoch_start = $1
@@ -382,7 +379,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
-	`, dayOldBoundsStart, latestHourlyEpoch)
+	`, dayOldBoundsStart, latestHourlyStartBound)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert rolling 24h aggregate")

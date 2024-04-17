@@ -141,10 +141,10 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	_, err = tx.Exec(fmt.Sprintf(`
 		WITH
 			epoch_starts as (
-				SELECT epoch_start FROM validator_dashboard_data_daily WHERE day = $1 LIMIT 1
+				SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_daily WHERE day = $1 LIMIT 1
 			),
 			epoch_ends as (
-				SELECT epoch_end FROM validator_dashboard_data_daily WHERE day = $2 LIMIT 1
+				SELECT max(epoch_end) as epoch_end FROM validator_dashboard_data_daily WHERE day = $2 LIMIT 1
 			),
 			balance_starts as (
 				SELECT validator_index, balance_start, epoch_start FROM validator_dashboard_data_daily WHERE day = $1
