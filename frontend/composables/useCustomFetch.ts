@@ -150,7 +150,7 @@ export function useCustomFetch () {
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
-  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues): Promise<T> {
+  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
       throw new Error(`path ${pathName} not found`)
@@ -191,7 +191,9 @@ export function useCustomFetch () {
     try {
       return await $fetch<T>(path, { method, ...options, baseURL })
     } catch (e: any) {
-      showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
+      if (!dontShowError) {
+        showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
+      }
       throw (e)
     }
   }

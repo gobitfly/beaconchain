@@ -11,17 +11,16 @@ useHead({
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
-const { getUser } = useUserStore()
-
-useAsyncData('get_user', () => getUser(), { server: false })
 
 </script>
 
 <template>
   <div class="min-h-full">
-    <NuxtPage />
-    <DynamicDialog />
-    <Toast />
+    <BcDataWrapper>
+      <NuxtPage />
+      <DynamicDialog />
+      <Toast />
+    </BcDataWrapper>
   </div>
 </template>
 

@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { warn } from 'vue'
 import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
 
@@ -35,12 +34,14 @@ export function useUserStore () {
   const getUser = async () => {
     try {
       // TODO: replace once we have an endpoint to get a real user
-      const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
+      const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS, undefined, undefined, undefined, true)
+
       if (res.data) {
         setUser(1, 'My temp sollution')
       }
     } catch (e) {
-      warn('get user error: ', e)
+      // We are not logged in
+      setUser(undefined)
     }
   }
 
