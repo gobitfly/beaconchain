@@ -4,16 +4,18 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   icon?: IconDefinition,
   text?: string
-  selected: boolean
+  selected: boolean,
+  disabled?:boolean,
 }
-const props = defineProps<Props>()
+defineProps<Props>()
+
 </script>
 
 <template>
-  <ToggleButton class="bc-toggle" :model-value="props.selected" :on-label="props.text" :off-label="props.text">
+  <ToggleButton class="bc-toggle" :disabled="disabled" :model-value="selected" :on-label="text" :off-label="text">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
-        <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
+        <FontAwesomeIcon v-if="icon" :icon="icon" />
       </slot>
     </template>
   </ToggleButton>
@@ -49,6 +51,10 @@ const props = defineProps<Props>()
 
       :deep(svg) {
         max-width: 36px;
+      }
+      &.p-disabled{
+        opacity: 0.5;
+        cursor: default;
       }
     }
   }

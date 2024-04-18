@@ -1,8 +1,10 @@
 {
-  "locales" : {
+  "locales": {
     "date": "en-US"
   },
   "common": {
+    "age": "Age",
+    "block": "Block",
     "epoch": "Epoch",
     "slot": "Slot",
     "validator": "Validator",
@@ -18,7 +20,7 @@
     "average": "Average",
     "index": "Index",
     "edit": "Edit",
-    "true": "True", 
+    "true": "True",
     "false": "False"
   },
   "clipboard": {
@@ -48,9 +50,9 @@
   },
   "premium": {
     "title": "beaconcha.in Premium",
-    "description":"Monitoring without limits on web and mobile.",
-    "subscribe":"Subscribe to Premium",
-    "unlock":"Unlock Full Features"
+    "description": "Monitoring without limits on web and mobile.",
+    "subscribe": "Subscribe to Premium",
+    "unlock": "Unlock Full Features"
   },
   "validator_state": {
     "active": "active",
@@ -118,15 +120,27 @@
         "orphaned": "Network orphaned slot {slot}"
       },
       "status": {
-        "scheduled":{
-          "no_duties":["You have", "no scheduled", "duties"],
-          "has_duties":["You have", "scheduled", "duties"]
-        }, 
+        "scheduled": {
+          "no_duties": ["You have", "no scheduled", "duties"],
+          "has_duties": ["You have", "scheduled", "duties"]
+        },
         "no_duties": ["You had", "no", "duties"],
-        "duties_some":["You missed", "some", "duties"],
-        "duties_success":["All of your duties were", "successful", ""],
+        "duties_some": ["You missed", "some", "duties"],
+        "duties_success": ["All of your duties were", "successful", ""],
         "duties_failed": ["All of your duties were", "missed", ""]
       }
+    }
+  },
+  "block":{
+    "status": {
+      "missed": "Missed",
+      "orphaned": "Orphaned",
+      "scheduled": "Scheduled",
+      "success": "Proposed"
+    },
+    "col":{
+      "proposer": "Proposer",
+      "graffiti": "Graffiti"
     }
   },
   "validator": {
@@ -143,18 +157,30 @@
       "slashing_success": "You slashed a validator",
       "slashing_failed": "You got slashed",
       "slashing_partial": "You slashed a validator and got slashed"
+    }, 
+    "rewards":{
+      "total": "Total",
+      "attestation_head": "Attestation Head",
+      "attestation_source": "Attestation Source",
+      "attestation_target": "Attestation Target",
+      "proposer_el": "Proposer EL Reward",
+      "proposer_attestation": "Proposer Att. Reward",
+      "proposer_sync": "Proposer Sync. Reward:",
+      "proposer_slashing": "Proposer Slashing Reward"
     }
   },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
+    "public_validator_dashboard": "Public Validator Dashboard",
+    "public_account_dashboard": "Public Account Dashboard",
     "notifications": "Notifications",
     "group": {
       "selection": {
         "all": "All groups",
         "default": "Default",
-        "placeholder": "Select group", 
+        "placeholder": "Select group",
         "dialog": {
           "title": "Edit Groups",
           "assign-group": "Assign to group",
@@ -177,14 +203,47 @@
     "validator": {
       "manage-validators": "Manage Validators",
       "manage-groups": "Manage Groups",
-      "management":{
+      "management": {
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",
         "validators_added": "validators added",
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
-      "group_management":{
+      "blocks":{
+        "title": "Blocks",
+        "search_placeholder": "Index, Public Key, Group",
+        "el_rewards": "Execution Layer Reward",
+        "cl_rewards": "Consensus Layer Reward"
+      },
+      "rewards": {
+        "title": "Rewards",
+        "search_placeholder": "Epoch, Index, Pubkey, Group",
+        "attestation": "Attestation",
+        "proposal": "Proposal",
+        "sync_committee": "Sync Committee",
+        "slashing": "Slashing",
+        "proposer_rewards_cl_att": "Proposer Att. Reward (CL)",
+        "proposer_rewards_cl_sync": "Proposer Sync. Reward (CL)",
+        "proposer_rewards_cl_slash": "Proposer Slashing Reward (CL)",
+        "proposer_rewards_el": "Proposer Reward (EL)",
+        "proposer_rewards_total": "Total Proposer Reward",
+        "attestation_source": "Att.: Source",
+        "attestation_target": "Att.: Target",
+        "attestation_head": "Att.: Head",
+        "block": "Block",
+        "sync": "Sync",
+        "inactivity": "Inactivity Leak",
+        "total": "Total",
+        "tooltip": {
+          "sync": ["Participated / Missed"],
+          "slashing": [
+            "Amount of validators you slashed",
+            "Amount of your slashed validators"
+          ]
+        }
+      },
+      "group_management":  {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
         "validators_added": "validators added",
@@ -193,8 +252,8 @@
         "remove_title": "Remove Groups",
         "new_group_placeholder": "New group name",
         "remove_text": "Do you want to remove group {group} from your dashboard?",
-        "col":{
-          "name": "Name", 
+        "col": {
+          "name": "Name",
           "id": "Group Id",
           "count": "Amount"
         }
@@ -206,6 +265,10 @@
         "7d_apr": "7d APR"
       },
       "col": {
+        "duty": "Duty",
+        "total_rewards": "Total Rewards",
+        "el_rewards": "El Rewards",
+        "cl_rewards": "Cl Rewards",
         "index": "Index",
         "public_key": "Public Key",
         "balance": "Balance",
@@ -216,7 +279,10 @@
         "efficiency_last_7d": "Efficiency (7d)",
         "efficiency_last_30d": "Efficiency (30d)",
         "efficiency_all_time": "Efficiency (All Time)",
-        "validators": "Validators"
+        "validators": "Validators",
+        "rewards": "Rewards",
+        "reward_recipient": "Rewards Recipient",
+        "proposer_rewards": "Proposer Rewards"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
@@ -240,7 +306,7 @@
           "apr": "APR",
           "luck": "Luck"
         },
-        "chart":{
+        "chart": {
           "all_groups": "All Groups",
           "efficiency": "Efficiency"
         }
@@ -263,6 +329,16 @@
         "sync": {
           "title": "Sync Committee Efficiency: ",
           "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1"
+        }
+      },
+      "duties": {
+        "title": "Epoch",
+        "search_placeholder": "Index, Public Key",
+        "col": {
+          "duties": "Duties",
+          "result": "Result",
+          "rewards": "Rewards",
+          "validator": "Validator"
         }
       }
     }
