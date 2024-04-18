@@ -53,7 +53,6 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
-    <div>len: {{ dashboards?.validator_dashboards?.length }} loged in{{ isLoggedIn }}</div>
     <BcPageWrapper>
       <DashboardCreationController
         class="panel-controller"

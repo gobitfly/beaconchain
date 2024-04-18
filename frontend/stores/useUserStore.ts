@@ -18,6 +18,7 @@ export function useUserStore () {
         password
       }
     })
+    await getUser()
   }
 
   const setUser = (id?: number, name: string = '') => {
