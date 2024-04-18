@@ -153,21 +153,6 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 		return errors.Wrap(err, fmt.Sprintf("failed to aggregate rolling %dd", days))
 	}
 
-	// Handles special case after bootstrap, as validators that joined during boot strap window are not in the tails table
-	// and hence will not get their epoch_start updated. Also handles super rare case where validator joined and exited during
-	// bootstrap window so we just set the epoch_start for all validators to the correct one after bootstrap
-	// if bootstrap {
-	// 	start := aggTailEpochEnd + 1
-	// 	if start < 0 {
-	// 		start = 0
-	// 	}
-
-	// 	_, err = tx.Exec(fmt.Sprintf(`UPDATE %s set epoch_start = $1`, tableName), start) // aggTailEpoch is incl so +1 is the real inclusive start epoch
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "failed to update epoch start")
-	// 	}
-	// }
-
 	// Sanity check
 	sanityBounds, err := d.getCurrentRollingBounds(tx, tableName)
 	if err != nil {
@@ -532,8 +517,6 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	if err := t.Execute(&queryBuffer, custom); err != nil {
 		return errors.Wrap(err, "failed to execute template")
 	}
-
-	//fmt.Printf("query: %v\n", queryBuffer.String())
 
 	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 

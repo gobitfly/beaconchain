@@ -91,7 +91,6 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		//d.headEpochQueue <- 5
 		d.processHeadQueue()
 	}()
 
@@ -273,7 +272,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64
 						continue
 					}
 
-					d.log.Infof("epoch data fetcher, retreiving data for epoch %d", gap)
+					d.log.Infof("epoch data fetcher, retrieving data for epoch %d", gap)
 
 					// for sequential improve performance by skipping some calls for all epochs that are not the start epoch
 					// and provide the startBalance and the missed slots for every following epoch in this sequence
@@ -434,19 +433,19 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
-	if latestExportedEpoch > 0 {
-		err = d.aggregatePerEpoch(true, false, true)
-		if err != nil {
-			return false, errors.Wrap(err, "failed to aggregate")
-		}
-	}
-
 	gaps, err := edb.GetDashboardEpochGapsBetween(*upToEpoch, int64(latestExportedEpoch))
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
+		if latestExportedEpoch > 0 {
+			err = d.aggregatePerEpoch(true, false, true)
+			if err != nil {
+				return false, errors.Wrap(err, "failed to aggregate")
+			}
+		}
+
 		d.log.Infof("Epoch dashboard data %d gaps found, backfilling gaps in the range fom epoch %d to %d", len(gaps), gaps[0], gaps[len(gaps)-1])
 
 		cutOff := latestExportedEpoch - d.epochWriter.getRetentionEpochDuration()
@@ -1241,8 +1240,6 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
 		}
 	}
-
-	// TODO: el reward data
 
 	return validatorsData, nil
 }

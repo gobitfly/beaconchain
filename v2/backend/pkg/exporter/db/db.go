@@ -879,7 +879,7 @@ func GetLastExportedDay() (*DayBounds, error) {
 
 func GetXDayOldDay(dayOffset int) (time.Time, error) {
 	var day time.Time
-	err := db.AlloyWriter.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset))
+	err := db.AlloyWriter.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset-1))
 	return day, err
 }
 
