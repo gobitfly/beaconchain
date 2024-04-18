@@ -11,17 +11,11 @@ import { uniq } from 'lodash-es'
 import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-
-interface Props {
-  dashboardKey: DashboardKey;
-}
-const props = defineProps<Props>()
 
 const { width } = useWindowSize()
 
@@ -35,6 +29,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
+const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
@@ -74,10 +70,10 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
   }
   const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
+  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
 
   loadData()
-  refreshOverview(props.dashboardKey)
+  refreshOverview(dashboardKey.value)
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -85,15 +81,23 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     warn('no validators selected to change group')
     return
   }
+  if (isPublic.value) {
+    removeEntities(validators as string[])
+    return
+  }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: props.dashboardKey })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: dashboardKey.value })
 
   loadData()
-  refreshOverview(props.dashboardKey)
+  refreshOverview(dashboardKey.value)
 }
 
 const addValidator = () => {
-  changeGroup([selectedValidator.value], selectedGroup.value)
+  if (isPublic.value || !isLoggedIn.value) {
+    addEntities([selectedValidator.value])
+  } else {
+    changeGroup([selectedValidator.value], selectedGroup.value)
+  }
 }
 
 const editSelected = () => {
@@ -136,19 +140,21 @@ watch(selectedGroup, (value) => {
 })
 
 const loadData = async () => {
-  if (props.dashboardKey) {
+  if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
-    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: dashboardKey.value }, query.value)
 
     // Make sure that during loading the query did not change
     if (testQ === JSON.stringify(query.value)) {
       data.value = result
       selected.value = []
     }
+  } else {
+    data.value = { paging: {}, data: [] }
   }
 }
 
-watch(() => [props.dashboardKey, visible.value, query.value], () => {
+watch(() => [dashboardKey.value, visible.value, query.value], () => {
   if (visible.value) {
     loadData()
   }
@@ -180,9 +186,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const MaxValidatorsPerDashboard = 1000
+const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxValidatorsPerDashboard)
+const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
 </script>
 
@@ -204,10 +210,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: replace input once Searchbar is finished -->
           <InputText v-model="selectedValidator" class="search-input" placeholder="Placeholder input (will be replaced once the searchbar is finished)" />
-          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator" @click="addValidator">
+          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator || premiumLimit" @click="addValidator">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
           <!-- end of temp -->
@@ -236,7 +242,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
               </template>
             </Column>
             <Column
-              v-if="size.showGroup"
+              v-if="size.showGroup && groupsEnabled"
               field="group_id"
               :sortable="!size.expandable"
               :header="$t('dashboard.validator.col.group')"
@@ -305,7 +311,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
-                  <div class="label">
+                  <div v-if="groupsEnabled" class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
                   <DashboardGroupSelection
@@ -328,9 +334,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     </BcTableControl>
     <template #footer>
       <div class="footer">
-        <div v-if="MaxValidatorsPerDashboard" class="left">
+        <div v-if="maxValidatorsPerDashboard" class="left">
           <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="MaxValidatorsPerDashboard" default="0" /></span>
+            <span><BcFormatNumber :value="total" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />
