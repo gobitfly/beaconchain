@@ -272,11 +272,25 @@ type CustomRolling struct {
 	TableFromEpochColumn string    // must provide
 	TableConflict        string    // must provide
 
-	TailBalancesQuery             string // optional
-	TailBalancesJoinQuery         string // optional
-	TailBalancesInsertColumnQuery string // optional
-	TableDayColum                 string // optional
-	TableDayValue                 string // optional
+	TailBalancesQuery             string   // optional
+	TailBalancesJoinQuery         string   // optional
+	TailBalancesInsertColumnQuery string   // optional
+	TableDayColum                 string   // optional
+	TableDayValue                 string   // optional
+	Agg                           TableAGG // do not provide, will be overwritten
+}
+
+type TableAGG struct {
+	SUM                              string
+	BOOL_OR                          string
+	MAX                              string
+	AGG_END                          string
+	WHERE_AND_GROUP                  string
+	BALANCE_END_Q                    string
+	BALANCE_END_COLUMN               string
+	HEAD_BALANCE_QUERY               string
+	HEAD_BALANCE_JOIN                string
+	HEAD_BALANCE_SINGLE_EPOCH_COLUMN string
 }
 
 // This method is the bread and butter of all aggregation. It is used by rolling window aggregation to add to head,
@@ -286,53 +300,105 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		custom.TailBalancesInsertColumnQuery = "null,"
 	}
 
+	if custom.StartEpoch > custom.EndEpoch {
+		custom.Log.Infof("nothing to do, start epoch is greater than end epoch (%d > %d)", custom.StartEpoch, custom.EndEpoch)
+		return nil
+	}
+
+	// When aggregating multiple epochs (aggregate mode)
+	custom.Agg = TableAGG{
+		SUM:     "SUM(",
+		BOOL_OR: "bool_or(",
+		MAX:     "MAX(",
+		AGG_END: ")",
+
+		// What epochs to select for aggregate
+		WHERE_AND_GROUP: fmt.Sprintf(`
+			WHERE %[1]s >= $1 AND %[1]s <= $2 
+			GROUP BY validator_index
+		`, custom.TableFromEpochColumn),
+
+		// Head balance from the most recent epoch so select and join the agg set
+		HEAD_BALANCE_QUERY: fmt.Sprintf(`
+			head_balance_ends as (
+				SELECT validator_index, balance_end FROM %[1]s WHERE %[2]s = $2
+			),
+		`, custom.TableFrom, custom.TableFromEpochColumn),
+		HEAD_BALANCE_JOIN: `
+			LEFT JOIN head_balance_ends ON aggregate_head.validator_index = head_balance_ends.validator_index
+		`,
+		HEAD_BALANCE_SINGLE_EPOCH_COLUMN: "", // since data is provided by join we dont need to select it
+	}
+
+	// I know how this looks but the query planner of postgres has difficulty with the agg group by for just one epoch
+	// So here some optimization for when we only aggregate one epoch
+	// just select, no aggregate, grouping or join needed
+	if custom.StartEpoch == custom.EndEpoch {
+		custom.Agg = TableAGG{
+			SUM:             "",
+			BOOL_OR:         "",
+			MAX:             "",
+			AGG_END:         "",
+			WHERE_AND_GROUP: fmt.Sprintf(`WHERE %s = $1`, custom.TableFromEpochColumn),
+
+			// For head balance with just one epoch just use the column, forget about the join
+			HEAD_BALANCE_SINGLE_EPOCH_COLUMN: "balance_end,",
+		}
+
+		// If start bound is the same as start and end, we can ommit that join altogether
+		// postgres really doesnt like joining on the same epoch
+		if custom.StartBoundEpoch == int64(custom.StartEpoch) && custom.TailBalancesQuery != "" {
+			custom.TailBalancesQuery = ""
+			custom.TailBalancesJoinQuery = ""
+			custom.Agg.HEAD_BALANCE_SINGLE_EPOCH_COLUMN += custom.TailBalancesInsertColumnQuery
+		}
+	}
+
 	tmpl := `
 		WITH
-			head_balance_ends as (
-				SELECT validator_index, balance_end FROM {{ .TableFrom }} WHERE {{ .TableFromEpochColumn }} = $2 
-			),
+			{{ .Agg.HEAD_BALANCE_QUERY }}
 			{{ .TailBalancesQuery }} -- balance start query
 			aggregate_head as (
 				SELECT 
 					validator_index,
-					SUM(attestations_source_reward) as attestations_source_reward,
-					SUM(attestations_target_reward) as attestations_target_reward,
-					SUM(attestations_head_reward) as attestations_head_reward,
-					SUM(attestations_inactivity_reward) as attestations_inactivity_reward,
-					SUM(attestations_inclusion_reward) as attestations_inclusion_reward,
-					SUM(attestations_reward) as attestations_reward,
-					SUM(attestations_ideal_source_reward) as attestations_ideal_source_reward,
-					SUM(attestations_ideal_target_reward) as attestations_ideal_target_reward,
-					SUM(attestations_ideal_head_reward) as attestations_ideal_head_reward,
-					SUM(attestations_ideal_inactivity_reward) as attestations_ideal_inactivity_reward,
-					SUM(attestations_ideal_inclusion_reward) as attestations_ideal_inclusion_reward,
-					SUM(attestations_ideal_reward) as attestations_ideal_reward,
-					SUM(blocks_scheduled) as blocks_scheduled,
-					SUM(blocks_proposed) as blocks_proposed,
-					SUM(blocks_cl_reward) as blocks_cl_reward,
-					SUM(sync_scheduled) as sync_scheduled,
-					SUM(sync_executed) as sync_executed,
-					SUM(sync_rewards) as sync_rewards,
-					bool_or(slashed) as slashed,
-					SUM(deposits_count) as deposits_count,
-					SUM(deposits_amount) as deposits_amount,
-					SUM(withdrawals_count) as withdrawals_count,
-					SUM(withdrawals_amount) as withdrawals_amount,
-					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(block_chance) as block_chance,
-					SUM(attestations_scheduled) as attestations_scheduled,
-					SUM(attestations_executed) as attestations_executed,
-					SUM(attestation_head_executed) as attestation_head_executed,
-					SUM(attestation_source_executed) as attestation_source_executed,
-					SUM(attestation_target_executed) as attestation_target_executed,
-					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
-					SUM(slasher_reward) as slasher_reward,
-					MAX(slashed_by) as slashed_by,
-					MAX(slashed_violation) as slashed_violation,
-					MAX(last_executed_duty_epoch) as last_executed_duty_epoch		
+					{{ .Agg.HEAD_BALANCE_SINGLE_EPOCH_COLUMN }}
+					{{ .Agg.SUM }}attestations_source_reward{{ .Agg.AGG_END }} as attestations_source_reward,
+					{{ .Agg.SUM }}attestations_target_reward{{ .Agg.AGG_END }} as attestations_target_reward,
+					{{ .Agg.SUM }}attestations_head_reward{{ .Agg.AGG_END }} as attestations_head_reward,
+					{{ .Agg.SUM }}attestations_inactivity_reward{{ .Agg.AGG_END }} as attestations_inactivity_reward,
+					{{ .Agg.SUM }}attestations_inclusion_reward{{ .Agg.AGG_END }} as attestations_inclusion_reward,
+					{{ .Agg.SUM }}attestations_reward{{ .Agg.AGG_END }} as attestations_reward,
+					{{ .Agg.SUM }}attestations_ideal_source_reward{{ .Agg.AGG_END }} as attestations_ideal_source_reward,
+					{{ .Agg.SUM }}attestations_ideal_target_reward{{ .Agg.AGG_END }} as attestations_ideal_target_reward,
+					{{ .Agg.SUM }}attestations_ideal_head_reward{{ .Agg.AGG_END }} as attestations_ideal_head_reward,
+					{{ .Agg.SUM }}attestations_ideal_inactivity_reward{{ .Agg.AGG_END }} as attestations_ideal_inactivity_reward,
+					{{ .Agg.SUM }}attestations_ideal_inclusion_reward{{ .Agg.AGG_END }} as attestations_ideal_inclusion_reward,
+					{{ .Agg.SUM }}attestations_ideal_reward{{ .Agg.AGG_END }} as attestations_ideal_reward,
+					{{ .Agg.SUM }}blocks_scheduled{{ .Agg.AGG_END }} as blocks_scheduled,
+					{{ .Agg.SUM }}blocks_proposed{{ .Agg.AGG_END }} as blocks_proposed,
+					{{ .Agg.SUM }}blocks_cl_reward{{ .Agg.AGG_END }} as blocks_cl_reward,
+					{{ .Agg.SUM }}sync_scheduled{{ .Agg.AGG_END }} as sync_scheduled,
+					{{ .Agg.SUM }}sync_executed{{ .Agg.AGG_END }} as sync_executed,
+					{{ .Agg.SUM }}sync_rewards{{ .Agg.AGG_END }} as sync_rewards,
+					{{ .Agg.BOOL_OR }}slashed{{ .Agg.AGG_END }} as slashed,
+					{{ .Agg.SUM }}deposits_count{{ .Agg.AGG_END }} as deposits_count,
+					{{ .Agg.SUM }}deposits_amount{{ .Agg.AGG_END }} as deposits_amount,
+					{{ .Agg.SUM }}withdrawals_count{{ .Agg.AGG_END }} as withdrawals_count,
+					{{ .Agg.SUM }}withdrawals_amount{{ .Agg.AGG_END }} as withdrawals_amount,
+					{{ .Agg.SUM }}inclusion_delay_sum{{ .Agg.AGG_END }} as inclusion_delay_sum,
+					{{ .Agg.SUM }}block_chance{{ .Agg.AGG_END }} as block_chance,
+					{{ .Agg.SUM }}attestations_scheduled{{ .Agg.AGG_END }} as attestations_scheduled,
+					{{ .Agg.SUM }}attestations_executed{{ .Agg.AGG_END }} as attestations_executed,
+					{{ .Agg.SUM }}attestation_head_executed{{ .Agg.AGG_END }} as attestation_head_executed,
+					{{ .Agg.SUM }}attestation_source_executed{{ .Agg.AGG_END }} as attestation_source_executed,
+					{{ .Agg.SUM }}attestation_target_executed{{ .Agg.AGG_END }} as attestation_target_executed,
+					{{ .Agg.SUM }}optimal_inclusion_delay_sum{{ .Agg.AGG_END }} as optimal_inclusion_delay_sum,
+					{{ .Agg.SUM }}slasher_reward{{ .Agg.AGG_END }} as slasher_reward,
+					{{ .Agg.MAX }}slashed_by{{ .Agg.AGG_END }} as slashed_by,
+					{{ .Agg.MAX }}slashed_violation{{ .Agg.AGG_END }} as slashed_violation,
+					{{ .Agg.MAX }}last_executed_duty_epoch{{ .Agg.AGG_END }} as last_executed_duty_epoch		
 				FROM {{ .TableFrom }}
-				WHERE {{ .TableFromEpochColumn }} >= $1 AND {{ .TableFromEpochColumn }} <= $2 
-				GROUP BY validator_index
+				{{ .Agg.WHERE_AND_GROUP }} 
 			)
 			INSERT INTO {{ .TableTo }} (
 				{{ .TableDayColum }}
@@ -421,7 +487,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				aggregate_head.last_executed_duty_epoch
 			FROM aggregate_head  
 			{{ .TailBalancesJoinQuery }} -- balance start join
-			LEFT JOIN head_balance_ends ON aggregate_head.validator_index = head_balance_ends.validator_index
+			{{ .Agg.HEAD_BALANCE_JOIN }}
 			ON CONFLICT {{ .TableConflict }} DO UPDATE SET
 					attestations_source_reward = COALESCE({{ .TableTo }}.attestations_source_reward, 0) + EXCLUDED.attestations_source_reward,
 					attestations_target_reward = COALESCE({{ .TableTo }}.attestations_target_reward, 0) + EXCLUDED.attestations_target_reward,
@@ -466,6 +532,10 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	if err := t.Execute(&queryBuffer, custom); err != nil {
 		return errors.Wrap(err, "failed to execute template")
 	}
+
+	//fmt.Printf("query: %v\n", queryBuffer.String())
+
+	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
 	result, err := tx.Exec(queryBuffer.String(),
 		custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,
