@@ -17,12 +17,11 @@ import type { MenuBarEntry } from '~/types/menuBar'
 const { isLoggedIn } = useUserStore()
 
 const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
-const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+const { refreshDashboards, updateHash, dashboards, getDashboardLabel } = useUserDashboardStore()
 
 const dialog = useDialog()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-const router = useRouter()
 const { width } = useWindowSize()
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
@@ -84,7 +83,7 @@ const remove = () => {
     },
     onClose: response => response?.data && removeDashboard(dashboardKey.value),
     data: {
-      question: $t('dashboard.deletion.text', { dashboard: 'dashboardName.value' }) // TODO: Fix
+      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, 'validator') }) // TODO: Fix
     }
   })
 }
@@ -96,17 +95,18 @@ const removeDashboard = async (key: DashboardKey) => {
 
   // forward user to another dashboard (if possible)
   if ((dashboards.value?.validator_dashboards?.length ?? 0) > 0) {
-    router.push(`/dashboard/${dashboards.value?.validator_dashboards[0].id}`)
+    await navigateTo(`/dashboard/${dashboards.value?.validator_dashboards[0].id}`)
     return
   }
 
   if ((dashboards.value?.account_dashboards?.length ?? 0) > 0) {
-    router.push(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
+    await navigateTo(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
     return
   }
 
   // no other dashboard available, forward to creation screen
-  router.push('/dashboard')
+  setDashboardKey('')
+  await navigateTo('/dashboard')
 }
 
 onMounted(() => {
