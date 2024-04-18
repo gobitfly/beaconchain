@@ -28,9 +28,12 @@ const onInput = (value: string) => {
         <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" />
         <slot name="header-left" />
       </div>
-      <div v-if="props.title" class="h1">
-        {{ props.title }}
-      </div>
+
+      <slot name="header-center">
+        <div v-if="props.title" class="h1">
+          {{ props.title }}
+        </div>
+      </slot>
       <div class="side right">
         <slot name="header-right" />
         <BcContentFilter

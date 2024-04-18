@@ -10,58 +10,23 @@ import {
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { DashboardCreationController, BcDialogConfirm, IconMore } from '#components'
-import type { DashboardCreationDisplayType } from '~/types/dashboard/creation'
-import type { DashboardKey } from '~/types/dashboard'
+import { DashboardCreationController, BcDialogConfirm } from '#components'
+import type { CookieDashboard, DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 
-const route = useRoute()
+const { isLoggedIn } = useUserStore()
+
+const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
+const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+
 const dialog = useDialog()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const router = useRouter()
 const { width } = useWindowSize()
 
-const key = computed<DashboardKey>(() => {
-  if (Array.isArray(route.params.id)) {
-    return route.params.id.join(',')
-  }
-
-  const idAsNumber = parseInt(route.params.id)
-  if (isNaN(idAsNumber)) {
-    return route.params.id
-  }
-
-  return idAsNumber
-})
-
-const moreButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 525) {
-    return [
-      {
-        label: '',
-        dropdown: false,
-        class: 'icon-only',
-        component: IconMore,
-        items: [
-          {
-            label: $t('dashboard.share_dashboard'),
-            command: () => { share() }
-          },
-          {
-            label: $t('dashboard.delete_dashboard'),
-            command: () => { remove() }
-          }
-        ]
-      }
-    ]
-  }
-
-  return undefined
-})
-
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 850) {
+  if (width.value < 520 && isLoggedIn.value && !isPublic.value) {
     return [
       {
         label: 'Manage',
@@ -83,26 +48,18 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   return undefined
 })
 
-const { dashboards, refreshDashboards, getValidatorDashboardName } = useUserDashboardStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
-  useAsyncData('user_dashboards', () => refreshDashboards()),
-  useAsyncData('validator_overview', () => refreshOverview(key.value), { watch: [key] })
+  useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] }),
+  useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
 ])
-
-const dashboardName = computed(() => getValidatorDashboardName(key.value))
 
 const manageValidatorsModalVisisble = ref(false)
 const manageGroupsModalVisisble = ref(false)
 
-const dashboardCreationControllerPanel = ref<typeof DashboardCreationController>()
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
-function showDashboardCreation (type: DashboardCreationDisplayType) {
-  if (type === 'panel') {
-    dashboardCreationControllerPanel.value?.show()
-  } else {
-    dashboardCreationControllerModal.value?.show()
-  }
+function showDashboardCreationDialog () {
+  dashboardCreationControllerModal.value?.show()
 }
 
 const share = () => {
@@ -114,9 +71,9 @@ const remove = () => {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && removeDashboard(key.value),
+    onClose: response => response?.data && removeDashboard(dashboardKey.value),
     data: {
-      question: $t('dashboard.deletion.text', { dashboard: dashboardName.value })
+      question: $t('dashboard.deletion.text', { dashboard: 'dashboardName.value' }) // TODO: Fix
     }
   })
 }
@@ -142,26 +99,41 @@ const removeDashboard = async (key: DashboardKey) => {
 }
 
 onMounted(() => {
-  // TODO: Implement check if user does not have a single dashboard instead of the key check once information is available
-  if (key.value === '') {
-    showDashboardCreation('panel')
+  if (dashboardKey.value === '') {
+    // we don't have a key and no validator dashboard: show the create panel
+    if (dashboards.value?.validator_dashboards?.length) {
+      // if we have a validator dashboard but none selected: select the first
+      const cd = dashboards.value.validator_dashboards[0] as CookieDashboard
+      setDashboardKey(cd.hash ?? cd.id.toString())
+    }
+  }
+})
+
+watch(dashboardKey, (newKey, oldKey) => {
+  if (!isLoggedIn.value) {
+    // We update the key for our public dashboard
+    const cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
+    // If the old key does not match the dashboards key then it probabbly means we opened a different pub. dashboard as a link
+    if (cd && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
+      updateHash('validator', newKey)
+    }
   }
 })
 </script>
 
 <template>
-  <div v-if="key === ''">
+  <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
       <DashboardCreationController
-        ref="dashboardCreationControllerPanel"
         class="panel-controller"
         :display-type="'panel'"
+        :initially-visislbe="true"
       />
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" :dashboard-key="key" />
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" :dashboard-key="key" />
+    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
@@ -169,36 +141,19 @@ onMounted(() => {
     />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreation('modal')" />
-        <DashboardValidatorOverview class="overview" :dashboard-key="key" />
+        <DashboardHeader @show-creation="showDashboardCreationDialog()" />
+        <DashboardValidatorOverview class="overview" />
       </template>
       <div class="header-row">
-        <div class="name-container">
-          <div class="h1 name">
-            {{ dashboardName }}
-          </div>
-          <Menubar v-if="moreButtons" :model="moreButtons" breakpoint="0px">
-            <template #item="{ item }">
-              <span class="button-content more-button pointer">
-                <div v-if="item.component">
-                  <component :is="item.component" />
-                </div>
-                <div v-else>
-                  <span class="text">{{ item.label }}</span>
-                  <IconChevron v-if="item.dropdown" direction="bottom" />
-                </div>
-              </span>
-            </template>
-          </Menubar>
-          <div v-else class="button-container">
-            <Button class="share-button" @click="share()">
-              {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
-            </Button>
-            <Button class="p-button-icon-only" @click="remove()">
-              <FontAwesomeIcon :icon="faTrash" />
-            </Button>
-          </div>
+        <div v-if="isLoggedIn && !isPublic" class="action-button-container">
+          <Button class="share-button" @click="share()">
+            {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
+          </Button>
+          <Button class="p-button-icon-only" @click="remove()">
+            <FontAwesomeIcon :icon="faTrash" />
+          </Button>
         </div>
+        <div v-else />
         <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
           <template #item="{ item }">
             <span class="button-content pointer">
@@ -208,31 +163,31 @@ onMounted(() => {
           </template>
         </Menubar>
         <div v-else class="manage-buttons-container">
-          <Button :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
+          <Button v-if="isLoggedIn && !isPublic" :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
           <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
         </div>
       </div>
       <div>
-        <DashboardValidatorSlotViz :dashboard-key="key" />
+        <DashboardValidatorSlotViz />
       </div>
       <TabView lazy>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
           </template>
-          <DashboardTableSummary :dashboard-key="key" />
+          <DashboardTableSummary />
         </TabPanel>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
           </template>
-          Rewards coming soon!
+          <DashboardTableRewards />
         </TabPanel>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
           </template>
-          Blocks coming soon!
+          <DashboardTableBlocks />
         </TabPanel>
         <TabPanel>
           <template #header>
@@ -267,37 +222,18 @@ onMounted(() => {
   gap: var(--padding);
   margin-bottom: var(--padding);
 
-  .name-container{
+  .action-button-container{
     display: flex;
-    gap: var(--padding-large);
+    gap: var(--padding);
 
-    max-width: 900px;
-    @media (max-width: 1260px) {
-      max-width: calc(100% - (var(--padding)*3) - var(--padding-large) - 330px);
-    }
-    @media (max-width: 849px) {
-      max-width: calc(100% - (var(--padding)*2) - var(--padding-large) - 110px);
-    }
-
-    .name {
-      margin-top: 0;
-      @include utils.truncate-text;
-    }
-
-    .button-container{
+    .share-button{
       display: flex;
-      gap: var(--padding);
-
-      .share-button{
-        display: flex;
-        gap: var(--padding-small);
-      }
+      gap: var(--padding-small);
     }
   }
 
   .manage-buttons-container{
     display: flex;
-    justify-content: flex-end;
     gap: var(--padding);
   }
 
