@@ -6,6 +6,7 @@ import {
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import type { TimeFrame } from '~/types/value'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 interface Props {
   validators: number[],
@@ -32,21 +33,16 @@ const openValidatorModal = () => {
 }
 
 const groupName = computed(() => {
-  if (props.groupId === undefined) {
-    return
-  }
-  if (props.groupId < 0) {
-    return $t('dashboard.validator.summary.total_group_name')
-  }
-  const group = overview.value?.groups?.find(g => g.id === props.groupId)
-  return group?.name || `${props.groupId}`
+  return getGroupLabel($t, props.groupId, overview.value?.groups)
 })
+
+const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
 
 </script>
 <template>
   <div class="validator_column">
     <div class="validators">
-      <template v-for="v in props.validators" :key="v">
+      <template v-for="v in cappedValidators" :key="v">
         <NuxtLink :to="`/validator/${v}`" target="_blank" class="link validator_link" :no-prefetch="true">
           {{ v }}
         </NuxtLink>

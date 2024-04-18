@@ -16,9 +16,11 @@ useDateProvider()
 
 <template>
   <div class="min-h-full">
-    <NuxtPage />
-    <DynamicDialog />
-    <Toast />
+    <BcDataWrapper>
+      <NuxtPage />
+      <DynamicDialog />
+      <Toast />
+    </BcDataWrapper>
   </div>
 </template>
 

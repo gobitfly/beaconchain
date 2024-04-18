@@ -96,7 +96,6 @@ func main() {
 
 	if *versionFlag {
 		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
 		return
 	}
 

@@ -1,6 +1,7 @@
+# this is meant to be built with the root of this repo as build-context
 FROM golang:1.22.0 AS build-env
-COPY go.mod go.sum /src/
-WORKDIR /src
+COPY backend/go.mod backend/go.sum /src/backend/
+WORKDIR /src/backend
 RUN go mod download
 ADD . /src
 ARG target=all
@@ -13,6 +14,6 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
   ca-certificates \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY --from=build-env /src/bin /app/
+WORKDIR /usr/local/bin
+COPY --from=build-env /src/backend/bin /usr/local/bin/
 CMD ["./exporter"]
