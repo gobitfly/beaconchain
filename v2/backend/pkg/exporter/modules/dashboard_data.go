@@ -83,6 +83,7 @@ func (d *dashboardData) Init() error {
 			if done {
 				d.log.Infof("dashboard data up to date, starting head export")
 				if debugSetBackfillCompleted { // todo remove
+					utils.SendMessage("🎉🎉🎉 V2 Dashboard Export - Reached head, exporting from head now", &utils.Config.InternalAlerts)
 					d.backFillCompleted = true
 				}
 				break
@@ -90,7 +91,7 @@ func (d *dashboardData) Init() error {
 			time.Sleep(1 * time.Second)
 		}
 
-		//d.headEpochQueue <- 603
+		//d.headEpochQueue <- 5
 		d.processHeadQueue()
 	}()
 
@@ -495,17 +496,24 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 				d.log.Info("storage got data, writing epoch data")
 				d.writeEpochDatas(datas)
 
+				lastEpoch := datas[len(datas)-1].Epoch
+
 				d.log.Info("storage writing done, aggregate")
 				for {
 					err = d.aggregatePerEpoch(false, false, false)
 					if err != nil {
-						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
+						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch})
 						time.Sleep(time.Second * 10)
 						continue
 					}
 					break
 				}
-				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch}, "backfill, aggregated epoch data")
+				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
+
+				if lastEpoch%225 == 0 {
+					upToEpoch := *upToEpoch
+					utils.SendMessage(fmt.Sprintf("🗿 V2 Dashboard Export - Epoch progress %d/%d [%.2d%%]", lastEpoch, upToEpoch, lastEpoch/upToEpoch*100), &utils.Config.InternalAlerts)
+				}
 			}
 
 			// has written last entry in gaps
