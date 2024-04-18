@@ -145,6 +145,7 @@ const mapping: Record<string, MappingData> = {
 }
 
 export function useCustomFetch () {
+  const headers = useRequestHeaders(['cookie'])
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
@@ -168,11 +169,11 @@ export function useCustomFetch () {
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.origin}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
+    options.headers = new Headers({ ...options.headers, ...headers })
     if (apiKey) {
-      options.headers = new Headers({})
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
     options.credentials = 'include'
