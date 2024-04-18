@@ -2311,7 +2311,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			}
 			search = strings.ToLower(search)
 			if utils.IsHash(search) {
-				// Get the current validator state
+				// Get the current validator state to convert pubkey to index
 				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
 				defer releaseLock()
 				if err != nil {
@@ -2365,7 +2365,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			validators = append(validators, res.ValidatorIndex)
 		}
 	} else {
-		// In case a list of validators is provided, set the group to default values
+		// In case a list of validators is provided set the group to the default id
 		for _, validator := range dashboardId.Validators {
 			if indexSearch != -1 && validator.Index != uint64(indexSearch) {
 				continue
@@ -2389,6 +2389,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		Amount          uint64 `db:"amount"`
 	}{}
 
+	queryParams := []interface{}{}
 	withdrawalsQuery := `
 		SELECT
 		    w.block_slot,
@@ -2400,7 +2401,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		    blocks_withdrawals w
 		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
 		`
-	queryParams := []interface{}{}
 
 	// Limit the query to relevant validators
 	queryParams = append(queryParams, pq.Array(validators))
@@ -2424,8 +2424,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	sortColCursor := interface{}(nil)
 	switch colSort.Column {
 	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
-		sortColName = "w.block_slot"
-		sortColCursor = currentCursor.Slot
 	case enums.VDBWithdrawalsColumns.Index:
 		sortColName = "w.validatorindex"
 		sortColCursor = currentCursor.Index
