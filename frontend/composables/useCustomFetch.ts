@@ -36,7 +36,6 @@ interface MockFunction {
 type MappingData = {
   path: string,
   getPath?: (values?: PathValues) => string,
-  noAuth?: boolean,
   mock?: boolean,
   mockFunction?: MockFunction,
   legacy?: boolean
@@ -141,7 +140,6 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.LOGIN]: {
     path: '/login',
     method: 'POST',
-    noAuth: true,
     mock: false
   }
 }

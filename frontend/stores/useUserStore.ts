@@ -38,7 +38,7 @@ export function useUserStore () {
       const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS, undefined, undefined, undefined, true)
 
       if (res.data) {
-        setUser(1, 'My temp sollution')
+        setUser(1, 'My temp solution')
       }
     } catch (e) {
       // We are not logged in

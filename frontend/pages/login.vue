@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
-import { warn } from 'vue'
 import { useUserStore } from '~/stores/useUserStore'
 
 const { doLogin } = useUserStore()
-const sessionCookie = useCookie('session_id')
 const router = useRouter()
 
 const { handleSubmit, errors, values } = useForm()
@@ -32,10 +30,6 @@ const onSubmit = handleSubmit(async (values) => {
     await doLogin(values.email, values.password)
     router.push('/')
   }
-})
-
-watch(() => sessionCookie, (session) => {
-  warn('session', session)
 })
 
 </script>
