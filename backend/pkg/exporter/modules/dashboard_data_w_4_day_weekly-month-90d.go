@@ -45,6 +45,7 @@ func (d *dayUpAggregator) rolling90dAggregate(currentEpochHead uint64) error {
 	return d.aggregateRollingXDays(90, "validator_dashboard_data_rolling_90d", currentEpochHead)
 }
 
+// for a given epoch intendedHeadEpoch, what epochs are needed for removal from the rolling tables
 func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
 	week, err := d.getMissingRollingXDaysTailEpochs(7, intendedHeadEpoch, "validator_dashboard_data_rolling_weekly")
 	if err != nil {
@@ -64,6 +65,7 @@ func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint6
 	return deduplicate(append(append(week, month...), ninety...)), nil
 }
 
+// for a given epoch intendedHeadEpoch, what epochs are needed to add to the rolling table (excluding the current epoch)
 func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
 	week, err := d.getMissingRollingXDaysHeadEpochs(7, intendedHeadEpoch-1, "validator_dashboard_data_rolling_weekly")
 	if err != nil {
@@ -133,6 +135,8 @@ type MultipleDaysRollingAggregatorImpl struct {
 }
 
 // returns both start_epochs
+// the epoch_start from the the bootstrap tail
+// and the epoch_start from the bootstrap head (epoch_start of epoch)
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64, days uint64) (uint64, uint64) {
 	currentStartBounds, _ := getDayAggregateBounds(epoch)
 	xDayOldEpoch := int64(epoch - days*utils.EpochsPerDay())
@@ -143,10 +147,12 @@ func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64, day
 	return dayOldBoundsStart, currentStartBounds
 }
 
+// how many epochs can the rolling table be behind without bootstrapping
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
 	return utils.EpochsPerDay()
 }
 
+// bootstrap rolling 7d, 30d, 90d table from utc day table
 func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {

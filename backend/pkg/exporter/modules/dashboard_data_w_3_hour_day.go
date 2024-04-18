@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type hourToDayAggregator struct {
+type epochToDayAggregator struct {
 	*dashboardData
 	mutex             *sync.Mutex
 	rollingAggregator RollingAggregator
@@ -21,8 +21,8 @@ type hourToDayAggregator struct {
 
 const PartitionDayWidth = 6
 
-func newHourToDayAggregator(d *dashboardData) *hourToDayAggregator {
-	return &hourToDayAggregator{
+func newHourToDayAggregator(d *dashboardData) *epochToDayAggregator {
+	return &epochToDayAggregator{
 		dashboardData: d,
 		mutex:         &sync.Mutex{},
 		rollingAggregator: RollingAggregator{
@@ -38,7 +38,7 @@ func GetDayAggregateWidth() uint64 {
 	return utils.EpochsPerDay()
 }
 
-func (d *hourToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
+func (d *epochToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -54,14 +54,16 @@ func (d *hourToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
 
 // used to retrieve missing historic epochs in database for rolling 24h aggregation
 // intentedHeadEpoch is the head you currently want to export
-func (d *hourToDayAggregator) getMissingRolling24TailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
+func (d *epochToDayAggregator) getMissingRolling24TailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
 	return d.rollingAggregator.getMissingRollingTailEpochs(1, intendedHeadEpoch, "validator_dashboard_data_rolling_daily")
 }
 
-func (d *hourToDayAggregator) rolling24hAggregate(currentEpochHead uint64) error {
+func (d *epochToDayAggregator) rolling24hAggregate(currentEpochHead uint64) error {
 	return d.rollingAggregator.Aggregate(1, "validator_dashboard_data_rolling_daily", currentEpochHead)
 }
 
+// Returns the epoch_start and epoch_end (the epoch bounds of a UTC day) for a given epoch.
+// epoch_start is inclusive, epoch_end is exclusive.
 func getDayAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
 	epoch += offset                                                             // offset to utc
@@ -73,7 +75,7 @@ func getDayAggregateBounds(epoch uint64) (uint64, uint64) {
 	return startOfPartition - offset, endOfPartition - offset
 }
 
-func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error {
+func (d *epochToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error {
 	startTime := time.Now()
 	defer func() {
 		d.log.Infof("utc day aggregate took %v", time.Since(startTime))
@@ -122,7 +124,7 @@ func (d *hourToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) error
 	return nil
 }
 
-func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpochOfDay uint64) error {
+func (d *epochToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpochOfDay uint64) error {
 	d.log.Infof("aggregating day of epoch %d", firstEpochOfDay)
 	partitionStartRange, partitionEndRange := d.GetDayPartitionRange(lastEpochOfDay)
 
@@ -164,13 +166,13 @@ func (d *hourToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoch
 	return tx.Commit()
 }
 
-func (d *hourToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, time.Time) {
+func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, time.Time) {
 	startOfPartition := epoch / (PartitionDayWidth * GetDayAggregateWidth()) * PartitionDayWidth * GetDayAggregateWidth() // inclusive
 	endOfPartition := startOfPartition + PartitionDayWidth*GetDayAggregateWidth()                                         // exclusive
 	return utils.EpochToTime(startOfPartition), utils.EpochToTime(endOfPartition)
 }
 
-func (d *hourToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
+func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily_%s_%s
 		PARTITION OF validator_dashboard_data_daily
@@ -196,6 +198,8 @@ type DayRollingAggregatorImpl struct {
 }
 
 // returns both start_epochs
+// the epoch_start from the the bootstrap tail
+// and the epoch_start from the bootstrap head (epoch_start of latestExportedHourEpoch)
 func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch uint64, _ uint64) (uint64, uint64) {
 	currentStartBounds, _ := getHourAggregateBounds(latestExportedHourEpoch)
 
@@ -207,10 +211,12 @@ func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch ui
 	return dayOldBoundsStart, currentStartBounds
 }
 
+// How many epochs can you be behind in the rolling table without bootstrap
 func (d *DayRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
 	return getHourAggregateWidth()
 }
 
+// Bootstrap rolling 24h table from hourly table
 func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {
