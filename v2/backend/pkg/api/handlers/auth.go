@@ -117,6 +117,7 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
 		if err != nil {
 			// if primary id is not used, no need to check access
+			next.ServeHTTP(w, r)
 			return
 		}
 		// primary id is used -> user needs to have access to dashboard
