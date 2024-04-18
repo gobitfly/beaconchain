@@ -3,9 +3,15 @@ import { type DashboardType } from '~/types/dashboard'
 import { IconAccount, IconValidator } from '#components'
 
 const { t: $t } = useI18n()
+const { isLoggedIn } = useUserStore()
+const { dashboards } = useUserDashboardStore()
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-const typeButtons = [{ text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount }, { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator }]
+// TODO: once we have a proper user management we must check the max allowed dashboard by user type
+const typeButtons = [
+  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: !isLoggedIn.value && !!dashboards.value?.account_dashboards?.length },
+  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: !isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length }
+]
 
 const name = defineModel<string>('name', { required: true })
 
@@ -27,7 +33,7 @@ const continueDisabled = computed(() => {
       </div>
       <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
       <div class="row-container">
-        <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
+        <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
         <Button class="button" :disabled="continueDisabled" @click="emit('next')">
           {{ $t('navigation.continue') }}
         </Button>

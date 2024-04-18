@@ -10,7 +10,6 @@ import { BcDialogConfirm } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 
@@ -18,10 +17,7 @@ const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-interface Props {
-  dashboardKey: DashboardKey;
-}
-const props = defineProps<Props>()
+const { dashboardKey } = useDashboardKey()
 
 const { width, isMobile } = useWindowSize()
 
@@ -77,19 +73,19 @@ const addGroup = async () => {
   if (!newGroupName.value?.length) {
     return
   }
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: props.dashboardKey })
-  await refreshOverview(props.dashboardKey)
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: dashboardKey.value })
+  await refreshOverview(dashboardKey.value)
   newGroupName.value = ''
 }
 
 const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'PUT', body: { name: newName } }, { dashboardKey: props.dashboardKey, groupId: row.id })
-  refreshOverview(props.dashboardKey)
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'PUT', body: { name: newName } }, { dashboardKey: dashboardKey.value, groupId: row.id })
+  refreshOverview(dashboardKey.value)
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'DELETE' }, { dashboardKey: props.dashboardKey, groupId: row.id })
-  refreshOverview(props.dashboardKey)
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'DELETE' }, { dashboardKey: dashboardKey.value, groupId: row.id })
+  refreshOverview(dashboardKey.value)
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
@@ -124,7 +120,7 @@ const setSearch = (value?: string) => {
 }
 
 const dashboardName = computed(() => {
-  return dashboards.value?.validator_dashboards?.find(d => `${d.id}` === props.dashboardKey)?.name || props.dashboardKey
+  return dashboards.value?.validator_dashboards?.find(d => `${d.id}` === dashboardKey.value)?.name || dashboardKey.value
 })
 
 // TODO: once we have a user management we need to check how to get the real premium limit

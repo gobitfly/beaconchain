@@ -28,6 +28,8 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const { isPrivate: groupsEnabled } = useDashboardKey()
+
 const { tm: $tm } = useI18n()
 
 const data = computed(() => {
@@ -128,7 +130,7 @@ const data = computed(() => {
     :validators="data.validators"
     :time-frame="props.detail"
     :context="data.context"
-    :group-id="props.row.group_id"
+    :group-id="groupsEnabled ? props.row.group_id : undefined"
   />
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
