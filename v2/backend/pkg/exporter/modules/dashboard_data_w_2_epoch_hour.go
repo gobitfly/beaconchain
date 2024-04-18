@@ -119,6 +119,8 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 	return nil
 }
 
+// Returns the epoch_start and epoch_end (the epoch bounds of an hourly aggregation) for a given epoch.
+// epoch_start is inclusive, epoch_end is exclusive.
 func getHourAggregateBounds(epoch uint64) (uint64, uint64) {
 	offset := utils.GetEpochOffsetGenesis()
 	epoch += offset                                                               // offset to utc

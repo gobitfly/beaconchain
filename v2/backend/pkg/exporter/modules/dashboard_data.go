@@ -21,7 +21,7 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = true                             // prod: false
+const debugAggregateMidEveryEpoch = false                            // prod: false
 const debugTargetBackfillEpoch = uint64(0)                           // prod: 0
 const debugSetBackfillCompleted = true                               // prod: true
 const debugSkipOldEpochClear = false                                 // prod: false
@@ -41,7 +41,7 @@ type dashboardData struct {
 	epochWriter       *epochWriter
 	epochToTotal      *epochToTotalAggregator
 	epochToHour       *epochToHourAggregator
-	hourToDay         *hourToDayAggregator
+	epochToDay        *epochToDayAggregator
 	dayUp             *dayUpAggregator
 	headEpochQueue    chan uint64
 	backFillCompleted bool
@@ -52,12 +52,23 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 		ModuleContext: moduleContext,
 	}
 	temp.log = ModuleLog{module: temp}
+
+	// When a new epoch gets exported the very first step is to export it to the db via epochWriter
 	temp.epochWriter = newEpochWriter(temp)
+
+	// Then those aggregators below use the epoch data to aggregate it into the respective tables
 	temp.epochToTotal = newEpochToTotalAggregator(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
-	temp.hourToDay = newHourToDayAggregator(temp)
+	temp.epochToDay = newHourToDayAggregator(temp)
+
+	// Once an epoch is aggregated to its respective UTC day, we can use the UTC day table to aggregate up to the rolling window tables (7d, 30d, 90d)
 	temp.dayUp = newDayUpAggregator(temp)
+
+	// This channel is used to queue up epochs that need to be exported
 	temp.headEpochQueue = make(chan uint64, 100)
+
+	// Indicates whether the initial backfill - which is checked when starting the exporter - has completed
+	// and the exporter can start listening for new head epochs to be processed
 	temp.backFillCompleted = false
 	return temp
 }
@@ -68,9 +79,10 @@ func (d *dashboardData) Init() error {
 		if err != nil {
 			d.log.Fatal(err, "failed to set work_mem", 0)
 		}
+
 		for {
-			var upToEpochPtr *uint64 = nil    // nil will backfill back to head
-			if debugTargetBackfillEpoch > 0 { // todo remove
+			var upToEpochPtr *uint64 = nil // nil will backfill back to head
+			if debugTargetBackfillEpoch > 0 {
 				upToEpoch := debugTargetBackfillEpoch
 				upToEpochPtr = &upToEpoch
 			}
@@ -82,7 +94,7 @@ func (d *dashboardData) Init() error {
 
 			if done {
 				d.log.Infof("dashboard data up to date, starting head export")
-				if debugSetBackfillCompleted { // todo remove
+				if debugSetBackfillCompleted {
 					utils.SendMessage(fmt.Sprintf("🎉🎉🎉 v2 Dashboard %s - Reached head, exporting from head now", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
 					d.backFillCompleted = true
 				}
@@ -112,6 +124,7 @@ func (d *dashboardData) processHeadQueue() {
 				continue
 			}
 
+			// Back fill to epoch -1 if necessary
 			if stage <= 0 {
 				targetEpoch := epoch - 1
 				_, err := d.backfillHeadEpochData(&targetEpoch)
@@ -123,6 +136,7 @@ func (d *dashboardData) processHeadQueue() {
 				stage = 1
 			}
 
+			// Get epoch data from node and write to database
 			if stage <= 1 {
 				err := d.exportEpochAndTails(epoch)
 				if err != nil {
@@ -133,8 +147,10 @@ func (d *dashboardData) processHeadQueue() {
 				stage = 2
 			}
 
+			// Run aggregations
 			if stage <= 2 {
-				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1, false)
+				doRollingAggregate := currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1
+				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || doRollingAggregate, false)
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
 					time.Sleep(time.Second * 10)
@@ -172,12 +188,12 @@ func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
 // fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
 func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 	// for 24h aggregation
-	missingTails, err := d.hourToDay.getMissingRolling24TailEpochs(headEpoch)
+	missingTails, err := d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing 24h tail epochs")
 	}
 
-	d.log.Infof("missing 24h: %v", missingTails)
+	d.log.Infof("missing 24h tails: %v", missingTails)
 
 	// day aggregation
 	daysMissingTails, err := d.dayUp.getMissingRollingDayTailEpochs(headEpoch)
@@ -217,7 +233,7 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 
 	var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
 	go func() {
-		d.epochDataFetcher(missingTails, 0, epochFetchParallelism, nextDataChan)
+		d.epochDataFetcher(missingTails, epochFetchParallelism, nextDataChan)
 	}()
 
 	for {
@@ -238,7 +254,7 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
 
 // fetches and processes epoch data and provides them via the nextDataChan
 // expects ordered epochs in ascending order
-func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64, epochFetchParallelism int, nextDataChan chan []DataEpoch) {
+func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism int, nextDataChan chan []DataEpoch) {
 	// group epochs into parallel worker groups
 	groups := getEpochParallelGroups(epochs, epochFetchParallelism)
 	numberOfEpochsToFetch := len(epochs)
@@ -255,11 +271,6 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochTailCutOff uint64
 			gap := gap
 			errGroup.Go(func() error {
 				for {
-					//backfill if needed, skip backfilling older than RetainEpochDuration
-					if gap < epochTailCutOff {
-						continue
-					}
-
 					// just in case we ask again before exporting since some time may have been passed
 					hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
 					if err != nil {
@@ -439,6 +450,9 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	}
 
 	if len(gaps) > 0 {
+		// Aggregate (non rolling) before exporting more epochs
+		// This is just a precaution so that the aggregated epochs tables are up to date
+		// before exporting new epochs
 		if latestExportedEpoch > 0 {
 			err = d.aggregatePerEpoch(true, false, true)
 			if err != nil {
@@ -448,20 +462,18 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 		d.log.Infof("Epoch dashboard data %d gaps found, backfilling gaps in the range fom epoch %d to %d", len(gaps), gaps[0], gaps[len(gaps)-1])
 
-		cutOff := latestExportedEpoch - d.epochWriter.getRetentionEpochDuration()
-		if d.epochWriter.getRetentionEpochDuration() > latestExportedEpoch {
-			cutOff = 0
-		}
+		// get epochs data
 		var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
 		go func() {
-			d.epochDataFetcher(gaps, cutOff, epochFetchParallelism, nextDataChan)
+			d.epochDataFetcher(gaps, epochFetchParallelism, nextDataChan)
 		}()
 
+		// save epochs data
 		for {
 			d.log.Info("storage waiting for data from fetcher")
 			datas := <-nextDataChan
 
-			done := containsEpoch(datas, gaps[len(gaps)-1])
+			done := containsEpoch(datas, gaps[len(gaps)-1]) // if the last epoch to fetch is in the result set, mark as job completed
 			lastEpoch := datas[len(datas)-1].Epoch
 
 			// If one epoch containing an UTC boundary epoch we do a bootstrap aggregation for the rolling windows
@@ -608,7 +620,7 @@ func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWind
 		})
 
 		errGroup.Go(func() error { // can run in parallel with aggregateRollingWindowsas long as no bootstrap is required, otherwise must be sequential
-			err := d.hourToDay.dayAggregate(currentExportedEpoch)
+			err := d.epochToDay.dayAggregate(currentExportedEpoch)
 			if err != nil {
 				return errors.Wrap(err, "failed to aggregate day")
 			}
@@ -663,7 +675,7 @@ func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) err
 	errGroup.SetLimit(databaseAggregationParallelism)
 
 	errGroup.Go(func() error {
-		err := d.hourToDay.rolling24hAggregate(currentExportedEpoch)
+		err := d.epochToDay.rolling24hAggregate(currentExportedEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to rolling 24h aggregate")
 		}
@@ -1094,7 +1106,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[block.Data.Message.ProposerIndex].LastSubmittedDutyEpoch = sql.NullInt32{Int32: int32(block.Data.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch), Valid: true}
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
-			// TODO: properly verify that deposit is valid:
+			// Properly verify that deposit is valid:
 			// if signature is valid I count the deposit towards the balance
 			// if signature is invalid and the validator was in the state at the beginning of the epoch I count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there were no valid deposits in the block prior I DO NOT count the deposit towards the balance

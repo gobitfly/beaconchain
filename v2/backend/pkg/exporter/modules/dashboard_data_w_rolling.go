@@ -17,7 +17,7 @@ import (
 
 /**
 This file handles the logic for rolling aggregation for 24h, 7d, 31d and 90d. Total also relies on the AddRollingCustom method as well as the day and hour aggregate.
-The way this works is by adding new epochs to the rolling table and removing the old epochs at the end so that the time duration of rolling stays constant.
+The way this works is by adding new epochs to the rolling table (adding to head) and removing the old epochs at the end (removing tail) so that the time duration of rolling stays constant.
 
 If the rolling tables fall out of sync due to long offline time or initial sync, the tables are bootstrapped. This bootstrap method must be provided,
 7d, 31d, 90d use a bootstrap from the utc_days table to get started and 24h the hourly table.
@@ -107,6 +107,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 
 		d.log.Infof("rolling %dd bootstraping finished, currentHead: %v | bounds: %v | Epochs Per Day: %v", days, currentEpochHead, bounds, utils.EpochsPerDay())
 
+		// if rolling bounds are exactly what they should be, we are done here
 		if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-utils.EpochsPerDay() == bounds.EpochStart {
 			log.Infof("rolling %dd is up to date, nothing to do", days) // perfect bounds after bootstrap, lucky day, done here
 			err = tx.Commit()
@@ -153,7 +154,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 		return errors.Wrap(err, fmt.Sprintf("failed to aggregate rolling %dd", days))
 	}
 
-	// Sanity check
+	// Sanity check, get bounds again after rolling aggregate
 	sanityBounds, err := d.getCurrentRollingBounds(tx, tableName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get current rolling bounds for sanity check")
@@ -257,12 +258,13 @@ type CustomRolling struct {
 	TableFromEpochColumn string    // must provide
 	TableConflict        string    // must provide
 
-	TailBalancesQuery             string   // optional
-	TailBalancesJoinQuery         string   // optional
-	TailBalancesInsertColumnQuery string   // optional
-	TableDayColum                 string   // optional
-	TableDayValue                 string   // optional
-	Agg                           TableAGG // do not provide, will be overwritten
+	TailBalancesQuery             string // optional
+	TailBalancesJoinQuery         string // optional
+	TailBalancesInsertColumnQuery string // optional
+	TableDayColum                 string // optional
+	TableDayValue                 string // optional
+
+	Agg TableAGG // do not provide, will be overwritten
 }
 
 type TableAGG struct {
