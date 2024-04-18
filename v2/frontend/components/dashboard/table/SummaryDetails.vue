@@ -1,29 +1,20 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
 import { TimeFrames, type TimeFrame } from '~/types/value'
 
 interface Props {
-  dashboardKey: DashboardKey
   row: VDBSummaryTableRow
 }
 const props = defineProps<Props>()
 
+const { dashboardKey } = useDashboardKey()
+
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
-const store = useValidatorDashboardSummaryDetailsStore()
-const { getKey, getDetails } = store
-const { detailsMap } = storeToRefs(store)
-
-const key = computed(() => getKey(props.dashboardKey, props.row.group_id))
-
-watch(key, () => {
-  getDetails(props.dashboardKey, props.row.group_id)
-}, { immediate: true })
+const { details: summary } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
 const isWideEnough = computed(() => width.value >= 1400)
-const summary = computed(() => detailsMap.value[key.value])
 
 const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4
@@ -111,7 +102,7 @@ const rowClass = (data:SummaryRow) => {
     </BcTable>
   </div>
   <div v-else>
-    ... TODO: loading ...
+    <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
   </div>
 </template>
 
@@ -123,6 +114,10 @@ const rowClass = (data:SummaryRow) => {
   @media (max-width: 1180px) {
     flex-direction: column;
   }
+}
+
+.spinner{
+  padding: var(--padding-large);
 }
 
 :deep(.summary-details-table) {

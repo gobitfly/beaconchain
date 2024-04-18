@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import BcTooltip from '~/components/bc/BcTooltip.vue'
-import type SlotVizIcon from '~/components/slot/viz/SlotVizIcon.vue'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
 
 interface Props {
@@ -22,7 +20,7 @@ const mapped = computed(() => {
         className = 'positive'
         break
       case 'partial':
-        className = 'mixed'
+        className = 'partial'
         break
       case 'failed':
         className = 'negative'
@@ -116,7 +114,7 @@ const mapped = computed(() => {
 .duty-status-container {
   background-color: var(--subcontainer-background);
   border-radius: var(--border-radius);
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   color: var(--text-color-disabled);
   height: 20px;
