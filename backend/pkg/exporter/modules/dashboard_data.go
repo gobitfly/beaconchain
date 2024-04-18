@@ -83,7 +83,7 @@ func (d *dashboardData) Init() error {
 			if done {
 				d.log.Infof("dashboard data up to date, starting head export")
 				if debugSetBackfillCompleted { // todo remove
-					utils.SendMessage("🎉🎉🎉 V2 Dashboard Export - Reached head, exporting from head now", &utils.Config.InternalAlerts)
+					utils.SendMessage(fmt.Sprintf("🎉🎉🎉 v2 Dashboard %s - Reached head, exporting from head now", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
 					d.backFillCompleted = true
 				}
 				break
@@ -486,7 +486,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 						{
 							utcDayStart, _ := getDayAggregateBounds(data.Epoch - 1)
 							utcDay := utils.EpochToTime(utcDayStart).Format("2006-01-02")
-							utils.SendMessage(fmt.Sprintf("🗡🧙‍♂️ V2 Dashboard Export - Completed UTC day `%s` & Updated Rolling tables (24h, 7d, 30d, 90d) to epoch %v", utcDay, data.Epoch), &utils.Config.InternalAlerts)
+							utils.SendMessage(fmt.Sprintf("🗡🧙‍♂️ v2 Dashboard %s - Completed UTC day `%s` & Updated Rolling tables (24h, 7d, 30d, 90d) to epoch %v", utils.Config.Chain.Name, utcDay, data.Epoch), &utils.Config.InternalAlerts)
 						}
 
 						if len(datas) > i+1 {
@@ -518,7 +518,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 			if lastEpoch%225 < epochFetchParallelism {
 				upToEpoch := *upToEpoch
-				utils.SendMessage(fmt.Sprintf("<:stonks:820252887094394901> V2 Dashboard Export - Epoch progress %d/%d [%.2f%%]", lastEpoch, upToEpoch, float64(lastEpoch*100)/float64(upToEpoch)), &utils.Config.InternalAlerts)
+				utils.SendMessage(fmt.Sprintf("<:stonks:820252887094394901> v2 Dashboard %s - Epoch progress %d/%d [%.2f%%]", utils.Config.Chain.Name, lastEpoch, upToEpoch, float64(lastEpoch*100)/float64(upToEpoch)), &utils.Config.InternalAlerts)
 			}
 
 			// has written last entry in gaps
