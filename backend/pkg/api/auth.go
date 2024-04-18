@@ -24,7 +24,7 @@ func NewSessionManager(cfg *types.Config) *scs.SessionManager {
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
-	scs.Cookie.Domain = cfg.Frontend.SiteDomain
+	scs.Cookie.Domain = cfg.Frontend.SessionCookieDomain
 	sameSite := http.SameSiteLaxMode
 	secure := !cfg.Frontend.Debug
 	if cfg.Frontend.SessionSameSiteNone {
