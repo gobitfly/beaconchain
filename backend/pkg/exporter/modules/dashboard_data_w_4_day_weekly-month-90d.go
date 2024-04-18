@@ -134,13 +134,13 @@ type MultipleDaysRollingAggregatorImpl struct {
 
 // returns both start_epochs
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64, days uint64) (uint64, uint64) {
-	todayStart, _ := getDayAggregateBounds(epoch)
-	start := int64(epoch - days*utils.EpochsPerDay())
-	if start < 0 {
-		start = 0
+	currentStartBounds, _ := getDayAggregateBounds(epoch)
+	xDayOldEpoch := int64(epoch - days*utils.EpochsPerDay())
+	if xDayOldEpoch < 0 {
+		xDayOldEpoch = 0
 	}
-	xDayOldStart, _ := getDayAggregateBounds(uint64(start))
-	return xDayOldStart, todayStart
+	dayOldBoundsStart, _ := getDayAggregateBounds(uint64(xDayOldEpoch))
+	return dayOldBoundsStart, currentStartBounds
 }
 
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 {
@@ -164,7 +164,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 		return errors.Wrap(err, "failed to get old day")
 	}
 
-	d.log.Infof("latestDay: %v, oldDay: %v", latestDay, xDayOldDay)
+	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
 
 	_, err = tx.Exec(fmt.Sprintf(`TRUNCATE %s`, tableName))
 	if err != nil {

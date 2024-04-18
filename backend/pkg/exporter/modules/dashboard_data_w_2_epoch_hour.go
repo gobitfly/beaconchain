@@ -17,7 +17,7 @@ type epochToHourAggregator struct {
 	mutex *sync.Mutex
 }
 
-const hourRetentionBuffer = 1.2 // do not go below 1
+const hourRetentionBuffer = 1.1 // do not go below 1
 
 func getHourAggregateWidth() uint64 {
 	return utils.EpochsPerDay() / 24
