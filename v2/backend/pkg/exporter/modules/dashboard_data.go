@@ -64,7 +64,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
-		_, err := db.AlloyWriter.Exec("SET work_mem TO '256MB';")
+		_, err := db.AlloyWriter.Exec("SET work_mem TO '128MB';")
 		if err != nil {
 			d.log.Fatal(err, "failed to set work_mem", 0)
 		}
@@ -463,6 +463,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 			datas := <-nextDataChan
 
 			done := containsEpoch(datas, gaps[len(gaps)-1])
+			lastEpoch := datas[len(datas)-1].Epoch
 
 			// If one epoch containing an UTC boundary epoch we do a bootstrap aggregation for the rolling windows
 			// since this an exact utc bounds (and hence also an hour bounds) we do not need any tail epochs to calculate the rolling window
@@ -482,6 +483,12 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 							break
 						}
 
+						{
+							utcDayStart, _ := getDayAggregateBounds(data.Epoch - 1)
+							utcDay := utils.EpochToTime(utcDayStart).Format("2006-01-02")
+							utils.SendMessage(fmt.Sprintf("🗡🧙‍♂️ V2 Dashboard Export - Completed UTC day `%s` & Updated Rolling tables (24h, 7d, 30d, 90d) to epoch %v", utcDay, data.Epoch), &utils.Config.InternalAlerts)
+						}
+
 						if len(datas) > i+1 {
 							datas = datas[i+1:]
 						} else {
@@ -496,8 +503,6 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 				d.log.Info("storage got data, writing epoch data")
 				d.writeEpochDatas(datas)
 
-				lastEpoch := datas[len(datas)-1].Epoch
-
 				d.log.Info("storage writing done, aggregate")
 				for {
 					err = d.aggregatePerEpoch(false, false, false)
@@ -509,11 +514,11 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 					break
 				}
 				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
+			}
 
-				if lastEpoch%225 == 0 {
-					upToEpoch := *upToEpoch
-					utils.SendMessage(fmt.Sprintf("🗿 V2 Dashboard Export - Epoch progress %d/%d [%.2d%%]", lastEpoch, upToEpoch, lastEpoch/upToEpoch*100), &utils.Config.InternalAlerts)
-				}
+			if lastEpoch%225 < epochFetchParallelism {
+				upToEpoch := *upToEpoch
+				utils.SendMessage(fmt.Sprintf("<:stonks:820252887094394901> V2 Dashboard Export - Epoch progress %d/%d [%.2f%%]", lastEpoch, upToEpoch, float64(lastEpoch*100)/float64(upToEpoch)), &utils.Config.InternalAlerts)
 			}
 
 			// has written last entry in gaps
