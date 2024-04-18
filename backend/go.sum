@@ -368,6 +368,8 @@ github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWm
 github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 h1:/c3QmbOGMGTOumP2iT/rCwB7b0QDGLKzqOmktBjT+Is=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1/go.mod h1:5SN9VR2LTsRFsrEC6FHgRbTWrTHu6tqPeKxEQv15giM=
+github.com/gtuk/discordwebhook v1.2.0 h1:7+gWPKSGyXjopu/6X9+oGbn0knTkDVXUM909+IXGZ/U=
+github.com/gtuk/discordwebhook v1.2.0/go.mod h1:U3LdXNJ1e0bx3MMe2a4mB1VBantPHOPly2jNd8ZWXec=
 github.com/gxed/hashland/keccakpg v0.0.1/go.mod h1:kRzw3HkwxFU1mpmPP8v1WyQzwdGfmKFJ6tItnhQ67kU=
 github.com/gxed/hashland/murmur3 v0.0.1/go.mod h1:KjXop02n4/ckmZSnY2+HKcLud/tcmvhST0bie/0lS48=
 github.com/gzuidhof/tygo v0.2.13 h1:aCPwb+N5Oh5pP3HiC/3a3Jwq4QXmMZPhRMCZu927yHg=
