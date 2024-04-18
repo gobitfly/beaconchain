@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DashboardGroupSelectionDialog } from '#components'
+import { DashboardGroupSelectionDialog, DashboardValidatorEpochDutiesModal } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
@@ -27,8 +27,20 @@ const openGroupSelection = (withPreselection: boolean) => {
   })
 }
 
+const openEpochDuties = () => {
+  dialog.open(DashboardValidatorEpochDutiesModal, {
+    data: {
+      dashboardKey: 5003,
+      groupId: 4,
+      groupName: 'My test group',
+      epoch: 1370
+    }
+  })
+}
+
 </script>
 <template>
+  <Button label="Open Epoch Duties" @click="openEpochDuties" />
   <div class="icon-holder">
     <div class="premium-row">
       Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" />

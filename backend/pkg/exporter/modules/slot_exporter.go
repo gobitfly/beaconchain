@@ -543,6 +543,77 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
 				return nil
 			})
+			// update cached view of consensus desposits
+			g.Go(func() error {
+				start := time.Now()
+				tx, err := db.AlloyWriter.Beginx()
+				if err != nil {
+					return fmt.Errorf("error starting tx: %w", err)
+				}
+				defer utils.Rollback(tx)
+				// clean up if we for some godforsaken reason have ended up in a situation where the temporary views still exists
+				_, err = tx.Exec(`drop materialized view if exists "_tmp_cached_blocks_deposits_lookup"`)
+				if err != nil {
+					return fmt.Errorf("error dropping tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`drop materialized view if exists "_trash_blocks_deposits_lookup"`)
+				if err != nil {
+					return fmt.Errorf("error dropping trash materialized view: %w", err)
+				}
+				_, err = tx.Exec(`
+					CREATE MATERIALIZED VIEW _tmp_cached_blocks_deposits_lookup AS
+					SELECT
+					    uvdv.dashboard_id,
+					    uvdv.group_id,
+					    bd.block_slot,
+					    bd.block_index
+					FROM
+					    blocks_deposits bd
+					    INNER JOIN validators v ON bd.publickey = v.pubkey
+					    INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+					ORDER BY
+					    uvdv.dashboard_id DESC,
+					    bd.block_slot DESC,
+					    bd.block_index DESC;
+					`)
+				if err != nil {
+					return fmt.Errorf("error creating tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`CREATE UNIQUE INDEX "_tmp_cached_blocks_deposits_lookup_block_index_idx" ON "_tmp_cached_blocks_deposits_lookup" (dashboard_id, block_slot, block_index);`)
+				if err != nil {
+					return fmt.Errorf("error creating index for tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`GRANT SELECT ON _tmp_cached_blocks_deposits_lookup TO readaccess;`)
+				if err != nil {
+					return fmt.Errorf("error granting select on tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`GRANT ALL ON _tmp_cached_blocks_deposits_lookup TO alloydbsuperuser;`)
+				if err != nil {
+					return fmt.Errorf("error granting all on tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`ALTER MATERIALIZED VIEW if exists cached_blocks_deposits_lookup RENAME TO _trash_blocks_deposits_lookup;`)
+				if err != nil {
+					return fmt.Errorf("error renaming existing materialized view: %w", err)
+				}
+				_, err = tx.Exec(`ALTER MATERIALIZED VIEW _tmp_cached_blocks_deposits_lookup RENAME TO cached_blocks_deposits_lookup;`)
+				if err != nil {
+					return fmt.Errorf("error renaming tmp materialized view: %w", err)
+				}
+				_, err = tx.Exec(`drop materialized view if exists "_trash_blocks_deposits_lookup"`)
+				if err != nil {
+					return fmt.Errorf("error dropping trash materialized view: %w", err)
+				}
+				_, err = tx.Exec(`ALTER INDEX "_tmp_cached_blocks_deposits_lookup_block_index_idx" RENAME TO "cached_blocks_deposits_lookup_block_index_idx";`)
+				if err != nil {
+					return fmt.Errorf("error renaming index: %w", err)
+				}
+				err = tx.Commit()
+				if err != nil {
+					return fmt.Errorf("error committing tx: %w", err)
+				}
+				log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
+				return nil
+			})
 		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {

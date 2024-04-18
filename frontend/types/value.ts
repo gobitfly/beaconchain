@@ -6,6 +6,7 @@ export type ValueConvertOptions = {
   targetCurrency?: Currency // target currency - overrides the selected currency
   fixedDecimalCount?: number // can override the usual settings, but can't go over 2 for fiat
   minUnit?: CryptoUnits // if output should only be in higher units (for example GWEI -> then it will never go down to WEI)
+  minUnitDecimalCount?: number // decimal count to check for value while unit conversion - defaults to max decimal count
   fixedUnit?: CryptoUnits // fixed output unit - overrides min unit
   addPlus?: boolean // add + sign if value is positive
 }

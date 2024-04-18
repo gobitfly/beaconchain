@@ -2,6 +2,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 // frontend can ignore ApiResponse type, it's just for the backend
@@ -63,15 +65,15 @@ type PeriodicValues[T any] struct {
 	Last30d T `json:"last_30d"`
 }
 
-type ChartSeries[T int | string] struct {
-	Id    T         `json:"id"`              // id may be a string or an int
-	Stack string    `json:"stack,omitempty"` // for stacking bar charts
-	Data  []float64 `json:"data"`            // y-axis values
+type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
+	Id       I      `json:"id"`                 // id may be a string or an int
+	Property string `json:"property,omitempty"` // for stacking bar charts
+	Data     []D    `json:"data"`               // y-axis values
 }
 
-type ChartData[T int | string] struct {
-	Categories []uint64         `json:"categories"` // x-axis
-	Series     []ChartSeries[T] `json:"series"`
+type ChartData[I int | string, D float64 | decimal.Decimal] struct {
+	Categories []uint64            `json:"categories"` // x-axis
+	Series     []ChartSeries[I, D] `json:"series"`
 }
 
 type SearchResult struct {
@@ -84,4 +86,28 @@ type SearchResult struct {
 
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
+}
+
+type ValidatorHistoryEvent struct {
+	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed'" faker:"oneof: success, partial, failed"`
+	Income decimal.Decimal `json:"income"`
+}
+
+type ValidatorHistoryProposal struct {
+	Status                       string          `json:"status" tstype:"'success' | 'partial' | 'failed' | 'orphaned'" faker:"oneof: success, partial, failed, orphaned"`
+	ElIncome                     decimal.Decimal `json:"el_income"`
+	ClAttestationInclusionIncome decimal.Decimal `json:"cl_attestation_inclusion_income"`
+	ClSyncInclusionIncome        decimal.Decimal `json:"cl_sync_inclusion_income"`
+	ClSlashingInclusionIncome    decimal.Decimal `json:"cl_slashing_inclusion_income"`
+}
+
+type ValidatorHistoryDuties struct {
+	AttestationSource *ValidatorHistoryEvent    `json:"attestation_source,omitempty"`
+	AttestationTarget *ValidatorHistoryEvent    `json:"attestation_target,omitempty"`
+	AttestationHead   *ValidatorHistoryEvent    `json:"attestation_head,omitempty"`
+	Sync              *ValidatorHistoryEvent    `json:"sync,omitempty"`
+	Slashing          *ValidatorHistoryEvent    `json:"slashing,omitempty"`
+	Proposal          *ValidatorHistoryProposal `json:"proposal,omitempty"`
+
+	SyncCount uint64 `json:"sync_count,omitempty"` // count of successful sync duties for the epoch
 }

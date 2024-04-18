@@ -9,6 +9,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {
 	Column T
@@ -35,12 +36,12 @@ type DashboardInfo struct {
 type CursorLike interface {
 	IsCursor() bool
 	IsValid() bool
-	GetDirection() enums.SortOrder
+	IsReverse() bool
 }
 
 type GenericCursor struct {
-	Direction enums.SortOrder `json:"d"`
-	Valid     bool            `json:"-"`
+	Reverse bool `json:"r"`
+	Valid   bool `json:"-"`
 }
 
 func (c GenericCursor) IsCursor() bool {
@@ -51,6 +52,26 @@ func (c GenericCursor) IsValid() bool {
 	return c.Valid
 }
 
-func (c GenericCursor) GetDirection() enums.SortOrder {
-	return c.Direction
+// note: dont have to check for valid when calling this
+func (c GenericCursor) IsReverse() bool {
+	return c.Reverse && c.Valid
+}
+
+type CLDepositsCursor struct {
+	GenericCursor
+	Slot      int64
+	SlotIndex int64
+}
+
+type ValidatorsCursor struct {
+	GenericCursor
+
+	Index uint64 `json:"vi"`
+}
+
+type User struct {
+	Id        uint64 `db:"id"`
+	Password  string `db:"password"`
+	ProductId string `db:"product_id"`
+	UserGroup string `db:"user_group"`
 }

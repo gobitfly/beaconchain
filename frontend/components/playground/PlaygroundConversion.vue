@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { Currency } from '~/types/currencies'
+import type { AgeFormat } from '~/types/settings'
 
 const { setCurrency, currency } = useCurrency()
 const { latestState } = useLatestStateStore()
+
+const { setting } = useGlobalSetting<AgeFormat>('age-format')
 
 const onCurrencyChange = (event: Event) => {
   const select = event.target as HTMLSelectElement
@@ -132,7 +135,7 @@ const onCurrencyChange = (event: Event) => {
     <BcFormatPercent :percent="1" />
   </div>
   <b>
-    Format Epochs time passed
+    Format Epochs time {{ setting }} <BcTableAgeHeader />
   </b>
   <div>
     Epoch 1 ->
@@ -146,6 +149,14 @@ const onCurrencyChange = (event: Event) => {
   <div>
     latest Epoch ->
     <BcFormatTimePassed :value="latestState?.currentEpoch" />
+  </div>
+  <div>
+    latest Epoch absolute ->
+    <BcFormatTimePassed :value="latestState?.currentEpoch" format="absolute" />
+  </div>
+  <div>
+    latest Epoch relative ->
+    <BcFormatTimePassed :value="latestState?.currentEpoch" format="relative" />
   </div>
   <div>
     latest Epoch - 1 ->
