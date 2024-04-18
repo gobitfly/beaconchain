@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { useToast } from 'primevue/usetoast'
 import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 
 const { doLogin } = useUserStore()
+const router = useRouter()
 
-const { handleSubmit, resetForm, errors, values } = useForm()
+const { handleSubmit, errors, values } = useForm()
 const { value: email } = useField('email', validateField)
 const { value: password } = useField('password', validateField)
-const toast = useToast()
 
 function validateField (value?: string) {
   if (!value) {
@@ -29,9 +28,7 @@ const inputValid = computed(() => {
 const onSubmit = handleSubmit(async (values) => {
   if (inputValid.value) {
     await doLogin(values.email, values.password)
-
-    toast.add({ severity: 'info', summary: 'Form Submitted', detail: `user: ${values.email} pw: ${values.password}`, life: 3000 })
-    resetForm()
+    router.push('/')
   }
 })
 

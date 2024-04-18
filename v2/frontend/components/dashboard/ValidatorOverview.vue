@@ -45,18 +45,15 @@ const dataList = computed(() => {
     label: $t(`${tPath}7d_apr`)
   }
   const list: OverviewTableData[] = [active, efficiency, rewards, apr]
-  if (!v) {
-    return list
-  }
 
-  const onlineClass = v.validators.online ? 'positive' : ''
-  const offlineClass = v.validators.online ? 'negative' : ''
-  active.value = { label: `<span class="${onlineClass}">${v.validators.online ?? 0}</span> / <span class="${offlineClass}">${v.validators.offline ?? 0}</span>` }
+  const onlineClass = v?.validators.online ? 'positive' : ''
+  const offlineClass = v?.validators.online ? 'negative' : ''
+  active.value = { label: `<span class="${onlineClass}">${v?.validators.online ?? 0}</span> / <span class="${offlineClass}">${v?.validators.offline ?? 0}</span>` }
   active.additonalValues = [
     [
-      { label: v.validators.pending ?? 0 },
-      { label: v.validators.exited ?? 0 },
-      { label: v.validators.slashed ?? 0 }
+      { label: v?.validators.pending ?? 0 },
+      { label: v?.validators.exited ?? 0 },
+      { label: v?.validators.slashed ?? 0 }
     ],
     [
       { label: $t('validator_state.pending') },
@@ -65,14 +62,14 @@ const dataList = computed(() => {
     ]
   ]
 
-  efficiency.value = { label: formatPercent(v.efficiency.last_7d ?? 0) }
-  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v.efficiency[k] ?? 0) }))
+  efficiency.value = { label: formatPercent(v?.efficiency.last_7d ?? 0) }
+  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v?.efficiency[k] ?? 0) }))
 
-  rewards.value = converter.value.weiToValue(totalElCl(v.rewards.last_7d), { addPlus: true })
-  rewards.infos = TimeFrames.map(k => createInfo(k, v.rewards[k] ?? 0, formatValueWei))
+  rewards.value = converter.value.weiToValue(totalElCl(v?.rewards.last_7d ?? { el: '0', cl: '0' }), { addPlus: true })
+  rewards.infos = TimeFrames.map(k => createInfo(k, v?.rewards[k] ?? { el: '0', cl: '0' }, formatValueWei))
 
-  apr.value = { label: formatPercent(totalElClNumbers(v.apr.last_7d ?? 0)) }
-  apr.infos = TimeFrames.map(k => createInfo(k, v.apr[k] ?? 0, formatValuePercent))
+  apr.value = { label: formatPercent(totalElClNumbers(v?.apr.last_7d ?? { cl: 0, el: 0 })) }
+  apr.infos = TimeFrames.map(k => createInfo(k, v?.apr[k] ?? { cl: 0, el: 0 }, formatValuePercent))
   return list
 })
 

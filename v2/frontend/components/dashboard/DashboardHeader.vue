@@ -2,13 +2,20 @@
 import type Menubar from 'primevue/menubar'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
+import type { Dashboard } from '~/types/api/dashboard'
+import { type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 
 const { width } = useWindowSize()
 
 const { t: $t } = useI18n()
-const { path } = useRoute()
+const route = useRoute()
+const router = useRouter()
+const isValidatorDashboard = route.name === 'dashboard-id'
 
+const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
+const { dashboardKey } = useDashboardKey()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -27,6 +34,14 @@ watch(width, () => {
   }
 }, { immediate: true })
 
+const getDashboardName = (db: Dashboard):string => {
+  if (isLoggedIn.value) {
+    return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
+  } else {
+    return db.id === COOKIE_DASHBOARD_ID.ACCOUNT ? $t('dashboard.account_dashboard') : $t('dashboard.validator_dashboard')
+  }
+}
+
 const items = computed<MenuBarEntry[]>(() => {
   if (dashboards.value === undefined) {
     return []
@@ -34,7 +49,7 @@ const items = computed<MenuBarEntry[]>(() => {
 
   const sortedItems: MenuBarButton[][] = []
 
-  const addToSortedItems = (minButtonCount: number, items?:MenuBarButton[]) => {
+  const addToSortedItems = (minButtonCount: number, items?: MenuBarButton[]) => {
     if (items?.length) {
       if (buttonCount.value >= minButtonCount) {
         sortedItems.push(items)
@@ -50,13 +65,22 @@ const items = computed<MenuBarEntry[]>(() => {
       }
     }
   }
-  addToSortedItems(0, dashboards.value?.validator_dashboards?.map(({ id, name }) => ({ label: name, route: `/dashboard/${id}` })))
-  addToSortedItems(3, dashboards.value?.account_dashboards?.map(({ id, name }) => ({ label: name, route: `/account-dashboard/${id}` })))
+  addToSortedItems(0, dashboards.value?.validator_dashboards?.map((db) => {
+    const cd = db as CookieDashboard
+    return { label: getDashboardName(cd), route: `/dashboard/${cd.hash ?? cd.id}` }
+  }))
+  addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
+    const cd = db as CookieDashboard
+    return { label: getDashboardName(cd), route: `/account/${cd.hash ?? cd.id}` }
+  }))
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
   return sortedItems.map((items) => {
-    const active = items.find(i => i.route === path)
+    // if we are in a public dashboard and change the validators then the route does not get updated
+    const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
+    const active = items.find(i => i.route === fixedRoute.path)
     return {
+      active: !!active,
       label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
       route: items.length === 1 ? items[0].route : active?.route,
@@ -64,18 +88,40 @@ const items = computed<MenuBarEntry[]>(() => {
     }
   })
 })
+
+const title = computed(() => {
+  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+  const id = parseInt(dashboardKey.value ?? '')
+  if (!isNaN(id)) {
+    const userDb = list?.find(db => db.id === id)
+    if (userDb) {
+      return userDb.name
+    }
+    // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
+    if (overview.value) {
+      return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
+    }
+  }
+  const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === dashboardKey.value)
+  if (cookieDb || (isLoggedIn.value && !dashboardKey.value)) {
+    return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
+  }
+
+  return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
+})
+
 </script>
 
 <template>
   <div class="header-container">
     <div class="h1 dashboard-title">
-      {{ $t('dashboard.title') }}
+      {{ title }}
     </div>
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <NuxtLink v-if="item.route" :to="item.route">
-            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown}]">
+          <NuxtLink v-if="item.route" :to="item.route" :class="{ 'p-active': item.active }">
+            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown }]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
@@ -98,19 +144,21 @@ const items = computed<MenuBarEntry[]>(() => {
 
 .header-container {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  margin-bottom: var(--padding-large);
 
   .dashboard-title {
-    margin-bottom: var(--padding-large);
+    @include utils.truncate-text;
   }
 
   .dashboard-buttons {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     gap: var(--padding);
 
-    .button-content{
+    .button-content {
       display: flex;
       align-items: center;
       justify-content: space-between;

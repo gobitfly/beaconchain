@@ -3,6 +3,7 @@ import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
 import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slotViz'
 interface Props {
   data: VDBSlotVizSlot,
+  currentSlotId?: number,
   selectedCategoris: SlotVizCategories[]
 }
 const props = defineProps<Props>()
@@ -25,6 +26,9 @@ const data = computed(() => {
     case 'proposed':
       outer = 'proposed'
       break
+  }
+  if (slot.slot === props.currentSlotId) {
+    outer += ' blinking-animation'
   }
 
   let inner = ''

@@ -43,6 +43,14 @@ export const totalElCl = (value: ClElValue<string>): BigNumber | undefined => {
   return convertSum(value.el, value.cl)
 }
 
+export const subWei = (total: string, value: string): BigNumber | undefined => {
+  if (!total) {
+    return
+  }
+
+  return BigNumber.from(total).sub(BigNumber.from(value ?? '0'))
+}
+
 export const totalElClNumbers = (value: ClElValue<number>): number | undefined => {
   if (!value) {
     return

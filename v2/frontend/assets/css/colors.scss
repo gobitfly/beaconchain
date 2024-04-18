@@ -32,6 +32,7 @@
   --primary-orange: #ffaa31;
   --primary-orange-hover: #ff951a;
   --primary-orange-pressed: #ffb346;
+  --orange-color: var(--light-orange);
 
   --black-transparent-3: rgba(0, 0, 0, 0.3);
 
@@ -72,8 +73,17 @@
   --link-color: var(--blue);
 
   --negative-color: var(--light-red);
+  --negative-contrast-color: var(--text-color-inverted);
   --positive-color: var(--light-green);
-  --orange-color: var(--light-orange);
+  --positive-contrast-color: var(--text-color-inverted);
+  --partial-color: var(--light-orange);
+  --partial-contrast-color: var(--text-color-inverted);
+  --orphaned-color: var(--purple);
+  --orphaned-contrast-color: var(--text-color-inverted);
+  --dark-tag-color: var(--graphite);
+  --dark-tag-contrast-color: var(--light-grey);
+  --light-tag-color: var(--light-grey-5);
+  --light-tag-contrast-color: var(--light-black);
 
   --megamenu-panel-color: var(--light-grey);
   --megamenu-text-color: var(--grey);
@@ -89,6 +99,7 @@
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
     --primary-contrast-color-discreet: var(--dark-grey);
+    --orange-color: var(--orange);
 
     --scrollbar-thumb-color: var(--light-grey);
 
@@ -124,8 +135,12 @@
     --link-color: var(--light-blue);
 
     --negative-color: var(--flashy-red);
+    --negative-contrast-color: var(--text-color);
     --positive-color: var(--green);
-    --orange-color: var(--orange);
+    --positive-contrast-color: var(--text-color-inverted);
+    --partial-color: var(--orange);
+    --partial-contrast-color: var(--text-color);
+    --light-tag-color: var(--light-grey);
 
     --megamenu-panel-color: var(--graphite);
     --megamenu-text-color: var(--grey);

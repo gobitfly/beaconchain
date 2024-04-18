@@ -1,10 +1,11 @@
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
 
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
 
-  const selectedCurrency = useCookie<Currency>('currency', { default: () => 'NAT' })
+  const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
   function setCurrency (newCurrency: Currency) {
     selectedCurrency.value = newCurrency
