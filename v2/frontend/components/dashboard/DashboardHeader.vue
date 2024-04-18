@@ -13,9 +13,8 @@ const router = useRouter()
 const isValidatorDashboard = route.name === 'dashboard-id'
 
 const { isLoggedIn } = useUserStore()
-const { dashboards } = useUserDashboardStore()
+const { dashboards, getDashboardLabel } = useUserDashboardStore()
 const { dashboardKey } = useDashboardKey()
-const { overview } = useValidatorDashboardOverviewStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -90,24 +89,7 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
-  const id = parseInt(dashboardKey.value ?? '')
-  if (!isNaN(id)) {
-    const userDb = list?.find(db => db.id === id)
-    if (userDb) {
-      return userDb.name
-    }
-    // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
-    if (overview.value) {
-      return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
-    }
-  }
-  const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === dashboardKey.value)
-  if (cookieDb || (isLoggedIn.value && !dashboardKey.value)) {
-    return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
-  }
-
-  return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
+  return getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
 
 </script>
