@@ -45,7 +45,18 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     ]
   }
 
-  return undefined
+  return [
+    {
+      dropdown: false,
+      label: $t('dashboard.validator.manage_groups'),
+      command: () => { manageGroupsModalVisisble.value = true }
+    },
+    {
+      dropdown: false,
+      label: $t('dashboard.validator.manage_validators'),
+      command: () => { manageValidatorsModalVisisble.value = true }
+    }
+  ]
 })
 
 const { refreshOverview } = useValidatorDashboardOverviewStore()
@@ -144,7 +155,7 @@ watch(dashboardKey, (newKey, oldKey) => {
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
-      <div class="header-row">
+      <div class="header-row" :class="{'single-element':!(isLoggedIn && !isPublic)}">
         <div v-if="isLoggedIn && !isPublic" class="action-button-container">
           <Button class="share-button" @click="share()">
             {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
@@ -153,7 +164,6 @@ watch(dashboardKey, (newKey, oldKey) => {
             <FontAwesomeIcon :icon="faTrash" />
           </Button>
         </div>
-        <div v-else />
         <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
           <template #item="{ item }">
             <span class="button-content pointer">
@@ -162,10 +172,6 @@ watch(dashboardKey, (newKey, oldKey) => {
             </span>
           </template>
         </Menubar>
-        <div v-else class="manage-buttons-container">
-          <Button v-if="isLoggedIn && !isPublic" :label="$t('dashboard.validator.manage_groups')" @click="manageGroupsModalVisisble = true" />
-          <Button :label="$t('dashboard.validator.manage_validators')" @click="manageValidatorsModalVisisble = true" />
-        </div>
       </div>
       <div>
         <DashboardValidatorSlotViz />
@@ -222,6 +228,10 @@ watch(dashboardKey, (newKey, oldKey) => {
   gap: var(--padding);
   margin-bottom: var(--padding);
 
+  &.single-element {
+    justify-content: flex-end;
+  }
+
   .action-button-container{
     display: flex;
     gap: var(--padding);
@@ -232,13 +242,9 @@ watch(dashboardKey, (newKey, oldKey) => {
     }
   }
 
-  .manage-buttons-container{
-    display: flex;
-    gap: var(--padding);
-  }
-
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
+      height: 30px;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
       font-weight: var(--standard_text_medium_font_weight);
@@ -249,16 +255,9 @@ watch(dashboardKey, (newKey, oldKey) => {
 
         >.button-content{
           display: flex;
-
-          &:not(.more-button){
-            align-items: center;
-            gap: 7px;
-            padding: 7px 17px;
-          }
-
-          &.more-button{
-            padding: 6px 13px 3px 13px;
-          }
+          align-items: center;
+          gap: 7px;
+          padding: 7px 17px;
 
           .pointer {
             cursor: pointer;
