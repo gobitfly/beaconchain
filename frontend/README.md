@@ -68,7 +68,9 @@ yarn install
 bun install
 ```
 
-**In your `.npmrc` file, replace the actual Font-Awesome key that we wrote earlier with `YOURKEY`. Yes, we revert this change. Otherwise, next time you push onto GitHub, the key will leak.**
+```diff
+- In your `.npmrc` file, replace the actual Font-Awesome key that we wrote earlier with `${FA_PRO_KEY}`. Yes, we revert this change. Otherwise, next time you push onto GitHub, the key will leak.
+```
 
 ## Development Server
 
