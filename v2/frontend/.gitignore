@@ -26,7 +26,6 @@ logs
 pnpm-lock.yaml
 
 .npmrc
-.npmrc_ci
 
 server.crt
 server.key
