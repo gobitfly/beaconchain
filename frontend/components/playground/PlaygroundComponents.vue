@@ -1,7 +1,10 @@
+import type { ClientOnly } from '#build/components';
 <template>
   <TabView lazy>
     <TabPanel header="Chart">
-      <PlaygroundCharts />
+      <ClientOnly>
+        <PlaygroundCharts />
+      </ClientOnly>
     </TabPanel>
     <TabPanel header="Tags">
       <PlaygroundTags />

@@ -1,6 +1,6 @@
 <template>
   <div class="chart-container">
-    <DashboardChartRewardsChart :dashboard-key="5003" />
+    <DashboardChartRewardsChart />
   </div>
 </template>
 
