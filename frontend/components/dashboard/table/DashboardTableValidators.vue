@@ -6,7 +6,7 @@ import {
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import type { TimeFrame } from '~/types/value'
-import { getGroupLabel } from '~/utils/dashbaord/group'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 interface Props {
   validators: number[],

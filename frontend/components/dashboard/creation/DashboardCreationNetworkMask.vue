@@ -5,7 +5,7 @@ import type { ValidatorDashboardNetwork } from '~/types/dashboard'
 const network = defineModel<ValidatorDashboardNetwork>('network')
 const allNetworks = [
   { text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum, componentClass: 'monochromatic' },
-  { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis, componentClass: 'monochromatic' }
+  { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis, componentClass: 'monochromatic', disabled: true }
 ]
 
 const { t: $t } = useI18n()

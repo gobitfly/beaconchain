@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Chart">
+      <PlaygroundCharts />
+    </TabPanel>
     <TabPanel header="Tags">
       <PlaygroundTags />
     </TabPanel>
@@ -8,9 +11,6 @@
     </TabPanel>
     <TabPanel header="Table">
       <PlaygroundTable />
-    </TabPanel>
-    <TabPanel header="Chart">
-      <PlaygroundCharts />
     </TabPanel>
     <TabPanel header="Icons">
       <PlaygroundIcons />

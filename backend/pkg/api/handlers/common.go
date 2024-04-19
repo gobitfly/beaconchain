@@ -18,6 +18,7 @@ import (
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
+	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -25,10 +26,14 @@ import (
 
 type HandlerService struct {
 	dai dataaccess.DataAccessor
+	scs *scs.SessionManager
 }
 
-func NewHandlerService(DataAccessor dataaccess.DataAccessor) *HandlerService {
-	return &HandlerService{dai: DataAccessor}
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+	return &HandlerService{
+		dai: dataAccessor,
+		scs: sessionManager,
+	}
 }
 
 // --------------------------------------
@@ -41,7 +46,7 @@ var (
 	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPubkey = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reCursor          = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
-
+	reEmail           = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 )
 
 const (
@@ -94,6 +99,10 @@ func checkName(handlerErr *error, name string, minLength int) string {
 
 func checkNameNotEmpty(handlerErr *error, name string) string {
 	return checkName(handlerErr, name, 1)
+}
+
+func checkEmail(handlerErr *error, email string) string {
+	return checkRegex(handlerErr, reEmail, email, "email")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -225,7 +234,7 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
-	return nil, errors.New(errorMsgParsingId)
+	return nil, errMsgParsingId
 }
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
@@ -244,7 +253,7 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	return dashboardId, nil
 }
 
-func checkDashboardPrimaryId(handlerErr *error, param string) types.VDBIdPrimary {
+func checkPrimaryDashboardId(handlerErr *error, param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(checkUint(handlerErr, param, "dashboard_id"))
 }
 
@@ -266,8 +275,8 @@ func checkExistingGroupId(handlerErr *error, param string) int64 {
 	return id
 }
 
-func checkValidatorDashboardPublicId(handlerErr *error, publicId string) string {
-	return checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id")
+func checkValidatorDashboardPublicId(handlerErr *error, publicId string) types.VDBIdPublic {
+	return types.VDBIdPublic(checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
 func checkPagingParams(handlerErr *error, q url.Values) Paging {
@@ -391,33 +400,6 @@ func checkNetwork(handlerErr *error, network string) uint64 {
 }
 
 // --------------------------------------
-// Authorization
-
-type User struct {
-	Id uint64
-	// TODO add more user fields, e.g. subscription tier
-}
-
-func getUser(r *http.Request) (User, error) {
-	// TODO @LuccaBitfly add real user auth
-	userId := r.Header.Get("X-User-Id")
-	if userId == "" {
-		return User{}, errors.New("missing user id, please set the X-User-Id header")
-	}
-	id, err := strconv.ParseUint(userId, 10, 64)
-	if err != nil {
-		return User{}, errors.New("invalid user id, must be a positive integer")
-	}
-	// TODO if api key is used, fetch user id from the database
-
-	// TODO if access token is used, verify the token and get user id from the token
-
-	return User{
-		Id: id,
-	}, nil
-}
-
-// --------------------------------------
 //   Response handling
 
 func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
@@ -475,11 +457,6 @@ func returnUnauthorized(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusUnauthorized, err)
 }
 
-//nolint:unused
-func returnForbidden(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusForbidden, err)
-}
-
 func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
@@ -494,6 +471,10 @@ func returnInternalServerError(w http.ResponseWriter, err error) {
 }
 
 func handleError(w http.ResponseWriter, err error) {
+	if errors.Is(err, dataaccess.ErrNotFound) {
+		returnNotFound(w, err)
+		return
+	}
 	// TODO @recy21 define error types in data access package
 	// TODO @LuccaBitfly handle specific data access errors
 	returnInternalServerError(w, err)

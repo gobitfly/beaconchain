@@ -1,8 +1,5 @@
 <template>
   <div class="chart-container">
-    <DashboardChartSummaryChart :dashboard-key="5003" />
-  </div>
-  <div class="chart-container">
     <DashboardChartRewardsChart :dashboard-key="5003" />
   </div>
 </template>

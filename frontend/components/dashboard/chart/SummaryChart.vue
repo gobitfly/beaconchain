@@ -15,9 +15,9 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
-import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
 use([
   CanvasRenderer,
@@ -30,22 +30,17 @@ use([
 
 const { fetch } = useCustomFetch()
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
-
-const key = computed(() => props.dashboardKey)
+const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
 await useAsyncData('validator_summary_rewards_chart', async () => {
-  if (key.value === undefined) {
+  if (!dashboardKey.value) {
     data.value = undefined
     return
   }
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: key.value })
+  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: dashboardKey.value })
   data.value = res.data
-}, { watch: [key], server: false })
+}, { watch: [dashboardKey], server: false })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
@@ -81,12 +76,12 @@ const option = computed(() => {
   if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
-      let name = allGroups
-      if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        const group = overview.value?.groups.find(group => group.id === element.id)
-        name = group?.name || element.id.toString()
+      let name:string
+      if (!groupsEnabled) {
+        name = $t('dashboard.validator.summary.chart.efficiency')
+      } else {
+        name = getGroupLabel($t, element.id, overview.value?.groups, allGroups)
       }
-
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',

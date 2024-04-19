@@ -7,7 +7,8 @@ interface Props {
     text?: string,
     component?: Component,
     componentClass?: string,
-    value: string
+    value: string,
+    disabled?: boolean
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
@@ -43,7 +44,8 @@ function onButtonClicked (value: string) {
       :icon="button.icon"
       :text="button.text"
       :selected="values[button.value]"
-      @click="onButtonClicked(button.value)"
+      :disabled="button.disabled"
+      @click="!button.disabled && onButtonClicked(button.value)"
     >
       <template #icon>
         <slot :name="button.value">

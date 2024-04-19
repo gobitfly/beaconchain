@@ -1,16 +1,15 @@
 import { defineStore } from 'pinia'
+import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
 
 const userStore = defineStore('user-store', () => {
-  const { public: { xUserId } } = useRuntimeConfig()
-  return { data: xUserId }
+  const data = ref<{user_id: number, user_name: string} | undefined | null>()
+  return { data }
 })
 
 export function useUserStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userStore())
-
-  const xUserId = computed(() => data.value)
 
   async function doLogin (email: string, password: string) {
     await fetch<LoginResponse>(API_PATH.LOGIN, {
@@ -19,14 +18,41 @@ export function useUserStore () {
         password
       }
     })
+    await getUser()
   }
 
-  // TODO: Faking logged in User for now, if xUserId is set
+  const setUser = (id?: number, name: string = '') => {
+    if (!id) {
+      data.value = null
+    } else {
+      data.value = {
+        user_id: id,
+        user_name: name
+      }
+    }
+  }
+
+  const getUser = async () => {
+    try {
+      // TODO: replace once we have an endpoint to get a real user
+      const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS, undefined, undefined, undefined, true)
+
+      if (res.data) {
+        setUser(1, 'My temp solution')
+      }
+    } catch (e) {
+      // We are not logged in
+      setUser(undefined)
+    }
+  }
+
   const user = computed(() => {
-    return xUserId ? { user_id: xUserId, user_name: `Test User [${xUserId}]` } : undefined
+    return data.value
   })
 
-  const isLoggedIn = computed(() => !!user.value)
+  const isLoggedIn = computed(() => {
+    return !!user.value
+  })
 
-  return { doLogin, user, isLoggedIn }
+  return { doLogin, user, isLoggedIn, getUser }
 }

@@ -15,7 +15,7 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor, getRewardChartColors } from '~/utils/colors'
-import { type DashboardKey, DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData, type ChartSeries } from '~/types/api/common'
 import type { ExtendedLabel } from '~/types/value'
@@ -31,22 +31,18 @@ use([
 
 const { fetch } = useCustomFetch()
 
-// TODO: replace with new DashboardKey system
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined >()
 
 await useAsyncData('validator_dashboard_rewards_chart', async () => {
-  if (props.dashboardKey === undefined) {
+  if (dashboardKey.value === undefined) {
     data.value = undefined
     return
   }
-  const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART, undefined, { dashboardKey: props.dashboardKey })
+  const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART, undefined, { dashboardKey: dashboardKey.value })
   data.value = res.data
-}, { watch: [props], server: false })
+}, { watch: [dashboardKey], server: false })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
@@ -85,12 +81,16 @@ const option = computed(() => {
 
   const series: SeriesObject[] = []
   if (data.value?.series) {
-    const allGroups = $t('dashboard.validator.summary.chart.all_groups')
+    const allGroups = $t('dashboard.validator.rewards.chart.all_groups')
     data.value.series.forEach((element) => {
       let name = allGroups
       if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        const group = overview.value?.groups.find(group => group.id === element.id)
-        name = group?.name || element.id.toString()
+        if (!groupsEnabled) {
+          name = $t('dashboard.validator.rewards.chart.rewards')
+        } else {
+          const group = overview.value?.groups.find(group => group.id === element.id)
+          name = group?.name || element.id.toString()
+        }
       }
       const id = `${element.property}|${element.id}`
       const newObj: SeriesObject = {
