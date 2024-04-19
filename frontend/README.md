@@ -30,7 +30,7 @@ Write the following settings in file `.env`:
 ```
 NUXT_PUBLIC_API_CLIENT: "https://holesky.beaconcha.in/api/i/"
 NUXT_PUBLIC_LEGACY_API_CLIENT: "https://sepolia.beaconcha.in/"
-NUXT_PUBLIC_API_KEY: "the 'V2 API Key Secret' stored by Bitwarden in the Employee folder"
+NUXT_PUBLIC_API_KEY: "API Key Secret"
 NUXT_PRIVATE_API_SERVER: "https://holesky.beaconcha.in/api/i/"
 NUXT_PRIVATE_LEGACY_API_SERVER: "https://sepolia.beaconcha.in/"
 
