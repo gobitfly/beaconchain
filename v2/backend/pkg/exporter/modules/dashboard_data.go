@@ -694,9 +694,8 @@ func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWind
 			}
 		}
 
-		d.log.Infof("cleaning old epochs")
-
 		if !preventClearOldEpochs {
+			d.log.Infof("cleaning old epochs")
 			err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
 			if err != nil {
 				return errors.Wrap(err, "failed to clear old epochs")
