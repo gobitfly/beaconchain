@@ -560,14 +560,14 @@ function informationIfHiddenResults () : string {
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
             class="filter-networks"
-            :live-state="userFilters.networks"
+            :v-model="userFilters.networks"
             :bar-style="barStyle"
             @change="refreshOutputArea"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
             class="filter-categories"
-            :live-state="userFilters.categories"
+            :v-model="userFilters.categories"
             :bar-style="barStyle"
             @change="refreshOutputArea"
           />

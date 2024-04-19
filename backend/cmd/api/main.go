@@ -48,10 +48,10 @@ func main() {
 	}
 	defer dataAccessor.CloseDataAccessService()
 
-	sessionManager := api.NewSessionManager(cfg.RedisCacheEndpoint, !cfg.Frontend.Debug)
+	sessionManager := api.NewSessionManager(cfg)
 
 	router := api.NewApiRouter(dataAccessor, sessionManager)
-	router.Use(api.CorsMiddleware, api.GetAuthMiddleware(cfg.ApiKeySecret))
+	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts), api.GetAuthMiddleware(cfg.ApiKeySecret))
 
 	srv := &http.Server{
 		Handler:      router,

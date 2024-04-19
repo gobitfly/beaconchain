@@ -10,7 +10,6 @@ import { uniq } from 'lodash-es'
 import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
@@ -18,11 +17,6 @@ import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-
-interface Props {
-  dashboardKey: DashboardKey;
-}
-const props = defineProps<Props>()
 
 const { width } = useWindowSize()
 
@@ -36,6 +30,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
+const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
@@ -76,10 +72,10 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
   }
   const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: props.dashboardKey })
+  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
 
   loadData()
-  refreshOverview(props.dashboardKey)
+  refreshOverview(dashboardKey.value)
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -87,20 +83,29 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     warn('no validators selected to change group')
     return
   }
+  if (isPublic.value) {
+    removeEntities(validators as string[])
+    return
+  }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: props.dashboardKey })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: dashboardKey.value })
 
   loadData()
-  refreshOverview(props.dashboardKey)
+  refreshOverview(dashboardKey.value)
 }
 
-const addValidator = (result : ResultSuggestion) => {
+const addValidatorOrShowLimitReached = (result : ResultSuggestion) => {
+  if (premiumLimit.value) {
+    // TODO: show this modal: https://www.figma.com/file/Aokjs6b8hqgDhOmXvEq9Ps/Beaconcha.in?type=design&node-id=8908-99278&mode=design#776338787
+    return
+  }
+
   switch (result.type) {
     case ResultType.ValidatorsByIndex : // `result.queryParam` contains the index of the validator
     case ResultType.ValidatorsByPubkey : // `result.queryParam` contains the pubkey of the validator
       selectedValidator.value = result.queryParam
       break
-    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys :
+    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys:
     case ResultType.ValidatorsByDepositAddress : // `result.queryParam` contains the address that was used to deposit
     case ResultType.ValidatorsByDepositEnsName : // `result.queryParam` contains the ENS name that was used to deposit
     case ResultType.ValidatorsByWithdrawalCredential : // `result.queryParam` contains the withdrawal credential
@@ -108,20 +113,23 @@ const addValidator = (result : ResultSuggestion) => {
     case ResultType.ValidatorsByWithdrawalEnsName : // `result.queryParam` contains the ENS name of the withdrawal address
     case ResultType.ValidatorsByGraffiti : // `result.queryParam` contains the graffiti used to sign blocks
       selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
+      // If you need it: `result.count` is the size of the batch.
       break
     default :
       return
   }
-  // When the result is a batch of validators, result.count is the size of the batch.
-
-  changeGroup([selectedValidator.value], selectedGroup.value)
-
+  if (isPublic.value || !isLoggedIn.value) {
+    addEntities([selectedValidator.value])
+  } else {
+    changeGroup([selectedValidator.value], selectedGroup.value)
+  }
   // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
   searchBar.value!.hideResult(result)
-  // You do not have to call it here, you can do it later, for example after getting confirmation that the validator is added into the database.
+  // You probably want to call it later, after getting confirmation that the validator is added into the database,
+  // but `result` is no longer valid if the user changes the input (the bar ignores your call to hideResult() then).
 
   // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
-  // If it happens that you want to close the dropdown, you can call this method:
+  // If there are cases that you want to close the dropdown, you can call this method:
   // searchBar.value!.closeDropdown()
   // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
 }
@@ -166,19 +174,21 @@ watch(selectedGroup, (value) => {
 })
 
 const loadData = async () => {
-  if (props.dashboardKey) {
+  if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
-    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: props.dashboardKey }, query.value)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: dashboardKey.value }, query.value)
 
     // Make sure that during loading the query did not change
     if (testQ === JSON.stringify(query.value)) {
       data.value = result
       selected.value = []
     }
+  } else {
+    data.value = { paging: {}, data: [] }
   }
 }
 
-watch(() => [props.dashboardKey, visible.value, query.value], () => {
+watch(() => [dashboardKey.value, visible.value, query.value], () => {
   if (visible.value) {
     loadData()
   }
@@ -210,9 +220,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const MaxValidatorsPerDashboard = 1000
+const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
 
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxValidatorsPerDashboard)
+const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
 </script>
 
@@ -234,7 +244,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             ref="searchBar"
@@ -244,7 +254,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :keep-dropdown-open="true"
             class="search-bar"
-            @go="addValidator"
+            @go="addValidatorOrShowLimitReached"
           />
         </div>
       </template>
@@ -271,7 +281,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
               </template>
             </Column>
             <Column
-              v-if="size.showGroup"
+              v-if="size.showGroup && groupsEnabled"
               field="group_id"
               :sortable="!size.expandable"
               :header="$t('dashboard.validator.col.group')"
@@ -340,7 +350,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
-                  <div class="label">
+                  <div v-if="groupsEnabled" class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
                   <DashboardGroupSelection
@@ -363,9 +373,9 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     </BcTableControl>
     <template #footer>
       <div class="footer">
-        <div v-if="MaxValidatorsPerDashboard" class="left">
+        <div v-if="maxValidatorsPerDashboard" class="left">
           <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="data?.paging?.total_count" default="0" />/<BcFormatNumber :value="MaxValidatorsPerDashboard" default="0" /></span>
+            <span><BcFormatNumber :value="total" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
             <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
           </div>
           <BcPremiumGem />

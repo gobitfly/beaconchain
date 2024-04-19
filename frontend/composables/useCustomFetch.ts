@@ -23,7 +23,6 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
-  REFRESH_TOKEN = '/refreshToken',
   SEARCH = '/search'
 }
 
@@ -39,7 +38,6 @@ interface MockFunction {
 type MappingData = {
   path: string,
   getPath?: (values?: PathValues) => string,
-  noAuth?: boolean,
   mock?: boolean,
   mockFunction?: MockFunction,
   legacy?: boolean
@@ -144,32 +142,22 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.LOGIN]: {
     path: '/login',
     method: 'POST',
-    noAuth: true,
-    mock: true
-  },
-  [API_PATH.REFRESH_TOKEN]: {
-    path: '/refreshToken',
-    method: 'POST',
-    noAuth: true,
-    mock: true
+    mock: false
   },
   [API_PATH.SEARCH]: {
     path: '/search',
     method: 'POST',
-    noAuth: true,
     mock: true,
     mockFunction: simulateAPIresponseForTheSearchBar
   }
 }
 
 export function useCustomFetch () {
-  const refreshToken = useCookie('refreshToken')
-  // the access token stuff is only a blue-print and needs to be refined once we have api calls to test against
-  const accessToken = useCookie('accessToken')
+  const headers = useRequestHeaders(['cookie'])
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
-  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues): Promise<T> {
+  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
       throw new Error(`path ${pathName} not found`)
@@ -184,46 +172,35 @@ export function useCustomFetch () {
     }
 
     const url = useRequestURL()
-    const { public: { apiClient, legacyApiClient, xUserId, apiKey }, private: pConfig } = useRuntimeConfig()
+    const { public: { apiClient, legacyApiClient, apiKey }, private: pConfig } = useRuntimeConfig()
     const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.origin}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
+    options.headers = new Headers({ ...options.headers, ...headers })
+    if (apiKey) {
+      options.headers.append('Authorization', `Bearer ${apiKey}`)
+    }
+    options.credentials = 'include'
     const method = map.method || 'GET'
     if (pathName === API_PATH.LOGIN) {
-      const res = await $fetch<LoginResponse>(path, { method, ...options, baseURL })
-      refreshToken.value = res.refresh_token
-      accessToken.value = res.access_token
+      const res = await $fetch<LoginResponse>(path, {
+        method,
+        ...options,
+        baseURL
+      })
       return res as T
-    } else if (!map.noAuth) {
-      if (!accessToken.value && refreshToken.value) {
-        const res = await fetch<{ access_token: string }>(API_PATH.REFRESH_TOKEN, { body: { refresh_token: refreshToken.value } })
-        accessToken.value = res.access_token
-      }
-
-      if (accessToken.value) {
-        options.headers = new Headers({})
-        options.headers.append('Authorization', `Bearer ${accessToken.value}`)
-      } else if (apiKey) {
-        options.headers = new Headers({})
-        options.headers.append('Authorization', `Bearer ${apiKey}`)
-      }
-
-      if (xUserId) {
-        if (!options.headers) {
-          options.headers = new Headers({ })
-        }
-        (options.headers as Headers).append('X-User-Id', xUserId)
-      }
     }
 
     try {
       return await $fetch<T>(path, { method, ...options, baseURL })
     } catch (e: any) {
-      showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
+      if (!dontShowError) {
+        showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
+      }
       throw (e)
     }
   }
