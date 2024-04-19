@@ -9,6 +9,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/jmoiron/sqlx"
@@ -93,6 +94,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	}
 
 	if bootstrap {
+		metrics.Errors.WithLabelValues(fmt.Sprintf("exporter_v2dash_agg_bootstrap_%dd", days)).Inc()
 		d.log.Infof("rolling %dd bootstraping starting", days)
 
 		err = d.bootstrap(tx, days, tableName)

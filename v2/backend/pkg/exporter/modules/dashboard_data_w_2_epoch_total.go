@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
@@ -32,6 +33,7 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 	startTime := time.Now()
 	defer func() {
 		d.log.Infof("aggregate total took %v", time.Since(startTime))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_total").Observe(time.Since(startTime).Seconds())
 	}()
 
 	lastTotalExported, err := edb.GetLastExportedTotalEpoch()

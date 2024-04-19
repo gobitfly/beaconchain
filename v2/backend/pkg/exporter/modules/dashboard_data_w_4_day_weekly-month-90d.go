@@ -156,7 +156,7 @@ func (d *MultipleDaysRollingAggregatorImpl) getBootstrapOnEpochsBehind() uint64 
 func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName string) error {
 	startTime := time.Now()
 	defer func() {
-		d.log.Infof("rolling %vd aggregate took %v", days, time.Since(startTime))
+		d.log.Infof("bootstrap rolling %vd took %v", days, time.Since(startTime))
 	}()
 
 	latestDayBounds, err := edb.GetLastExportedDay()
