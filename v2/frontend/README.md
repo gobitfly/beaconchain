@@ -19,7 +19,8 @@ Type
 cp .npmrc-example .npmrc
 ```
 Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token" in Bitwarden.
-In your `.npmrc` file, replace *YOURKEY* with the actual key.
+
+In your `.npmrc` file, replace `YOURKEY` with the actual key.
 
 Then type:
 ```
@@ -35,10 +36,12 @@ NUXT_PRIVATE_LEGACY_API_SERVER: "https://sepolia.beaconcha.in/"
 
 ```
 
-Set the following mapping in your `/etc/hosts` file
-`127.0.0.1 local.beaconcha.in`
+Set the following mapping in your `/etc/hosts` file:
+```
+127.0.0.1 local.beaconcha.in
+```
 
-Create server certificates for locally running on https, by runing thess comands in the console (the last two with `sudo`)
+Create server certificates for locally running on https, by runing these comands in the console (the last two with `sudo`)
 ```bash
 openssl genrsa 2048 > server.key
 chmod 400 server.key
@@ -46,10 +49,8 @@ openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
 ```
 Set the following env variable (needed to load local mock data): 
 `export NODE_TLS_REJECT_UNAUTHORIZED=0`
+
 Restart.
-
-Copy `.npmrc-example` to `.npmrc` and, inside, replace `YOURKEY` with your fontawesome API key.
-
 
 Run
 ```bash
