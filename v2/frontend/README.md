@@ -20,9 +20,7 @@ cp .npmrc-example .npmrc
 ```
 Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token" in Bitwarden.
 
-In your `.npmrc` file, replace `YOURKEY` with the actual key.
-
-Write it also in your `.npmrc_ci` file.
+In your `.npmrc` file, replace `FA_TOKEN` with the actual key. Note that there are two spots were it must be written.
 
 Then type:
 ```
@@ -66,10 +64,6 @@ and then
 pnpm install
 yarn install
 bun install
-```
-
-```diff
-- In your `.npmrc` file, replace the actual Font-Awesome key that we wrote earlier with `${FA_PRO_KEY}`. Yes, we revert this change. Otherwise, next time you push onto GitHub, the key will leak.
 ```
 
 ## Development Server

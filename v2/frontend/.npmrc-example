@@ -1,9 +1,9 @@
 @fortawesome:registry=https://npm.fontawesome.com/
-//npm.fontawesome.com/:_authToken=YOURKEY
+//npm.fontawesome.com/:_authToken=FA_TOKEN
 
 
 npmScopes:
 fortawesome:
   npmAlwaysAuth: true
   npmRegistryServer: "https://npm.fontawesome.com/"
-  npmAuthToken: "TOKEN"
+  npmAuthToken: "FA_TOKEN"

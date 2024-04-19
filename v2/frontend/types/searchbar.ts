@@ -469,6 +469,9 @@ export interface ExposedSearchbarMethods { // for internal use
 export interface SearchBar // your ref to the search-bar component must be of this type
        extends ComponentPublicInstance, ExposedSearchbarMethods {}
 
+export type CategoryFilter = Map<Category, boolean>
+export type NetworkFilter = Map<ChainIDs, boolean>
+
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
     case Indirect.SASRstr_value :

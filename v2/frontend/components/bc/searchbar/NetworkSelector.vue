@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { SearchbarStyle } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/networks'
+import { SearchbarStyle, type NetworkFilter } from '~/types/searchbar'
+import { ChainInfo } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
   barStyle: SearchbarStyle
 }>()
-const liveState = defineModel<Map<ChainIDs, boolean>>() // each key is a chain ID and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<NetworkFilter>({ required: true }) // each key is a chain ID and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
@@ -20,9 +20,6 @@ const everyNetworkIsSelected = computed(() => {
 watch(liveState, initialize, { immediate: true })
 
 function initialize () {
-  if (!liveState.value) {
-    return
-  }
   vueMultiselectAllOptions.value = []
   vueMultiselectSelectedOptions.value = []
   for (const nw of liveState.value) {
@@ -34,8 +31,8 @@ function initialize () {
 }
 
 function selectionHasChanged () {
-  for (const nw of liveState.value!) {
-    liveState.value!.set(nw[0], vueMultiselectSelectedOptions.value.includes(String(nw[0])))
+  for (const nw of liveState.value) {
+    liveState.value.set(nw[0], vueMultiselectSelectedOptions.value.includes(String(nw[0])))
   }
   emit('change')
 }
