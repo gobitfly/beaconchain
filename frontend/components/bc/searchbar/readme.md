@@ -66,13 +66,14 @@ If you want to change in depth the whole result-suggestion list (to change how e
   2. Update the `SearchbarPurposeInfo` record there to tell the bar which Purpose must use your new mode.
   3. Implement this mode in a new root `<div>` at the end of the `<template>` of `SuggestionRow.vue`.
 
-You can create a new `:bar-purpose` if needed:
+You can create a new purpose if needed:
   1. Add a purpose name into the `SearchbarPurpose` enum of _searchbar.ts_.
-  2. Define this purpose into the `SearchbarPurposeInfo` record.
+  2. Define the behavior of the bar when it has this purpose, by adding an entry in the `SearchbarPurposeInfo` record.
+  3. Now you can give this purpose to the `:bar-purpose` props.
 
 If you want to add or remove a filter button:
-  A. Either you simply need create or modify a purpose to see more/less filters (see above).
-  B. Or:
+  - Either you simply need create or modify a purpose to see more/less filters (see above).
+  - Or:
     1. Add/remove an entry in enum `Category`.
     2. Add/remove the corresponding category-title and button-label in enum `CategoryInfo`.
     3. You might need to add/remove an entry in `SubCategoryInfo`.
