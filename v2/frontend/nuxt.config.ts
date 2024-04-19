@@ -20,11 +20,16 @@ try {
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  devServer: {
+    https: {
+      key: 'server.key',
+      cert: 'server.crt'
+    }
+  },
   runtimeConfig: {
     public: {
       apiClient: '',
       legacyApiClient: '',
-      xUserId: '',
       apiKey: '',
       gitVersion
     },

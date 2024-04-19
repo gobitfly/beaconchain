@@ -3,35 +3,29 @@ import { SearchbarStyle } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
-const props = defineProps<{
-  liveState: Map<ChainIDs, boolean>, // each key is a chain ID (as enumerated in ChainIDs in networks.ts) and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+defineProps<{
   barStyle: SearchbarStyle
 }>()
+const liveState = defineModel<Map<ChainIDs, boolean>>() // each key is a chain ID and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
 const vueMultiselectAllOptions = ref<{name: string, label: string}[]>()
 const vueMultiselectSelectedOptions = ref<string[]>([])
 
-const stateRef = ref<Map<ChainIDs, boolean>>(props.liveState) // getting back the reactivity of the props, so if the parent changes something, we react
-
 const everyNetworkIsSelected = computed(() => {
   return (vueMultiselectSelectedOptions.value.length === vueMultiselectAllOptions.value?.length)
 })
 
-watch(props, () => {
-  stateRef.value = props.liveState
-  initialize()
-},
-{
-  immediate: true
-})
+watch(liveState, initialize, { immediate: true })
 
 function initialize () {
+  if (!liveState.value) {
+    return
+  }
   vueMultiselectAllOptions.value = []
   vueMultiselectSelectedOptions.value = []
-
-  for (const nw of stateRef.value) {
+  for (const nw of liveState.value) {
     vueMultiselectAllOptions.value.push({ name: String(nw[0]), label: ChainInfo[nw[0]].description })
     if (nw[1]) {
       vueMultiselectSelectedOptions.value.push(String(nw[0]))
@@ -40,8 +34,8 @@ function initialize () {
 }
 
 function selectionHasChanged () {
-  for (const nw of stateRef.value) {
-    stateRef.value.set(nw[0], vueMultiselectSelectedOptions.value.includes(String(nw[0])))
+  for (const nw of liveState.value!) {
+    liveState.value!.set(nw[0], vueMultiselectSelectedOptions.value.includes(String(nw[0])))
   }
   emit('change')
 }

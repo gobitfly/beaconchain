@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
 import { TimeFrames, type TimeFrame } from '~/types/value'
 
 interface Props {
-  dashboardKey: DashboardKey
   row: VDBSummaryTableRow
 }
 const props = defineProps<Props>()
 
+const { dashboardKey } = useDashboardKey()
+
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
-const { details: summary } = useValidatorDashboardSummaryDetailsStore(props.dashboardKey, props.row.group_id)
+const { details: summary } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
 const isWideEnough = computed(() => width.value >= 1400)
 

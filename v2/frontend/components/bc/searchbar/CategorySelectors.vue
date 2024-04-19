@@ -6,28 +6,22 @@ import {
 } from '~/types/searchbar'
 
 const emit = defineEmits<{(e: 'change') : void}>()
-const props = defineProps<{
-  liveState: Map<Category, boolean>, // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+defineProps<{
   barStyle: SearchbarStyle
 }>()
+const liveState = defineModel<Map<Category, boolean>>() // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
-const stateRef = ref<Map<Category, boolean>>(props.liveState) // getting back the reactivity of the props, so if the parent changes something, we react
-
-watch(props, () => {
-  stateRef.value = props.liveState
-})
-
 function selectionHasChanged (category : Category, selected : boolean) {
-  stateRef.value.set(category, selected)
+  liveState.value?.set(category, selected)
   emit('change')
 }
 </script>
 
 <template>
   <div>
-    <span v-for="filter of stateRef" :key="filter[0]">
+    <span v-for="filter of liveState" :key="filter[0]">
       <label class="filter-button">
         <input
           type="checkbox"

@@ -2,16 +2,12 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import { getGroupLabel } from '~/utils/dashbaord/group'
+import { getGroupLabel } from '~/utils/dashboard/group'
 
-interface Props {
-  dashboardKey: DashboardKey
-}
-const props = defineProps<Props>()
+const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -37,13 +33,13 @@ const loadData = (q?: TableQueryParams) => {
   setQuery(q, true, true)
 }
 
-watch(() => [props.dashboardKey, overview.value], () => {
+watch(() => [dashboardKey.value, overview.value], () => {
   loadData()
 }, { immediate: true })
 
 watch(query, (q) => {
   if (q) {
-    getSummary(props.dashboardKey, q)
+    getSummary(dashboardKey.value, q)
   }
 }, { immediate: true })
 
@@ -99,6 +95,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             @set-page-size="setPageSize"
           >
             <Column
+              v-if="groupsEnabled"
               field="group_id"
               :sortable="true"
               body-class="bold"
@@ -156,20 +153,20 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               <template #body="slotProps">
                 <DashboardTableValidators
                   :validators="slotProps.data.validators"
-                  :group-id="slotProps.data.group_id"
+                  :group-id="groupsEnabled ? slotProps.data.group_id : undefined"
                   context="group"
                 />
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" :dashboard-key="props.dashboardKey" />
+              <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
           </BcTable>
         </ClientOnly>
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart :dashboard-key="props.dashboardKey" />
+          <SummaryChart />
         </div>
       </template>
     </BcTableControl>

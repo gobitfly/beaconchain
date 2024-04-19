@@ -12,41 +12,65 @@
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
 ## Setup
+Checkout the `beaconchain` repository from git and navigate to `beaconchain/frontend`.
 
-Make sure to install the dependencies:
+Type
+```
+cp .npmrc-example .npmrc
+```
+Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token" in Bitwarden.
+In your `.npmrc` file, replace *YOURKEY* with the actual key.
 
-copy .npmrc-example to .npmrc and replace YOURKEY with your fontawesome API key
+Then type:
+```
+cp .env-example .env
+```
+Write the following settings in file `.env`:
+```
+NUXT_PUBLIC_API_CLIENT: "https://holesky.beaconcha.in/api/i/"
+NUXT_PUBLIC_LEGACY_API_CLIENT: "https://sepolia.beaconcha.in/"
+NUXT_PUBLIC_API_KEY: "the 'V2 API Key Secret' stored by Bitwarden in the Employee folder"
+NUXT_PRIVATE_API_SERVER: "https://holesky.beaconcha.in/api/i/"
+NUXT_PRIVATE_LEGACY_API_SERVER: "https://sepolia.beaconcha.in/"
 
+```
+
+Set the following mapping in your `/etc/hosts` file
+`127.0.0.1 local.beaconcha.in`
+
+Create server certificates for locally running on https, by runing thess comands in the console (the last two with `sudo`)
 ```bash
-# npm
+openssl genrsa 2048 > server.key
+chmod 400 server.key
+openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
+```
+Set the following env variable (needed to load local mock data): 
+`export NODE_TLS_REJECT_UNAUTHORIZED=0`
+Restart.
+
+Copy `.npmrc-example` to `.npmrc` and, inside, replace `YOURKEY` with your fontawesome API key.
+
+
+Run
+```bash
 npm install
-
-# pnpm
+sudo npm install -g pnpm
+sudo npm install -g yarn
+sudo npm install -g bun
+```
+and then
+```bash
 pnpm install
-
-# yarn
 yarn install
-
-# bun
 bun install
 ```
 
 ## Development Server
 
-Start the development server on `http://localhost:3000`:
+Start the development server on `https://local.beaconcha.in:3000/`:
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm run dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+npm run dev & pnpm run dev & yarn dev & bun run dev
 ```
 
 ## Production
