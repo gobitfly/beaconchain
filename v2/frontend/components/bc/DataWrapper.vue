@@ -5,9 +5,6 @@ const { getUser } = useUserStore()
 
 await useAsyncData('get_user', () => getUser())
 
-// TODO: load user on server once we fix SSR
-await useAsyncData('get_user', () => getUser(), { server: false })
-
 </script>
 <template>
   <slot />

@@ -1634,7 +1634,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
-			COALESCE(sync_chance, 0) as sync_chance,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from users_val_dashboards_validators
@@ -1676,7 +1675,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
-			COALESCE(sync_chance, 0) as sync_chance,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from %[1]s
@@ -1732,7 +1730,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		WithdrawalsCount  uint32 `db:"withdrawals_count"`
 		WithdrawalsAmount int64  `db:"withdrawals_amount"`
 
-		SyncChance  float64 `db:"sync_chance"`
+		SyncChance  float64 `db:"sync_chance"` // obsolete
 		BlockChance float64 `db:"block_chance"`
 
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
