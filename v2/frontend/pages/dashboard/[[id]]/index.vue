@@ -95,18 +95,17 @@ const removeDashboard = async (key: DashboardKey) => {
 
   // forward user to another dashboard (if possible)
   if ((dashboards.value?.validator_dashboards?.length ?? 0) > 0) {
-    await navigateTo(`/dashboard/${dashboards.value?.validator_dashboards[0].id}`)
+    setDashboardKey(`${dashboards.value?.validator_dashboards[0].id}`)
     return
   }
 
   if ((dashboards.value?.account_dashboards?.length ?? 0) > 0) {
-    await navigateTo(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
+    setDashboardKey(`${dashboards.value?.account_dashboards[0].id}`)
     return
   }
 
   // no other dashboard available, forward to creation screen
   setDashboardKey('')
-  await navigateTo('/dashboard')
 }
 
 onMounted(() => {
