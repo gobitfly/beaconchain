@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
@@ -65,6 +66,7 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 	d.log.Info("aggregating 1h")
 	defer func() {
 		d.log.Infof("aggregate 1h took %v", time.Since(startTime))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_1h").Observe(time.Since(startTime).Seconds())
 	}()
 
 	lastHourExported, err := edb.GetLastExportedHour()

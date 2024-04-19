@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/jmoiron/sqlx"
@@ -79,6 +80,7 @@ func (d *epochToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) erro
 	startTime := time.Now()
 	defer func() {
 		d.log.Infof("utc day aggregate took %v", time.Since(startTime))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_utc_day").Observe(time.Since(startTime).Seconds())
 	}()
 
 	latestExportedDay, err := edb.GetLastExportedDay()
