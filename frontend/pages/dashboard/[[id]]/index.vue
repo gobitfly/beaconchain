@@ -7,6 +7,7 @@ import {
   faWallet,
   faMoneyBill,
   faShare,
+  faUsers,
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -25,7 +26,7 @@ const { fetch } = useCustomFetch()
 const { width } = useWindowSize()
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 520 && isLoggedIn.value && !isPublic.value) {
+  if (width.value < 520) {
     return [
       {
         label: 'Manage',
@@ -154,8 +155,13 @@ watch(dashboardKey, (newKey, oldKey) => {
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
-      <div class="header-row" :class="{'single-element':!(isLoggedIn && !isPublic)}">
-        <div v-if="isLoggedIn && !isPublic" class="action-button-container">
+      <div class="header-row">
+        <div v-if="isPublic" class="action-button-container">
+          <Button class="share-button" :disabled="true">
+            {{ $t('dashboard.shared') }}<FontAwesomeIcon :icon="faUsers" />
+          </Button>
+        </div>
+        <div v-else class="action-button-container">
           <Button class="share-button" @click="share()">
             {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
           </Button>
@@ -226,10 +232,6 @@ watch(dashboardKey, (newKey, oldKey) => {
   justify-content: space-between;
   gap: var(--padding);
   margin-bottom: var(--padding);
-
-  &.single-element {
-    justify-content: flex-end;
-  }
 
   .action-button-container{
     display: flex;
