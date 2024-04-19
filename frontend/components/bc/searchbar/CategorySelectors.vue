@@ -31,7 +31,7 @@ function selectionHasChanged (category : Category, selected : boolean) {
       <label class="filter-button">
         <input
           type="checkbox"
-          class="hiddencheckbox"
+          class="hidden-checkbox"
           :true-value="true"
           :false-value="false"
           :checked="filter[1]"
@@ -82,7 +82,7 @@ function selectionHasChanged (category : Category, selected : boolean) {
     }
   }
 
-  .hiddencheckbox {
+  .hidden-checkbox {
     display: none;
     width: 0;
     height: 0;

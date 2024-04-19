@@ -56,7 +56,7 @@ function formatDescriptionCell () : string {
 <template>
   <div
     v-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory"
-    class="rowstyle-namedescriptionlowlevelcategory"
+    class="rowstyle_name-description-low-level-category"
     :class="barStyle"
   >
     <!-- In this mode, all possible cells are shown (as originally designed on Figma) -->
@@ -68,23 +68,23 @@ function formatDescriptionCell () : string {
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <BcSearchbarMiddleEllipsis
-      class="cell-name"
+      class="cell_name"
       :class="barStyle"
       :text="suggestion.output.name"
     />
-    <BcSearchbarMiddleEllipsis class="group-blockchaininfo" :class="barStyle">
+    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle">
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
         :dont-clip-under="16"
         :max-flex-grow="1"
-        class="cell-bi-description"
+        class="cell_bi_description"
         :class="barStyle"
       />
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.lowLevelData !== ''"
         :text="suggestion.output.lowLevelData"
-        class="cell-bi-lowleveldata"
+        class="cell_bi_low-level-data"
         :class="[barStyle,(suggestion.output.description !== '')?'greyish':'']"
       />
     </BcSearchbarMiddleEllipsis>
@@ -97,7 +97,7 @@ function formatDescriptionCell () : string {
 
   <div
     v-else-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription"
-    class="rowstyle-subcategoryidentificationdescription"
+    class="rowstyle_subcategory-identification-description"
     :class="barStyle"
   >
     <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
@@ -112,11 +112,11 @@ function formatDescriptionCell () : string {
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
-      class="cells-blockchaininfo-common cell-bi-identification"
+      class="cells_blockchain-info_common cell_bi_identification"
       :class="barStyle"
       :text="formatIdentificationCell()"
     />
-    <div v-if="suggestion.output.description !== ''" class="cells-blockchaininfo-common cell-bi-description" :class="barStyle">
+    <div v-if="suggestion.output.description !== ''" class="cells_blockchain-info_common cell_bi_description" :class="barStyle">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -200,7 +200,7 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cell-name,
+  .cell_name,
   .cell-subcategory {
     grid-column: 2;
     grid-row: 1;
@@ -212,7 +212,7 @@ function formatDescriptionCell () : string {
 
 // specific style when SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory
 
-.rowstyle-namedescriptionlowlevelcategory {
+.rowstyle_name-description-low-level-category {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
@@ -227,12 +227,12 @@ function formatDescriptionCell () : string {
     grid-template-columns: 40px 114px auto;
   }
 
-  .cell-name {
+  .cell_name {
     font-weight: var(--roboto-medium);
     margin-right: 16px;
   }
 
-  .group-blockchaininfo {
+  .group_blockchain-info {
     grid-column: 3;
     grid-row: 1;
     display: flex;
@@ -250,7 +250,7 @@ function formatDescriptionCell () : string {
     font-weight: var(--roboto-medium);
     white-space: nowrap;  // this has an effect on a large screen in gaudy mode only, it makes sure that the two spans (description + lowleveldata) stay on the same line
 
-    .cell-bi-description {
+    .cell_bi_description {
       position: relative;
       @media (min-width: 600px) { // large screen
         &.gaudy {
@@ -259,7 +259,7 @@ function formatDescriptionCell () : string {
       }
     }
 
-    .cell-bi-lowleveldata {
+    .cell_bi_low-level-data {
       position: relative;
       flex-grow: 1;
       text-align: justify;
@@ -308,7 +308,7 @@ function formatDescriptionCell () : string {
 
 // specific style when SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription
 
-.rowstyle-subcategoryidentificationdescription {
+.rowstyle_subcategory-identification-description {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
@@ -327,14 +327,14 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cells-blockchaininfo-common {
+  .cells_blockchain-info_common {
     display: flex;
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
   }
 
-  .cell-bi-identification {
+  .cell_bi_identification {
     @media (min-width: 600px) { // large screen
       grid-column: 3;
       font-weight: var(--roboto-medium);
@@ -349,7 +349,7 @@ function formatDescriptionCell () : string {
     text-justify: inter-character;
   }
 
-  .cell-bi-description {
+  .cell_bi_description {
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }
