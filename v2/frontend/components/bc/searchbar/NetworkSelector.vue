@@ -22,9 +22,10 @@ const everyNetworkIsSelected = computed(() => {
 watch(props, () => {
   stateRef.value = props.liveState
   initialize()
+},
+{
+  immediate: true
 })
-
-initialize()
 
 function initialize () {
   vueMultiselectAllOptions.value = []
