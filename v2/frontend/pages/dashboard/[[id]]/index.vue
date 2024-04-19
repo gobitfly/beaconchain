@@ -100,7 +100,7 @@ const removeDashboard = async (key: DashboardKey) => {
   }
 
   if ((dashboards.value?.account_dashboards?.length ?? 0) > 0) {
-    setDashboardKey(`${dashboards.value?.account_dashboards[0].id}`)
+    await navigateTo(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
     return
   }
 
