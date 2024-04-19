@@ -68,6 +68,8 @@ yarn install
 bun install
 ```
 
+**In your `.npmrc` file, replace the actual Font-Awesome key that we wrote earlier with `YOURKEY`. Yes, we revert this change. Otherwise, next time you push onto GitHub, the key will leak.**
+
 ## Development Server
 
 Start the development server on `https://local.beaconcha.in:3000/`:
