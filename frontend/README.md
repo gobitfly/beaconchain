@@ -20,7 +20,7 @@ cp .npmrc-example .npmrc
 ```
 Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token" in Bitwarden.
 
-In your `.npmrc` file, replace `FA_TOKEN` with the actual key. Note that there are two spots were it must be written.
+In your `.npmrc` file, replace `FA_TOKEN` with the actual key. Note that there are two spots where it must be written.
 
 Then type:
 ```
