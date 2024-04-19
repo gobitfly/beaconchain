@@ -2,19 +2,20 @@
 import {
   Category,
   CategoryInfo,
-  SearchbarStyle
+  SearchbarStyle,
+  type CategoryFilter
 } from '~/types/searchbar'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
   barStyle: SearchbarStyle
 }>()
-const liveState = defineModel<Map<Category, boolean>>() // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<CategoryFilter>({ required: true }) // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
 function selectionHasChanged (category : Category, selected : boolean) {
-  liveState.value?.set(category, selected)
+  liveState.value.set(category, selected)
   emit('change')
 }
 </script>
