@@ -22,6 +22,8 @@ Go to [fontawesome.com/account/general](https://fontawesome.com/account/general)
 
 In your `.npmrc` file, replace `YOURKEY` with the actual key.
 
+Write it also in your `.npmrc_ci` file.
+
 Then type:
 ```
 cp .env-example .env
