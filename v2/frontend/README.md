@@ -12,7 +12,9 @@
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
 ## Setup
-Checkout the `beaconchain` repository from git and navigate to `beaconchain/frontend`.
+Clone the `beaconchain` repository from git.
+
+On your console, navigate to folder `beaconchain/frontend`.
 
 Type
 ```
@@ -52,14 +54,18 @@ Set the following env variable (needed to load local mock data):
 
 Restart.
 
-Run
+Navigate to folder `beaconchain/frontend` and run
 ```bash
 npm install
+```
+
+If you prefer to use _pnpm_, _yarn_ or _bun_ instead of _npm_:
+```bash
 sudo npm install -g pnpm
 sudo npm install -g yarn
 sudo npm install -g bun
 ```
-and then
+then
 ```bash
 pnpm install
 yarn install
@@ -68,11 +74,15 @@ bun install
 
 ## Development Server
 
-Start the development server on `https://local.beaconcha.in:3000/`:
+Start the development server with one of those commands (they are equivalent, each software having pros and cons) :
 
 ```bash
-npm run dev & pnpm run dev & yarn dev & bun run dev
+npm run dev
+pnpm run dev
+yarn dev
+bun run dev
 ```
+Now you can browse the front-end at https://local.beaconcha.in:3000/
 
 ## Production
 
