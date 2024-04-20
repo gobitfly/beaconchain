@@ -17,15 +17,15 @@ Clone the `beaconchain` repository from git.
 On your console, navigate to folder `beaconchain/frontend`.
 
 Type
-```
+```bash
 cp .npmrc-example .npmrc
 ```
-Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token" in Bitwarden.
+Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token".
 
 In your `.npmrc` file, replace `FA_TOKEN` with the actual key. Note that there are two spots where it must be written.
 
 Then type:
-```
+```bash
 cp .env-example .env
 ```
 Write the following settings in file `.env`:
@@ -49,8 +49,10 @@ openssl genrsa 2048 > server.key
 chmod 400 server.key
 openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
 ```
-Set the following env variable (needed to load local mock data): 
-`export NODE_TLS_REJECT_UNAUTHORIZED=0`
+Add the following env variable (on Ubuntu: in your `~/.profile`) needed to load local mock data:
+```bash
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+```
 
 Restart.
 
