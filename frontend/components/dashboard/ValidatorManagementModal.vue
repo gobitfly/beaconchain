@@ -100,18 +100,19 @@ const addValidatorOrShowLimitReached = (result : ResultSuggestion) => {
     return
   }
 
+  // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
   switch (result.type) {
-    case ResultType.ValidatorsByIndex : // `result.queryParam` contains the index of the validator
-    case ResultType.ValidatorsByPubkey : // `result.queryParam` contains the pubkey of the validator
+    case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
+    case ResultType.ValidatorsByPubkey :
       selectedValidator.value = result.queryParam
       break
-    // The following types can correspond to several validators. The search bar doesn't know the list of indices and pubkeys:
-    case ResultType.ValidatorsByDepositAddress : // `result.queryParam` contains the address that was used to deposit
-    case ResultType.ValidatorsByDepositEnsName : // `result.queryParam` contains the ENS name that was used to deposit
-    case ResultType.ValidatorsByWithdrawalCredential : // `result.queryParam` contains the withdrawal credential
-    case ResultType.ValidatorsByWithdrawalAddress : // `result.queryParam` contains the withdrawal address
-    case ResultType.ValidatorsByWithdrawalEnsName : // `result.queryParam` contains the ENS name of the withdrawal address
-    case ResultType.ValidatorsByGraffiti : // `result.queryParam` contains the graffiti used to sign blocks
+    // Below, several validators correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByGraffiti :
       selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
       // If you need it: `result.count` is the size of the batch.
       break
