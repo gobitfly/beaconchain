@@ -34,11 +34,14 @@ func (s *Services) startIndexMappingService() {
 	for {
 		startTime := time.Now()
 		err := s.updateValidatorMapping() // TODO: only update data if something has changed (new head epoch)
+		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		if err != nil {
 			log.Error(err, "error updating validator mapping", 0)
+			delay = 10 * time.Second
+		} else {
+			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
 		}
-		log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-		utils.ConstantTimeDelay(startTime, time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot)*time.Second)
+		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
 

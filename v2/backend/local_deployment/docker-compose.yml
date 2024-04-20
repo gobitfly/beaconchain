@@ -34,12 +34,13 @@ services:
     command: go run ./cmd/api -config /app/backend/local_deployment/config.yml
   frontend:
     image: ghcr.io/gobitfly/beaconchain_frontend:main
-    ports:
-      - "3000:3000"
+    network_mode: "host"
     environment:
-      - NUXT_PUBLIC_API_CLIENT="http://127.0.0.1:8080/api/i/"
-      - NUXT_PUBLIC_LEGACY_API_CLIENT="http://127.0.0.1:8080/"
-      - NUXT_PRIVATE_API_SERVER="http://127.0.0.1:8080/api/i/"
-      - NUXT_PRIVATE_LEGACY_API_SERVER="http://127.0.0.1:8080/"
+      - NUXT_PUBLIC_API_CLIENT="http://local.beaconcha.in:8080/api/i/"
+      - NUXT_PUBLIC_LEGACY_API_CLIENT="http://local.beaconcha.in:8080/"
+      - NUXT_PRIVATE_API_SERVER="http://local.beaconcha.in:8080/api/i/"
+      - NUXT_PRIVATE_LEGACY_API_SERVER="http://local.beaconcha.in:8080/"
       - NUXT_PUBLIC_API_KEY="xxx"
       - NUXT_PUBLIC_X_USER_ID=1
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - NUXT_HOST=local.beaconcha.in
