@@ -234,7 +234,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'ens_addresses',
-        str_value: searched + '-greendildo.eth',
+        str_value: searched + '-futureoffinance.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
@@ -246,7 +246,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'ens_overview',
-        str_value: searched + '-greendildo.eth',
+        str_value: searched + '-green.eth',
         hash_value: '0xA9Bc41b63fCb29F2d2FaDE0a7E3A50F7357Ca938'
       },
       {
@@ -258,7 +258,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '-greendildo.eth'
+        str_value: searched + '-futureoffinance.eth'
       },
       {
         chain_id: 100,
