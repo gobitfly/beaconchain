@@ -145,7 +145,9 @@ function updateGlobalState (state : States) {
   }
 }
 
-onMounted(() => {
+function reconfigureSearchbar () {
+  closeDropdown()
+  empty()
   searchableTypes = []
   allTypesBelongToAllNetworks = true
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
@@ -155,15 +157,22 @@ onMounted(() => {
       allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
     }
   }
-  // creates the entries storing the state of the category-filter buttons, and deselect them
+  // creates the entries storing the state of the category filter, and deselect all categories
+  categoryFilter.value.clear()
   for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
     categoryFilter.value.set(s, false)
   }
-  // creates the entries storing the state of the network drop-down, and deselect all networks
+  // creates the entries storing the state of the network filter, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
+  networkFilter.value.clear()
   for (const nw of networks) {
     networkFilter.value.set(nw, false)
   }
+}
+
+watch(() => props, reconfigureSearchbar, { immediate: true })
+
+onMounted(() => {
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
@@ -475,12 +484,11 @@ function isResultCountable (type : ResultType | undefined) : boolean {
     return TypeInfo[type].countable
   }
   // from here, there is uncertainty but we must simply tell whether counting is possible for some results
-  if (props.barPurpose === SearchbarPurpose.GlobalSearch) {
-    return false // we do not ask the API to count identical results when the bar is versatile (general bar to search anything on the blockchain)
-  }
-  for (const type of searchableTypes) {
-    if (TypeInfo[type].countable) {
-      return true
+  if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults) {
+    for (const type of searchableTypes) {
+      if (TypeInfo[type].countable) {
+        return true
+      }
     }
   }
   return false
