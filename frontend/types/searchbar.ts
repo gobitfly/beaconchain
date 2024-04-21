@@ -501,11 +501,13 @@ export function getListOfResultTypes (sortByPriority : boolean) : ResultType[] {
 }
 
 const searchableTypesPerCategory : Record<string, ResultType[]> = {}
-// Returns the list of types belonging to the given category.
-// This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
-export function getListOfResultTypesInCategory (category: Category, sortByPriority : boolean) : ResultType[] {
+/**
+ * @returns the list of types belonging to the given category.
+ * This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
+ */
+export function getListOfResultTypesInCategory (category: Category) : ResultType[] {
   if (!(category in searchableTypesPerCategory)) {
-    for (const t of getListOfResultTypes(sortByPriority)) {
+    for (const t of getListOfResultTypes(true)) {
       const c = TypeInfo[t].category
       if (!searchableTypesPerCategory[c]) {
         searchableTypesPerCategory[c] = []
