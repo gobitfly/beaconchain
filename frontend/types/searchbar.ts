@@ -150,6 +150,7 @@ export interface OrganizedResults {
 interface SearchbarPurposeInfoField {
   searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
   unsearchable : ResultType[], // List of types that the bar will not search for.
+  askAPItoCountResults : boolean, // This will tell the user how many results correspond to each suggestion in the drop-down (uses more resources in the back-end).
   button : 'search' | 'add', // Utility of the button.
   placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
   cellsInSuggestionRows : SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
@@ -158,6 +159,7 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
   [SearchbarPurpose.GlobalSearch]: {
     searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
     unsearchable: [],
+    askAPItoCountResults: false,
     button: 'search',
     placeHolder: 'search_bar.general_placeholder',
     cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory
@@ -165,6 +167,7 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
   [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
     unsearchable: [ResultType.EnsOverview],
+    askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.account_placeholder',
     cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
@@ -172,6 +175,7 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
   [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
     unsearchable: [],
+    askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.validator_placeholder',
     cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
