@@ -80,8 +80,7 @@ function formatDescriptionCell () : string {
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
-        :dont-clip-under="16"
-        :max-flex-grow="1"
+        :initial-flex-grow="1"
         class="cell_bi_description"
         :class="barStyle"
       />
