@@ -1,5 +1,8 @@
 <script setup lang="ts">
-
+/*
+ * If you want to change the behavior of the component or the information it displays, it is possible that you simply need to change a few parameters
+ * in searchbar.ts rather than altering the code of the component. The possibilities offered by this configuration file are explanined in readme.md
+ */
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {

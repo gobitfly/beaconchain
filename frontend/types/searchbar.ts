@@ -150,11 +150,12 @@ export interface OrganizedResults {
 interface SearchbarPurposeInfoField {
   searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
   unsearchable : ResultType[], // List of types that the bar will not search for.
-  askAPItoCountResults : boolean, // This will tell the user how many results correspond to each suggestion in the drop-down (uses more resources in the back-end).
+  askAPItoCountResults : boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
   button : 'search' | 'add', // Utility of the button.
   placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
   cellsInSuggestionRows : SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
 }
+// this Record describes the look and behavior of the search-bar according to the value that you pass in its props `:bar-purpose`
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
   [SearchbarPurpose.GlobalSearch]: {
     searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
