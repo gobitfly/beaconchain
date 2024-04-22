@@ -74,7 +74,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 
 	err = AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:                    epochStart,
-		EndEpoch:                      epochEnd,
+		EndEpochInclusive:             epochEnd,
 		StartBoundEpoch:               0,
 		TableFrom:                     "validator_dashboard_data_epoch",
 		TableTo:                       "validator_dashboard_data_rolling_total",

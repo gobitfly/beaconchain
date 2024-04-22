@@ -21,3 +21,15 @@ func Rollback(tx *sqlx.Tx) {
 func IsDuplicatedKeyError(err error) bool {
 	return errors.Is(err, duplicateEntryError)
 }
+
+func NullInt16(i int16) sql.NullInt16 {
+	return sql.NullInt16{Int16: i, Valid: true}
+}
+
+func NullInt32(i int32) sql.NullInt32 {
+	return sql.NullInt32{Int32: i, Valid: true}
+}
+
+func NullInt64(i int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: i, Valid: true}
+}

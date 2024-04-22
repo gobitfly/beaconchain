@@ -22,7 +22,7 @@ type epochToDayAggregator struct {
 
 const PartitionDayWidth = 6
 
-func newHourToDayAggregator(d *dashboardData) *epochToDayAggregator {
+func newEpochToDayAggregator(d *dashboardData) *epochToDayAggregator {
 	return &epochToDayAggregator{
 		dashboardData: d,
 		mutex:         &sync.Mutex{},
@@ -116,17 +116,17 @@ func (d *epochToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) erro
 			boundsEnd = currentExportedEpoch + 1
 		}
 
-		err = d.aggregateUtcDaySpecific(boundsStart, boundsEnd)
+		err = d.aggregateUtcDayWithBounds(boundsStart, boundsEnd)
 		if err != nil {
-			d.log.Error(err, "failed to aggregate utc day specific", 0)
-			return errors.Wrap(err, "failed to aggregate utc day specific")
+			d.log.Error(err, "failed to aggregate utc day with bounds", 0)
+			return errors.Wrap(err, "failed to aggregate utc day  with bounds")
 		}
 	}
 
 	return nil
 }
 
-func (d *epochToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpochOfDay uint64) error {
+func (d *epochToDayAggregator) aggregateUtcDayWithBounds(firstEpochOfDay, lastEpochOfDay uint64) error {
 	d.log.Infof("aggregating day of epoch %d", firstEpochOfDay)
 	partitionStartRange, partitionEndRange := d.GetDayPartitionRange(lastEpochOfDay)
 
@@ -145,7 +145,7 @@ func (d *epochToDayAggregator) aggregateUtcDaySpecific(firstEpochOfDay, lastEpoc
 
 	err = AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           firstEpochOfDay,
-		EndEpoch:             lastEpochOfDay - 1, // rolling arg is inclusive
+		EndEpochInclusive:    lastEpochOfDay - 1, // rolling arg is inclusive
 		StartBoundEpoch:      int64(boundsStart),
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              "validator_dashboard_data_daily",
