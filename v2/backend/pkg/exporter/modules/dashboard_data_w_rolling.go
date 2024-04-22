@@ -55,10 +55,10 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 // returns the tail epochs (those must be removed from rolling) for a given intendedHeadEpoch for a given rolling table
 // fE a tail epoch for rolling 1 day aggregation (225 epochs) for boundsStart 0 (start epoch of last rolling export) and intendedHeadEpoch 227 on ethereum would correspond to a tail range of 0 - 1
 // meaning epoch [0,1] must be removed from the rolling table if you want to add epoch 227
-// arguments returned are inclusive
+// first argument (start bound) is inclusive, second arg (end bound) is exclusive
 func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, intendedHeadEpoch uint64) (int64, int64) {
 	aggTailEpochStart := int64(boundsStart) // current bounds start must be removed
-	aggTailEpochEnd := int64(intendedHeadEpoch - utils.EpochsPerDay()*uint64(days))
+	aggTailEpochEnd := int64(intendedHeadEpoch-utils.EpochsPerDay()*uint64(days)) + 1
 	d.log.Infof("tail bounds for %dd: %d - %d | intendedHead: %v | boundsStart: %v", days, aggTailEpochStart, aggTailEpochEnd, intendedHeadEpoch, boundsStart)
 
 	return aggTailEpochStart, aggTailEpochEnd
@@ -126,7 +126,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 
 	// bounds for what to aggregate and add to the head of the rolling table
 	aggHeadEpochStart := bounds.EpochEnd
-	aggHeadEpochEnd := currentEpochHead
+	aggHeadEpochEnd := currentEpochHead + 1
 
 	// bounds for what to aggregate and remove from the tail of the rolling table
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, currentEpochHead)
@@ -204,7 +204,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 }
 
 // Adds the new epochs (headEpochStart to headEpochEnd) to the rolling table and removes the old ones (tailEpochStart to tailEpochEnd)
-// all arguments are inclusive
+// start params are inclusive, end params are exclusive
 func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, headEpochStart, headEpochEnd uint64, tailEpochStart, tailEpochEnd int64) error {
 	d.log.Infof("aggregating rolling %s epochs: %d - %d, %d - %d", tableName, headEpochStart, headEpochEnd, tailEpochStart, tailEpochEnd)
 	defer d.log.Infof("aggregated rolling %s epochs: %d - %d, %d - %d", tableName, headEpochStart, headEpochEnd, tailEpochStart, tailEpochEnd)
@@ -227,6 +227,7 @@ func (d *RollingAggregator) aggregateRolling(tx *sqlx.Tx, tableName string, head
 }
 
 // Inserts new validators or updated existing ones into the rolling table
+// startEpoch incl | endEpoch, tailEnd excl
 func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpoch, endEpoch uint64, tailEnd int64) error {
 	startTime := time.Now()
 	d.log.Infof("add to rolling %s epochs: %d - %d", tableName, startEpoch, endEpoch)
@@ -234,14 +235,14 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 		d.log.Infof("added to rolling %s took %v", tableName, time.Since(startTime))
 	}()
 
-	if tailEnd+1 < 0 {
+	if tailEnd < 0 {
 		tailEnd = 0
 	}
 
 	return AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           startEpoch,
-		EndEpochInclusive:    endEpoch,
-		StartBoundEpoch:      tailEnd + 1, // since tail is inclusive (remove), we need to set the start_epoch for new inserts to tail + 1
+		EndEpoch:             endEpoch,
+		StartBoundEpoch:      tailEnd,
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              tableName,
 		TableFromEpochColumn: "epoch",
@@ -253,7 +254,7 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 type CustomRolling struct {
 	Log                  ModuleLog // for logging, must provide
 	StartEpoch           uint64    // incl, must be provided
-	EndEpochInclusive    uint64    // incl, must be provided
+	EndEpoch             uint64    // excl, must be provided
 	StartBoundEpoch      int64     // incl, must be provided
 	TableFrom            string    // must provide
 	TableTo              string    // must provide
@@ -289,8 +290,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		custom.TailBalancesInsertColumnQuery = "null,"
 	}
 
-	if custom.StartEpoch > custom.EndEpochInclusive {
-		custom.Log.Infof("nothing to do, start epoch is greater than end epoch (%d > %d)", custom.StartEpoch, custom.EndEpochInclusive)
+	if custom.StartEpoch > custom.EndEpoch-1 {
+		custom.Log.Infof("nothing to do, start epoch is greater than end epoch (%d > %d)", custom.StartEpoch, custom.EndEpoch-1)
 		return nil
 	}
 
@@ -303,14 +304,14 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 		// What epochs to select for aggregate
 		WHERE_AND_GROUP: fmt.Sprintf(`
-			WHERE %[1]s >= $1 AND %[1]s <= $2 
+			WHERE %[1]s >= $1 AND %[1]s < $2 
 			GROUP BY validator_index
 		`, custom.TableFromEpochColumn),
 
 		// Head balance from the most recent epoch so select and join the agg set
 		HEAD_BALANCE_QUERY: fmt.Sprintf(`
 			head_balance_ends as (
-				SELECT validator_index, balance_end FROM %[1]s WHERE %[2]s = $2
+				SELECT validator_index, balance_end FROM %[1]s WHERE %[2]s = $2 -1
 			),
 		`, custom.TableFrom, custom.TableFromEpochColumn),
 		HEAD_BALANCE_JOIN: `
@@ -322,7 +323,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	// I know how this looks but the query planner of postgres has difficulty with the agg group by for just one epoch
 	// So here some optimization for when we only aggregate one epoch
 	// just select, no aggregate, grouping or join needed
-	if custom.StartEpoch == custom.EndEpochInclusive {
+	if custom.StartEpoch == custom.EndEpoch-1 {
 		custom.Agg = TableAGG{
 			SUM:             "",
 			BOOL_OR:         "",
@@ -434,7 +435,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 			)
 			SELECT
 				{{ .TableDayValue }}
-				$2 + 1 as epoch_end, -- exclusive
+				$2 as epoch_end, -- exclusive
 				$3 as epoch_start, -- inclusive, only write on insert - do not update in UPDATE part! Use tail start epoch
 				aggregate_head.validator_index as validator_index,
 				COALESCE(aggregate_head.attestations_source_reward, 0) as attestations_source_reward,
@@ -522,10 +523,10 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		return errors.Wrap(err, "failed to execute template")
 	}
 
-	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpochInclusive, custom.StartBoundEpoch)
+	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
 	result, err := tx.Exec(queryBuffer.String(),
-		custom.StartEpoch, custom.EndEpochInclusive, custom.StartBoundEpoch,
+		custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,
 	)
 
 	if err != nil {
@@ -545,7 +546,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	return err
 }
 
-// args inclusive
+// startEpoch incl, endEpoch excl
 func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, startEpoch, endEpoch int64) error {
 	startTime := time.Now()
 	d.log.Infof("remove from rolling %s epochs: %d - %d ", tableName, startEpoch, endEpoch)
@@ -553,16 +554,16 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 		d.log.Infof("removed from rolling %s took %v", tableName, time.Since(startTime))
 	}()
 
-	if endEpoch < 0 {
+	if endEpoch-1 < 0 {
 		// if selected time frame is more than epochs exists we log an info
 		d.log.Infof("rolling %sd tail epoch is negative, no end cutting", tableName)
-		endEpoch = -1 // since its inclusive make it -1 so it stored 0 in table
+		endEpoch = 0 // since its inclusive make it -1 so it stored 0 in table
 	}
 
 	result, err := tx.Exec(fmt.Sprintf(`
 		WITH
 			footer_balance_starts as (
-				SELECT validator_index, balance_end as balance_start FROM validator_dashboard_data_epoch WHERE epoch = $2 -- end balance of epoch we want to remove = start epoch of epoch we start from
+				SELECT validator_index, balance_end as balance_start FROM validator_dashboard_data_epoch WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from
 			),
 			aggregate_tail as (
 				SELECT 
@@ -602,12 +603,12 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					MAX(slashed_violation) as slashed_violation,
 					MAX(last_executed_duty_epoch) as last_executed_duty_epoch
 				FROM validator_dashboard_data_epoch
-				WHERE epoch >= $1 AND epoch <= $2
+				WHERE epoch >= $1 AND epoch < $2
 				GROUP BY validator_index
 			),
 			result as (
 				SELECT
-					$2 + 1 as epoch_start, --since its inclusive in the func $2 will be deducted hence +1
+					$2 as epoch_start, --since its inclusive in the func $2 will be deducted hence +1
 					aggregate_tail.validator_index as validator_index,
 					COALESCE(aggregate_tail.attestations_source_reward, 0) as attestations_source_reward,
 					COALESCE(aggregate_tail.attestations_target_reward, 0) as attestations_target_reward,

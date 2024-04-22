@@ -196,7 +196,7 @@ func (d *epochToHourAggregator) aggregate1hWithBounds(epochStart, epochEnd uint6
 
 	err = AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           epochStart,
-		EndEpochInclusive:    epochEnd - 1, // rolling arg is inclusive
+		EndEpoch:             epochEnd,
 		StartBoundEpoch:      int64(boundsStart),
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              "validator_dashboard_data_hourly",
