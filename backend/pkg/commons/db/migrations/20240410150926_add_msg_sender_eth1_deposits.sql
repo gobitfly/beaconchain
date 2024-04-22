@@ -6,9 +6,6 @@ ALTER TABLE eth1_deposits ADD msg_sender bytea NULL;
 ALTER TABLE eth1_deposits ADD to_address bytea NULL;
 ALTER TABLE eth1_deposits ADD log_index int4 NULL;
 
-SELECT('up SQL query - remove tx_input column from eth1_deposits');
-ALTER TABLE eth1_deposits DROP COLUMN tx_input;
-
 SELECT('up SQL query - remove duplicate rows from eth1_deposits');
 delete from
 	eth1_deposits
@@ -46,9 +43,6 @@ SELECT('down SQL query - remove msg_sender, to_address, and log_index columns fr
 ALTER TABLE eth1_deposits DROP COLUMN msg_sender;
 ALTER TABLE eth1_deposits DROP COLUMN to_address;
 ALTER TABLE eth1_deposits DROP COLUMN log_index;
-
-SELECT('down SQL query - add tx_input column to eth1_deposits');
-ALTER TABLE public.eth1_deposits ADD tx_input bytea NULL;
 
 SELECT('down SQL query - changing the primary key of eth1_deposits back to be tx_hash & merkletree_index');
 ALTER TABLE eth1_deposits DROP CONSTRAINT IF EXISTS eth1_deposits_pkey;
