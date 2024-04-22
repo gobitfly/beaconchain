@@ -5,7 +5,7 @@ const randomTexts = ref<string[]>([])
 function getRandomText () : string {
   let result = ''
 
-  for (let l = 20 + Math.floor(Math.random() * 100); l >= 0; l--) {
+  for (let l = 30 + Math.floor(Math.random() * 100); l >= 0; l--) {
     result += characters[Math.floor(Math.random() * characters.length)]
   }
   return result
@@ -30,12 +30,13 @@ const showAllCSSclipped = ref<boolean>(false)
   </Button>
   <p>
     For this test:<br>
-    Blue means that the width is not defined (the component finds a width by using its content and its initial-flex-grow props).
-    Other colors mean that the width is defined with flex-grow: or width:<br>
-    A red frame highlights a parent.
+    * Blue means that the width is not defined (the component finds a width by using its content and its initial-flex-grow props).
+    Other colors mean that the width is defined with flex-grow or width %<br>
+    * A red frame highlights a MiddleEllipsis controlling several MiddleEllipses to make sure they don't disturb each other,
+    and allows for children of <i>undefined width</i>.
   </p>
   <div style="position: relative;">
-    <p>With 1 ellispis:</p>
+    <p><b>With 1 ellispis:</b></p>
     <div class="frame medium">
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" />
     </div>
@@ -43,21 +44,23 @@ const showAllCSSclipped = ref<boolean>(false)
       <BcSearchbarMiddleEllipsis class="flexible big nocolor parent">
         <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :initial-flex-grow="1" />
         <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
+        <span>Hello I am not a MiddleEllipsis*</span>
         <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
         <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
       </BcSearchbarMiddleEllipsis>
     </div>
+    <p>* you can put anything in a parent, he will control the child Middle Ellipses and leave the rest untouched.</p>
   </div>
 
   <div style="position: relative;">
-    <p>With 2 ellispis:</p>
+    <p><b>With 2 ellispes:</b></p>
     <p>
       Sometimes, you will notice that there is 1 ellipsis only. This is not a bug, it is because 2 ellipses would not make sense:
       <br>
-      * When the text looks long: there is room for n characters and the text length is n+1, so there is only 1 character to skip, not 2.
+      * If the text looks long when it happens: there is room for n characters and the text length is n+1, so there is only 1 character to skip, not 2.
       Adding an ellipsis would hide a character that is not clipped, this would be a loss of information.
       <br>
-      * When the text looks short: with 2 ellipses, there would be 1 visible character ony, for example "…C…" or "A……" which is a loss of information without any advantage, therefore "A…D" is shown.
+      * If the text looks short when it happens: with 2 ellipses, there would be 1 visible character ony, for example "…C…" or "A……" which is a loss of information without any advantage, therefore "A…D" is shown.
     </p>
     <div class="frame medium">
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" :ellipses="2" />
@@ -73,8 +76,10 @@ const showAllCSSclipped = ref<boolean>(false)
   </div>
 
   <div style="position: relative;">
-    <p>With an adaptive number of ellipses (configurable, see the props):</p>
+    <p><b>With an adaptive number of ellipses (configurable, see the props):</b></p>
     <p>
+      <i>Play with the width of your window to see the number of ellipses change.</i><br><br>
+      Configuration for this test:<br>
       * 1 ellipsis if there is room for up to 16 characters,<br>
       * up to 2 ellipses if there is room for up to 32 characters,<br>
       * up to 3 ellipses if there is room for up to 64 characters,<br>
@@ -95,7 +100,7 @@ const showAllCSSclipped = ref<boolean>(false)
 
   <div style="position: relative;">
     <p>
-      Now, {{ randomTexts.length }} hundreds MiddleEllipses to see the lower smoothness of the UI when you resize your window:
+      <b>{{ randomTexts.length }} hundreds MiddleEllipses to see the lower smoothness of the UI when you resize your window:</b>
       <Button @click="showAllME=!showAllME">
         show/hide
       </Button>
@@ -127,6 +132,10 @@ const showAllCSSclipped = ref<boolean>(false)
       </div>
     </div>
   </div>
+
+  <p>
+    -> With a modern computer, 100 Middle Ellipses seem to be an upper limit to keep a satisfying smoothness (and 50 are super smooth, unnoticeable).
+  </p>
 </template>
 
 <style scoped lang="scss">
