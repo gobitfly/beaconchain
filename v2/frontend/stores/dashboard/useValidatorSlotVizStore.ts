@@ -13,7 +13,11 @@ export function useValidatorSlotVizStore () {
 
   const slotViz = computed(() => data.value)
 
-  async function refreshSlotViz (dashboardKey: DashboardKey | string) {
+  async function refreshSlotViz (dashboardKey: DashboardKey) {
+    if (!dashboardKey) {
+      data.value = undefined
+      return
+    }
     const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(API_PATH.DASHBOARD_SLOTVIZ, { headers: {} }, { dashboardKey })
     data.value = res.data
 
