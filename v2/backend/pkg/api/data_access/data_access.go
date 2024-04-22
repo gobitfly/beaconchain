@@ -2195,52 +2195,54 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	params := []interface{}{pq.Array(validators)}
 	where := `WHERE proposer = ANY($1) `
 	orderBy := `ORDER BY `
-	// multi-sort disabled as discussed
-	if len(sort) > 0 {
-		sortOrder := ` ASC`
-		if sort[0].Desc {
-			sortOrder = ` DESC`
+	sortOrder := ` ASC`
+	if colSort.Desc {
+		sortOrder = ` DESC`
+	}
+	val := int64(-1)
+	sortColName := `slot`
+	switch colSort.Column {
+	case enums.VDBBlockProposer:
+		sortColName = `proposer`
+		val = currentCursor.Proposer
+	case enums.VDBBlockGroup:
+		// TODO join tables, need to migrate tables onto the same db
+		sortColName = ``
+		val = currentCursor.Group
+	case enums.VDBBlockStatus:
+		sortColName = `status`
+		val = currentCursor.Status
+	case enums.VDBBlockProposerReward:
+		// TODO need to sum up reward data; CL rewards missing, EL only in BT
+		sortColName = `mev_reward`
+		val = currentCursor.Reward
+	}
+	onlyPrimarySort := sortColName == `slot`
+	if currentCursor.IsValid() {
+		sign := ` > `
+		if colSort.Desc && !currentCursor.Reverse || !colSort.Desc && currentCursor.Reverse {
+			sign = ` < `
 		}
-		val := int64(-1)
-		sortColName := `slot`
-		switch sort[0].Column {
-		case enums.VDBBlockProposer:
-			sortColName = `proposer`
-			val = currentCursor.Proposer
-		case enums.VDBBlockGroup:
-			// TODO join tables
-			sortColName = ``
-			val = currentCursor.Group
-		case enums.VDBBlockStatus:
-			sortColName = `status`
-			val = currentCursor.Status
-		case enums.VDBBlockProposerReward:
-			// TODO reward data is split between multiple tables, sum them up
-			sortColName = `mev_reward`
-			val = currentCursor.Reward
-		}
-		onlyPrimarySort := sortColName == `slot`
-		orderBy += sortColName + sortOrder
-		if !onlyPrimarySort {
-			orderBy += `, slot DESC`
-		}
-		if currentCursor.IsValid() {
-			sign := ` > `
-			if sort[0].Desc {
-				sign = ` < `
-			}
-			params = append(params, currentCursor.Slot)
-			where += `AND (`
-			if onlyPrimarySort {
-				where += `slot` + sign + `$2`
+		if currentCursor.Reverse {
+			if sortOrder == ` ASC` {
+				sortOrder = ` DESC`
 			} else {
-				where += `(slot < $2 AND ` + sortColName + ` = $3) OR ` + sortColName + sign + `$3`
-				params = append(params, val)
+				sortOrder = ` ASC`
 			}
-			where += `) `
 		}
-	} else {
-		orderBy += `slot DESC`
+		params = append(params, currentCursor.Slot)
+		where += `AND (`
+		if onlyPrimarySort {
+			where += `slot` + sign + `$2`
+		} else {
+			where += `(slot < $2 AND ` + sortColName + ` = $3) OR ` + sortColName + sign + `$3`
+			params = append(params, val)
+		}
+		where += `) `
+	}
+	orderBy += sortColName + sortOrder
+	if !onlyPrimarySort {
+		orderBy += `, slot DESC`
 	}
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
@@ -2254,6 +2256,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	moreDataFlag := len(proposals) > int(limit)
 	if moreDataFlag {
 		proposals = proposals[:len(proposals)-1]
+	}
+	if currentCursor.IsReverse() && currentCursor.Reverse {
+		slices.Reverse(proposals)
 	}
 
 	blocksNoRelay := make([]uint64, 0, len(proposals))
@@ -2324,7 +2329,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		// No paging required
 		return data, &t.Paging{}, nil
 	}
-	p, err := utils.GetPagingFromData(utils.DataStructure(proposals), currentCursor, currentCursor.Direction, moreDataFlag)
+	p, err := utils.GetPagingFromData(proposals, currentCursor, moreDataFlag)
 	return data, p, err
 }
 
