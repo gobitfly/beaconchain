@@ -261,6 +261,10 @@
           ]
         }
       },
+      "withdrawals": {
+        "title": "Withdrawals",
+        "search_placeholder": "Index, Public Key, Address"
+      },
       "group_management":  {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
@@ -300,7 +304,9 @@
         "validators": "Validators",
         "rewards": "Rewards",
         "reward_recipient": "Rewards Recipient",
-        "proposer_rewards": "Proposer Rewards"
+        "proposer_rewards": "Proposer Rewards",
+        "recipient": "Recipient",
+        "amount": "Amount"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
