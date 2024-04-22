@@ -65,7 +65,8 @@ const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 
 let classPropsDuringLastUpdate = props.class || ''
 let textPropsDuringLastUpdate = props.text || ''
-let initialFlexGrowDuringLastUpdate = 0
+let initialFlexGrowDuringLastUpdate : number | undefined
+let ellipsesPropsDuringLastUpdate : number | number[] | undefined = 1
 let textAfterLastUpdate : TextProperties = { text: '', width: 0 }
 let frameWidthDuringLastUpdate = 0 // used by determineReason() to find out why an update is needed, during the update process
 let frameWidthAfterLastUpdate = 0 // used by determineReason() to find out why an update is needed, outside the update process
@@ -186,8 +187,8 @@ watch(() => props.text, (newText) => { // reacts to changes of text
     } else { logStep('blue', 'parent not called') }
 })
 
-watch(() => props.initialFlexGrow, (newFG) => { // reacts to changes of props initialFlexGrow
-  if (newFG === initialFlexGrowDuringLastUpdate) {
+watch(() => props.initialFlexGrow, (newIFG) => { // reacts to changes of props initialFlexGrow
+  if (newIFG === initialFlexGrowDuringLastUpdate) {
     // our watcher lags (we already updated with the correct initial flex-grow)
     return
   }
@@ -199,7 +200,11 @@ watch(() => props.initialFlexGrow, (newFG) => { // reacts to changes of props in
   } else { logStep('blue', 'parent not called') }
 })
 
-watch(() => props.ellipses, () => { // reacts to changes regarding the number of ellipses to use
+watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding the number of ellipses to use
+  if (newEllipses === ellipsesPropsDuringLastUpdate) {
+    // our watcher lags (we already updated with the correct initial flex-grow)
+    return
+  }
   logStep('yellow', 'new (array of) number(s) regarding ellipses received')
   if (amIofDefinedWidth.value) {
     // the clipping adapts the text to our width, not the other way around, so our width did not change, so we can update by ourselves (if we have a parent, a notification is useless and our siblings would spend resources updating for nothing)
@@ -351,16 +356,21 @@ function enterUpdateCycleAsAparent (childId? : number) {
   for (const child of innerElements.widthUndefinedChildren) {
     child.settleAfterUpdate()
   }
-  /*
-  TODO: one last visual bug to fix :)
-  Solution:
-   implement and expose calculateGapsWithOriginalText()
-   updateContent() should take a new argument (additional room)
-   Before updating: if at least one defined-width child with a flex-grow value (read css) has a large gap (which means it will not clip)
-     sum the gaps of those.
-     spread this additional room over the width-defined children with no gap AND a flex-grow value
-  */
   // now that the undefined-width children got a width, we allow the others to use the remaining room
+  /*
+  TODO here: insert the fix for the last visual bug I found during tests :)
+  Fix:
+   implement and expose howMuchCanMyFrameShrink(additionalWidthAvailable : number) : number
+     this function would return  getFW()+addWidthA-calcTW(props.text)-ResizeObserverLagMargin  if it is positive && the frame has a flex-grow defined (read CSS), otherwise 0.
+   updateContent() must take a new argument (additionalWidthAvailable)
+   Before updating all children of defined width:
+     ask everyone howMuchCanMyFrameShrink(). Positive answers mean that the corresponding child will not clip (its text fits entirely).
+     sum these answers.
+     distribute this additional room over the width-defined children having a flex-grow value && having replied 0.
+     now, it is possible that some children have too much room, so:
+      reiterate until the answers stabilize (design a clever way to converge to this fixed point. hopefully it will not take 10 nights and 1000 lines).
+    Now the updates of children of defined width can be launched with updateContent(additionalWidthAvailable[child]) the parameter being what has been distributed.
+  */
   for (const child of innerElements.widthDefinedChildren) {
     child.updateContent()
   }
@@ -522,7 +532,6 @@ function getReadyForUpdate () {
   if (!amIofDefinedWidth.value) {
     // our undefined width requires us to get a width before clipping the text. Note that settleAfterUpdate() will undefine our width later.
     setFrameWidth(WidthMode.FixedFlexGrow, props.initialFlexGrow)
-    initialFlexGrowDuringLastUpdate = props.initialFlexGrow!
   }
   if (whatIam.value !== WhatIcanBe.Parent) {
     logStep('normal', 'getting ready for update')
@@ -545,6 +554,8 @@ function getReadyForUpdate () {
 function settleAfterUpdate () {
   classPropsDuringLastUpdate = props.class || ''
   textPropsDuringLastUpdate = props.text || ''
+  initialFlexGrowDuringLastUpdate = props.initialFlexGrow
+  ellipsesPropsDuringLastUpdate = props.ellipses
   frameWidthDuringLastUpdate = getFrameWidth()
   if (whatIam.value !== WhatIcanBe.Parent) {
     setFrameText(currentText)

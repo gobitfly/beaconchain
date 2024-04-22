@@ -6,4 +6,4 @@ npmScopes:
 fortawesome:
   npmAlwaysAuth: true
   npmRegistryServer: "https://npm.fontawesome.com/"
-  npmAuthToken: "FA_TOKEN"
+  npmAuthToken: "TOKEN"
