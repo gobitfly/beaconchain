@@ -12,7 +12,7 @@ const props = defineProps({
 
 const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
 const coloring = computed(() => !props.colored ? 'monochromatic' : '')
-const sizing = computed(() => props.harmonizePerceivedSize ? family : '')
+const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 </script>
 
 <template>
