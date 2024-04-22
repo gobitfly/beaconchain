@@ -69,6 +69,16 @@ type ValidatorsCursor struct {
 	Index uint64 `json:"vi"`
 }
 
+type WithdrawalsCursor struct {
+	GenericCursor
+
+	Slot            uint64
+	WithdrawalIndex uint64
+	Index           uint64
+	Recipient       []byte
+	Amount          uint64
+}
+
 type User struct {
 	Id        uint64 `db:"id"`
 	Password  string `db:"password"`
