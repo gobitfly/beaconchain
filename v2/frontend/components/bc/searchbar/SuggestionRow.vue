@@ -19,9 +19,9 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-    suggestion: ResultSuggestion,
-    barStyle: SearchbarStyle,
-    barPurpose: SearchbarPurpose
+    suggestion : ResultSuggestion,
+    barStyle : SearchbarStyle,
+    barPurpose : SearchbarPurpose
 }>()
 
 const { t } = useI18n()

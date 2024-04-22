@@ -4,7 +4,7 @@ import { ChainInfo } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
-  barStyle: SearchbarStyle
+  barStyle : SearchbarStyle
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each key is a chain ID and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
