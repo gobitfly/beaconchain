@@ -3,7 +3,7 @@ import type Menubar from 'primevue/menubar'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { Dashboard } from '~/types/api/dashboard'
-import { type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
+import { type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
 
 const { width } = useWindowSize()
 
@@ -14,7 +14,7 @@ const isValidatorDashboard = route.name === 'dashboard-id'
 
 const { isLoggedIn } = useUserStore()
 const { dashboards, getDashboardLabel } = useUserDashboardStore()
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, dashboardType, setDashboardKey } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -64,20 +64,31 @@ const items = computed<MenuBarEntry[]>(() => {
       }
     }
   }
+  const createMenuBarButton = (type: DashboardType, label: string, id: DashboardKey): MenuBarButton => {
+    if (type === dashboardType.value) {
+      return { label, command: () => setDashboardKey(id), active: id === dashboardKey.value }
+    }
+
+    if (type === 'validator') {
+      return { label, route: `/dashboard/${id}` }
+    }
+    return { label, route: `/account-dashboard/${id}` }
+  }
+
   addToSortedItems(0, dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
-    return { label: getDashboardName(cd), route: `/dashboard/${cd.hash ?? cd.id}` }
+    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
   addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
     const cd = db as CookieDashboard
-    return { label: getDashboardName(cd), route: `/account-dashboard/${cd.hash ?? cd.id}` }
+    return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
   return sortedItems.map((items) => {
     // if we are in a public dashboard and change the validators then the route does not get updated
     const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
-    const active = items.find(i => i.route === fixedRoute.path)
+    const active = items.find(i => i.active || i.route === fixedRoute.path)
     return {
       active: !!active,
       label: active?.label ?? items[0].label,
@@ -102,14 +113,13 @@ const title = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <!--TODO: Theses should only link if the dashboard type is changed, otherwise a simple setDashboardKey would be enough and cleaner-->
-          <NuxtLink v-if="item.route" :to="item.route" :class="{ 'p-active': item.active }">
-            <span class="button-content" :class="[item.class, { 'pointer': item.dropdown }]">
+          <NuxtLink v-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+            <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
           </NuxtLink>
-          <span v-else class="button-content" :class="{ 'pointer': item.dropdown }">
+          <span v-else class="button-content pointer" :class="{ 'p-active': item.active }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
           </span>

@@ -9,7 +9,6 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
-import DashboardControls from '~/components/dashboard/DashboardControls.vue'
 
 const { isLoggedIn } = useUserStore()
 
@@ -73,7 +72,7 @@ watch(dashboardKey, (newKey, oldKey) => {
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
-      <DashboardControls type="validator" />
+      <DashboardControls />
       <div>
         <DashboardValidatorSlotViz />
       </div>

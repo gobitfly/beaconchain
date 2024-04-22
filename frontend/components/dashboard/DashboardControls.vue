@@ -7,21 +7,16 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import { BcDialogConfirm } from '#components'
-import type { DashboardKey, DashboardType } from '~/types/dashboard'
+import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 
-const { dashboardKey, isPublic, setDashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic, setDashboardKey, dashboardType } = useDashboardKey()
 const { refreshDashboards, dashboards, getDashboardLabel } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const dialog = useDialog()
 const { fetch } = useCustomFetch()
-
-interface Props {
-  type: DashboardType,
-}
-const props = defineProps<Props>()
 
 const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
@@ -35,7 +30,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     command: () => { manageGroupsModalVisisble.value = true }
   })
 
-  if (props.type === 'validator') {
+  if (dashboardType.value === 'validator') {
     buttons.push(
       {
         dropdown: false,
@@ -69,13 +64,13 @@ const remove = () => {
     },
     onClose: response => response?.data && removeDashboard(dashboardKey.value),
     data: {
-      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, props.type) })
+      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
 const removeDashboard = async (key: DashboardKey) => {
-  if (props.type === 'validator') {
+  if (dashboardType.value === 'validator') {
     await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
   } else {
     await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
@@ -86,7 +81,7 @@ const removeDashboard = async (key: DashboardKey) => {
   let preferedDashboards = dashboards.value?.validator_dashboards ?? []
   let fallbackDashboards = dashboards.value?.account_dashboards ?? []
   let fallbackUrl = '/account-dashboard/'
-  if (props.type === 'account') {
+  if (dashboardType.value === 'account') {
     preferedDashboards = dashboards.value?.account_dashboards ?? []
     fallbackDashboards = dashboards.value?.validator_dashboards ?? []
     fallbackUrl = '/dashboard/'
@@ -110,7 +105,7 @@ const removeDashboard = async (key: DashboardKey) => {
 
 <template>
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="type=='validator'" v-model="manageValidatorsModalVisisble" />
+  <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div v-if="isPublic" class="action-button-container">
       <Button class="share-button" :disabled="true">

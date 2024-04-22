@@ -4,6 +4,7 @@ export interface MenuBarButton {
   route?: string;
   class?: string;
   component?: Component;
+  active?: boolean;
 }
 
 export interface MenuBarEntry extends MenuBarButton {
