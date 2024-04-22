@@ -19,12 +19,13 @@ const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | u
 const { overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
-const colsVisible = computed(() => { // TODO: finetune
+const colsVisible = computed(() => {
   return {
-    group: width.value > 1050,
+    group: width.value > 980,
     slot: width.value > 850,
-    epoch: width.value > 650,
-    recipient: width.value > 450
+    epoch: width.value > 700,
+    recipient: width.value > 600,
+    amount: width.value > 470
   }
 })
 
@@ -87,7 +88,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
           <BcTable
             :data="withdrawals"
             data-key="epoch"
-            :expandable="true"
+            :expandable="!colsVisible.group"
             class="withdrawal-table"
             :cursor="cursor"
             :page-size="pageSize"
@@ -116,6 +117,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               </template>
             </Column>
             <Column
+              v-if="colsVisible.group"
               field="group_id"
               body-class="group-id"
               header-class="group-id"
@@ -128,6 +130,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               </template>
             </Column>
             <Column
+              v-if="colsVisible.epoch"
               field="epoch"
               :sortable="true"
               :header="$t('common.epoch')"
@@ -180,6 +183,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               </template>
             </Column>
             <Column
+              v-if="colsVisible.amount"
               field="amount"
               :sortable="true"
               body-class="amount"
@@ -187,8 +191,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               :header="$t('dashboard.validator.col.amount')"
             >
               <template #body="slotProps">
-                <!--TODO: Using BlockTableRewardItem is not perfect-->
-                <BlockTableRewardItem :reward="slotProps.data.amount" />
+                <BcFormatValue :value="slotProps.data.amount" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -201,18 +204,18 @@ const getRowClass = (row: VDBBlocksTableRow) => {
                 </div>
                 <div v-if="!colsVisible.group" class="row">
                   <div class="label">
-                    {{ $t('common.slot') }}:
-                  </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
-                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                  </NuxtLink>
-                </div>
-                <div v-if="!colsVisible.group" class="row">
-                  <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
                   <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  </NuxtLink>
+                </div>
+                <div v-if="!colsVisible.group" class="row">
+                  <div class="label">
+                    {{ $t('common.slot') }}:
+                  </div>
+                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
                   </NuxtLink>
                 </div>
                 <div v-if="!colsVisible.group" class="row">
@@ -227,6 +230,12 @@ const getRowClass = (row: VDBBlocksTableRow) => {
                     :ens="slotProps.data.recipient?.ens"
                   />
                   <span v-else>-</span>
+                </div>
+                <div v-if="!colsVisible.group" class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.amount') }}:
+                  </div>
+                  <BcFormatValue :value="slotProps.data.amount" />
                 </div>
               </div>
             </template>
