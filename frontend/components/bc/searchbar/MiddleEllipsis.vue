@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type ComponentPublicInstance, warn } from 'vue'
 
-const DEBUG = true // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
+const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 interface ExportedMembers {
   myInstanceId: ComputedRef<number>,
@@ -355,6 +355,18 @@ function enterUpdateCycleAsAparent (childId? : number) {
   for (const child of innerElements.widthDefinedChildren) {
     child.updateContent()
   }
+  /*
+  TODO: one last visual bug to fix :)
+  Solution:
+   updateContent() should return the gap after clipping, and take a new argument (additional room)
+   If at least one defined-width child returns a large gap
+     Sum the widths of those returning a large gap
+     Spread this additional room over the width-defined children with a narrow gap AND a flex-grow value (read css)
+     For all of those that have a narrow gap and a flex-grow value
+       update again with this additional room
+    Looks like time is lost, but this repetition of updates is balanced by at least one child that did not run its search.
+  */
+
   // now that they adapted their text to their width, we can fill them, their text is decided so their will not influence each other
   for (const child of innerElements.widthDefinedChildren) {
     child.settleAfterUpdate()

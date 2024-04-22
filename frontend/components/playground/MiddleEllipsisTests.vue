@@ -32,11 +32,11 @@ const showAllCSSclipped = ref<boolean>(false)
     For this test:<br>
     * Blue means that the width is not defined (the component finds a width by using its content and its initial-flex-grow props).
     Other colors mean that the width is defined with flex-grow or width %<br>
-    * A red frame highlights a MiddleEllipsis controlling several MiddleEllipses to make sure they don't disturb each other,
-    and allows for children of <i>undefined width</i>.
+    * A red frame highlights a MiddleEllipsis controlling several MiddleEllipses (this is needed to make sure they don't disturb each other,
+    and allows for children of <i>undefined width</i>).
   </p>
   <div style="position: relative;">
-    <p><b>With 1 ellispis:</b></p>
+    <p><b>With 1 ellipsis:</b></p>
     <div class="frame medium">
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" />
     </div>
@@ -49,11 +49,11 @@ const showAllCSSclipped = ref<boolean>(false)
         <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
       </BcSearchbarMiddleEllipsis>
     </div>
-    <p>* you can put anything in a parent MiddleEllipsis, he will control the children and leave the rest untouched.</p>
+    <p>* you can put anything in a parent MiddleEllipsis, he will control its children and leave the rest as it is.</p>
   </div>
 
   <div style="position: relative;">
-    <p><b>With 2 ellispes:</b></p>
+    <p><b>With 2 ellipses:</b></p>
     <p>
       Sometimes, you will notice that there is 1 ellipsis only. This is not a bug, it is because 2 ellipses would not make sense:
       <br>
@@ -76,7 +76,7 @@ const showAllCSSclipped = ref<boolean>(false)
   </div>
 
   <div style="position: relative;">
-    <p><b>With an adaptive number of ellipses (configurable, see the props):</b></p>
+    <p><b>With an adaptive number of ellipses (configurable in the props):</b></p>
     <p>
       <i>Play with the width of your window to see the number of ellipses change.</i><br><br>
       Configuration for this test:<br>
