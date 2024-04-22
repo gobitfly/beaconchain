@@ -29,7 +29,7 @@ function showDashboardCreation () {
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation()" />
       </template>
-      <DashboardControls type="account" />
+      <DashboardControls />
     </BcPageWrapper>
   </div>
 </template>
