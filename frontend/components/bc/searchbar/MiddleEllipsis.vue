@@ -351,22 +351,19 @@ function enterUpdateCycleAsAparent (childId? : number) {
   for (const child of innerElements.widthUndefinedChildren) {
     child.settleAfterUpdate()
   }
+  /*
+  TODO: one last visual bug to fix :)
+  Solution:
+   implement and expose calculateGapsWithOriginalText()
+   updateContent() should take a new argument (additional room)
+   Before updating: if at least one defined-width child with a flex-grow value (read css) has a large gap (which means it will not clip)
+     sum the gaps of those.
+     spread this additional room over the width-defined children with no gap AND a flex-grow value
+  */
   // now that the undefined-width children got a width, we allow the others to use the remaining room
   for (const child of innerElements.widthDefinedChildren) {
     child.updateContent()
   }
-  /*
-  TODO: one last visual bug to fix :)
-  Solution:
-   updateContent() should return the gap after clipping, and take a new argument (additional room)
-   If at least one defined-width child returns a large gap
-     Sum the widths of those returning a large gap
-     Spread this additional room over the width-defined children with a narrow gap AND a flex-grow value (read css)
-     For all of those that have a narrow gap and a flex-grow value
-       update again with this additional room
-    Looks like time is lost, but this repetition of updates is balanced by at least one child that did not run its search.
-  */
-
   // now that they adapted their text to their width, we can fill them, their text is decided so their will not influence each other
   for (const child of innerElements.widthDefinedChildren) {
     child.settleAfterUpdate()
