@@ -54,7 +54,7 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 		return fmt.Errorf("gaps in dashboard epoch, skipping total for now: %v", gaps) // sanity, this should never happen
 	}
 
-	err = d.aggregateAndAddToTotal(lastTotalExported.EpochEnd, currentExportedEpoch)
+	err = d.aggregateAndAddToTotal(lastTotalExported.EpochEnd, currentExportedEpoch+1)
 	if err != nil {
 		return errors.Wrap(err, "failed to aggregate total")
 	}
@@ -62,7 +62,7 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 	return nil
 }
 
-// both inclusive
+// epochStart incl, epochEnd excl
 func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uint64) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
@@ -74,7 +74,7 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 
 	err = AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:                    epochStart,
-		EndEpochInclusive:             epochEnd,
+		EndEpoch:                      epochEnd,
 		StartBoundEpoch:               0,
 		TableFrom:                     "validator_dashboard_data_epoch",
 		TableTo:                       "validator_dashboard_data_rolling_total",

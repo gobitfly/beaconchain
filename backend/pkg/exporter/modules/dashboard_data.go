@@ -198,13 +198,13 @@ func (d *dashboardData) processHeadQueue() {
 	}
 }
 
-// returns epochs between start and end that are missing in the database, arguments are inclusive
+// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
 func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
-	if end < start {
+	if end <= start {
 		return nil, nil
 	}
 	missingEpochs := make([]uint64, 0)
-	for epoch := start; epoch <= end; epoch++ {
+	for epoch := start; epoch < end; epoch++ {
 		hasEpoch, err := edb.HasDashboardDataForEpoch(uint64(epoch))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get epoch")

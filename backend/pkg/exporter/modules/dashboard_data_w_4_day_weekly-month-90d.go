@@ -112,7 +112,7 @@ func (d *dayUpAggregator) getMissingRollingXDaysHeadEpochs(days int, intendedHea
 	if bounds.EpochEnd <= 0 || intendedHeadEpoch-bounds.EpochEnd < d.epochWriter.getRetentionEpochDuration() {
 		return nil, nil
 	}
-	return getMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch))
+	return getMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch)+1)
 }
 
 func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string, currentEpochHead uint64) error {
