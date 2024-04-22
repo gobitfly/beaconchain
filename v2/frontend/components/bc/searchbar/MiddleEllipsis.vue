@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type ComponentPublicInstance, warn } from 'vue'
 
-const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
+const DEBUG = true // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 interface ExportedMembers {
   myInstanceId: ComputedRef<number>,

@@ -5,7 +5,7 @@ const randomTexts = ref<string[]>([])
 function getRandomText () : string {
   let result = ''
 
-  for (let l = 30 + Math.floor(Math.random() * 100); l >= 0; l--) {
+  for (let l = 50 + Math.floor(Math.random() * 100); l >= 0; l--) {
     result += characters[Math.floor(Math.random() * characters.length)]
   }
   return result
@@ -49,7 +49,7 @@ const showAllCSSclipped = ref<boolean>(false)
         <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
       </BcSearchbarMiddleEllipsis>
     </div>
-    <p>* you can put anything in a parent, he will control the child Middle Ellipses and leave the rest untouched.</p>
+    <p>* you can put anything in a parent MiddleEllipsis, he will control the children and leave the rest untouched.</p>
   </div>
 
   <div style="position: relative;">
