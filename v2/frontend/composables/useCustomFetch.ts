@@ -1,5 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
 import type { LoginResponse } from '~/types/user'
+import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
@@ -24,6 +25,7 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
+  SEARCH = '/search'
 }
 
 const pathNames = Object.values(API_PATH)
@@ -155,6 +157,12 @@ const mapping: Record<string, MappingData> = {
     path: '/login',
     method: 'POST',
     mock: false
+  },
+  [API_PATH.SEARCH]: {
+    path: '/search',
+    method: 'POST',
+    mock: true,
+    mockFunction: simulateAPIresponseForTheSearchBar
   }
 }
 

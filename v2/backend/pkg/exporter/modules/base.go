@@ -19,8 +19,7 @@ type ModuleInterface interface {
 	Init() error
 	GetName() string // Used for logging
 
-	// !Do not block in this functions for an extended period of time!
-	OnHead(*types.StandardEventHeadResponse) error
+	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error
 	OnChainReorg(*types.StandardEventChainReorg) error
 }
@@ -31,7 +30,6 @@ var Client *rpc.Client
 func StartAll(context ModuleContext) {
 	if !utils.Config.JustV2 {
 		go networkLivenessUpdater(context.ConsClient)
-		go eth1DepositsExporter()
 		go genesisDepositsExporter(context.ConsClient)
 		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
@@ -65,10 +63,12 @@ func StartAll(context ModuleContext) {
 
 	modules := []ModuleInterface{}
 
-	if !utils.Config.JustV2 {
-		modules = append(modules, NewSlotExporter(context))
-	} else {
+	if utils.Config.JustV2 {
 		modules = append(modules, NewDashboardDataModule(context))
+	} else {
+		modules = append(modules,
+			NewSlotExporter(context),
+			NewExecutionDepositsExporter(context))
 	}
 
 	startSubscriptionModules(&context, modules)
