@@ -286,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	for i, row := range data {
 		pubkeys[i] = hexutil.Encode(row.PublicKey)
 	}
-	indices, err := d.services.GetValidatorIndexOfPubkeySlice(pubkeys)
+	indices, err := d.services.GetValidatorIndicesOfPubkeySlice(pubkeys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to recover indices after query: %w", err)
 	}
