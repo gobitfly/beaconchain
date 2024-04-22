@@ -19,6 +19,9 @@ export function useValidatorDashboardSummaryStore () {
   const query = computed(() => storedQuery.value)
 
   async function getSummary (dashboardKey: DashboardKey, query?: TableQueryParams) {
+    if (!dashboardKey) {
+      return
+    }
     storedQuery.value = query
 
     const res = await fetch<InternalGetValidatorDashboardSummaryResponse>(API_PATH.DASHBOARD_SUMMARY, undefined, { dashboardKey }, query)
