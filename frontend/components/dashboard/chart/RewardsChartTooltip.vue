@@ -36,7 +36,7 @@ interface GroupValue {
   value: string
 }
 
-interface Group {
+interface Series {
   name: string,
   value: string
   groups: GroupValue[]
@@ -55,18 +55,39 @@ const mapData = (groups: RewardChartGroupGroupData[]):GroupValue[] => {
   }))
 }
 
-const data = computed<Group[]>(() => {
-  const el:Group = {
+const data = computed<Series[]>(() => {
+  const el:Series = {
     name: props.series[1].name,
     value: props.series[1].formatedData[props.dataIndex].label as string,
     groups: mapData(props.series[1].groups)
   }
-  const cl:Group = {
+  const cl:Series = {
     name: props.series[0].name,
     value: props.series[0].formatedData[props.dataIndex].label as string,
     groups: mapData(props.series[0].groups)
   }
-  return [el, cl]
+
+  const totalGroups = props.series[0].groups.map((g) => {
+    const elValue = props.series[1].groups.find(elG => elG.id === g.id)?.bigData?.[props.dataIndex] ?? BigNumber.from(0)
+    const bigData = [...g.bigData]
+    bigData[props.dataIndex] = bigData[props.dataIndex].add(elValue)
+    return {
+      ...g,
+      bigData
+    }
+  })
+  props.series[1].groups.forEach((g) => {
+    if (!totalGroups.find(tG => tG.id === g.id)) {
+      totalGroups.push(g)
+    }
+  })
+
+  const total: Series = {
+    name: props.t('common.total'),
+    value: `${props.weiToValue(props.series[1].bigData[props.dataIndex].add(props.series[0].bigData[props.dataIndex])).label}`,
+    groups: mapData(totalGroups)
+  }
+  return [el, cl, total]
 })
 
 </script>
