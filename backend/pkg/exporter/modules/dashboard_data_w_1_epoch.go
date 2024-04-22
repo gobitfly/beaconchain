@@ -26,7 +26,12 @@ func newEpochWriter(d *dashboardData) *epochWriter {
 	}
 }
 
+// How wide each table partition is in epochs
 const PartitionEpochWidth = 3
+
+// How long epochs will remain in the database is defined in getRetentionEpochDuration.
+// For ETH mainnet this will be 9 epochs, as 9 epochs is exactly the range we need in the hour table (roughly one hour).
+// This buffer can be used to increase or decrease from that 9 epoch target. A value of 1 will keep exactly those 9 needed epochs in the database.
 const retentionBuffer = 1.1 // do not go below 1
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {

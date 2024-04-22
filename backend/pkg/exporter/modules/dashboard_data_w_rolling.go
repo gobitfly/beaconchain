@@ -240,7 +240,7 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 
 	return AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           startEpoch,
-		EndEpoch:             endEpoch,
+		EndEpochInclusive:    endEpoch,
 		StartBoundEpoch:      tailEnd + 1, // since tail is inclusive (remove), we need to set the start_epoch for new inserts to tail + 1
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              tableName,
@@ -253,7 +253,7 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 type CustomRolling struct {
 	Log                  ModuleLog // for logging, must provide
 	StartEpoch           uint64    // incl, must be provided
-	EndEpoch             uint64    // incl, must be provided
+	EndEpochInclusive    uint64    // incl, must be provided
 	StartBoundEpoch      int64     // incl, must be provided
 	TableFrom            string    // must provide
 	TableTo              string    // must provide
@@ -289,8 +289,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		custom.TailBalancesInsertColumnQuery = "null,"
 	}
 
-	if custom.StartEpoch > custom.EndEpoch {
-		custom.Log.Infof("nothing to do, start epoch is greater than end epoch (%d > %d)", custom.StartEpoch, custom.EndEpoch)
+	if custom.StartEpoch > custom.EndEpochInclusive {
+		custom.Log.Infof("nothing to do, start epoch is greater than end epoch (%d > %d)", custom.StartEpoch, custom.EndEpochInclusive)
 		return nil
 	}
 
@@ -322,7 +322,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	// I know how this looks but the query planner of postgres has difficulty with the agg group by for just one epoch
 	// So here some optimization for when we only aggregate one epoch
 	// just select, no aggregate, grouping or join needed
-	if custom.StartEpoch == custom.EndEpoch {
+	if custom.StartEpoch == custom.EndEpochInclusive {
 		custom.Agg = TableAGG{
 			SUM:             "",
 			BOOL_OR:         "",
@@ -522,10 +522,10 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		return errors.Wrap(err, "failed to execute template")
 	}
 
-	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
+	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpochInclusive, custom.StartBoundEpoch)
 
 	result, err := tx.Exec(queryBuffer.String(),
-		custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,
+		custom.StartEpoch, custom.EndEpochInclusive, custom.StartBoundEpoch,
 	)
 
 	if err != nil {

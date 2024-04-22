@@ -18,6 +18,9 @@ type epochToHourAggregator struct {
 	mutex *sync.Mutex
 }
 
+// How long aggregated hours will remain in the database is defined in getHourRetentionDurationEpochs.
+// For ETH mainnet this will be 225 epochs, as 225 epochs is exactly the range we need in the day table (equals 1 day).
+// This buffer can be used to increase or decrease from that 225 epoch target. A value of 1 will keep exactly those 25 (225 / 9) needed hour aggregations in the database.
 const hourRetentionBuffer = 1.1 // do not go below 1
 
 func getHourAggregateWidth() uint64 {
@@ -110,7 +113,7 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 			boundsEnd = currentExportedEpoch + 1
 		}
 
-		err = d.aggregate1hSpecific(boundsStart, boundsEnd)
+		err = d.aggregate1hWithBounds(boundsStart, boundsEnd)
 		if err != nil {
 			return errors.Wrap(err, "failed to aggregate 1h")
 		}
@@ -166,7 +169,7 @@ func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStart
 }
 
 // epochStart incl, epochEnd excl
-func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64) error {
+func (d *epochToHourAggregator) aggregate1hWithBounds(epochStart, epochEnd uint64) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -189,11 +192,11 @@ func (d *epochToHourAggregator) aggregate1hSpecific(epochStart, epochEnd uint64)
 		}
 	}
 
-	d.log.Infof("aggregating 1h specific, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
+	d.log.Infof("aggregating 1h with bounds, startEpoch: %d endEpoch: %d", epochStart, epochEnd)
 
 	err = AddToRollingCustom(tx, CustomRolling{
 		StartEpoch:           epochStart,
-		EndEpoch:             epochEnd - 1, // rolling arg is inclusive
+		EndEpochInclusive:    epochEnd - 1, // rolling arg is inclusive
 		StartBoundEpoch:      int64(boundsStart),
 		TableFrom:            "validator_dashboard_data_epoch",
 		TableTo:              "validator_dashboard_data_hourly",

@@ -23,18 +23,39 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-const debugAggregateMidEveryEpoch = false                            // prod: false
-const debugTargetBackfillEpoch = uint64(0)                           // prod: 0
-const debugSetBackfillCompleted = true                               // prod: true
-const debugSkipOldEpochClear = false                                 // prod: false
-const debugAddToColumnEngine = false                                 // prod: true?
+// Normally rolling aggregation is done when headEpochQueue exporter is near head, but for debugging purposes we can force it to be done every epoch
+const debugAggregateMidEveryEpoch = false // prod: false
+
+// If set to 0 exporter will backfill to node finalized head, use any other value to backfill up to that specific epoch
+const debugTargetBackfillEpoch = uint64(0) // prod: 0
+
+// Once backfill is done the exporter will start to listen for new head epochs to export. You can disable this behavior by setting this flag to false
+const debugSetBackfillCompleted = true // prod: true
+
+// Old epoch data is cleared from the database to save space and improve performance. This can be disabled for debugging purposes
+const debugSkipOldEpochClear = false // prod: false
+
+// If set to true some tables like the epoch based table or hourly based table will be manually added to AlloyDBs Column Engine
+const debugAddToColumnEngine = false // prod: true?
+
+// During backfill we can attempt to bootstrap the rolling tables on each UTC boundary day (as no tail fetching is needed here). So setting this will update the rolling tables every
+// 225 epochs (for ETH mainnet) but at the slight cost of increased aggregation time for this particular boundary epoch.
 const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: true
 
 // ----------- END OF DEBUG FLAGS ------------
 
+// How many epochs will be fetched in parallel from the node (relevant for backfill and rolling tail fetching). We are fetching the head epoch and
+// one epoch for each rolling table (tail), so if you want to fetch all epochs in one go (and your node can handle that) set this to at least 5.
 const epochFetchParallelism = 6
+
+// Fetching one epoch consists of multiple calls. You can define how many concurrent calls each epoch fetch will do. Keep in mind that
+// the total number of concurrent requests is epochFetchParallelism * epochFetchParallelismWithinEpoch
 const epochFetchParallelismWithinEpoch = 5
+
+// How many epochs will be written in parallel to the database
 const epochWriteParallelism = 3
+
+// How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 3
 
 type dashboardData struct {
@@ -62,7 +83,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	// Then those aggregators below use the epoch data to aggregate it into the respective tables
 	temp.epochToTotal = newEpochToTotalAggregator(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
-	temp.epochToDay = newHourToDayAggregator(temp)
+	temp.epochToDay = newEpochToDayAggregator(temp)
 
 	// Once an epoch is aggregated to its respective UTC day, we can use the UTC day table to aggregate up to the rolling window tables (7d, 30d, 90d)
 	temp.dayUp = newDayUpAggregator(temp)
@@ -144,9 +165,11 @@ func (d *dashboardData) processHeadQueue() {
 				stage = 1
 			}
 
+			doRollingAggregate := currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1
+
 			// Get epoch data from node and write to database
 			if stage <= 1 {
-				err := d.exportEpochAndTails(epoch)
+				err := d.exportEpochAndTails(epoch, debugAggregateMidEveryEpoch || doRollingAggregate)
 				if err != nil {
 					d.log.Error(err, "failed to export epoch tail data", 0, map[string]interface{}{"epoch": epoch})
 					metrics.Errors.WithLabelValues("exporter_v2dash_export_epoch_tail_fail").Inc()
@@ -158,7 +181,6 @@ func (d *dashboardData) processHeadQueue() {
 
 			// Run aggregations
 			if stage <= 2 {
-				doRollingAggregate := currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1
 				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || doRollingAggregate, false)
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
@@ -172,7 +194,7 @@ func (d *dashboardData) processHeadQueue() {
 			break
 		}
 
-		d.log.Infof("completed dashboard epoch data for epoch %d in %v", epoch, time.Since(startTime))
+		d.log.Infof("[time] completed dashboard epoch data for epoch %d in %v", epoch, time.Since(startTime))
 	}
 }
 
@@ -196,37 +218,40 @@ func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
 
 // exports the provided headEpoch plus any tail epochs that are needed for rolling aggregation
 // fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
-func (d *dashboardData) exportEpochAndTails(headEpoch uint64) error {
-	// for 24h aggregation
-	missingTails, err := d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
-	if err != nil {
-		return errors.Wrap(err, "failed to get missing 24h tail epochs")
+func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails bool) error {
+	missingTails := make([]uint64, 0)
+	if fetchRollingTails {
+		// for 24h aggregation
+		missingTails, err := d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing 24h tail epochs")
+		}
+
+		d.log.Infof("missing 24h tails: %v", missingTails)
+
+		// day aggregation
+		daysMissingTails, err := d.dayUp.getMissingRollingDayTailEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing day tail epochs")
+		}
+
+		dayMissingHeads, err := d.dayUp.getMissingRollingDayHeadEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing day head epochs")
+		}
+
+		// merge
+		missingTails = append(missingTails, deduplicate(append(daysMissingTails, dayMissingHeads...))...)
+
+		if len(missingTails) > 10 {
+			d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")
+		}
+
+		// sort asc
+		sort.Slice(missingTails, func(i, j int) bool {
+			return missingTails[i] < missingTails[j]
+		})
 	}
-
-	d.log.Infof("missing 24h tails: %v", missingTails)
-
-	// day aggregation
-	daysMissingTails, err := d.dayUp.getMissingRollingDayTailEpochs(headEpoch)
-	if err != nil {
-		return errors.Wrap(err, "failed to get missing day tail epochs")
-	}
-
-	dayMissingHeads, err := d.dayUp.getMissingRollingDayHeadEpochs(headEpoch)
-	if err != nil {
-		return errors.Wrap(err, "failed to get missing day head epochs")
-	}
-
-	// merge
-	missingTails = append(missingTails, deduplicate(append(daysMissingTails, dayMissingHeads...))...)
-
-	if len(missingTails) > 10 {
-		d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")
-	}
-
-	// sort asc
-	sort.Slice(missingTails, func(i, j int) bool {
-		return missingTails[i] < missingTails[j]
-	})
 
 	hasHeadAlreadyExported, err := edb.HasDashboardDataForEpoch(headEpoch)
 	if err != nil {
@@ -374,7 +399,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 				remainingTimeEst = time.Duration(time.Since(start).Nanoseconds() / int64(len(datas)) * int64(remaining))
 			}
 
-			d.log.Infof("epoch data fetcher, fetched %v epochs %v in %v. Remaining: %v (%v)", len(datas), gapGroup.Epochs, time.Since(start), remaining, remainingTimeEst)
+			d.log.Infof("[time] epoch data fetcher, fetched %v epochs %v in %v. Remaining: %v (%v)", len(datas), gapGroup.Epochs, time.Since(start), remaining, remainingTimeEst)
 			metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs").Observe(time.Since(start).Seconds())
 			metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs_per_epochs").Observe(time.Since(start).Seconds() / float64(len(datas)))
 		}
@@ -598,7 +623,7 @@ func containsEpoch(d []DataEpoch, epoch uint64) bool {
 func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
 	totalStart := time.Now()
 	defer func() {
-		d.log.Infof("storage, wrote all epoch data in %v", time.Since(totalStart))
+		d.log.Infof("[time] storage, wrote all epoch data in %v", time.Since(totalStart))
 		metrics.TaskDuration.WithLabelValues("exporter_v2dash_write_epochs").Observe(time.Since(totalStart).Seconds())
 	}()
 
@@ -679,7 +704,7 @@ func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWind
 			metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_roling_fail").Inc()
 			return errors.Wrap(err, "failed to aggregate")
 		}
-		d.log.Infof("all of epoch based aggregation took %v", time.Since(start))
+		d.log.Infof("[time] all of epoch based aggregation took %v", time.Since(start))
 		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_non_roling").Observe(time.Since(start).Seconds())
 
 		lastExportedHour = currentStartBound
@@ -718,7 +743,7 @@ func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWind
 func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) error {
 	start := time.Now()
 	defer func() {
-		d.log.Infof("all of mid aggregation took %v", time.Since(start))
+		d.log.Infof("[time] all of mid aggregation took %v", time.Since(start))
 		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_roling").Observe(time.Since(start).Seconds())
 	}()
 
@@ -1049,7 +1074,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		return nil, err
 	}
 
-	d.log.Infof("retrieved all data for epoch %d in %v", epoch, time.Since(totalStart))
+	d.log.Infof("[time] retrieved all data for epoch %d in %v", epoch, time.Since(totalStart))
 
 	return &result, nil
 }
@@ -1074,12 +1099,12 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 			if data.startBalances.Data[i].Status.IsActive() {
 				activeCount++
-				validatorsData[i].AttestationsScheduled = sql.NullInt16{Int16: 1, Valid: true}
+				validatorsData[i].AttestationsScheduled = utils.NullInt16(1)
 			}
 
 			if data.genesis {
-				validatorsData[i].DepositsCount = sql.NullInt16{Int16: 1, Valid: true}
-				validatorsData[i].DepositsAmount = sql.NullInt64{Int64: int64(data.startBalances.Data[i].Validator.EffectiveBalance), Valid: true}
+				validatorsData[i].DepositsCount = utils.NullInt16(1)
+				validatorsData[i].DepositsAmount = utils.NullInt64(int64(data.startBalances.Data[i].Validator.EffectiveBalance))
 			}
 		} else {
 			pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
@@ -1154,7 +1179,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	for _, block := range data.beaconBlockData {
 		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Int16++
 		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Valid = true
-		validatorsData[block.Data.Message.ProposerIndex].LastSubmittedDutyEpoch = sql.NullInt32{Int32: int32(block.Data.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch), Valid: true}
+		validatorsData[block.Data.Message.ProposerIndex].LastSubmittedDutyEpoch = utils.NullInt32(int32(block.Data.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch))
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
 			// Properly verify that deposit is valid:
@@ -1223,12 +1248,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						return nil, errors.New("proposer index out of range")
 					}
 
-					validatorsData[validator_index].InclusionDelaySum = sql.NullInt32{
-						Int32: int32(block.Data.Message.Slot - attestation.Data.Slot - 1),
-						Valid: true,
-					}
+					validatorsData[validator_index].InclusionDelaySum = utils.NullInt32(int32(block.Data.Message.Slot - attestation.Data.Slot - 1))
 
-					validatorsData[validator_index].LastSubmittedDutyEpoch = sql.NullInt32{Int32: int32(attestation.Data.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch), Valid: true}
+					validatorsData[validator_index].LastSubmittedDutyEpoch = utils.NullInt32(int32(attestation.Data.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch))
 
 					optimalInclusionDistance := 0
 					for i := attestation.Data.Slot + 1; i < block.Data.Message.Slot; i++ {
@@ -1239,7 +1261,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 						}
 					}
 
-					validatorsData[validator_index].OptimalInclusionDelay = sql.NullInt32{Int32: int32(optimalInclusionDistance), Valid: true}
+					validatorsData[validator_index].OptimalInclusionDelay = utils.NullInt32(int32(optimalInclusionDistance))
 				}
 			}
 		}
@@ -1248,17 +1270,17 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		for _, data := range block.Data.Message.Body.AttesterSlashings {
 			slashedIndices := data.GetSlashedIndices()
 			for _, index := range slashedIndices {
-				validatorsData[index].SlashedBy = sql.NullInt32{Int32: int32(block.Data.Message.ProposerIndex), Valid: true}
+				validatorsData[index].SlashedBy = utils.NullInt32(int32(block.Data.Message.ProposerIndex))
 				validatorsData[index].Slashed = true
-				validatorsData[index].SlashedViolation = sql.NullInt16{Int16: SLASHED_VIOLATION_ATTESTATION, Valid: true}
+				validatorsData[index].SlashedViolation = utils.NullInt16(SLASHED_VIOLATION_ATTESTATION)
 			}
 		}
 
 		// proposer slashings "done" by proposer (slashed by)
 		for _, data := range block.Data.Message.Body.ProposerSlashings {
-			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedBy = sql.NullInt32{Int32: int32(block.Data.Message.ProposerIndex), Valid: true}
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedBy = utils.NullInt32(int32(block.Data.Message.ProposerIndex))
 			validatorsData[data.SignedHeader1.Message.ProposerIndex].Slashed = true
-			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedViolation = sql.NullInt16{Int16: SLASHED_VIOLATION_PROPOSER, Valid: true}
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedViolation = utils.NullInt16(SLASHED_VIOLATION_PROPOSER)
 		}
 	}
 
@@ -1269,38 +1291,32 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			return nil, errors.New("proposer index out of range")
 		}
 
-		validatorsData[validator_index].AttestationsHeadReward = sql.NullInt32{Int32: attestationReward.Head, Valid: true}
-		validatorsData[validator_index].AttestationsSourceReward = sql.NullInt32{Int32: attestationReward.Source, Valid: true}
-		validatorsData[validator_index].AttestationsTargetReward = sql.NullInt32{Int32: attestationReward.Target, Valid: true}
-		validatorsData[validator_index].AttestationsInactivityPenalty = sql.NullInt32{Int32: attestationReward.Inactivity, Valid: true}
-		validatorsData[validator_index].AttestationsInclusionsReward = sql.NullInt32{Int32: attestationReward.InclusionDelay, Valid: true}
-		validatorsData[validator_index].AttestationReward = sql.NullInt64{
-			Int64: int64(attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay),
-			Valid: true,
-		}
+		validatorsData[validator_index].AttestationsHeadReward = utils.NullInt32(attestationReward.Head)
+		validatorsData[validator_index].AttestationsSourceReward = utils.NullInt32(attestationReward.Source)
+		validatorsData[validator_index].AttestationsTargetReward = utils.NullInt32(attestationReward.Target)
+		validatorsData[validator_index].AttestationsInactivityPenalty = utils.NullInt32(attestationReward.Inactivity)
+		validatorsData[validator_index].AttestationsInclusionsReward = utils.NullInt32(attestationReward.InclusionDelay)
+		validatorsData[validator_index].AttestationReward = utils.NullInt64(int64(attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay))
 		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validator_index].Validator.EffectiveBalance)]]
-		validatorsData[validator_index].AttestationsIdealHeadReward = sql.NullInt32{Int32: idealRewardsOfValidator.Head, Valid: true}
-		validatorsData[validator_index].AttestationsIdealTargetReward = sql.NullInt32{Int32: idealRewardsOfValidator.Target, Valid: true}
-		validatorsData[validator_index].AttestationsIdealSourceReward = sql.NullInt32{Int32: idealRewardsOfValidator.Source, Valid: true}
-		validatorsData[validator_index].AttestationsIdealInactivityPenalty = sql.NullInt32{Int32: idealRewardsOfValidator.Inactivity, Valid: true}
-		validatorsData[validator_index].AttestationsIdealInclusionsReward = sql.NullInt32{Int32: idealRewardsOfValidator.InclusionDelay, Valid: true}
+		validatorsData[validator_index].AttestationsIdealHeadReward = utils.NullInt32(idealRewardsOfValidator.Head)
+		validatorsData[validator_index].AttestationsIdealTargetReward = utils.NullInt32(idealRewardsOfValidator.Target)
+		validatorsData[validator_index].AttestationsIdealSourceReward = utils.NullInt32(idealRewardsOfValidator.Source)
+		validatorsData[validator_index].AttestationsIdealInactivityPenalty = utils.NullInt32(idealRewardsOfValidator.Inactivity)
+		validatorsData[validator_index].AttestationsIdealInclusionsReward = utils.NullInt32(idealRewardsOfValidator.InclusionDelay)
 
-		validatorsData[validator_index].AttestationIdealReward = sql.NullInt64{
-			Int64: int64(idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay),
-			Valid: true,
-		}
+		validatorsData[validator_index].AttestationIdealReward = utils.NullInt64(int64(idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay))
 
 		if attestationReward.Head > 0 {
-			validatorsData[validator_index].AttestationHeadExecuted = sql.NullInt16{Int16: 1, Valid: true}
-			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationHeadExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 		if attestationReward.Source > 0 {
-			validatorsData[validator_index].AttestationSourceExecuted = sql.NullInt16{Int16: 1, Valid: true}
-			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationSourceExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 		if attestationReward.Target > 0 {
-			validatorsData[validator_index].AttestationTargetExecuted = sql.NullInt16{Int16: 1, Valid: true}
-			validatorsData[validator_index].AttestationsExecuted = sql.NullInt16{Int16: 1, Valid: true}
+			validatorsData[validator_index].AttestationTargetExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 	}
 
