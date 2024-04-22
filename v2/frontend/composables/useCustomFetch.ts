@@ -13,6 +13,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_modify',
   DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
+  DASHBOARD_VALIDATOR_WITHDRAWALS = '/validator-dashboards/withdrawals',
   DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
@@ -61,6 +62,11 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
     path: 'validator-dashboards/{dashboard_id}/blocks',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/blocks`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS]: {
+    path: 'validator-dashboards/{dashboard_id}/withdrawals',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {
