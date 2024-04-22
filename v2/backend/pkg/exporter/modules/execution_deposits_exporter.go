@@ -385,6 +385,7 @@ func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDepos
 	insertDepositStmt, err := tx.Prepare(`
 		INSERT INTO eth1_deposits (
 			tx_hash,
+			tx_input,
 			tx_index,
 			block_number,
 			block_ts,
@@ -401,9 +402,10 @@ func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDepos
 			to_address,
 			log_index
 		)
-		VALUES ($1, $2, $3, TO_TIMESTAMP($4), $5, ENCODE($6, 'hex'), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		VALUES ($1, '\x00'::bytea, $2, $3, TO_TIMESTAMP($4), $5, ENCODE($6, 'hex'), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		ON CONFLICT (merkletree_index) DO UPDATE SET
 			tx_hash                = EXCLUDED.tx_hash,
+			tx_input               = EXCLUDED.tx_input,
 			tx_index               = EXCLUDED.tx_index,
 			block_number           = EXCLUDED.block_number,
 			block_ts               = EXCLUDED.block_ts,
