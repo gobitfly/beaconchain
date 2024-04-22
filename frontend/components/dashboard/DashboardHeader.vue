@@ -70,7 +70,7 @@ const items = computed<MenuBarEntry[]>(() => {
   }))
   addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
     const cd = db as CookieDashboard
-    return { label: getDashboardName(cd), route: `/account/${cd.hash ?? cd.id}` }
+    return { label: getDashboardName(cd), route: `/account-dashboard/${cd.hash ?? cd.id}` }
   }))
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
 
@@ -102,6 +102,7 @@ const title = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
+          <!--TODO: Theses should only link if the dashboard type is changed, otherwise a simple setDashboardKey would be enough and cleaner-->
           <NuxtLink v-if="item.route" :to="item.route" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class, { 'pointer': item.dropdown }]">
               <span class="text">{{ item.label }}</span>

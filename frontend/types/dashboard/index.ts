@@ -22,6 +22,7 @@ export type DashboardKeyData = {
   publicEntities:globalThis.Ref<string[]>,
   addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
+  setDashboardKey:(key:string) =>void,
 }
 
 // For not logged in Users we store the Dashboard in Cookies

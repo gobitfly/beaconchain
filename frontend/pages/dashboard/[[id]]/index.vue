@@ -5,59 +5,18 @@ import {
   faCubes,
   faFire,
   faWallet,
-  faMoneyBill,
-  faShare,
-  faUsers,
-  faTrash
+  faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { DashboardCreationController, BcDialogConfirm } from '#components'
-import type { CookieDashboard, DashboardKey } from '~/types/dashboard'
-import type { MenuBarEntry } from '~/types/menuBar'
+import { DashboardCreationController } from '#components'
+import type { CookieDashboard } from '~/types/dashboard'
+import DashboardControls from '~/components/dashboard/DashboardControls.vue'
 
 const { isLoggedIn } = useUserStore()
 
-const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
-const { refreshDashboards, updateHash, dashboards, getDashboardLabel } = useUserDashboardStore()
+const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
+const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
 
-const dialog = useDialog()
 const { t: $t } = useI18n()
-const { fetch } = useCustomFetch()
-const { width } = useWindowSize()
-
-const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (width.value < 520) {
-    return [
-      {
-        label: 'Manage',
-        dropdown: true,
-        items: [
-          {
-            label: $t('dashboard.validator.manage_groups'),
-            command: () => { manageGroupsModalVisisble.value = true }
-          },
-          {
-            label: $t('dashboard.validator.manage_validators'),
-            command: () => { manageValidatorsModalVisisble.value = true }
-          }
-        ]
-      }
-    ]
-  }
-
-  return [
-    {
-      dropdown: false,
-      label: $t('dashboard.validator.manage_groups'),
-      command: () => { manageGroupsModalVisisble.value = true }
-    },
-    {
-      dropdown: false,
-      label: $t('dashboard.validator.manage_validators'),
-      command: () => { manageValidatorsModalVisisble.value = true }
-    }
-  ]
-})
 
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
@@ -65,48 +24,9 @@ await Promise.all([
   useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
 ])
 
-const manageValidatorsModalVisisble = ref(false)
-const manageGroupsModalVisisble = ref(false)
-
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 function showDashboardCreationDialog () {
   dashboardCreationControllerModal.value?.show()
-}
-
-const share = () => {
-  alert('Not implemented yet')
-}
-
-const remove = () => {
-  dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.deletion.title')
-    },
-    onClose: response => response?.data && removeDashboard(dashboardKey.value),
-    data: {
-      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, 'validator') }) // TODO: Fix
-    }
-  })
-}
-
-const removeDashboard = async (key: DashboardKey) => {
-  await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
-
-  await refreshDashboards()
-
-  // forward user to another dashboard (if possible)
-  if ((dashboards.value?.validator_dashboards?.length ?? 0) > 0) {
-    setDashboardKey(`${dashboards.value?.validator_dashboards[0].id}`)
-    return
-  }
-
-  if ((dashboards.value?.account_dashboards?.length ?? 0) > 0) {
-    await navigateTo(`/account-dashboard/${dashboards.value?.account_dashboards[0].id}`)
-    return
-  }
-
-  // no other dashboard available, forward to creation screen
-  setDashboardKey('')
 }
 
 onMounted(() => {
@@ -143,8 +63,6 @@ watch(dashboardKey, (newKey, oldKey) => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
@@ -155,29 +73,7 @@ watch(dashboardKey, (newKey, oldKey) => {
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
-      <div class="header-row">
-        <div v-if="isPublic" class="action-button-container">
-          <Button class="share-button" :disabled="true">
-            {{ $t('dashboard.shared') }}<FontAwesomeIcon :icon="faUsers" />
-          </Button>
-        </div>
-        <div v-else class="action-button-container">
-          <Button class="share-button" @click="share()">
-            {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
-          </Button>
-          <Button class="p-button-icon-only" @click="remove()">
-            <FontAwesomeIcon :icon="faTrash" />
-          </Button>
-        </div>
-        <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
-          <template #item="{ item }">
-            <span class="button-content pointer">
-              <span class="text">{{ item.label }}</span>
-              <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
-            </span>
-          </template>
-        </Menubar>
-      </div>
+      <DashboardControls type="validator" />
       <div>
         <DashboardValidatorSlotViz />
       </div>
@@ -224,68 +120,6 @@ watch(dashboardKey, (newKey, oldKey) => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
-
-.header-row {
-  height: 30px;
-  display: flex;
-  justify-content: space-between;
-  gap: var(--padding);
-  margin-bottom: var(--padding);
-
-  .action-button-container{
-    display: flex;
-    gap: var(--padding);
-
-    .share-button{
-      display: flex;
-      gap: var(--padding-small);
-    }
-  }
-
-  :deep(.p-menubar .p-menubar-root-list) {
-    >.p-menuitem{
-      height: 30px;
-      color: var(--text-color-inverted);
-      background: var(--button-color-active);
-      font-weight: var(--standard_text_medium_font_weight);
-      border-color: var(--button-color-active);
-
-      >.p-menuitem-content {
-        padding: 0;
-
-        >.button-content{
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 7px 17px;
-
-          .pointer {
-            cursor: pointer;
-          }
-        }
-      }
-
-      >.p-submenu-list {
-        font-weight: var(--standard_text_font_weight);
-
-        >.p-menuitem .button-content{
-          gap: 0;
-          padding: 0;
-
-          .text {
-            @include utils.truncate-text;
-          }
-        }
-      }
-
-      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
-        background: var(--button-color-hover);
-      }
-    }
-  }
-}
-
 .panel-controller {
   display: flex;
   justify-content: center;

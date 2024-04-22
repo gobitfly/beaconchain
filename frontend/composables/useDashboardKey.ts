@@ -13,6 +13,7 @@ export function useDashboardKey () {
   const isPublic = computed(() => !!data.isPublic.value)
   const publicEntities = computed(() => data.publicEntities.value ?? [])
   const isPrivate = computed(() => isLoggedIn.value && !isPublic.value)
+  const setDashboardKey = (key: string) => data.setDashboardKey(key)
 
-  return { ...data, dashboardKey, isPublic, isPrivate, publicEntities }
+  return { ...data, dashboardKey, isPublic, isPrivate, publicEntities, setDashboardKey }
 }
