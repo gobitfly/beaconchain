@@ -110,7 +110,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 		d.log.Infof("rolling %dd bootstraping finished, currentHead: %v | bounds: %v | Epochs Per Day: %v", days, currentEpochHead, bounds, utils.EpochsPerDay())
 
 		// if rolling bounds are exactly what they should be, we are done here
-		if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-utils.EpochsPerDay() == bounds.EpochStart {
+		if currentEpochHead == bounds.EpochEnd-1 && bounds.EpochEnd-uint64(days)*utils.EpochsPerDay() == bounds.EpochStart {
 			log.Infof("rolling %dd is up to date, nothing to do", days) // perfect bounds after bootstrap, lucky day, done here
 			err = tx.Commit()
 			if err != nil {
