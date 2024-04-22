@@ -17,6 +17,7 @@
   --light-black: #2a262c;
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
+  --light-purple-blue: #545C7E;
   --blue: #2e82ae;
   --light-blue: #66bce9;
   --flashy-green: #90ed7d;
@@ -67,6 +68,15 @@
   --input-active-text-color: var(--light-black);
   --input-placeholder-text-color: var(--grey);
 
+  --searchbar-background-gaudy: var(--light-grey);
+  --searchbar-background-discreet: var(--purple-blue);
+  --searchbar-background-hover-discreet: var(--light-purple-blue);
+  --searchbar-background-pressed-discreet: var(--blue);
+  --searchbar-text-discreet: var(--light-grey);
+  --searchbar-text-detail-gaudy: var(--dark-grey);
+  --searchbar-text-detail-discreet: var(--grey);
+  --searchbar-filter-unselected-gaudy: var(--button-color-disabled);
+  --dropdown-background-hover: var(--grey);
   --tooltip-background: var(--light-grey-2);
   --tooltip-text-color: var(--light-black);
 
@@ -129,6 +139,10 @@
     --input-active-text-color: var(--light-grey);
     --input-placeholder-text-color: var(--grey);
 
+    --searchbar-background-gaudy: var(--light-black);
+    --searchbar-text-detail-gaudy: var(--grey);
+    --searchbar-filter-unselected-gaudy: var(--light-grey);
+    --dropdown-background-hover: var(--dark-grey);
     --tooltip-background: var(--light-grey);
     --tooltip-text-color: var(--light-black);
 
