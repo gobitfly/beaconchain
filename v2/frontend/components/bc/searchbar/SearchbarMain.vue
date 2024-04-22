@@ -254,7 +254,7 @@ function userPressedSearchButtonOrEnter () {
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
+      // here we assume that the result with the best `closeness` value is the first one in array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
       possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type, s: type.suggestions[0] } as Matching)
     }
   }
@@ -607,7 +607,7 @@ function informationIfHiddenResults () : string {
         <div v-else class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
             {{ t('search_bar.searching') }}
-            <BcLoadingSpinner :loading="true" size="small" alignment="default" />
+            <BcLoadingSpinner :loading="true" size="small" alignment="center" />
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
             {{ t('search_bar.something_wrong') }}
