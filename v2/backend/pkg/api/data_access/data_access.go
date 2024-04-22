@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -2158,9 +2159,72 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		}
 	}
 
-	validatorGroupMap, validators, err := d.getDashboardValidatorGroups(dashboardId)
-	if err != nil || len(validators) == 0 {
-		return nil, nil, err
+	// regexes taken from api handler common.go
+	searchPubkey := regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`).MatchString(search)
+	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
+	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
+
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+
+	validatorGroupMap := make(map[uint64]uint64)
+	var validators []uint64
+	if dashboardId.Validators == nil {
+		// Get the validators and their groups in case a dashboard id is provided
+		queryResult := []struct {
+			ValidatorIndex uint64 `db:"validator_index"`
+			GroupId        uint64 `db:"group_id"`
+		}{}
+
+		params := []interface{}{dashboardId.Id}
+		selectStr := `SELECT validator_index, group_id `
+		from := `FROM users_val_dashboards_validators validators `
+		where := `WHERE validators.dashboard_id = $1`
+		if searchIndex {
+			where += ` AND validator_index = $2`
+			params = append(params, search)
+		} else if searchGroup {
+			from += `INNER JOIN users_val_dashboards_groups groups ON validators.dashboard_id = groups.dashboard_id AND validators.group_id = groups.id `
+			where += ` AND LOWER(name) LIKE LOWER($2)`
+			params = append(params, "%"+search+"%")
+		} else if searchPubkey {
+			if err != nil {
+				return nil, nil, err
+			}
+			index, ok := validatorMapping.ValidatorIndices[search]
+			if !ok {
+				return nil, nil, fmt.Errorf("unknown pubkey: %s", search)
+			}
+			where += ` AND validator_index = $2`
+			params = append(params, index)
+		}
+
+		err := d.alloyReader.Select(&queryResult, selectStr+from+where, params...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, res := range queryResult {
+			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			validators = append(validators, res.ValidatorIndex)
+		}
+	} else {
+		// In case a list of validators is provided, set the group to default 0
+		validators = make([]uint64, 0, len(dashboardId.Validators))
+		for _, validator := range dashboardId.Validators {
+			if searchIndex && fmt.Sprint(validator.Index) != search ||
+				searchPubkey && (validatorMapping.ValidatorIndices[search] == nil || validator.Index != *validatorMapping.ValidatorIndices[search]) {
+				continue
+			}
+			validatorGroupMap[validator.Index] = t.DefaultGroupId
+			validators = append(validators, validator.Index)
+			if searchIndex || searchPubkey {
+				break
+			}
+		}
+	}
+	if len(validators) == 0 {
+		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 	}
 
 	proposals := make([]struct {
@@ -2207,7 +2271,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		val = currentCursor.Proposer
 	case enums.VDBBlockGroup:
 		// TODO join tables, need to migrate tables onto the same db
-		sortColName = ``
+		// sortColName = `group_id`
 		val = currentCursor.Group
 	case enums.VDBBlockStatus:
 		sortColName = `status`
@@ -2235,7 +2299,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		if onlyPrimarySort {
 			where += `slot` + sign + `$2`
 		} else {
-			where += `(slot < $2 AND ` + sortColName + ` = $3) OR ` + sortColName + sign + `$3`
+			// explicit cast to int because type of 'status' column is text for some reason
+			where += `(slot < $2 AND ` + sortColName + `::int = $3) OR ` + sortColName + `::int` + sign + `$3`
 			params = append(params, val)
 		}
 		where += `) `
@@ -2330,7 +2395,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		return data, &t.Paging{}, nil
 	}
 	p, err := utils.GetPagingFromData(proposals, currentCursor, moreDataFlag)
-	return data, p, err
+	if err != nil {
+		return nil, nil, err
+	}
+	return data, p, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
