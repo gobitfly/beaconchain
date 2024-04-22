@@ -25,21 +25,13 @@ cp .npmrc-example .npmrc
 ```
 Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token".
 
-In your `.npmrc` file, replace `FA_TOKEN` with the actual key. Note that there are two spots where it must be written.
+In your `.npmrc` file, replace `FA_TOKEN` with the actual key.
 
 Then type:
 ```bash
 cp .env-example .env
 ```
-Write the following settings in file `.env`:
-```
-NUXT_PUBLIC_API_CLIENT: "https://holesky.beaconcha.in/api/i/"
-NUXT_PUBLIC_LEGACY_API_CLIENT: "https://sepolia.beaconcha.in/"
-NUXT_PUBLIC_API_KEY: "API Key Secret"
-NUXT_PRIVATE_API_SERVER: "https://holesky.beaconcha.in/api/i/"
-NUXT_PRIVATE_LEGACY_API_SERVER: "https://sepolia.beaconcha.in/"
-
-```
+In file `.env`, write the URLs of the API servers and the secret key to access them (see the V2 frontend wiki page).
 
 Set the following mapping in your `/etc/hosts` file:
 ```

@@ -94,9 +94,9 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const addValidatorOrShowLimitReached = (result : ResultSuggestion) => {
+const addValidator = (result : ResultSuggestion) => {
   if (premiumLimit.value) {
-    // TODO: show this modal: https://www.figma.com/file/Aokjs6b8hqgDhOmXvEq9Ps/Beaconcha.in?type=design&node-id=8908-99278&mode=design#776338787
+    // TODO: show a BcDialogConfirm to invite the user to suscribe to a plan (see Figma).
     return
   }
 
@@ -255,7 +255,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :keep-dropdown-open="true"
             class="search-bar"
-            @go="addValidatorOrShowLimitReached"
+            @go="addValidator"
           />
         </div>
       </template>
