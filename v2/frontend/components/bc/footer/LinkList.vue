@@ -52,11 +52,11 @@ const columns: Row[] = [
 </script>
 
 <template>
-  <div v-for="column in columns" :key="column.title">
+  <div v-for="column of columns" :key="column.title">
     <div class="title">
       {{ column.title }}
     </div>
-    <div v-for="line in column.links" :key="line[0]" class="link-line">
+    <div v-for="line of column.links" :key="line[0]" class="link-line">
       <NuxtLink :to="line[2]" :target="line[3]" class="link">
         <FontAwesomeIcon class="icon" :icon="line[1]" />
         {{ line[0] }}

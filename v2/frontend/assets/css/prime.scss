@@ -16,7 +16,8 @@
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
 
-  display: flex;
+  display: inline-flex;
+  flex-grow: 0;
   justify-content: center;
   align-items: center;
 
@@ -245,6 +246,86 @@
 .p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
 .p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
   color: #ff5757;
+}
+
+// Multiselect drop-down
+// TODO: Apply our styles better and completely
+
+.p-multiselect {
+  @include fonts.button_text;
+  color: var(--primary-contrast-color);
+  background: var(--button-color-active);
+  height: var(--default-button-height);
+  border: 1px solid var(--button-color-active);
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  justify-content: center;
+}
+.p-multiselect .p-disabled {
+  color: var(--button-text-color-disabled);
+  background: var(--button-color-disabled);
+  border-color: var(--button-color-disabled);
+}
+.p-multiselect:not(:disabled):hover {
+  background: var(--button-color-hover);
+  border-color: var(--button-color-hover);
+}
+.p-multiselect .p-multiselect-label.p-placeholder {
+  background: var(--searchbar-filter-unselected);
+}
+.p-multiselect .p-multiselect-trigger {
+  background: transparent;
+  color: var(--light-grey);
+  width: 1.5rem;  // MAYBE 2rem IS BETTER
+  border-top-right-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
+}
+.p-multiselect .p-multiselect-label {
+  padding: 6px;
+  padding-top: 3px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.p-multiselect-panel {
+  background: var(--container-background);
+  border: 0 none;
+  border-radius: var(--border-radius);
+}
+.p-multiselect-panel .p-multiselect-items {
+  padding: 0.75rem 0;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item {
+  margin: 0;
+  padding: 4px;
+  border: 0 none;
+  color: var(--text-color);
+  background: transparent;
+  transition: box-shadow 0.2s;
+  border-radius: 0;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight {
+  color: #047857;
+  background: #F0FDFA;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight.p-focus {
+  background: rgba(16, 185, 129, 0.24);
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item:not(.p-highlight):not(.p-disabled).p-focus {
+  color: #4b5563;
+  background: #e5e7eb;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item:not(.p-highlight):not(.p-disabled):hover {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item .p-checkbox {
+  margin-right: 0.5rem;
+}
+.p-multiselect-panel .p-multiselect-items .p-multiselect-item-group {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  color: #374151;
+  background: #ffffff;
+  font-weight: 700;
 }
 
 /***

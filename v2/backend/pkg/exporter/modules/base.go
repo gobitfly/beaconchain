@@ -19,16 +19,14 @@ type ModuleInterface interface {
 	Init() error
 	GetName() string // Used for logging
 
-	// -- !Do not block in this functions for an extended period of time! --
-
-	OnHead(*types.StandardEventHeadResponse) error
+	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
-	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error
+	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
 
-	OnChainReorg(*types.StandardEventChainReorg) error
+	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
 }
 
 var Client *rpc.Client
@@ -37,7 +35,6 @@ var Client *rpc.Client
 func StartAll(context ModuleContext) {
 	if !utils.Config.JustV2 {
 		go networkLivenessUpdater(context.ConsClient)
-		go eth1DepositsExporter()
 		go genesisDepositsExporter(context.ConsClient)
 		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
@@ -71,10 +68,12 @@ func StartAll(context ModuleContext) {
 
 	modules := []ModuleInterface{}
 
-	if !utils.Config.JustV2 {
-		modules = append(modules, NewSlotExporter(context))
-	} else {
+	if utils.Config.JustV2 {
 		modules = append(modules, NewDashboardDataModule(context))
+	} else {
+		modules = append(modules,
+			NewSlotExporter(context),
+			NewExecutionDepositsExporter(context))
 	}
 
 	startSubscriptionModules(&context, modules)
