@@ -8,25 +8,35 @@ import {
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  DataZoomComponent
+  DataZoomComponent,
+  DatasetComponent,
+  TransformComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import SummaryChartTooltip from './SummaryChartTooltip.vue'
+import type { ECBasicOption } from 'echarts/types/dist/shared'
+import { BigNumber } from '@ethersproject/bignumber'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor, getRewardChartColors } from '~/utils/colors'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
-import { type ChartData, type ChartSeries } from '~/types/api/common'
-import type { ExtendedLabel } from '~/types/value'
+import { type ChartData } from '~/types/api/common'
+import { type RewardChartSeries, type RewardChartGroupGroupData } from '~/types/dashboard/rewards'
+import { getGroupLabel } from '~/utils/dashboard/group'
+import { DashboardChartRewardsChartTooltip } from '#components'
+
+const { currency } = useCurrency()
+// TODO: once we have different chains we migh need to change the default from 'ETH' to the dashboard currency
+const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? 'ETH' : currency.value)
 
 use([
-  CanvasRenderer,
-  BarChart,
-  TooltipComponent,
+  GridComponent,
+  DatasetComponent,
   LegendComponent,
+  TooltipComponent,
   DataZoomComponent,
-  GridComponent
+  TransformComponent,
+  BarChart,
+  CanvasRenderer
 ])
 
 const { fetch } = useCustomFetch()
@@ -65,58 +75,107 @@ const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
 const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
-const option = computed(() => {
-  if (data === undefined) {
-    return undefined
+const valueFormatter = computed(() => {
+  const decimals = isFiat(currency.value) ? 2 : 5
+  return (value: number) => `${trim(value, decimals, decimals)} ${currencyLabel.value}`
+})
+
+const sumSeries = (data: RewardChartSeries) => {
+  data.bigData.forEach((bigValue, index) => {
+    if (!bigValue.isZero()) {
+      const formatted = converter.value.weiToValue(bigValue, { fixedDecimalCount: 5, minUnit: 'MAIN' })
+      data.formatedData[index] = formatted
+      const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0])
+      if (!isNaN(parsedValue)) {
+        data.data[index] = parsedValue
+      }
+    }
+  })
+}
+
+const series = computed<RewardChartSeries[]>(() => {
+  const list:RewardChartSeries[] = []
+  if (!data.value?.series) {
+    return list
   }
 
-  interface SeriesObject extends ChartSeries<string, number> {
-    name: string;
-    category: number;
-    color: string;
-    type: 'bar';
-    stack: 'x';
+  const categoryCount = data.value?.categories.length ?? 0
+  const allGroups = $t('dashboard.validator.summary.chart.all_groups')
+  const clSeries:RewardChartSeries = {
+    id: 1,
+    name: $t('dashboard.validator.rewards.chart.cl'),
+    color: colors.value.data.cl,
+    property: 'cl',
+    type: 'bar',
+    stack: 'x',
+    barMaxWidth: 33,
+    groups: [],
+    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
+    data: Array.from(Array(categoryCount)).map(() => 0)
   }
-  const dataMap: Record<string, ExtendedLabel> = {}
+  list.push(clSeries)
+  const elSeries:RewardChartSeries = {
+    id: 2,
+    name: $t('dashboard.validator.rewards.chart.el'),
+    color: colors.value.data.el,
+    property: 'el',
+    type: 'bar',
+    stack: 'x',
+    barMaxWidth: 33,
+    groups: [],
+    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
+    data: Array.from(Array(categoryCount)).map(() => 0)
+  }
+  list.push(elSeries)
+  data.value.series.forEach((group) => {
+    let name = allGroups
+    if (!groupsEnabled) {
+      name = $t('dashboard.validator.rewards.chart.rewards')
+    } else {
+      name = getGroupLabel($t, group.id, overview.value?.groups, allGroups)
+    }
+    const newData: RewardChartGroupGroupData = {
+      id: group.id,
+      bigData: [],
+      name
+    }
+    for (let i = 0; i < categoryCount; i++) {
+      const bigValue = group.data[i] ? BigNumber.from(group.data[i]) : BigNumber.from('0')
 
-  const series: SeriesObject[] = []
-  if (data.value?.series) {
-    const allGroups = $t('dashboard.validator.rewards.chart.all_groups')
-    data.value.series.forEach((element) => {
-      let name = allGroups
-      if (element.id !== DAHSHBOARDS_ALL_GROUPS_ID) {
-        if (!groupsEnabled) {
-          name = $t('dashboard.validator.rewards.chart.rewards')
+      if (!bigValue.isZero()) {
+        if (group.property === 'el') {
+          elSeries.bigData[i] = elSeries.bigData[i].add(bigValue)
         } else {
-          const group = overview.value?.groups.find(group => group.id === element.id)
-          name = group?.name || element.id.toString()
+          clSeries.bigData[i] = clSeries.bigData[i].add(bigValue)
         }
       }
-      const id = `${element.property}|${element.id}`
-      const newObj: SeriesObject = {
-        id,
-        category: element.id,
-        property: element.property,
-        data: element.data.map((wei) => {
-          const value = converter.value.weiToValue(wei, { fixedDecimalCount: 5 })
-          dataMap[id] = value
-          return parseFloat(`${value.label}`)
-        }),
-        stack: 'x',
-        color: element.property === 'cl' ? colors.value.data.cl : colors.value.data.el,
-        type: 'bar',
-        name
-      }
-      series.push(newObj)
-    })
+      newData.bigData.push(bigValue)
+    }
+
+    if (group.property === 'el') {
+      elSeries.groups.push(newData)
+    } else {
+      clSeries.groups.push(newData)
+    }
+  })
+  sumSeries(elSeries)
+  sumSeries(clSeries)
+  return list
+})
+
+const option = computed<ECBasicOption | undefined>(() => {
+  if (series.value === undefined) {
+    return undefined
   }
 
   return {
     grid: {
-      containLabel: true
-      /* top: 10,
+      containLabel: true,
+      top: 20,
       left: '5%',
-      right: '5%' */
+      right: '5%'
     },
     xAxis: {
       type: 'category',
@@ -136,16 +195,12 @@ const option = computed(() => {
       }
     },
     yAxis: {
-      nameLocation: 'center',
-      nameTextStyle: {
-        padding: [0, 0, 30, 0]
-      },
       type: 'value',
-      minInterval: 50,
       silent: true,
       axisLabel: {
-        formatter: '{value} GWEI',
-        fontSize: textSize
+        formatter: valueFormatter.value,
+        fontSize: textSize,
+        padding: [0, 30, 0, 0]
       },
       splitLine: {
         lineStyle: {
@@ -153,7 +208,7 @@ const option = computed(() => {
         }
       }
     },
-    series,
+    series: series.value,
     textStyle: {
       fontFamily,
       fontSize: textSize,
@@ -173,23 +228,15 @@ const option = computed(() => {
     tooltip: {
       order: 'seriesAsc',
       trigger: 'axis',
+      triggerOn: 'click',
       padding: 0,
       borderColor: colors.value.background,
-      valueFormatter: (value: number) => {
-        return `${value} GWEI`
-      },
       formatter (params : any) : HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)
-        const groupInfos = params.map((param: any) => {
-          return {
-            name: param.seriesName,
-            efficiency: param.value,
-            color: param.color
-          }
-        })
+        const dataIndex = params[0].dataIndex
 
         const d = document.createElement('div')
-        render(h(SummaryChartTooltip, { t: $t, startEpoch, groupInfos }), d)
+        render(h(DashboardChartRewardsChartTooltip, { t: $t, startEpoch, dataIndex, series: series.value, weiToValue: converter.value.weiToValue }), d)
         return d
       }
     },
