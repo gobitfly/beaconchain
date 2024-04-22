@@ -202,7 +202,7 @@ watch(() => props.initialFlexGrow, (newIFG) => { // reacts to changes of props i
 
 watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding the number of ellipses to use
   if (newEllipses === ellipsesPropsDuringLastUpdate) {
-    // our watcher lags (we already updated with the correct initial flex-grow)
+    // our watcher lags (we already updated with the correct value)
     return
   }
   logStep('yellow', 'new (array of) number(s) regarding ellipses received')
@@ -358,15 +358,15 @@ function enterUpdateCycleAsAparent (childId? : number) {
   }
   // now that the undefined-width children got a width, we allow the others to use the remaining room
   /*
-  TODO here: insert the fix for the last visual bug I found during tests :)
+  TODO here: insert the fix for the last visual bug I found during tests (if anyone reads this and worries: it happens in a specific configuration that is not used by the search bar: two ore more children of defined width among which one has a short text)
   Fix:
    implement and expose howMuchCanMyFrameShrink(additionalWidthAvailable : number) : number
-     this function would return  getFW()+addWidthA-calcTW(props.text)-ResizeObserverLagMargin  if it is positive && the frame has a flex-grow defined (read CSS), otherwise 0.
+     this function would return  getFW()+addWidthA-calcTW(props.text)-ResizeObserverLagMargin  if (it is positive) && (the frame has a flex-grow defined and > 0), otherwise 0.
    updateContent() must take a new argument (additionalWidthAvailable)
    Before updating all children of defined width:
      ask everyone howMuchCanMyFrameShrink(). Positive answers mean that the corresponding child will not clip (its text fits entirely).
      sum these answers.
-     distribute this additional room over the width-defined children having a flex-grow value && having replied 0.
+     distribute this additional room over the width-defined children having a flex-grow value > 0 && having replied 0.
      now, it is possible that some children have too much room, so:
       reiterate until the answers stabilize (design a clever way to converge to this fixed point. hopefully it will not take 10 nights and 1000 lines).
     Now the updates of children of defined width can be launched with updateContent(additionalWidthAvailable[child]) the parameter being what has been distributed.
