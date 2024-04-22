@@ -31,7 +31,7 @@ Then type:
 ```bash
 cp .env-example .env
 ```
-In file `.env`, write the URLs of the API servers and the secret key to access them (see the V2 frontend wiki page).
+In file `.env`, write the URLs of the API servers and the secret key to access to them.
 
 Set the following mapping in your `/etc/hosts` file:
 ```
