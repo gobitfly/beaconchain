@@ -16,7 +16,8 @@
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
 
-  display: flex;
+  display: inline-flex;
+  flex-grow: 0;
   justify-content: center;
   align-items: center;
 
