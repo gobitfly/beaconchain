@@ -38,10 +38,10 @@ const { t } = useI18n()
 
 const { fetch } = useCustomFetch()
 const props = defineProps<{
-  barStyle: SearchbarStyle, // look of the bar
-  barPurpose: SearchbarPurpose, // what the bar will be used for
-  onlyNetworks?: ChainIDs[], // the bar will search on these networks only
-  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
+  barStyle : SearchbarStyle, // look of the bar
+  barPurpose : SearchbarPurpose, // what the bar will be used for
+  onlyNetworks? : ChainIDs[], // the bar will search on these networks only
+  pickByDefault : PickingCallBackFunction, // see the declaration of the type to get an explanation
   keepDropdownOpen? : boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
@@ -58,8 +58,8 @@ enum States {
 
 interface GlobalState {
   state : States,
-  functionToCallAfterResultsGetOrganized: Function | null
-  showDropdown: boolean
+  functionToCallAfterResultsGetOrganized : Function | null
+  showDropdown : boolean
 }
 
 let searchableTypes : ResultType[] = []
@@ -606,8 +606,10 @@ function informationIfHiddenResults () : string {
         </div>
         <div v-else class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
-            {{ t('search_bar.searching') }}
-            <BcLoadingSpinner :loading="true" size="small" alignment="center" />
+            <div class="">
+              {{ t('search_bar.searching') }}
+              <BcLoadingSpinner :loading="true" size="small" alignment="center" />
+            </div>
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
             {{ t('search_bar.something_wrong') }}
@@ -824,6 +826,7 @@ function informationIfHiddenResults () : string {
 
       .info {
         position: relative;
+        display: flex;
         @include fonts.standard_text;
         color: var(--text-color-disabled);
         justify-content: center;
@@ -836,6 +839,7 @@ function informationIfHiddenResults () : string {
         &.center {
           margin-bottom: auto;
           margin-top: auto;
+          height: 50px;
         }
         padding-left: 6px;
         padding-right: 6px;

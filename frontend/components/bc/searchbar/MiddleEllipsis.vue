@@ -4,13 +4,13 @@ import { type ComponentPublicInstance, warn } from 'vue'
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 interface ExportedMembers {
-  myInstanceId: ComputedRef<number>,
-  amIofDefinedWidth: ComputedRef<boolean>,
-  getReadyForUpdate: typeof getReadyForUpdate,
-  updateContent: typeof updateContent,
-  settleAfterUpdate: typeof settleAfterUpdate,
-  saveFinalState: typeof saveFinalState,
-  enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent
+  myInstanceId : ComputedRef<number>,
+  amIofDefinedWidth : ComputedRef<boolean>,
+  getReadyForUpdate : typeof getReadyForUpdate,
+  updateContent : typeof updateContent,
+  settleAfterUpdate : typeof settleAfterUpdate,
+  saveFinalState : typeof saveFinalState,
+  enterUpdateCycleAsAparent : typeof enterUpdateCycleAsAparent
 }
 
 interface MiddleEllipsis extends ComponentPublicInstance, ExportedMembers {}
@@ -37,16 +37,16 @@ enum UpdateReason {
   GapChangePlus
 }
 
-type TextProperties = { text: string, width: number }
+type TextProperties = { text : string, width : number }
 
 const ResizeObserverLagMargin = 1.5 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
 
 const props = defineProps<{
-  text?: string,
-  initialFlexGrow?: number, // if the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props
+  text? : string,
+  initialFlexGrow? : number, // if the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props
   ellipses? : number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on
-  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent, // for internal use, to inform this instance that it belongs to a parent MiddleEllipsis component
-  meInstanceId?: number
+  meCallbackToInformParentAboutChanges? : typeof enterUpdateCycleAsAparent, // for internal use, to inform this instance that it belongs to a parent MiddleEllipsis component
+  meInstanceId? : number
   class? : string // hack to make the list of classes reactive
 }>()
 
