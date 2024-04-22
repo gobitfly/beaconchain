@@ -1,5 +1,5 @@
 @fortawesome:registry=https://npm.fontawesome.com/
-//npm.fontawesome.com/:_authToken=YOURKEY
+//npm.fontawesome.com/:_authToken=FA_TOKEN
 
 
 npmScopes:
