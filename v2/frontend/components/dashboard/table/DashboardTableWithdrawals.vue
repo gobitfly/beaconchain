@@ -21,11 +21,11 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 980,
-    slot: width.value > 850,
-    epoch: width.value > 700,
-    recipient: width.value > 600,
-    amount: width.value > 470
+    group: width.value > 995,
+    slot: width.value > 875,
+    epoch: width.value > 805,
+    recipient: width.value > 695,
+    amount: width.value > 500
   }
 })
 
@@ -74,6 +74,8 @@ const getRowClass = (row: VDBBlocksTableRow) => {
     return 'future-row'
   }
 }
+
+// TODO: Endpoint seems not to return total and future, discuss
 
 </script>
 <template>
@@ -134,8 +136,6 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               field="epoch"
               :sortable="true"
               :header="$t('common.epoch')"
-              body-class="epoch"
-              header-class="epoch"
             >
               <template #body="slotProps">
                 <NuxtLink
@@ -148,14 +148,23 @@ const getRowClass = (row: VDBBlocksTableRow) => {
                 </NuxtLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.slot" field="slot" :sortable="true" :header="$t('common.slot')">
+            <Column
+              v-if="colsVisible.slot"
+              field="slot"
+              :sortable="true"
+              :header="$t('common.slot')"
+            >
               <template #body="slotProps">
                 <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
                   <BcFormatNumber :value="slotProps.data.slot" default="-" />
                 </NuxtLink>
               </template>
             </Column>
-            <Column field="age" body-class="age" header-class="age">
+            <Column
+              field="age"
+              body-class="age"
+              header-class="age"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -168,6 +177,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
               v-if="colsVisible.recipient"
               field="recipient"
               header-class="recipient"
+              body-class="recipient"
               :sortable="true"
               :header="$t('dashboard.validator.col.recipient')"
             >
@@ -251,45 +261,28 @@ const getRowClass = (row: VDBBlocksTableRow) => {
 
 :deep(.withdrawal-table) {
 
-  // TODO: Finetune
-
   .index {
-    @include utils.set-all-width(110px);
+    @include utils.set-all-width(140px);
   }
 
   .group-id {
-    @include utils.set-all-width(120px);
+    @include utils.set-all-width(160px);
     @include utils.truncate-text;
   }
 
-  .epoch {
-    // TODO
+  .age {
+    @include utils.set-all-width(195px);
   }
 
-  @media (max-width: 399px) {
-    .group-id {
-      @include utils.set-all-width(80px);
-      @include utils.truncate-text;
-    }
-  }
-
-  // TODO: Check
-  .status-mobile {
-    @include utils.set-all-width(40px);
-    @include utils.truncate-text;
+  .recipient {
+    @include utils.set-all-width(180px);
   }
 
   .time-passed {
     white-space: nowrap;
   }
 
-  .reward,
-  .recipient {
-    .p-column-title {
-      @include utils.truncate-text;
-    }
-  }
-
+  // TODO: Handle/Use future row
   .future-row {
     td {
 
@@ -301,10 +294,6 @@ const getRowClass = (row: VDBBlocksTableRow) => {
   }
 }
 
-.recipient {
-  @include utils.set-all-width(120px);
-}
-
 .expansion {
   display: flex;
   flex-direction: column;
@@ -314,7 +303,6 @@ const getRowClass = (row: VDBBlocksTableRow) => {
   font-size: var(--small_text_font_size);
 
   .row {
-
     display: flex;
     align-items: center;
 
