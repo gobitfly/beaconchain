@@ -264,8 +264,16 @@ type Config struct {
 		ApiKey                          string                           `yaml:"apiKey" envconfig:"MONITORING_API_KEY"`
 		ServiceMonitoringConfigurations []ServiceMonitoringConfiguration `yaml:"serviceMonitoringConfigurations" envconfig:"SERVICE_MONITORING_CONFIGURATIONS"`
 	} `yaml:"monitoring"`
+	InternalAlerts InternalAlertDiscord `yaml:"internalAlerts"`
+
 	ApiKeySecret     string   `yaml:"apiKeySecret" envconfig:"API_KEY_SECRET"`
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" envconfig:"CORS_ALLOWED_HOSTS"`
+}
+
+type InternalAlertDiscord struct {
+	DiscordWebhookUrl string `yaml:"discordWebhookUrl" envconfig:"INTERNAL_ALERTS_DISCORD_WEBHOOK_URL"`
+	DiscordUserName   string `yaml:"discordUserName" envconfig:"INTERNAL_ALERTS_DISCORD_USER_NAME"`
+	AvatarURL         string `yaml:"avatarURL" envconfig:"INTERNAL_ALERTS_AVATAR_URL"`
 }
 
 type DatabaseConfig struct {

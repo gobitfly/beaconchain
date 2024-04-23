@@ -19,6 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -360,5 +362,25 @@ func GetEpochOffsetGenesis() uint64 {
 	// the offset can be used to get the first epoch of a utc day
 	genesisTs := Config.Chain.GenesisTimestamp
 	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
-	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+	return uint64(math.Floor(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+}
+
+func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error) {
+	if !IsValidWithdrawalCredentialsAddress(hexutil.Encode(withCred)) {
+		return nil, fmt.Errorf("invalid withdrawal credentials for address: %s", hexutil.Encode(withCred))
+	}
+	addr := common.BytesToAddress(withCred[12:])
+	return &addr, nil
+}
+
+func Deduplicate(slice []uint64) []uint64 {
+	keys := make(map[uint64]bool)
+	list := []uint64{}
+	for _, entry := range slice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
