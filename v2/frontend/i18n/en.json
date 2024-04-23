@@ -194,6 +194,10 @@
     "public_validator_dashboard": "Public Validator Dashboard",
     "public_account_dashboard": "Public Account Dashboard",
     "notifications": "Notifications",
+    "share": "Share",
+    "shared": "Shared",
+    "share_dashboard": "Share Dashboard",
+    "delete_dashboard": "Delete Dashboard",
     "group": {
       "selection": {
         "all": "All groups",
@@ -201,8 +205,8 @@
         "placeholder": "Select group",
         "dialog": {
           "title": "Edit Groups",
-          "assign-group": "Assign to group",
-          "validators-selected": "1/{total} validator selected | {count}/{total} validators selected"
+          "assign_group": "Assign to group",
+          "validators_selected": "1/{total} validator selected | {count}/{total} validators selected"
         }
       }
     },
@@ -218,9 +222,13 @@
         "subtitle": "What network are your validators on?"
       }
     },
+    "deletion": {
+      "title": "Delete Dashboard",
+      "text": "Do you want to delete dashboard {dashboard}?"
+    },
     "validator": {
-      "manage-validators": "Manage Validators",
-      "manage-groups": "Manage Groups",
+      "manage_validators": "Manage Validators",
+      "manage_groups": "Manage Groups",
       "management": {
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",

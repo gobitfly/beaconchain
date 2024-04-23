@@ -35,6 +35,10 @@ func (s *bytesHexStr) String() string {
 	return fmt.Sprintf("0x%x", *s)
 }
 
+func (s *bytesHexStr) Hex() string {
+	return s.String()
+}
+
 type Uint64Str uint64
 
 func (s *Uint64Str) UnmarshalJSON(b []byte) error {

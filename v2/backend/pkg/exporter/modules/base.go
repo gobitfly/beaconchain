@@ -20,8 +20,13 @@ type ModuleInterface interface {
 	GetName() string // Used for logging
 
 	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
-	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error
-	OnChainReorg(*types.StandardEventChainReorg) error
+
+	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
+	// An epoch becomes finalized once the next epoch gets justified
+	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
+	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
+
+	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
 }
 
 var Client *rpc.Client
@@ -206,6 +211,19 @@ func (m ModuleLog) Info(message string) {
 
 func (m ModuleLog) Infof(format string, args ...interface{}) {
 	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) Debug(message string) {
+	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Debugf(format string, args ...interface{}) {
+	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {
+	additionalInfos["module"] = m.module.GetName()
+	log.InfoWithFields(additionalInfos, msg)
 }
 
 func (m ModuleLog) Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {

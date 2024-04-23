@@ -91,6 +91,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			id 				SMALLINT 		DEFAULT(0),
 			dashboard_id 	BIGINT 			NOT NULL,
 			name 			VARCHAR(50) 	NOT NULL,
+			foreign key (dashboard_id) references users_val_dashboards(id),
 			primary key (dashboard_id, id)
 		);
 
@@ -99,6 +100,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			dashboard_id 				BIGINT 		NOT NULL,
 			group_id 					SMALLINT 	NOT NULL,
 			validator_index     		BIGINT      NOT NULL,
+			foreign key (dashboard_id, group_id) references users_val_dashboards_groups(dashboard_id, id),
     		primary key (dashboard_id, validator_index)
 		);
 
@@ -108,6 +110,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			public_id	 		CHAR(38) 	DEFAULT ('v-' || gen_random_uuid()::text) UNIQUE, -- prefix with "v" for validator dashboards. Public ID to dashboard
 			name 				VARCHAR(50) NOT NULL,
 			shared_groups 		bool	 	NOT NULL, -- all groups or default 0
+			foreign key (dashboard_id) references users_val_dashboards(id),
 			primary key (public_id)
 		);
 
@@ -135,6 +138,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			id 				INT 		NOT NULL,
 			dashboard_id 	BIGINT 		NOT NULL,
 			name 			VARCHAR(50) NOT NULL,
+			foreign key (dashboard_id) references users_acc_dashboards(id),
 			primary key (dashboard_id, id)
 		);
 
@@ -143,6 +147,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			dashboard_id 		BIGINT 		NOT NULL,
 			group_id 			SMALLINT 	NOT NULL,
 			address 			BYTEA 		NOT NULL,
+			foreign key (dashboard_id, group_id) references users_acc_dashboards_groups(dashboard_id, id),
 			primary key (dashboard_id, address)
 		);
 
@@ -154,6 +159,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			user_settings 		JSONB		DEFAULT '{}'::jsonb, -- snapshots users_dashboards.user_settings at the time of creating the share
 			shared_groups 		bool	 	NOT NULL, -- all groups or default 0
 			tx_notes_shared 	BOOLEAN 	NOT NULL, -- not snapshoted
+			foreign key (dashboard_id) references users_acc_dashboards(id),
 			primary key (public_id)
 		);
 
