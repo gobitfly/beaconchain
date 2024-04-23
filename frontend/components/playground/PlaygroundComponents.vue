@@ -1,4 +1,3 @@
-import type { ClientOnly } from '#build/components';
 <template>
   <TabView lazy>
     <TabPanel header="Tags">
