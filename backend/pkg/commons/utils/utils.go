@@ -372,3 +372,15 @@ func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error)
 	addr := common.BytesToAddress(withCred[12:])
 	return &addr, nil
 }
+
+func Deduplicate(slice []uint64) []uint64 {
+	keys := make(map[uint64]bool)
+	list := []uint64{}
+	for _, entry := range slice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}

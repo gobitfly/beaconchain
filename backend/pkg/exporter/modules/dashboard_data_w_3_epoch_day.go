@@ -48,8 +48,6 @@ func (d *epochToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
 		return errors.Wrap(err, "failed to utc day aggregate")
 	}
 
-	d.log.Infof("finished dayAggregate all finished")
-
 	return nil
 }
 
@@ -103,6 +101,11 @@ func (d *epochToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) erro
 		boundsStart, boundsEnd := getDayAggregateBounds(epoch)
 		if latestExportedDay.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last day entry since it is complete")
+			continue
+		}
+
+		// no need to aggregate epoch data that hasn't been exported yet
+		if boundsEnd > currentEndBound {
 			continue
 		}
 

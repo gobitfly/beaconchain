@@ -62,7 +62,7 @@ func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint6
 
 	d.log.Infof("missing tail 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
 
-	return deduplicate(append(append(week, month...), ninety...)), nil
+	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
 
 // for a given epoch intendedHeadEpoch, what epochs are needed to add to the rolling table (excluding the current epoch)
@@ -82,19 +82,7 @@ func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint6
 
 	d.log.Infof("missing head 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
 
-	return deduplicate(append(append(week, month...), ninety...)), nil
-}
-
-func deduplicate(slice []uint64) []uint64 {
-	keys := make(map[uint64]bool)
-	list := []uint64{}
-	for _, entry := range slice {
-		if _, value := keys[entry]; !value {
-			keys[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
+	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
 
 func (d *dayUpAggregator) getMissingRollingXDaysTailEpochs(days int, intendedHeadEpoch uint64, tableName string) ([]uint64, error) {
