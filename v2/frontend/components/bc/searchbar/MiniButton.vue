@@ -5,12 +5,12 @@ import {
 
 const props = defineProps<{
   barStyle : SearchbarStyle,
-  forcedColor? : number // to controle the color from the parent instead of having the color matching the real state of the button. 0 = deactivated, any other number = activated.
+  color? : { on : boolean } // to color the button statically instead of having the color changing with the state of the button
 }>()
 const activated = defineModel<boolean>()
 const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 
-const classForcingColorTheme = computed(() => props.forcedColor === undefined ? '' : (props.forcedColor ? 'forced-on' : 'forced-off'))
+const classForcingColorTheme = computed(() => props.color ? (props.color.on ? 'forced-on' : 'forced-off') : '')
 </script>
 
 <template>
@@ -47,13 +47,16 @@ const classForcingColorTheme = computed(() => props.forcedColor === undefined ? 
       height: 0;
     }
 
-    .hidden-checkbox:checked + .face {
-      background-color: var(--button-color-active);
-      &:hover {
-        background-color: var(--button-color-hover);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
+    &:not(.forced-off) {
+      .forced-on.face,
+      .hidden-checkbox:checked + .face {
+        background-color: var(--button-color-active);
+        &:hover {
+          background-color: var(--button-color-hover);
+        }
+        &:active {
+          background-color: var(--button-color-pressed);
+        }
       }
     }
 
@@ -68,30 +71,22 @@ const classForcingColorTheme = computed(() => props.forcedColor === undefined ? 
       text-align: center;
       transition: 0.2s;
 
-      &.gaudy,
-      &.gaudy.forced-off {
+      &.gaudy {
         color: var(--primary-contrast-color);
-        background-color: var(--searchbar-filter-unselected-gaudy);
       }
-      &.discreet,
-      &.discreet.forced-off {
+      &.discreet {
         color: var(--light-black);
-        background-color: var(--light-grey);
       }
 
-      &:hover,
-      &:hover.forced-off {
-        background-color: var(--light-grey-3);
-      }
-      &:active,
-      &:active.forced-off {
-        background-color: var(--button-color-pressed);
-      }
-
-      &.forced-on {
-        background-color: var(--button-color-active);
+      &:not(.forced-on) {
+        &.gaudy {
+          background-color: var(--searchbar-filter-unselected-gaudy);
+        }
+        &.discreet {
+          background-color: var(--light-grey);
+        }
         &:hover {
-          background-color: var(--button-color-hover);
+          background-color: var(--light-grey-3);
         }
         &:active {
           background-color: var(--button-color-pressed);
