@@ -25,7 +25,7 @@ function selectionHasChanged (category : Category, selected : boolean) {
     <BcSearchbarFilterButton
       v-for="filter of liveState"
       :key="filter[0]"
-      :initial-state="filter[1]"
+      :state="filter[1]"
       class="button"
       :bar-style="barStyle"
       @change="(selected : boolean) => selectionHasChanged(filter[0], selected)"

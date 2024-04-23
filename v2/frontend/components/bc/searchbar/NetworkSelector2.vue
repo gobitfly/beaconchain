@@ -14,7 +14,7 @@ const head = ref<{look : 'on'|'off', network : string}>({
   look: 'off',
   network: ''
 })
-const list = ref<{
+const listInDropdown = ref<{
   chainId: ChainIDs,
   label: string,
   selected: boolean
@@ -43,18 +43,18 @@ function updateLocalState () {
     head.value.network = String(howManyAreSelected)
   }
   head.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
-  // now the list
-  list.value.length = 0
-  list.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
+  // now the listInDropdown
+  listInDropdown.value.length = 0
+  listInDropdown.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
   for (const filter of liveState.value) {
-    list.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].description, selected: filter[1] })
+    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].description, selected: filter[1] })
   }
 }
 
 function oneOptionChanged (index : number) {
-  const selected = list.value[index].selected
-  if (list.value[index].chainId !== ChainIDs.Any) {
-    liveState.value.set(list.value[index].chainId, selected)
+  const selected = listInDropdown.value[index].selected
+  if (listInDropdown.value[index].chainId !== ChainIDs.Any) {
+    liveState.value.set(listInDropdown.value[index].chainId, selected)
   } else {
     for (const filter of liveState.value) {
       liveState.value.set(filter[0], selected)
@@ -71,6 +71,7 @@ function oneOptionChanged (index : number) {
       class="head"
       :bar-style="barStyle"
       :look="head.look"
+      :state="dropdownIsOpen"
       @change="(open : boolean) => dropdownIsOpen = open"
     >
       <div class="content">
@@ -82,8 +83,13 @@ function oneOptionChanged (index : number) {
         </span>
       </div>
     </BcSearchbarFilterButton>
-    <div v-if="dropdownIsOpen" class="dropdown" @click="(e : Event) => e.stopPropagation()">
-      <div v-for="(item, i) of list" :key="item.chainId" class="line" @click="oneOptionChanged(i)">
+    <div
+      v-if="dropdownIsOpen"
+      class="dropdown"
+      @click="(e : Event) => e.stopPropagation()"
+      @mouseleave="dropdownIsOpen = false"
+    >
+      <div v-for="(item, i) of listInDropdown" :key="item.chainId" class="line" @click="oneOptionChanged(i)">
         <Checkbox v-model="item.selected" :binary="true" :input-id="String(item.chainId)" />
         <label :for="String(item.chainId)">
           {{ item.label }}
@@ -129,6 +135,7 @@ function oneOptionChanged (index : number) {
     color: var(--light-black);
 
     .line {
+      position:relative;
       cursor: pointer;
     }
   }
