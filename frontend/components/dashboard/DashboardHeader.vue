@@ -94,6 +94,7 @@ const items = computed<MenuBarEntry[]>(() => {
       label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
       route: items.length === 1 ? items[0].route : active?.route,
+      command: items.length === 1 ? items[0].command : active?.command,
       items: items.length > 1 ? items : undefined
     }
   })
