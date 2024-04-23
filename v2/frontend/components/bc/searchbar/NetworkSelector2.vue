@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { SearchbarStyle, type NetworkFilter } from '~/types/searchbar'
-// import { ChainIDs, ChainInfo } from '~/types/networks'
+import { ChainInfo, ChainIDs } from '~/types/networks'
 
-// const emit = defineEmits<{(e: 'change') : void}>()
+const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
   barStyle : SearchbarStyle
 }>()
@@ -10,44 +10,127 @@ const liveState = defineModel<NetworkFilter>({ required: true }) // each entry h
 
 const { t } = useI18n()
 
-const dropDownIsOpen = ref<boolean>(false)
+const head = ref<{look : 'on'|'off', network : string}>({
+  look: 'off',
+  network: ''
+})
+const list = ref<{
+  chainId: ChainIDs,
+  label: string,
+  selected: boolean
+}[]>([])
+const dropdownIsOpen = ref<boolean>(false)
 
-onUnmounted(() => {
-  dropDownIsOpen.value = false
+watch(liveState, () => updateLocalState()) // fires when the parent changes the pointer but not when he or we change a value inside
+
+onBeforeMount(() => {
+  dropdownIsOpen.value = false
+  updateLocalState()
 })
 
-const everyNetworkIsSelected = computed(() => {
+function updateLocalState () {
+  // first we update the head
+  let howManyAreSelected = 0
   for (const nw of liveState.value) {
-    if (!nw[1]) {
-      return false
+    if (nw[1]) {
+      howManyAreSelected++
     }
   }
-  return true
-})
+  const allNetworksAreSelected = (howManyAreSelected === liveState.value.size)
+  if (howManyAreSelected === 0 || allNetworksAreSelected) {
+    head.value.network = t('search_bar.all_networks')
+  } else {
+    head.value.network = String(howManyAreSelected)
+  }
+  head.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
+  // now the list
+  list.value.length = 0
+  list.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
+  for (const filter of liveState.value) {
+    list.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].description, selected: filter[1] })
+  }
+}
 
-/*
-function selectionHasChanged (chainId : ChainIDs, selected : boolean) {
-  liveState.value.set(chainId, selected) // the map element cannot save the infornmation from `v-model`, so we do it with .set()
+function oneOptionChanged (index : number) {
+  const selected = list.value[index].selected
+  if (list.value[index].chainId !== ChainIDs.Any) {
+    liveState.value.set(list.value[index].chainId, selected)
+  } else {
+    for (const filter of liveState.value) {
+      liveState.value.set(filter[0], selected)
+    }
+  }
+  updateLocalState()
   emit('change')
 }
-*/
 </script>
 
 <template>
-  <div>
-    <BcSearchbarMiniButton
-      v-model="dropDownIsOpen"
-      class="button"
+  <div class="anchor">
+    <BcSearchbarFilterButton
+      class="head"
       :bar-style="barStyle"
-      :color="{on:true}"
+      :look="head.look"
+      @change="(open : boolean) => dropdownIsOpen = open"
     >
-      {{ t('search_bar.network_filter_label') + ' ' + (everyNetworkIsSelected ? t('search_bar.all_networks') : '{0}') }}
-    </BcSearchbarMiniButton>
+      <div class="content">
+        <span class="label">
+          {{ t('search_bar.network_filter_label') + ' ' + head.network }}
+        </span>
+        <span class="arrow">
+          ▾
+        </span>
+      </div>
+    </BcSearchbarFilterButton>
+    <div v-if="dropdownIsOpen" class="dropdown" @click="(e : Event) => e.stopPropagation()">
+      <div v-for="(item, i) of list" :key="item.chainId" class="line" @click="oneOptionChanged(i)">
+        <Checkbox v-model="item.selected" :binary="true" :input-id="String(item.chainId)" />
+        <label :for="String(item.chainId)">
+          {{ item.label }}
+        </label>
+      </div>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.button {
-  margin-bottom: 8px;
+@use "~/assets/css/fonts.scss";
+
+.anchor {
+  display: inline-block;
+    padding-bottom: 8px;
+
+  .head {
+    position: relative;
+    width: 94px;
+    .content {
+      position: relative;
+      display: inline-flex;
+      width: 100%;
+      .label {
+        display: inline-flex;
+        flex-grow: 1;
+      }
+      .arrow {
+        display: inline-flex;
+      }
+    }
+  }
+
+  .dropdown {
+    position: absolute;
+    z-index: 1024;
+    width: 128px;
+    border-radius: 10px;
+    left: 0px;
+    top: 21px;
+    background-color: var(--light-grey);
+    @include fonts.small_text_bold;
+    color: var(--light-black);
+
+    .line {
+      cursor: pointer;
+    }
+  }
 }
 </style>

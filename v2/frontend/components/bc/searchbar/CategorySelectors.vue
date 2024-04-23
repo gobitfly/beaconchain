@@ -15,29 +15,33 @@ const liveState = defineModel<CategoryFilter>({ required: true }) // each entry 
 const { t } = useI18n()
 
 function selectionHasChanged (category : Category, selected : boolean) {
-  liveState.value.set(category, selected) // the map element cannot save the infornmation from `v-model`, so we do it with .set()
+  liveState.value.set(category, selected)
   emit('change')
 }
 </script>
 
 <template>
-  <div>
-    <BcSearchbarMiniButton
+  <div class="group">
+    <BcSearchbarFilterButton
       v-for="filter of liveState"
       :key="filter[0]"
-      v-model="filter[1]"
+      :initial-state="filter[1]"
       class="button"
       :bar-style="barStyle"
-      @change="(activ : boolean) => selectionHasChanged(filter[0], activ)"
+      @change="(selected : boolean) => selectionHasChanged(filter[0], selected)"
     >
       {{ t(...CategoryInfo[filter[0]].filterLabel) }}
-    </BcSearchbarMiniButton>
+    </BcSearchbarFilterButton>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.button {
-  margin-right: 6px;
-  margin-bottom: 8px;
+.group {
+  display: inline-block;
+  vertical-align: top;
+  .button {
+    margin-right: 6px;
+    margin-bottom: 8px;
+  }
 }
 </style>
