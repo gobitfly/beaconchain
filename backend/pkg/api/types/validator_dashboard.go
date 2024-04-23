@@ -140,14 +140,24 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 // ------------------------------------------------------------
 // Heatmap Tab
 type VDBHeatmapCell struct {
-	X     uint64  `json:"x"`     // Epoch
-	Y     uint64  `json:"y"`     // Group ID
+	X uint64 `json:"x"` // Epoch
+	Y uint64 `json:"y"` // Group ID
+
 	Value float64 `json:"value"` // Attestaton Rewards
 }
+type VDBHeatmapEvent struct {
+	X uint64 `json:"x"` // Epoch
+	Y uint64 `json:"y"` // Group ID
+
+	Proposal bool `json:"proposal"`
+	Slash    bool `json:"slash"`
+	Sync     bool `json:"sync"`
+}
 type VDBHeatmap struct {
-	Epochs   []uint64         `json:"epochs"`    // X-Axis Categories
-	GroupIds []uint64         `json:"group_ids"` // Y-Axis Categories
-	Data     []VDBHeatmapCell `json:"data"`
+	Epochs   []uint64          `json:"epochs"`    // X-Axis Categories
+	GroupIds []uint64          `json:"group_ids"` // Y-Axis Categories
+	Data     []VDBHeatmapCell  `json:"data"`
+	Events   []VDBHeatmapEvent `json:"events"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
@@ -159,13 +169,14 @@ type VDBHeatmapTooltipData struct {
 	Epoch uint64 `json:"epoch"`
 
 	Proposers []VDBHeatmapTooltipDuty `json:"proposers"`
-	Syncs     []VDBHeatmapTooltipDuty `json:"syncs"`
+	Syncs     []uint64                `json:"syncs"`
 	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
 
-	AttestationsHead   StatusCount     `json:"attestations_head"`
-	AttestationsSource StatusCount     `json:"attestations_source"`
-	AttestationsTarget StatusCount     `json:"attestations_target"`
-	AttestationIncome  decimal.Decimal `json:"attestation_income"`
+	AttestationsHead      StatusCount     `json:"attestations_head"`
+	AttestationsSource    StatusCount     `json:"attestations_source"`
+	AttestationsTarget    StatusCount     `json:"attestations_target"`
+	AttestationIncome     decimal.Decimal `json:"attestation_income"`
+	AttestationEfficiency float64         `json:"attestation_efficiency"`
 }
 type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatmapTooltipData]
 

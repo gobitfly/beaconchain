@@ -143,10 +143,10 @@ type VDBBlocksColumn int
 var _ EnumFactory[VDBBlocksColumn] = VDBBlocksColumn(0)
 
 const (
-	VDBBlockProposer VDBBlocksColumn = iota
+	VDBBlockSlot VDBBlocksColumn = iota
 	VDBBlockGroup
 	VDBBlockEpoch
-	VDBBlockSlot
+	VDBBlockProposer
 	VDBBlockBlock
 	VDBBlockAge
 	VDBBlockStatus
