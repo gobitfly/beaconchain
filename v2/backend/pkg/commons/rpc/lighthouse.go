@@ -97,7 +97,7 @@ func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 		return &types.ChainHead{}, err
 	}
 
-	id := fmt.Sprintf("0x%x", parsedHead.Data.Header.Message.StateRoot)
+	id := parsedHead.Data.Header.Message.StateRoot.Hex()
 	if parsedHead.Data.Header.Message.Slot == 0 {
 		id = "genesis"
 	}
@@ -200,7 +200,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	}
 
 	if epoch >= utils.Config.Chain.ClConfig.AltairForkEpoch {
-		syncCommitteeState := fmt.Sprintf("0x%x", depStateRoot)
+		syncCommitteeState := depStateRoot.Hex()
 		if epoch == utils.Config.Chain.ClConfig.AltairForkEpoch {
 			syncCommitteeState = fmt.Sprintf("%d", utils.Config.Chain.ClConfig.AltairForkEpoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		}
