@@ -29,7 +29,7 @@ function showDashboardCreation () {
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation()" />
       </template>
-      <h1>Account Dashboard {{ dashboardKey }}</h1>
+      <DashboardControls />
     </BcPageWrapper>
   </div>
 </template>
