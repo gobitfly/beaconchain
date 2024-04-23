@@ -98,7 +98,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               v-if="groupsEnabled"
               field="group_id"
               :sortable="true"
-              body-class="bold"
+              body-class="bold group-id"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -191,6 +191,10 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
   @media (max-width: 600px) {
     --col-width: 140px;
+  }
+
+  .group-id {
+    @include utils.truncate-text;
   }
 
   .total-row {
