@@ -169,8 +169,7 @@ const getRowClass = (row: VDBBlocksTableRow) => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <!-- TODO: Use slot here and in blocks table, requires new formating function for BcFormatTimePassed -->
-                <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
+                <BcFormatTimePassed type="slot" class="time-passed" :value="slotProps.data.epoch" />
               </template>
             </Column>
             <Column
