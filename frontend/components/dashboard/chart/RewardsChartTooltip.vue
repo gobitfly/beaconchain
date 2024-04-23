@@ -2,7 +2,6 @@
 import { type ComposerTranslation } from 'vue-i18n'
 import { BigNumber } from '@ethersproject/bignumber'
 import type { RewardChartGroupGroupData, RewardChartSeries } from '~/types/dashboard/rewards'
-import { formatEpochToDate } from '~/utils/format'
 import type { VaiToValue } from '~/types/value'
 
 interface Props {
@@ -14,21 +13,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-const { epochsPerDay } = useNetwork()
-
-const dateText = computed(() => {
-  const date = formatEpochToDate(props.startEpoch, props.t('locales.date'))
-  if (date === undefined) {
-    return undefined
-  }
-  return `${date}`
-})
-
-const epochText = computed(() => {
-  const endEpoch = props.startEpoch + epochsPerDay()
-  return `${props.t('common.epoch')} ${props.startEpoch} - ${endEpoch}`
-})
 
 interface GroupValue {
   id: number,
@@ -97,14 +81,7 @@ const data = computed<Series[]>(() => {
 
 <template>
   <div class="tooltip-container" @click.stop.prevent="console.log('click')">
-    <b>
-      <div>
-        {{ dateText }}
-      </div>
-      <div>
-        {{ epochText }}
-      </div>
-    </b>
+    <DashboardChartTooltipHeader :t="t" :start-epoch="startEpoch" />
     <div v-for="(entry, index) in data" :key="index">
       <div class="header">
         <span class="circle" :class="entry.className" /><b>{{ entry.name }}: {{ entry.value }}</b>
