@@ -199,7 +199,7 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 
 		if nodeSlotFinalized != dbSlot.Finalized {
 			// slot has finalized, mark it in the db
-			if header != nil && bytes.Equal(dbSlot.BlockRoot, utils.MustParseHex(header.Data.Root)) {
+			if header != nil && bytes.Equal(dbSlot.BlockRoot, header.Data.Root) {
 				// no reorg happened, simply mark the slot as final
 				log.Infof("setting slot %v as finalized (proposed)", dbSlot.Slot)
 				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, dbSlot.Status, tx)
@@ -220,7 +220,7 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
-			} else if header != nil && !bytes.Equal(utils.MustParseHex(header.Data.Root), dbSlot.BlockRoot) {
+			} else if header != nil && !bytes.Equal(header.Data.Root, dbSlot.BlockRoot) {
 				// we have a different block root for the slot in the db, mark the currently present one as orphaned and write the new one
 				log.Infof("setting slot %v as orphaned and exporting new slot", dbSlot.Slot)
 				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "3", tx)

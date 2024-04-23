@@ -85,3 +85,14 @@ type User struct {
 	ProductId string `db:"product_id"`
 	UserGroup string `db:"user_group"`
 }
+
+type BlocksCursor struct {
+	GenericCursor
+	Slot int64 // basically the same as Block, Epoch, Age; mandatory, used to index
+
+	// optional, max one of those (for now)
+	Proposer int64
+	Group    int64
+	Status   int64
+	Reward   int64
+}

@@ -10,14 +10,14 @@ type StandardBeaconSlotResponse struct {
 
 type AnySignedBlock struct {
 	Message struct {
-		Slot          uint64 `json:"slot,string"`
-		ProposerIndex uint64 `json:"proposer_index,string"`
-		ParentRoot    string `json:"parent_root"`
-		StateRoot     string `json:"state_root"`
+		Slot          uint64      `json:"slot,string"`
+		ProposerIndex uint64      `json:"proposer_index,string"`
+		ParentRoot    bytesHexStr `json:"parent_root"`
+		StateRoot     bytesHexStr `json:"state_root"`
 		Body          struct {
-			RandaoReveal      string             `json:"randao_reveal"`
+			RandaoReveal      bytesHexStr        `json:"randao_reveal"`
 			Eth1Data          Eth1Data           `json:"eth1_data"`
-			Graffiti          string             `json:"graffiti"`
+			Graffiti          bytesHexStr        `json:"graffiti"`
 			ProposerSlashings []ProposerSlashing `json:"proposer_slashings"`
 			AttesterSlashings []AttesterSlashing `json:"attester_slashings"`
 			Attestations      []Attestation      `json:"attestations"`
@@ -43,21 +43,21 @@ type AnySignedBlock struct {
 type ProposerSlashing struct {
 	SignedHeader1 struct {
 		Message struct {
-			Slot          uint64 `json:"slot,string"`
-			ProposerIndex uint64 `json:"proposer_index,string"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			BodyRoot      string `json:"body_root"`
+			Slot          uint64      `json:"slot,string"`
+			ProposerIndex uint64      `json:"proposer_index,string"`
+			ParentRoot    bytesHexStr `json:"parent_root"`
+			StateRoot     bytesHexStr `json:"state_root"`
+			BodyRoot      bytesHexStr `json:"body_root"`
 		} `json:"message"`
 		Signature bytesHexStr `json:"signature"`
 	} `json:"signed_header_1"`
 	SignedHeader2 struct {
 		Message struct {
-			Slot          uint64 `json:"slot,string"`
-			ProposerIndex uint64 `json:"proposer_index,string"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			BodyRoot      string `json:"body_root"`
+			Slot          uint64      `json:"slot,string"`
+			ProposerIndex uint64      `json:"proposer_index,string"`
+			ParentRoot    bytesHexStr `json:"parent_root"`
+			StateRoot     bytesHexStr `json:"state_root"`
+			BodyRoot      bytesHexStr `json:"body_root"`
 		} `json:"message"`
 		Signature bytesHexStr `json:"signature"`
 	} `json:"signed_header_2"`
@@ -68,16 +68,16 @@ type AttesterSlashing struct {
 		AttestingIndices []Uint64Str `json:"attesting_indices"`
 		Signature        bytesHexStr `json:"signature"`
 		Data             struct {
-			Slot            uint64 `json:"slot,string"`
-			Index           uint64 `json:"index,string"`
-			BeaconBlockRoot string `json:"beacon_block_root"`
+			Slot            uint64      `json:"slot,string"`
+			Index           uint16      `json:"index,string"`
+			BeaconBlockRoot bytesHexStr `json:"beacon_block_root"`
 			Source          struct {
-				Epoch uint64 `json:"epoch,string"`
-				Root  string `json:"root"`
+				Epoch uint64      `json:"epoch,string"`
+				Root  bytesHexStr `json:"root"`
 			} `json:"source"`
 			Target struct {
-				Epoch uint64 `json:"epoch,string"`
-				Root  string `json:"root"`
+				Epoch uint64      `json:"epoch,string"`
+				Root  bytesHexStr `json:"root"`
 			} `json:"target"`
 		} `json:"data"`
 	} `json:"attestation_1"`
@@ -85,43 +85,59 @@ type AttesterSlashing struct {
 		AttestingIndices []Uint64Str `json:"attesting_indices"`
 		Signature        bytesHexStr `json:"signature"`
 		Data             struct {
-			Slot            uint64 `json:"slot,string"`
-			Index           uint64 `json:"index,string"`
-			BeaconBlockRoot string `json:"beacon_block_root"`
+			Slot            uint64      `json:"slot,string"`
+			Index           uint16      `json:"index,string"`
+			BeaconBlockRoot bytesHexStr `json:"beacon_block_root"`
 			Source          struct {
-				Epoch uint64 `json:"epoch,string"`
-				Root  string `json:"root"`
+				Epoch uint64      `json:"epoch,string"`
+				Root  bytesHexStr `json:"root"`
 			} `json:"source"`
 			Target struct {
-				Epoch uint64 `json:"epoch,string"`
-				Root  string `json:"root"`
+				Epoch uint64      `json:"epoch,string"`
+				Root  bytesHexStr `json:"root"`
 			} `json:"target"`
 		} `json:"data"`
 	} `json:"attestation_2"`
+}
+
+func (a *AttesterSlashing) GetSlashedIndices() []uint64 {
+	commonIndices := make([]uint64, 0)
+	indexMap := make(map[int32]bool)
+
+	for _, index := range a.Attestation2.AttestingIndices {
+		indexMap[int32(index)] = true
+	}
+
+	for _, index := range a.Attestation2.AttestingIndices {
+		if indexMap[int32(index)] {
+			commonIndices = append(commonIndices, uint64(index))
+		}
+	}
+	return commonIndices
 }
 
 type Attestation struct {
 	AggregationBits bytesHexStr `json:"aggregation_bits"`
 	Signature       bytesHexStr `json:"signature"`
 	Data            struct {
-		Slot            uint64 `json:"slot,string"`
-		Index           uint64 `json:"index,string"`
-		BeaconBlockRoot string `json:"beacon_block_root"`
+		Slot            uint64      `json:"slot,string"`
+		Index           uint16      `json:"index,string"`
+		BeaconBlockRoot bytesHexStr `json:"beacon_block_root"`
 		Source          struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
+			Epoch uint64      `json:"epoch,string"`
+			Root  bytesHexStr `json:"root"`
 		} `json:"source"`
 		Target struct {
-			Epoch uint64 `json:"epoch,string"`
-			Root  string `json:"root"`
+			Epoch uint64      `json:"epoch,string"`
+			Root  bytesHexStr `json:"root"`
 		} `json:"target"`
 	} `json:"data"`
 }
 
 type Deposit struct {
-	Proof []string `json:"proof"`
+	Proof []bytesHexStr `json:"proof"`
 	Data  struct {
-		Pubkey                string      `json:"pubkey"`
+		Pubkey                bytesHexStr `json:"pubkey"`
 		WithdrawalCredentials bytesHexStr `json:"withdrawal_credentials"`
 		Amount                uint64      `json:"amount,string"`
 		Signature             bytesHexStr `json:"signature"`
@@ -137,14 +153,14 @@ type VoluntaryExit struct {
 }
 
 type Eth1Data struct {
-	DepositRoot  string `json:"deposit_root"`
-	DepositCount uint64 `json:"deposit_count,string"`
-	BlockHash    string `json:"block_hash"`
+	DepositRoot  bytesHexStr `json:"deposit_root"`
+	DepositCount uint64      `json:"deposit_count,string"`
+	BlockHash    bytesHexStr `json:"block_hash"`
 }
 
 type SyncAggregate struct {
-	SyncCommitteeBits      string `json:"sync_committee_bits"`
-	SyncCommitteeSignature string `json:"sync_committee_signature"`
+	SyncCommitteeBits      bytesHexStr `json:"sync_committee_bits"`
+	SyncCommitteeSignature bytesHexStr `json:"sync_committee_signature"`
 }
 
 // https://ethereum.github.io/beacon-APIs/#/Beacon/getBlockV2

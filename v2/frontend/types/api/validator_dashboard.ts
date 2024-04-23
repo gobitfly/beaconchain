@@ -71,10 +71,10 @@ export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataRespo
  * Rewards Tab
  */
 export interface VDBRewardesTableDuty {
-  attestation: number /* float64 */;
-  proposal: number /* float64 */;
-  sync: number /* float64 */;
-  slashing: number /* uint64 */;
+  attestation?: number /* float64 */;
+  proposal?: number /* float64 */;
+  sync?: number /* float64 */;
+  slashing?: number /* uint64 */;
 }
 export interface VDBRewardsTableRow {
   epoch: number /* uint64 */;

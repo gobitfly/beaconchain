@@ -251,7 +251,7 @@ type Attestation struct {
 // AttestationData to hold attestation detail data
 type AttestationData struct {
 	Slot            uint64
-	CommitteeIndex  uint64
+	CommitteeIndex  uint16
 	BeaconBlockRoot []byte
 	Source          *Checkpoint
 	Target          *Checkpoint
