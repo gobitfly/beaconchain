@@ -86,7 +86,7 @@ const data = computed<Series[]>(() => {
   })
 
   const total: Series = {
-    name: props.t('common.total'),
+    name: props.t('dashboard.validator.rewards.chart.total'),
     value: `${props.weiToValue(props.series[1].bigData[props.dataIndex].add(props.series[0].bigData[props.dataIndex])).label}`,
     groups: mapData(totalGroups)
   }
@@ -107,7 +107,7 @@ const data = computed<Series[]>(() => {
     </b>
     <div v-for="(entry, index) in data" :key="index">
       <div class="header">
-        <b>{{ entry.name }}: {{ entry.value }}</b>
+        <span class="circle" :class="entry.className" /><b>{{ entry.name }}: {{ entry.value }}</b>
       </div>
       <ol>
         <li v-for="group in entry.groups" :key="group.id">
@@ -134,17 +134,31 @@ const data = computed<Series[]>(() => {
   .header {
     display: flex;
     align-items: center;
+    margin-top: var(--padding);
     gap: 3px;
 
     .circle {
-      width: 10px;
-      height: 10px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
+      margin-bottom: 2px;
+
+      &.cl {
+        background-color: var(--primary-orange);
+      }
+
+      &.el {
+        background-color: var(--melllow-blue);
+      }
     }
   }
 
   ol {
-    margin-left: var(--padding);
+    margin-block-start: 0;
+    margin-block-end: 0;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    padding-inline-start: 26px;
   }
 }
 </style>

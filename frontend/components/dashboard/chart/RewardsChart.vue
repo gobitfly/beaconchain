@@ -114,7 +114,6 @@ const series = computed<RewardChartSeries[]>(() => {
     formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
     data: Array.from(Array(categoryCount)).map(() => 0)
   }
-  list.push(clSeries)
   const elSeries:RewardChartSeries = {
     id: 2,
     name: $t('dashboard.validator.rewards.chart.el'),
@@ -129,6 +128,7 @@ const series = computed<RewardChartSeries[]>(() => {
     data: Array.from(Array(categoryCount)).map(() => 0)
   }
   list.push(elSeries)
+  list.push(clSeries)
   data.value.series.forEach((group) => {
     let name = allGroups
     if (!groupsEnabled) {
@@ -153,6 +153,7 @@ const series = computed<RewardChartSeries[]>(() => {
       }
       newData.bigData.push(bigValue)
     }
+    console.log('categoryCount', categoryCount, newData)
 
     if (group.property === 'el') {
       elSeries.groups.push(newData)
@@ -242,7 +243,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     },
     dataZoom: {
       type: 'slider',
-      start: 80,
+      start: 60,
       end: 100,
       dataBackground: {
         lineStyle: {
