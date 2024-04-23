@@ -39,7 +39,7 @@ function selectionHasChanged (chainId : ChainIDs, selected : boolean) {
       v-model="dropDownIsOpen"
       class="button"
       :bar-style="barStyle"
-      :forced-color="1"
+      :color="{on:true}"
     >
       {{ t('search_bar.network_filter_label') + ' ' + (everyNetworkIsSelected ? t('search_bar.all_networks') : '{0}') }}
     </BcSearchbarMiniButton>
