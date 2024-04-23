@@ -5,7 +5,7 @@ import {
 
 defineProps<{
   barStyle : SearchbarStyle,
-  initialState? : boolean,
+  state? : boolean,
   look? : 'on'|'off' // forces the look of the button statically instead of having the color changing with its state
 }>()
 
@@ -19,7 +19,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
       class="hidden-checkbox"
       :true-value="true"
       :false-value="false"
-      :checked="initialState"
+      :checked="state"
       :onchange="(e:any) => {emit('change', e.target.checked)}"
     >
     <slot />
