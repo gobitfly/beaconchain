@@ -94,8 +94,9 @@ type Config struct {
 			Type     string `yaml:"type" envconfig:"INDEXER_NODE_TYPE"`
 			PageSize int32  `yaml:"pageSize" envconfig:"INDEXER_NODE_PAGE_SIZE"`
 		} `yaml:"node"`
-		Eth1DepositContractFirstBlock uint64 `yaml:"eth1DepositContractFirstBlock" envconfig:"INDEXER_ETH1_DEPOSIT_CONTRACT_FIRST_BLOCK"`
-		PubKeyTagsExporter            struct {
+		ELDepositContractFirstBlock uint64 `yaml:"eth1DepositContractFirstBlock" envconfig:"INDEXER_ETH1_DEPOSIT_CONTRACT_FIRST_BLOCK"`
+		DoNotTraceDeposits          bool   `yaml:"doNotTraceDeposits" envconfig:"INDEXER_DO_NOT_TRACE_DEPOSITS"`
+		PubKeyTagsExporter          struct {
 			Enabled bool `yaml:"enabled" envconfig:"PUBKEY_TAGS_EXPORTER_ENABLED"`
 		} `yaml:"pubkeyTagsExporter"`
 		EnsTransformer struct {
@@ -263,8 +264,16 @@ type Config struct {
 		ApiKey                          string                           `yaml:"apiKey" envconfig:"MONITORING_API_KEY"`
 		ServiceMonitoringConfigurations []ServiceMonitoringConfiguration `yaml:"serviceMonitoringConfigurations" envconfig:"SERVICE_MONITORING_CONFIGURATIONS"`
 	} `yaml:"monitoring"`
+	InternalAlerts InternalAlertDiscord `yaml:"internalAlerts"`
+
 	ApiKeySecret     string   `yaml:"apiKeySecret" envconfig:"API_KEY_SECRET"`
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" envconfig:"CORS_ALLOWED_HOSTS"`
+}
+
+type InternalAlertDiscord struct {
+	DiscordWebhookUrl string `yaml:"discordWebhookUrl" envconfig:"INTERNAL_ALERTS_DISCORD_WEBHOOK_URL"`
+	DiscordUserName   string `yaml:"discordUserName" envconfig:"INTERNAL_ALERTS_DISCORD_USER_NAME"`
+	AvatarURL         string `yaml:"avatarURL" envconfig:"INTERNAL_ALERTS_AVATAR_URL"`
 }
 
 type DatabaseConfig struct {

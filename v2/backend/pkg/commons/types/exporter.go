@@ -251,7 +251,7 @@ type Attestation struct {
 // AttestationData to hold attestation detail data
 type AttestationData struct {
 	Slot            uint64
-	CommitteeIndex  uint64
+	CommitteeIndex  uint16
 	BeaconBlockRoot []byte
 	Source          *Checkpoint
 	Target          *Checkpoint
@@ -302,15 +302,17 @@ type EpochAssignments struct {
 	SyncAssignments     []uint64
 }
 
-// Eth1Deposit is a struct to hold eth1-deposit data
-type Eth1Deposit struct {
+// ELDeposit is a struct to hold execution layer deposit data
+type ELDeposit struct {
 	TxHash                []byte `db:"tx_hash"`
-	TxInput               []byte `db:"tx_input"`
 	TxIndex               uint64 `db:"tx_index"`
 	BlockNumber           uint64 `db:"block_number"`
+	LogIndex              uint64 `db:"log_index"`
 	BlockTs               int64  `db:"block_ts"`
 	FromAddress           []byte `db:"from_address"`
-	FromName              string
+	FromAddressText       string `db:"from_address_text"` // deprecated, TODO: remove
+	MsgSender             []byte `db:"msg_sender"`
+	ToAddress             []byte `db:"to_address"`
 	PublicKey             []byte `db:"publickey"`
 	WithdrawalCredentials []byte `db:"withdrawal_credentials"`
 	Amount                uint64 `db:"amount"`
@@ -320,8 +322,8 @@ type Eth1Deposit struct {
 	ValidSignature        bool   `db:"valid_signature"`
 }
 
-// Eth2Deposit is a struct to hold eth2-deposit data
-type Eth2Deposit struct {
+// CLDeposit is a struct to hold consensus layer deposit data
+type CLDeposit struct {
 	BlockSlot             uint64 `db:"block_slot"`
 	BlockIndex            uint64 `db:"block_index"`
 	BlockRoot             []byte `db:"block_root"`

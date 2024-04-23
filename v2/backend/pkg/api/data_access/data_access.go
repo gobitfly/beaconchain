@@ -644,7 +644,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 				efficiencyField = &data.Efficiency.AllTime
 			}
 			(*rewardsField).El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
-			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64)
+			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64).Mul(decimal.NewFromInt(1e9))
 			*efficiencyField = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
 			return nil
 		})
@@ -2092,7 +2092,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
-	// WORKING spletka
+	// TODO @recy21
 	return d.dummy.GetValidatorDashboardGroupRewards(dashboardId, groupId, epoch)
 }
 
@@ -2279,7 +2279,56 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	// TODO: implement sorting, filtering & paging
+	var paging t.Paging
+
+	// Initialize the cursor
+	var currentCursor t.WithdrawalsCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.WithdrawalsCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+		}
+	}
+
+	// Prepare the sorting
+	sortSearchDirection := ">"
+	sortSearchOrder := " ASC"
+	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+		sortSearchDirection = "<"
+		sortSearchOrder = " DESC"
+	}
+
+	// Analyze the search term
+	indexSearch := int64(-1)
+	if search != "" {
+		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			// Ensure that we have a "0x" prefix for the search term
+			if !strings.HasPrefix(search, "0x") {
+				search = "0x" + search
+			}
+			search = strings.ToLower(search)
+			if utils.IsHash(search) {
+				// Get the current validator state to convert pubkey to index
+				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+				defer releaseLock()
+				if err != nil {
+					return nil, nil, err
+				}
+				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+					indexSearch = int64(*index)
+				} else {
+					// No validator index for pubkey found, return empty results
+					return nil, &paging, nil
+				}
+			}
+		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
+			indexSearch = int64(index)
+		} else {
+			// No allowed search term found, return empty results
+			return nil, &paging, nil
+		}
+	}
 
 	validatorGroupMap := make(map[uint64]uint64)
 	var validators []uint64
@@ -2290,16 +2339,21 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			GroupId        uint64 `db:"group_id"`
 		}{}
 
-		validatorsQuery := `
-			SELECT
-			    validator_index,
-			    group_id
-			FROM
-			    users_val_dashboards_validators
-			WHERE
-			    dashboard_id = $1`
+		queryArgs := []interface{}{dashboardId.Id}
+		validatorsQuery := fmt.Sprintf(`
+			SELECT 
+				validator_index,
+				group_id
+			FROM users_val_dashboards_validators
+			WHERE dashboard_id = $%d
+			`, len(queryArgs))
 
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, dashboardId.Id)
+		if indexSearch != -1 {
+			queryArgs = append(queryArgs, indexSearch)
+			validatorsQuery += fmt.Sprintf(" AND validator_index = $%d", len(queryArgs))
+		}
+
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -2309,8 +2363,11 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			validators = append(validators, res.ValidatorIndex)
 		}
 	} else {
-		// In case a list of validators is provided, set the group to default 0
+		// In case a list of validators is provided set the group to the default id
 		for _, validator := range dashboardId.Validators {
+			if indexSearch != -1 && validator.Index != uint64(indexSearch) {
+				continue
+			}
 			validatorGroupMap[validator.Index] = t.DefaultGroupId
 			validators = append(validators, validator.Index)
 		}
@@ -2318,55 +2375,109 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, nil, nil
+		return nil, &paging, nil
 	}
 
 	// Get the withdrawals for the validators
 	queryResult := []struct {
-		ValidatorIndex uint64 `db:"validator_index"`
-		Epoch          uint64 `db:"epoch"`
-		Amount         int64  `db:"withdrawals_amount"`
+		BlockSlot       uint64 `db:"block_slot"`
+		WithdrawalIndex uint64 `db:"withdrawalindex"`
+		ValidatorIndex  uint64 `db:"validatorindex"`
+		Address         []byte `db:"address"`
+		Amount          uint64 `db:"amount"`
 	}{}
-	err := d.alloyReader.Select(&queryResult, `
+
+	queryParams := []interface{}{}
+	withdrawalsQuery := `
 		SELECT
-		    validator_index,
-			epoch,
-		    withdrawals_amount
+		    w.block_slot,
+			w.withdrawalindex,
+			w.validatorindex,
+			w.address,
+			w.amount
 		FROM
-		    validator_dashboard_data_epoch
+		    blocks_withdrawals w
+		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		`
+
+	// Limit the query to relevant validators
+	queryParams = append(queryParams, pq.Array(validators))
+	whereQuery := fmt.Sprintf(`
 		WHERE
-		    validator_index = ANY ($1) AND withdrawals_amount > 0`, pq.Array(validators))
+		    validatorindex = ANY ($%d)`, len(queryParams))
+
+	// Limit the query using the search term if it is an address
+	if utils.IsEth1Address(search) {
+		searchAddress, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decode search term %s as address: %w", search, err)
+		}
+		queryParams = append(queryParams, searchAddress)
+		whereQuery += fmt.Sprintf(" AND w.address = $%d", len(queryParams))
+	}
+
+	// Limit the query using sorting and the cursor
+	orderQuery := ""
+	sortColName := ""
+	sortColCursor := interface{}(nil)
+	switch colSort.Column {
+	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
+	case enums.VDBWithdrawalsColumns.Index:
+		sortColName = "w.validatorindex"
+		sortColCursor = currentCursor.Index
+	case enums.VDBWithdrawalsColumns.Recipient:
+		sortColName = "w.address"
+		sortColCursor = currentCursor.Recipient
+	case enums.VDBWithdrawalsColumns.Amount:
+		sortColName = "w.amount"
+		sortColCursor = currentCursor.Amount
+	}
+
+	if colSort.Column == enums.VDBWithdrawalsColumns.Epoch ||
+		colSort.Column == enums.VDBWithdrawalsColumns.Slot ||
+		colSort.Column == enums.VDBWithdrawalsColumns.Age {
+		if currentCursor.IsValid() {
+			// If we have a valid cursor only check the results before/after it
+			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
+			whereQuery += fmt.Sprintf(" AND (w.block_slot%[1]s$%[2]d OR (w.block_slot=$%[2]d AND w.withdrawalindex%[1]s$%[3]d))",
+				sortSearchDirection, len(queryParams)-1, len(queryParams))
+		}
+		orderQuery = fmt.Sprintf(" ORDER BY w.block_slot %[1]s, w.withdrawalindex %[1]s", sortSearchOrder)
+	} else {
+		if currentCursor.IsValid() {
+			// If we have a valid cursor only check the results before/after it
+			queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
+
+			// The additional WHERE requirement is
+			// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
+			// with the > flipped if the sort is descending
+			whereQuery += fmt.Sprintf(" AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (w.block_slot%[2]s$%[4]d OR (w.block_slot=$%[4]d AND w.withdrawalindex%[2]s$%[5]d))))",
+				sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+		}
+		// The ordering is
+		// ORDER BY sortColName ASC, block_slot ASC, withdrawalindex ASC
+		// with the ASC flipped if the sort is descending
+		orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, w.block_slot %[2]s, w.withdrawalindex %[2]s",
+			sortColName, sortSearchOrder)
+	}
+
+	limitQuery := fmt.Sprintf(" LIMIT %d", limit+1)
+
+	withdrawalsQuery += whereQuery + orderQuery + limitQuery
+
+	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, nil
+			return nil, &paging, nil
 		}
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
 
-	// Get the validators with withdrawals
-	validatorsWithWithdrawals := make(map[uint64]bool, 0)
-	for _, withdrawal := range queryResult {
-		validatorsWithWithdrawals[withdrawal.ValidatorIndex] = true
-	}
-
-	// Get the current validator state
-	validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseLock()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Get the withdrawal addresses for the validators
-	withdrawalAddresses := make(map[uint64]string)
+	// Prepare the ENS map
 	addressEns := make(map[string]string)
-	for validator := range validatorsWithWithdrawals {
-		withdrawalCredentials := validatorMapping.ValidatorMetadata[validator].WithdrawalCredentials
-		withdrawalAddress, err := utils.GetAddressOfWithdrawalCredentials(withdrawalCredentials)
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid withdrawal credentials for validator %d: %s", validator, hexutil.Encode(withdrawalCredentials))
-		}
-		withdrawalAddresses[validator] = hexutil.Encode(withdrawalAddress.Bytes())
-		addressEns[hexutil.Encode(withdrawalAddress.Bytes())] = ""
+	for _, withdrawal := range queryResult {
+		address := hexutil.Encode(withdrawal.Address)
+		addressEns[address] = ""
 	}
 
 	// Get the ENS names for the addresses
@@ -2376,23 +2487,52 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	// Create the result
 	result := make([]t.VDBWithdrawalsTableRow, 0)
+	cursorData := make([]t.WithdrawalsCursor, 0)
 	for _, withdrawal := range queryResult {
-		address := withdrawalAddresses[withdrawal.ValidatorIndex]
+		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   withdrawal.Epoch,
+			Epoch:   withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Slot:    withdrawal.BlockSlot,
 			Index:   withdrawal.ValidatorIndex,
 			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
 			Recipient: t.Address{
 				Hash: t.Hash(address),
 				Ens:  addressEns[address],
 			},
-			Amount: decimal.NewFromInt(withdrawal.Amount),
+			Amount: utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+		})
+		cursorData = append(cursorData, t.WithdrawalsCursor{
+			Slot:            withdrawal.BlockSlot,
+			WithdrawalIndex: withdrawal.WithdrawalIndex,
+			Index:           withdrawal.ValidatorIndex,
+			Recipient:       withdrawal.Address,
+			Amount:          withdrawal.Amount,
 		})
 	}
 
-	paging := &t.Paging{
-		TotalCount: uint64(len(result)),
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
 	}
 
-	return result, paging, nil
+	// Remove the last entry from data as it is only required for the check
+	if moreDataFlag {
+		result = result[:len(result)-1]
+		cursorData = cursorData[:len(cursorData)-1]
+	}
+
+	// Reverse the data if the cursor is reversed to correct it to the requested direction
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+		slices.Reverse(cursorData)
+	}
+
+	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
