@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"database/sql"
 	"fmt"
+	"html/template"
 	"math/big"
 	"slices"
 	"strconv"
@@ -11,7 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -251,10 +254,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
-		// No paging required
-		return result, &paging, nil
-	}
 
 	// Remove the last entry from data as it is only required for the check
 	if moreDataFlag {
@@ -268,10 +267,169 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		slices.Reverse(cursorData)
 	}
 
+	// Find the next withdrawal if we are currently at the first page
+	// If we have a prev_cursor but not enough data it means the next data is missing
+	if !currentCursor.IsValid() || (currentCursor.IsReverse() && len(result) < int(limit)) {
+		nextData, err := d.getNextWithdrawalRow(validators)
+		if err != nil {
+			return nil, nil, err
+		}
+		if nextData != nil {
+			result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
+
+			// Flag if above limit
+			moreDataFlag = moreDataFlag || len(result) > int(limit)
+			if !moreDataFlag && !currentCursor.IsValid() {
+				// No paging required
+				return result, &paging, nil
+			}
+
+			// Remove the last entry from data as it is only required for the check
+			if moreDataFlag {
+				result = result[:len(result)-1]
+				cursorData = cursorData[:len(cursorData)-1]
+			}
+		}
+	}
+
 	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
 
 	return result, p, nil
+}
+
+func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.VDBWithdrawalsTableRow, error) {
+
+	if len(queryValidators) == 0 {
+		return nil, nil
+	}
+
+	stats := cache.LatestStats.Get() // TODO
+	if stats == nil || stats.LatestValidatorWithdrawalIndex == nil {
+		return nil, errors.New("stats not available")
+	}
+
+	epoch := cache.LatestEpoch.Get()
+
+	// find subscribed validators that are active and have valid withdrawal credentials (balance will be checked later as it will be queried from bigtable)
+	// order by validator index to ensure that "last withdrawal" cursor handling works
+	var validatorsDb []*types.Validator
+	err := db.ReaderDb.Select(&validatorsDb, `
+			SELECT
+				validatorindex,
+				withdrawalcredentials,
+				withdrawableepoch
+			FROM validators
+			WHERE
+				activationepoch <= $1 AND exitepoch > $1 AND
+				withdrawalcredentials LIKE '\x01' || '%'::bytea AND
+				validatorindex = ANY($2)
+			ORDER BY validatorindex ASC`, epoch, pq.Array(queryValidators))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(validatorsDb) == 0 {
+		return nil, nil
+	}
+
+	// GetValidatorBalanceHistory only takes uint64 slice
+	var validatorIds = make([]uint64, 0, len(validatorsDb))
+	for _, v := range validatorsDb {
+		validatorIds = append(validatorIds, v.Index)
+	}
+
+	// retrieve up2date balances for all valid validators from bigtable
+	balances, err := db.BigtableClient.GetValidatorBalanceHistory(validatorIds, epoch, epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	// find the first withdrawable validator by matching validators and balances
+	var nextValidator *types.Validator
+	for _, v := range validatorsDb {
+		balance, ok := balances[v.Index]
+		if !ok {
+			continue
+		}
+		if len(balance) == 0 {
+			continue
+		}
+
+		if (balance[0].Balance > 0 && v.WithdrawableEpoch <= epoch) ||
+			(balance[0].EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && balance[0].Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
+			// this validator is eligible for withdrawal, check if it is the next one
+			if nextValidator == nil || v.Index > *stats.LatestValidatorWithdrawalIndex {
+				nextValidator = v
+				nextValidator.Balance = balance[0].Balance
+				if nextValidator.Index > *stats.LatestValidatorWithdrawalIndex {
+					// the first validator after the cursor has to be the next validator
+					break
+				}
+			}
+		}
+	}
+
+	if nextValidator == nil {
+		return nil, nil
+	}
+
+	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{nextValidator.Index})
+	if err != nil {
+		return nil, err
+	}
+	lastWithdrawnEpoch := lastWithdrawnEpochs[nextValidator.Index]
+
+	distance, err := GetWithdrawableCountFromCursor(epoch, nextValidator.Index, *stats.LatestValidatorWithdrawalIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	timeToWithdrawal := utils.GetTimeToNextWithdrawal(distance)
+
+	// it normally takes two epochs to finalize
+	latestFinalized := cache.LatestFinalizedEpoch.Get()
+	if timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
+		return nil, nil
+	}
+
+	var withdrawalCredentialsTemplate template.HTML
+	address, err := utils.WithdrawalCredentialsToAddress(nextValidator.WithdrawalCredentials)
+	if err != nil {
+		// warning only as "N/A" will be displayed
+		logger.Warn("invalid withdrawal credentials")
+	}
+	if address != nil {
+		withdrawalCredentialsTemplate = template.HTML(fmt.Sprintf(`<a href="/address/0x%x"><span class="text-muted">%s</span></a>`, address, utils.FormatAddress(address, nil, "", false, false, true)))
+	} else {
+		withdrawalCredentialsTemplate = `<span class="text-muted">N/A</span>`
+	}
+
+	var withdrawalAmount uint64
+	if nextValidator.WithdrawableEpoch <= epoch {
+		// full withdrawal
+		withdrawalAmount = nextValidator.Balance
+	} else {
+		// partial withdrawal
+		withdrawalAmount = nextValidator.Balance - utils.Config.Chain.ClConfig.MaxEffectiveBalance
+	}
+
+	if lastWithdrawnEpoch == epoch || nextValidator.Balance < utils.Config.Chain.ClConfig.MaxEffectiveBalance {
+		withdrawalAmount = 0
+	}
+
+	nextData := make([][]interface{}, 0, 1)
+	nextData = append(nextData, []interface{}{
+		utils.FormatValidator(nextValidator.Index),
+		template.HTML(fmt.Sprintf(`<span class="text-muted">~ %s</span>`, utils.FormatEpoch(uint64(utils.TimeToEpoch(timeToWithdrawal))))),
+		template.HTML(fmt.Sprintf(`<span class="text-muted">~ %s</span>`, utils.FormatBlockSlot(utils.TimeToSlot(uint64(timeToWithdrawal.Unix()))))),
+		template.HTML(fmt.Sprintf(`<span class="">~ %s</span>`, utils.FormatTimestamp(timeToWithdrawal.Unix()))),
+		withdrawalCredentialsTemplate,
+		template.HTML(fmt.Sprintf(`<span class="text-muted"><span data-toggle="tooltip" title="If the withdrawal were to be processed at this very moment, this amount would be withdrawn"><i class="far ml-1 fa-question-circle" style="margin-left: 0px !important;"></i></span> %s</span>`, utils.FormatClCurrency(withdrawalAmount, currency, 6, true, false, false, true))),
+	})
+
+	return nextData, nil
 }

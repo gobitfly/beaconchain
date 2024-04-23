@@ -54,6 +54,12 @@ var LatestExportedStatisticDay UInt64Cached = UInt64Cached{
 	},
 }
 
+var LatestStats UInt64Cached = UInt64Cached{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestStats", utils.Config.Chain.ClConfig.DepositChainID)
+	},
+}
+
 // FinalizationDelay will return the current Finalization Delay
 func FinalizationDelay() uint64 {
 	return LatestNodeEpoch.Get() - LatestNodeFinalizedEpoch.Get()
