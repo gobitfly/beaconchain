@@ -23,7 +23,7 @@ import (
 )
 
 // -------------- DEBUG FLAGS ----------------
-// Normally rolling aggregation is done when headEpochQueue exporter is near head, but for debugging purposes we can force it to be done every epoch
+// Normally rolling aggregation is only done when headEpochQueue exporter is near head so the exporter can catch up faster if behind, but for debugging purposes we can force it to be done every epoch
 const debugAggregateMidEveryEpoch = false // prod: false
 
 // If set to 0 exporter will backfill to node finalized head, use any other value to backfill up to that specific epoch

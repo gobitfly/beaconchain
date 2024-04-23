@@ -24,6 +24,11 @@ If the rolling tables fall out of sync due to long offline time or initial sync,
 7d, 31d, 90d use a bootstrap from the utc_days table to get started and 24h the hourly table.
 */
 
+/*
+	In case exporter needs to be reset and re-export from an older epoch again, the rolling tables must be truncated.
+	Total must be bootstrapped by hand, for example via daily utc table. Other rolling tables will be bootstrapped automatically.
+*/
+
 type RollingAggregator struct {
 	RollingAggregatorInt
 	log ModuleLog
