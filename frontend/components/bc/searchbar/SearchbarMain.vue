@@ -568,7 +568,7 @@ function informationIfHiddenResults () : string {
       <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
         <div v-if="classIfDropdownContainsSomething" class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
-          <BcSearchbarNetworkSelector2
+          <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
             v-model="networkFilter"
             class="filter-networks"
