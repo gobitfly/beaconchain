@@ -173,8 +173,9 @@ func (d *epochToDayAggregator) aggregateUtcDayWithBounds(firstEpochOfDay, lastEp
 }
 
 func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, time.Time) {
-	startOfPartition := epoch / (PartitionDayWidth * GetDayAggregateWidth()) * PartitionDayWidth * GetDayAggregateWidth() // inclusive
-	endOfPartition := startOfPartition + PartitionDayWidth*GetDayAggregateWidth()                                         // exclusive
+	_, boundsEnd := getDayAggregateBounds(epoch)
+	startOfPartition := boundsEnd / (PartitionDayWidth * GetDayAggregateWidth()) * PartitionDayWidth * GetDayAggregateWidth() // inclusive
+	endOfPartition := startOfPartition + PartitionDayWidth*GetDayAggregateWidth()                                             // exclusive
 	return utils.EpochToTime(startOfPartition), utils.EpochToTime(endOfPartition)
 }
 
