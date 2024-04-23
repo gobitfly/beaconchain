@@ -362,7 +362,7 @@ func GetEpochOffsetGenesis() uint64 {
 	// the offset can be used to get the first epoch of a utc day
 	genesisTs := Config.Chain.GenesisTimestamp
 	offsetToUTCDay := genesisTs % 86400 // 86400 seconds per day
-	return uint64(math.Ceil(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
+	return uint64(math.Floor(float64(offsetToUTCDay) / float64(Config.Chain.ClConfig.SecondsPerSlot) / float64(Config.Chain.ClConfig.SlotsPerEpoch)))
 }
 
 func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error) {
@@ -371,4 +371,16 @@ func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error)
 	}
 	addr := common.BytesToAddress(withCred[12:])
 	return &addr, nil
+}
+
+func Deduplicate(slice []uint64) []uint64 {
+	keys := make(map[uint64]bool)
+	list := []uint64{}
+	for _, entry := range slice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

@@ -209,9 +209,9 @@ var _ EnumFactory[VDBWithdrawalsColumn] = VDBWithdrawalsColumn(0)
 
 const (
 	VDBWithdrawalEpoch VDBWithdrawalsColumn = iota
+	VDBWithdrawalSlot
 	VDBWithdrawalAge
 	VDBWithdrawalIndex
-	VDBWithdrawalGroup
 	VDBWithdrawalRecipient
 	VDBWithdrawalAmount
 )
@@ -224,12 +224,12 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 	switch s {
 	case "epoch":
 		return VDBWithdrawalEpoch
+	case "slot":
+		return VDBWithdrawalSlot
 	case "age":
 		return VDBWithdrawalAge
 	case "index":
 		return VDBWithdrawalIndex
-	case "group_id":
-		return VDBWithdrawalGroup
 	case "recipient":
 		return VDBWithdrawalRecipient
 	case "amount":
@@ -241,16 +241,16 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 
 var VDBWithdrawalsColumns = struct {
 	Epoch     VDBWithdrawalsColumn
+	Slot      VDBWithdrawalsColumn
 	Age       VDBWithdrawalsColumn
 	Index     VDBWithdrawalsColumn
-	Group     VDBWithdrawalsColumn
 	Recipient VDBWithdrawalsColumn
 	Amount    VDBWithdrawalsColumn
 }{
 	VDBWithdrawalEpoch,
+	VDBWithdrawalSlot,
 	VDBWithdrawalAge,
 	VDBWithdrawalIndex,
-	VDBWithdrawalGroup,
 	VDBWithdrawalRecipient,
 	VDBWithdrawalAmount,
 }

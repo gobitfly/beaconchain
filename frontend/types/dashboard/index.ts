@@ -17,11 +17,13 @@ export const DAHSHBOARDS_ALL_GROUPS_ID = -1
 export const DAHSHBOARDS_NEXT_EPOCH_ID = -2
 
 export type DashboardKeyData = {
+  dashboardType:globalThis.Ref<DashboardType>,
   dashboardKey:globalThis.Ref<string>,
   isPublic:globalThis.Ref<boolean>,
   publicEntities:globalThis.Ref<string[]>,
   addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
+  setDashboardKey:(key:string) =>void,
 }
 
 // For not logged in Users we store the Dashboard in Cookies

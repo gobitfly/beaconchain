@@ -2,8 +2,6 @@
 import { type DashboardType, type ValidatorDashboardNetwork } from '~/types/dashboard'
 import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
 
-const router = useRouter()
-
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 
 interface Props {
@@ -69,7 +67,7 @@ async function createDashboard () {
     }
     const response = await createAccountDashboard(name.value, publicKey)
 
-    router.push(`/account-dashboard/${response?.hash ?? response?.id ?? 1}`)
+    await navigateTo(`/account-dashboard/${response?.hash ?? response?.id ?? 1}`)
   } else if (type.value === 'validator') {
     if (!name.value || !network.value) {
       return
@@ -79,7 +77,7 @@ async function createDashboard () {
     if (matchingType && publicEntities.value?.length && response?.id && response.id > 0) {
       await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators: publicEntities.value, group_id: '0' } }, { dashboardKey: response.id })
     }
-    router.push(`/dashboard/${response?.hash ?? response?.id ?? 1}`)
+    await navigateTo(`/dashboard/${response?.hash ?? response?.id ?? 1}`)
   }
 }
 </script>
