@@ -153,7 +153,6 @@ const series = computed<RewardChartSeries[]>(() => {
       }
       newData.bigData.push(bigValue)
     }
-    console.log('categoryCount', categoryCount, newData)
 
     if (group.property === 'el') {
       elSeries.groups.push(newData)
@@ -181,7 +180,6 @@ const option = computed<ECBasicOption | undefined>(() => {
     xAxis: {
       type: 'category',
       data: data.value?.categories,
-      boundaryGap: false,
       axisLabel: {
         fontSize: textSize,
         lineHeight: 20,
@@ -201,7 +199,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       axisLabel: {
         formatter: valueFormatter.value,
         fontSize: textSize,
-        padding: [0, 30, 0, 0]
+        padding: [0, 10, 0, 0]
       },
       splitLine: {
         lineStyle: {
