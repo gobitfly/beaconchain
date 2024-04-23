@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -132,13 +131,9 @@ func GetSyncCommitteAtPeriod(rpcClient rpc.Client, p uint64) ([]SyncCommittee, e
 
 	result := make([]SyncCommittee, len(c.Validators))
 	for i, idxStr := range c.Validators {
-		idxU64, err := strconv.ParseUint(idxStr, 10, 64)
-		if err != nil {
-			return nil, err
-		}
 		result = append(result, SyncCommittee{
 			Period:         p,
-			ValidatorIndex: idxU64,
+			ValidatorIndex: uint64(idxStr),
 			CommitteeIndex: uint64(i),
 		})
 	}
