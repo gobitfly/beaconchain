@@ -124,13 +124,44 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	if err != nil {
 		return nil, nil, err
 	}
-	scheduledSlots := make([]uint64, 0)
-	for slot := range dutiesInfo.PropAssignmentsForSlot {
-		scheduledSlots = append(scheduledSlots, slot)
+	// just pass scheduled proposals to query and let db do the sorting etc
+	scheduledPropsQryValues := ""
+	for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
+		// only gather scheduled slots
+		if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+			continue
+		}
+		// only gather slots scheduled for our validators
+		if _, ok := validatorGroupMap[vali]; !ok {
+			continue
+		}
+		params = append(params, dutiesInfo.PropAssignmentsForSlot[slot])
+		params = append(params, validatorGroupMap[dutiesInfo.PropAssignmentsForSlot[slot]])
+		params = append(params, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		params = append(params, slot)
+		scheduledPropsQryValues = scheduledPropsQryValues + fmt.Sprintf(`($%d::int, $%d::int, $%d::int, $%d::int, '0', null::int, null::bytea, null::int, null::bytea, ''), `, len(params)-3, len(params)-2, len(params)-1, len(params))
 	}
-	slices.Sort(scheduledSlots)
 
-	query := `
+	query := ""
+	if len(scheduledPropsQryValues) > 0 {
+		query = fmt.Sprintf(`SELECT * FROM (SELECT * FROM (WITH scheduled_proposals (
+			proposer,
+			group_id,
+			epoch,
+			slot,
+			status,
+			exec_block_number,
+			exec_fee_recipient,
+			mev_reward,
+			proposer_fee_recipient,
+			graffiti_text
+		) AS (VALUES %s)
+		SELECT * FROM scheduled_proposals) proposals
+		UNION
+		(`, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
+	}
+
+	query += with + `
 	SELECT
 		proposer,
 		group_id,
@@ -146,6 +177,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	LEFT JOIN blocks ON blocks.proposer = validator_groups.validator_index
 	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
 	`
+	if len(scheduledPropsQryValues) > 0 {
+		query += `)) as u `
+	}
 	where := ``
 	orderBy := `ORDER BY `
 	sortOrder := ` ASC`
@@ -187,65 +221,39 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		if onlyPrimarySort {
 			where += `slot` + sign + fmt.Sprintf(`$%d`, len(params))
 		} else {
-			// explicit cast to int because type of 'status' column is text for some reason
 			params = append(params, val)
-			where += fmt.Sprintf(`(slot < $%d AND `+sortColName+`::int = $%d) OR `+sortColName+`::int`+sign+`$%d`, len(params)-1, len(params), len(params))
+			secSign := ` < `
+			if currentCursor.Reverse {
+				secSign = ` > `
+			}
+			// explicit cast to int because type of 'status' column is text for some reason
+			where += fmt.Sprintf(`(slot`+secSign+`$%d AND `+sortColName+`::int = $%d) OR `+sortColName+`::int`+sign+`$%d`, len(params)-1, len(params), len(params))
 		}
 		where += `) `
 	}
 	orderBy += sortColName + sortOrder
 	if !onlyPrimarySort {
-		orderBy += `, slot DESC`
+		secSort := `DESC`
+		if currentCursor.Reverse {
+			secSort = `ASC`
+		}
+		orderBy += `, slot ` + secSort
 	}
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
 		LIMIT $%d
 	`, len(params))
 
-	err = d.readerDb.Select(&proposals, with+query+where+orderBy+limitStr, params...)
+	err = d.readerDb.Select(&proposals, query+where+orderBy+limitStr, params...)
 	if err != nil {
 		return nil, nil, err
-	}
-	if currentCursor.IsReverse() && currentCursor.Reverse {
-		slices.Reverse(proposals)
-	}
-	// insert scheduled proposals
-	for _, slot := range scheduledSlots {
-		prop := proposal{
-			Proposer: int64(dutiesInfo.PropAssignmentsForSlot[slot]),
-			Epoch:    slot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
-			Slot:     int64(slot),
-			Status:   0,
-			// Block: ,
-			// Mev: 2,
-			Group: int64(validatorGroupMap[dutiesInfo.PropAssignmentsForSlot[slot]]),
-			// TODO fill this properly, used for cursor atm
-			// Reward: 2,
-		}
-		// insert if needed
-		switch colSort.Column {
-		case enums.VDBBlocksColumns.Block:
-			fallthrough
-		case enums.VDBBlocksColumns.Epoch:
-			fallthrough
-		case enums.VDBBlocksColumns.Age:
-			fallthrough
-		case enums.VDBBlocksColumns.Slot:
-			proposals = append(proposals, proposal{})
-		case enums.VDBBlocksColumns.Proposer:
-		case enums.VDBBlocksColumns.Group:
-		case enums.VDBBlocksColumns.Status:
-			if colSort.Desc {
-				proposals = append([]proposal{prop}, proposals...)
-			} else {
-				proposals = append(proposals, prop)
-			}
-			// case enums.VDBBlocksColumns.ProposerReward:
-		}
 	}
 	moreDataFlag := len(proposals) > int(limit)
 	if moreDataFlag {
 		proposals = proposals[:len(proposals)-1]
+	}
+	if currentCursor.IsReverse() {
+		slices.Reverse(proposals)
 	}
 
 	blocksNoRelay := make([]uint64, 0, len(proposals))
