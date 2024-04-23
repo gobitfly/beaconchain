@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
+import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard/index'
 
 const { dashboardKey } = useDashboardKey()
 
@@ -68,11 +69,13 @@ const setSearch = (value?: string) => {
   loadData(setQuerySearch(value, lastQuery.value))
 }
 
-const getRowClass = (row: VDBBlocksTableRow) => {
-// TODO (scheduled and total)
-  if (row.status === 'scheduled') {
-    return 'future-row'
+const getRowClass = (row: VDBWithdrawalsTableRow) => {
+  // TODO: Discuss if we want to use DAHSHBOARDS_ALL_GROUPS_ID here
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+    return 'total-row'
   }
+
+  // TODO: Discuss future withdrawals
 }
 
 // TODO: Endpoint seems not to return total and future, discuss
@@ -259,7 +262,6 @@ const getRowClass = (row: VDBBlocksTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
-
   .index {
     @include utils.set-all-width(140px);
   }
@@ -279,6 +281,12 @@ const getRowClass = (row: VDBBlocksTableRow) => {
 
   .time-passed {
     white-space: nowrap;
+  }
+
+  tr:has(+.total-row) {
+    td {
+      border-bottom-color: var(--primary-color);
+    }
   }
 
   // TODO: Handle/Use future row
