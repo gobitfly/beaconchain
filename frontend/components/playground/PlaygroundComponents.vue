@@ -18,6 +18,12 @@ import type { ClientOnly } from '#build/components';
     <TabPanel header="Icons">
       <PlaygroundIcons />
     </TabPanel>
+    <TabPanel header="Clipping in the middle">
+      <PlaygroundMiddleEllipsisTests />
+    </TabPanel>
+    <TabPanel header="Search bars">
+      <PlaygroundEmbeddedSearchbars />
+    </TabPanel>
     <TabPanel header="Input">
       <PlaygroundInput />
     </TabPanel>

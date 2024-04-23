@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import {
-  faAdd,
   faEdit,
   faTrash
 } from '@fortawesome/pro-solid-svg-icons'
@@ -13,6 +12,8 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { ChainIDs } from '~/types/networks'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -36,6 +37,7 @@ const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefin
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
+const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 const size = computed(() => {
@@ -92,12 +94,45 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const addValidator = () => {
+const addValidator = (result : ResultSuggestion) => {
+  if (premiumLimit.value) {
+    // TODO: show a BcDialogConfirm to invite the user to suscribe to a plan (see Figma).
+    return
+  }
+
+  // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
+  switch (result.type) {
+    case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
+    case ResultType.ValidatorsByPubkey :
+      selectedValidator.value = result.queryParam
+      break
+    // Below, several validators correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByGraffiti :
+      selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
+      // If you need it: `result.count` is the size of the batch.
+      break
+    default :
+      return
+  }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities([selectedValidator.value])
   } else {
     changeGroup([selectedValidator.value], selectedGroup.value)
   }
+  // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
+  searchBar.value!.hideResult(result)
+  // You probably want to call it later, after getting confirmation that the validator is added into the database,
+  // but `result` is no longer valid if the user changes the input (the bar ignores your call to hideResult() then).
+
+  // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
+  // If there are cases that you want to close the dropdown, you can call this method:
+  // searchBar.value!.closeDropdown()
+  // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
 }
 
 const editSelected = () => {
@@ -206,17 +241,22 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
-        <span v-else class="small-title">{{ $t('dashboard.validator.manage-validators') }}</span>
+        <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
           <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: replace input once Searchbar is finished -->
-          <InputText v-model="selectedValidator" class="search-input" placeholder="Placeholder input (will be replaced once the searchbar is finished)" />
-          <Button class="p-button-icon-only" style="display: inline;" :disabled="!selectedValidator || premiumLimit" @click="addValidator">
-            <FontAwesomeIcon :icon="faAdd" />
-          </Button>
-          <!-- end of temp -->
+          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
+          <BcSearchbarMain
+            ref="searchBar"
+            :bar-style="SearchbarStyle.Embedded"
+            :bar-purpose="SearchbarPurpose.ValidatorAddition"
+            :only-networks="[ChainIDs.Ethereum]"
+            :pick-by-default="pickHighestPriorityAmongBestMatchings"
+            :keep-dropdown-open="true"
+            class="search-bar"
+            @go="addValidator"
+          />
         </div>
       </template>
       <template #table>
@@ -400,16 +440,16 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 .add-row {
+  position:relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--padding);
   gap: var(--padding);
 
-  .search-input {
+  .search-bar {
     flex-shrink: 1;
     flex-grow: 1;
-    width: 50px;
   }
 }
 
