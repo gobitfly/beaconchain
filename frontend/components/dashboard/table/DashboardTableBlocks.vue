@@ -327,7 +327,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   font-size: var(--small_text_font_size);
 
   .row {
-
     display: flex;
     align-items: center;
 
