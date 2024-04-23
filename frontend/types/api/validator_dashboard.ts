@@ -159,9 +159,10 @@ export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<
  */
 export interface VDBExecutionDepositsTableRow {
   public_key: PubKey;
-  index: number /* uint64 */;
+  index?: number /* uint64 */;
   group_id: number /* uint64 */;
   block: number /* uint64 */;
+  timestamp: string /* time.Time */;
   from: Address;
   depositor: Address;
   tx_hash: Hash;

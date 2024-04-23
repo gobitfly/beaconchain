@@ -184,9 +184,10 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
 	PublicKey             PubKey          `json:"public_key"`
-	Index                 uint64          `json:"index"`
+	Index                 *uint64         `json:"index,omitempty"`
 	GroupId               uint64          `json:"group_id"`
 	Block                 uint64          `json:"block"`
+	Timestamp             time.Time       `json:"timestamp"`
 	From                  Address         `json:"from"`
 	Depositor             Address         `json:"depositor"`
 	TxHash                Hash            `json:"tx_hash"`
