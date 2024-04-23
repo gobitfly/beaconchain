@@ -33,6 +33,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/invopop/jsonschema v0.12.0
+	github.com/jackc/pgconn v1.9.1-0.20210724152538-d89c8390a530
 	github.com/jackc/pgtype v1.14.2
 	github.com/jackc/pgx-shopspring-decimal v0.0.0-20220624020537-1d36b5a1853e
 	github.com/jackc/pgx/v5 v5.5.3
@@ -131,6 +132,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 // indirect
+	github.com/gtuk/discordwebhook v1.2.0 // indirect
 	github.com/herumi/bls-eth-go-binary v1.31.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/huandu/go-clone v1.6.0 // indirect
@@ -149,8 +151,10 @@ require (
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
 	github.com/ipld/go-codec-dagpb v1.6.0 // indirect
 	github.com/ipld/go-ipld-prime v0.20.0 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.1.1 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect

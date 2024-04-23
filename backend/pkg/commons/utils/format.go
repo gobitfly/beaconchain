@@ -14,6 +14,37 @@ import (
 
 func FormatAttestorAssignmentKey(AttesterSlot, CommitteeIndex, MemberIndex uint64) string {
 	return fmt.Sprintf("%v-%v-%v", AttesterSlot, CommitteeIndex, MemberIndex)
+
+	/*
+		Refactoring to
+
+		b := make([]byte, 14)
+		binary.LittleEndian.PutUint64(b, AttesterSlot)
+		binary.LittleEndian.PutUint16(b[8:], CommitteeIndex)
+		binary.LittleEndian.PutUint32(b[10:], MemberIndex)
+		return string(b)
+
+		would save memory but at the expense of readability.
+		Check usage first since we do some key parsing in some places.
+	*/
+}
+
+// Do NOT use if you have multiple AttesterSlots in multiple epochs, this is intended for singular epoch use
+// FormatAttestorAssignmentKeyLowMem formats the attester assignment key using a low memory approach.
+// It takes the attester slot, committee index, and member index as input and returns the formatted key as a uint64 value.
+// The attester slot is masked with 0xFFFF to extract the last 2 bytes, more than enough for one epoch but can not represent slots of multiple epochs uniquely.
+// It is shifted to the first 16 bits of the result.
+// The committee index is shifted to the next 16 bits of the result.
+// Finally, the member index is is set to the remaining 32 bits of the result.
+// The formatted key is returned as a uint64 value.
+func FormatAttestorAssignmentKeyLowMem(AttesterSlot uint64, CommitteeIndex uint16, MemberIndex uint32) uint64 {
+	var result uint64
+	attSlotLast2Bytes := AttesterSlot & 0xFFFF
+
+	result = attSlotLast2Bytes << 48
+	result |= uint64(CommitteeIndex) << 32
+	result |= uint64(MemberIndex)
+	return result
 }
 
 func ClToCurrency(valIf interface{}, currency string) decimal.Decimal {
