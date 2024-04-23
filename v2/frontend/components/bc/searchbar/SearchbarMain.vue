@@ -606,7 +606,7 @@ function informationIfHiddenResults () : string {
         </div>
         <div v-else class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
-            <div class="">
+            <div>
               {{ t('search_bar.searching') }}
               <BcLoadingSpinner :loading="true" size="small" alignment="center" />
             </div>
