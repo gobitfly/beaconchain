@@ -160,12 +160,12 @@ const data = computed(() => {
     <span>
       <span class="no-wrap">
         <FontAwesomeIcon :icon="faCube" />
-        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" :precision="0" />
       </span>
       <span> | </span>
       <span class="no-wrap">
         <FontAwesomeIcon :icon="faSync" />
-        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" :precision="0" />
       </span>
     </span>
     <BcTooltip position="top">
