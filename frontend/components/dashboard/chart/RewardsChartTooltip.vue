@@ -38,11 +38,12 @@ interface GroupValue {
 
 interface Series {
   name: string,
-  value: string
+  value: string,
+  className?: string,
   groups: GroupValue[]
 }
 
-const mapData = (groups: RewardChartGroupGroupData[]):GroupValue[] => {
+const mapData = (groups: RewardChartGroupGroupData[]): GroupValue[] => {
   const sort = [...groups].sort((g1, g2) => {
     const v1 = g1.bigData[props.dataIndex] || BigNumber.from('0')
     const v2 = g2.bigData[props.dataIndex] || BigNumber.from('0')
@@ -56,13 +57,15 @@ const mapData = (groups: RewardChartGroupGroupData[]):GroupValue[] => {
 }
 
 const data = computed<Series[]>(() => {
-  const el:Series = {
+  const el: Series = {
     name: props.series[1].name,
+    className: 'cl',
     value: props.series[1].formatedData[props.dataIndex].label as string,
     groups: mapData(props.series[1].groups)
   }
-  const cl:Series = {
+  const cl: Series = {
     name: props.series[0].name,
+    className: 'el',
     value: props.series[0].formatedData[props.dataIndex].label as string,
     groups: mapData(props.series[0].groups)
   }
@@ -94,21 +97,23 @@ const data = computed<Series[]>(() => {
 
 <template>
   <div class="tooltip-container" @click.stop.prevent="console.log('click')">
-    <div>
-      {{ dateText }}
-    </div>
-    <div>
-      {{ epochText }}
-    </div>
+    <b>
+      <div>
+        {{ dateText }}
+      </div>
+      <div>
+        {{ epochText }}
+      </div>
+    </b>
     <div v-for="(entry, index) in data" :key="index">
-      <div class="line-container">
-        {{ entry.name }}: {{ entry.value }}
+      <div class="header">
+        <b>{{ entry.name }}: {{ entry.value }}</b>
       </div>
-      <div v-for="group in entry.groups" :key="group.id">
-        <div class="line-container">
+      <ol>
+        <li v-for="group in entry.groups" :key="group.id">
           {{ group.name }}: {{ group.value }}
-        </div>
-      </div>
+        </li>
+      </ol>
     </div>
   </div>
 </template>
@@ -126,20 +131,20 @@ const data = computed<Series[]>(() => {
   overflow-y: auto;
   pointer-events: all;
 
-  .line-container{
+  .header {
     display: flex;
     align-items: center;
     gap: 3px;
 
-    .circle{
+    .circle {
       width: 10px;
       height: 10px;
       border-radius: 50%;
     }
+  }
 
-    .efficiency{
-      @include fonts.tooltip_text;
-    }
+  ol {
+    margin-left: var(--padding);
   }
 }
 </style>
