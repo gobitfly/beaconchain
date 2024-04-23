@@ -3,7 +3,6 @@ import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 
 const { doLogin } = useUserStore()
-const router = useRouter()
 
 const { handleSubmit, errors, values } = useForm()
 const { value: email } = useField('email', validateField)
@@ -28,7 +27,7 @@ const inputValid = computed(() => {
 const onSubmit = handleSubmit(async (values) => {
   if (inputValid.value) {
     await doLogin(values.email, values.password)
-    router.push('/')
+    await navigateTo('/')
   }
 })
 
