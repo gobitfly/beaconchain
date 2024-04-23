@@ -88,7 +88,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	// Once an epoch is aggregated to its respective UTC day, we can use the UTC day table to aggregate up to the rolling window tables (7d, 30d, 90d)
 	temp.dayUp = newDayUpAggregator(temp)
 
-	// This channel is used to queue up epochs that need to be exported
+	// This channel is used to queue up epochs from chain head that need to be exported
 	temp.headEpochQueue = make(chan uint64, 100)
 
 	// Indicates whether the initial backfill - which is checked when starting the exporter - has completed
@@ -241,7 +241,7 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails 
 		}
 
 		// merge
-		missingTails = append(missingTails, deduplicate(append(daysMissingTails, dayMissingHeads...))...)
+		missingTails = append(missingTails, utils.Deduplicate(append(daysMissingTails, dayMissingHeads...))...)
 
 		if len(missingTails) > 10 {
 			d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")

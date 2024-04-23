@@ -64,7 +64,7 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, intendedHeadEpoch uint64) (int64, int64) {
 	aggTailEpochStart := int64(boundsStart) // current bounds start must be removed
 	aggTailEpochEnd := int64(intendedHeadEpoch-utils.EpochsPerDay()*uint64(days)) + 1
-	d.log.Infof("tail bounds for %dd: %d - %d | intendedHead: %v | boundsStart: %v", days, aggTailEpochStart, aggTailEpochEnd, intendedHeadEpoch, boundsStart)
+	d.log.Debugf("tail bounds for %dd: %d - %d | intendedHead: %v | boundsStart: %v", days, aggTailEpochStart, aggTailEpochEnd, intendedHeadEpoch, boundsStart)
 
 	return aggTailEpochStart, aggTailEpochEnd
 }
@@ -528,7 +528,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		return errors.Wrap(err, "failed to execute template")
 	}
 
-	custom.Log.Infof("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
+	custom.Log.Debugf("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
 	result, err := tx.Exec(queryBuffer.String(),
 		custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,

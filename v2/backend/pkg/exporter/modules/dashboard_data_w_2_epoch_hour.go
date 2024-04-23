@@ -97,9 +97,13 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 
 	for epoch := lastHourExported.EpochStart; epoch <= currentEndBound; epoch += getHourAggregateWidth() {
 		boundsStart, boundsEnd := getHourAggregateBounds(epoch)
-		//d.log.Infof("epoch: %d, boundsStart: %d, boundsEnd: %d |  lastHourExported: %v", epoch, boundsStart, boundsEnd, lastHourExported)
 		if lastHourExported.EpochEnd == boundsEnd { // no need to update last hour entry if it is complete
 			d.log.Infof("skipping updating last hour entry since it is complete")
+			continue
+		}
+
+		// no need to aggregate epoch data that hasn't been exported yet
+		if boundsEnd > currentEndBound {
 			continue
 		}
 
@@ -118,8 +122,6 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 			return errors.Wrap(err, "failed to aggregate 1h")
 		}
 	}
-
-	d.log.Info("finished 1h aggregation")
 
 	return nil
 }
