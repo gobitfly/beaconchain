@@ -2166,6 +2166,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
 	defer releaseValMapLock()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	validatorGroupMap := make(map[uint64]uint64)
 	var validators []uint64
@@ -2227,7 +2230,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 	}
 
-	proposals := make([]struct {
+	type proposal struct {
 		Proposer     int64         `db:"proposer"`
 		Epoch        uint64        `db:"epoch"`
 		Slot         int64         `db:"slot"`
@@ -2240,7 +2243,20 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		Group        int64
 		// TODO fill this properly, used for cursor atm
 		Reward int64
-	}, 0)
+	}
+	proposals := make([]proposal, 0)
+
+	// scheduled blocks aren't written to blocks table, get from duties
+	dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
+	defer releaseLock()
+	if err != nil {
+		return nil, nil, err
+	}
+	scheduledSlots := make([]uint64, 0)
+	for slot := range dutiesInfo.PropAssignmentsForSlot {
+		scheduledSlots = append(scheduledSlots, slot)
+	}
+	slices.Sort(scheduledSlots)
 
 	query := `
 	SELECT
@@ -2318,12 +2334,46 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	if err != nil {
 		return nil, nil, err
 	}
+	if currentCursor.IsReverse() && currentCursor.Reverse {
+		slices.Reverse(proposals)
+	}
+	// insert scheduled proposals
+	for _, slot := range scheduledSlots {
+		prop := proposal{
+			Proposer: int64(dutiesInfo.PropAssignmentsForSlot[slot]),
+			Epoch:    slot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Slot:     int64(slot),
+			Status:   0,
+			// Block: ,
+			// Mev: 2,
+			Group: int64(validatorGroupMap[dutiesInfo.PropAssignmentsForSlot[slot]]),
+			// TODO fill this properly, used for cursor atm
+			// Reward: 2,
+		}
+		// insert if needed
+		switch colSort.Column {
+		case enums.VDBBlocksColumns.Block:
+			fallthrough
+		case enums.VDBBlocksColumns.Epoch:
+			fallthrough
+		case enums.VDBBlocksColumns.Age:
+			fallthrough
+		case enums.VDBBlocksColumns.Slot:
+			proposals = append(proposals, proposal{})
+		case enums.VDBBlocksColumns.Proposer:
+		case enums.VDBBlocksColumns.Group:
+		case enums.VDBBlocksColumns.Status:
+			if colSort.Desc {
+				proposals = append([]proposal{prop}, proposals...)
+			} else {
+				proposals = append(proposals, prop)
+			}
+			// case enums.VDBBlocksColumns.ProposerReward:
+		}
+	}
 	moreDataFlag := len(proposals) > int(limit)
 	if moreDataFlag {
 		proposals = proposals[:len(proposals)-1]
-	}
-	if currentCursor.IsReverse() && currentCursor.Reverse {
-		slices.Reverse(proposals)
 	}
 
 	blocksNoRelay := make([]uint64, 0, len(proposals))
