@@ -7,21 +7,21 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardCreationController } from '#components'
-import { type CookieDashboard } from '~/types/dashboard'
-
-const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider()
+import { DashboardCreationController } from '#components'
+import type { CookieDashboard } from '~/types/dashboard'
 
 const { isLoggedIn } = useUserStore()
+
+const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+
+const { t: $t } = useI18n()
+
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] }),
   useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
 ])
-
-const manageValidatorsModalVisisble = ref(false)
-const manageGroupsModalVisisble = ref(false)
 
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 function showDashboardCreationDialog () {
@@ -62,8 +62,6 @@ watch(dashboardKey, (newKey, oldKey) => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
@@ -74,10 +72,7 @@ watch(dashboardKey, (newKey, oldKey) => {
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
-      <div class="edit-buttons-row">
-        <Button v-if="isLoggedIn && !isPublic" :label="$t('dashboard.validator.manage-groups')" @click="manageGroupsModalVisisble = true" />
-        <Button :label="$t('dashboard.validator.manage-validators')" @click="manageValidatorsModalVisisble = true" />
-      </div>
+      <DashboardControls />
       <div>
         <DashboardValidatorSlotViz />
       </div>
@@ -124,12 +119,6 @@ watch(dashboardKey, (newKey, oldKey) => {
 </template>
 
 <style lang="scss" scoped>
-.edit-buttons-row{
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--padding);
-  margin-bottom: var(--padding);
-}
 .panel-controller {
   display: flex;
   justify-content: center;
@@ -145,5 +134,9 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 .overview {
   margin-bottom: var(--padding-large);
+}
+
+.p-tabview {
+  margin-top: var(--padding-large);
 }
 </style>
