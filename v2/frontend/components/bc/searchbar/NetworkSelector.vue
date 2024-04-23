@@ -6,7 +6,7 @@ const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
   barStyle : SearchbarStyle
 }>()
-const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
