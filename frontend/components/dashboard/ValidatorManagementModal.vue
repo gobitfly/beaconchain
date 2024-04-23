@@ -124,15 +124,7 @@ const addValidator = (result : ResultSuggestion) => {
   } else {
     changeGroup([selectedValidator.value], selectedGroup.value)
   }
-  // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
-  searchBar.value!.hideResult(result)
-  // You probably want to call it later, after getting confirmation that the validator is added into the database,
-  // but `result` is no longer valid if the user changes the input (the bar ignores your call to hideResult() then).
-
-  // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
-  // If there are cases that you want to close the dropdown, you can call this method:
-  // searchBar.value!.closeDropdown()
-  // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
+  searchBar.value!.empty()
 }
 
 const editSelected = () => {
@@ -253,7 +245,6 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
             :only-networks="[ChainIDs.Ethereum]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
-            :keep-dropdown-open="true"
             class="search-bar"
             @go="addValidator"
           />

@@ -568,7 +568,7 @@ function informationIfHiddenResults () : string {
       <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
         <div v-if="classIfDropdownContainsSomething" class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
-          <BcSearchbarNetworkSelector
+          <BcSearchbarNetworkSelector2
             v-if="mustNetworkFilterBeShown()"
             v-model="networkFilter"
             class="filter-networks"
@@ -771,13 +771,17 @@ function informationIfHiddenResults () : string {
     }
 
     .filter-area {
-      display: flex;
-      flex-wrap: wrap;
+      position: relative;
+      display: block;
 
       .filter-networks {
+        position: relative;
+        display: inline-block;
         margin-left: 6px;
       }
       .filter-categories {
+        position: relative;
+        display: inline-block;
         margin-left: 6px;
       }
     }
