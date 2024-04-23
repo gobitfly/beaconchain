@@ -122,7 +122,7 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/rewards-chart',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
-    mock: true
+    mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
