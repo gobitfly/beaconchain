@@ -1760,7 +1760,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		totalInclusionDelaySum := int64(0)
 		totalInclusionDelayDivisor := int64(0)
 
+		syncValidators := make([]uint64, 0)
 		for _, row := range rows {
+			syncValidators = append(syncValidators, uint64(row.ValidatorIndex))
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
 
@@ -1847,18 +1849,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 		endSyncLuckEpoch := cache.LatestFinalizedEpoch.Get()
 		startSyncLuckEpoch := endSyncLuckEpoch - utils.EpochsPerDay()*uint64(days)
+		if days == -1 {
+			startSyncLuckEpoch = utils.Config.Chain.ClConfig.AltairForkEpoch
+		}
 		if startSyncLuckEpoch > endSyncLuckEpoch {
 			startSyncLuckEpoch = 0
 		}
 
-		expectedSync, err := d.internal_getExpectedSyncCommitteeSlots(validators, startSyncLuckEpoch, endSyncLuckEpoch)
+		expectedSync, err := d.internal_getExpectedSyncCommitteeSlots(syncValidators, startSyncLuckEpoch, endSyncLuckEpoch)
 		if err != nil {
 			return nil, err
 		}
+		log.Infof("expectedSync: %d, days: %d", expectedSync, days)
 		if expectedSync == 0 {
 			data.Luck.Sync.Percent = 0
 		} else {
-			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / float64(expectedSync)
+			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / float64(expectedSync) * 100
 		}
 
 		if totalInclusionDelayDivisor > 0 {
