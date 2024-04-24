@@ -476,7 +476,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("expectedSync: %d, days: %d", expectedSync, days)
 		if expectedSync == 0 {
 			data.Luck.Sync.Percent = 0
 		} else {
@@ -547,23 +546,32 @@ func (d *DataAccessService) internal_getExpectedSyncCommitteeSlots(validators []
 		LastPossibleSyncCommittee  uint64 // calculated
 	}
 
-	var validatorsInfoFromDb = []ValidatorInfo{}
-	query, args, err := sqlx.In(`SELECT validatorindex, activationepoch, exitepoch FROM validators WHERE validatorindex IN (?) ORDER BY validatorindex ASC`, validators)
-	if err != nil {
-		return 0, err
-	}
-
-	err = db.ReaderDb.Select(&validatorsInfoFromDb, db.ReaderDb.Rebind(query), args...)
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
 	if err != nil {
 		return 0, err
 	}
 
 	// only check validators that are/have been active and that did not exit before altair
-	const noEpoch = uint64(9223372036854775807)
-	var validatorsInfo = make([]ValidatorInfo, 0, len(validatorsInfoFromDb))
-	for _, v := range validatorsInfoFromDb {
-		if v.ActivationEpoch != noEpoch && v.ActivationEpoch < endEpoch && (v.ExitEpoch == noEpoch || v.ExitEpoch >= utils.Config.Chain.ClConfig.AltairForkEpoch) {
-			validatorsInfo = append(validatorsInfo, v)
+	noEpoch := uint64(math.MaxUint64)
+	var validatorsInfo = make([]ValidatorInfo, 0, len(validators))
+	for _, v := range validators {
+		activationEpoch := noEpoch
+		exitEpoch := noEpoch
+
+		if validatorMapping.ValidatorMetadata[v].ActivationEpoch.Valid {
+			activationEpoch = uint64(validatorMapping.ValidatorMetadata[v].ActivationEpoch.Int64)
+		}
+		if validatorMapping.ValidatorMetadata[v].ExitEpoch.Valid {
+			activationEpoch = uint64(validatorMapping.ValidatorMetadata[v].ExitEpoch.Int64)
+		}
+
+		if activationEpoch != noEpoch && activationEpoch < endEpoch && (exitEpoch == noEpoch || exitEpoch >= utils.Config.Chain.ClConfig.AltairForkEpoch) {
+			validatorsInfo = append(validatorsInfo, ValidatorInfo{
+				Id:              int64(v),
+				ActivationEpoch: activationEpoch,
+				ExitEpoch:       exitEpoch,
+			})
 		}
 	}
 
