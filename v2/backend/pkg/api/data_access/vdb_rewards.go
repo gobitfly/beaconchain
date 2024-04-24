@@ -1,14 +1,17 @@
 package dataaccess
 
 import (
+	"database/sql"
 	"fmt"
-	"strconv"
-	"strings"
+	"math/big"
+	"slices"
+	"sort"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -26,50 +29,40 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	// Prepare the sorting
-	sortSearchDirection := ">"
-	sortSearchOrder := " ASC"
+	sortSearchDirection := ">="
 	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
-		sortSearchDirection = "<"
-		sortSearchOrder = " DESC"
+		sortSearchDirection = "<="
 	}
-
-	headEpoch := cache.LatestEpoch.Get()
 
 	// Analyze the search term
-	indexSearch := int64(-1)
-	epochSearch := int64(-1)
-	if search != "" {
-		if utils.IsHash(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
-			search = strings.ToLower(search)
-			if utils.IsHash(search) {
-				// Get the current validator state to convert pubkey to index
-				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-				defer releaseLock()
-				if err != nil {
-					return nil, nil, err
-				}
-				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					indexSearch = int64(*index)
-				} else {
-					// No validator index for pubkey found, return empty results
-					return nil, &paging, nil
-				}
-			}
-		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
-			indexSearch = int64(number)
-			epochSearch = int64(number)
-		}
-	}
-
-	fmt.Printf("sortSearchDirection: %v\n", sortSearchDirection)
-	fmt.Printf("sortSearchOrder: %v\n", sortSearchOrder)
-	fmt.Printf("headEpoch: %v\n", headEpoch)
-	fmt.Printf("indexSearch: %v\n", indexSearch)
-	fmt.Printf("epochSearch: %v\n", epochSearch)
+	// indexSearch := int64(-1)
+	// epochSearch := int64(-1)
+	// if search != "" {
+	// 	if utils.IsHash(search) {
+	// 		// Ensure that we have a "0x" prefix for the search term
+	// 		if !strings.HasPrefix(search, "0x") {
+	// 			search = "0x" + search
+	// 		}
+	// 		search = strings.ToLower(search)
+	// 		if utils.IsHash(search) {
+	// 			// Get the current validator state to convert pubkey to index
+	// 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+	// 			defer releaseLock()
+	// 			if err != nil {
+	// 				return nil, nil, err
+	// 			}
+	// 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+	// 				indexSearch = int64(*index)
+	// 			} else {
+	// 				// No validator index for pubkey found, return empty results
+	// 				return nil, &paging, nil
+	// 			}
+	// 		}
+	// 	} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
+	// 		indexSearch = int64(number)
+	// 		epochSearch = int64(number)
+	// 	}
+	// }
 
 	type ValidatorGroupInfo struct {
 		GroupId   uint64
@@ -123,21 +116,159 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		return nil, &paging, nil
 	}
 
-	// Prepare the query
-	validatorIncome, err := d.bigtable.GetValidatorIncomeDetailsHistory(validators, 0, headEpoch)
-	if err != nil {
-		return nil, nil, err
+	// Get the rewards for the validators
+	type ValidatorInfo struct {
+		ValidatorIndex        uint64          `db:"validator_index"`
+		Epoch                 uint64          `db:"epoch"`
+		ClRewards             uint64          `db:"cl_rewards"`
+		ElRewards             decimal.Decimal `db:"el_rewards"`
+		AttestationsScheduled uint64          `db:"attestations_scheduled"`
+		AttestationsExecuted  uint64          `db:"attestations_executed"`
+		BlocksScheduled       uint64          `db:"blocks_scheduled"`
+		BlocksProposed        uint64          `db:"blocks_proposed"`
+		SyncScheduled         uint64          `db:"sync_scheduled"`
+		SyncExecuted          uint64          `db:"sync_executed"`
+		Slashed               uint64          `db:"slashed"`
 	}
 
-	fmt.Printf("validatorIncome: %v\n", validatorIncome)
+	queryResult := []ValidatorInfo{}
 
-	// TODO: The epochs I search for in bigtable can be restricted by looking at the cursor.
-	// A row must exist for each epoch and each group (as long as the group is not empty)
-	// Therefore the limit can be used to figure out the least amount of epochs to fetch
-	// However there can be a gap between epochs if all validators within it have exited and some only activate later
-	// IMPORTANT: This logic would completely break if we can sort by something other than epoch/age
+	queryParams := []interface{}{}
+	rewardsQuery := `
+		SELECT
+			validator_index,
+			epoch,
+			COALESCE(attestations_reward, 0) + COALESCE(blocks_cl_reward, 0) +
+			COALESCE(sync_rewards, 0) + COALESCE(slasher_reward, 0) AS cl_rewards,
+			COALESCE(blocks_el_reward, 0) AS el_rewards,
+			COALESCE(attestations_scheduled, 0) AS attestations_scheduled,
+			COALESCE(attestations_executed, 0) AS attestations_executed,
+			COALESCE(blocks_scheduled, 0) AS blocks_scheduled,
+			COALESCE(blocks_proposed, 0) AS blocks_proposed,
+			COALESCE(sync_scheduled, 0) AS sync_scheduled,
+			COALESCE(sync_executed, 0) AS sync_executed,
+			COALESCE(slashed, 0) AS slashed
+		FROM validator_dashboard_data_epoch
+		`
 
-	return nil, &paging, nil
+	queryParams = append(queryParams, pq.Array(validators))
+	whereQuery := fmt.Sprintf("WHERE validator_index = ANY($%d)", len(queryParams))
+	if currentCursor.IsValid() {
+		queryParams = append(queryParams, currentCursor.Epoch)
+		whereQuery = fmt.Sprintf(" AND epoch %s $%d", sortSearchDirection, len(queryParams))
+	}
+
+	rewardsQuery += whereQuery
+	err = d.readerDb.Select(&queryResult, rewardsQuery, queryParams...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &paging, nil
+		}
+		return nil, nil, fmt.Errorf("error getting rewards for validators: %+v: %w", validators, err)
+	}
+
+	epochGroupMap := make(map[uint64]map[uint64]ValidatorInfo)
+	for _, res := range queryResult {
+		if _, ok := epochGroupMap[res.Epoch]; !ok {
+			epochGroupMap[res.Epoch] = make(map[uint64]ValidatorInfo)
+		}
+		if _, ok := epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId]; !ok {
+			epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId] = ValidatorInfo{}
+		}
+		epochGroup := epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId]
+
+		epochGroup.ClRewards += res.ClRewards
+		epochGroup.ElRewards = epochGroup.ElRewards.Add(res.ElRewards)
+		epochGroup.AttestationsScheduled += res.AttestationsScheduled
+		epochGroup.AttestationsExecuted += res.AttestationsExecuted
+		epochGroup.BlocksScheduled += res.BlocksScheduled
+		epochGroup.BlocksProposed += res.BlocksProposed
+		epochGroup.SyncScheduled += res.SyncScheduled
+		epochGroup.SyncExecuted += res.SyncExecuted
+		epochGroup.Slashed += res.Slashed
+	}
+
+	result := make([]t.VDBRewardsTableRow, 0)
+	for epoch, groupMap := range epochGroupMap {
+		for groupId, info := range groupMap {
+			duty := t.VDBRewardesTableDuty{}
+			if info.AttestationsScheduled > 0 {
+				attestationPercentage := float64(info.AttestationsExecuted) / float64(info.AttestationsScheduled)
+				duty.Attestation = &attestationPercentage
+			}
+			if info.BlocksScheduled > 0 {
+				ProposalPercentage := float64(info.BlocksProposed) / float64(info.BlocksScheduled)
+				duty.Proposal = &ProposalPercentage
+			}
+			if info.SyncScheduled > 0 {
+				SyncPercentage := float64(info.SyncExecuted) / float64(info.SyncScheduled)
+				duty.Sync = &SyncPercentage
+			}
+			if info.Slashed > 0 {
+				duty.Slashing = &info.Slashed
+			}
+			reward := t.ClElValue[decimal.Decimal]{
+				El: info.ElRewards,
+				Cl: utils.GWeiToWei(big.NewInt(int64(info.ClRewards))),
+			}
+			result = append(result, t.VDBRewardsTableRow{
+				Epoch:   epoch,
+				Duty:    duty,
+				GroupId: groupId,
+				Reward:  reward,
+			})
+		}
+	}
+
+	// Sort the result first by epoch then by group id
+	sort.Slice(result, func(i, j int) bool {
+		if colSort.Desc {
+			if result[i].Epoch == result[j].Epoch {
+				return result[i].GroupId > result[j].GroupId
+			}
+			return result[i].Epoch > result[j].Epoch
+		}
+		if result[i].Epoch == result[j].Epoch {
+			return result[i].GroupId < result[j].GroupId
+		}
+		return result[i].Epoch < result[j].Epoch
+	})
+
+	// Find the cursor and cut away the data that is not needed
+	if currentCursor.IsValid() {
+		cursorIndex := 0
+		for i, row := range result {
+			if row.Epoch == currentCursor.Epoch && row.GroupId == currentCursor.GroupId {
+				cursorIndex = i
+				break
+			}
+		}
+		result = result[cursorIndex+1:]
+	}
+
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
+	}
+
+	// Remove the last entries from data
+	if moreDataFlag {
+		result = result[:limit]
+	}
+
+	// Reverse the data if the cursor is reversed to correct it to the requested direction
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+	}
+
+	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
