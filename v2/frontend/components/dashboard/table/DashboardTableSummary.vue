@@ -7,7 +7,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
+const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -95,7 +95,6 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             @set-page-size="setPageSize"
           >
             <Column
-              v-if="groupsEnabled"
               field="group_id"
               :sortable="true"
               body-class="bold"
@@ -153,7 +152,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               <template #body="slotProps">
                 <DashboardTableValidators
                   :validators="slotProps.data.validators"
-                  :group-id="groupsEnabled ? slotProps.data.group_id : undefined"
+                  :group-id="slotProps.data.group_id"
                   context="group"
                 />
               </template>

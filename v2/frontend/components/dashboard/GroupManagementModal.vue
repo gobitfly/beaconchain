@@ -17,7 +17,7 @@ const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const { width, isMobile } = useWindowSize()
 
@@ -124,8 +124,13 @@ const dashboardName = computed(() => {
 })
 
 // TODO: once we have a user management we need to check how to get the real premium limit
-const MaxGroupsPerDashboard = 40
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxGroupsPerDashboard)
+const maxGroupsPerDashboard = computed(() => (isPublic.value ? 1 : 40))
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
+
+const showPremiumModal = () => {
+  // TODO: Implement properly (modal is currently part of premium gem)
+  alert('This is the premium modal.')
+}
 
 </script>
 
@@ -154,12 +159,14 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <InputText
             v-model="newGroupName"
             class="search-input"
-            :disabled="premiumLimit"
             maxlength="20"
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
             @keypress.enter="addGroup"
           />
-          <Button style="display: inline;" :disabled="!newGroupName.length || premiumLimit" @click="addGroup">
+          <Button v-if="!premiumLimit" style="display: inline;" :disabled="!newGroupName.length" @click="addGroup">
+            <FontAwesomeIcon :icon="faAdd" />
+          </Button>
+          <Button v-else style="display: inline;" :disabled="!newGroupName.length" @click="showPremiumModal()">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -183,7 +190,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
                   :value="slotProps.data.name"
                   :default="slotProps.data.id === 0 ? $t('common.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
-                  :disabled="false"
+                  :disabled="isPublic"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
@@ -215,10 +222,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     <template #footer>
       <div class="footer">
         <div class="left">
-          <div v-if="MaxGroupsPerDashboard" class="labels" :class="{premiumLimit}">
+          <div class="labels" :class="{premiumLimit}">
             <span>
-              <BcFormatNumber :value="data.paging.total_count" default="0" />/
-              <BcFormatNumber :value="MaxGroupsPerDashboard" />
+              <BcFormatNumber :value="data.paging.total_count" default="0" /> /
+              <BcFormatNumber :value="maxGroupsPerDashboard" />
             </span>
             <span>{{ $t('dashboard.validator.group_management.groups_added') }}</span>
           </div>
