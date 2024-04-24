@@ -120,7 +120,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	type ValidatorInfo struct {
 		ValidatorIndex        uint64          `db:"validator_index"`
 		Epoch                 uint64          `db:"epoch"`
-		ClRewards             uint64          `db:"cl_rewards"`
+		ClRewards             int64           `db:"cl_rewards"`
 		ElRewards             decimal.Decimal `db:"el_rewards"`
 		AttestationsScheduled uint64          `db:"attestations_scheduled"`
 		AttestationsExecuted  uint64          `db:"attestations_executed"`
@@ -128,7 +128,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		BlocksProposed        uint64          `db:"blocks_proposed"`
 		SyncScheduled         uint64          `db:"sync_scheduled"`
 		SyncExecuted          uint64          `db:"sync_executed"`
-		Slashed               uint64          `db:"slashed"`
+		SlashedViolation      uint64          `db:"slashed_violation"`
 	}
 
 	queryResult := []ValidatorInfo{}
@@ -147,7 +147,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			COALESCE(blocks_proposed, 0) AS blocks_proposed,
 			COALESCE(sync_scheduled, 0) AS sync_scheduled,
 			COALESCE(sync_executed, 0) AS sync_executed,
-			COALESCE(slashed, 0) AS slashed
+			COALESCE(slashed_violation, 0) AS slashed_violation
 		FROM validator_dashboard_data_epoch
 		`
 
@@ -155,11 +155,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	whereQuery := fmt.Sprintf("WHERE validator_index = ANY($%d)", len(queryParams))
 	if currentCursor.IsValid() {
 		queryParams = append(queryParams, currentCursor.Epoch)
-		whereQuery = fmt.Sprintf(" AND epoch %s $%d", sortSearchDirection, len(queryParams))
+		whereQuery += fmt.Sprintf(" AND epoch %s $%d", sortSearchDirection, len(queryParams))
 	}
 
 	rewardsQuery += whereQuery
-	err = d.readerDb.Select(&queryResult, rewardsQuery, queryParams...)
+	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &paging, nil
@@ -167,13 +167,13 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		return nil, nil, fmt.Errorf("error getting rewards for validators: %+v: %w", validators, err)
 	}
 
-	epochGroupMap := make(map[uint64]map[uint64]ValidatorInfo)
+	epochGroupMap := make(map[uint64]map[uint64]*ValidatorInfo)
 	for _, res := range queryResult {
 		if _, ok := epochGroupMap[res.Epoch]; !ok {
-			epochGroupMap[res.Epoch] = make(map[uint64]ValidatorInfo)
+			epochGroupMap[res.Epoch] = make(map[uint64]*ValidatorInfo)
 		}
 		if _, ok := epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId]; !ok {
-			epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId] = ValidatorInfo{}
+			epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId] = &ValidatorInfo{}
 		}
 		epochGroup := epochGroupMap[res.Epoch][validatorGroupMap[res.ValidatorIndex].GroupId]
 
@@ -185,7 +185,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		epochGroup.BlocksProposed += res.BlocksProposed
 		epochGroup.SyncScheduled += res.SyncScheduled
 		epochGroup.SyncExecuted += res.SyncExecuted
-		epochGroup.Slashed += res.Slashed
+		epochGroup.SlashedViolation += res.SlashedViolation
 	}
 
 	result := make([]t.VDBRewardsTableRow, 0)
@@ -204,19 +204,21 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				SyncPercentage := float64(info.SyncExecuted) / float64(info.SyncScheduled)
 				duty.Sync = &SyncPercentage
 			}
-			if info.Slashed > 0 {
-				duty.Slashing = &info.Slashed
+			if info.SlashedViolation > 0 {
+				duty.Slashing = &info.SlashedViolation
 			}
 			reward := t.ClElValue[decimal.Decimal]{
 				El: info.ElRewards,
-				Cl: utils.GWeiToWei(big.NewInt(int64(info.ClRewards))),
+				Cl: utils.GWeiToWei(big.NewInt(info.ClRewards)),
 			}
-			result = append(result, t.VDBRewardsTableRow{
-				Epoch:   epoch,
-				Duty:    duty,
-				GroupId: groupId,
-				Reward:  reward,
-			})
+			if duty.Attestation != nil || duty.Proposal != nil || duty.Sync != nil || duty.Slashing != nil {
+				result = append(result, t.VDBRewardsTableRow{
+					Epoch:   epoch,
+					Duty:    duty,
+					GroupId: groupId,
+					Reward:  reward,
+				})
+			}
 		}
 	}
 
@@ -236,12 +238,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	// Find the cursor and cut away the data that is not needed
 	if currentCursor.IsValid() {
-		cursorIndex := 0
+		cursorIndex := -1
 		for i, row := range result {
 			if row.Epoch == currentCursor.Epoch && row.GroupId == currentCursor.GroupId {
 				cursorIndex = i
 				break
 			}
+		}
+		if cursorIndex == -1 {
+			return nil, nil, fmt.Errorf("cursor not found in data: %+v", currentCursor)
 		}
 		result = result[cursorIndex+1:]
 	}
