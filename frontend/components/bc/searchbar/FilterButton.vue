@@ -32,10 +32,11 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 .frame {
   display: inline-block;
   position: relative;
+  box-sizing: border-box;
   cursor: pointer;
   border-radius: 10px;
-  height: 17px;
-  padding-top: 2.5px;
+  height: 20px;
+  padding-top: 3px;
   padding-left: 8px;
   padding-right: 8px;
   text-align: center;
@@ -64,7 +65,8 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   }
 
   &:not(.on) {
-    &.gaudy {
+    &.gaudy,
+    &.embedded {
       background-color: var(--searchbar-filter-unselected-gaudy);
     }
     &.discreet {
@@ -78,7 +80,8 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
     }
   }
 
-  &.gaudy {
+  &.gaudy,
+  &.embedded {
     color: var(--primary-contrast-color);
   }
   &.discreet {

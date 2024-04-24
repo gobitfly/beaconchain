@@ -8,7 +8,7 @@ import {
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
-  barStyle : SearchbarStyle
+  barStyle: SearchbarStyle
 }>()
 const liveState = defineModel<CategoryFilter>({ required: true }) // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
@@ -40,7 +40,7 @@ function selectionHasChanged (category : Category, selected : boolean) {
   display: inline-block;
   vertical-align: top;
   .button {
-    margin-right: 6px;
+    margin-right: var(--padding-small);
     margin-bottom: 8px;
   }
 }
