@@ -63,6 +63,12 @@ type CLDepositsCursor struct {
 	SlotIndex int64
 }
 
+type ELDepositsCursor struct {
+	GenericCursor
+	BlockNumber int64
+	LogIndex    int64
+}
+
 type ValidatorsCursor struct {
 	GenericCursor
 
