@@ -30,7 +30,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
 const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
@@ -221,7 +221,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
@@ -245,7 +245,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             ref="searchBar"
@@ -282,7 +282,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               </template>
             </Column>
             <Column
-              v-if="size.showGroup && groupsEnabled"
+              v-if="size.showGroup"
               field="group_id"
               :sortable="!size.expandable"
               :header="$t('dashboard.validator.col.group')"
@@ -351,7 +351,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
-                  <div v-if="groupsEnabled" class="label">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
                   <DashboardGroupSelection
