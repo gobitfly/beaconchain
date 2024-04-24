@@ -85,7 +85,6 @@ func (s *Services) quickUpdateValidatorMapping() {
 		currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
 		currentValidatorMapping.ValidatorIndices[b] = &j
 	}
-
 }
 
 func (s *Services) updateValidatorMapping() error {
