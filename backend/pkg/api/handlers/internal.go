@@ -834,7 +834,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w h
 		handleError(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalConsensusDeposits(*dashboardId)
+	data, err := h.dai.GetValidatorDashboardTotalClDeposits(*dashboardId)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -853,7 +853,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w h
 		handleError(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalExecutionDeposits(*dashboardId)
+	data, err := h.dai.GetValidatorDashboardTotalElDeposits(*dashboardId)
 	if err != nil {
 		handleError(w, err)
 		return
