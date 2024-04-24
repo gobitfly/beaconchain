@@ -3,18 +3,18 @@ package dataaccess
 import (
 	"database/sql"
 	"fmt"
-	"html/template"
 	"math/big"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -275,6 +275,10 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			return nil, nil, err
 		}
 		if nextData != nil {
+			// Complete the next data
+			nextData.GroupId = validatorGroupMap[nextData.Index]
+			nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+
 			result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
 
 			// Flag if above limit
@@ -306,66 +310,48 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 		return nil, nil
 	}
 
-	stats := cache.LatestStats.Get() // TODO
+	stats := cache.LatestStats.Get()
 	if stats == nil || stats.LatestValidatorWithdrawalIndex == nil {
 		return nil, errors.New("stats not available")
 	}
 
+	// Get the current validator state
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
 	epoch := cache.LatestEpoch.Get()
 
-	// find subscribed validators that are active and have valid withdrawal credentials (balance will be checked later as it will be queried from bigtable)
+	// find subscribed validators that are active and have valid withdrawal credentials
 	// order by validator index to ensure that "last withdrawal" cursor handling works
-	var validatorsDb []*types.Validator
-	err := db.ReaderDb.Select(&validatorsDb, `
-			SELECT
-				validatorindex,
-				withdrawalcredentials,
-				withdrawableepoch
-			FROM validators
-			WHERE
-				activationepoch <= $1 AND exitepoch > $1 AND
-				withdrawalcredentials LIKE '\x01' || '%'::bytea AND
-				validatorindex = ANY($2)
-			ORDER BY validatorindex ASC`, epoch, pq.Array(queryValidators))
+	sort.Slice(queryValidators, func(i, j int) bool {
+		return queryValidators[i] < queryValidators[j]
+	})
+	var nextValidator *uint64
+	for _, validator := range queryValidators {
+		metadata := validatorMapping.ValidatorMetadata[validator]
 
-	if err != nil {
-		return nil, err
-	}
-
-	if len(validatorsDb) == 0 {
-		return nil, nil
-	}
-
-	// GetValidatorBalanceHistory only takes uint64 slice
-	var validatorIds = make([]uint64, 0, len(validatorsDb))
-	for _, v := range validatorsDb {
-		validatorIds = append(validatorIds, v.Index)
-	}
-
-	// retrieve up2date balances for all valid validators from bigtable
-	balances, err := db.BigtableClient.GetValidatorBalanceHistory(validatorIds, epoch, epoch)
-	if err != nil {
-		return nil, err
-	}
-
-	// find the first withdrawable validator by matching validators and balances
-	var nextValidator *types.Validator
-	for _, v := range validatorsDb {
-		balance, ok := balances[v.Index]
-		if !ok {
+		if utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
+			// Validator cannot withdraw because of invalid withdrawal credentials
 			continue
 		}
-		if len(balance) == 0 {
+		if !metadata.ActivationEpoch.Valid || metadata.ActivationEpoch.Int64 > int64(epoch) {
+			// Validator is not active yet
+			continue
+		}
+		if metadata.ExitEpoch.Valid && metadata.ExitEpoch.Int64 <= int64(epoch) {
+			// Validator has already exited
 			continue
 		}
 
-		if (balance[0].Balance > 0 && v.WithdrawableEpoch <= epoch) ||
-			(balance[0].EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && balance[0].Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
+		if (metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)) ||
+			(metadata.EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && metadata.Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
 			// this validator is eligible for withdrawal, check if it is the next one
-			if nextValidator == nil || v.Index > *stats.LatestValidatorWithdrawalIndex {
-				nextValidator = v
-				nextValidator.Balance = balance[0].Balance
-				if nextValidator.Index > *stats.LatestValidatorWithdrawalIndex {
+			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
+				nextValidator = &validator
+				if nextValidator > *stats.LatestValidatorWithdrawalIndex {
 					// the first validator after the cursor has to be the next validator
 					break
 				}
@@ -376,19 +362,21 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	if nextValidator == nil {
 		return nil, nil
 	}
+	nextValidatorData := validatorMapping.ValidatorMetadata[*nextValidator]
 
-	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{nextValidator.Index})
+	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{*nextValidator})
 	if err != nil {
 		return nil, err
 	}
-	lastWithdrawnEpoch := lastWithdrawnEpochs[nextValidator.Index]
+	lastWithdrawnEpoch := lastWithdrawnEpochs[*nextValidator]
 
-	distance, err := GetWithdrawableCountFromCursor(epoch, nextValidator.Index, *stats.LatestValidatorWithdrawalIndex)
+	distance, err := d.getWithdrawableCountFromCursor(epoch, *nextValidator, *stats.LatestValidatorWithdrawalIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	timeToWithdrawal := utils.GetTimeToNextWithdrawal(distance)
+	timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+	withdrawalSlot := utils.TimeToSlot(uint64(timeToWithdrawal.Unix()))
 
 	// it normally takes two epochs to finalize
 	latestFinalized := cache.LatestFinalizedEpoch.Get()
@@ -396,40 +384,80 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 		return nil, nil
 	}
 
-	var withdrawalCredentialsTemplate template.HTML
-	address, err := utils.WithdrawalCredentialsToAddress(nextValidator.WithdrawalCredentials)
+	address, err := utils.GetAddressOfWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
 	if err != nil {
-		// warning only as "N/A" will be displayed
-		logger.Warn("invalid withdrawal credentials")
-	}
-	if address != nil {
-		withdrawalCredentialsTemplate = template.HTML(fmt.Sprintf(`<a href="/address/0x%x"><span class="text-muted">%s</span></a>`, address, utils.FormatAddress(address, nil, "", false, false, true)))
-	} else {
-		withdrawalCredentialsTemplate = `<span class="text-muted">N/A</span>`
+		return nil, err
 	}
 
 	var withdrawalAmount uint64
-	if nextValidator.WithdrawableEpoch <= epoch {
+	if nextValidatorData.WithdrawableEpoch.Valid && nextValidatorData.WithdrawableEpoch.Int64 <= int64(epoch) {
 		// full withdrawal
-		withdrawalAmount = nextValidator.Balance
+		withdrawalAmount = nextValidatorData.Balance
 	} else {
 		// partial withdrawal
-		withdrawalAmount = nextValidator.Balance - utils.Config.Chain.ClConfig.MaxEffectiveBalance
+		withdrawalAmount = nextValidatorData.Balance - utils.Config.Chain.ClConfig.MaxEffectiveBalance
 	}
 
-	if lastWithdrawnEpoch == epoch || nextValidator.Balance < utils.Config.Chain.ClConfig.MaxEffectiveBalance {
+	if lastWithdrawnEpoch == epoch || nextValidatorData.Balance < utils.Config.Chain.ClConfig.MaxEffectiveBalance {
 		withdrawalAmount = 0
 	}
 
-	nextData := make([][]interface{}, 0, 1)
-	nextData = append(nextData, []interface{}{
-		utils.FormatValidator(nextValidator.Index),
-		template.HTML(fmt.Sprintf(`<span class="text-muted">~ %s</span>`, utils.FormatEpoch(uint64(utils.TimeToEpoch(timeToWithdrawal))))),
-		template.HTML(fmt.Sprintf(`<span class="text-muted">~ %s</span>`, utils.FormatBlockSlot(utils.TimeToSlot(uint64(timeToWithdrawal.Unix()))))),
-		template.HTML(fmt.Sprintf(`<span class="">~ %s</span>`, utils.FormatTimestamp(timeToWithdrawal.Unix()))),
-		withdrawalCredentialsTemplate,
-		template.HTML(fmt.Sprintf(`<span class="text-muted"><span data-toggle="tooltip" title="If the withdrawal were to be processed at this very moment, this amount would be withdrawn"><i class="far ml-1 fa-question-circle" style="margin-left: 0px !important;"></i></span> %s</span>`, utils.FormatClCurrency(withdrawalAmount, currency, 6, true, false, false, true))),
-	})
+	nextData := &t.VDBWithdrawalsTableRow{
+		Epoch: withdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		Slot:  withdrawalSlot,
+		Index: *nextValidator,
+		Recipient: t.Address{
+			Hash: t.Hash(address.String()),
+		},
+		Amount: utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
+	}
 
 	return nextData, nil
+}
+
+func (d *DataAccessService) getWithdrawableCountFromCursor(epoch uint64, validatorindex uint64, cursor uint64) (uint64, error) {
+	// the validators' balance will not be checked here as this is only a rough estimation
+	// checking the balance for hundreds of thousands of validators is too expensive
+
+	stats := cache.LatestStats.Get()
+	if stats == nil || stats.ActiveValidatorCount == nil || stats.TotalValidatorCount == nil {
+		return nil, errors.New("stats not available")
+	}
+
+	var maxValidatorIndex uint64
+	if *stats.TotalValidatorCount > 0 {
+		maxValidatorIndex = *stats.TotalValidatorCount - 1
+	}
+	if maxValidatorIndex == 0 {
+		return 0, nil
+	}
+
+	activeValidators := *stats.ActiveValidatorCount
+	if activeValidators == 0 {
+		activeValidators = maxValidatorIndex
+	}
+
+	if validatorindex > cursor {
+		// if the validatorindex is after the cursor, simply return the number of validators between the cursor and the validatorindex
+		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
+		return (validatorindex - cursor) * activeValidators / maxValidatorIndex, nil
+	} else if validatorindex < cursor {
+		// if the validatorindex is before the cursor (wraparound case) return the number of validators between the cursor and the most recent validator plus the amount of validators from the validator 0 to the validatorindex
+		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
+		return (maxValidatorIndex - cursor + validatorindex) * activeValidators / maxValidatorIndex, nil
+	} else {
+		return 0, nil
+	}
+}
+
+// GetTimeToNextWithdrawal calculates the time it takes for the validators next withdrawal to be processed.
+func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
+	minTimeToWithdrawal := time.Now().Add(time.Second * time.Duration((distance/utils.Config.Chain.ClConfig.MaxValidatorsPerWithdrawalSweep)*utils.Config.Chain.ClConfig.SecondsPerSlot))
+	timeToWithdrawal := time.Now().Add(time.Second * time.Duration((float64(distance)/float64(utils.Config.Chain.ClConfig.MaxWithdrawalsPerPayload))*float64(utils.Config.Chain.ClConfig.SecondsPerSlot)))
+
+	if timeToWithdrawal.Before(minTimeToWithdrawal) {
+		return minTimeToWithdrawal
+	}
+
+	return timeToWithdrawal
 }
