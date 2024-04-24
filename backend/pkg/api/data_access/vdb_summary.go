@@ -12,7 +12,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -440,7 +439,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		}
 
 		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
+		//log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
 		aprDivisor := days
 		if days == -1 { // for all time APR
 			aprDivisor = 1
