@@ -334,3 +334,8 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 
 	return responseData, p, nil
 }
+
+func (d *DataAccessService) GetValidatorDashboardTotalDeposits(dashboardId t.VDBId) (*t.VDBTotalDepositsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalDeposits(dashboardId)
+}

@@ -209,6 +209,13 @@ type VDBConsensusDepositsTableRow struct {
 }
 type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
+type VDBTotalDepositsData struct {
+	ConsensusTotalAmount decimal.Decimal `json:"consensus_total_amount"`
+	ExecutionTotalAmount decimal.Decimal `json:"execution_total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalDepositsResponse ApiDataResponse[VDBTotalDepositsData]
+
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
@@ -220,6 +227,12 @@ type VDBWithdrawalsTableRow struct {
 	Amount    decimal.Decimal `json:"amount"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
+
+type VDBTotalWithdrawalsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
 // Manage Modal
