@@ -105,7 +105,9 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
           </template>
-          Deposits coming soon!
+          <div class="deposits">
+            <DashboardTableElDeposits />
+          </div>
         </TabPanel>
         <TabPanel>
           <template #header>
