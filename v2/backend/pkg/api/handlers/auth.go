@@ -3,11 +3,9 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -113,32 +111,32 @@ func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Reque
 // checks if user has access to dashboard
 func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
-		if err != nil {
-			// if primary id is not used, no need to check access
-			next.ServeHTTP(w, r)
-			return
-		}
-		// primary id is used -> user needs to have access to dashboard
+		// var err error
+		// dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+		// if err != nil {
+		// 	// if primary id is not used, no need to check access
+		// 	next.ServeHTTP(w, r)
+		// 	return
+		// }
+		// // primary id is used -> user needs to have access to dashboard
 
-		user, err := h.getUser(r)
-		if err != nil {
-			returnUnauthorized(w, err)
-			return
-		}
-		dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
-		if err != nil {
-			handleError(w, err)
-			return
-		}
+		// user, err := h.getUser(r)
+		// if err != nil {
+		// 	returnUnauthorized(w, err)
+		// 	return
+		// }
+		// dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
+		// if err != nil {
+		// 	handleError(w, err)
+		// 	return
+		// }
 
-		if dashboard.UserId != user.Id {
-			// user does not have access to dashboard, return 404 to avoid leaking information
-			// TODO: make sure real non-existence of dashboard returns same error
-			returnNotFound(w, errors.New("dashboard not found"))
-			return
-		}
+		// if dashboard.UserId != user.Id {
+		// 	// user does not have access to dashboard, return 404 to avoid leaking information
+		// 	// TODO: make sure real non-existence of dashboard returns same error
+		// 	returnNotFound(w, errors.New("dashboard not found"))
+		// 	return
+		// }
 		next.ServeHTTP(w, r)
 	})
 }
