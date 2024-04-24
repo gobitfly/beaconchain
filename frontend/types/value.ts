@@ -22,4 +22,4 @@ export type ExtendedLabel = {
 export const TimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
 export type TimeFrame = typeof TimeFrames[number]
 
-export type VaiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions) => ExtendedLabel
+export type WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions) => ExtendedLabel

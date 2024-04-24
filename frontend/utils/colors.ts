@@ -5,7 +5,7 @@ export function getSummaryChartGroupColors (theme: string) {
   return theme === 'light' ? colorsLight : colorsDark
 }
 
-export function getSummaryChartTextColor (theme: string) {
+export function getChartTextColor (theme: string) {
   const styles = window.getComputedStyle(document.documentElement)
 
   if (theme === 'light') {
@@ -15,13 +15,23 @@ export function getSummaryChartTextColor (theme: string) {
   }
 }
 
-export function getSummaryChartTooltipBackgroundColor (theme: string) {
+export function getChartTooltipBackgroundColor (theme: string) {
   const styles = window.getComputedStyle(document.documentElement)
 
   if (theme === 'light') {
     return styles.getPropertyValue('--light-grey-2')
   } else {
     return styles.getPropertyValue('--light-grey')
+  }
+}
+
+export function getRewardsChartLineColor (theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+
+  if (theme === 'light') {
+    return styles.getPropertyValue('--light-grey-3')
+  } else {
+    return styles.getPropertyValue('--dark-grey')
   }
 }
 

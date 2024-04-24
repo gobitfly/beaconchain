@@ -2,7 +2,7 @@ import type { BigNumber } from '@ethersproject/bignumber'
 import type { ExtendedLabel } from '~/types/value'
 import type { ChartSeries } from '~/types/api/common'
 
-export interface RewardChartGroupGroupData {
+export interface RewardChartGroupData {
   id: number;
   name: string;
   bigData: BigNumber[];
@@ -15,5 +15,5 @@ export interface RewardChartSeries extends ChartSeries<number, number> {
   barMaxWidth: number;
   bigData: BigNumber[];
   formatedData: ExtendedLabel[]
-  groups: RewardChartGroupGroupData[];
+  groups: RewardChartGroupData[];
 }

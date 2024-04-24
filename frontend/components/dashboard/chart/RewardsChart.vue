@@ -17,10 +17,10 @@ import type { ECBasicOption } from 'echarts/types/dist/shared'
 import { BigNumber } from '@ethersproject/bignumber'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor, getRewardChartColors } from '~/utils/colors'
+import { getChartTextColor, getChartTooltipBackgroundColor, getRewardChartColors } from '~/utils/colors'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
-import { type RewardChartSeries, type RewardChartGroupGroupData } from '~/types/dashboard/rewards'
+import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 
@@ -44,15 +44,19 @@ const { fetch } = useCustomFetch()
 const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined >()
+const isLoading = ref(false)
 
 await useAsyncData('validator_dashboard_rewards_chart', async () => {
   if (dashboardKey.value === undefined) {
     data.value = undefined
     return
   }
+  isLoading.value = true
   const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART, undefined, { dashboardKey: dashboardKey.value })
+
+  isLoading.value = false
   data.value = res.data
-}, { watch: [dashboardKey], server: false })
+}, { watch: [dashboardKey], server: false, immediate: true })
 
 const { overview } = useValidatorDashboardOverviewStore()
 
@@ -64,8 +68,9 @@ const { converter } = useValue()
 const colors = computed(() => {
   return {
     data: getRewardChartColors(),
-    label: getSummaryChartTextColor(colorMode.value),
-    background: getSummaryChartTooltipBackgroundColor(colorMode.value)
+    label: getChartTextColor(colorMode.value),
+    line: getRewardsChartLineColor(colorMode.value),
+    background: getChartTooltipBackgroundColor(colorMode.value)
   }
 })
 
@@ -80,7 +85,7 @@ const valueFormatter = computed(() => {
   return (value: number) => `${trim(value, decimals, decimals)} ${currencyLabel.value}`
 })
 
-const sumSeries = (data: RewardChartSeries) => {
+const mapSeriesData = (data: RewardChartSeries) => {
   data.bigData.forEach((bigValue, index) => {
     if (!bigValue.isZero()) {
       const formatted = converter.value.weiToValue(bigValue, { fixedDecimalCount: 5, minUnit: 'MAIN' })
@@ -100,7 +105,6 @@ const series = computed<RewardChartSeries[]>(() => {
   }
 
   const categoryCount = data.value?.categories.length ?? 0
-  const allGroups = $t('dashboard.validator.summary.chart.all_groups')
   const clSeries:RewardChartSeries = {
     id: 1,
     name: $t('dashboard.validator.rewards.chart.cl'),
@@ -130,13 +134,13 @@ const series = computed<RewardChartSeries[]>(() => {
   list.push(elSeries)
   list.push(clSeries)
   data.value.series.forEach((group) => {
-    let name = allGroups
+    let name
     if (!groupsEnabled) {
       name = $t('dashboard.validator.rewards.chart.rewards')
     } else {
-      name = getGroupLabel($t, group.id, overview.value?.groups, allGroups)
+      name = getGroupLabel($t, group.id, overview.value?.groups)
     }
-    const newData: RewardChartGroupGroupData = {
+    const newData: RewardChartGroupData = {
       id: group.id,
       bigData: [],
       name
@@ -160,8 +164,8 @@ const series = computed<RewardChartSeries[]>(() => {
       clSeries.groups.push(newData)
     }
   })
-  sumSeries(elSeries)
-  sumSeries(clSeries)
+  mapSeriesData(elSeries)
+  mapSeriesData(clSeries)
   return list
 })
 
@@ -203,7 +207,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       },
       splitLine: {
         lineStyle: {
-          color: colors.value.label
+          color: colors.value.line
         }
       }
     },
@@ -259,7 +263,8 @@ const option = computed<ECBasicOption | undefined>(() => {
 
 <template>
   <ClientOnly>
-    <VChart class="chart" :option="option" autoresize />
+    <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
+    <VChart v-else class="chart" :option="option" autoresize />
   </ClientOnly>
 </template>
 

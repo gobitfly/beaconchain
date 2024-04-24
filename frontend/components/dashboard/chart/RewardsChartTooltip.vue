@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
 import { BigNumber } from '@ethersproject/bignumber'
-import type { RewardChartGroupGroupData, RewardChartSeries } from '~/types/dashboard/rewards'
-import type { VaiToValue } from '~/types/value'
+import type { RewardChartGroupData, RewardChartSeries } from '~/types/dashboard/rewards'
+import type { WeiToValue } from '~/types/value'
 
 interface Props {
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
-  weiToValue: VaiToValue,
+  weiToValue: WeiToValue,
   startEpoch: number,
   dataIndex: number,
   series: RewardChartSeries[]
@@ -27,7 +27,7 @@ interface Series {
   groups: GroupValue[]
 }
 
-const mapData = (groups: RewardChartGroupGroupData[]): GroupValue[] => {
+const mapData = (groups: RewardChartGroupData[]): GroupValue[] => {
   const sort = [...groups].sort((g1, g2) => {
     const v1 = g1.bigData[props.dataIndex] || BigNumber.from('0')
     const v2 = g2.bigData[props.dataIndex] || BigNumber.from('0')
@@ -80,7 +80,7 @@ const data = computed<Series[]>(() => {
 </script>
 
 <template>
-  <div class="tooltip-container" @click.stop.prevent="console.log('click')">
+  <div class="tooltip-container">
     <DashboardChartTooltipHeader :t="t" :start-epoch="startEpoch" />
     <div v-for="(entry, index) in data" :key="index">
       <div class="header">

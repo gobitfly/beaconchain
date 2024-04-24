@@ -1,7 +1,7 @@
 import { BigNumber } from '@ethersproject/bignumber'
 import { formatEther, commify } from '@ethersproject/units'
 import type { Currency, CryptoCurrency } from '~/types/currencies'
-import type { ExtendedLabel, VaiToValue, ValueConvertOptions } from '~/types/value'
+import type { ExtendedLabel, WeiToValue, ValueConvertOptions } from '~/types/value'
 import { isNative, isFiat } from '~/utils/currency'
 import { OneEther, OneGwei, lessThanGwei, lessThanEth } from '~/utils/ether'
 import { commmifyLeft, trim, withCurrency } from '~/utils/format'
@@ -10,7 +10,7 @@ export function useValue () {
   const { currency, rates } = useCurrency()
 
   const converter = computed(() => {
-    const weiToValue:VaiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions): ExtendedLabel => {
+    const weiToValue:WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions): ExtendedLabel => {
       if (!wei) {
         return { label: '' }
       }

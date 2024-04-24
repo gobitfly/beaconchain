@@ -14,7 +14,7 @@ import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getSummaryChartGroupColors, getSummaryChartTextColor, getSummaryChartTooltipBackgroundColor } from '~/utils/colors'
+import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -33,12 +33,16 @@ const { fetch } = useCustomFetch()
 const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
-await useAsyncData('validator_summary_rewards_chart', async () => {
+const isLoading = ref(false)
+await useAsyncData('validator_dashboard_summary_chart', async () => {
   if (!dashboardKey.value) {
     data.value = undefined
     return
   }
+  isLoading.value = true
   const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: dashboardKey.value })
+
+  isLoading.value = false
   data.value = res.data
 }, { watch: [dashboardKey], server: false })
 
@@ -50,8 +54,8 @@ const colorMode = useColorMode()
 const colors = computed(() => {
   return {
     groups: getSummaryChartGroupColors(colorMode.value),
-    label: getSummaryChartTextColor(colorMode.value),
-    background: getSummaryChartTooltipBackgroundColor(colorMode.value)
+    label: getChartTextColor(colorMode.value),
+    background: getChartTooltipBackgroundColor(colorMode.value)
   }
 })
 
@@ -195,7 +199,8 @@ const option = computed(() => {
 
 <template>
   <ClientOnly>
-    <VChart class="chart" :option="option" autoresize />
+    <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
+    <VChart v-else class="chart" :option="option" autoresize />
   </ClientOnly>
 </template>
 
