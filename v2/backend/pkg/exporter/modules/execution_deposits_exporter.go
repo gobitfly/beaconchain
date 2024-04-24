@@ -227,6 +227,15 @@ func (d *executionDepositsExporter) exportTillBlock(block uint64) (err error) {
 
 	d.LastExportedBlock = blockTarget
 
+	start := time.Now()
+	// update cached view
+	err = d.updateCachedView()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("updating cached view took %v", time.Since(start))
+
 	if len(depositsToSave) > 0 {
 		err = d.aggregateDeposits()
 		if err != nil {
@@ -659,5 +668,24 @@ func (d *executionDepositsExporter) aggregateDeposits() error {
 	if err != nil && err != sql.ErrNoRows {
 		return nil
 	}
+	return err
+}
+
+func (d *executionDepositsExporter) updateCachedView() error {
+	err := db.CacheQuery(`
+		SELECT
+		    uvdv.dashboard_id,
+		    uvdv.group_id,
+		    ed.block_number,
+		    ed.log_index
+		FROM
+		    eth1_deposits ed
+		    INNER JOIN validators v ON ed.publickey = v.pubkey
+		    INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+		ORDER BY
+		    uvdv.dashboard_id DESC,
+		    ed.block_number DESC,
+		    ed.log_index DESC;
+		`, "cached_eth1_deposits_lookup", []string{"dashboard_id, block_number", "log_index"})
 	return err
 }
