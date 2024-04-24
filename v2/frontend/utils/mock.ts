@@ -98,6 +98,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         chain_id: 1,
         type: 'validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth'
+      },
+      {
+        chain_id: 1,
+        type: 'validators_by_pubkey',
+        num_value: Math.floor(Math.random() * 1000000),
+        hash_value: '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660'
       }
     )
   }
