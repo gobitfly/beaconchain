@@ -226,10 +226,28 @@ func (d *DummyService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, curs
 	return r, &p, err
 }
 
+func (d *DummyService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+	r := t.VDBTotalExecutionDepositsData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+	r := t.VDBTotalConsensusDepositsData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
 func (d *DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	r := []t.VDBWithdrawalsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+	r := t.VDBTotalWithdrawalsData{}
+	err := commonFakeData(&r)
+	return &r, err
 }

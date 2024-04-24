@@ -275,3 +275,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	return result, p, nil
 }
+
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalWithdrawals(dashboardId)
+}
