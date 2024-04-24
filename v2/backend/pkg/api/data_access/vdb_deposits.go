@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		for i, v := range dashboardId.Validators {
 			validatorsArray[i] = v.Index
 		}
-		validatorPubkeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -205,7 +205,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		for i, v := range dashboardId.Validators {
 			validatorsArray[i] = v.Index
 		}
-		validatorPubkeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -286,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	for i, row := range data {
 		pubkeys[i] = hexutil.Encode(row.PublicKey)
 	}
-	indices, err := d.services.GetValidatorIndicesOfPubkeySlice(pubkeys)
+	indices, err := d.services.GetIndexSliceFromPubkeySlice(pubkeys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to recover indices after query: %w", err)
 	}
