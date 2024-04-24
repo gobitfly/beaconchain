@@ -226,8 +226,14 @@ func (d *DummyService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, curs
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalDeposits(dashboardId t.VDBId) (*t.VDBTotalDepositsData, error) {
-	r := t.VDBTotalDepositsData{}
+func (d *DummyService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+	r := t.VDBTotalExecutionDepositsData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+	r := t.VDBTotalConsensusDepositsData{}
 	err := commonFakeData(&r)
 	return &r, err
 }

@@ -209,12 +209,17 @@ type VDBConsensusDepositsTableRow struct {
 }
 type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
-type VDBTotalDepositsData struct {
-	ConsensusTotalAmount decimal.Decimal `json:"consensus_total_amount"`
-	ExecutionTotalAmount decimal.Decimal `json:"execution_total_amount"`
+type VDBTotalExecutionDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
 }
 
-type InternalGetValidatorDashboardTotalDepositsResponse ApiDataResponse[VDBTotalDepositsData]
+type InternalGetValidatorDashboardTotalExecutionDepositsResponse ApiDataResponse[VDBTotalExecutionDepositsData]
+
+type VDBTotalConsensusDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTotalConsensusDepositsData]
 
 // ------------------------------------------------------------
 // Withdrawals Tab

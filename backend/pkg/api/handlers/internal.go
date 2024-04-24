@@ -827,20 +827,39 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleError(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalDeposits(*dashboardId)
+	data, err := h.dai.GetValidatorDashboardTotalConsensusDeposits(*dashboardId)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	response := types.InternalGetValidatorDashboardTotalDepositsResponse{
+	response := types.InternalGetValidatorDashboardTotalConsensusDepositsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalExecutionDeposits(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalExecutionDepositsResponse{
 		Data: *data,
 	}
 	returnOk(w, response)

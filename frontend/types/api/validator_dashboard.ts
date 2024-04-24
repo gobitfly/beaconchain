@@ -191,11 +191,14 @@ export interface VDBConsensusDepositsTableRow {
   signature: Hash;
 }
 export type InternalGetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
-export interface VDBTotalDepositsData {
-  consensus_total_amount: string /* decimal.Decimal */;
-  execution_total_amount: string /* decimal.Decimal */;
+export interface VDBTotalExecutionDepositsData {
+  total_amount: string /* decimal.Decimal */;
 }
-export type InternalGetValidatorDashboardTotalDepositsResponse = ApiDataResponse<VDBTotalDepositsData>;
+export type InternalGetValidatorDashboardTotalExecutionDepositsResponse = ApiDataResponse<VDBTotalExecutionDepositsData>;
+export interface VDBTotalConsensusDepositsData {
+  total_amount: string /* decimal.Decimal */;
+}
+export type InternalGetValidatorDashboardTotalConsensusDepositsResponse = ApiDataResponse<VDBTotalConsensusDepositsData>;
 /**
  * ------------------------------------------------------------
  * Withdrawals Tab

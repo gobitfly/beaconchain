@@ -335,7 +335,12 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalDeposits(dashboardId t.VDBId) (*t.VDBTotalDepositsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
 	// TODO @ data access team
-	return d.dummy.GetValidatorDashboardTotalDeposits(dashboardId)
+	return d.dummy.GetValidatorDashboardTotalElDeposits(dashboardId)
+}
+
+func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalClDeposits(dashboardId)
 }
