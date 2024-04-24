@@ -19,9 +19,9 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-    suggestion : ResultSuggestion,
-    barStyle : SearchbarStyle,
-    barPurpose : SearchbarPurpose
+    suggestion: ResultSuggestion,
+    barStyle: SearchbarStyle,
+    barPurpose: SearchbarPurpose
 }>()
 
 const { t } = useI18n()
@@ -219,7 +219,8 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
-    &.gaudy {
+    &.gaudy,
+    &.embedded {
       grid-template-columns: 40px 106px auto 114px;
     }
     &.discreet {
@@ -251,12 +252,13 @@ function formatDescriptionCell () : string {
     margin-top: auto;
     margin-bottom: auto;
     font-weight: var(--roboto-medium);
-    white-space: nowrap;  // this has an effect on a large screen in gaudy mode only, it makes sure that the two spans (description + lowleveldata) stay on the same line
+    white-space: nowrap;  // makes sure that the two spans (description + lowleveldata) stay on the same line
 
     .cell_bi_description {
       position: relative;
       @media (min-width: 600px) { // large screen
-        &.gaudy {
+        &.gaudy,
+        &.embedded {
           margin-right: 0.5em;
         }
       }
@@ -267,8 +269,11 @@ function formatDescriptionCell () : string {
       flex-grow: 1;
       text-align: justify;
       text-justify: inter-character;
-      &.greyish.gaudy {
-        color: var(--searchbar-text-detail-gaudy);
+      &.greyish {
+        &.gaudy,
+        &.embedded {
+          color: var(--searchbar-text-detail-gaudy);
+        }
       }
       &.greyish.discreet {
         color: var(--searchbar-text-detail-discreet);
@@ -280,7 +285,8 @@ function formatDescriptionCell () : string {
     display: block;
     position: relative;
     @media (min-width: 600px) { // large screen
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         grid-column: 4;
         grid-row: 1;
         margin-top: auto;
@@ -299,7 +305,8 @@ function formatDescriptionCell () : string {
     .category-label {
       display: inline-block;
       position: relative;
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         color: var(--searchbar-text-detail-gaudy);
       }
       &.discreet {
@@ -347,7 +354,6 @@ function formatDescriptionCell () : string {
       grid-column-end: span 2;
       font-weight: var(--roboto-regular);
     }
-    width: 100%;
     text-align: justify;
     text-justify: inter-character;
   }

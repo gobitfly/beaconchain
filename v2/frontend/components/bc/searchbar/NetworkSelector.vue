@@ -4,7 +4,7 @@ import { ChainInfo, ChainIDs } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
-  barStyle : SearchbarStyle
+  barStyle: SearchbarStyle
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
@@ -21,7 +21,7 @@ const listInDropdown = ref<{
 }[]>([])
 const dropdownIsOpen = ref<boolean>(false)
 
-watch(liveState, () => updateLocalState()) // fires when the parent changes the whole object but not when he / we change a value inside
+watch(liveState, updateLocalState) // fires when the parent changes the whole object but not when he / we change a value inside
 
 onBeforeMount(() => {
   dropdownIsOpen.value = false
@@ -85,7 +85,6 @@ function oneOptionChanged (index : number) {
       v-if="dropdownIsOpen"
       class="dropdown"
       @click="(e : Event) => e.stopPropagation()"
-      @mouseleave="dropdownIsOpen = false"
     >
       <div v-for="(line, i) of listInDropdown" :key="line.chainId" class="line" @click="oneOptionChanged(i)">
         <Checkbox v-model="line.selected" :binary="true" :input-id="String(line.chainId)" />
@@ -104,14 +103,14 @@ function oneOptionChanged (index : number) {
 .anchor {
   display: inline-block;
   padding-bottom: 8px;
+  box-sizing: border-box;
 
   .head {
     position: relative;
-    width: 94px;
     .content {
       position: relative;
       display: inline-flex;
-      width: 100%;
+      width: 85px;
       .label {
         display: inline-flex;
         flex-grow: 1;
@@ -122,22 +121,22 @@ function oneOptionChanged (index : number) {
   .dropdown {
     position: absolute;
     display: block;
+    box-sizing: border-box;
     z-index: 1024;
-    width: 128px;
     border-radius: 10px;
     left: 0px;
     top: 21px;
-    padding: 10px;
-    padding-bottom: 8px;
+    padding: var(--padding);
     background-color: var(--light-grey);
     @include fonts.small_text_bold;
     color: var(--light-black);
 
     .line {
       position:relative;
-      display: block;
+      display: flex;
       width: 100%;
       margin-bottom: 2px;
+      white-space: nowrap;
 
       .p-checkbox {
         :deep(.p-checkbox-box:not(:hover):not(.p-highlight)) {
@@ -147,15 +146,19 @@ function oneOptionChanged (index : number) {
 
       .label {
         position:relative;
-        display: inline-block;
+        display: inline-flex;
+        flex-grow: 1;
         margin-left: 5px;
-        padding-bottom: 2px;
+        margin-top: auto;
+        margin-bottom: auto;
         cursor: pointer;
         user-select: none;
       }
 
       .icon {
-        position: absolute;
+        box-sizing: border-box;
+        position: relative;
+        margin-left: 10px;
         width: 18px;
         height: 18px;
         right: 0px;

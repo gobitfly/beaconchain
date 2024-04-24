@@ -8,8 +8,8 @@ import {
 } from '~/types/searchbar'
 
 defineProps<{
-    barStyle : SearchbarStyle,
-    barPurpose : SearchbarPurpose
+    barStyle: SearchbarStyle,
+    barPurpose: SearchbarPurpose
 }>()
 
 </script>

@@ -104,20 +104,25 @@ const addValidator = (result : ResultSuggestion) => {
   switch (result.type) {
     case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
     case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = result.queryParam
+      selectedValidator.value = String(result.rawResult.num_value!)
       break
-    // Below, several validators correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
-      selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
+      // TODO: add a batch of validators
       // If you need it: `result.count` is the size of the batch.
+      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
+      selectedValidator.value = ''
       break
     default :
       return
+  }
+  if (!selectedValidator.value) {
+    return
   }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities([selectedValidator.value])
