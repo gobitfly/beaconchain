@@ -827,6 +827,44 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalClDeposits(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalConsensusDepositsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalElDeposits(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalExecutionDepositsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
 func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var err error
 	q := r.URL.Query()
@@ -850,6 +888,25 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{
 		Data:   data,
 		Paging: *paging,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalWithdrawalsResponse{
+		Data: *data,
 	}
 	returnOk(w, response)
 }
