@@ -38,8 +38,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 
 	validatorGroupMap := make(map[uint64]uint64)
-	var validators []uint64
-	validatorGroupQryValues := ""
+	withGroups := ""
 	params := []interface{}{}
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
@@ -52,55 +51,68 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		selectStr := `SELECT validator_index, group_id `
 		from := `FROM users_val_dashboards_validators validators `
 		where := `WHERE validators.dashboard_id = $1`
+		extraConds := make([]string, 0, 3)
 		if searchIndex {
-			where += ` AND validator_index = $2`
 			paramsGroups = append(paramsGroups, search)
-		} else if searchGroup {
+			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(paramsGroups)))
+		}
+		if searchGroup {
 			from += `INNER JOIN users_val_dashboards_groups groups ON validators.dashboard_id = groups.dashboard_id AND validators.group_id = groups.id `
-			where += ` AND LOWER(name) LIKE LOWER($2)`
+			// escape the psql single character wildcard "_"; apply prefix-search
 			paramsGroups = append(paramsGroups, strings.Replace(search, "_", "\\_", -1)+"%")
-		} else if searchPubkey {
+			extraConds = append(extraConds, fmt.Sprintf(`LOWER(name) LIKE LOWER($%d)`, len(paramsGroups)))
+		}
+		if searchPubkey {
 			index, ok := validatorMapping.ValidatorIndices[search]
-			if !ok {
-				return nil, nil, fmt.Errorf("unknown pubkey: %s", search)
+			if !ok && len(extraConds) == 0 {
+				// don't even need to query
+				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
-			where += ` AND validator_index = $2`
 			paramsGroups = append(paramsGroups, index)
+			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(paramsGroups)))
+		}
+		if len(extraConds) > 0 {
+			where += ` AND (` + strings.Join(extraConds, ` OR `) + `)`
 		}
 
 		err := d.alloyReader.Select(&queryResult, selectStr+from+where, paramsGroups...)
 		if err != nil {
 			return nil, nil, err
 		}
+		if len(queryResult) == 0 {
+			return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
+		}
+		validatorGroupQryValues := ""
 		for i, res := range queryResult {
 			validatorGroupMap[res.ValidatorIndex] = res.GroupId
-			validators = append(validators, res.ValidatorIndex)
 
 			validatorGroupQryValues = validatorGroupQryValues + fmt.Sprintf(`($%d::int, $%d::int), `, i*2+1, (i+1)*2)
 			params = append(params, res.ValidatorIndex)
 			params = append(params, res.GroupId)
 		}
+		// TODO once the blocks table has been migrated, this can be replaced with a simple join
+		withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
 	} else {
 		// In case a list of validators is provided, set the group to default 0
-		validators = make([]uint64, 0, len(dashboardId.Validators))
+		validatorGroupQryValues := ""
 		for _, validator := range dashboardId.Validators {
 			if searchIndex && fmt.Sprint(validator.Index) != search ||
 				searchPubkey && (validatorMapping.ValidatorIndices[search] == nil || validator.Index != *validatorMapping.ValidatorIndices[search]) {
 				continue
 			}
 			validatorGroupMap[validator.Index] = t.DefaultGroupId
-			validators = append(validators, validator.Index)
+			params = append(params, validator.Index)
+			validatorGroupQryValues = validatorGroupQryValues + fmt.Sprintf(`($%d::int, %d::int), `, len(params), t.DefaultGroupId)
 			if searchIndex || searchPubkey {
 				break
 			}
 		}
+		if len(params) == 0 {
+			return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
+		}
+		// using where on the (filtered) list of validator indices later down would obv be better for this, but let's not make this even less readable
+		withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
 	}
-	if len(validators) == 0 {
-		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
-	}
-
-	// TODO once the blocks table has been migrated, this can be replaced with a simple join
-	with := fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
 
 	type proposal struct {
 		Proposer     int64         `db:"proposer"`
@@ -161,7 +173,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		(`, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
 	}
 
-	query += with + `
+	query += withGroups + `
 	SELECT
 		proposer,
 		group_id,
@@ -206,10 +218,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	onlyPrimarySort := sortColName == `slot`
 	if currentCursor.IsValid() {
 		sign := ` > `
-		if colSort.Desc && !currentCursor.Reverse || !colSort.Desc && currentCursor.Reverse {
+		if colSort.Desc && !currentCursor.IsReverse() || !colSort.Desc && currentCursor.IsReverse() {
 			sign = ` < `
 		}
-		if currentCursor.Reverse {
+		if currentCursor.IsReverse() {
 			if sortOrder == ` ASC` {
 				sortOrder = ` DESC`
 			} else {
@@ -223,7 +235,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		} else {
 			params = append(params, val)
 			secSign := ` < `
-			if currentCursor.Reverse {
+			if currentCursor.IsReverse() {
 				secSign = ` > `
 			}
 			// explicit cast to int because type of 'status' column is text for some reason
@@ -234,7 +246,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	orderBy += sortColName + sortOrder
 	if !onlyPrimarySort {
 		secSort := `DESC`
-		if currentCursor.Reverse {
+		if currentCursor.IsReverse() {
 			secSort = `ASC`
 		}
 		orderBy += `, slot ` + secSort
