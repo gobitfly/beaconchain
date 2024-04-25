@@ -148,6 +148,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
     </template>
     <BcTableControl
       :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')"
+      :disabled-filter="isPublic"
       @set-search="setSearch"
     >
       <template #header-left>
