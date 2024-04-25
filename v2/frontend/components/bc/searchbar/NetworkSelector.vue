@@ -96,6 +96,7 @@ function oneOptionChanged (index : number) {
     <div
       v-if="dropdownIsOpen"
       class="dropdown"
+      :class="barStyle"
       @click="(e : Event) => e.stopPropagation()"
       @keydown="(e) => {if (e.key === 'Escape') dropdownIsOpen = false}"
     >
@@ -136,13 +137,23 @@ function oneOptionChanged (index : number) {
     display: block;
     box-sizing: border-box;
     z-index: 1024;
-    border-radius: 10px;
+    border-radius: var(--padding);
     left: 0px;
     top: 21px;
     padding: var(--padding);
-    background-color: var(--light-grey);
     @include fonts.small_text_bold;
-    color: var(--light-black);
+
+    &.gaudy,
+    &.embedded {
+      background-color: var(--list-background);
+      border: 1px solid var(--container-border-color);
+      color: var(--text-color);
+    }
+    &.discreet {
+      background-color: var(--searchbar-networkdropdown-bgroung-discreet);
+      border: 1px solid var(--searchbar-networkdropdown-border-discreet);
+      color: var(--light-black);
+    }
 
     .line {
       position:relative;
