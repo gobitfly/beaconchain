@@ -269,6 +269,11 @@
             "Amount of validators you slashed",
             "Amount of your slashed validators"
           ]
+        },
+        "chart": {
+          "cl": "Consensus Rewards",
+          "el": "Execution Rewards",
+          "total": "Total Rewards"
         }
       },
       "group_management":  {
