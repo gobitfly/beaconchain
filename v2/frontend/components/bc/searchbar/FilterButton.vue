@@ -62,7 +62,6 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
       &.gaudy,
       &.embedded {
         border: 1px solid var(--button-color-active);
-        color: var(--primary-contrast-color);
       }
       background-color: var(--button-color-active);
       &:hover {

@@ -75,8 +75,9 @@ function formatDescriptionCell () : string {
       class="cell_name"
       :class="barStyle"
       :text="suggestion.output.name"
+      :width-mediaquery-threshold="600"
     />
-    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle">
+    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle" :width-mediaquery-threshold="600">
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
@@ -118,6 +119,7 @@ function formatDescriptionCell () : string {
       class="cell_bi_identification"
       :class="barStyle"
       :text="formatIdentificationCell()"
+      :width-mediaquery-threshold="600"
     />
     <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="barStyle">
       {{ formatDescriptionCell() }}
@@ -168,7 +170,7 @@ function formatDescriptionCell () : string {
     position: relative;
     grid-column: 1;
     grid-row: 1;
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row-end: span 2;
     }
     &.discreet {
@@ -227,7 +229,7 @@ function formatDescriptionCell () : string {
       grid-template-columns: 40px 114px auto;
     }
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     grid-template-columns: 40px 114px auto;
   }
 
@@ -240,7 +242,7 @@ function formatDescriptionCell () : string {
     grid-column: 3;
     grid-row: 1;
     display: flex;
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row-end: span 2;
       flex-direction: column;
     }
@@ -296,7 +298,7 @@ function formatDescriptionCell () : string {
         grid-row: 2;
       }
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-column: 2;
       grid-row: 2;
     }
@@ -322,7 +324,7 @@ function formatDescriptionCell () : string {
   @media (min-width: 600px) { // large screen
     grid-template-columns: 40px 106px auto min-content;
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     grid-template-columns: 40px auto min-content;
   }
 
@@ -330,7 +332,7 @@ function formatDescriptionCell () : string {
     @media (min-width: 600px) { // large screen
       font-weight: var(--roboto-medium);
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       font-weight: var(--roboto-regular);
     }
   }
@@ -349,7 +351,7 @@ function formatDescriptionCell () : string {
       grid-column: 3;
       font-weight: var(--roboto-medium);
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row: 2;
       grid-column-end: span 2;
       font-weight: var(--roboto-regular);
@@ -362,7 +364,7 @@ function formatDescriptionCell () : string {
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row: 1;
       grid-column: 3;
       color: var(--searchbar-text-detail-gaudy);
