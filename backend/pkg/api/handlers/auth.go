@@ -54,7 +54,7 @@ func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Requ
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
 	// validate request
-	var v validationMap
+	var v validationError
 	req := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`

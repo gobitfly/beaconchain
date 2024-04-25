@@ -115,7 +115,7 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 // Validator Dashboards
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	user, err := h.getUser(r)
 	if err != nil {
 		handleErr(w, err)
@@ -166,7 +166,7 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	if v.hasErrors() {
 		handleErr(w, v)
@@ -181,7 +181,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name string `json:"name"`
@@ -210,7 +210,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -249,7 +249,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -280,7 +280,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Validators []string `json:"validators"`
@@ -329,7 +329,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -356,7 +356,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	var indices []uint64
 	var publicKeys []string
@@ -382,7 +382,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
@@ -412,7 +412,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
@@ -453,7 +453,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
@@ -499,7 +499,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -526,7 +526,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
@@ -568,7 +568,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -597,7 +597,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -624,7 +624,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
@@ -669,7 +669,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
@@ -699,7 +699,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -744,7 +744,7 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -770,7 +770,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -795,7 +795,7 @@ func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w h
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
@@ -859,7 +859,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w h
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
-	var v validationMap
+	var v validationError
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
