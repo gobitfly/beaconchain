@@ -104,35 +104,32 @@ const addValidator = (result : ResultSuggestion) => {
   switch (result.type) {
     case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
     case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = result.queryParam
+      selectedValidator.value = String(result.rawResult.num_value!)
       break
-    // Below, several validators correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
-      selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
+      // TODO: add a batch of validators
       // If you need it: `result.count` is the size of the batch.
+      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
+      selectedValidator.value = ''
       break
     default :
       return
+  }
+  if (!selectedValidator.value) {
+    return
   }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities([selectedValidator.value])
   } else {
     changeGroup([selectedValidator.value], selectedGroup.value)
   }
-  // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
-  searchBar.value!.hideResult(result)
-  // You probably want to call it later, after getting confirmation that the validator is added into the database,
-  // but `result` is no longer valid if the user changes the input (the bar ignores your call to hideResult() then).
-
-  // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
-  // If there are cases that you want to close the dropdown, you can call this method:
-  // searchBar.value!.closeDropdown()
-  // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
+  searchBar.value!.empty()
 }
 
 const editSelected = () => {
@@ -253,7 +250,6 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
             :only-networks="[ChainIDs.Ethereum]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
-            :keep-dropdown-open="true"
             class="search-bar"
             @go="addValidator"
           />
