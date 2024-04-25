@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"database/sql"
 	"fmt"
 	"math/big"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -82,16 +84,29 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	queryParams := []interface{}{}
 	rewardsQuery := ""
 
-	if dashboardId.Validators == nil {
-		// Get the validators and their groups in case a dashboard id is provided
-		joinQuery := ""
+	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
+	rewardsDataQuery := `
+		SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
+		COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards,
+		SUM(COALESCE(e.blocks_el_reward, 0)) AS el_rewards,		
+		SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled,
+		SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed,
+		SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled,
+		SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed,
+		SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled,
+		SUM(COALESCE(e.sync_executed, 0)) AS sync_executed,
+		SUM(COALESCE(e.slashed_violation, 0)) AS slashed_violation
+		`
 
+	if dashboardId.Validators == nil {
 		queryParams = append(queryParams, dashboardId.Id)
 		whereQuery := fmt.Sprintf("WHERE v.dashboard_id = $%d", len(queryParams))
 		if currentCursor.IsValid() {
 			queryParams = append(queryParams, currentCursor.Epoch, currentCursor.GroupId)
 			whereQuery += fmt.Sprintf(" AND (e.epoch%[1]s$%[2]d OR (e.epoch=$%[2]d AND v.group_id%[1]s$%[3]d))", sortSearchDirection, len(queryParams)-1, len(queryParams))
 		}
+
+		joinQuery := ""
 		if search != "" {
 			// Join the groups table to get the group name which we search for
 			joinQuery = "INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id"
@@ -103,7 +118,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			}
 			groupIdSearchQuery := ""
 			if indexSearch != -1 {
-				// Check in what group the searched for index is
+				// Check in what group if any the searched for index is
 				var groupIdSearch uint64
 				err = d.alloyReader.Get(&groupIdSearch, `
 					SELECT
@@ -111,7 +126,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					FROM users_val_dashboards_validators
 					WHERE dashboard_id = $1 AND validator_index = $2
 					`, dashboardId.Id, indexSearch)
-				if err != nil {
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+					// Index not in the dashboard
 					return nil, nil, err
 				}
 
@@ -119,7 +135,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				groupIdSearchQuery = fmt.Sprintf("OR v.group_id = $%d", len(queryParams))
 			}
 			queryParams = append(queryParams, search)
-			whereQuery += fmt.Sprintf(" AND (g.name ILIKE ($%d||'%') %s %s)", len(queryParams), epochSearchQuery, groupIdSearchQuery)
+			whereQuery += fmt.Sprintf(` AND (g.name ILIKE ($%d||'%%') %s %s)`, len(queryParams), epochSearchQuery, groupIdSearchQuery)
 		}
 
 		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
@@ -128,74 +144,68 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			SELECT
 				e.epoch,
 				v.group_id,
-				COALESCE(SUM(e.attestations_reward + blocks_cl_reward + sync_rewards + slasher_reward), 0) AS cl_rewards,
-				COALESCE(SUM(e.blocks_el_reward), 0) AS el_rewards,
-				COALESCE(SUM(e.attestations_scheduled), 0)) AS attestations_scheduled,
-				COALESCE(SUM(e.attestations_executed), 0)) AS attestations_executed,
-				COALESCE(SUM(e.blocks_scheduled), 0)) AS blocks_scheduled,
-				COALESCE(SUM(e.blocks_proposed), 0)) AS blocks_proposed,
-				COALESCE(SUM(e.sync_scheduled), 0)) AS sync_scheduled,
-				COALESCE(SUM(e.sync_executed), 0)) AS sync_executed,
-				COALESCE(SUM(e.slashed_violation), 0) AS slashed_violation
+				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
 			%s
 			%s
 			GROUP BY e.epoch, v.group_id
-			%s`, joinQuery, whereQuery, orderQuery)
+			%s`, rewardsDataQuery, joinQuery, whereQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		queryParams = append(queryParams, pq.Array(dashboardId.Validators))
+		validators := make([]uint64, 0)
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+
+		queryParams = append(queryParams, pq.Array(validators))
 		whereQuery := fmt.Sprintf("WHERE e.validator_index = ANY($%d)", len(queryParams))
 		if currentCursor.IsValid() {
-			queryParams = append(queryParams, currentCursor.Epoch, currentCursor.GroupId)
-			whereQuery += fmt.Sprintf(" AND (e.epoch%[1]s$%[2]d OR (e.epoch=$%[2]d AND v.group_id%[1]s$%[3]d))", sortSearchDirection, len(queryParams)-1, len(queryParams))
+			queryParams = append(queryParams, currentCursor.Epoch)
+			whereQuery += fmt.Sprintf(" AND e.epoch%s$%d", sortSearchDirection, len(queryParams))
 		}
-		if epochSearch != -1 || indexSearch != -1 {
-			found := false
-			if indexSearch != -1 {
-				// Find whether the index is in the list of validators
-				// If it is then show all the data
-				for _, validator := range dashboardId.Validators {
-					if validator.Index == uint64(indexSearch) {
-						found = true
-						break
+		if search != "" {
+			if epochSearch != -1 || indexSearch != -1 {
+				found := false
+				if indexSearch != -1 {
+					// Find whether the index is in the list of validators
+					// If it is then show all the data
+					for _, validator := range dashboardId.Validators {
+						if validator.Index == uint64(indexSearch) {
+							found = true
+							break
+						}
 					}
 				}
-			}
-			if !found && epochSearch != -1 {
-				queryParams = append(queryParams, epochSearch)
-				whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+				if !found && epochSearch != -1 {
+					queryParams = append(queryParams, epochSearch)
+					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+				}
+			} else {
+				return nil, &paging, nil
 			}
 		}
 
-		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
+		orderQuery := fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
 
 		queryParams = append(queryParams, t.DefaultGroupId)
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
-				$%d AS group_id,
-				COALESCE(SUM(e.attestations_reward + blocks_cl_reward + sync_rewards + slasher_reward), 0) AS cl_rewards,
-				COALESCE(SUM(e.blocks_el_reward), 0) AS el_rewards,
-				COALESCE(SUM(e.attestations_scheduled), 0)) AS attestations_scheduled,
-				COALESCE(SUM(e.attestations_executed), 0)) AS attestations_executed,
-				COALESCE(SUM(e.blocks_scheduled), 0)) AS blocks_scheduled,
-				COALESCE(SUM(e.blocks_proposed), 0)) AS blocks_proposed,
-				COALESCE(SUM(e.sync_scheduled), 0)) AS sync_scheduled,
-				COALESCE(SUM(e.sync_executed), 0)) AS sync_executed,
-				COALESCE(SUM(e.slashed_violation), 0) AS slashed_violation
+				$%d::smallint AS group_id,
+				%s
 			FROM validator_dashboard_data_epoch e
 			%s
-			GROUP BY e.epoch, v.group_id
-			%s`, len(queryParams), whereQuery, orderQuery)
+			GROUP BY e.epoch
+			%s`, len(queryParams), rewardsDataQuery, whereQuery, orderQuery)
 	}
 
-	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams)
+	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Create the result
 	result := make([]t.VDBRewardsTableRow, 0)
 	for _, res := range queryResult {
 		duty := t.VDBRewardesTableDuty{}
@@ -219,6 +229,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 		}
 		if duty.Attestation != nil || duty.Proposal != nil || duty.Sync != nil || duty.Slashing != nil {
+			// Only add groups that had some duty
 			result = append(result, t.VDBRewardsTableRow{
 				Epoch:   res.Epoch,
 				Duty:    duty,

@@ -27,6 +27,6 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter *sqlx.DB, bigtable
 }
 
 func (s *Services) InitServices() {
-	// go s.startSlotVizDataService()
-	// go s.startIndexMappingService()
+	go s.startSlotVizDataService()
+	go s.startIndexMappingService()
 }
