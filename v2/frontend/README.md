@@ -23,9 +23,8 @@ Type
 ```bash
 cp .npmrc-example .npmrc
 ```
-Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token".
 
-In your `.npmrc` file, replace `FA_TOKEN` with the actual key.
+In your `.npmrc` file, replace `FA_TOKEN` with an actual key for Font Awesome.
 
 Then type:
 ```bash

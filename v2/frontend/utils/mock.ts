@@ -18,6 +18,14 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const n = Math.floor(Number(searched))
   const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
 
+  let ordinal = searched
+  if (Number(searched) < 11 || Number(searched) > 13) {
+    const last = searched.slice(-1)
+    ordinal += (last === '1') ? 'st' : (last === '2' ? 'nd' : (last === '3' ? 'rd' : 'th'))
+  } else {
+    ordinal += 'th'
+  }
+
   response.data.push(
     {
       chain_id: 1,
@@ -72,6 +80,16 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         type: 'validators_by_index',
         num_value: Number(searched),
         hash_value: '0xa525497ec3116c1310be8d73d2efd536dc0ce6bd4b0163dffddf94dad3d91d154c061b9a3bfd1b704a5ba67fc443974a'
+      },
+      {
+        chain_id: 1,
+        type: 'validators_by_deposit_ens_name',
+        str_value: searched + 'kETH-hodler-club.eth'
+      },
+      {
+        chain_id: 1,
+        type: 'validators_by_graffiti',
+        str_value: ordinal + ' proposal!'
       }
     )
   } else {
@@ -98,6 +116,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         chain_id: 1,
         type: 'validators_by_withdrawal_ens_name',
         str_value: searched + '.bitfly.eth'
+      },
+      {
+        chain_id: 1,
+        type: 'validators_by_pubkey',
+        num_value: Math.floor(Math.random() * 1000000),
+        hash_value: '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660'
       }
     )
   }
