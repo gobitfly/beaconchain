@@ -286,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	for i, row := range data {
 		pubkeys[i] = hexutil.Encode(row.PublicKey)
 	}
-	indices, err := d.services.GetValidatorIndexOfPubkeySlice(pubkeys)
+	indices, err := d.services.GetValidatorIndicesOfPubkeySlice(pubkeys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to recover indices after query: %w", err)
 	}
@@ -333,4 +333,14 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	}
 
 	return responseData, p, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalElDeposits(dashboardId)
+}
+
+func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalClDeposits(dashboardId)
 }
