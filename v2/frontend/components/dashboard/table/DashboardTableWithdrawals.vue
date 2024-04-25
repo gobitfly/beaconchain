@@ -51,6 +51,10 @@ watch(query, (q) => {
 watch(withdrawals, () => {
   // keep total withdrawals sticky at the top
   if (withdrawals.value?.data && totalWithdrawals.value !== undefined) {
+    if (withdrawals.value.data[0].group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+      return
+    }
+
     withdrawals.value.data.unshift({
       epoch: 0,
       slot: 0,
