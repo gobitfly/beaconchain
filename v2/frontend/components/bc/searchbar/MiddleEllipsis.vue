@@ -47,7 +47,7 @@ const props = defineProps<{
   ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent, // for internal use, to inform this instance that it belongs to a parent MiddleEllipsis component
   meInstanceId?: number
-  class?: string // hack to make the list of classes reactive
+  class?: string // to make the list of classes reactive
 }>()
 
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
