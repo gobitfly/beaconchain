@@ -11,7 +11,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  if (!props.hash) {
+  if (!props.hash || props.hash === '0x') {
     return
   }
   const hash = props.hash

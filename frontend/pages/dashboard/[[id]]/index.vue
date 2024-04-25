@@ -107,6 +107,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           </template>
           <div class="deposits">
             <DashboardTableElDeposits />
+            <DashboardTableClDeposits />
           </div>
         </TabPanel>
         <TabPanel>

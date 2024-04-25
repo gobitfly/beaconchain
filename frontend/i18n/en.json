@@ -241,6 +241,9 @@
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
+      "cl_deposits":{
+        "title": "Consensus Layer"
+      },
       "el_deposits":{
         "title": "Execution Layer"
       },
@@ -325,7 +328,7 @@
         "reward_recipient": "Rewards Recipient",
         "proposer_rewards": "Proposer Rewards",
         "depositor": "Depositor",
-        "withdrawal_credentials": "Withdrawal Credential"
+        "signature": "Signature"
       },
       "summary": {
         "total_group_name": "Total Efficiency",

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
+import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useValidatorDashboardElDepositsStore'
+import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useValidatorDashboardClDepositsStore'
 
 const { dashboardKey } = useDashboardKey()
 
@@ -12,7 +12,9 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardElDepositsStore()
+const { slotToEpoch } = useNetwork()
+
+const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardClDepositsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -21,13 +23,11 @@ const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     group: width.value > 1180,
-    block: width.value >= 1080,
-    withdrawalCredentials: width.value >= 980,
-    from: width.value >= 880,
-    depositer: width.value >= 780,
-    txHash: width.value >= 680,
-    valid: width.value >= 580,
-    publicKey: width.value >= 480
+    signature: width.value >= 1080,
+    epoch: width.value >= 980,
+    slot: width.value >= 880,
+    withdrawalCredentials: width.value >= 780,
+    publicKey: width.value >= 680
   }
 })
 
@@ -82,27 +82,27 @@ const setPageSize = (value: number) => {
   loadData(setQueryPageSize(value, lastQuery.value))
 }
 
-const getRowClass = (row: VDBExecutionDepositsTableRow) => {
+const getRowClass = (row: VDBConsensusDepositsTableRow) => {
   if (row.index === undefined) {
     return 'total-row'
   }
 }
 
-const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
+const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
 
 </script>
 <template>
   <div>
-    <BcTableControl :title="$t('dashboard.validator.el_deposits.title')">
+    <BcTableControl :title="$t('dashboard.validator.cl_deposits.title')">
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="tableData"
             data-key="index"
             :expandable="!colsVisible.group"
-            class="el_deposits_table"
+            class="cl_deposits_table"
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
@@ -149,10 +149,17 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 </span>
               </template>
             </Column>
-            <Column v-if="colsVisible.block" field="block" body-class="block" header-class="block" :header="$t('common.block')">
+            <Column v-if="colsVisible.epoch" field="epoch" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
               <template #body="slotProps">
-                <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
-                  <BcFormatNumber :value="slotProps.data.block" />
+                <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
+                </NuxtLink>
+              </template>
+            </Column>
+            <Column v-if="colsVisible.slot" field="slot" body-class="slot" header-class="slot" :header="$t('common.slot')">
+              <template #body="slotProps">
+                <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcFormatNumber :value="slotProps.data.slot" />
                 </NuxtLink>
               </template>
             </Column>
@@ -164,46 +171,21 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 <BcFormatTimePassed
                   v-if="slotProps.data.index !== undefined"
                   class="time-passed"
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                  :value="slotProps.data.slot"
+                  type="slot"
                 />
-              </template>
-            </Column>
-            <Column v-if="colsVisible.from" field="from" header-class="from" :header="$t('table.from')">
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.from.hash"
-                  :ens="slotProps.data.from.ens"
-                  type="address"
-                />
-              </template>
-            </Column>
-            <Column v-if="colsVisible.depositer" field="depositor" header-class="depositor" :header="$t('dashboard.validator.col.depositor')">
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.depositor.hash"
-                  :ens="slotProps.data.depositor.ens"
-                  type="address"
-                />
-              </template>
-            </Column>
-            <Column v-if="colsVisible.txHash" field="tx_hash" header-class="tx_hash" :header="$t('block.col.tx_hash')">
-              <template #body="slotProps">
-                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.tx_hash" type="tx" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.withdrawalCredentials"
-              field="withdrawal_credentials"
-              header-class="withdrawal_credentials"
+              field="withdrawal_credential"
+              header-class="withdrawal_credential"
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.withdrawal_credentials"
+                  :hash="slotProps.data.withdrawal_credential"
                   type="withdrawal_credentials"
                 />
               </template>
@@ -216,9 +198,17 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 <BcFormatValue v-else :value="slotProps.data.amount" :options="{ fixedDecimalCount: 0 }" />
               </template>
             </Column>
-            <Column v-if="colsVisible.valid" field="valid" header-class="valid" body-class="valid" :header="$t('table.valid')">
+            <Column
+              v-if="colsVisible.signature"
+              field="signature"
+              header-class="signature"
+              :header="$t('dashboard.validator.col.signature')"
+            >
               <template #body="slotProps">
-                <BcTableValidTag v-if="slotProps.data.index !== undefined" :valid="slotProps.data.valid" />
+                <BcFormatHash
+                  v-if="slotProps.data.index !== undefined"
+                  :hash="slotProps.data.signature"
+                />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -242,10 +232,18 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.block') }}
+                    {{ $t('common.epoch') }}
                   </div>
-                  <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
-                    <BcFormatNumber :value="slotProps.data.block" />
+                  <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`" target="_blank" class="link" :no-prefetch="true">
+                    <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
+                  </NuxtLink>
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('common.slot') }}
+                  </div>
+                  <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                    <BcFormatNumber :value="slotProps.data.slot" />
                   </NuxtLink>
                 </div>
                 <div class="row">
@@ -253,17 +251,18 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
                   <BcFormatHash
-                    :hash="slotProps.data.withdrawal_credentials"
+                    :hash="slotProps.data.withdrawal_credential"
                     type="withdrawal_credentials"
                   />
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('table.valid') }}
+                    {{ $t('dashboard.validator.col.signature') }}
                   </div>
-                  <div>
-                    <BcTableValidTag :valid="slotProps.data.valid" />
-                  </div>
+                  <BcFormatHash
+                    v-if="slotProps.data.index !== undefined"
+                    :hash="slotProps.data.signature"
+                  />
                 </div>
               </div>
             </template>
@@ -277,7 +276,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
 
-:deep(.el_deposits_table) {
+:deep(.cl_deposits_table) {
   .time-passed {
     white-space: nowrap;
   }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
 import { type AgeFormat } from '~/types/settings'
-import { formatGoTimestamp, formatEpochToDateTime } from '~/utils/format'
+import { formatGoTimestamp, formatEpochToDateTime, formatSlotToDateTime } from '~/utils/format'
 
 interface Props {
   value?: number,
-  type?: 'epoch' | 'go-timestamp', // we can add slot and other types later when needed, we default to epoch
+  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add slot and other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
   noUpdate?: boolean,
   unitLength?: StringUnitLength
@@ -32,6 +32,8 @@ const label = computed(() => {
   switch (props.type) {
     case 'go-timestamp':
       return formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+    case 'slot':
+      return formatSlotToDateTime(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     default:
       return formatEpochToDateTime(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
   }
