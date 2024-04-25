@@ -50,8 +50,18 @@ CREATE INDEX IF NOT EXISTS idx_validators_lastattestationslot ON validators (las
 CREATE INDEX IF NOT EXISTS idx_validators_activationepoch_status ON public.validators USING btree (activationepoch, status);
 CREATE INDEX IF NOT EXISTS idx_validators_activationeligibilityepoch ON public.validators USING btree (activationeligibilityepoch);
 
-CREATE ROLE alloydbsuperuser;
-CREATE ROLE readaccess;
+do
+$$
+begin
+  if not exists (select * from pg_roles where rolname = 'alloydbsuperuser') then
+     create role alloydbsuperuser;
+  end if;
+  if not exists (select * from pg_roles where rolname = 'readaccess') then
+     create role readaccess;
+  end if;
+end
+$$
+;
 
 -- +goose StatementEnd
 
@@ -59,23 +69,23 @@ CREATE ROLE readaccess;
 -- +goose StatementBegin
 
 DROP TABLE IF EXISTS blocks_deposits;
-DROP INDEX idx_blocks_deposits_publickey;
-DROP INDEX idx_blocks_deposits_block_slot_block_root;
-DROP INDEX idx_blocks_deposits_block_root_publickey;
+DROP INDEX IF EXISTS idx_blocks_deposits_publickey;
+DROP INDEX IF EXISTS idx_blocks_deposits_block_slot_block_root;
+DROP INDEX IF EXISTS idx_blocks_deposits_block_root_publickey;
 
 DROP TABLE IF EXISTS validators;
-DROP INDEX idx_validators_pubkey
-DROP INDEX idx_validators_pubkeyhex
-DROP INDEX idx_validators_pubkeyhex_pattern_pos
-DROP INDEX idx_validators_status
-DROP INDEX idx_validators_balanceactivation
-DROP INDEX idx_validators_activationepoch
-DROP INDEX validators_is_offline_vali_idx
-DROP INDEX idx_validators_withdrawalcredentials;
-DROP INDEX idx_validators_exitepoch;
-DROP INDEX idx_validators_withdrawableepoch;
-DROP INDEX idx_validators_lastattestationslot;
-DROP INDEX idx_validators_activationepoch_status;
-DROP INDEX idx_validators_activationeligibilityepoch;
+DROP INDEX IF EXISTS idx_validators_pubkey;
+DROP INDEX IF EXISTS idx_validators_pubkeyhex;
+DROP INDEX IF EXISTS idx_validators_pubkeyhex_pattern_pos;
+DROP INDEX IF EXISTS idx_validators_status;
+DROP INDEX IF EXISTS idx_validators_balanceactivation;
+DROP INDEX IF EXISTS idx_validators_activationepoch;
+DROP INDEX IF EXISTS validators_is_offline_vali_idx;
+DROP INDEX IF EXISTS idx_validators_withdrawalcredentials;
+DROP INDEX IF EXISTS idx_validators_exitepoch;
+DROP INDEX IF EXISTS idx_validators_withdrawableepoch;
+DROP INDEX IF EXISTS idx_validators_lastattestationslot;
+DROP INDEX IF EXISTS idx_validators_activationepoch_status;
+DROP INDEX IF EXISTS idx_validators_activationeligibilityepoch;
 
 -- +goose StatementEnd

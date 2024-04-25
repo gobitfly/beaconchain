@@ -142,6 +142,7 @@ echo "provisioning alloy db schema"
 cd ../perfTesting
 go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128
 cd ../backend/db_migrations
+goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" reset
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
 echo "alloy db schema initialization completed"
 
