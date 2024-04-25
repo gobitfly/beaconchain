@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -18,12 +18,17 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, debug bool) *mux.Router {
+func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
+
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()
+	sessionManager := newSessionManager(cfg)
 
-	internalRouter.Use(sessionManager.LoadAndSave)
+	debug := cfg.Frontend.Debug
+	if !debug {
+		internalRouter.Use(sessionManager.LoadAndSave, getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
+	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
 	addRoutes(handlerService, publicRouter, internalRouter, debug)
