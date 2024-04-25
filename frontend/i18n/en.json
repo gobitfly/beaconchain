@@ -239,12 +239,14 @@
       "blocks":{
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
         "el_rewards": "Execution Layer Reward",
         "cl_rewards": "Consensus Layer Reward"
       },
       "rewards": {
         "title": "Rewards",
         "search_placeholder": "Epoch, Index, Pubkey, Group",
+        "search_placeholder_public": "Epoch, Index, Pubkey",
         "attestation": "Attestation",
         "proposal": "Proposal",
         "sync_committee": "Sync Committee",
@@ -314,6 +316,7 @@
         "total_group_name": "Total Efficiency",
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
         "row": {
           "efficiency_all_time": "Efficiency",
           "attestations": "Attestations",
