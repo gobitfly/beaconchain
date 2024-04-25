@@ -63,9 +63,15 @@ func getCsrfProtectionMiddleware(cfg *types.Config) func(http.Handler) http.Hand
 		log.Fatal(err, "error decoding cfg.Frontend.CsrfAuthKey, set it to a valid hex string", 0)
 	}
 	if len(csrfBytes) == 0 {
-		log.Warn("CSRF auth key is empty")
+		log.Warn("CSRF auth key is empty, unsafe requests will not work! Set cfg.Frontend.Debug to true to disable CSRF protection or cfg.Frontend.CsrfAuthKey.")
 	}
-	return csrf.Protect(csrfBytes, csrf.Secure(!cfg.Frontend.CsrfInsecure), csrf.Path("/"))
+	sameSite := csrf.SameSiteStrictMode
+	secure := !cfg.Frontend.Debug
+	if cfg.Frontend.SessionSameSiteNone {
+		sameSite = csrf.SameSiteNoneMode
+		secure = true
+	}
+	return csrf.Protect(csrfBytes, csrf.Secure(secure), csrf.Path("/"), csrf.Domain(cfg.Frontend.SessionCookieDomain), csrf.SameSite(sameSite))
 }
 
 func csrfInjecterMiddleware(next http.Handler) http.Handler {
