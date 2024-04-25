@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"bytes"
-	"encoding/hex"
 	"net/http"
 
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -97,7 +97,7 @@ func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 		return &types.ChainHead{}, err
 	}
 
-	id := parsedHead.Data.Header.Message.StateRoot.Hex()
+	id := parsedHead.Data.Header.Message.StateRoot.String()
 	if parsedHead.Data.Header.Message.Slot == 0 {
 		id = "genesis"
 	}
@@ -1084,24 +1084,6 @@ func (lc *LighthouseClient) GetBlobSidecars(stateID string) (*constypes.Standard
 	return lc.cl.GetBlobSidecars(stateID)
 }
 
-type bytesHexStr []byte
-
-func (s *bytesHexStr) UnmarshalText(b []byte) error {
-	if s == nil {
-		return fmt.Errorf("cannot unmarshal bytes into nil")
-	}
-	if len(b) >= 2 && b[0] == '0' && b[1] == 'x' {
-		b = b[2:]
-	}
-	out := make([]byte, len(b)/2)
-	_, err := hex.Decode(out, b)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling text: %w", err)
-	}
-	*s = out
-	return nil
-}
-
 type LighthouseValidatorParticipationResponse struct {
 	Data struct {
 		CurrentEpochActiveGwei           constypes.Uint64Str `json:"current_epoch_active_gwei"`
@@ -1115,20 +1097,20 @@ type LighthouseValidatorParticipationResponse struct {
 // https://ethereum.github.io/beacon-APIs/#/Beacon/getBlockV2
 // https://github.com/ethereum/consensus-specs/blob/v1.1.9/specs/bellatrix/beacon-chain.md#executionpayload
 type ExecutionPayload struct {
-	ParentHash    bytesHexStr         `json:"parent_hash"`
-	FeeRecipient  bytesHexStr         `json:"fee_recipient"`
-	StateRoot     bytesHexStr         `json:"state_root"`
-	ReceiptsRoot  bytesHexStr         `json:"receipts_root"`
-	LogsBloom     bytesHexStr         `json:"logs_bloom"`
-	PrevRandao    bytesHexStr         `json:"prev_randao"`
+	ParentHash    hexutil.Bytes       `json:"parent_hash"`
+	FeeRecipient  hexutil.Bytes       `json:"fee_recipient"`
+	StateRoot     hexutil.Bytes       `json:"state_root"`
+	ReceiptsRoot  hexutil.Bytes       `json:"receipts_root"`
+	LogsBloom     hexutil.Bytes       `json:"logs_bloom"`
+	PrevRandao    hexutil.Bytes       `json:"prev_randao"`
 	BlockNumber   constypes.Uint64Str `json:"block_number"`
 	GasLimit      constypes.Uint64Str `json:"gas_limit"`
 	GasUsed       constypes.Uint64Str `json:"gas_used"`
 	Timestamp     constypes.Uint64Str `json:"timestamp"`
-	ExtraData     bytesHexStr         `json:"extra_data"`
+	ExtraData     hexutil.Bytes       `json:"extra_data"`
 	BaseFeePerGas constypes.Uint64Str `json:"base_fee_per_gas"`
-	BlockHash     bytesHexStr         `json:"block_hash"`
-	Transactions  []bytesHexStr       `json:"transactions"`
+	BlockHash     hexutil.Bytes       `json:"block_hash"`
+	Transactions  []hexutil.Bytes     `json:"transactions"`
 	// present only after capella
 	Withdrawals []constypes.WithdrawalPayload `json:"withdrawals"`
 	// present only after deneb
