@@ -116,6 +116,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   :hash="slotProps.data.public_key"
                   type="public_key"
                 />
+                <span v-else>{{ $t('table.all_time_total') }}</span>
               </template>
             </Column>
             <Column field="index" header-class="index" :header="$t('common.index')">
@@ -195,12 +196,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column
-              field="amount"
-              body-class="amount"
-              header-class="amount"
-              :header="$t('table.amount')"
-            >
+            <Column field="amount" body-class="amount" header-class="amount" :header="$t('table.amount')">
               <template #body="slotProps">
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
@@ -214,7 +210,75 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <div>TODO! {{ slotProps.data }}</div>
+              <div class="expansion">
+                <div class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.public_key') }}
+                  </div>
+                  <BcFormatHash
+                    :hash="slotProps.data.public_key"
+                    type="public_key"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.group') }}
+                  </div>
+                  <div>
+                    {{ groupNameLabel(slotProps.data.group_id) }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('common.block') }}
+                  </div>
+                  <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
+                    <BcFormatNumber :value="slotProps.data.block" />
+                  </NuxtLink>
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('table.from') }}
+                  </div>
+                  <BcFormatHash
+                    :hash="slotProps.data.from.hash"
+                    :ens="slotProps.data.from.ens"
+                    type="address"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.depositor') }}
+                  </div>
+                  <BcFormatHash
+                    :hash="slotProps.data.depositor.hash"
+                    :ens="slotProps.data.depositor.ens"
+                    type="address"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('block.col.tx_hash') }}
+                  </div><BcFormatHash :hash="slotProps.data.tx_hash" type="tx" />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.withdrawal_credentials') }}
+                  </div>
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credentials"
+                    type="withdrawal_credentials"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('table.valid') }}
+                  </div>
+                  <div>
+                    <BcTableValidTag :valid="slotProps.data.valid" />
+                  </div>
+                </div>
+              </div>
             </template>
           </BcTable>
         </ClientOnly>
@@ -250,19 +314,29 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
     }
   }
 
-  tr:has(+.total-row) {
+  .total-row {
     td {
+      font-weight: var(--standard_text_medium_font_weight);
       border-bottom-color: var(--primary-color);
     }
   }
+}
 
-  .future-row {
-    td {
+.expansion {
+  color: var(--container-color);
+  background-color: var(--container-background);
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding);
+  padding: var(--padding);
 
-      >div,
-      >span {
-        opacity: 0.5;
-      }
+  .row {
+    display: flex;
+    gap: var(--padding);
+
+    .label {
+      width: 164px;
+      font-weight: var(--standard_text_bold_font_weight);
     }
   }
 }

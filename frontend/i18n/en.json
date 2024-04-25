@@ -67,7 +67,8 @@
     "age": "Age",
     "from": "From",
     "amount": "Amount",
-    "valid": "Valid"
+    "valid": "Valid",
+    "all_time_total": "All time total"
   },
   "premium": {
     "title": "beaconcha.in Premium",
