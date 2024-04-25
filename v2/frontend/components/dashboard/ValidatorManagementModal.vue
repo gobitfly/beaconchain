@@ -238,7 +238,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span />
     </template>
-    <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
+    <BcTableControl :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>

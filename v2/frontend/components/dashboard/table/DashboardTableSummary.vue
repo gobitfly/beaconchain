@@ -7,7 +7,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -76,7 +76,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
-      :search-placeholder="$t('dashboard.validator.summary.search_placeholder')"
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
