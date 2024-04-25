@@ -108,7 +108,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       <div class="item button" :disabled="!data.prev_cursor" @click="emit('setCursor', data.prev_cursor)">
         <IconChevron class="toggle" direction="left" />
       </div>
-      <div class="item button" :disabled="data.next_cursor" @click="emit('setCursor', data.next_cursor)">
+      <div class="item button" :disabled="!data.next_cursor" @click="emit('setCursor', data.next_cursor)">
         <IconChevron class="toggle" direction="right" />
       </div>
       <Dropdown
