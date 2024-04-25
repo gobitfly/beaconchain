@@ -115,11 +115,11 @@ function formatDescriptionCell () : string {
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
-      class="cells_blockchain-info_common cell_bi_identification"
+      class="cell_bi_identification"
       :class="barStyle"
       :text="formatIdentificationCell()"
     />
-    <div v-if="suggestion.output.description !== ''" class="cells_blockchain-info_common cell_bi_description" :class="barStyle">
+    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="barStyle">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -219,7 +219,8 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
-    &.gaudy {
+    &.gaudy,
+    &.embedded {
       grid-template-columns: 40px 106px auto 114px;
     }
     &.discreet {
@@ -251,12 +252,13 @@ function formatDescriptionCell () : string {
     margin-top: auto;
     margin-bottom: auto;
     font-weight: var(--roboto-medium);
-    white-space: nowrap;  // this has an effect on a large screen in gaudy mode only, it makes sure that the two spans (description + lowleveldata) stay on the same line
+    white-space: nowrap;  // makes sure that the two spans (description + lowleveldata) stay on the same line
 
     .cell_bi_description {
       position: relative;
       @media (min-width: 600px) { // large screen
-        &.gaudy {
+        &.gaudy,
+        &.embedded {
           margin-right: 0.5em;
         }
       }
@@ -265,10 +267,11 @@ function formatDescriptionCell () : string {
     .cell_bi_low-level-data {
       position: relative;
       flex-grow: 1;
-      text-align: justify;
-      text-justify: inter-character;
-      &.greyish.gaudy {
-        color: var(--searchbar-text-detail-gaudy);
+      &.greyish {
+        &.gaudy,
+        &.embedded {
+          color: var(--searchbar-text-detail-gaudy);
+        }
       }
       &.greyish.discreet {
         color: var(--searchbar-text-detail-discreet);
@@ -280,7 +283,8 @@ function formatDescriptionCell () : string {
     display: block;
     position: relative;
     @media (min-width: 600px) { // large screen
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         grid-column: 4;
         grid-row: 1;
         margin-top: auto;
@@ -299,7 +303,8 @@ function formatDescriptionCell () : string {
     .category-label {
       display: inline-block;
       position: relative;
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         color: var(--searchbar-text-detail-gaudy);
       }
       &.discreet {
@@ -330,7 +335,7 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cells_blockchain-info_common {
+  @mixin cells_blockchain-info_common {
     display: flex;
     position: relative;
     margin-top: auto;
@@ -338,6 +343,8 @@ function formatDescriptionCell () : string {
   }
 
   .cell_bi_identification {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 3;
       font-weight: var(--roboto-medium);
@@ -347,12 +354,11 @@ function formatDescriptionCell () : string {
       grid-column-end: span 2;
       font-weight: var(--roboto-regular);
     }
-    width: 100%;
-    text-align: justify;
-    text-justify: inter-character;
   }
 
   .cell_bi_description {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }
