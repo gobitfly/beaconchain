@@ -276,7 +276,8 @@
       },
       "withdrawals": {
         "title": "Withdrawals",
-        "search_placeholder": "Index, Public Key, Address"
+        "search_placeholder": "Index, Public Key, Address",
+        "all_time_total": "All time total"
       },
       "group_management":  {
         "title": "Manage Groups",
