@@ -222,7 +222,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			duty.Sync = &SyncPercentage
 		}
 		if res.SlashedViolation > 0 {
-			duty.Slashing = &res.SlashedViolation
+			slashedViolation := res.SlashedViolation
+			duty.Slashing = &slashedViolation
 		}
 		reward := t.ClElValue[decimal.Decimal]{
 			El: res.ElRewards,
