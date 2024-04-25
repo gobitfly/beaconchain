@@ -37,7 +37,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   user-select: none;
   border-radius: 10px;
   height: 20px;
-  padding-top: 3px;
+  padding-top: 2.2px;
   padding-left: 8px;
   padding-right: 8px;
   text-align: center;
@@ -45,6 +45,10 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   @include fonts.small_text_bold;
   white-space: nowrap;
   overflow: clip;
+  &.gaudy,
+  &.embedded {
+    border: 1px solid var(--container-border-color);
+  }
 
   .hidden-checkbox {
     display: none;
@@ -55,6 +59,11 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   &:not(.off) {
     &.on,
     &:has(.hidden-checkbox:checked) {
+      &.gaudy,
+      &.embedded {
+        border: 1px solid var(--button-color-active);
+        color: var(--primary-contrast-color);
+      }
       background-color: var(--button-color-active);
       &:hover {
         background-color: var(--button-color-hover);
@@ -66,15 +75,17 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   }
 
   &:not(.on) {
-    &.gaudy,
-    &.embedded {
-      background-color: var(--searchbar-filter-unselected-gaudy);
-    }
     &.discreet {
       background-color: var(--light-grey);
     }
     &:hover {
-      background-color: var(--light-grey-3);
+      &.gaudy,
+      &.embedded {
+        background-color: var(--container-border-color);
+      }
+      &.discreet {
+        background-color: var(--light-grey-3);
+      }
     }
     &:active {
       background-color: var(--button-color-pressed);
@@ -83,7 +94,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 
   &.gaudy,
   &.embedded {
-    color: var(--primary-contrast-color);
+    color: var(--text-color);
   }
   &.discreet {
     color: var(--light-black);
