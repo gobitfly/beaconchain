@@ -644,7 +644,7 @@ function informationIfHiddenResults () : string {
     @media (min-width: 600px) { // large screen
       width: 460px;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       width: 380px;
     }
   }
@@ -653,7 +653,7 @@ function informationIfHiddenResults () : string {
     @media (min-width: 600px) { // large screen
       width: 735px;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       width: 380px;
     }
   }
@@ -814,7 +814,7 @@ function informationIfHiddenResults () : string {
               height: 1px;
 
               &.embedded {
-                @media (max-width: 600px) { // mobile
+                @media (max-width: 599.9px) { // mobile
                   display: block;
                 }
                 background-color: var(--input-border-color);

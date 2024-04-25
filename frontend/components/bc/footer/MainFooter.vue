@@ -22,7 +22,7 @@
   @media (min-width: 600px) { // large screen
     justify-content: center;
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     justify-content: flex-start;
     width: 100%;
   }
@@ -40,7 +40,7 @@
     flex-direction: row;
     gap: 130px;
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     justify-content: flex-start;
     align-items: flex-start;
     flex-direction: column;
@@ -55,7 +55,7 @@
   @media (min-width: 600px) { // large screen
     justify-content: center;
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     justify-content: flex-start;
   }
 }
