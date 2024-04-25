@@ -70,11 +70,12 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
 	user, err := h.dai.GetUserInfo(email)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = newBadRequestErr("invalid email or password")
+			err = badCredentialsErr
 		}
 		handleErr(w, err)
 		return
@@ -83,7 +84,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		returnBadRequest(w, errors.New("invalid email or password"))
+		handleErr(w, badCredentialsErr)
 		return
 	}
 
