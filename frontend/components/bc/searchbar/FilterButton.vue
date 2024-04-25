@@ -34,6 +34,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   position: relative;
   box-sizing: border-box;
   cursor: pointer;
+  user-select: none;
   border-radius: 10px;
   height: 20px;
   padding-top: 3px;

@@ -115,11 +115,11 @@ function formatDescriptionCell () : string {
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
-      class="cells_blockchain-info_common cell_bi_identification"
+      class="cell_bi_identification"
       :class="barStyle"
       :text="formatIdentificationCell()"
     />
-    <div v-if="suggestion.output.description !== ''" class="cells_blockchain-info_common cell_bi_description" :class="barStyle">
+    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="barStyle">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -267,8 +267,6 @@ function formatDescriptionCell () : string {
     .cell_bi_low-level-data {
       position: relative;
       flex-grow: 1;
-      text-align: justify;
-      text-justify: inter-character;
       &.greyish {
         &.gaudy,
         &.embedded {
@@ -337,7 +335,7 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cells_blockchain-info_common {
+  @mixin cells_blockchain-info_common {
     display: flex;
     position: relative;
     margin-top: auto;
@@ -345,6 +343,8 @@ function formatDescriptionCell () : string {
   }
 
   .cell_bi_identification {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 3;
       font-weight: var(--roboto-medium);
@@ -354,11 +354,11 @@ function formatDescriptionCell () : string {
       grid-column-end: span 2;
       font-weight: var(--roboto-regular);
     }
-    text-align: justify;
-    text-justify: inter-character;
   }
 
   .cell_bi_description {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 4;
     }

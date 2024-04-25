@@ -26,7 +26,19 @@ watch(liveState, updateLocalState) // fires when the parent changes the whole ob
 onBeforeMount(() => {
   dropdownIsOpen.value = false
   updateLocalState()
+  document.addEventListener('keydown', listenToKeys)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', listenToKeys)
+})
+
+function listenToKeys (event : KeyboardEvent) {
+  if (event.key === 'Escape' && dropdownIsOpen.value) {
+    dropdownIsOpen.value = false
+    event.stopImmediatePropagation()
+  }
+}
 
 function updateLocalState () {
   // first we update the head
@@ -85,6 +97,7 @@ function oneOptionChanged (index : number) {
       v-if="dropdownIsOpen"
       class="dropdown"
       @click="(e : Event) => e.stopPropagation()"
+      @keydown="(e) => {if (e.key === 'Escape') dropdownIsOpen = false}"
     >
       <div v-for="(line, i) of listInDropdown" :key="line.chainId" class="line" @click="oneOptionChanged(i)">
         <Checkbox v-model="line.selected" :binary="true" :input-id="String(line.chainId)" />
