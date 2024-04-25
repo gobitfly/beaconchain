@@ -174,7 +174,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving proposer duties dependent header for epoch %v: %w", epoch, err)
 	}
-	depStateRoot := parsedHeader.Data.Header.Message.StateRoot
+	depStateRoot := parsedHeader.Data.Header.Message.StateRoot.String()
 
 	parsedCommittees, err := lc.cl.GetCommittees(depStateRoot, &epoch, nil, nil)
 	if err != nil {
@@ -200,7 +200,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	}
 
 	if epoch >= utils.Config.Chain.ClConfig.AltairForkEpoch {
-		syncCommitteeState := depStateRoot.Hex()
+		syncCommitteeState := depStateRoot
 		if epoch == utils.Config.Chain.ClConfig.AltairForkEpoch {
 			syncCommitteeState = fmt.Sprintf("%d", utils.Config.Chain.ClConfig.AltairForkEpoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		}
@@ -537,7 +537,7 @@ func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block,
 
 	slot := parsedHeaders.Data.Header.Message.Slot
 
-	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root)
+	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root.String())
 	if err != nil {
 		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 		return nil, fmt.Errorf("error retrieving block data at slot %v: %w", slot, err)
@@ -652,7 +652,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	}
 
 	lc.slotsCacheMux.Lock()
-	cachedBlock, ok := lc.slotsCache.Get(parsedHeaders.Data.Root)
+	cachedBlock, ok := lc.slotsCache.Get(parsedHeaders.Data.Root.String())
 	if ok {
 		lc.slotsCacheMux.Unlock()
 		block, ok := cachedBlock.(*types.Block)
@@ -666,7 +666,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	}
 	lc.slotsCacheMux.Unlock()
 
-	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root)
+	parsedResponse, err := lc.cl.GetSlot(parsedHeaders.Data.Root.String())
 	if err != nil && slot == 0 {
 		log.Error(err, "error parsing block data for slot", 0, map[string]interface{}{"slot": parsedHeaders.Data.Header.Message.Slot})
 
@@ -710,7 +710,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	}
 
 	lc.slotsCacheMux.Lock()
-	lc.slotsCache.Add(parsedHeaders.Data.Root, block)
+	lc.slotsCache.Add(parsedHeaders.Data.Root.String(), block)
 	lc.slotsCacheMux.Unlock()
 
 	return block, nil
