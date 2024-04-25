@@ -14,7 +14,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const { withdrawals, query: lastQuery, getWithdrawals } = useValidatorDashboardWithdrawalsStore()
+const { withdrawals, query: lastQuery, getWithdrawals, totalWithdrawals, getTotalWithdrawals } = useValidatorDashboardWithdrawalsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -39,6 +39,7 @@ const loadData = (query?: TableQueryParams) => {
 
 watch(dashboardKey, () => {
   loadData()
+  getTotalWithdrawals(dashboardKey.value)
 }, { immediate: true })
 
 watch(query, (q) => {
@@ -47,8 +48,22 @@ watch(query, (q) => {
   }
 }, { immediate: true })
 
+watch(withdrawals, () => {
+  // keep total withdrawals sticky at the top
+  if (withdrawals.value?.data && totalWithdrawals.value !== undefined) {
+    withdrawals.value.data.unshift({
+      epoch: 0,
+      slot: 0,
+      group_id: DAHSHBOARDS_ALL_GROUPS_ID,
+      recipient: { hash: '' },
+      amount: totalWithdrawals.value.data.total_amount,
+      index: 0
+    })
+  }
+})
+
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, overview.value?.groups, '')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -70,15 +85,11 @@ const setSearch = (value?: string) => {
 }
 
 const getRowClass = (row: VDBWithdrawalsTableRow) => {
-  // TODO: Discuss if we want to use DAHSHBOARDS_ALL_GROUPS_ID here
   if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
   }
-
-  // TODO: Discuss future withdrawals
+  // TODO: Future withdrawals
 }
-
-// TODO: Endpoint seems not to return total and future, discuss
 
 </script>
 <template>
@@ -111,7 +122,11 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               header-class="index"
             >
               <template #body="slotProps">
+                <div v-if="slotProps.data.group_id === DAHSHBOARDS_ALL_GROUPS_ID" class="all-time-total">
+                  {{ $t('dashboard.validator.withdrawals.all_time_total') }}
+                </div>
                 <NuxtLink
+                  v-else
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
@@ -142,6 +157,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
+                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
@@ -158,7 +174,13 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               :header="$t('common.slot')"
             >
               <template #body="slotProps">
-                <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                <NuxtLink
+                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
+                  :to="`/slot/${slotProps.data.slot}`"
+                  target="_blank"
+                  class="link"
+                  :no-prefetch="true"
+                >
                   <BcFormatNumber :value="slotProps.data.slot" default="-" />
                 </NuxtLink>
               </template>
@@ -172,7 +194,12 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed type="slot" class="time-passed" :value="slotProps.data.epoch" />
+                <BcFormatTimePassed
+                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
+                  type="slot"
+                  class="time-passed"
+                  :value="slotProps.data.epoch"
+                />
               </template>
             </Column>
             <Column
@@ -184,14 +211,16 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.recipient')"
             >
               <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.recipient?.hash"
-                  type="address"
-                  class="recipient"
-                  :hash="slotProps.data.recipient?.hash"
-                  :ens="slotProps.data.recipient?.ens"
-                />
-                <span v-else>-</span>
+                <div v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID">
+                  <BcFormatHash
+                    v-if="slotProps.data.recipient?.hash"
+                    type="address"
+                    class="recipient"
+                    :hash="slotProps.data.recipient?.hash"
+                    :ens="slotProps.data.recipient?.ens"
+                  />
+                  <span v-else>-</span>
+                </div>
               </template>
             </Column>
             <Column
@@ -203,7 +232,10 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.amount')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.amount" />
+                <BcFormatValue
+                  :value="slotProps.data.amount"
+                  :class="{'all-time-total':slotProps.data.group_id === DAHSHBOARDS_ALL_GROUPS_ID}"
+                />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -259,11 +291,17 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
   .index {
     @include utils.set-all-width(140px);
+
+    .all-time-total {
+      @include fonts.standard_text;
+      font-weight: var(--standard_text_medium_font_weight);
+    }
   }
 
   .group-id {
@@ -283,10 +321,15 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
     white-space: nowrap;
   }
 
-  tr:has(+.total-row) {
-    td {
-      border-bottom-color: var(--primary-color);
+  .amount {
+    .all-time-total {
+      @include fonts.standard_text;
+      font-weight: var(--standard_text_medium_font_weight);
     }
+  }
+
+  tr.total-row > td {
+    border-bottom-color: var(--primary-color);
   }
 
   // TODO: Handle/Use future row
