@@ -122,6 +122,11 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         type: 'validators_by_pubkey',
         num_value: Math.floor(Math.random() * 1000000),
         hash_value: '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660'
+      },
+      {
+        chain_id: 1,
+        type: 'validators_by_withdrawal_address',
+        hash_value: '0xc2c89C217d256b060e6b3Ae567B6b213ad9954B2'
       }
     )
   }
@@ -131,11 +136,6 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       type: 'contracts',
       hash_value: '0x1c6bC968f5Be2410e98f0CB5Fad7363Fac875351',
       str_value: 'Uniswap'
-    },
-    {
-      chain_id: 1,
-      type: 'validators_by_withdrawal_address',
-      hash_value: '0xc2c89C217d256b060e6b3Ae567B6b213ad9954B2'
     },
     {
       chain_id: 42161,
