@@ -6,7 +6,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { BcDialogConfirm } from '#components'
+import { BcDialogConfirm, BcPremiumModal } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
@@ -73,6 +73,12 @@ const addGroup = async () => {
   if (!newGroupName.value?.length) {
     return
   }
+
+  if (premiumLimit.value) {
+    dialog.open(BcPremiumModal, {})
+    return
+  }
+
   await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: dashboardKey.value })
   await refreshOverview(dashboardKey.value)
   newGroupName.value = ''
@@ -127,11 +133,6 @@ const dashboardName = computed(() => {
 const maxGroupsPerDashboard = computed(() => (isPublic.value ? 1 : 40))
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
 
-const showPremiumModal = () => {
-  // TODO: Implement properly (modal is currently part of premium gem)
-  alert('This is the premium modal.')
-}
-
 </script>
 
 <template>
@@ -163,10 +164,7 @@ const showPremiumModal = () => {
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
             @keypress.enter="addGroup"
           />
-          <Button v-if="!premiumLimit" style="display: inline;" :disabled="!newGroupName.length" @click="addGroup">
-            <FontAwesomeIcon :icon="faAdd" />
-          </Button>
-          <Button v-else style="display: inline;" :disabled="!newGroupName.length" @click="showPremiumModal()">
+          <Button style="display: inline;" :disabled="!newGroupName.length" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
