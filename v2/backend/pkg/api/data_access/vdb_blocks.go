@@ -156,7 +156,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	query := ""
 	if len(scheduledPropsQryValues) > 0 {
-		query = fmt.Sprintf(`SELECT * FROM (SELECT * FROM (WITH scheduled_proposals (
+		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
+		query = fmt.Sprintf(`SELECT distinct on (slot) * FROM (WITH scheduled_proposals (
 			proposer,
 			group_id,
 			epoch,
@@ -168,7 +169,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			proposer_fee_recipient,
 			graffiti_text
 		) AS (VALUES %s)
-		SELECT * FROM scheduled_proposals) proposals
+		SELECT * FROM scheduled_proposals
 		UNION
 		(`, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
 	}
@@ -250,6 +251,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			secSort = `ASC`
 		}
 		orderBy += `, slot ` + secSort
+	}
+	if len(scheduledPropsQryValues) > 0 {
+		// make sure the distinct clause filters out the correct row (e.g. block=nil)
+		orderBy += `, exec_block_number`
 	}
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
