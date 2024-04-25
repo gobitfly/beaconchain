@@ -86,19 +86,19 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 		return nil, nil
 	}
 
-	_, err := d.services.GetPubkeysOfValidatorIndexSlice(indices)
+	existingIndices, err := d.services.GetExistingValidatorIndices(indices)
 	if err != nil {
 		return nil, err
 	}
 
-	extraIndices, err := d.services.GetValidatorIndexOfPubkeySlice(publicKeys)
+	extraIndices, err := d.services.GetExistingValidatorIndexesOfPubkeySlice(publicKeys)
 	if err != nil {
 		return nil, err
 	}
 
 	// convert to t.VDBValidator slice
-	validators := make([]t.VDBValidator, len(indices)+len(publicKeys))
-	for i, index := range append(indices, extraIndices...) {
+	validators := make([]t.VDBValidator, len(existingIndices)+len(publicKeys))
+	for i, index := range append(existingIndices, extraIndices...) {
 		validators[i] = t.VDBValidator{Index: index}
 	}
 

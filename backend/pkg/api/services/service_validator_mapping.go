@@ -154,6 +154,17 @@ func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), erro
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil
 }
 
+func (s *Services) GetExistingValidatorIndices(indices []uint64) ([]uint64, error) {
+	validIndices := []uint64{}
+	for _, index := range indices {
+		if index > uint64(lastValidatorIndex) {
+			continue
+		}
+		validIndices = append(validIndices, index)
+	}
+	return validIndices, nil
+}
+
 func (s *Services) GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, error) {
 	res := make([]string, len(indices))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
@@ -170,7 +181,18 @@ func (s *Services) GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, 
 	return res, nil
 }
 
-func (s *Services) GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, error) {
+func (s *Services) GetValidatorIndicesOfPubkeySlice(pubkeys []string) ([]uint64, error) {
+	indices, err := s.GetExistingValidatorIndexesOfPubkeySlice(pubkeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(indices) != len(pubkeys) {
+		return nil, fmt.Errorf("not all pubkeys could be mapped to indices")
+	}
+	return indices, nil
+}
+
+func (s *Services) GetExistingValidatorIndexesOfPubkeySlice(pubkeys []string) ([]uint64, error) {
 	res := make([]uint64, len(pubkeys))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
@@ -180,7 +202,7 @@ func (s *Services) GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, e
 	for i, pubkey := range pubkeys {
 		p, ok := mapping.ValidatorIndices[pubkey]
 		if !ok {
-			return nil, fmt.Errorf("pubkey not found in validator mapping: %s", pubkey)
+			continue
 		}
 		res[i] = *p
 	}
