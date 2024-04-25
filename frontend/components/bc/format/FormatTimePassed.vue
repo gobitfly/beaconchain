@@ -4,7 +4,7 @@ import { type AgeFormat } from '~/types/settings'
 import { formatGoTimestamp, formatEpochToDateTime, formatSlotToDateTime } from '~/utils/format'
 
 interface Props {
-  value?: number,
+  value?: number | string,
   type?: 'epoch' | 'go-timestamp' | 'slot', // we can add slot and other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
   noUpdate?: boolean,
@@ -31,11 +31,11 @@ const label = computed(() => {
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
   switch (props.type) {
     case 'go-timestamp':
-      return formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      return formatGoTimestamp(props.value as string, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     case 'slot':
-      return formatSlotToDateTime(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      return formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     default:
-      return formatEpochToDateTime(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      return formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
   }
 })
 </script>

@@ -116,7 +116,7 @@ export function formatToRelative (targetTimestamp?: number, baseTimestamp?: numb
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
-export function formatGoTimestamp (timestamp: number, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+export function formatGoTimestamp (timestamp: string, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
   if (timestamp === undefined) {
     return undefined
   }
