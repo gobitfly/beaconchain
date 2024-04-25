@@ -109,7 +109,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="public_key" header-class="public_key" :header="$t('common.public_key')">
+            <Column field="public_key" header-class="public_key" :header="$t('dashboard.validator.col.public_key')">
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
@@ -139,7 +139,9 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             </Column>
             <Column field="block" body-class="block" header-class="block" :header="$t('common.block')">
               <template #body="slotProps">
-                <BcFormatNumber v-if="slotProps.data.index !== undefined" :value="slotProps.data.block" />
+                <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcFormatNumber v-if="slotProps.data.index !== undefined" :value="slotProps.data.block" />
+                </NuxtLink>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age" body-class="age" header-class="age">
@@ -155,7 +157,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="from" header-class="from" :header="$t('common.from')">
+            <Column field="from" header-class="from" :header="$t('table.from')">
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
@@ -165,7 +167,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="depositor" header-class="depositor" :header="$t('common.depositor')">
+            <Column field="depositor" header-class="depositor" :header="$t('dashboard.validator.col.depositor')">
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
@@ -175,20 +177,20 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="tx_hash" header-class="tx_hash" :header="$t('common.tx_hash')">
+            <Column field="tx_hash" header-class="tx_hash" :header="$t('block.col.tx_hash')">
               <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.tx_hash "
-                  type="tx"
-                />
+                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.tx_hash" type="tx" />
               </template>
             </Column>
-            <Column field="withdrawal_credentials" header-class="withdrawal_credentials" :header="$t('common.withdrawal_credentials')">
+            <Column
+              field="withdrawal_credentials"
+              header-class="withdrawal_credentials"
+              :header="$t('dashboard.validator.col.withdrawal_credentials')"
+            >
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.withdrawal_credentials "
+                  :hash="slotProps.data.withdrawal_credentials"
                   type="withdrawal_credentials"
                 />
               </template>
@@ -197,22 +199,18 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
               field="amount"
               body-class="amount"
               header-class="amount"
-              :header="$t('dashboard.validator.col.amount')"
+              :header="$t('table.amount')"
             >
               <template #body="slotProps">
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
                 </div>
-                <BcFormatValue v-else :value="slotProps.data.amount" />
+                <BcFormatValue v-else :value="slotProps.data.amount" :options="{ fixedDecimalCount: 0 }" />
               </template>
             </Column>
-            <Column field="valid" header-class="valid" body-class="valid" :header="$t('common.valid')">
+            <Column field="valid" header-class="valid" body-class="valid" :header="$t('table.valid')">
               <template #body="slotProps">
-                <span
-                  v-if="slotProps.data.index !== undefined"
-                  class="valid"
-                  :class="{'is_valid': slotProps.data.valid}"
-                >{{ slotProps.data.valid ? $t('common.true') : $t('common.false') }}</span>
+                <BcTableValidTag v-if="slotProps.data.index !== undefined" :valid="slotProps.data.valid" />
               </template>
             </Column>
             <template #expansion="slotProps">

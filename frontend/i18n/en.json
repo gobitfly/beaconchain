@@ -64,7 +64,10 @@
     "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}",
-    "age": "Age"
+    "age": "Age",
+    "from": "From",
+    "amount": "Amount",
+    "valid": "Valid"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -158,7 +161,8 @@
     },
     "col":{
       "proposer": "Proposer",
-      "graffiti": "Graffiti"
+      "graffiti": "Graffiti",
+      "tx_hash": "Tx Hash"
     }
   },
   "validator": {
@@ -313,7 +317,9 @@
         "validators": "Validators",
         "rewards": "Rewards",
         "reward_recipient": "Rewards Recipient",
-        "proposer_rewards": "Proposer Rewards"
+        "proposer_rewards": "Proposer Rewards",
+        "depositor": "Depositor",
+        "withdrawal_credentials": "Withdrawal Credential"
       },
       "summary": {
         "total_group_name": "Total Efficiency",

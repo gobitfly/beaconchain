@@ -51,6 +51,9 @@ const data = computed(() => {
       case 'public_key':
         link = `/validator/${props.hash}`
         break
+      case 'tx':
+        link = `/tx/${props.hash}`
+        break
     }
   }
 
