@@ -64,7 +64,7 @@ watch([isEditing, inputRef], ([edit, input]) => {
     <span v-if="!isEditing" class="label">
       {{ label || value }}
     </span>
-    <FontAwesomeIcon v-if="!disabled" class="link" :icon="icon.icon" :disabled="icon.disabled" @click="iconClick" />
+    <FontAwesomeIcon class="link" :icon="icon.icon" :disabled="icon.disabled" @click="iconClick" />
   </div>
 </template>
 
@@ -94,6 +94,10 @@ watch([isEditing, inputRef], ([edit, input]) => {
 
   .link{
     margin-right: var(--padding);
+  }
+
+  >svg[disabled]{
+    color: var(--button-color-disabled);
   }
 }
 </style>

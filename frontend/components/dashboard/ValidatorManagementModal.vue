@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import { uniq } from 'lodash-es'
-import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
+import { BcDialogConfirm, BcPremiumModal, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
@@ -30,7 +30,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
 const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
@@ -96,7 +96,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 
 const addValidator = (result : ResultSuggestion) => {
   if (premiumLimit.value) {
-    // TODO: show a BcDialogConfirm to invite the user to suscribe to a plan (see Figma).
+    dialog.open(BcPremiumModal, {})
     return
   }
 
@@ -218,7 +218,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
@@ -235,14 +235,14 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span />
     </template>
-    <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
+    <BcTableControl :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             ref="searchBar"
@@ -278,7 +278,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               </template>
             </Column>
             <Column
-              v-if="size.showGroup && groupsEnabled"
+              v-if="size.showGroup"
               field="group_id"
               :sortable="!size.expandable"
               :header="$t('dashboard.validator.col.group')"
@@ -347,7 +347,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
-                  <div v-if="groupsEnabled" class="label">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
                   <DashboardGroupSelection
