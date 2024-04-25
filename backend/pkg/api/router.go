@@ -23,10 +23,11 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
+	internalRouter.Use(sessionManager.LoadAndSave)
 
 	debug := cfg.Frontend.Debug
 	if !debug {
-		internalRouter.Use(sessionManager.LoadAndSave, getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
+		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
