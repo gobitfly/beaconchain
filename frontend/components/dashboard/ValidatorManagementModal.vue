@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import { uniq } from 'lodash-es'
-import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
+import { BcDialogConfirm, BcPremiumModal, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
@@ -96,7 +96,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 
 const addValidator = (result : ResultSuggestion) => {
   if (premiumLimit.value) {
-    // TODO: show a BcDialogConfirm to invite the user to suscribe to a plan (see Figma).
+    dialog.open(BcPremiumModal, {})
     return
   }
 
