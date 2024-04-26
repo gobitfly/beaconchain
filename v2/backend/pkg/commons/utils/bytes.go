@@ -9,3 +9,12 @@ func SafeCopyBytes(cp []byte) []byte {
 	}
 	return nil
 }
+
+func IsByteArrayAllZero(bytes []byte) bool {
+	for _, b := range bytes {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
+}

@@ -9,57 +9,76 @@
 
 # Nuxt 3 Minimal Starter
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more about this framework.
 
 ## Setup
 
-Set the following mapping in your `/etc/hosts` file
-`127.0.0.1 local.beaconcha.in`
+Install `npm` and Nuxt.
 
-Create server certificates for locally running on https, by runing this comands in the console
+Clone the `beaconchain` repository from git.
+
+On your console, navigate to folder `beaconchain/frontend`.
+
+Type
+```bash
+cp .npmrc-example .npmrc
+```
+
+In your `.npmrc` file, replace `FA_TOKEN` with an actual key for Font Awesome.
+
+Then type:
+```bash
+cp .env-example .env
+```
+In file `.env`, write the URLs of the API servers and the secret key to access to them.
+
+Set the following mapping in your `/etc/hosts` file:
+```
+127.0.0.1 local.beaconcha.in
+```
+
+Create server certificates for locally running on https, by runing these comands in the console (the last two with `sudo`)
 ```bash
 openssl genrsa 2048 > server.key
 chmod 400 server.key
 openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
 ```
-Set the following env variable (needed to load local mock data): 
-`export NODE_TLS_REJECT_UNAUTHORIZED=0`
-
-Make sure to install the dependencies:
-
-copy .npmrc-example to .npmrc and replace YOURKEY with your fontawesome API key
-
+Add the following env variable (on Ubuntu: in your `~/.profile`) needed to load local mock data:
 ```bash
-# npm
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+Restart.
+
+Navigate to folder `beaconchain/frontend` and run
+```bash
 npm install
+```
 
-# pnpm
+If you prefer to use _pnpm_, _yarn_ or _bun_ instead of _npm_:
+```bash
+sudo npm install -g pnpm
+sudo npm install -g yarn
+sudo npm install -g bun
+```
+then
+```bash
 pnpm install
-
-# yarn
 yarn install
-
-# bun
 bun install
 ```
 
 ## Development Server
 
-Start the development server on `https://local.beaconcha.in:3000/`:
+Start the development server with one of those commands (they are equivalent, each software having pros and cons) :
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
 pnpm run dev
-
-# yarn
 yarn dev
-
-# bun
 bun run dev
 ```
+Now you can browse the front-end at https://local.beaconcha.in:3000/
 
 ## Production
 

@@ -18,12 +18,11 @@ import (
 
 type ValidatorMapping struct {
 	ValidatorPubkeys  []string
-	ValidatorIndices  map[string]*uint64
-	ValidatorMetadata []*types.CachedValidator
+	ValidatorIndices  map[string]*uint64       // note: why pointers?
+	ValidatorMetadata []*types.CachedValidator // note: why pointers?
 }
 
 var currentValidatorMapping *ValidatorMapping
-var lastValidatorIndex int
 var _cachedBufferCompressed = new(bytes.Buffer)
 var _cachedBufferDecompressed = new(bytes.Buffer)
 var _cachedValidatorMapping = new(types.RedisCachedValidatorsMapping)
@@ -66,7 +65,6 @@ func (s *Services) initValidatorMapping() {
 		c.ValidatorIndices[b] = &j
 	}
 	currentValidatorMapping = &c
-	lastValidatorIndex = lenMapping - 1
 }
 
 func (s *Services) quickUpdateValidatorMapping() {
@@ -75,13 +73,14 @@ func (s *Services) quickUpdateValidatorMapping() {
 	currentValidatorMapping.ValidatorMetadata = _cachedValidatorMapping.Mapping
 
 	newLastValidatorIndex := len(_cachedValidatorMapping.Mapping) - 1
+	oldLastValidatorIndex := len(currentValidatorMapping.ValidatorPubkeys) - 1
 
-	if newLastValidatorIndex <= lastValidatorIndex {
+	if newLastValidatorIndex <= oldLastValidatorIndex {
 		log.Debugf("no new validators to add to mapping")
 		return
 	}
 	// update mappings
-	for i := lastValidatorIndex + 1; i <= newLastValidatorIndex; i++ {
+	for i := oldLastValidatorIndex + 1; i <= newLastValidatorIndex; i++ {
 		v := _cachedValidatorMapping.Mapping[i]
 		b := hexutil.Encode(v.PublicKey)
 		j := uint64(i)
@@ -89,7 +88,6 @@ func (s *Services) quickUpdateValidatorMapping() {
 		currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
 		currentValidatorMapping.ValidatorIndices[b] = &j
 	}
-	lastValidatorIndex = newLastValidatorIndex
 }
 
 func (s *Services) updateValidatorMapping() error {
@@ -157,15 +155,16 @@ func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), erro
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil
 }
 
-func (s *Services) GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, error) {
+func (s *Services) GetPubkeySliceFromIndexSlice(indices []uint64) ([]string, error) {
 	res := make([]string, len(indices))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
 	if err != nil {
 		return nil, err
 	}
+	lastValidatorIndex := uint64(len(mapping.ValidatorPubkeys) - 1)
 	for i, index := range indices {
-		if index > uint64(lastValidatorIndex) {
+		if index > lastValidatorIndex {
 			return nil, fmt.Errorf("validator index outside of mapped range (%d is not within 0-%d)", index, lastValidatorIndex)
 		}
 		res[i] = mapping.ValidatorPubkeys[index]
@@ -173,7 +172,7 @@ func (s *Services) GetPubkeysOfValidatorIndexSlice(indices []uint64) ([]string, 
 	return res, nil
 }
 
-func (s *Services) GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, error) {
+func (s *Services) GetIndexSliceFromPubkeySlice(pubkeys []string) ([]uint64, error) {
 	res := make([]uint64, len(pubkeys))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
@@ -183,7 +182,7 @@ func (s *Services) GetValidatorIndexOfPubkeySlice(pubkeys []string) ([]uint64, e
 	for i, pubkey := range pubkeys {
 		p, ok := mapping.ValidatorIndices[pubkey]
 		if !ok {
-			return nil, fmt.Errorf("pubkey not found in validator mapping: %s", pubkey)
+			return nil, fmt.Errorf("pubkey %s not found in mapping", pubkey)
 		}
 		res[i] = *p
 	}

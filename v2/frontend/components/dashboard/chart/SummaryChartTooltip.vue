@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
-import { formatEpochToDate } from '~/utils/format'
 
 interface Props {
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context
@@ -12,34 +11,14 @@ interface Props {
   }[]
 }
 
-const props = defineProps<Props>()
-
-const { epochsPerDay } = useNetwork()
-
-const dateText = computed(() => {
-  const date = formatEpochToDate(props.startEpoch, props.t('locales.date'))
-  if (date === undefined) {
-    return undefined
-  }
-  return `${date}`
-})
-
-const epochText = computed(() => {
-  const endEpoch = props.startEpoch + epochsPerDay()
-  return `${props.t('common.epoch')} ${props.startEpoch} - ${endEpoch}`
-})
+defineProps<Props>()
 
 </script>
 
 <template>
   <div class="tooltip-container">
-    <div>
-      {{ dateText }}
-    </div>
-    <div>
-      {{ epochText }}
-    </div>
-    <div v-for="(entry, index) in props.groupInfos" :key="index" class="line-container">
+    <DashboardChartTooltipHeader :t="t" :start-epoch="startEpoch" />
+    <div v-for="(entry, index) in groupInfos" :key="index" class="line-container">
       <div class="circle" :style="{ 'background-color': entry.color }" />
       <div>
         {{ entry.name }}:

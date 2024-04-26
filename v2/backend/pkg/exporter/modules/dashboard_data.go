@@ -1,29 +1,74 @@
 package modules
 
 import (
+	"database/sql"
 	"fmt"
+	"math"
+	"regexp"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
+// -------------- DEBUG FLAGS ----------------
+// Normally rolling aggregation is only done when headEpochQueue exporter is near head so the exporter can catch up faster if behind, but for debugging purposes we can force it to be done every epoch
+const debugAggregateMidEveryEpoch = false // prod: false
+
+// If set to 0 exporter will backfill to node finalized head, use any other value to backfill up to that specific epoch
+const debugTargetBackfillEpoch = uint64(0) // prod: 0
+
+// Once backfill is done the exporter will start to listen for new head epochs to export. You can disable this behavior by setting this flag to false
+const debugSetBackfillCompleted = true // prod: true
+
+// Old epoch data is cleared from the database to save space and improve performance. This can be disabled for debugging purposes
+const debugSkipOldEpochClear = false // prod: false
+
+// If set to true some tables like the epoch based table or hourly based table will be manually added to AlloyDBs Column Engine
+const debugAddToColumnEngine = false // prod: true?
+
+// During backfill we can attempt to bootstrap the rolling tables on each UTC boundary day (as no tail fetching is needed here). So setting this will update the rolling tables every
+// 225 epochs (for ETH mainnet) but at the slight cost of increased aggregation time for this particular boundary epoch.
+const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: true
+
+// ----------- END OF DEBUG FLAGS ------------
+
+// How many epochs will be fetched in parallel from the node (relevant for backfill and rolling tail fetching). We are fetching the head epoch and
+// one epoch for each rolling table (tail), so if you want to fetch all epochs in one go (and your node can handle that) set this to at least 5.
+const epochFetchParallelism = 6
+
+// Fetching one epoch consists of multiple calls. You can define how many concurrent calls each epoch fetch will do. Keep in mind that
+// the total number of concurrent requests is epochFetchParallelism * epochFetchParallelismWithinEpoch
+const epochFetchParallelismWithinEpoch = 5
+
+// How many epochs will be written in parallel to the database
+const epochWriteParallelism = 3
+
+// How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
+const databaseAggregationParallelism = 3
+
 type dashboardData struct {
 	ModuleContext
-	log           ModuleLog
-	signingDomain []byte
-	epochWriter   *epochWriter
-	epochToHour   *epochToHourAggregator
-	hourToDay     *hourToDayAggregator
+	log               ModuleLog
+	signingDomain     []byte
+	epochWriter       *epochWriter
+	epochToTotal      *epochToTotalAggregator
+	epochToHour       *epochToHourAggregator
+	epochToDay        *epochToDayAggregator
+	dayUp             *dayUpAggregator
+	headEpochQueue    chan uint64
+	backFillCompleted bool
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
@@ -31,84 +76,726 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 		ModuleContext: moduleContext,
 	}
 	temp.log = ModuleLog{module: temp}
+
+	// When a new epoch gets exported the very first step is to export it to the db via epochWriter
 	temp.epochWriter = newEpochWriter(temp)
+
+	// Then those aggregators below use the epoch data to aggregate it into the respective tables
+	temp.epochToTotal = newEpochToTotalAggregator(temp)
 	temp.epochToHour = newEpochToHourAggregator(temp)
-	temp.hourToDay = newHourToDayAggregator(temp)
+	temp.epochToDay = newEpochToDayAggregator(temp)
+
+	// Once an epoch is aggregated to its respective UTC day, we can use the UTC day table to aggregate up to the rolling window tables (7d, 30d, 90d)
+	temp.dayUp = newDayUpAggregator(temp)
+
+	// This channel is used to queue up epochs from chain head that need to be exported
+	temp.headEpochQueue = make(chan uint64, 100)
+
+	// Indicates whether the initial backfill - which is checked when starting the exporter - has completed
+	// and the exporter can start listening for new head epochs to be processed
+	temp.backFillCompleted = false
 	return temp
 }
 
 func (d *dashboardData) Init() error {
 	go func() {
-		d.backfillEpochData()
+		_, err := db.AlloyWriter.Exec("SET work_mem TO '128MB';")
+		if err != nil {
+			d.log.Fatal(err, "failed to set work_mem", 0)
+		}
+
+		for {
+			var upToEpochPtr *uint64 = nil // nil will backfill back to head
+			if debugTargetBackfillEpoch > 0 {
+				upToEpoch := debugTargetBackfillEpoch
+				upToEpochPtr = &upToEpoch
+			}
+
+			done, err := d.backfillHeadEpochData(upToEpochPtr)
+			if err != nil {
+				d.log.Error(err, "failed to backfill epoch data", 0)
+				metrics.Errors.WithLabelValues("exporter_v2dash_backfill_fail").Inc()
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
+			if done {
+				d.log.Infof("dashboard data up to date, starting head export")
+				if debugSetBackfillCompleted {
+					utils.SendMessage(fmt.Sprintf("🎉🎉🎉 v2 Dashboard %s - Reached head, exporting from head now", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
+					d.backFillCompleted = true
+				}
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+
+		d.processHeadQueue()
 	}()
 
 	return nil
 }
 
-var backFillMutex = &sync.Mutex{}
+func (d *dashboardData) processHeadQueue() {
+	for {
+		epoch := <-d.headEpochQueue
 
-func (d *dashboardData) backfillEpochData() {
-	if !backFillMutex.TryLock() {
-		return
+		startTime := time.Now()
+		d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
+		stage := 0
+		for { // retry this epoch until no errors occur
+			currentFinalizedEpoch, err := d.CL.GetFinalityCheckpoints("finalized")
+			if err != nil {
+				d.log.Error(err, "failed to get finalized checkpoint", 0)
+				metrics.Errors.WithLabelValues("exporter_v2dash_node_get_finalize_fail").Inc()
+				time.Sleep(time.Second * 10)
+				continue
+			}
+
+			// Back fill to epoch -1 if necessary
+			if stage <= 0 {
+				targetEpoch := epoch - 1
+				_, err := d.backfillHeadEpochData(&targetEpoch)
+				if err != nil {
+					d.log.Error(err, "failed to backfill head epoch data", 0, map[string]interface{}{"epoch": epoch})
+					metrics.Errors.WithLabelValues("exporter_v2dash_backfill_fail").Inc()
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 1
+			}
+
+			doRollingAggregate := currentFinalizedEpoch.Data.Finalized.Epoch <= epoch+1
+
+			// Get epoch data from node and write to database
+			if stage <= 1 {
+				err := d.exportEpochAndTails(epoch, debugAggregateMidEveryEpoch || doRollingAggregate)
+				if err != nil {
+					d.log.Error(err, "failed to export epoch tail data", 0, map[string]interface{}{"epoch": epoch})
+					metrics.Errors.WithLabelValues("exporter_v2dash_export_epoch_tail_fail").Inc()
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 2
+			}
+
+			// Run aggregations
+			if stage <= 2 {
+				err := d.aggregatePerEpoch(true, debugAggregateMidEveryEpoch || doRollingAggregate, false)
+				if err != nil {
+					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
+					metrics.Errors.WithLabelValues("exporter_v2dash_agg_fail").Inc()
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				stage = 3
+			}
+
+			break
+		}
+
+		d.log.Infof("[time] completed dashboard epoch data for epoch %d in %v", epoch, time.Since(startTime))
 	}
-	defer backFillMutex.Unlock()
+}
 
-	res, err := d.CL.GetFinalityCheckpoints("finalized")
+// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
+func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
+	if end <= start {
+		return nil, nil
+	}
+	missingEpochs := make([]uint64, 0)
+	for epoch := start; epoch < end; epoch++ {
+		hasEpoch, err := edb.HasDashboardDataForEpoch(uint64(epoch))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get epoch")
+		}
+		if !hasEpoch {
+			missingEpochs = append(missingEpochs, uint64(epoch))
+		}
+	}
+	return missingEpochs, nil
+}
+
+// exports the provided headEpoch plus any tail epochs that are needed for rolling aggregation
+// fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
+func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails bool) error {
+	missingTails := make([]uint64, 0)
+	if fetchRollingTails {
+		// for 24h aggregation
+		missingTails, err := d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing 24h tail epochs")
+		}
+
+		d.log.Infof("missing 24h tails: %v", missingTails)
+
+		// day aggregation
+		daysMissingTails, err := d.dayUp.getMissingRollingDayTailEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing day tail epochs")
+		}
+
+		dayMissingHeads, err := d.dayUp.getMissingRollingDayHeadEpochs(headEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing day head epochs")
+		}
+
+		// merge
+		missingTails = append(missingTails, utils.Deduplicate(append(daysMissingTails, dayMissingHeads...))...)
+
+		if len(missingTails) > 10 {
+			d.log.Infof("This might take a bit longer than usual as exporter is catching up quite a lot old epochs, usually happens after downtime or after initial sync")
+		}
+
+		// sort asc
+		sort.Slice(missingTails, func(i, j int) bool {
+			return missingTails[i] < missingTails[j]
+		})
+	}
+
+	hasHeadAlreadyExported, err := edb.HasDashboardDataForEpoch(headEpoch)
 	if err != nil {
-		d.log.Error(err, "failed to get finalized checkpoint", 0)
-		return
+		return errors.Wrap(err, "failed to check if head epoch has dashboard data")
 	}
 
-	if res.Data.Finalized.Root == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		d.log.Info("network not finalized yet, skipping epoch backfill")
-		return
+	// append head
+	if !hasHeadAlreadyExported {
+		missingTails = append(missingTails, headEpoch)
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", missingTails, headEpoch)
+	} else {
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: -", missingTails)
 	}
 
-	gaps, err := edb.GetDashboardEpochGaps(res.Data.Finalized.Epoch, d.epochWriter.getRetentionEpochDuration())
+	var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
+	go func() {
+		d.epochDataFetcher(missingTails, epochFetchParallelism, nextDataChan)
+	}()
+
+	for {
+		datas := <-nextDataChan
+
+		d.writeEpochDatas(datas)
+
+		// has written last entry in gaps
+		if containsEpoch(datas, missingTails[len(missingTails)-1]) {
+			break
+		}
+	}
+
+	d.log.Infof("backfilling tail epochs for aggregation finished")
+
+	return nil
+}
+
+// fetches and processes epoch data and provides them via the nextDataChan
+// expects ordered epochs in ascending order
+func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism int, nextDataChan chan []DataEpoch) {
+	// group epochs into parallel worker groups
+	groups := getEpochParallelGroups(epochs, epochFetchParallelism)
+	numberOfEpochsToFetch := len(epochs)
+	epochsFetched := 0
+
+	for _, gapGroup := range groups {
+		errGroup := &errgroup.Group{}
+
+		datas := make([]DataEpoch, 0, epochFetchParallelism)
+		start := time.Now()
+
+		// Step 1: fetch epoch data raw
+		for _, gap := range gapGroup.Epochs {
+			gap := gap
+			errGroup.Go(func() error {
+				for {
+					// just in case we ask again before exporting since some time may have been passed
+					hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
+					if err != nil {
+						d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					if hasEpoch {
+						time.Sleep(time.Second * 1)
+						continue
+					}
+
+					d.log.Infof("epoch data fetcher, retrieving data for epoch %d", gap)
+
+					// for sequential improve performance by skipping some calls for all epochs that are not the start epoch
+					// and provide the startBalance and the missed slots for every following epoch in this sequence
+					// with the data from the previous epoch. Do not do this for non sequential working groups
+					data, err := d.GetEpochDataRaw(gap, gap != gapGroup.Epochs[0] && gapGroup.Sequential)
+					if err != nil {
+						d.log.Error(err, "failed to get epoch data", 0, map[string]interface{}{"epoch": gap})
+						metrics.Errors.WithLabelValues("exporter_v2dash_node_fail").Inc()
+						time.Sleep(time.Second * 10)
+						continue
+					}
+
+					datas = append(datas, DataEpoch{
+						DataRaw: data,
+						Epoch:   gap,
+					})
+
+					break
+				}
+				return nil
+			})
+		}
+
+		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
+
+		// sort datas first, epoch asc
+		sort.Slice(datas, func(i, j int) bool {
+			return datas[i].Epoch < datas[j].Epoch
+		})
+
+		// Half Step: for sequential since we used skipSerialCalls we must provide startBalance and missedSlots for every epoch except FromEpoch
+		// with the data from the previous epoch. This is done to improve performance by skipping some calls
+		if gapGroup.Sequential {
+			// provide data from the previous epochs
+			for i := 1; i < len(datas); i++ {
+				datas[i].DataRaw.startBalances = datas[i-1].DataRaw.endBalances
+
+				for slot := range datas[i-1].DataRaw.missedslots {
+					datas[i].DataRaw.missedslots[slot] = true
+				}
+			}
+		}
+
+		// Step 2: process data
+		errGroup = &errgroup.Group{}
+		errGroup.SetLimit(int(math.Max(epochWriteParallelism/2, 2.0))) // mitigate short ram spike
+		for i := 0; i < len(datas); i++ {
+			i := i
+			errGroup.Go(func() error {
+				for {
+					d.log.Infof("epoch data fetcher, processing data for epoch %d", datas[i].Epoch)
+					start := time.Now()
+
+					result, err := d.ProcessEpochData(datas[i].DataRaw, d.signingDomain)
+					if err != nil {
+						d.log.Error(err, "failed to process epoch data", 0, map[string]interface{}{"epoch": datas[i].Epoch})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+
+					datas[i].Data = result
+					datas[i].DataRaw = nil // clear raw data, not needed any more
+
+					d.log.Infof("epoch data fetcher, processed data for epoch %d in %v", datas[i].Epoch, time.Since(start))
+					break
+				}
+				return nil
+			})
+		}
+
+		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
+
+		{
+			epochsFetched += len(datas)
+			remaining := numberOfEpochsToFetch - epochsFetched
+			remainingTimeEst := time.Duration(0)
+			if remaining > 0 {
+				remainingTimeEst = time.Duration(time.Since(start).Nanoseconds() / int64(len(datas)) * int64(remaining))
+			}
+
+			d.log.Infof("[time] epoch data fetcher, fetched %v epochs %v in %v. Remaining: %v (%v)", len(datas), gapGroup.Epochs, time.Since(start), remaining, remainingTimeEst)
+			metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs").Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs_per_epochs").Observe(time.Since(start).Seconds() / float64(len(datas)))
+		}
+
+		nextDataChan <- datas
+	}
+}
+
+// breaks epoch down in groups of size parallelism
+// for example epochs: 1,2,3,5,7,9,10,11,12,13,20,30 with parallelism = 4 breaks down to groups:
+// 0 = 1,2,3 sequential true
+// 1 = 5,7 sequential false
+// 2 = 9,10,11,12 sequential true
+// 3 = 13,20,30 sequential false
+// expects ordered epochs in ascending order
+func getEpochParallelGroups(epochs []uint64, parallelism int) []EpochParallelGroup {
+	parallelGroups := make([]EpochParallelGroup, 0, len(epochs)/4)
+
+	// 1. Group sequential epochs in parallel groups
+	for i := 0; i < len(epochs); i++ {
+		group := EpochParallelGroup{
+			Epochs:     []uint64{epochs[i]},
+			Sequential: true,
+		}
+
+		var j int
+		for j = 1; j < parallelism && i+j < len(epochs); j++ {
+			if group.Epochs[len(group.Epochs)-1]+1 == epochs[i+j] { // only group sequential epochs
+				group.Epochs = append(group.Epochs, epochs[i+j])
+			} else {
+				break
+			}
+		}
+		i += j - 1
+
+		parallelGroups = append(parallelGroups, group)
+	}
+
+	groups := make([]EpochParallelGroup, 0)
+
+	// 2. Find non sequential (len(Epochs) == 1) epochs and group them as non sequential groups
+	for i := 0; i < len(parallelGroups); i++ {
+		group := parallelGroups[i]
+
+		if len(group.Epochs) == 1 {
+			var j int
+			for j = 1; j < parallelism && i+j < len(parallelGroups); j++ {
+				nextGroup := parallelGroups[i+j]
+				if len(nextGroup.Epochs) == 1 {
+					group.Sequential = false
+					group.Epochs = append(group.Epochs, nextGroup.Epochs[0])
+				} else {
+					break
+				}
+			}
+			i += j - 1
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups
+}
+
+// can be used to start a backfill up to epoch
+// returns true if there was nothing to backfill, otherwise returns false
+// if upToEpoch is nil, it will backfill until the latest finalized epoch
+func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
+	if upToEpoch == nil {
+		res, err := d.CL.GetFinalityCheckpoints("finalized")
+		if err != nil {
+			return false, errors.Wrap(err, "failed to get finalized checkpoint")
+		}
+		if utils.IsByteArrayAllZero(res.Data.Finalized.Root) {
+			return false, errors.New("network not finalized yet")
+		}
+		upToEpoch = &res.Data.Finalized.Epoch
+	}
+
+	latestExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
-		d.log.Error(err, "failed to get epoch gaps", 0)
-		return
+		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
+	}
+
+	// An unclean shutdown can occur when exporter is shut down in between writing epoch data
+	// while each epoch is its own transaction and hence writes the complete epoch or nothing,
+	// it could happen that epochs have been written out of order due to the parallel nature of the exporter.
+	// Meaning that there is a gap in the last ~epochFetchParallelism epochs
+	uncleanShutdownGaps, err := edb.GetDashboardEpochGapsBetween(latestExportedEpoch, int64(latestExportedEpoch-epochFetchParallelism))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get epoch gaps")
+	}
+
+	if latestExportedEpoch > 0 && len(uncleanShutdownGaps) > 0 {
+		d.log.Infof("Unclean shutdown detected, backfilling missing epochs %d", uncleanShutdownGaps)
+		var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
+		go func() {
+			d.epochDataFetcher(uncleanShutdownGaps, epochFetchParallelism, nextDataChan)
+		}()
+
+		for {
+			datas := <-nextDataChan
+			done := containsEpoch(datas, uncleanShutdownGaps[len(uncleanShutdownGaps)-1])
+			d.writeEpochDatas(datas)
+			if done {
+				break
+			}
+		}
+		d.log.Infof("Fixed unclean shutdown gaps")
+	}
+
+	gaps, err := edb.GetDashboardEpochGapsBetween(*upToEpoch, int64(latestExportedEpoch))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
-		d.log.Infof("Epoch dashboard data gaps found, backfilling fom epoch %d to %d", gaps[0], gaps[len(gaps)-1])
-
-		for _, gap := range gaps {
-			//backfill if needed, skip backfilling older than RetainEpochDuration/2 since the time it would take to backfill exceeds the retention period anyway
-			if gap < res.Data.Finalized.Epoch-d.epochWriter.getRetentionEpochDuration() && res.Data.Finalized.Epoch > d.epochWriter.getRetentionEpochDuration() {
-				continue
-			}
-
-			// just in case we ask again before exporting since some time may have been passed
-			hasEpoch, err := edb.HasDashboardDataForEpoch(gap)
+		// Aggregate (non rolling) before exporting more epochs
+		// This is just a precaution so that the aggregated epochs tables are up to date
+		// before exporting new epochs
+		if latestExportedEpoch > 0 {
+			err = d.aggregatePerEpoch(true, false, true)
 			if err != nil {
-				d.log.Error(err, "failed to check if epoch has dashboard data", 0, map[string]interface{}{"epoch": gap})
-				continue
+				return false, errors.Wrap(err, "failed to aggregate")
 			}
-			if hasEpoch {
-				continue
-			}
-
-			d.log.Infof("backfilling epoch %d", gap)
-			err = d.ExportEpochData(gap)
-			if err != nil {
-				d.log.Error(err, "failed to export dashboard epoch data", 0, map[string]interface{}{"epoch": gap})
-			}
-			d.log.Infof("backfill completed for epoch %d", gap)
-
-			d.epochToHour.aggregate1h()
-			d.hourToDay.rolling24hAggregate()
-
-			time.Sleep(15 * time.Second)
 		}
-	} else {
-		d.epochToHour.aggregate1h()
-		d.hourToDay.rolling24hAggregate()
+
+		d.log.Infof("Epoch dashboard data %d gaps found, backfilling gaps in the range fom epoch %d to %d", len(gaps), gaps[0], gaps[len(gaps)-1])
+
+		// get epochs data
+		var nextDataChan chan []DataEpoch = make(chan []DataEpoch, 1)
+		go func() {
+			d.epochDataFetcher(gaps, epochFetchParallelism, nextDataChan)
+		}()
+
+		// save epochs data
+		for {
+			d.log.Info("storage waiting for data from fetcher")
+			datas := <-nextDataChan
+
+			done := containsEpoch(datas, gaps[len(gaps)-1]) // if the last epoch to fetch is in the result set, mark as job completed
+			lastEpoch := datas[len(datas)-1].Epoch
+
+			// If one epoch containing an UTC boundary epoch we do a bootstrap aggregation for the rolling windows
+			// since this an exact utc bounds (and hence also an hour bounds) we do not need any tail epochs to calculate the rolling window
+			if debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch {
+				for i, data := range datas {
+					if _, utcEndBound := getDayAggregateBounds(data.Epoch); utcEndBound-1 == data.Epoch {
+						d.log.Infof("BOOTSTRAPPING ROLLING WINDOWS! Epoch %d contains an UTC boundary epoch", data.Epoch)
+						// write subset
+						d.writeEpochDatas(datas[:i+1])
+						for {
+							err = d.aggregatePerEpoch(true, true, false)
+							if err != nil {
+								metrics.Errors.WithLabelValues("exporter_v2dash_agg_per_epoch_fail").Inc()
+								d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": datas[len(datas)-1].Epoch})
+								time.Sleep(time.Second * 10)
+								continue
+							}
+							break
+						}
+
+						{
+							utcDayStart, _ := getDayAggregateBounds(data.Epoch - 1)
+							utcDay := utils.EpochToTime(utcDayStart).Format("2006-01-02")
+							utils.SendMessage(fmt.Sprintf("🗡🧙‍♂️ v2 Dashboard %s - Completed UTC day `%s` & Updated Rolling tables (24h, 7d, 30d, 90d) to epoch %v", utils.Config.Chain.Name, utcDay, data.Epoch), &utils.Config.InternalAlerts)
+						}
+
+						if len(datas) > i+1 {
+							datas = datas[i+1:]
+						} else {
+							datas = nil
+						}
+						break
+					}
+				}
+			}
+
+			if len(datas) > 0 {
+				d.log.Info("storage got data, writing epoch data")
+				d.writeEpochDatas(datas)
+
+				d.log.Info("storage writing done, aggregate")
+				for {
+					err = d.aggregatePerEpoch(false, false, false)
+					if err != nil {
+						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch})
+						metrics.Errors.WithLabelValues("exporter_v2dash_agg_per_epoch_fail").Inc()
+						time.Sleep(time.Second * 10)
+						continue
+					}
+					break
+				}
+				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
+			}
+
+			if lastEpoch%225 < epochFetchParallelism {
+				upToEpoch := *upToEpoch
+				utils.SendMessage(fmt.Sprintf("<:stonks:820252887094394901> v2 Dashboard %s - Epoch progress %d/%d [%.2f%%]", utils.Config.Chain.Name, lastEpoch, upToEpoch, float64(lastEpoch*100)/float64(upToEpoch)), &utils.Config.InternalAlerts)
+			}
+
+			// has written last entry in gaps
+			if done {
+				break
+			}
+		}
 	}
-	d.log.Infof("backfill finished")
+	return true, nil
+}
+
+func containsEpoch(d []DataEpoch, epoch uint64) bool {
+	for i := 0; i < len(d); i++ {
+		if d[i].Epoch == epoch {
+			return true
+		}
+	}
+	return false
+}
+
+// stores all passed epoch data, blocks until all data is written without error
+func (d *dashboardData) writeEpochDatas(datas []DataEpoch) {
+	totalStart := time.Now()
+	defer func() {
+		d.log.Infof("[time] storage, wrote all epoch data in %v", time.Since(totalStart))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_write_epochs").Observe(time.Since(totalStart).Seconds())
+	}()
+
+	errGroup := &errgroup.Group{}
+	errGroup.SetLimit(epochWriteParallelism)
+	for i := 0; i < len(datas); i++ {
+		data := datas[i]
+		errGroup.Go(func() error {
+			for {
+				d.log.Infof("storage, writing epoch data for epoch %v", data.Epoch)
+				start := time.Now()
+
+				// retry this epoch until no errors occur
+				err := d.epochWriter.WriteEpochData(data.Epoch, data.Data)
+				if err != nil {
+					d.log.Error(err, "storage, failed to write epoch data", 0, map[string]interface{}{"epoch": data.Epoch})
+					time.Sleep(time.Second * 10)
+					continue
+				}
+
+				d.log.Infof("storage, wrote epoch data %d in %v", data.Epoch, time.Since(start))
+
+				break
+			}
+			return nil
+		})
+	}
+
+	_ = errGroup.Wait() // no errors to handle since it will retry until it resolves without err
+}
+
+var lastExportedHour uint64 = ^uint64(0)
+
+// Contains all aggregation logic that should happen for every new exported epoch
+// forceAggregate triggers an aggregation, use this when calling on head.
+// updateRollingWindows specifies whether we should update rolling windows
+func (d *dashboardData) aggregatePerEpoch(forceAggregate bool, updateRollingWindows bool, preventClearOldEpochs bool) error {
+	currentExportedEpoch, err := edb.GetLatestDashboardEpoch()
+	if err != nil {
+		return errors.Wrap(err, "failed to get last exported epoch")
+	}
+	currentStartBound, _ := getHourAggregateBounds(currentExportedEpoch)
+
+	// Performance improvement for backfilling, no need to aggregate day after each epoch, we can update once per hour
+	if forceAggregate || currentStartBound != lastExportedHour {
+		start := time.Now()
+
+		// important to do this before hour aggregate as hour aggregate deletes old epochs
+		errGroup := &errgroup.Group{}
+		errGroup.SetLimit(databaseAggregationParallelism)
+		errGroup.Go(func() error {
+			err := d.epochToTotal.aggregateTotal(currentExportedEpoch)
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate total")
+			}
+			return nil
+		})
+
+		// below: so this could be parallel IF we dont need to bootstrap. Room for improvement?
+		errGroup.Go(func() error { // can run in parallel with aggregateRollingWindows as long as no bootstrap is required, otherwise must be sequential
+			err := d.epochToHour.aggregate1h(currentExportedEpoch) // will aggregate last hour too if it hasn't completed yet
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate 1h")
+			}
+			return nil
+		})
+
+		errGroup.Go(func() error { // can run in parallel with aggregateRollingWindowsas long as no bootstrap is required, otherwise must be sequential
+			err := d.epochToDay.dayAggregate(currentExportedEpoch)
+			if err != nil {
+				return errors.Wrap(err, "failed to aggregate day")
+			}
+			return nil
+		})
+
+		err = errGroup.Wait()
+		if err != nil {
+			metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_roling_fail").Inc()
+			return errors.Wrap(err, "failed to aggregate")
+		}
+		d.log.Infof("[time] all of epoch based aggregation took %v", time.Since(start))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_non_roling").Observe(time.Since(start).Seconds())
+
+		lastExportedHour = currentStartBound
+
+		if updateRollingWindows {
+			// todo you could add it to the err group above IF no bootstrap is needed.
+
+			err = d.aggregateRollingWindows(currentExportedEpoch)
+			if err != nil {
+				metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_fail").Inc()
+				return errors.Wrap(err, "failed to aggregate rolling windows")
+			}
+		}
+
+		if !preventClearOldEpochs {
+			d.log.Infof("cleaning old epochs")
+			err = d.epochWriter.clearOldEpochs(int64(currentExportedEpoch - d.epochWriter.getRetentionEpochDuration()))
+			if err != nil {
+				return errors.Wrap(err, "failed to clear old epochs")
+			}
+		}
+
+		// clear old hourly aggregated epochs, do not remove epochs from epoch table here as these are needed for Mid aggregation
+		err = d.epochToHour.clearOldHourAggregations(int64(currentExportedEpoch - d.epochToHour.getHourRetentionDurationEpochs()))
+		if err != nil {
+			return errors.Wrap(err, "failed to clear old hours")
+		}
+	}
+
+	return nil
+}
+
+// This function contains more heavy aggregation like rolling 7d, 30d, 90d
+// This function assumes that epoch aggregation is finished before calling THOUGH it could run in parallel
+// as long as the rolling tables do not require a bootstrap
+func (d *dashboardData) aggregateRollingWindows(currentExportedEpoch uint64) error {
+	start := time.Now()
+	defer func() {
+		d.log.Infof("[time] all of mid aggregation took %v", time.Since(start))
+		metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_roling").Observe(time.Since(start).Seconds())
+	}()
+
+	errGroup := &errgroup.Group{}
+	errGroup.SetLimit(databaseAggregationParallelism)
+
+	errGroup.Go(func() error {
+		err := d.epochToDay.rolling24hAggregate(currentExportedEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to rolling 24h aggregate")
+		}
+		d.log.Infof("finished dayAggregate rolling 24h")
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		err := d.dayUp.rolling7dAggregate(currentExportedEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 7d")
+		}
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		err := d.dayUp.rolling30dAggregate(currentExportedEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 30d")
+		}
+		return nil
+	})
+
+	errGroup.Go(func() error {
+		err := d.dayUp.rolling90dAggregate(currentExportedEpoch)
+		if err != nil {
+			return errors.Wrap(err, "failed to aggregate 90d")
+		}
+		return nil
+	})
+
+	err := errGroup.Wait()
+	if err != nil {
+		return errors.Wrap(err, "failed to aggregate")
+	}
+
+	return nil
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedCheckpointResponse) error {
+	if !d.backFillCompleted {
+		return nil // nothing to do, wait for backfill to finish
+	}
+
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
@@ -130,18 +817,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 		}
 	}
 
-	d.log.Infof("exporting dashboard epoch data for epoch %d", res.Data.Finalized.Epoch)
-
-	err = d.ExportEpochData(res.Data.Finalized.Epoch)
-	if err != nil {
-		return err
-	}
-
-	// We call backfill here to retry any failed "OnFinalizedCheckpoint" epoch exports
-	// since the init backfill only fixes gaps at the start of exporter but does not fix
-	// gaps that occur while operating (for example node not available for a brief moment)
-	// backfill will aggregate on demand
-	d.backfillEpochData()
+	d.headEpochQueue <- res.Data.Finalized.Epoch
 
 	return nil
 }
@@ -158,35 +834,28 @@ func (d *dashboardData) OnChainReorg(event *constypes.StandardEventChainReorg) e
 	return nil
 }
 
-func (d *dashboardData) ExportEpochData(epoch uint64) error {
-	totalStart := time.Now()
-	data := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
-	if data == nil {
-		return errors.New("can not get data")
+func (d *dashboardData) GetEpochDataRaw(epoch uint64, skipSerialCalls bool) (*Data, error) {
+	data, err := d.getData(epoch, utils.Config.Chain.ClConfig.SlotsPerEpoch, skipSerialCalls)
+	if err != nil {
+		return nil, err
 	}
-	d.log.Infof("retrieved data for epoch %d in %v", epoch, time.Since(totalStart))
+	if data == nil {
+		return nil, errors.New("can not get data")
+	}
 
-	start := time.Now()
+	return data, nil
+}
+
+func (d *dashboardData) ProcessEpochData(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
 	if d.signingDomain == nil {
 		domain, err := utils.GetSigningDomain()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		d.signingDomain = domain
 	}
 
-	result := d.process(data, d.signingDomain)
-	d.log.Infof("processed data for epoch %d in %v", epoch, time.Since(start))
-
-	start = time.Now()
-	err := d.epochWriter.writeEpochData(epoch, result)
-	if err != nil {
-		return err
-	}
-	d.log.Infof("wrote data for epoch %d in %v", epoch, time.Since(start))
-
-	d.log.Infof("successfully wrote dashboard epoch data for epoch %d in %v", epoch, time.Since(totalStart))
-	return nil
+	return d.process(data, domain)
 }
 
 type Data struct {
@@ -198,163 +867,219 @@ type Data struct {
 	beaconBlockData          map[uint64]*constypes.StandardBeaconSlotResponse
 	beaconBlockRewardData    map[uint64]*constypes.StandardBlockRewardsResponse
 	syncCommitteeRewardData  map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
-	attestationAssignments   map[string]uint64
+	attestationAssignments   map[uint64]uint32
+	missedslots              map[uint64]bool
+	genesis                  bool
 }
 
-func (d *dashboardData) getData(epoch, slotsPerEpoch uint64) *Data {
+// Data for a single validator
+// use skipSerialCalls = false if you are not sure what you are doing. This flag is mainly
+// to gain performance improvements when exporting a couple sequential epochs in a row
+func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls bool) (*Data, error) {
 	var result Data
 	var err error
 
 	firstSlotOfEpoch := epoch * slotsPerEpoch
-	var firstSlotOfPreviousEpoch uint64
-	if firstSlotOfEpoch > 0 {
-		firstSlotOfPreviousEpoch = firstSlotOfEpoch - 1
-	}
+
+	firstSlotOfPreviousEpoch := int64(firstSlotOfEpoch) - 1
 	lastSlotOfEpoch := firstSlotOfEpoch + slotsPerEpoch - 1
 
-	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse)
-	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse)
-	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse)
-	result.attestationAssignments = make(map[string]uint64)
+	result.beaconBlockData = make(map[uint64]*constypes.StandardBeaconSlotResponse, slotsPerEpoch)
+	result.beaconBlockRewardData = make(map[uint64]*constypes.StandardBlockRewardsResponse, slotsPerEpoch)
+	result.syncCommitteeRewardData = make(map[uint64]*constypes.StandardSyncCommitteeRewardsResponse, slotsPerEpoch)
+	result.attestationAssignments = make(map[uint64]uint32)
+	result.missedslots = make(map[uint64]bool, slotsPerEpoch*2)
+
+	cl := d.CL
 
 	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(3)
+	errGroup.SetLimit(epochFetchParallelismWithinEpoch)
 
-	errGroup.Go(func() error {
-		// retrieve the validator balances at the start of the epoch
-		start := time.Now()
-		if firstSlotOfPreviousEpoch == 0 {
-			result.startBalances, err = d.CL.GetValidators("genesis", nil, nil)
-		} else {
-			result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
-		}
-		if err != nil {
-			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
-			return err
-		}
-		d.log.Infof("retrieved start balances using state at slot %d in %v", firstSlotOfPreviousEpoch, time.Since(start))
-		return nil
-	})
+	totalStart := time.Now()
 
 	errGroup.Go(func() error {
 		// retrieve proposer assignments for the epoch in order to attribute missed slots
 		start := time.Now()
-		result.proposerAssignments, err = d.CL.GetPropoalAssignments(epoch)
+		result.proposerAssignments, err = cl.GetPropoalAssignments(epoch)
 		if err != nil {
 			d.log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
 			return err
 		}
-		d.log.Infof("retrieved proposer assignments in %v", time.Since(start))
+		d.log.Debugf("retrieved proposer assignments in %v", time.Since(start))
 		return nil
 	})
 
 	errGroup.Go(func() error {
 		// retrieve sync committee assignments for the epoch in order to attribute missed sync assignments
 		start := time.Now()
-		result.syncCommitteeAssignments, err = d.CL.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
+		result.syncCommitteeAssignments, err = cl.GetSyncCommitteesAssignments(epoch, int64(firstSlotOfEpoch))
 		if err != nil {
 			d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"epoch": epoch})
-			return nil
+			return err
 		}
-		d.log.Infof("retrieved sync committee assignments in %v", time.Since(start))
+		d.log.Debugf("retrieved sync committee assignments in %v", time.Since(start))
 		return nil
 	})
 
-	errGroup.Go(func() error {
-		// retrieve the attestation committees
-		start := time.Now()
-		// As of dencun you can attest up until the end of the following epoch
-		for slot := lastSlotOfEpoch; slot >= lastSlotOfEpoch-2*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
-			data, err := d.CL.GetCommittees(slot, nil, nil, nil)
+	// As of dencun you can attest up until the end of the following epoch
+	min := lastSlotOfEpoch - utils.Config.Chain.ClConfig.SlotsPerEpoch
+	if lastSlotOfEpoch < utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		min = 0
+	}
+
+	aaMutex := &sync.Mutex{}
+	// executes twice, one with lastSlotOf this epoch and then lastSlotOf last epoch
+	for slot := lastSlotOfEpoch; slot >= min; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		slot := slot
+		errGroup.Go(func() error {
+			data, err := cl.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
-				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"epoch": epoch})
-				return nil
+				d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": slot})
+				return err
 			}
-			d.log.Infof("retrieved attestation assignments in %v", time.Since(start))
 
 			for _, committee := range data.Data {
 				for i, valIndex := range committee.Validators {
-					valIndexU64, err := strconv.ParseUint(valIndex, 10, 64)
-					if err != nil {
-						d.log.Error(err, "can not parse validator index", 0, map[string]interface{}{"epoch": committee.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch, "committee": committee.Index, "index": i, "valIndex": valIndex})
-						continue
-					}
-					k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
-					result.attestationAssignments[k] = valIndexU64
+					k := utils.FormatAttestorAssignmentKeyLowMem(committee.Slot, uint16(committee.Index), uint32(i))
+					aaMutex.Lock()
+					result.attestationAssignments[k] = uint32(valIndex)
+					aaMutex.Unlock()
 				}
 			}
+			return nil
+		})
+		if slot < utils.Config.Chain.ClConfig.SlotsPerEpoch {
+			break // special case for epoch 0
 		}
-
-		return nil
-	})
+	}
 
 	errGroup.Go(func() error {
 		// attestation rewards
 		start := time.Now()
-		result.attestationRewards, err = d.CL.GetAttestationRewards(epoch)
+		result.attestationRewards, err = cl.GetAttestationRewards(epoch)
 		if err != nil {
 			d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
-			return nil
+			return err
 		}
-		d.log.Infof("retrieved attestation rewards data in %v", time.Since(start))
+		d.log.Debugf("retrieved attestation rewards data in %v", time.Since(start))
 		return nil
 	})
 
 	errGroup.Go(func() error {
 		// retrieve the validator balances at the end of the epoch
 		start := time.Now()
-		result.endBalances, err = d.CL.GetValidators(lastSlotOfEpoch, nil, nil)
+		result.endBalances, err = cl.GetValidators(lastSlotOfEpoch, nil, nil)
 		if err != nil {
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
-			return nil
+			return err
 		}
-		d.log.Infof("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
+		d.log.Debugf("retrieved end balances using state at slot %d in %v", lastSlotOfEpoch, time.Since(start))
 		return nil
 	})
 
+	// if this flag is used the caller must provide startBalance from the previous epoch themselves
+	// as well as providing the missedslots data from the previous epoch
+	if !skipSerialCalls {
+		errGroup.Go(func() error {
+			// retrieve the validator balances at the start of the epoch
+			start := time.Now()
+			if firstSlotOfPreviousEpoch < 0 {
+				result.startBalances, err = d.CL.GetValidators("genesis", nil, nil)
+				result.genesis = true
+			} else {
+				result.startBalances, err = d.CL.GetValidators(firstSlotOfPreviousEpoch, nil, nil)
+			}
+			if err != nil {
+				d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"firstSlotOfPreviousEpoch": firstSlotOfPreviousEpoch})
+				return err
+			}
+			d.log.Debugf("retrieved start balances using state at slot %d in %v", firstSlotOfPreviousEpoch, time.Since(start))
+			return nil
+		})
+
+		errGroup.Go(func() error {
+			start := time.Now()
+
+			if firstSlotOfEpoch > slotsPerEpoch { // handle case for first epoch
+				// get missed slots of last epoch for optimal inclusion distance
+				for slot := firstSlotOfEpoch - slotsPerEpoch; slot <= lastSlotOfEpoch-slotsPerEpoch; slot++ {
+					_, err := cl.GetBlockHeader(slot)
+					if err != nil {
+						httpErr, _ := network.SpecificError(err)
+						if httpErr != nil && httpErr.StatusCode == 404 {
+							result.missedslots[slot] = true
+							continue // missed
+						}
+						d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+						continue
+					}
+				}
+			}
+			d.log.Debugf("retrieved missed slots in %v", time.Since(start))
+			return nil
+		})
+	}
+
+	mutex := &sync.Mutex{}
+	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
+		slot := slot
+		errGroup.Go(func() error {
+			// retrieve the data for all blocks that were proposed in this epoch
+			block, err := cl.GetSlot(slot)
+			if err != nil {
+				httpErr, _ := network.SpecificError(err)
+				if httpErr != nil && httpErr.StatusCode == 404 {
+					mutex.Lock()
+					result.missedslots[slot] = true
+					mutex.Unlock()
+					return nil // missed
+				}
+
+				return err
+			}
+			if len(block.Data.Message.StateRoot) == 0 {
+				// todo better network handling, if 404 just log info, else log error
+				d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
+				return errors.New("can not get block data")
+			}
+
+			mutex.Lock()
+			result.beaconBlockData[slot] = block
+			mutex.Unlock()
+
+			blockReward, err := cl.GetPropoalRewards(slot)
+			if err != nil {
+				d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+				return err
+			}
+			mutex.Lock()
+			result.beaconBlockRewardData[slot] = blockReward
+			mutex.Unlock()
+
+			syncRewards, err := cl.GetSyncRewards(slot)
+			if err != nil {
+				d.log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
+				return err
+			}
+			mutex.Lock()
+			result.syncCommitteeRewardData[slot] = syncRewards
+			mutex.Unlock()
+
+			return nil
+		})
+	}
+
 	err = errGroup.Wait()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	// retrieve the data for all blocks that were proposed in this epoch
-	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
-		//d.log.Infof("retrieving data for block at slot %d", slot)
-		block, err := d.CL.GetSlot(slot)
-		if err != nil {
-			httpErr, _ := network.SpecificError(err)
-			if httpErr != nil && httpErr.StatusCode == 404 {
-				continue // missed
-			}
-			d.log.Fatal(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
-			continue
-		}
-		if block.Data.Message.StateRoot == "" {
-			// todo better network handling, if 404 just log info, else log error
-			d.log.Error(err, "can not get block data", 0, map[string]interface{}{"slot": slot})
-			continue
-		}
-		result.beaconBlockData[slot] = block
+	d.log.Infof("[time] retrieved all data for epoch %d in %v", epoch, time.Since(totalStart))
 
-		blockReward, err := d.CL.GetPropoalRewards(slot)
-		if err != nil {
-			d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
-			continue
-		}
-		result.beaconBlockRewardData[slot] = blockReward
-
-		syncRewards, err := d.CL.GetSyncRewards(slot)
-		if err != nil {
-			d.log.Error(err, "can not get sync committee reward data", 0, map[string]interface{}{"slot": slot})
-			continue
-		}
-		result.syncCommitteeRewardData[slot] = syncRewards
-	}
-
-	return &result
+	return &result, nil
 }
 
-func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboardDataRow {
+func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
 	validatorsData := make([]*validatorDashboardDataRow, len(data.endBalances.Data))
 
 	idealAttestationRewards := make(map[int64]int)
@@ -362,75 +1087,109 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 		idealAttestationRewards[idealReward.EffectiveBalance] = i
 	}
 
-	pubkeyToIndexMapEnd := make(map[string]int64)
-	pubkeyToIndexMapStart := make(map[string]int64)
+	pubkeyToIndexMapEnd := make(map[string]int64, len(validatorsData))
+	pubkeyToIndexMapStart := make(map[string]int64, len(validatorsData))
 	activeCount := 0
 	// write start & end balances and slashed status
 	for i := 0; i < len(validatorsData); i++ {
 		validatorsData[i] = &validatorDashboardDataRow{}
 		if i < len(data.startBalances.Data) {
 			validatorsData[i].BalanceStart = data.startBalances.Data[i].Balance
-			pubkeyToIndexMapStart[data.startBalances.Data[i].Validator.Pubkey] = int64(i)
+			pubkeyToIndexMapStart[string(data.startBalances.Data[i].Validator.Pubkey)] = int64(i)
 
 			if data.startBalances.Data[i].Status.IsActive() {
 				activeCount++
-				validatorsData[i].AttestationsScheduled = 1
+				validatorsData[i].AttestationsScheduled = utils.NullInt16(1)
 			}
+
+			if data.genesis {
+				validatorsData[i].DepositsCount = utils.NullInt16(1)
+				validatorsData[i].DepositsAmount = utils.NullInt64(int64(data.startBalances.Data[i].Validator.EffectiveBalance))
+			}
+		} else {
+			pubkeyToIndexMapEnd[string(data.endBalances.Data[i].Validator.Pubkey)] = int64(i)
 		}
+
 		validatorsData[i].BalanceEnd = data.endBalances.Data[i].Balance
 		validatorsData[i].Slashed = data.endBalances.Data[i].Validator.Slashed
-
-		pubkeyToIndexMapEnd[data.endBalances.Data[i].Validator.Pubkey] = int64(i)
 	}
 
 	// slotsPerSyncCommittee :=  * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	for validator_index := range validatorsData {
-		validatorsData[validator_index].SyncChance = float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(activeCount) / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
 		validatorsData[validator_index].BlockChance = float64(utils.Config.Chain.ClConfig.SlotsPerEpoch) / float64(activeCount)
 	}
+
+	size := uint64(len(validatorsData))
+	sizeInt := int64(len(validatorsData))
+	size32 := uint32(len(validatorsData))
 
 	// write scheduled block data
 	for _, proposerAssignment := range data.proposerAssignments.Data {
 		proposerIndex := proposerAssignment.ValidatorIndex
-		validatorsData[proposerIndex].BlockScheduled++
+		if proposerIndex >= size {
+			return nil, errors.New("proposer index out of range")
+		}
+		validatorsData[proposerIndex].BlockScheduled.Int16++
+		validatorsData[proposerIndex].BlockScheduled.Valid = true
 	}
 
 	// write scheduled sync committee data
 	for _, validator := range data.syncCommitteeAssignments.Data.Validators {
-		validatorsData[mustParseInt64(validator)].SyncScheduled = len(data.beaconBlockData) // take into account missed slots
+		validatorIndex := int64(validator)
+		if validatorIndex >= sizeInt {
+			return nil, errors.New("proposer index out of range")
+		}
+		validatorsData[validatorIndex].SyncScheduled.Int16 = int16(len(data.beaconBlockData)) // take into account missed slots
+		validatorsData[validatorIndex].SyncScheduled.Valid = true
 	}
 
 	// write proposer rewards data
 	for _, reward := range data.beaconBlockRewardData {
-		validatorsData[reward.Data.ProposerIndex].BlocksClReward += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
+		if reward.Data.ProposerIndex >= size {
+			return nil, errors.New("proposer index out of range")
+		}
+		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Int64 += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
+		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Valid = true
+
+		validatorsData[reward.Data.ProposerIndex].SlasherRewards.Int64 += reward.Data.AttesterSlashings + reward.Data.ProposerSlashings
+		if reward.Data.AttesterSlashings+reward.Data.ProposerSlashings > 0 {
+			validatorsData[reward.Data.ProposerIndex].SlasherRewards.Valid = true
+		}
 	}
 
 	// write sync committee reward data & sync committee execution stats
 	for _, rewards := range data.syncCommitteeRewardData {
 		for _, reward := range rewards.Data {
 			validator_index := reward.ValidatorIndex
+			if validator_index >= size {
+				return nil, errors.New("proposer index out of range")
+			}
 			syncReward := reward.Reward
-			validatorsData[validator_index].SyncReward += syncReward
+			validatorsData[validator_index].SyncReward.Int64 += syncReward
+			validatorsData[validator_index].SyncReward.Valid = true
 
 			if syncReward > 0 {
-				validatorsData[validator_index].SyncExecuted++
+				validatorsData[validator_index].SyncExecuted.Int16++
+				validatorsData[validator_index].SyncExecuted.Valid = true
 			}
 		}
 	}
 
 	// write block specific data
 	for _, block := range data.beaconBlockData {
-		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed++
+		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Int16++
+		validatorsData[block.Data.Message.ProposerIndex].BlocksProposed.Valid = true
+		validatorsData[block.Data.Message.ProposerIndex].LastSubmittedDutyEpoch = utils.NullInt32(int32(block.Data.Message.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch))
 
 		for depositIndex, depositData := range block.Data.Message.Body.Deposits {
-			// TODO: properly verify that deposit is valid:
+			// Properly verify that deposit is valid:
 			// if signature is valid I count the deposit towards the balance
 			// if signature is invalid and the validator was in the state at the beginning of the epoch I count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there were no valid deposits in the block prior I DO NOT count the deposit towards the balance
 			// if signature is invalid and the validator was NOT in the state at the beginning of the epoch and there was a VALID deposit in the blocks prior I DO COUNT the deposit towards the balance
 
 			err := utils.VerifyDepositSignature(&phase0.DepositData{
-				PublicKey:             phase0.BLSPubKey(utils.MustParseHex(depositData.Data.Pubkey)),
+				PublicKey:             phase0.BLSPubKey(depositData.Data.Pubkey),
 				WithdrawalCredentials: depositData.Data.WithdrawalCredentials,
 				Amount:                phase0.Gwei(depositData.Data.Amount),
 				Signature:             phase0.BLSSignature(depositData.Data.Signature),
@@ -440,9 +1199,9 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
-				if validatorsData[pubkeyToIndexMapEnd[depositData.Data.Pubkey]].DepositsCount > 0 {
+				if validatorsData[pubkeyToIndexMapEnd[string(depositData.Data.Pubkey)]].DepositsCount.Int16 > 0 {
 					d.log.Infof("validator had a valid deposit in some earlier block of the epoch, count the invalid towards the balance")
-				} else if _, ok := pubkeyToIndexMapStart[depositData.Data.Pubkey]; ok {
+				} else if _, ok := pubkeyToIndexMapStart[string(depositData.Data.Pubkey)]; ok {
 					d.log.Infof("validator had a valid deposit in some block prior to the current epoch, count the invalid towards the balance")
 				} else {
 					d.log.Infof("validator did not have a prior valid deposit, do not count the invalid towards the balance")
@@ -450,16 +1209,29 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 				}
 			}
 
-			validator_index := pubkeyToIndexMapEnd[depositData.Data.Pubkey]
+			validator_index := pubkeyToIndexMapEnd[string(depositData.Data.Pubkey)]
+			if validator_index >= sizeInt {
+				return nil, errors.New("proposer index out of range")
+			}
 
-			validatorsData[validator_index].DepositsAmount += depositData.Data.Amount
-			validatorsData[validator_index].DepositsCount++
+			validatorsData[validator_index].DepositsAmount.Int64 += int64(depositData.Data.Amount)
+			validatorsData[validator_index].DepositsAmount.Valid = true
+
+			validatorsData[validator_index].DepositsCount.Int16++
+			validatorsData[validator_index].DepositsCount.Valid = true
 		}
 
 		for _, withdrawal := range block.Data.Message.Body.ExecutionPayload.Withdrawals {
 			validator_index := withdrawal.ValidatorIndex
-			validatorsData[validator_index].WithdrawalsAmount += withdrawal.Amount
-			validatorsData[validator_index].WithdrawalsCount++
+
+			if validator_index >= size {
+				return nil, errors.New("proposer index out of range")
+			}
+			validatorsData[validator_index].WithdrawalsAmount.Int64 += int64(withdrawal.Amount)
+			validatorsData[validator_index].WithdrawalsAmount.Valid = true
+
+			validatorsData[validator_index].WithdrawalsCount.Int16++
+			validatorsData[validator_index].WithdrawalsCount.Valid = true
 		}
 
 		for _, attestation := range block.Data.Message.Body.Attestations {
@@ -467,117 +1239,176 @@ func (d *dashboardData) process(data *Data, domain []byte) []*validatorDashboard
 
 			for i := uint64(0); i < aggregationBits.Len(); i++ {
 				if aggregationBits.BitAt(i) {
-					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKey(attestation.Data.Slot, attestation.Data.Index, i)]
+					validator_index, found := data.attestationAssignments[utils.FormatAttestorAssignmentKeyLowMem(attestation.Data.Slot, attestation.Data.Index, uint32(i))]
 					if !found { // This should never happen!
-						//validator_index = 0
 						d.log.Error(fmt.Errorf("validator not found in attestation assignments"), "validator not found in attestation assignments", 0, map[string]interface{}{"slot": attestation.Data.Slot, "index": attestation.Data.Index, "i": i})
-						continue
+						return nil, fmt.Errorf("validator not found in attestation assignments")
 					}
-					validatorsData[validator_index].InclusionDelaySum = int64(block.Data.Message.Slot - attestation.Data.Slot - 1)
+					if validator_index >= size32 {
+						return nil, errors.New("proposer index out of range")
+					}
+
+					validatorsData[validator_index].InclusionDelaySum = utils.NullInt32(int32(block.Data.Message.Slot - attestation.Data.Slot - 1))
+
+					validatorsData[validator_index].LastSubmittedDutyEpoch = utils.NullInt32(int32(attestation.Data.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch))
+
+					optimalInclusionDistance := 0
+					for i := attestation.Data.Slot + 1; i < block.Data.Message.Slot; i++ {
+						if _, ok := data.missedslots[i]; ok {
+							optimalInclusionDistance++
+						} else {
+							break
+						}
+					}
+
+					validatorsData[validator_index].OptimalInclusionDelay = utils.NullInt32(int32(optimalInclusionDistance))
 				}
 			}
+		}
+
+		// attester slashings "done" by proposer (slashed by)
+		for _, data := range block.Data.Message.Body.AttesterSlashings {
+			slashedIndices := data.GetSlashedIndices()
+			for _, index := range slashedIndices {
+				validatorsData[index].SlashedBy = utils.NullInt32(int32(block.Data.Message.ProposerIndex))
+				validatorsData[index].Slashed = true
+				validatorsData[index].SlashedViolation = utils.NullInt16(SLASHED_VIOLATION_ATTESTATION)
+			}
+		}
+
+		// proposer slashings "done" by proposer (slashed by)
+		for _, data := range block.Data.Message.Body.ProposerSlashings {
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedBy = utils.NullInt32(int32(block.Data.Message.ProposerIndex))
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].Slashed = true
+			validatorsData[data.SignedHeader1.Message.ProposerIndex].SlashedViolation = utils.NullInt16(SLASHED_VIOLATION_PROPOSER)
 		}
 	}
 
 	// write attestation rewards data
 	for _, attestationReward := range data.attestationRewards.Data.TotalRewards {
 		validator_index := attestationReward.ValidatorIndex
+		if validator_index >= size {
+			return nil, errors.New("proposer index out of range")
+		}
 
-		validatorsData[validator_index].AttestationsHeadReward = attestationReward.Head
-		validatorsData[validator_index].AttestationsSourceReward = attestationReward.Source
-		validatorsData[validator_index].AttestationsTargetReward = attestationReward.Target
-		validatorsData[validator_index].AttestationsInactivityReward = attestationReward.Inactivity
-		validatorsData[validator_index].AttestationsInclusionsReward = attestationReward.InclusionDelay
-		validatorsData[validator_index].AttestationReward = validatorsData[validator_index].AttestationsHeadReward +
-			validatorsData[validator_index].AttestationsSourceReward +
-			validatorsData[validator_index].AttestationsTargetReward +
-			validatorsData[validator_index].AttestationsInactivityReward +
-			validatorsData[validator_index].AttestationsInclusionsReward
+		validatorsData[validator_index].AttestationsHeadReward = utils.NullInt32(attestationReward.Head)
+		validatorsData[validator_index].AttestationsSourceReward = utils.NullInt32(attestationReward.Source)
+		validatorsData[validator_index].AttestationsTargetReward = utils.NullInt32(attestationReward.Target)
+		validatorsData[validator_index].AttestationsInactivityPenalty = utils.NullInt32(attestationReward.Inactivity)
+		validatorsData[validator_index].AttestationsInclusionsReward = utils.NullInt32(attestationReward.InclusionDelay)
+		validatorsData[validator_index].AttestationReward = utils.NullInt64(int64(attestationReward.Head + attestationReward.Source + attestationReward.Target + attestationReward.Inactivity + attestationReward.InclusionDelay))
 		idealRewardsOfValidator := data.attestationRewards.Data.IdealRewards[idealAttestationRewards[int64(data.startBalances.Data[validator_index].Validator.EffectiveBalance)]]
-		validatorsData[validator_index].AttestationsIdealHeadReward = idealRewardsOfValidator.Head
-		validatorsData[validator_index].AttestationsIdealTargetReward = idealRewardsOfValidator.Target
-		validatorsData[validator_index].AttestationsIdealSourceReward = idealRewardsOfValidator.Source
-		validatorsData[validator_index].AttestationsIdealInactivityReward = idealRewardsOfValidator.Inactivity
-		validatorsData[validator_index].AttestationsIdealInclusionsReward = idealRewardsOfValidator.InclusionDelay
+		validatorsData[validator_index].AttestationsIdealHeadReward = utils.NullInt32(idealRewardsOfValidator.Head)
+		validatorsData[validator_index].AttestationsIdealTargetReward = utils.NullInt32(idealRewardsOfValidator.Target)
+		validatorsData[validator_index].AttestationsIdealSourceReward = utils.NullInt32(idealRewardsOfValidator.Source)
+		validatorsData[validator_index].AttestationsIdealInactivityPenalty = utils.NullInt32(idealRewardsOfValidator.Inactivity)
+		validatorsData[validator_index].AttestationsIdealInclusionsReward = utils.NullInt32(idealRewardsOfValidator.InclusionDelay)
 
-		validatorsData[validator_index].AttestationIdealReward = validatorsData[validator_index].AttestationsIdealHeadReward +
-			validatorsData[validator_index].AttestationsIdealSourceReward +
-			validatorsData[validator_index].AttestationsIdealTargetReward +
-			validatorsData[validator_index].AttestationsIdealInactivityReward +
-			validatorsData[validator_index].AttestationsIdealInclusionsReward
+		validatorsData[validator_index].AttestationIdealReward = utils.NullInt64(int64(idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay))
 
 		if attestationReward.Head > 0 {
-			validatorsData[validator_index].AttestationHeadExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationHeadExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 		if attestationReward.Source > 0 {
-			validatorsData[validator_index].AttestationSourceExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationSourceExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 		if attestationReward.Target > 0 {
-			validatorsData[validator_index].AttestationTargetExecuted = 1
-			validatorsData[validator_index].AttestationsExecuted = 1
+			validatorsData[validator_index].AttestationTargetExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
 		}
 	}
 
-	return validatorsData
+	return validatorsData, nil
 }
 
-func mustParseInt64(s string) int64 {
-	if s == "" {
-		return 0
-	}
-	r, err := strconv.ParseInt(s, 10, 64)
+func parseEpochRange(pattern, partition string) (uint64, uint64, error) {
+	// Compile the regular expression pattern
+	regex := regexp.MustCompile(pattern)
 
-	if err != nil {
-		panic(err)
+	// Find the matches in the partition string
+	matches := regex.FindStringSubmatch(partition)
+
+	// Check if the partition string matches the pattern
+	if len(matches) != 3 {
+		return 0, 0, fmt.Errorf("invalid partition string: %s", partition)
 	}
-	return r
+
+	// Parse the epoch range values
+	epochFrom, err := strconv.ParseUint(matches[1], 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse epoch from: %w", err)
+	}
+
+	epochTo, err := strconv.ParseUint(matches[2], 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse epoch to: %w", err)
+	}
+
+	return epochFrom, epochTo, nil
+}
+
+type DataEpoch struct {
+	DataRaw *Data
+	Data    []*validatorDashboardDataRow
+	Epoch   uint64
+}
+
+type EpochParallelGroup struct {
+	Epochs     []uint64
+	Sequential bool
 }
 
 type validatorDashboardDataRow struct {
-	AttestationsSourceReward          int64 //done
-	AttestationsTargetReward          int64 //done
-	AttestationsHeadReward            int64 //done
-	AttestationsInactivityReward      int64 //done
-	AttestationsInclusionsReward      int64 //done
-	AttestationReward                 int64 //done
-	AttestationsIdealSourceReward     int64 //done
-	AttestationsIdealTargetReward     int64 //done
-	AttestationsIdealHeadReward       int64 //done
-	AttestationsIdealInactivityReward int64 //done
-	AttestationsIdealInclusionsReward int64 //done
-	AttestationIdealReward            int64 //done
+	AttestationsSourceReward           sql.NullInt32 //done
+	AttestationsTargetReward           sql.NullInt32 //done
+	AttestationsHeadReward             sql.NullInt32 //done
+	AttestationsInactivityPenalty      sql.NullInt32 //done
+	AttestationsInclusionsReward       sql.NullInt32 //done
+	AttestationReward                  sql.NullInt64 //done
+	AttestationsIdealSourceReward      sql.NullInt32 //done
+	AttestationsIdealTargetReward      sql.NullInt32 //done
+	AttestationsIdealHeadReward        sql.NullInt32 //done
+	AttestationsIdealInactivityPenalty sql.NullInt32 //done
+	AttestationsIdealInclusionsReward  sql.NullInt32 //done
+	AttestationIdealReward             sql.NullInt64 //done
 
-	AttestationsScheduled     int8 //done
-	AttestationsExecuted      int8 //done
-	AttestationHeadExecuted   int8 //done
-	AttestationSourceExecuted int8 //done
-	AttestationTargetExecuted int8 //done
+	AttestationsScheduled     sql.NullInt16 //done
+	AttestationsExecuted      sql.NullInt16 //done
+	AttestationHeadExecuted   sql.NullInt16 //done
+	AttestationSourceExecuted sql.NullInt16 //done
+	AttestationTargetExecuted sql.NullInt16 //done
 
-	BlockScheduled int8    // done
-	BlocksProposed int8    // done
-	BlockChance    float64 // done
+	LastSubmittedDutyEpoch sql.NullInt32 // does not include sync committee duty slots
 
-	BlocksClReward int64 // done
-	BlocksElReward decimal.Decimal
+	BlockScheduled sql.NullInt16 // done
+	BlocksProposed sql.NullInt16 // done
+	BlockChance    float64       // done
 
-	SyncScheduled int     // done
-	SyncExecuted  int8    // done
-	SyncReward    int64   // done
-	SyncChance    float64 // done
+	BlocksClReward sql.NullInt64 // done
 
-	Slashed bool // done
+	SyncScheduled sql.NullInt16 // done
+	SyncExecuted  sql.NullInt16 // done
+	SyncReward    sql.NullInt64 // done
+
+	SlasherRewards   sql.NullInt64 // done
+	Slashed          bool          // done
+	SlashedBy        sql.NullInt32 // done
+	SlashedViolation sql.NullInt16 // done
 
 	BalanceStart uint64 // done
 	BalanceEnd   uint64 // done
 
-	DepositsCount  int8   // done
-	DepositsAmount uint64 // done
+	DepositsCount  sql.NullInt16 // done
+	DepositsAmount sql.NullInt64 // done
 
-	WithdrawalsCount  int8   // done
-	WithdrawalsAmount uint64 // done
+	WithdrawalsCount  sql.NullInt16 // done
+	WithdrawalsAmount sql.NullInt64 // done
 
-	InclusionDelaySum int64 // done
-
+	InclusionDelaySum     sql.NullInt32 // done
+	OptimalInclusionDelay sql.NullInt32 // done
 }
+
+const SLASHED_VIOLATION_ATTESTATION = 1
+const SLASHED_VIOLATION_PROPOSER = 2

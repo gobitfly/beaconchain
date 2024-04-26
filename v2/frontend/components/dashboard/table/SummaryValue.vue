@@ -28,8 +28,6 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { isPrivate: groupsEnabled } = useDashboardKey()
-
 const { tm: $tm } = useI18n()
 
 const data = computed(() => {
@@ -130,7 +128,7 @@ const data = computed(() => {
     :validators="data.validators"
     :time-frame="props.detail"
     :context="data.context"
-    :group-id="groupsEnabled ? props.row.group_id : undefined"
+    :group-id="props.row.group_id"
   />
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
@@ -160,12 +158,12 @@ const data = computed(() => {
     <span>
       <span class="no-wrap">
         <FontAwesomeIcon :icon="faCube" />
-        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" />
+        <BcFormatPercent class="space_before" :percent="data.luck.proposal.percent" :precision="0" />
       </span>
       <span> | </span>
       <span class="no-wrap">
         <FontAwesomeIcon :icon="faSync" />
-        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" />
+        <BcFormatPercent class="space_before" :percent="data.luck.sync.percent" :precision="0" />
       </span>
     </span>
     <BcTooltip position="top">

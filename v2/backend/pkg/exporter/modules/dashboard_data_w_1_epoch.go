@@ -3,9 +3,11 @@ package modules
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -14,16 +16,23 @@ import (
 
 type epochWriter struct {
 	*dashboardData
+	mutex *sync.Mutex
 }
 
 func newEpochWriter(d *dashboardData) *epochWriter {
 	return &epochWriter{
 		dashboardData: d,
+		mutex:         &sync.Mutex{},
 	}
 }
 
+// How wide each table partition is in epochs
 const PartitionEpochWidth = 3
-const retentionBuffer = 8 // todo set to 1.6 buffer
+
+// How long epochs will remain in the database is defined in getRetentionEpochDuration.
+// For ETH mainnet this will be 9 epochs, as 9 epochs is exactly the range we need in the hour table (roughly one hour).
+// This buffer can be used to increase or decrease from that 9 epoch target. A value of 1 will keep exactly those 9 needed epochs in the database.
+const retentionBuffer = 1.1 // do not go below 1
 
 func (d *epochWriter) getRetentionEpochDuration() uint64 {
 	return uint64(float64(utils.EpochsPerDay()) / 24 * retentionBuffer)
@@ -35,11 +44,49 @@ func (d *epochWriter) getPartitionRange(epoch uint64) (uint64, uint64) {
 	return startOfPartition, endOfPartition
 }
 
-func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
+func (d *epochWriter) clearOldEpochs(removeBelowEpoch int64) error {
+	if debugSkipOldEpochClear {
+		return nil
+	}
+
+	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_epoch")
+	if err != nil {
+		return errors.Wrap(err, "failed to get partitions")
+	}
+
+	for _, partition := range partitions {
+		epochFrom, epochTo, err := parseEpochRange(`validator_dashboard_data_epoch_(\d+)_(\d+)`, partition)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse epoch range")
+		}
+
+		if int64(epochTo) < removeBelowEpoch {
+			d.mutex.Lock()
+			err := d.deleteEpochPartition(epochFrom, epochTo)
+			d.log.Infof("Deleted old epoch partition %d-%d", epochFrom, epochTo)
+			d.mutex.Unlock()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete epoch partition")
+			}
+		}
+	}
+
+	return nil
+}
+
+func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDataRow) error {
 	// Create table if needed
 	startOfPartition, endOfPartition := d.getPartitionRange(epoch)
 
+	d.mutex.Lock()
 	err := d.createEpochPartition(startOfPartition, endOfPartition)
+	if epoch == startOfPartition && debugAddToColumnEngine {
+		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("validator_dashboard_data_epoch_%d_%d", startOfPartition, endOfPartition))
+		if err != nil {
+			d.log.Warnf("Failed to add epoch to column engine: %v", err)
+		}
+	}
+	d.mutex.Unlock()
 	if err != nil {
 		return errors.Wrap(err, "failed to create epoch partition")
 	}
@@ -67,14 +114,6 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 			}
 		}()
 
-		/*
-			AttestationsScheduled     int8 //done
-			AttestationsExecuted      int8 //done
-			AttestationHeadExecuted   int8 //done
-			AttestationSourceExecuted int8 //done
-			AttestationTargetExecuted int8 //done
-		*/
-
 		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"validator_dashboard_data_epoch"}, []string{
 			"validator_index",
 			"epoch",
@@ -93,7 +132,6 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 			"blocks_scheduled",
 			"blocks_proposed",
 			"blocks_cl_reward",
-			"blocks_el_reward",
 			"sync_scheduled",
 			"sync_executed",
 			"sync_rewards",
@@ -105,13 +143,17 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 			"withdrawals_count",
 			"withdrawals_amount",
 			"inclusion_delay_sum",
-			"sync_chance",
 			"block_chance",
 			"attestations_scheduled",
 			"attestations_executed",
 			"attestation_head_executed",
 			"attestation_source_executed",
 			"attestation_target_executed",
+			"optimal_inclusion_delay_sum",
+			"slashed_by",
+			"slashed_violation",
+			"slasher_reward",
+			"last_executed_duty_epoch",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
 				i,
@@ -119,19 +161,18 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].AttestationsSourceReward,
 				data[i].AttestationsTargetReward,
 				data[i].AttestationsHeadReward,
-				data[i].AttestationsInactivityReward,
+				data[i].AttestationsInactivityPenalty,
 				data[i].AttestationsInclusionsReward,
 				data[i].AttestationReward,
 				data[i].AttestationsIdealSourceReward,
 				data[i].AttestationsIdealTargetReward,
 				data[i].AttestationsIdealHeadReward,
-				data[i].AttestationsIdealInactivityReward,
+				data[i].AttestationsIdealInactivityPenalty,
 				data[i].AttestationsIdealInclusionsReward,
 				data[i].AttestationIdealReward,
 				data[i].BlockScheduled,
 				data[i].BlocksProposed,
 				data[i].BlocksClReward,
-				data[i].BlocksElReward,
 				data[i].SyncScheduled,
 				data[i].SyncExecuted,
 				data[i].SyncReward,
@@ -143,13 +184,17 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].WithdrawalsCount,
 				data[i].WithdrawalsAmount,
 				data[i].InclusionDelaySum,
-				data[i].SyncChance,
 				data[i].BlockChance,
 				data[i].AttestationsScheduled,
 				data[i].AttestationsExecuted,
 				data[i].AttestationHeadExecuted,
 				data[i].AttestationSourceExecuted,
 				data[i].AttestationTargetExecuted,
+				data[i].OptimalInclusionDelay,
+				data[i].SlashedBy,
+				data[i].SlashedViolation,
+				data[i].SlasherRewards,
+				data[i].LastSubmittedDutyEpoch,
 			}, nil
 		}))
 
@@ -159,7 +204,9 @@ func (d *epochWriter) writeEpochData(epoch uint64, data []*validatorDashboardDat
 
 		err = tx.Commit(context.Background())
 		if err != nil {
-			return errors.Wrap(err, "error committing transaction")
+			if !utils.IsDuplicatedKeyError(err) {
+				return errors.Wrap(err, "error committing transaction")
+			}
 		}
 		return nil
 	})

@@ -832,48 +832,60 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 func GetLatestDashboardEpoch() (uint64, error) {
 	var lastEpoch uint64
-	err := db.AlloyReader.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyWriter.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
 	return lastEpoch, err
 }
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
-	return epoch, err
-}
-
-func GetLatestHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
-	return epoch, err
-}
-
-func Get24hOldHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT GREATEST(max(epoch_start) - $1 - 1, min(epoch_start)) as epoch_start FROM validator_dashboard_data_hourly", utils.EpochsPerDay())
+	err := db.AlloyWriter.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
 	return epoch, err
 }
 
 func GetMinOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
+	err := db.AlloyWriter.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
 	return epoch, err
 }
 
-type LastHour struct {
+type EpochBounds struct {
 	EpochStart uint64 `db:"epoch_start"`
 	EpochEnd   uint64 `db:"epoch_end"`
 }
 
-func GetLastExportedHour() (*LastHour, error) {
-	var epoch LastHour
-	err := db.AlloyReader.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+type DayBounds struct {
+	Day        time.Time `db:"day"`
+	EpochStart uint64    `db:"epoch_start"`
+	EpochEnd   uint64    `db:"epoch_end"`
+}
+
+func GetLastExportedTotalEpoch() (*EpochBounds, error) {
+	var epoch EpochBounds
+	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_rolling_total ORDER BY epoch_start DESC LIMIT 1")
 	return &epoch, err
+}
+
+func GetLastExportedHour() (*EpochBounds, error) {
+	var epoch EpochBounds
+	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	return &epoch, err
+}
+
+func GetLastExportedDay() (*DayBounds, error) {
+	var epoch DayBounds
+	err := db.AlloyWriter.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
+	return &epoch, err
+}
+
+func GetXDayOldDay(dayOffset int) (time.Time, error) {
+	var day time.Time
+	err := db.AlloyWriter.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset-1))
+	return day, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyReader.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	err := db.AlloyWriter.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -883,19 +895,12 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	return true, nil
 }
 
-func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, error) {
-	var minEpoch uint64
-	err := db.AlloyReader.Get(&minEpoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
-	if err != nil {
-		return nil, err
+func GetDashboardEpochGapsBetween(targetEpoch uint64, minEpoch int64) ([]uint64, error) {
+	if minEpoch < 0 {
+		minEpoch = 0
 	}
-
-	if (minEpoch == 0 || minEpoch < targetEpoch-retainEpochDuration) && targetEpoch > retainEpochDuration {
-		minEpoch = targetEpoch - retainEpochDuration
-	}
-
 	var epochs []uint64
-	err = db.AlloyReader.Select(&epochs, `
+	err := db.AlloyWriter.Select(&epochs, `
 		WITH
 		epoch_range AS (
 			SELECT generate_series($1::bigint, $2::bigint) AS epoch
@@ -910,8 +915,34 @@ func GetDashboardEpochGaps(targetEpoch, retainEpochDuration uint64) ([]uint64, e
 		WHERE distinct_present_epochs.epoch IS NULL
 		ORDER BY epoch_range.epoch
 	`, minEpoch, targetEpoch)
-	if err != nil {
-		return nil, err
-	}
-	return epochs, nil
+	return epochs, err
+}
+
+func GetPartitionNamesOfTable(tableName string) ([]string, error) {
+	var partitions []string
+	err := db.AlloyWriter.Select(&partitions, fmt.Sprintf(`
+		SELECT inhrelid::regclass AS partition_name
+		FROM pg_inherits
+		WHERE inhparent = 'public.%s'::regclass;`, tableName),
+	)
+	return partitions, err
+}
+
+func AddToColumnEngine(table, columns string) error {
+	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		SELECT google_columnar_engine_add(
+			relation => '%s',
+			columns => '%s'
+		);
+		`, table, columns))
+	return err
+}
+
+func AddToColumnEngineAllColumns(table string) error {
+	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		SELECT google_columnar_engine_add(
+			relation => '%s'
+		);
+		`, table))
+	return err
 }

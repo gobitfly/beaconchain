@@ -5,8 +5,9 @@ import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dash
 export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
+  const dashboardType = ref(type)
   const dashboardKey = ref(mockKey)
-  const dashboardKeyCookie = useCookie(type === 'account' ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY)
+  const dashboardKeyCookie = useCookie(dashboardType.value === 'account' ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY)
   const { isLoggedIn } = useUserStore()
 
   const setDashboardKey = (key: string) => {
@@ -71,7 +72,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     updateEntities(pullAll(publicEntities.value, list))
   }
 
-  const api = { dashboardKey, isPublic, publicEntities, addEntities, removeEntities, setDashboardKey }
+  const api = { dashboardKey, isPublic, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
 
   provide<DashboardKeyData>('dashboard-key', api)
   return api

@@ -71,10 +71,10 @@ export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataRespo
  * Rewards Tab
  */
 export interface VDBRewardesTableDuty {
-  attestation: number /* float64 */;
-  proposal: number /* float64 */;
-  sync: number /* float64 */;
-  slashing: number /* uint64 */;
+  attestation?: number /* float64 */;
+  proposal?: number /* float64 */;
+  sync?: number /* float64 */;
+  slashing?: number /* uint64 */;
 }
 export interface VDBRewardsTableRow {
   epoch: number /* uint64 */;
@@ -132,10 +132,18 @@ export interface VDBHeatmapCell {
   y: number /* uint64 */; // Group ID
   value: number /* float64 */; // Attestaton Rewards
 }
+export interface VDBHeatmapEvent {
+  x: number /* uint64 */; // Epoch
+  y: number /* uint64 */; // Group ID
+  proposal: boolean;
+  slash: boolean;
+  sync: boolean;
+}
 export interface VDBHeatmap {
   epochs: number /* uint64 */[]; // X-Axis Categories
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
+  events: VDBHeatmapEvent[];
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipDuty {
@@ -145,12 +153,13 @@ export interface VDBHeatmapTooltipDuty {
 export interface VDBHeatmapTooltipData {
   epoch: number /* uint64 */;
   proposers: VDBHeatmapTooltipDuty[];
-  syncs: VDBHeatmapTooltipDuty[];
+  syncs: number /* uint64 */[];
   slashings: VDBHeatmapTooltipDuty[];
   attestations_head: StatusCount;
   attestations_source: StatusCount;
   attestations_target: StatusCount;
   attestation_income: string /* decimal.Decimal */;
+  attestation_efficiency: number /* float64 */;
 }
 export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<VDBHeatmapTooltipData>;
 /**
@@ -159,9 +168,10 @@ export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<
  */
 export interface VDBExecutionDepositsTableRow {
   public_key: PubKey;
-  index: number /* uint64 */;
+  index?: number /* uint64 */;
   group_id: number /* uint64 */;
   block: number /* uint64 */;
+  timestamp: string /* time.Time */;
   from: Address;
   depositor: Address;
   tx_hash: Hash;
@@ -181,6 +191,14 @@ export interface VDBConsensusDepositsTableRow {
   signature: Hash;
 }
 export type InternalGetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
+export interface VDBTotalExecutionDepositsData {
+  total_amount: string /* decimal.Decimal */;
+}
+export type InternalGetValidatorDashboardTotalExecutionDepositsResponse = ApiDataResponse<VDBTotalExecutionDepositsData>;
+export interface VDBTotalConsensusDepositsData {
+  total_amount: string /* decimal.Decimal */;
+}
+export type InternalGetValidatorDashboardTotalConsensusDepositsResponse = ApiDataResponse<VDBTotalConsensusDepositsData>;
 /**
  * ------------------------------------------------------------
  * Withdrawals Tab
@@ -194,6 +212,10 @@ export interface VDBWithdrawalsTableRow {
   amount: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
+export interface VDBTotalWithdrawalsData {
+  total_amount: string /* decimal.Decimal */;
+}
+export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
 /**
  * ------------------------------------------------------------
  * Manage Modal

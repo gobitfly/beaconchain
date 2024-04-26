@@ -2304,3 +2304,72 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 
 	return epochParticipation, nil
 }
+
+func CacheQuery(query string, viewName string, indexes ...[]string) error {
+	tmpViewName := "_tmp_" + viewName
+	trashViewName := "_trash_" + viewName
+	tx, err := AlloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting tx: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// pre-cleanup
+	_, err = tx.Exec(fmt.Sprintf(`drop materialized view if exists %s`, tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", tmpViewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
+	}
+	// create the new view
+	_, err = tx.Exec(fmt.Sprintf(`CREATE MATERIALIZED VIEW %s AS %s`, tmpViewName, query))
+	if err != nil {
+		return fmt.Errorf("error creating %s materialized view: %w", tmpViewName, err)
+	}
+	tmpIndexNames := make([]string, len(indexes))
+	for i, index := range indexes {
+		tmpIndexNames[i] = fmt.Sprintf("%s_%d_idx", tmpViewName, i)
+		_, err = tx.Exec(fmt.Sprintf("CREATE INDEX %s ON %s (%s)", tmpIndexNames[i], tmpViewName, strings.Join(index, ",")))
+		if err != nil {
+			return fmt.Errorf("error creating index %s over columns %v: %w", tmpIndexNames[i], index, err)
+		}
+	}
+	// fix permissions
+	_, err = tx.Exec(fmt.Sprintf("GRANT SELECT ON %s TO readaccess;", tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error granting select on %s materialized view: %w", tmpViewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf("GRANT ALL ON %s TO alloydbsuperuser;", tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error granting all on %s materialized view: %w", tmpViewName, err)
+	}
+	// swap views
+	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW if exists %s RENAME TO %s;`, viewName, trashViewName))
+	if err != nil {
+		return fmt.Errorf("error renaming existing %s materialized view: %w", viewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW %s RENAME TO %s;`, tmpViewName, viewName))
+	if err != nil {
+		return fmt.Errorf("error renaming %s materialized view: %w", tmpViewName, err)
+	}
+	// drop old view
+	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
+	}
+	// rename indexes
+	for i := range indexes {
+		indexName := fmt.Sprintf("%s_%d_idx", viewName, i)
+		_, err = tx.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", tmpIndexNames[i], indexName))
+		if err != nil {
+			return fmt.Errorf("error renaming index %s: %w", tmpIndexNames[i], err)
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx: %w", err)
+	}
+	return nil
+}

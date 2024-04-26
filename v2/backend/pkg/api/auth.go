@@ -15,7 +15,7 @@ func NewSessionManager(cfg *types.Config) *scs.SessionManager {
 	pool := &redis.Pool{
 		MaxIdle: 10,
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", cfg.RedisCacheEndpoint)
+			return redis.Dial("tcp", cfg.RedisSessionStoreEndpoint)
 		},
 	}
 

@@ -50,7 +50,7 @@ func main() {
 
 	sessionManager := api.NewSessionManager(cfg)
 
-	router := api.NewApiRouter(dataAccessor, sessionManager)
+	router := api.NewApiRouter(dataAccessor, sessionManager, cfg.Frontend.Debug)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts), api.GetAuthMiddleware(cfg.ApiKeySecret))
 
 	srv := &http.Server{
