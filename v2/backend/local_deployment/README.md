@@ -44,11 +44,6 @@ export PATH=$PATH:$HOME/go/bin
 The second line is not mentionned in the installation instructions of Go's website but will be necessary for our system.
 Before continuing, restarting your computer now might save you from unexplained errors during the next steps.
 
-# Install v2 deps
-1. install postgres: `sudo apt install postgresql-client`
-2. install [goose](https://github.com/pressly/goose?tab=readme-ov-file#install)
-3. setup [git container registry authentication](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-with-a-personal-access-token-classic)
-
 # Clone the explorer repository
 ```
 cd ~
