@@ -124,6 +124,8 @@ const exportedMembers : ExportedMembers = {
   enterUpdateCycleAsAparent
 }
 
+defineExpose<ExportedMembers>(exportedMembers)
+
 function isObjectMiddleEllipsis (obj : MiddleEllipsis | ComponentPublicInstance) : MiddleEllipsis | undefined {
   for (const exportedMEsymbol in exportedMembers) {
     if (!(exportedMEsymbol in obj)) {
@@ -133,7 +135,7 @@ function isObjectMiddleEllipsis (obj : MiddleEllipsis | ComponentPublicInstance)
   return obj as MiddleEllipsis
 }
 
-watch(slot, () => { // reacts to changes of components in our slot, and unfortunately also to changes in their props
+watch(slot, () => { // reacts to changes of components in our slot, and unfortunately also to changes in their props (Vue bug or feature)
   invalidateWidthCache()
   invalidateChildrenIdentities()
   innerElements.slotNonce++
@@ -204,6 +206,24 @@ watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding th
   }
 })
 
+watch(() => props.widthMediaqueryThreshold, (threshold) => {
+/*  This is a workaround for a bug in Chrome (at least in April 2024).
+    Here is the problem:
+    When the user resizes their window and a `@media` query in the CSS changes suddenly the size of a component having a relative width
+    (examples: flex-grow, width in %, auto or fr in a grid-template-columns , ...) then Chrome resizes the components in two steps.
+    The first resizing is approximate for some reason and triggers the resizeObserver.
+    The second resizing is definitive and accurate but does not trigger the resizeObserver, so MiddleEllipsis stays with a wrong clipping.
+  */
+  if (!/Chrome/.test(navigator.userAgent) && !/Chromium/.test(navigator.userAgent)) {
+    return
+  }
+  if (threshold && !amIinsideAparent.value) {
+    window.addEventListener('resize', catchResizingCausedByMediaquery)
+  } else {
+    window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  }
+}, { immediate: true })
+
 const resizingObserver = new ResizeObserver(() => { // will react to changes of width
   if (!didTheResizingObserverFireSinceMount) {
     // we do this test because the resizing observer fires when is starts to watch, although no resizing occured at that moment
@@ -216,12 +236,12 @@ const resizingObserver = new ResizeObserver(() => { // will react to changes of 
 })
 
 let lastWindowWidthCaught = 0
-// this function is a workaround for a bug in Chrome (see onMounted for explanations)
+// this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
 function catchResizingCausedByMediaquery () {
   const windowWidthCaught = document.documentElement.clientWidth
   const diffA = props.widthMediaqueryThreshold! - lastWindowWidthCaught
   const diffB = windowWidthCaught - props.widthMediaqueryThreshold!
-  if (diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
+  if (lastWindowWidthCaught && diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
     logStep('event', 'window width passed through props.widthMediaqueryThreshold')
     setTimeout(() => handleResizingEvent(true), 50)
   }
@@ -251,16 +271,6 @@ onMounted(() => {
   if (doIobserveMyResizing.value) {
     didTheResizingObserverFireSinceMount = false
     resizingObserver.observe(frameSpan.value)
-    if (props.widthMediaqueryThreshold && !amIinsideAparent.value && (/Chrome/.test(navigator.userAgent) || /Chromium/.test(navigator.userAgent))) {
-      /* This is a workaround for a bug in Chrome (at least in April 2024).
-         Here is the problem:
-         When the user resizes their window and a `@media` query in the CSS changes suddenly the size of a component having a relative width
-         (examples: flex-grow, width in %, auto or fr in a grid-template-columns , ...) then Chrome resizes the components in two steps.
-         The first resizing is approximate for some reason and triggers the resizeObserver.
-         The second resizing is definitive and accurate but does not trigger the resizeObserver, so MiddleEllipsis stays with a wrong clipping.
-       */
-      window.addEventListener('resize', catchResizingCausedByMediaquery)
-    }
   }
   if (!amIinsideAparent.value) {
     updateContent(false)
@@ -273,6 +283,7 @@ onBeforeUnmount(() => {
   amImounted = false
   resizingObserver.disconnect()
   window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  lastWindowWidthCaught = 0
 })
 
 onUnmounted(() => {
@@ -618,8 +629,6 @@ function logStep (color : 'neutral'|'attention'|'event'|'signal'|'good'|'complet
 function whatIsMyGivenContent () : any {
   return whatIam.value !== WhatIcanBe.Parent ? (props.text ? 'text' : 'no text') : innerElements.allInstanciatedElements.value
 }
-
-defineExpose<ExportedMembers>(exportedMembers)
 
 function searchForIdealLength (originalText: string = '', targetWidth: number): string {
   let current = calculateTextWidth(originalText)

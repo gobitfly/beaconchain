@@ -10,7 +10,7 @@ const liveState = defineModel<NetworkFilter>({ required: true }) // each entry h
 
 const { t } = useI18n()
 
-const head = ref<{look : 'on'|'off', network : string}>({
+const headState = ref<{look : 'on'|'off', network : string}>({
   look: 'off',
   network: ''
 })
@@ -21,17 +21,29 @@ const listInDropdown = ref<{
 }[]>([])
 const dropdownIsOpen = ref<boolean>(false)
 
+const head = ref<HTMLDivElement>()
+const dropdown = ref<HTMLDivElement>()
+
 watch(liveState, updateLocalState) // fires when the parent changes the whole object but not when he / we change a value inside
 
 onBeforeMount(() => {
   dropdownIsOpen.value = false
   updateLocalState()
   document.addEventListener('keydown', listenToKeys)
+  document.addEventListener('click', listenToClicks)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('click', listenToClicks)
   document.removeEventListener('keydown', listenToKeys)
 })
+
+function listenToClicks (event : Event) {
+  if (!dropdownIsOpen.value || !dropdown.value || !head.value || dropdown.value.contains(event.target as Node) || head.value.contains(event.target as Node)) {
+    return
+  }
+  dropdownIsOpen.value = false
+}
 
 function listenToKeys (event : KeyboardEvent) {
   if (event.key === 'Escape' && dropdownIsOpen.value) {
@@ -50,11 +62,11 @@ function updateLocalState () {
   }
   const allNetworksAreSelected = (howManyAreSelected === liveState.value.size)
   if (howManyAreSelected === 0 || allNetworksAreSelected) {
-    head.value.network = t('search_bar.all_networks')
+    headState.value.network = t('search_bar.all_networks')
   } else {
-    head.value.network = String(howManyAreSelected)
+    headState.value.network = String(howManyAreSelected)
   }
-  head.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
+  headState.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
   // now we update the list used to fill the dropdown
   listInDropdown.value.length = 0
   listInDropdown.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
@@ -82,22 +94,22 @@ function oneOptionChanged (index : number) {
     <BcSearchbarFilterButton
       class="head"
       :bar-style="barStyle"
-      :look="head.look"
+      :look="headState.look"
       :state="dropdownIsOpen"
       @change="(open : boolean) => dropdownIsOpen = open"
     >
-      <div class="content">
+      <div ref="head" class="content">
         <span class="label">
-          {{ t('search_bar.network_filter_label') + ' ' + head.network }}
+          {{ t('search_bar.network_filter_label') + ' ' + headState.network }}
         </span>
         ▾
       </div>
     </BcSearchbarFilterButton>
     <div
       v-if="dropdownIsOpen"
+      ref="dropdown"
       class="dropdown"
       :class="barStyle"
-      @click="(e : Event) => e.stopPropagation()"
       @keydown="(e) => {if (e.key === 'Escape') dropdownIsOpen = false}"
     >
       <div v-for="(line, i) of listInDropdown" :key="line.chainId" class="line" @click="oneOptionChanged(i)">
