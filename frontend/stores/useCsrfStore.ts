@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { getCSRFHeader } from '~/utils/fetch'
 
 /**
   The csrf header is added to non GET requests to prevent Cross-site request forgery

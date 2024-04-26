@@ -208,7 +208,7 @@ export function useCustomFetch () {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
     options.credentials = 'include'
-    const method = map.method || 'GET'
+    const method = options.method || map.method || 'GET'
 
     // For non GET method's we need to set the csrf header for security
     if (method !== 'GET') {
