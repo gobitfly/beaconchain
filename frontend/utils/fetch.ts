@@ -3,7 +3,7 @@ export function getCSRFHeader (headers?: Headers): [string, string] | undefined 
     return
   }
   for (const entry of headers.entries()) {
-    if (entry[0].includes('_v2_csrf')) {
+    if (entry[0].includes('X-CSRF-Token')) {
       return entry
     }
   }
