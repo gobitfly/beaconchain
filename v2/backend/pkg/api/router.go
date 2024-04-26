@@ -42,13 +42,13 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 		return gorillaHandlers.CORS(
 			gorillaHandlers.AllowedOrigins([]string{"*"}),
 			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		)
 	}
 	return gorillaHandlers.CORS(
 		gorillaHandlers.AllowedOrigins(allowedHosts),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		gorillaHandlers.AllowCredentials(),
 	)
 }
