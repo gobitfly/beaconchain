@@ -9,7 +9,7 @@ const props = defineProps<{
   text?: string,
   initialFlexGrow?: number, // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
   ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
-  widthMediaqueryThreshold?: number, // Very important: if the size of the component is suddenly changed by `@media (max-width: AAAApx)` or `@media (max-width: AAAApx)`, give AAAA to this pros.
+  widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
   // the props below are for internal use only
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
   class?: string // to make the list of classes reactive
@@ -242,7 +242,7 @@ function catchResizingCausedByMediaquery () {
   const diffA = props.widthMediaqueryThreshold! - lastWindowWidthCaught
   const diffB = windowWidthCaught - props.widthMediaqueryThreshold!
   if (lastWindowWidthCaught && diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
-    logStep('event', 'window width passed through props.widthMediaqueryThreshold')
+    logStep('event', 'window width passed through', props.widthMediaqueryThreshold)
     setTimeout(() => handleResizingEvent(true), 50)
   }
   lastWindowWidthCaught = windowWidthCaught
