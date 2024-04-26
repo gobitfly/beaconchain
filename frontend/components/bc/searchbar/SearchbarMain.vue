@@ -187,7 +187,7 @@ onUnmounted(() => {
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (!dropdown.value || !inputFieldAndButton.value ||
+  if (!globalState.value.showDropdown || !dropdown.value || !inputFieldAndButton.value ||
       dropdown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
@@ -588,7 +588,7 @@ function informationIfHiddenResults () : string {
                   :suggestion="suggestion"
                   :bar-style="barStyle"
                   :bar-purpose="barPurpose"
-                  @click="(e : Event) => {e.stopPropagation(); userClickedSuggestion(suggestion)}"
+                  @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
                 />
               </div>
             </div>
