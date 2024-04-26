@@ -1,4 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
+import { warn } from 'vue'
+import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
 import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
@@ -174,6 +176,7 @@ const mapping: Record<string, MappingData> = {
 
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
+  const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
@@ -206,6 +209,16 @@ export function useCustomFetch () {
     }
     options.credentials = 'include'
     const method = map.method || 'GET'
+
+    // For non GET method's we need to set the csrf header for security
+    if (method !== 'GET') {
+      if (csrfHeader.value) {
+        options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
+      } else {
+        warn('missing csrf header!')
+      }
+    }
+
     if (pathName === API_PATH.LOGIN) {
       const res = await $fetch<LoginResponse>(path, {
         method,
@@ -216,7 +229,12 @@ export function useCustomFetch () {
     }
 
     try {
-      return await $fetch<T>(path, { method, ...options, baseURL })
+      const res = await $fetch.raw<T>(path, { method, ...options, baseURL })
+      if (method === 'GET') {
+        // We get the csrf header from GET requests
+        setCsrfHeader(res.headers)
+      }
+      return res._data as T
     } catch (e: any) {
       if (!dontShowError) {
         showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
