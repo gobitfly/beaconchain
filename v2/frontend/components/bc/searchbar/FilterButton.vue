@@ -62,11 +62,12 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
       &.gaudy,
       &.embedded {
         border: 1px solid var(--button-color-active);
-        color: var(--primary-contrast-color);
       }
       background-color: var(--button-color-active);
       &:hover {
-        background-color: var(--button-color-hover);
+        @media (hover: hover) {
+          background-color: var(--button-color-hover);
+        }
       }
       &:active {
         background-color: var(--button-color-pressed);
@@ -78,13 +79,15 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
     &.discreet {
       background-color: var(--light-grey);
     }
-    &:hover {
-      &.gaudy,
-      &.embedded {
-        background-color: var(--container-border-color);
-      }
-      &.discreet {
-        background-color: var(--light-grey-3);
+    @media (hover: hover) {
+      &:hover {
+        &.gaudy,
+        &.embedded {
+          background-color: var(--container-border-color);
+        }
+        &.discreet {
+          background-color: var(--light-grey-3);
+        }
       }
     }
     &:active {
