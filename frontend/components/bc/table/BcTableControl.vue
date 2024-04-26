@@ -9,6 +9,7 @@ import {
 interface Props {
   title?: string,
   searchPlaceholder?: string,
+  disabledFilter?: boolean
 }
 const props = defineProps<Props>()
 
@@ -39,6 +40,7 @@ const onInput = (value: string) => {
         <BcContentFilter
           v-if="props.searchPlaceholder && tableIsShown"
           :search-placeholder="props.searchPlaceholder"
+          :disabled-filter="disabledFilter"
           @filter-changed="onInput"
         />
       </div>

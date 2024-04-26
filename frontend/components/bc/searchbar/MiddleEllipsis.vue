@@ -3,8 +3,19 @@ import { type ComponentPublicInstance, warn } from 'vue'
 
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
+const ResizeObserverLagMargin = 1.5 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
+
+const props = defineProps<{
+  text?: string,
+  initialFlexGrow?: number, // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
+  ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
+  widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
+  // the props below are for internal use only
+  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
+  class?: string // to make the list of classes reactive
+}>()
+
 interface ExportedMembers {
-  myInstanceId: ComputedRef<number>,
   amIofDefinedWidth: ComputedRef<boolean>,
   getReadyForUpdate: typeof getReadyForUpdate,
   updateContent: typeof updateContent,
@@ -39,17 +50,6 @@ enum UpdateReason {
 
 type TextProperties = { text: string, width: number }
 
-const ResizeObserverLagMargin = 1.5 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
-
-const props = defineProps<{
-  text?: string,
-  initialFlexGrow?: number, // if the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props
-  ellipses? : number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on
-  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent, // for internal use, to inform this instance that it belongs to a parent MiddleEllipsis component
-  meInstanceId?: number
-  class? : string // hack to make the list of classes reactive
-}>()
-
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => _s.default ? _s.default() : []) // `slot`s is always an array, empty if there is no slot
 
@@ -76,19 +76,15 @@ const canvasContextToCalculateTextWidths = document.createElement('canvas').getC
 const lastTextWidthCalculation: TextProperties = { text: '', width: 0 }
 let amImounted = false
 let didTheResizingObserverFireSinceMount = false
-let amIreadyForUpdate = false // 1. Our parent can call function getReadyForUpdate() as we can, so we use this variable to prevent multiple executions of it in a row. 2. It is also useful in our resizing observer to know whether our parent started our update process so we do not inform it about our changes if our observer fires late.
+let amIreadyForUpdate = false // our parent can call function getReadyForUpdate() as we can, so we use this variable to prevent multiple executions of it in a row
 let lastSlotNonceWhenChecked = -1
 
 let numberOfClippings = 0
 let totalIterationsWhenClipping = 0
 
-const myInstanceId = computed(() => {
-  return props.meInstanceId === undefined ? -1 : props.meInstanceId
-})
-
 const amIofDefinedWidth = computed(() => {
   // TODO: Maybe check whether the width is defined in the CSS of the component if-and-only-if props.initialFlexGrow is not set.
-  //       Problem if done: it would be a slow operation at execution time just to provide a security against the programmer during development (because during execution it causes bugs anyway).
+  //       Problem if done: it would be a slow operation at execution time just to provide a security against the programmer during development (because an inconsistency here causes unwanted results on the screen anyway).
   return !props.initialFlexGrow
 })
 
@@ -120,7 +116,6 @@ const whatIam = computed(() => {
 })
 
 const exportedMembers : ExportedMembers = {
-  myInstanceId,
   amIofDefinedWidth,
   getReadyForUpdate,
   updateContent,
@@ -128,6 +123,8 @@ const exportedMembers : ExportedMembers = {
   saveFinalState,
   enterUpdateCycleAsAparent
 }
+
+defineExpose<ExportedMembers>(exportedMembers)
 
 function isObjectMiddleEllipsis (obj : MiddleEllipsis | ComponentPublicInstance) : MiddleEllipsis | undefined {
   for (const exportedMEsymbol in exportedMembers) {
@@ -138,7 +135,7 @@ function isObjectMiddleEllipsis (obj : MiddleEllipsis | ComponentPublicInstance)
   return obj as MiddleEllipsis
 }
 
-watch(slot, () => { // reacts to changes of components in our slot, and unfortunately also to changes in their props
+watch(slot, () => { // reacts to changes of components in our slot, and unfortunately also to changes in their props (Vue bug or feature)
   invalidateWidthCache()
   invalidateChildrenIdentities()
   innerElements.slotNonce++
@@ -146,10 +143,10 @@ watch(slot, () => { // reacts to changes of components in our slot, and unfortun
   flush: 'pre'
 })
 watch(slot, () => { // reacts to changes of components in our slot after they are mounted, and unfortunately this happens also after changes in their props
-  logStep('yellow', 'new slot instanciated')
+  logStep('event', 'new slot instanciated')
   invalidateChildrenIdentities()
   identifyChildren()
-  nextTick(() => enterUpdateCycleAsAparent()) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (unfortunately, this slot-watcher ensured they were instanciated but not inserted in the real DOM)
+  nextTick(() => updateContent(false)) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (unfortunately, this slot-watcher ensured they were instanciated but not inserted in the real DOM)
 }, {
   flush: 'post'
 })
@@ -159,16 +156,15 @@ watch(() => props.class, (newClassList) => { // reacts to changes in our list of
     // our watcher lags (we already updated with the correct class list)
     return
   }
-  logStep('yellow', 'new class list received')
+  logStep('event', 'new class list received')
   invalidateTextWidthCalculationCache() // the font might have changed
   invalidateWidthCache()
   if (!amIinsideAparent.value) {
-    updateContent()
-  } else // No self update is allowed, we must ask our parent to update us.
-    if (!amIreadyForUpdate) { // if our parent is updating us already, we abort
-      logStep('green', 'notifying my parent')
-      props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
-    } else { logStep('blue', 'parent not called') }
+    updateContent(false)
+  } else {
+    logStep('signal', 'notifying my parent')
+    props.meCallbackToInformParentAboutChanges!()
+  }
 })
 
 watch(() => props.text, (newText) => { // reacts to changes of text
@@ -176,15 +172,13 @@ watch(() => props.text, (newText) => { // reacts to changes of text
     // our watcher lags (we already updated with the correct text)
     return
   }
-  logStep('yellow', 'new text received')
-  if (amIofDefinedWidth.value) {
-    // the clipping adapts the text to our width, not the other way around, so our width did not change, so we can update by ourselves (if we have a parent, a notification is useless and our siblings would spend resources updating for nothing)
-    updateContent()
-  } else // Our width is not defined so we have a parent.
-    if (!amIreadyForUpdate) { // if our parent is updating us already, we abort
-      logStep('green', 'notifying my parent')
-      props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
-    } else { logStep('blue', 'parent not called') }
+  logStep('event', 'new text received')
+  if (!amIinsideAparent.value) {
+    updateContent(false)
+  } else {
+    logStep('signal', 'notifying my parent')
+    props.meCallbackToInformParentAboutChanges!()
+  }
 })
 
 watch(() => props.initialFlexGrow, (newIFG) => { // reacts to changes of props initialFlexGrow
@@ -192,12 +186,9 @@ watch(() => props.initialFlexGrow, (newIFG) => { // reacts to changes of props i
     // our watcher lags (we already updated with the correct initial flex-grow)
     return
   }
-  logStep('yellow', 'new initial flex-grow received')
-  // No self update is allowed, we must ask our parent to update us.
-  if (!amIreadyForUpdate) { // if our parent is updating us already, we abort
-    logStep('green', 'notifying my parent')
-    props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
-  } else { logStep('blue', 'parent not called') }
+  logStep('event', 'new initial flex-grow received')
+  logStep('signal', 'notifying my parent')
+  props.meCallbackToInformParentAboutChanges!()
 })
 
 watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding the number of ellipses to use
@@ -205,16 +196,33 @@ watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding th
     // our watcher lags (we already updated with the correct value)
     return
   }
-  logStep('yellow', 'new (array of) number(s) regarding ellipses received')
+  logStep('event', 'new (array of) number(s) regarding ellipses received')
   if (amIofDefinedWidth.value) {
     // the clipping adapts the text to our width, not the other way around, so our width did not change, so we can update by ourselves (if we have a parent, a notification is useless and our siblings would spend resources updating for nothing)
-    updateContent()
-  } else // Our width is not defined so we have a parent.
-    if (!amIreadyForUpdate) { // if our parent is updating us already, we abort
-      logStep('green', 'notifying my parent')
-      props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
-    } else { logStep('blue', 'parent not called') }
+    updateContent(false)
+  } else { // our width is not defined so we have a parent
+    logStep('signal', 'notifying my parent')
+    props.meCallbackToInformParentAboutChanges!()
+  }
 })
+
+watch(() => props.widthMediaqueryThreshold, (threshold) => {
+/*  This is a workaround for a bug in Chrome (at least in April 2024).
+    Here is the problem:
+    When the user resizes their window and a `@media` query in the CSS changes suddenly the size of a component having a relative width
+    (examples: flex-grow, width in %, auto or fr in a grid-template-columns , ...) then Chrome resizes the components in two steps.
+    The first resizing is approximate for some reason and triggers the resizeObserver.
+    The second resizing is definitive and accurate but does not trigger the resizeObserver, so MiddleEllipsis stays with a wrong clipping.
+  */
+  if (!/Chrome/.test(navigator.userAgent) && !/Chromium/.test(navigator.userAgent)) {
+    return
+  }
+  if (threshold && !amIinsideAparent.value) {
+    window.addEventListener('resize', catchResizingCausedByMediaquery)
+  } else {
+    window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  }
+}, { immediate: true })
 
 const resizingObserver = new ResizeObserver(() => { // will react to changes of width
   if (!didTheResizingObserverFireSinceMount) {
@@ -222,41 +230,60 @@ const resizingObserver = new ResizeObserver(() => { // will react to changes of 
     didTheResizingObserverFireSinceMount = true
     return
   }
-  invalidateWidthCache()
-  logStep('yellow', 'resizing observer running')
-  if (!amIinsideAparent.value) {
-    updateContent()
-  } else
-    if (!amIreadyForUpdate) { // if our parent is updating us already, we abort
-      const reason = determineReason(false)
-      if (reason) { // if our resize observer lags (old resize-observer signal, we have been updated just now), we abort
-        logStep('green', 'notifying my parent for reason #', reason)
-        props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
-      } else { logStep('blue', 'parent not called because no width difference') }
-    }
+  logStep('event', 'resizing observer running')
+  invalidateTextWidthCalculationCache() // the font might have changed, for example because the mode has been switched between mobile and desktop
+  handleResizingEvent(false)
 })
+
+let lastWindowWidthCaught = 0
+// this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
+function catchResizingCausedByMediaquery () {
+  const windowWidthCaught = document.documentElement.clientWidth
+  const diffA = props.widthMediaqueryThreshold! - lastWindowWidthCaught
+  const diffB = windowWidthCaught - props.widthMediaqueryThreshold!
+  if (lastWindowWidthCaught && diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
+    logStep('event', 'window width passed through', props.widthMediaqueryThreshold)
+    setTimeout(() => handleResizingEvent(true), 50)
+  }
+  lastWindowWidthCaught = windowWidthCaught
+}
+
+function handleResizingEvent (force : boolean) {
+  invalidateWidthCache()
+  if (!amIinsideAparent.value) {
+    updateContent(force)
+  } else {
+    const reason = determineReason(false)
+    if (reason) { // if our resize observer lags (old resize-observer signal, we have been updated just now), we abort
+      logStep('signal', 'notifying my parent for reason #', reason)
+        props.meCallbackToInformParentAboutChanges!()
+    } else { logStep('good', 'parent not called because no width difference') }
+  }
+}
 
 onMounted(() => {
   amImounted = true
   if (whatIam.value === WhatIcanBe.Error) {
     return
   }
-  logStep('yellow', 'mounted, content given:', whatIsMyGivenContent())
+  logStep('event', 'mounted, content given:', whatIsMyGivenContent())
   identifyChildren()
   if (doIobserveMyResizing.value) {
     didTheResizingObserverFireSinceMount = false
     resizingObserver.observe(frameSpan.value)
   }
   if (!amIinsideAparent.value) {
-    updateContent()
+    updateContent(false)
   } // if we are inside a parent, our parent will update us because he gets mounted too
 })
 
 onBeforeUnmount(() => {
-  logStep('red', 'unmounting.', whatIam.value !== WhatIcanBe.Parent ? 'The algorithm iterated ' + totalIterationsWhenClipping / numberOfClippings + ' times on average.' : '')
+  logStep('attention', 'unmounting.', whatIam.value !== WhatIcanBe.Parent ? 'The algorithm iterated ' + totalIterationsWhenClipping / numberOfClippings + ' times on average.' : '')
   // Tests showed that watchers can be triggered by the unmounting cycle. We prevent useless recalculation to improve smoothness of the UI.
   amImounted = false
   resizingObserver.disconnect()
+  window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  lastWindowWidthCaught = 0
 })
 
 onUnmounted(() => {
@@ -278,13 +305,9 @@ function didMyGivenContentChange () : boolean {
   return props.text !== textPropsDuringLastUpdate
 }
 
-function areChildrenIdentified () : boolean {
-  return !innerElements.isAnUpdateOrdered && innerElements.allInstanciatedElements.value.length === slot.value.length
-}
-
 function identifyChildren () : boolean {
   if (innerElements.allInstanciatedElements.value.length !== slot.value.length) {
-    logStep('red', 'could not identify children')
+    logStep('attention', 'could not identify children')
     // some children are not instanciated yet
     innerElements.isAnUpdateOrdered = true
     return false
@@ -313,44 +336,39 @@ function invalidateChildrenIdentities () {
   innerElements.isAnUpdateOrdered = true
 }
 
-function updateContent () {
+function updateContent (force : boolean) {
   if (whatIam.value === WhatIcanBe.Error || !amImounted || !frameSpan.value) {
-    logStep('red', 'update is impossible. amImounted and frameSpan are', amImounted, !!frameSpan.value)
+    logStep('attention', 'update is impossible. amImounted and frameSpan are', amImounted, !!frameSpan.value)
     return
   }
   if (whatIam.value === WhatIcanBe.Parent) {
-    enterUpdateCycleAsAparent()
+    enterUpdateCycleAsAparent(force)
   } else {
-    enterUpdateCycleAsTextclipper()
+    enterUpdateCycleAsTextclipper(force)
   }
 }
 
-function enterUpdateCycleAsAparent (childId? : number) {
+function enterUpdateCycleAsAparent (force : boolean = false) {
   if (amIinsideAparent.value) {
     // if we are here, it means we are a parent inside a parent
     if (!amIreadyForUpdate) {
-      logStep('green', 'notifying my parent')
+      logStep('signal', 'notifying my parent')
       // propagating up the refresh signal in the tree of MiddleEllipsis components
-      props.meCallbackToInformParentAboutChanges!(myInstanceId.value)
+      props.meCallbackToInformParentAboutChanges!()
     }
     return
   }
   if (!amImounted) {
-    logStep('normal', 'aborting update cycle: not mounted')
+    logStep('neutral', 'aborting update cycle: not mounted')
     // A child calls us but we are not mounted yet. No problem, we update our children after we are mounted anyway.
-    return
-  }
-  if (!areChildrenIdentified()) {
-    // we do not know all our children yet (they are beeing mounted or have been too recently)
-    warn('MiddleEllipsis entered an update cycle as parent but its children are not all known yet. This is an internal bug. Child #' + childId)
     return
   }
   identifyChildren()
   getReadyForUpdate()
-  logStep('green', 'asking children to update and settle')
+  logStep('signal', 'asking children to update and settle')
   // first we allow children with an undefined width to update their content
   for (const child of innerElements.widthUndefinedChildren) {
-    child.updateContent()
+    child.updateContent(force)
   }
   // each of these children collpases their frame now to touch their text
   for (const child of innerElements.widthUndefinedChildren) {
@@ -361,7 +379,7 @@ function enterUpdateCycleAsAparent (childId? : number) {
   TODO here: insert the fix for the last visual bug I found during tests (if anyone reads this and worries: it happens in a specific configuration that is not used by the search bar: two ore more children of defined width among which one has a short text)
   Fix:
    implement and expose howMuchCanMyFrameShrink(additionalWidthAvailable : number) : number
-     this function would return  getFW()+addWidthA-calcTW(props.text)-ResizeObserverLagMargin  if (it is positive) && (the frame has a flex-grow defined and > 0), otherwise 0.
+     this function would return  getFW()+addWidthA-calcTW(props.text)-ResizeObserverLagMargin  if (it is positive) && (the frame has a flex-grow defined and > 0 and flex-direction != column(-reverse)), otherwise 0.
    updateContent() must take a new argument (additionalWidthAvailable)
    Before updating all children of defined width:
      ask everyone howMuchCanMyFrameShrink(). Positive answers mean that the corresponding child will not clip (its text fits entirely).
@@ -372,7 +390,7 @@ function enterUpdateCycleAsAparent (childId? : number) {
     Now the updates of children of defined width can be launched with updateContent(additionalWidthAvailable[child]) the parameter being what has been distributed.
   */
   for (const child of innerElements.widthDefinedChildren) {
-    child.updateContent()
+    child.updateContent(force)
   }
   // now that they adapted their text to their width, we can fill them, their text is decided so their will not influence each other
   for (const child of innerElements.widthDefinedChildren) {
@@ -389,17 +407,17 @@ function enterUpdateCycleAsAparent (childId? : number) {
     settleAfterUpdate()
     saveFinalState()
   }
-  logStep('normal', 'update cycle completed')
+  logStep('neutral', 'update cycle completed')
 }
 
-function enterUpdateCycleAsTextclipper () {
+function enterUpdateCycleAsTextclipper (force : boolean) {
   currentText = textAfterLastUpdate.text
   getReadyForUpdate()
-  if (determineReason(true)) {
+  if (determineReason(true) || force) {
     currentText = searchForIdealLength(props.text, getFrameWidth() - ResizeObserverLagMargin)
-    logStep('purple', 'text clipped, length difference: ', String(currentText.length - textAfterLastUpdate.text.length))
+    logStep('completed', 'text clipped (with ' + canvasContextToCalculateTextWidths.font + '), length difference: ', String(currentText.length - textAfterLastUpdate.text.length))
   } else {
-    logStep('blue', 'text restored, no reclipping needed')
+    logStep('good', 'text restored, no reclipping needed')
   }
   if (!amIinsideAparent.value) {
     settleAfterUpdate()
@@ -489,7 +507,7 @@ function setFrameWidth (mode: WidthMode, x: number = 0) {
 function determineReason (considerThatTheChangeAffectMeOnly : boolean) : UpdateReason {
   let reason : UpdateReason
   const gaps = calculateGaps()
-  if (gaps.before === undefined || didMyGivenContentChange() || whatIam.value === WhatIcanBe.Parent) {
+  if (gaps.before === undefined || didMyGivenContentChange() || whatIam.value === WhatIcanBe.Parent || gaps.now <= 0 || gaps.before <= 0) {
     reason = UpdateReason.GapChangeToBeDetermined
   } else {
     let changeMightNotRequireAnUpdate = gaps.now >= ResizeObserverLagMargin // the content still fits the frame
@@ -505,7 +523,7 @@ function determineReason (considerThatTheChangeAffectMeOnly : boolean) : UpdateR
       reason = UpdateReason.None
     }
   }
-  logStep('normal', ['my gap is fine as it is.', 'my gap changed (to be determined).', 'my gap decreased.', 'my gap increased.'][reason], 'Gaps:', gaps)
+  logStep('neutral', ['my gap is fine as it is.', 'my gap changed (to be determined).', 'my gap decreased.', 'my gap increased.'][reason], 'Gaps:', gaps)
   return reason
 
   function calculateGaps () : {before : number|undefined, now : number} {
@@ -534,11 +552,11 @@ function getReadyForUpdate () {
     setFrameWidth(WidthMode.FixedFlexGrow, props.initialFlexGrow)
   }
   if (whatIam.value !== WhatIcanBe.Parent) {
-    logStep('normal', 'getting ready for update')
+    logStep('neutral', 'getting ready for update')
     setFrameText('') // better done after setFrameWidth() for performance reasons
   } else {
     identifyChildren()
-    logStep('green', 'asking children to get ready')
+    logStep('signal', 'asking children to get ready')
     for (const child of innerElements.widthDefinedChildren) {
       // All children of defined width must be prepared first. Preparing the undefined-width children first would change the width of the defined-width ones (because of the initial flex-grows of the undefined-width ones), thus making their reasons unreliable.
       child.getReadyForUpdate()
@@ -565,7 +583,7 @@ function settleAfterUpdate () {
     setFrameWidth(WidthMode.NoFlexGrow)
   }
   amIreadyForUpdate = false
-  logStep('normal', 'settled')
+  logStep('neutral', 'settled')
 }
 
 function saveFinalState () {
@@ -574,49 +592,43 @@ function saveFinalState () {
   textAfterLastUpdate = { ...calculateTextWidth(currentText) }
 }
 
-function logStep (color : 'normal'|'red'|'yellow'|'green'|'blue'|'purple', msg : string, a? : any, b? : any, c? : any) {
-  if (DEBUG) {
-    const parentInParent = whatIam.value === WhatIcanBe.Parent && amIinsideAparent.value
-    let common = ''
+function logStep (color : 'neutral'|'attention'|'event'|'signal'|'good'|'completed', msg : string, a? : any, b? : any) {
+  if (!DEBUG) {
+    return
+  }
+  const parentInParent = whatIam.value === WhatIcanBe.Parent && amIinsideAparent.value
+  let common = ''
 
-    if (whatIam.value === WhatIcanBe.Standalone) {
-      common += '\u001B[90m'
-    }
-    common += whatIam.value === WhatIcanBe.Child ? '    ' : (parentInParent ? '  ' : '')
-    common += ['Error', 'Parent', 'Child', 'Standalone'][whatIam.value]
-    if (whatIam.value === WhatIcanBe.Child || parentInParent) {
-      common += ' #' + myInstanceId.value
-    }
-    if (whatIam.value !== WhatIcanBe.Parent) {
-      common += ' "' + (props.text as string).slice(0, 8) + '…"'
-    }
-    common += (amIofDefinedWidth.value ? ' (defined' : ' (undef') + ' width cached: ' + lastMeasuredFrameWidth + ') '
-    switch (color) {
-      case 'red' : msg = '\u001B[31m' + msg; break
-      case 'yellow' : msg = '\u001B[33m' + msg; break
-      case 'green' : msg = '\u001B[32m' + msg; break
-      case 'blue' : msg = '\u001B[34m' + msg; break
-      case 'purple' : msg = '\u001B[35m' + msg; break
-      default : msg = '\u001B[0m' + msg
-    }
-    const writer = console
-    if (!a && !b && !c) {
-      writer.log(common + msg)
-    } else if (!b && !c) {
-      writer.log(common + msg, a)
-    } else if (!c) {
-      writer.log(common + msg, a, b)
-    } else {
-      writer.log(common + msg, a, b, c)
-    }
+  if (whatIam.value === WhatIcanBe.Standalone) {
+    common += '\u001B[90m'
+  }
+  common += whatIam.value === WhatIcanBe.Child ? '    ' : (parentInParent ? '  ' : '')
+  common += ['Error', 'Parent', 'Child', 'Standalone'][whatIam.value]
+  if (whatIam.value !== WhatIcanBe.Parent) {
+    common += ' "' + (props.text as string).slice(0, 8) + '…"'
+  }
+  common += (amIofDefinedWidth.value ? ' (defined' : ' (undef') + ' width cached: ' + lastMeasuredFrameWidth + ') '
+  switch (color) {
+    case 'attention' : msg = '\u001B[31m' + msg; break
+    case 'event' : msg = '\u001B[33m' + msg; break
+    case 'signal' : msg = '\u001B[32m' + msg; break
+    case 'good' : msg = '\u001B[34m' + msg; break
+    case 'completed' : msg = '\u001B[35m' + msg; break
+    default : msg = '\u001B[0m' + msg
+  }
+  const writer = console
+  if (!a && !b) {
+    writer.log(common + msg)
+  } else if (!b) {
+    writer.log(common + msg, a)
+  } else {
+    writer.log(common + msg, a, b)
   }
 }
 
 function whatIsMyGivenContent () : any {
   return whatIam.value !== WhatIcanBe.Parent ? (props.text ? 'text' : 'no text') : innerElements.allInstanciatedElements.value
 }
-
-defineExpose<ExportedMembers>(exportedMembers)
 
 function searchForIdealLength (originalText: string = '', targetWidth: number): string {
   let current = calculateTextWidth(originalText)
@@ -789,6 +801,7 @@ const frameClassList = computed(() => 'meframe-unique000name_16218934709 ' + pro
 .meframe-unique000name_16218934709 { // a fancy name is needed because we get our class list from `props.class` and we must avoid that one of those names overrides ours
   display: inline-flex;
   position: relative;
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
 }

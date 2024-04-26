@@ -50,7 +50,8 @@ var (
 )
 
 const (
-	maxNameLength       uint64 = 50
+	maxNameLength              = 50
+	maxValidatorsInList        = 20
 	maxQueryLimit       uint64 = 100
 	defaultReturnLimit  uint64 = 10
 	sortOrderAscending         = "asc"
@@ -60,6 +61,11 @@ const (
 	gnosis                     = "gnosis"
 	allowEmpty                 = true
 	forbidEmpty                = false
+)
+
+var (
+	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
+	errBadRequest   = errors.New("bad request")
 )
 
 type Paging struct {
@@ -90,7 +96,7 @@ func checkName(handlerErr *error, name string, minLength int) string {
 	if len(name) < minLength {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too short, minimum length is %d`, name, minLength))
 		return name
-	} else if len(name) > 50 {
+	} else if len(name) > maxNameLength {
 		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too long, maximum length is %d`, name, maxNameLength))
 		return name
 	}
@@ -107,9 +113,15 @@ func checkEmail(handlerErr *error, email string) string {
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
-func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
+func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
+	// check if content type is application/json
+	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+		joinErr(handlerErr, "Content-Type header must be 'application/json'")
+	}
+	body := r.Body
+
 	// Read the entire request body (this consumes the request body)
-	bodyBytes, err := io.ReadAll(r)
+	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		log.Error(err, "error reading request body", 0, nil)
 		return errors.New("can't read request body")
@@ -209,9 +221,6 @@ func parseDashboardId(id string) (interface{}, error) {
 		return nil, errors.New("invalid format for parameter 'dashboard_id'")
 	}
 	indexes, publicKeys := checkValidatorList(&err, string(decodedId))
-	if len(indexes)+len(publicKeys) > 20 {
-		return nil, errors.New("too many validators in the list, maximum is 20")
-	}
 	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, err
 }
 
@@ -232,6 +241,12 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 		if err != nil {
 			return nil, err
 		}
+		if len(validators) == 0 {
+			return nil, fmt.Errorf("%w: no validators found for given id", dataaccess.ErrNotFound)
+		}
+		if len(validators) > maxValidatorsInList {
+			return nil, fmt.Errorf("%w too many validators in list, maximum is %d", errBadRequest, maxValidatorsInList)
+		}
 		return &types.VDBId{Validators: validators}, nil
 	}
 	return nil, errMsgParsingId
@@ -243,7 +258,7 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", errBadRequest, err)
 	}
 	// convert to VDBId
 	dashboardId, err := h.getDashboardId(dashboardIdParam)
@@ -467,6 +482,7 @@ func returnConflict(w http.ResponseWriter, err error) {
 }
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
+	log.Error(err, "internal server error", 0, nil)
 	returnError(w, http.StatusInternalServerError, err)
 }
 
@@ -474,8 +490,9 @@ func handleError(w http.ResponseWriter, err error) {
 	if errors.Is(err, dataaccess.ErrNotFound) {
 		returnNotFound(w, err)
 		return
+	} else if errors.Is(err, errBadRequest) {
+		returnBadRequest(w, err)
+		return
 	}
-	// TODO @recy21 define error types in data access package
-	// TODO @LuccaBitfly handle specific data access errors
 	returnInternalServerError(w, err)
 }

@@ -114,8 +114,6 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 // --------------------------------------
 // Validator Dashboards
 
-var errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
-
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var err error
 	user, err := h.getUser(r)
@@ -127,7 +125,7 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		Name    string `json:"name"`
 		Network string `json:"network"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -188,7 +186,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -219,7 +217,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -288,7 +286,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -392,7 +390,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -423,7 +421,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
@@ -829,6 +827,44 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalClDeposits(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalConsensusDepositsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalElDeposits(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalExecutionDepositsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
 func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var err error
 	q := r.URL.Query()
@@ -852,6 +888,25 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{
 		Data:   data,
 		Paging: *paging,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
+	var err error
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	response := types.InternalGetValidatorDashboardTotalWithdrawalsResponse{
+		Data: *data,
 	}
 	returnOk(w, response)
 }
