@@ -150,6 +150,7 @@
     }
     .p-checkbox-icon {
       transition-duration: 0.2s;
+      pointer-events: none; // prevents the checkbox from letting click events pass through (like a hole) when unchecking
       .p-icon {
         width: 14px;
         height: 14px;

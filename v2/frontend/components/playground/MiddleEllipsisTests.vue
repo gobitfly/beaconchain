@@ -100,7 +100,7 @@ const showAllCSSclipped = ref<boolean>(false)
 
   <div style="position: relative;">
     <p>
-      <b>{{ randomTexts.length }} hundreds MiddleEllipses to see the lower smoothness of the UI when you resize your window:</b>
+      <b>{{ randomTexts.length }} MiddleEllipses to see the lower smoothness of the UI when you resize your window:</b>
       <Button @click="showAllME=!showAllME">
         show/hide
       </Button>

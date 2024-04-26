@@ -184,9 +184,10 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
 	PublicKey             PubKey          `json:"public_key"`
-	Index                 uint64          `json:"index"`
+	Index                 *uint64         `json:"index,omitempty"`
 	GroupId               uint64          `json:"group_id"`
 	Block                 uint64          `json:"block"`
+	Timestamp             time.Time       `json:"timestamp"`
 	From                  Address         `json:"from"`
 	Depositor             Address         `json:"depositor"`
 	TxHash                Hash            `json:"tx_hash"`
@@ -208,6 +209,18 @@ type VDBConsensusDepositsTableRow struct {
 }
 type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
+type VDBTotalExecutionDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalExecutionDepositsResponse ApiDataResponse[VDBTotalExecutionDepositsData]
+
+type VDBTotalConsensusDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTotalConsensusDepositsData]
+
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
@@ -219,6 +232,12 @@ type VDBWithdrawalsTableRow struct {
 	Amount    decimal.Decimal `json:"amount"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
+
+type VDBTotalWithdrawalsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
 // Manage Modal

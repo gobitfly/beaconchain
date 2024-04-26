@@ -1,4 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
+import { warn } from 'vue'
+import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
 import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
@@ -14,6 +16,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group_modify',
+  DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
   DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
   DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
@@ -118,6 +121,11 @@ const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
     mock: false
   },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
+    path: '/validator-dashboards/{dashboardKey}/rewards-chart',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
+    mock: false
+  },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
@@ -168,6 +176,7 @@ const mapping: Record<string, MappingData> = {
 
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
+  const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
@@ -199,7 +208,17 @@ export function useCustomFetch () {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
     options.credentials = 'include'
-    const method = map.method || 'GET'
+    const method = options.method || map.method || 'GET'
+
+    // For non GET method's we need to set the csrf header for security
+    if (method !== 'GET') {
+      if (csrfHeader.value) {
+        options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
+      } else {
+        warn('missing csrf header!')
+      }
+    }
+
     if (pathName === API_PATH.LOGIN) {
       const res = await $fetch<LoginResponse>(path, {
         method,
@@ -210,7 +229,12 @@ export function useCustomFetch () {
     }
 
     try {
-      return await $fetch<T>(path, { method, ...options, baseURL })
+      const res = await $fetch.raw<T>(path, { method, ...options, baseURL })
+      if (method === 'GET') {
+        // We get the csrf header from GET requests
+        setCsrfHeader(res.headers)
+      }
+      return res._data as T
     } catch (e: any) {
       if (!dontShowError) {
         showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
