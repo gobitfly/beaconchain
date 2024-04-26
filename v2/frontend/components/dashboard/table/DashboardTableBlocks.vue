@@ -92,7 +92,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="blocks"
-            data-key="epoch"
+            data-key="slot"
             :expandable="true"
             class="block-table"
             :cursor="cursor"
