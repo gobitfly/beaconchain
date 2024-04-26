@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
+import { type DashboardKey, type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
-import { type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -12,6 +12,7 @@ const userDashboardStore = defineStore('user_dashboards_store', () => {
 
 export function useUserDashboardStore () {
   const { fetch } = useCustomFetch()
+  const { t: $t } = useI18n()
   const { data } = storeToRefs(userDashboardStore())
   const { isLoggedIn } = useUserStore()
   const dashboardCookie = useCookie(COOKIE_KEY.USER_DASHBOARDS)
@@ -22,6 +23,20 @@ export function useUserDashboardStore () {
     if (isLoggedIn.value) {
       const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
       data.value = res.data
+
+      // add fallback names for dashboards that have no names
+      if (dashboards.value) {
+        dashboards.value.account_dashboards?.forEach((d) => {
+          if (d.name === '') {
+            d.name = `${$t('dashboard.account_dashboard')} ${d.id}`
+          }
+        })
+        dashboards.value.validator_dashboards?.forEach((d) => {
+          if (d.name === '') {
+            d.name = `${$t('dashboard.validator_dashboard')} ${d.id}`
+          }
+        })
+      }
     } else if (dashboardCookie.value) {
       if (typeof dashboardCookie.value === 'object') {
         // it seems the browser sometimes auto converts the string into an object
@@ -109,5 +124,27 @@ export function useUserDashboardStore () {
     saveToCookie()
   }
 
-  return { dashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard, updateHash }
+  function getDashboardLabel (key: DashboardKey, type:DashboardType): string {
+    const isValidatorDashboard = type === 'validator'
+    const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+    const id = parseInt(key ?? '')
+    if (!isNaN(id)) {
+      const userDb = list?.find(db => db.id === id)
+      if (userDb) {
+        return userDb.name
+      }
+
+      // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
+      return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
+    }
+
+    const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === key)
+    if (cookieDb || (isLoggedIn.value && !key)) {
+      return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
+    }
+
+    return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
+  }
+
+  return { dashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard, updateHash, getDashboardLabel }
 }

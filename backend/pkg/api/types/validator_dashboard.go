@@ -77,10 +77,10 @@ type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uin
 // ------------------------------------------------------------
 // Rewards Tab
 type VDBRewardesTableDuty struct {
-	Attestation float64 `json:"attestation"`
-	Proposal    float64 `json:"proposal"`
-	Sync        float64 `json:"sync"`
-	Slashing    uint64  `json:"slashing"`
+	Attestation *float64 `json:"attestation"`
+	Proposal    *float64 `json:"proposal"`
+	Sync        *float64 `json:"sync"`
+	Slashing    *uint64  `json:"slashing"`
 }
 
 type VDBRewardsTableRow struct {
@@ -140,14 +140,24 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 // ------------------------------------------------------------
 // Heatmap Tab
 type VDBHeatmapCell struct {
-	X     uint64  `json:"x"`     // Epoch
-	Y     uint64  `json:"y"`     // Group ID
+	X uint64 `json:"x"` // Epoch
+	Y uint64 `json:"y"` // Group ID
+
 	Value float64 `json:"value"` // Attestaton Rewards
 }
+type VDBHeatmapEvent struct {
+	X uint64 `json:"x"` // Epoch
+	Y uint64 `json:"y"` // Group ID
+
+	Proposal bool `json:"proposal"`
+	Slash    bool `json:"slash"`
+	Sync     bool `json:"sync"`
+}
 type VDBHeatmap struct {
-	Epochs   []uint64         `json:"epochs"`    // X-Axis Categories
-	GroupIds []uint64         `json:"group_ids"` // Y-Axis Categories
-	Data     []VDBHeatmapCell `json:"data"`
+	Epochs   []uint64          `json:"epochs"`    // X-Axis Categories
+	GroupIds []uint64          `json:"group_ids"` // Y-Axis Categories
+	Data     []VDBHeatmapCell  `json:"data"`
+	Events   []VDBHeatmapEvent `json:"events"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
@@ -159,13 +169,14 @@ type VDBHeatmapTooltipData struct {
 	Epoch uint64 `json:"epoch"`
 
 	Proposers []VDBHeatmapTooltipDuty `json:"proposers"`
-	Syncs     []VDBHeatmapTooltipDuty `json:"syncs"`
+	Syncs     []uint64                `json:"syncs"`
 	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
 
-	AttestationsHead   StatusCount     `json:"attestations_head"`
-	AttestationsSource StatusCount     `json:"attestations_source"`
-	AttestationsTarget StatusCount     `json:"attestations_target"`
-	AttestationIncome  decimal.Decimal `json:"attestation_income"`
+	AttestationsHead      StatusCount     `json:"attestations_head"`
+	AttestationsSource    StatusCount     `json:"attestations_source"`
+	AttestationsTarget    StatusCount     `json:"attestations_target"`
+	AttestationIncome     decimal.Decimal `json:"attestation_income"`
+	AttestationEfficiency float64         `json:"attestation_efficiency"`
 }
 type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatmapTooltipData]
 
@@ -173,9 +184,10 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
 	PublicKey             PubKey          `json:"public_key"`
-	Index                 uint64          `json:"index"`
+	Index                 *uint64         `json:"index,omitempty"`
 	GroupId               uint64          `json:"group_id"`
 	Block                 uint64          `json:"block"`
+	Timestamp             time.Time       `json:"timestamp"`
 	From                  Address         `json:"from"`
 	Depositor             Address         `json:"depositor"`
 	TxHash                Hash            `json:"tx_hash"`
@@ -197,6 +209,18 @@ type VDBConsensusDepositsTableRow struct {
 }
 type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
+type VDBTotalExecutionDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalExecutionDepositsResponse ApiDataResponse[VDBTotalExecutionDepositsData]
+
+type VDBTotalConsensusDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTotalConsensusDepositsData]
+
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
@@ -208,6 +232,12 @@ type VDBWithdrawalsTableRow struct {
 	Amount    decimal.Decimal `json:"amount"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
+
+type VDBTotalWithdrawalsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
 // Manage Modal

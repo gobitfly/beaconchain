@@ -1,9 +1,7 @@
 package types
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -11,28 +9,6 @@ type ValidatorStatus string
 
 func (s ValidatorStatus) IsActive() bool {
 	return s == ActiveOngoing || s == ActiveExiting || s == ActiveSlashed || s == Active
-}
-
-type bytesHexStr []byte
-
-func (s *bytesHexStr) UnmarshalText(b []byte) error {
-	if s == nil {
-		return fmt.Errorf("cannot unmarshal bytes into nil")
-	}
-	if len(b) >= 2 && b[0] == '0' && b[1] == 'x' {
-		b = b[2:]
-	}
-	out := make([]byte, len(b)/2)
-	_, err := hex.Decode(out, b)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling text: %w", err)
-	}
-	*s = out
-	return nil
-}
-
-func (s *bytesHexStr) String() string {
-	return fmt.Sprintf("0x%x", *s)
 }
 
 type Uint64Str uint64

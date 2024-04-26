@@ -233,7 +233,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 	cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
 
 	if cfg.RedisSessionStoreEndpoint == "" && cfg.RedisCacheEndpoint != "" {
-		log.Infof("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
+		log.Warnf("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
 

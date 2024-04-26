@@ -311,8 +311,8 @@ func main() {
 		for _, validator := range validators.Data {
 			validatorsArr = append(validatorsArr, &types.Validator{
 				Index:                      validator.Index,
-				PublicKey:                  utils.MustParseHex(validator.Validator.Pubkey),
-				WithdrawalCredentials:      utils.MustParseHex(validator.Validator.WithdrawalCredentials),
+				PublicKey:                  validator.Validator.Pubkey,
+				WithdrawalCredentials:      validator.Validator.WithdrawalCredentials,
 				Balance:                    validator.Balance,
 				EffectiveBalance:           validator.Validator.EffectiveBalance,
 				Slashed:                    validator.Validator.Slashed,
@@ -375,7 +375,7 @@ func main() {
 			}
 			_, err = tx.Exec(`INSERT INTO blocks_deposits (block_slot, block_root, block_index, publickey, withdrawalcredentials, amount, signature)
 			VALUES (0, '\x01', $1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-				validator.Index, utils.MustParseHex(validator.Validator.Pubkey), utils.MustParseHex(validator.Validator.WithdrawalCredentials), validator.Balance, []byte{0x0},
+				validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance, []byte{0x0},
 			)
 			if err != nil {
 				log.Error(err, "error exporting genesis-deposits", 0)

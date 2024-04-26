@@ -1,3 +1,4 @@
+import type { BigNumber } from '@ethersproject/bignumber'
 import type { CryptoCurrency, CryptoUnits, Currency } from '~/types/currencies'
 
 export type ValueConvertOptions = {
@@ -20,3 +21,5 @@ export type ExtendedLabel = {
 
 export const TimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
 export type TimeFrame = typeof TimeFrames[number]
+
+export type WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions) => ExtendedLabel

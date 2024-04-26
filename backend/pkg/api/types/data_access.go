@@ -63,10 +63,26 @@ type CLDepositsCursor struct {
 	SlotIndex int64
 }
 
+type ELDepositsCursor struct {
+	GenericCursor
+	BlockNumber int64
+	LogIndex    int64
+}
+
 type ValidatorsCursor struct {
 	GenericCursor
 
 	Index uint64 `json:"vi"`
+}
+
+type WithdrawalsCursor struct {
+	GenericCursor
+
+	Slot            uint64
+	WithdrawalIndex uint64
+	Index           uint64
+	Recipient       []byte
+	Amount          uint64
 }
 
 type User struct {
@@ -74,4 +90,15 @@ type User struct {
 	Password  string `db:"password"`
 	ProductId string `db:"product_id"`
 	UserGroup string `db:"user_group"`
+}
+
+type BlocksCursor struct {
+	GenericCursor
+	Slot int64 // basically the same as Block, Epoch, Age; mandatory, used to index
+
+	// optional, max one of those (for now)
+	Proposer int64
+	Group    int64
+	Status   int64
+	Reward   int64
 }
