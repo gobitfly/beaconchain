@@ -154,45 +154,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		scheduledPropsQryValues = scheduledPropsQryValues + fmt.Sprintf(`($%d::int, $%d::int, $%d::int, $%d::int, '0', null::int, null::bytea, null::int, null::bytea, ''), `, len(params)-3, len(params)-2, len(params)-1, len(params))
 	}
 
-	query := ""
-	if len(scheduledPropsQryValues) > 0 {
-		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
-		query = fmt.Sprintf(`SELECT distinct on (slot) * FROM (WITH scheduled_proposals (
-			proposer,
-			group_id,
-			epoch,
-			slot,
-			status,
-			exec_block_number,
-			exec_fee_recipient,
-			mev_reward,
-			proposer_fee_recipient,
-			graffiti_text
-		) AS (VALUES %s)
-		SELECT * FROM scheduled_proposals
-		UNION
-		(`, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
-	}
-
-	query += withGroups + `
-	SELECT
-		proposer,
-		group_id,
-		epoch,
-		slot,
-		status,
-		exec_block_number,
-		exec_fee_recipient,
-		relays_blocks.value AS mev_reward,
-		COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
-		graffiti_text
-	FROM validator_groups
-	LEFT JOIN blocks ON blocks.proposer = validator_groups.validator_index
-	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
-	`
-	if len(scheduledPropsQryValues) > 0 {
-		query += `)) as u `
-	}
 	where := ``
 	orderBy := `ORDER BY `
 	sortOrder := ` ASC`
@@ -205,9 +166,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	case enums.VDBBlockProposer:
 		sortColName = `proposer`
 		val = currentCursor.Proposer
-	case enums.VDBBlockGroup:
-		sortColName = `group_id`
-		val = currentCursor.Group
 	case enums.VDBBlockStatus:
 		sortColName = `status`
 		val = currentCursor.Status
@@ -256,6 +214,52 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		// make sure the distinct clause filters out the correct row (e.g. block=nil)
 		orderBy += `, exec_block_number`
 	}
+
+	query := ""
+	if len(scheduledPropsQryValues) > 0 {
+		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
+		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
+		distinct := "slot"
+		if !onlyPrimarySort {
+			distinct = sortColName + ", " + distinct
+		}
+		query = fmt.Sprintf(`SELECT distinct on (%s) * FROM (WITH scheduled_proposals (
+			proposer,
+			group_id,
+			epoch,
+			slot,
+			status,
+			exec_block_number,
+			exec_fee_recipient,
+			mev_reward,
+			proposer_fee_recipient,
+			graffiti_text
+		) AS (VALUES %s)
+		SELECT * FROM scheduled_proposals
+		UNION
+		(`, distinct, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
+	}
+
+	query += withGroups + `
+	SELECT
+		proposer,
+		group_id,
+		epoch,
+		slot,
+		status,
+		exec_block_number,
+		exec_fee_recipient,
+		relays_blocks.value AS mev_reward,
+		COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
+		graffiti_text
+	FROM validator_groups
+	LEFT JOIN blocks ON blocks.proposer = validator_groups.validator_index
+	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+	`
+	if len(scheduledPropsQryValues) > 0 {
+		query += `)) as u `
+	}
+
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
 		LIMIT $%d
