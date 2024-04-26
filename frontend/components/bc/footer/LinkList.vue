@@ -76,7 +76,7 @@ const columns: Row[] = [
     margin-bottom: var(--padding);
   }
 
-  @media (max-width: 599px) {
+  @media (max-width: 599.9px) {
     margin-top: var(--padding);
   }
 }
