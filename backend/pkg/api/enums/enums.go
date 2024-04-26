@@ -143,9 +143,7 @@ type VDBBlocksColumn int
 var _ EnumFactory[VDBBlocksColumn] = VDBBlocksColumn(0)
 
 const (
-	VDBBlockSlot VDBBlocksColumn = iota
-	VDBBlockGroup
-	VDBBlockEpoch
+	VDBBlockSlot VDBBlocksColumn = iota // default
 	VDBBlockProposer
 	VDBBlockBlock
 	VDBBlockAge
@@ -161,10 +159,6 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	switch s {
 	case "proposer":
 		return VDBBlockProposer
-	case "group_id":
-		return VDBBlockGroup
-	case "epoch":
-		return VDBBlockEpoch
 	case "slot":
 		return VDBBlockSlot
 	case "block":
@@ -182,8 +176,6 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 
 var VDBBlocksColumns = struct {
 	Proposer       VDBBlocksColumn
-	Group          VDBBlocksColumn
-	Epoch          VDBBlocksColumn
 	Slot           VDBBlocksColumn
 	Block          VDBBlocksColumn
 	Age            VDBBlocksColumn
@@ -191,8 +183,6 @@ var VDBBlocksColumns = struct {
 	ProposerReward VDBBlocksColumn
 }{
 	VDBBlockProposer,
-	VDBBlockGroup,
-	VDBBlockEpoch,
 	VDBBlockSlot,
 	VDBBlockBlock,
 	VDBBlockAge,
