@@ -86,25 +86,25 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 		return nil, nil
 	}
 
-	existingIndices, err := d.services.GetExistingValidatorIndices(indices)
+	mapping, release, err := d.services.GetCurrentValidatorMapping()
+	defer release()
 	if err != nil {
 		return nil, err
 	}
 
-	extraIndices, err := d.services.GetExistingValidatorIndexesOfPubkeySlice(publicKeys)
-	if err != nil {
-		return nil, err
+	validators := make(map[t.VDBValidator]bool, 0)
+	for _, pubkey := range publicKeys {
+		if v, ok := mapping.ValidatorIndices[pubkey]; ok {
+			validators[t.VDBValidator{Index: *v}] = true
+		}
+	}
+	for _, index := range indices {
+		if index < uint64(len(mapping.ValidatorPubkeys)) {
+			validators[t.VDBValidator{Index: index}] = true
+		}
 	}
 
-	// convert to t.VDBValidator slice
-	validators := make([]t.VDBValidator, len(existingIndices)+len(publicKeys))
-	for i, index := range append(existingIndices, extraIndices...) {
-		validators[i] = t.VDBValidator{Index: index}
-	}
-
-	// Create a map to remove potential duplicates
-	validatorResultMap := utils.SliceToMap(validators)
-	result := maps.Keys(validatorResultMap)
+	result := maps.Keys(validators)
 
 	return result, nil
 }
