@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
 import { SearchbarStyle, type NetworkFilter } from '~/types/searchbar'
 import { ChainInfo, ChainIDs } from '~/types/networks'
 
@@ -102,7 +104,7 @@ function oneOptionChanged (index : number) {
         <span class="label">
           {{ t('search_bar.network_filter_label') + ' ' + headState.network }}
         </span>
-        ▾
+        <fontAwesomeIcon class="arrow" :icon="faCaretDown" />
       </div>
     </BcSearchbarFilterButton>
     <div
@@ -140,6 +142,11 @@ function oneOptionChanged (index : number) {
       .label {
         display: inline-flex;
         flex-grow: 1;
+      }
+      .arrow {
+        position: relative;
+        margin-top: auto;
+        margin-bottom: auto;
       }
     }
   }
@@ -185,10 +192,10 @@ function oneOptionChanged (index : number) {
         display: inline-flex;
         flex-grow: 1;
         margin-left: 5px;
-        margin-top: auto;
-        margin-bottom: auto;
         cursor: pointer;
         user-select: none;
+        margin-top: auto;
+        margin-bottom: auto;
       }
 
       .icon {
