@@ -138,11 +138,6 @@ export function useUserDashboardStore () {
       return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
     }
 
-    const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === key)
-    if (cookieDb || (isLoggedIn.value && !key)) {
-      return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
-    }
-
     return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
   }
 

@@ -10,7 +10,7 @@ import { BcDialogConfirm } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 
-const { dashboardKey, isPublic, setDashboardKey, dashboardType } = useDashboardKey()
+const { dashboardKey, isPublic, setDashboardKey, dashboardType, publicEntities, removeEntities } = useDashboardKey()
 const { refreshDashboards, dashboards, getDashboardLabel } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
@@ -53,23 +53,42 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   return buttons
 })
 
+const shareButtonOptions = computed(() => {
+  const label = isPublic.value ? $t('dashboard.shared') : $t('dashboard.share')
+  const icon = isPublic.value ? faUsers : faShare
+  return { label, icon }
+})
+
 const share = () => {
   alert('Not implemented yet')
 }
 
-const remove = () => {
+const deleteButtonOptions = computed(() => {
+  const disabled = isPublic.value && publicEntities.value?.length === 0
+
+  return { disabled }
+})
+
+const onDelete = () => {
   dialog.open(BcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && removeDashboard(dashboardKey.value),
+    onClose: response => response?.data && deleteDashboard(dashboardKey.value),
     data: {
       question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
-const removeDashboard = async (key: DashboardKey) => {
+const deleteDashboard = async (key: DashboardKey) => {
+  if (isPublic.value) {
+    if (publicEntities.value?.length > 0) {
+      removeEntities(publicEntities.value)
+    }
+    return
+  }
+
   if (dashboardType.value === 'validator') {
     await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
   } else {
@@ -107,16 +126,11 @@ const removeDashboard = async (key: DashboardKey) => {
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
-    <div v-if="isPublic" class="action-button-container">
-      <Button class="share-button" :disabled="true">
-        {{ $t('dashboard.shared') }}<FontAwesomeIcon :icon="faUsers" />
+    <div class="action-button-container">
+      <Button class="share-button" :disabled="isPublic" @click="share()">
+        {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
-    </div>
-    <div v-else class="action-button-container">
-      <Button class="share-button" @click="share()">
-        {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
-      </Button>
-      <Button class="p-button-icon-only" @click="remove()">
+      <Button class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
