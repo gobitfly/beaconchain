@@ -278,21 +278,25 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			// Complete the next data
 			nextData.GroupId = validatorGroupMap[nextData.Index]
 			nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
-
-			result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
-
-			// Flag if above limit
-			moreDataFlag = moreDataFlag || len(result) > int(limit)
-			if !moreDataFlag && !currentCursor.IsValid() {
-				// No paging required
-				return result, &paging, nil
+		} else {
+			// If there is no next data, add a missing estimate row
+			nextData = &t.VDBWithdrawalsTableRow{
+				IsMissingEstimate: true,
 			}
+		}
+		result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
 
-			// Remove the last entry from data as it is only required for the check
-			if moreDataFlag {
-				result = result[:len(result)-1]
-				cursorData = cursorData[:len(cursorData)-1]
-			}
+		// Flag if above limit
+		moreDataFlag = moreDataFlag || len(result) > int(limit)
+		if !moreDataFlag && !currentCursor.IsValid() {
+			// No paging required
+			return result, &paging, nil
+		}
+
+		// Remove the last entry from data as it is only required for the check
+		if moreDataFlag {
+			result = result[:len(result)-1]
+			cursorData = cursorData[:len(cursorData)-1]
 		}
 	}
 
@@ -351,7 +355,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 			// this validator is eligible for withdrawal, check if it is the next one
 			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
 				nextValidator = &validator
-				if nextValidator > *stats.LatestValidatorWithdrawalIndex {
+				if *nextValidator > *stats.LatestValidatorWithdrawalIndex {
 					// the first validator after the cursor has to be the next validator
 					break
 				}
@@ -370,7 +374,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	}
 	lastWithdrawnEpoch := lastWithdrawnEpochs[*nextValidator]
 
-	distance, err := d.getWithdrawableCountFromCursor(epoch, *nextValidator, *stats.LatestValidatorWithdrawalIndex)
+	distance, err := d.getWithdrawableCountFromCursor(*nextValidator, *stats.LatestValidatorWithdrawalIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -415,13 +419,13 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	return nextData, nil
 }
 
-func (d *DataAccessService) getWithdrawableCountFromCursor(epoch uint64, validatorindex uint64, cursor uint64) (uint64, error) {
+func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex uint64, cursor uint64) (uint64, error) {
 	// the validators' balance will not be checked here as this is only a rough estimation
 	// checking the balance for hundreds of thousands of validators is too expensive
 
 	stats := cache.LatestStats.Get()
 	if stats == nil || stats.ActiveValidatorCount == nil || stats.TotalValidatorCount == nil {
-		return nil, errors.New("stats not available")
+		return 0, errors.New("stats not available")
 	}
 
 	var maxValidatorIndex uint64
