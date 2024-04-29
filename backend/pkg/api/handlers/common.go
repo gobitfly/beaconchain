@@ -131,7 +131,7 @@ func (v validationError) checkEmail(email string) string {
 }
 
 // check request structure (body contains valid json and all required parameters are present)
-// return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
+// return error only if internal error occurs, otherwise add error to validationError and/or return nil
 func (v validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
@@ -489,6 +489,7 @@ func returnNotFound(w http.ResponseWriter, err error) {
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 0, nil)
+	// TODO: don't return the error message to the user in production
 	returnError(w, http.StatusInternalServerError, err)
 }
 

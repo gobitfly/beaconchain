@@ -125,8 +125,8 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		Name    string `json:"name"`
 		Network string `json:"network"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
@@ -186,8 +186,8 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
@@ -217,8 +217,8 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
@@ -286,8 +286,8 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	indices, pubkeys := v.checkValidatorArray(req.Validators)
@@ -390,8 +390,8 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
@@ -421,8 +421,8 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := v.checkBody(&req, r); bodyErr != nil {
-		handleErr(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
