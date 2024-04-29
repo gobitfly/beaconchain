@@ -7,23 +7,27 @@ type StandardAttestationRewardsResponse struct {
 	ExecutionOptimistic bool `json:"execution_optimistic"`
 	Finalized           bool `json:"finalized"`
 	Data                struct {
-		IdealRewards []struct {
-			EffectiveBalance int64 `json:"effective_balance,string"`
-			Head             int32 `json:"head,string"`
-			Target           int32 `json:"target,string"`
-			Source           int32 `json:"source,string"`
-			InclusionDelay   int32 `json:"inclusion_delay,string"`
-			Inactivity       int32 `json:"inactivity,string"`
-		} `json:"ideal_rewards"`
-		TotalRewards []struct {
-			ValidatorIndex uint64 `json:"validator_index,string"`
-			Head           int32  `json:"head,string"`
-			Target         int32  `json:"target,string"`
-			Source         int32  `json:"source,string"`
-			InclusionDelay int32  `json:"inclusion_delay,string"`
-			Inactivity     int32  `json:"inactivity,string"`
-		} `json:"total_rewards"`
+		IdealRewards []AttestationIdealReward `json:"ideal_rewards"`
+		TotalRewards []AttestationReward      `json:"total_rewards"`
 	} `json:"data"`
+}
+
+type AttestationReward struct {
+	ValidatorIndex uint64 `json:"validator_index,string"`
+	Head           int32  `json:"head,string"`
+	Target         int32  `json:"target,string"`
+	Source         int32  `json:"source,string"`
+	InclusionDelay int32  `json:"inclusion_delay,string"`
+	Inactivity     int32  `json:"inactivity,string"`
+}
+
+type AttestationIdealReward struct {
+	EffectiveBalance int64 `json:"effective_balance,string"`
+	Head             int32 `json:"head,string"`
+	Target           int32 `json:"target,string"`
+	Source           int32 `json:"source,string"`
+	InclusionDelay   int32 `json:"inclusion_delay,string"`
+	Inactivity       int32 `json:"inactivity,string"`
 }
 
 // /eth/v1/beacon/rewards/sync_committee/{block_id}
