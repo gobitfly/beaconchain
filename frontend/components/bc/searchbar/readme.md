@@ -1,4 +1,10 @@
-# Using the component in your code
+**Summary**
+
+- Using the search bar in your code
+- Changing the behavior and look of the search bar thanks to _searchbar.ts_
+- Usage of _MiddleEllipsis.vue_
+
+# Using the search bar in your code
 
 In your `<script setup>`, write
 ```TS
@@ -42,7 +48,7 @@ mySearchbar.value!.closeDropdown() // Useful when you gave `:keep-dropdown-open=
 mySearchbar.value!.empty() // By itself, the search-bar never empties its input field nor its drop-down. You can still clear the search-bar with this method if you want the user to retype from scratch.
 ```
 
-# Changing the behavior of the search bar thanks to _searchbar.ts_
+# Changing the behavior and look of the search bar thanks to _searchbar.ts_
 
 _searchbar.ts_ has been designed as a "configuration file" for the search bar. For example, if the protocol to communicate with the API changes, it might
 not be necessary to modify the code of the search-bar (its behavior and look are hard-coded as little as possible).
@@ -87,3 +93,90 @@ If you want to change the order of the results in the drop-down, it is a bit les
   Note that if different types or networks have the same priority, two results of these types/networks will appear in the drop-down in the order of their `closeness` values
   (a measure of similarity to the user input).
 
+# Usage of _MiddleEllipsis.vue_
+
+This component clips the text that you give in its slot. The text is clipped in the middle so the beginning and the end of the text remain visible.
+It has been designed to adapt the text to its width as quickly as possible (tests show that the optimization algorithm finds almost always the correct clipping within 3 iterations, often 2).
+
+## Vocabulary
+
+In the rest of the documentation, we will use those defintions:
+
+- a component of _defined width_ is a component whose width does not collapse to `0px` or `min-width` when it has no content. So, for example, it has a `flex-grow` or `width` property set, or it is a cell in a grid and the width of its column is fixed in `px` or set to `auto` or `fr` with `grid-template-columns`.
+
+- a component of _undefined width_ is a component whose width collapses to `0px` or `min-width` when it has no content.
+
+## Syntax
+
+### The simplest case
+
+If the room allowed to the text is _defined_ (see the vocabulary above), you can write
+
+```HTML
+<MiddleEllipsis class="my-class" text="my long text" />
+```
+
+### The interesting cases
+
+**Coordination of interdependent MiddleEllipsis components**
+
+When the room that a MiddleEllipsis component has depends on the room that other MiddleEllipsis components take (typically, several MiddleEllipsis components are on the same line and their widths are defined with `flex-grow` values), if you output them individually with the syntax above, their text will look wrongly clipped.
+This is because their widths depend on the content of all of them but they have no way to know it.
+You must gather them in a parent MiddleEllipsis like so:
+```HTML
+<MiddleEllipsis class="my-parent-class">
+  <MiddleEllipsis class="child1-class" text="a long text" />
+  <MiddleEllipsis class="child2-class" text="another long text" />
+  ...
+</MiddleEllipsis>
+```
+Note that :
+- A parent MiddleEllipsis can contain anything, so using a parent does not restrict the layout of your page. See it as a `div`. The parent displays components of other types as they are, untouched. It recognizes and controls its children to make sure that they clip properly.
+- Regarding the children, their display modes can be `inline-flex` or `inline-block` (only `inline` modes make sense).
+
+**Guaranteeing no gap between the clipped text and its neighbors**
+
+When you want
+- to have a room which adapts to its content (you are guaranteed that it is as large as its text, no matter how small the text is),
+- but you do not want this room to exceed some limit (the text must clip at some point),
+what width or flex-grow value should you use? There is no answer (unless the text is known in advance and fixed).
+To achieve that, you can display your text through a MiddleEllipsis of undefined width as follows.
+
+Take a parent of defined width. Inside, sit your MiddleEllipsis of undefined width and the other things to display on that line. For example:
+```HTML
+<MiddleEllipsis class="my-parent-class">
+  <MiddleEllipsis class="child1-class" text="a long text" />
+  <MiddleEllipsis class="undefined-width-child2-class" text="another long text" :initial-flex-grow="1" />
+  ...
+</MiddleEllipsis>
+```
+Note the use of props `initial-flex-grow`, which is mandatory for children of undefined width. It tells the component how much room it can give to its text with respect to the `flex-grow` properties of its neighbors. _initial_ means that the value gives room to clip the text during the computation. The real `flex-grow` of the component remains `0` so it collapses around its content, there is no empty space between it and its neighbors.
+
+**Using more than one ellipsis to clip the text**
+
+If you want your text to get clipped with a fixed number of ellipses, you can give a constant:
+```HTML
+<MiddleEllipsis class="my-class" text="my long text" :ellipses="3" />
+```
+MiddleEllipsis offers the possibility to adapt the number of ellipses to the length of the text. For example,
+```HTML
+<MiddleEllipsis class="my-class" text="my long text" :ellipses="[8,30]" />
+```
+tells the component to use one ellipsis if there is room for 8 characters or less, two ellipses between 9 and 30 characters, and three ellipses above. The array can configure as many cases as you want.
+
+In practice, you will probably want a simple configuration like so:
+```HTML
+<MiddleEllipsis class="my-class" text="my long text" :ellipses="[8]" />
+```
+Here, the text will be clipped with one ellipsis if there is room for less than 9 characters, otherwise two ellipses.
+
+
+## Restrictions
+
+- Never set a padding on the left or right side of a MiddleEllipsis component (margin is not a problem).
+- Never set a width for its left or right border.
+
+Optional props:
+  
+  width-mediaquery-threshold="600"
+Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
