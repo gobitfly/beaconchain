@@ -38,9 +38,9 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, (key) => {
+watch([dashboardKey, overview], () => {
   loadData()
-  getTotalAmount(key)
+  getTotalAmount(dashboardKey.value)
 }, { immediate: true })
 
 watch(query, async (q) => {
@@ -112,7 +112,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column v-if="colsVisible.publicKey" field="public_key" header-class="public_key" :header="$t('dashboard.validator.col.public_key')">
+            <Column
+              v-if="colsVisible.publicKey"
+              :header="$t('dashboard.validator.col.public_key')"
+            >
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
@@ -122,7 +125,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 <span v-else>{{ $t('table.all_time_total') }}</span>
               </template>
             </Column>
-            <Column field="index" header-class="index" :header="$t('common.index')">
+            <Column field="index" :header="$t('common.index')">
               <template #body="slotProps">
                 <NuxtLink
                   v-if="slotProps.data.index !== undefined"
@@ -149,21 +152,41 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </span>
               </template>
             </Column>
-            <Column v-if="colsVisible.epoch" field="epoch" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
+            <Column
+              v-if="colsVisible.epoch"
+              field="epoch"
+              :header="$t('common.epoch')"
+            >
               <template #body="slotProps">
-                <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`" target="_blank" class="link" :no-prefetch="true">
+                <NuxtLink
+                  v-if="slotProps.data.index !== undefined"
+                  :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
+                  target="_blank"
+                  class="link"
+                  :no-prefetch="true"
+                >
                   <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
                 </NuxtLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.slot" field="slot" body-class="slot" header-class="slot" :header="$t('common.slot')">
+            <Column
+              v-if="colsVisible.slot"
+              field="slot"
+              :header="$t('common.slot')"
+            >
               <template #body="slotProps">
-                <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                <NuxtLink
+                  v-if="slotProps.data.index !== undefined"
+                  :to="`/slot/${slotProps.data.slot}`"
+                  target="_blank"
+                  class="link"
+                  :no-prefetch="true"
+                >
                   <BcFormatNumber :value="slotProps.data.slot" />
                 </NuxtLink>
               </template>
             </Column>
-            <Column field="age" body-class="age" header-class="age">
+            <Column field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -179,7 +202,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             <Column
               v-if="colsVisible.withdrawalCredentials"
               field="withdrawal_credential"
-              header-class="withdrawal_credential"
+              header-class="withdrawal_credentials"
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
@@ -190,7 +213,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="amount" body-class="amount" header-class="amount" :header="$t('table.amount')">
+            <Column field="amount" :header="$t('table.amount')">
               <template #body="slotProps">
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
@@ -201,14 +224,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             <Column
               v-if="colsVisible.signature"
               field="signature"
-              header-class="signature"
               :header="$t('dashboard.validator.col.signature')"
             >
               <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.signature"
-                />
+                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.signature" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -217,16 +236,13 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.public_key') }}
                   </div>
-                  <BcFormatHash
-                    :hash="slotProps.data.public_key"
-                    type="public_key"
-                  />
+                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" />
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
-                  <div>
+                  <div class="value">
                     {{ groupNameLabel(slotProps.data.group_id) }}
                   </div>
                 </div>
@@ -234,7 +250,13 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}
                   </div>
-                  <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink
+                    v-if="slotProps.data.index !== undefined"
+                    :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
+                    target="_blank"
+                    class="link"
+                    :no-prefetch="true"
+                  >
                     <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
                   </NuxtLink>
                 </div>
@@ -242,7 +264,13 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('common.slot') }}
                   </div>
-                  <NuxtLink v-if="slotProps.data.index !== undefined" :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink
+                    v-if="slotProps.data.index !== undefined"
+                    :to="`/slot/${slotProps.data.slot}`"
+                    target="_blank"
+                    class="link"
+                    :no-prefetch="true"
+                  >
                     <BcFormatNumber :value="slotProps.data.slot" />
                   </NuxtLink>
                 </div>
@@ -250,19 +278,13 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
-                  <BcFormatHash
-                    :hash="slotProps.data.withdrawal_credential"
-                    type="withdrawal_credentials"
-                  />
+                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.signature') }}
                   </div>
-                  <BcFormatHash
-                    v-if="slotProps.data.index !== undefined"
-                    :hash="slotProps.data.signature"
-                  />
+                  <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.signature" />
                 </div>
               </div>
             </template>
@@ -281,11 +303,24 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
     white-space: nowrap;
   }
 
+  .withdrawal_credentials {
+    @include utils.truncate-text;
+  }
+
+  .group-id {
+    @include utils.set-all-width(120px);
+    @include utils.truncate-text;
+  }
+
   .total-row {
     td {
       font-weight: var(--standard_text_medium_font_weight);
       border-bottom-color: var(--primary-color);
     }
+  }
+
+  >table {
+    min-height: 200px;
   }
 }
 
@@ -304,6 +339,11 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
     .label {
       width: 164px;
       font-weight: var(--standard_text_bold_font_weight);
+    }
+
+    .value {
+      @include utils.truncate-text;
+      max-width: 140px;
     }
   }
 }

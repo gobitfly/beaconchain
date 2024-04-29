@@ -20,7 +20,8 @@ export function useValidatorDashboardSummaryStore () {
 
   async function getSummary (dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
-      return
+      data.value = undefined
+      return undefined
     }
     storedQuery.value = query
 

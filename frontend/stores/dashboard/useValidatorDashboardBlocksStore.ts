@@ -18,7 +18,8 @@ export function useValidatorDashboardBlocksStore () {
   const query = computed(() => storedQuery.value)
 
   async function getBlocks (dashboardKey: DashboardKey, query?: TableQueryParams) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      data.value = undefined
       return undefined
     }
     storedQuery.value = query

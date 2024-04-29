@@ -15,7 +15,7 @@ const { t: $t } = useI18n()
 const { timestamp } = useDate()
 const { setting } = useGlobalSetting<AgeFormat>('age-format')
 
-const initTs = ref(timestamp.value) // store the initial timestamp, in case we don't want to auto update
+const initTs = ref(timestamp.value) // we can add other types later when needed, we default to epoch
 
 const mappedSetting = computed(() => {
   if (!props.format || props.format === 'global-setting') {
