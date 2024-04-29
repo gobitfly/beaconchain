@@ -336,14 +336,12 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
     border-bottom-color: var(--primary-color);
   }
 
-  // TODO: Handle/Use future row
-  .future-row {
-    td {
-
-      >div,
-      >span {
-        opacity: 0.5;
-      }
+  // TODO: Tooltip in future row for amount
+  .future-row > td {
+    >a,
+    >div,
+    >span {
+      opacity: 0.5;
     }
   }
 }
