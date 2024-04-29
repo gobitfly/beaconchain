@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -139,7 +138,7 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 
 		if dashboard.UserId != user.Id {
 			// user does not have access to dashboard, return 404 to avoid leaking information
-			returnNotFound(w, fmt.Errorf("%w: dashboard with id %v not found", dataaccess.ErrNotFound, dashboardId))
+			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
 			return
 		}
 		next.ServeHTTP(w, r)
