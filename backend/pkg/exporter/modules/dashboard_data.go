@@ -309,11 +309,16 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 
 		// identifies unique sync periods in this epoch group
 		var syncCommitteePeriods = make(map[uint64]bool)
+		containsNewSyncCommitteeStartEpoch := false
 
 		// Step 1: fetch epoch data raw
 		for _, gap := range gapGroup.Epochs {
 			gap := gap
 			syncCommitteePeriods[utils.SyncPeriodOfEpoch(gap)] = true
+			if gap == utils.FirstEpochOfSyncPeriod(utils.SyncPeriodOfEpoch(gap)) {
+				containsNewSyncCommitteeStartEpoch = true
+			}
+
 			errGroup.Go(func() error {
 				for {
 					// just in case we ask again before exporting since some time may have been passed
@@ -350,7 +355,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 		}
 
 		// Step 2: fetch sync committee data
-		d.getSyncCommitteesData(errGroup, syncCommitteePeriods)
+		d.getSyncCommitteesData(errGroup, syncCommitteePeriods, containsNewSyncCommitteeStartEpoch)
 
 		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
 
@@ -428,7 +433,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 
 // Fetches sync committee assignments of provided periods
 // and fetches the epoch validator state with all validators that were eligible for election to be part of the sync committee (state at start epoch of X-1 sync period)
-func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncCommitteePeriods map[uint64]bool) {
+func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncCommitteePeriods map[uint64]bool, containsNewSyncCommitteeStartEpoch bool) {
 	for syncPeriod := range syncCommitteePeriods {
 		syncPeriod := syncPeriod
 		// -- Part 1: Get current sync committee members and cache it
@@ -454,7 +459,7 @@ func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncComm
 		}
 
 		// --Part 2: Get the state of the current sync committee election and cache it
-		{
+		if containsNewSyncCommitteeStartEpoch {
 			if found := d.responseCache.GetSyncCommitteeElectedState(syncPeriod); found == nil {
 				// This is the epoch where the members of syncPeriod were elected
 				syncCommitteElectionEpoch := getSyncCommitteeElectionEpochOf(syncPeriod)
@@ -1235,7 +1240,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	// Sync Committee Chance
 	// Get the total effective balance from the state where the current sync committee was elected
 	// And then calculate the chance of being in the sync committee from that state
-	{
+	if data.epoch == utils.FirstEpochOfSyncPeriod(currentSyncPeriod) {
 		syncCommitteeElectionState := d.responseCache.GetSyncCommitteeElectedState(currentSyncPeriod)
 		if syncCommitteeElectionState == nil && postAltair {
 			return nil, errors.New("sync committee election state not found")
@@ -1254,7 +1259,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				syncChance = 0
 			}
 
-			validatorsData[valData.Index].SyncChance = (syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)) / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
+			validatorsData[valData.Index].SyncChance = (syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)) // / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
 		}
 	}
 
@@ -1292,6 +1297,13 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		if reward.Data.ProposerIndex >= size {
 			return nil, errors.New("proposer index out of range")
 		}
+
+		validatorsData[reward.Data.ProposerIndex].BlocksClSyncAggregateReward.Int64 += reward.Data.SyncAggregate
+		validatorsData[reward.Data.ProposerIndex].BlocksClSyncAggregateReward.Valid = true
+
+		validatorsData[reward.Data.ProposerIndex].BlocksClAttestestationsReward.Int64 += reward.Data.Attestations
+		validatorsData[reward.Data.ProposerIndex].BlocksClAttestestationsReward.Valid = true
+
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Int64 += reward.Data.Attestations + reward.Data.AttesterSlashings + reward.Data.ProposerSlashings + reward.Data.SyncAggregate
 		validatorsData[reward.Data.ProposerIndex].BlocksClReward.Valid = true
 
@@ -1547,7 +1559,9 @@ type validatorDashboardDataRow struct {
 	BlockChance    float64       // done
 	SyncChance     float64       // done
 
-	BlocksClReward sql.NullInt64 // done
+	BlocksClReward                sql.NullInt64 // done
+	BlocksClAttestestationsReward sql.NullInt64 // done
+	BlocksClSyncAggregateReward   sql.NullInt64 // done
 
 	SyncScheduled sql.NullInt16 // done
 	SyncExecuted  sql.NullInt16 // done

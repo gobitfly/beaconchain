@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     withdrawals_amount BIGINT,
     inclusion_delay_sum smallint,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled smallint,
     attestations_executed smallint,
     attestation_head_executed smallint,
@@ -52,6 +53,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index, epoch)
 ) PARTITION BY range (epoch);
 
@@ -90,6 +93,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     withdrawals_amount BIGINT,
     inclusion_delay_sum int,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled smallint,
     attestations_executed smallint,
     attestation_head_executed smallint,
@@ -100,9 +104,10 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (epoch_start, validator_index)
 ) PARTITION BY range(epoch_start);
-
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
     validator_index int NOT NULL,
@@ -137,6 +142,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
     withdrawals_amount BIGINT,
     inclusion_delay_sum int,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled smallint,
     attestations_executed smallint,
     attestation_head_executed smallint,
@@ -147,6 +153,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (day, validator_index)
 ) PARTITION BY range(day);
 
@@ -183,6 +191,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
     withdrawals_amount BIGINT,
     inclusion_delay_sum int,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled smallint,
     attestations_executed smallint,
     attestation_head_executed smallint,
@@ -193,6 +202,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index)
 );
 
@@ -228,6 +239,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_weekly (
     withdrawals_amount BIGINT,
     inclusion_delay_sum int,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled int,
     attestations_executed int,
     attestation_head_executed int,
@@ -238,6 +250,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_weekly (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index)
 );
 
@@ -273,6 +287,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_monthly (
     withdrawals_amount BIGINT,
     inclusion_delay_sum int,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled int,
     attestations_executed int,
     attestation_head_executed int,
@@ -283,6 +298,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_monthly (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index)
 );
 
@@ -318,6 +335,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_90d (
     withdrawals_amount BIGINT,
     inclusion_delay_sum BIGINT,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled int,
     attestations_executed int,
     attestation_head_executed int,
@@ -328,6 +346,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_90d (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index)
 );
 
@@ -363,6 +383,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_total (
     withdrawals_amount BIGINT,
     inclusion_delay_sum BIGINT,
     block_chance double precision, 
+    sync_chance double precision,
     attestations_scheduled int,
     attestations_executed int,
     attestation_head_executed int,
@@ -373,6 +394,8 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_total (
     slashed_violation smallint, -- 0: attestation, 1: block
     slasher_reward BIGINT, -- gwei
     last_executed_duty_epoch int,
+    blocks_cl_attestations_reward BIGINT, -- gwei
+    blocks_cl_sync_aggregate_reward BIGINT, -- gwei
     primary key (validator_index)
 );
 

@@ -154,6 +154,9 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"slashed_violation",
 			"slasher_reward",
 			"last_executed_duty_epoch",
+			"blocks_cl_attestations_reward",
+			"blocks_cl_sync_aggregate_reward",
+			"sync_chance",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
 				i,
@@ -195,6 +198,9 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].SlashedViolation,
 				data[i].SlasherRewards,
 				data[i].LastSubmittedDutyEpoch,
+				data[i].BlocksClAttestestationsReward,
+				data[i].BlocksClSyncAggregateReward,
+				data[i].SyncChance,
 			}, nil
 		}))
 
