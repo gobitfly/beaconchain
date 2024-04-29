@@ -5,7 +5,7 @@ const randomTexts = ref<string[]>([])
 function getRandomText () : string {
   let result = ''
 
-  for (let l = 50 + Math.floor(Math.random() * 100); l >= 0; l--) {
+  for (let l = 20 + Math.floor(Math.random() * 100); l >= 0; l--) {
     result += characters[Math.floor(Math.random() * characters.length)]
   }
   return result
@@ -37,18 +37,14 @@ const showAllCSSclipped = ref<boolean>(false)
   </p>
   <div style="position: relative;">
     <p><b>With 1 ellipsis:</b></p>
-    <div class="frame medium">
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" />
-    </div>
-    <div class="frame big">
-      <BcSearchbarMiddleEllipsis class="flexible big nocolor parent">
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :initial-flex-grow="1" />
-        <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
-        <span>Hello I am not a MiddleEllipsis*</span>
-        <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
-      </BcSearchbarMiddleEllipsis>
-    </div>
+    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" />
+    <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
+      <span>Hello I am not a MiddleEllipsis*</span>
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
+    </BcSearchbarMiddleEllipsis>
     <p>* you can put anything in a parent MiddleEllipsis, he will control its children and leave the rest as it is.</p>
   </div>
 
@@ -62,17 +58,13 @@ const showAllCSSclipped = ref<boolean>(false)
       <br>
       * If the text looks short when it happens: with 2 ellipses, there would be 1 visible character ony, for example "…C…" or "A……" which is a loss of information without any advantage, therefore "A…D" is shown.
     </p>
-    <div class="frame medium">
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" :ellipses="2" />
-    </div>
-    <div class="frame big">
-      <BcSearchbarMiddleEllipsis class="flexible big nocolor parent">
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="2" :initial-flex-grow="1" />
-        <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="2" />
-        <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="2" />
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="2" :initial-flex-grow="1" />
-      </BcSearchbarMiddleEllipsis>
-    </div>
+    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" :ellipses="2" />
+    <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="2" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="2" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="2" />
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="2" :initial-flex-grow="1" />
+    </BcSearchbarMiddleEllipsis>
   </div>
 
   <div style="position: relative;">
@@ -85,22 +77,32 @@ const showAllCSSclipped = ref<boolean>(false)
       * up to 3 ellipses if there is room for up to 64 characters,<br>
       * up to 4 ellipses if there is room for more than 64 characters.<br>
     </p>
-    <div class="frame medium">
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" :ellipses="[16,32,64]" />
-    </div>
-    <div class="frame big">
-      <BcSearchbarMiddleEllipsis class="flexible big nocolor parent">
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
-        <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="[16,32,64]" />
-        <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="[16,32,64]" />
-        <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
-      </BcSearchbarMiddleEllipsis>
-    </div>
+    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" :ellipses="[16,32,64]" />
+    <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="[16,32,64]" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="[16,32,64]" />
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
+    </BcSearchbarMiddleEllipsis>
+  </div>
+
+  <div style="position: relative;">
+    <p><b>Redistribution of unused room</b></p>
+    <p>Here we have 4 children with different flex-grow values. It can happen that some of them do not need to clip (their text is displayable entirely), which means that they have spare room. Observe that instead of leaving them with unused space, the parent distributes their spare room to children needing clipping, so those can diplay more:</p>
+    (enlarge your window or change the texts to see it)
+    <br>
+    <BcSearchbarMiddleEllipsis class="frame all nocolor parent">
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[4]" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[5]" />
+    </BcSearchbarMiddleEllipsis>
   </div>
 
   <div style="position: relative;">
     <p>
       <b>{{ randomTexts.length }} MiddleEllipses to see the lower smoothness of the UI when you resize your window:</b>
+      <br>
       <Button @click="showAllME=!showAllME">
         show/hide
       </Button>
@@ -118,6 +120,7 @@ const showAllCSSclipped = ref<boolean>(false)
   <div style="position: relative;">
     <p>
       Compare the smoothness with {{ randomTexts.length }} hundreds spans clipped natively by CSS:
+      <br>
       <Button @click="showAllCSSclipped=!showAllCSSclipped">
         show/hide
       </Button>
@@ -181,18 +184,22 @@ const showAllCSSclipped = ref<boolean>(false)
   &.big {
     width: 20%;
   }
+  &.all {
+    width: 100%;
+  }
 }
 
 .frame {
   position: relative;
   display: inline-flex;
-  margin: 4px;
-  padding: 4px;
   &.medium {
     width: 25%;
   }
   &.big {
     width: 65%;
+  }
+  &.all {
+    width: 100%;
   }
 }
 

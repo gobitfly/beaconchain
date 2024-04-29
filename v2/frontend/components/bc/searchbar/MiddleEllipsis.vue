@@ -393,16 +393,16 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
   }
   // now that the undefined-width children got a width, we allow the others to use the remaining room
   let isAchildUnclipped = false
-  /*
-  The following lines handle a specific case: several children have a width defined with `flex-grow`, among which at least 1 has a non-clipped text.
-  Without the following lines, after the texts are written, the flex rules would distribute the room in the span of the non-clipped text(s) to the spans of the longer text(s), after they all are written. That would create a gap around the longer text(s).
-  The following lines detect this case and distribute the room to the children before clipping and writing. */
   for (const child of innerElements.widthDefinedChildren) {
     if (child.howMuchCanIshrinkOrGrow(false) < 0) {
       isAchildUnclipped = true
       break
     }
   }
+  /*
+  The following lines handle a specific case: several children have a width defined with `flex-grow`, among which at least 1 has a non-clipped text.
+  Without the following lines, after the texts are written, the flex rules would distribute the room in the span of the non-clipped text(s) to the spans of the longer text(s), after they all are written. That would create a gap around the longer text(s).
+  The following lines detect this case and distribute the room to the children before clipping and writing. */
   if (isAchildUnclipped && !getComputedStyle(frameSpan.value).flexDirection.includes('column')) {
     const canUseMoreRoom : {child: MiddleEllipsis, growth: number, flexGrow : number}[] = []
     const hasEnoughRoom : MiddleEllipsis[] = []
@@ -594,7 +594,7 @@ function determineReason (considerThatTheChangeAffectsMeOnly : boolean) : Update
 }
 
 function whatIsMyFlexGrow () : number {
-  return Number(getComputedStyle(frameSpan.value).flexGrow || 0)
+  return Number(getComputedStyle(frameSpan.value).flexGrow) || 0
 }
 
 /**
@@ -611,10 +611,10 @@ function howMuchCanIshrinkOrGrow (accurate : boolean) : number {
     return 0
   }
   if (withoutRestriction >= 0) {
-    const limit = Number(getComputedStyle(frameSpan.value).maxWidth || Number.MAX_SAFE_INTEGER)
+    const limit = parseFloat(getComputedStyle(frameSpan.value).maxWidth) || Number.MAX_SAFE_INTEGER
     return (widthRightNow + withoutRestriction <= limit) ? withoutRestriction : limit - widthRightNow
   } else {
-    const limit = Number(getComputedStyle(frameSpan.value).minWidth || 0)
+    const limit = parseFloat(getComputedStyle(frameSpan.value).minWidth) || 0
     return (widthRightNow + withoutRestriction >= limit) ? withoutRestriction : limit - widthRightNow
   }
 }
