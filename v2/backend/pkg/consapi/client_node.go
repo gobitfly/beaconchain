@@ -60,7 +60,7 @@ func (r *NodeClient) GetBlockHeaders(slot *uint64, parentRoot *any) (*types.Stan
 func (r *NodeClient) GetSyncCommitteesAssignments(epoch *uint64, stateID any) (*types.StandardSyncCommitteesResponse, error) {
 	var requestURL string
 	if epoch == nil {
-		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees", r.Endpoint, stateID, epoch)
+		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees", r.Endpoint, stateID)
 	} else {
 		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, epoch)
 	}
