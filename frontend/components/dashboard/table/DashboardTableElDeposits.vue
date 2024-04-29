@@ -20,14 +20,14 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1180,
-    block: width.value >= 1080,
-    withdrawalCredentials: width.value >= 980,
-    from: width.value >= 880,
-    depositer: width.value >= 780,
-    txHash: width.value >= 680,
-    valid: width.value >= 580,
-    publicKey: width.value >= 480
+    group: width.value > 1200,
+    block: width.value >= 1100,
+    withdrawalCredentials: width.value >= 1060,
+    from: width.value >= 960,
+    depositer: width.value >= 860,
+    txHash: width.value >= 760,
+    valid: width.value >= 660,
+    publicKey: width.value >= 560
   }
 })
 
@@ -121,6 +121,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.public_key"
+                  :no-wrap="true"
                   type="public_key"
                 />
                 <span v-else>{{ $t('table.all_time_total') }}</span>
@@ -189,6 +190,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.from.hash"
                   :ens="slotProps.data.from.ens"
+                  :no-wrap="true"
                   type="address"
                 />
               </template>
@@ -203,24 +205,26 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.depositor.hash"
                   :ens="slotProps.data.depositor.ens"
+                  :no-wrap="true"
                   type="address"
                 />
               </template>
             </Column>
             <Column v-if="colsVisible.txHash" :header="$t('block.col.tx_hash')">
               <template #body="slotProps">
-                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.tx_hash" type="tx" />
+                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.tx_hash" :no-wrap="true" type="tx" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.withdrawalCredentials"
-              header-class="withdrawal_credentials"
+              header-class="withdrawal-credentials"
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.withdrawal_credentials"
+                  :no-wrap="true"
                   type="withdrawal_credentials"
                 />
               </template>
@@ -236,8 +240,6 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             <Column
               v-if="colsVisible.valid"
               field="valid"
-              header-class="valid"
-              body-class="valid"
               :header="$t('table.valid')"
             >
               <template #body="slotProps">
@@ -250,7 +252,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.public_key') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" />
+                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" :no-wrap="true" />
                 </div>
                 <div class="row">
                   <div class="label">
@@ -272,7 +274,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credentials" type="withdrawal_credentials" />
+                  <BcFormatHash :hash="slotProps.data.withdrawal_credentials" type="withdrawal_credentials" :no-wrap="true" />
                 </div>
                 <div class="row">
                   <div class="label">
@@ -299,7 +301,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
     white-space: nowrap;
   }
 
-  .withdrawal_credentials {
+  .withdrawal-credentials {
     @include utils.truncate-text;
   }
 

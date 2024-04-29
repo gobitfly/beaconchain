@@ -22,12 +22,12 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1180,
-    signature: width.value >= 1080,
-    epoch: width.value >= 980,
-    slot: width.value >= 880,
-    withdrawalCredentials: width.value >= 780,
-    publicKey: width.value >= 680
+    group: width.value > 1200,
+    signature: width.value >= 1100,
+    epoch: width.value >= 1000,
+    slot: width.value >= 900,
+    withdrawalCredentials: width.value >= 800,
+    publicKey: width.value >= 700
   }
 })
 
@@ -120,6 +120,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.public_key"
+                  :no-wrap="true"
                   type="public_key"
                 />
                 <span v-else>{{ $t('table.all_time_total') }}</span>
@@ -202,13 +203,14 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             <Column
               v-if="colsVisible.withdrawalCredentials"
               field="withdrawal_credential"
-              header-class="withdrawal_credentials"
+              header-class="withdrawal-credentials"
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
                   :hash="slotProps.data.withdrawal_credential"
+                  :no-wrap="true"
                   type="withdrawal_credentials"
                 />
               </template>
@@ -227,7 +229,11 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               :header="$t('dashboard.validator.col.signature')"
             >
               <template #body="slotProps">
-                <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.signature" />
+                <BcFormatHash
+                  v-if="slotProps.data.index !== undefined"
+                  :hash="slotProps.data.signature"
+                  :no-wrap="true"
+                />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -236,7 +242,11 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.public_key') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" />
+                  <BcFormatHash
+                    :hash="slotProps.data.public_key"
+                    type="public_key"
+                    :no-wrap="true"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">
@@ -278,13 +288,21 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credential"
+                    type="withdrawal_credentials"
+                    :no-wrap="true"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.signature') }}
                   </div>
-                  <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.signature" />
+                  <BcFormatHash
+                    v-if="slotProps.data.index !== undefined"
+                    :hash="slotProps.data.signature"
+                    :no-wrap="true"
+                  />
                 </div>
               </div>
             </template>
@@ -303,7 +321,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
     white-space: nowrap;
   }
 
-  .withdrawal_credentials {
+  .withdrawal-credentials {
     @include utils.truncate-text;
   }
 

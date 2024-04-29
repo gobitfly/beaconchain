@@ -5,7 +5,7 @@ import { formatGoTimestamp, formatEpochToDateTime, formatSlotToDateTime } from '
 
 interface Props {
   value?: number | string,
-  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add slot and other types later when needed, we default to epoch
+  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
   noUpdate?: boolean,
   unitLength?: StringUnitLength
@@ -15,7 +15,7 @@ const { t: $t } = useI18n()
 const { timestamp } = useDate()
 const { setting } = useGlobalSetting<AgeFormat>('age-format')
 
-const initTs = ref(timestamp.value) // we can add other types later when needed, we default to epoch
+const initTs = ref(timestamp.value) // store the initial timestamp, in case we don't want to auto update
 
 const mappedSetting = computed(() => {
   if (!props.format || props.format === 'global-setting') {

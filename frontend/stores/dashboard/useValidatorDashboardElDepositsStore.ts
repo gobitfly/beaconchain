@@ -37,7 +37,6 @@ export function useValidatorDashboardElDepositsStore () {
   ) {
     if (!dashboardKey) {
       data.value = undefined
-      total.value = undefined
       return undefined
     }
     storedQuery.value = query
@@ -60,7 +59,8 @@ export function useValidatorDashboardElDepositsStore () {
   }
 
   async function getTotalAmount (dashboardKey: DashboardKey) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      total.value = undefined
       return undefined
     }
     isLoadingTotal.value = true
