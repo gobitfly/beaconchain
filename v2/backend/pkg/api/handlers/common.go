@@ -66,6 +66,7 @@ const (
 var (
 	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
 	errBadRequest   = errors.New("bad request")
+	errUnauthorized = errors.New("unauthorized")
 )
 
 type Paging struct {
@@ -79,44 +80,66 @@ type Paging struct {
 // --------------------------------------
 //   Validation
 
-func joinErr(err *error, message string) {
-	if len(message) > 0 {
-		*err = errors.Join(*err, errors.New(message))
+// validationError is a map of parameter names to error messages.
+// It is used to collect multiple validation errors before returning them to the user.
+type validationError map[string]string
+
+func (v validationError) Error() string {
+	//iterate over map and create a string
+	var sb strings.Builder
+	for k, v := range v {
+		sb.WriteString(k)
+		sb.WriteString(": ")
+		sb.WriteString(v)
+		sb.WriteString("\n")
 	}
+	return sb.String()[:sb.Len()-1]
 }
 
-func checkRegex(handlerErr *error, regex *regexp.Regexp, param, paramName string) string {
+func (v *validationError) add(paramName, problem string) {
+	if *v == nil {
+		*v = make(validationError)
+	}
+	validationMap := *v
+	validationMap[paramName] = problem
+}
+
+func (v *validationError) hasErrors() bool {
+	return v != nil && len(*v) > 0
+}
+
+func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName string) string {
 	if !regex.MatchString(param) {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter '`+paramName+`' has incorrect format`, param))
+		v.add(paramName, fmt.Sprintf(`given value '%s' has incorrect format`, param))
 	}
 	return param
 }
 
-func checkName(handlerErr *error, name string, minLength int) string {
+func (v *validationError) checkName(name string, minLength int) string {
 	if len(name) < minLength {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too short, minimum length is %d`, name, minLength))
+		v.add("name", fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
 		return name
 	} else if len(name) > maxNameLength {
-		joinErr(handlerErr, fmt.Sprintf(`given value '%s' for parameter 'name' is too long, maximum length is %d`, name, maxNameLength))
+		v.add("name", fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
 		return name
 	}
-	return checkRegex(handlerErr, reName, name, "name")
+	return v.checkRegex(reName, name, "name")
 }
 
-func checkNameNotEmpty(handlerErr *error, name string) string {
-	return checkName(handlerErr, name, 1)
+func (v *validationError) checkNameNotEmpty(name string) string {
+	return v.checkName(name, 1)
 }
 
-func checkEmail(handlerErr *error, email string) string {
-	return checkRegex(handlerErr, reEmail, email, "email")
+func (v *validationError) checkEmail(email string) string {
+	return v.checkRegex(reEmail, email, "email")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
-// return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
-func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
+// return error only if internal error occurs, otherwise add error to validationError and/or return nil
+func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
-		joinErr(handlerErr, "Content-Type header must be 'application/json'")
+		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
 	body := r.Body
 
@@ -133,7 +156,7 @@ func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
 	// First check: Decode into an empty interface to check JSON format
 	var i interface{}
 	if err := json.NewDecoder(bodyReader).Decode(&i); err != nil {
-		joinErr(handlerErr, "request body is not in JSON format")
+		v.add("request body", "not in JSON format")
 		return nil
 	}
 
@@ -163,7 +186,7 @@ func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
 		return errors.New("couldn't validate JSON request")
 	}
 	if !result.Valid() {
-		joinErr(handlerErr, "error reading request body due to invalid schema, check the API documentation for the expected format")
+		v.add("request body", "invalid schema, check the API documentation for the expected format")
 		return nil
 	}
 
@@ -182,18 +205,18 @@ func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
 	return nil
 }
 
-func checkInt(handlerErr *error, param, paramName string) int64 {
+func (v *validationError) checkInt(param, paramName string) int64 {
 	num, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
-		joinErr(handlerErr, fmt.Sprintf("given value '"+param+"' for parameter '"+paramName+"' is not an integer"))
+		v.add(paramName, fmt.Sprintf("given value '%s' is not an integer", param))
 	}
 	return num
 }
 
-func checkUint(handlerErr *error, param, paramName string) uint64 {
+func (v *validationError) checkUint(param, paramName string) uint64 {
 	num, err := strconv.ParseUint(param, 10, 64)
 	if err != nil {
-		joinErr(handlerErr, fmt.Sprintf("given value '"+param+"' for parameter '"+paramName+"' is not a positive integer"))
+		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
 }
@@ -205,11 +228,14 @@ type validatorSet struct {
 
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
-	var err error
+	var v validationError
 	if reNumber.MatchString(id) {
 		// given id is a normal id
-		id := checkUint(&err, id, "dashboard_id")
-		return types.VDBIdPrimary(id), err
+		id := v.checkUint(id, "dashboard_id")
+		if v.hasErrors() {
+			return nil, v
+		}
+		return types.VDBIdPrimary(id), nil
 	}
 	if reValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
@@ -218,10 +244,13 @@ func parseDashboardId(id string) (interface{}, error) {
 	// given id must be an encoded set of validators
 	decodedId, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil {
-		return nil, errors.New("invalid format for parameter 'dashboard_id'")
+		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
 	}
-	indexes, publicKeys := checkValidatorList(&err, string(decodedId))
-	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, err
+	indexes, publicKeys := v.checkValidatorList(string(decodedId), forbidEmpty)
+	if v.hasErrors() {
+		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
+	}
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, nil
 }
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
@@ -242,10 +271,10 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 			return nil, err
 		}
 		if len(validators) == 0 {
-			return nil, fmt.Errorf("%w: no validators found for given id", dataaccess.ErrNotFound)
+			return nil, newNotFoundErr("no validators found for given id")
 		}
 		if len(validators) > maxValidatorsInList {
-			return nil, fmt.Errorf("%w too many validators in list, maximum is %d", errBadRequest, maxValidatorsInList)
+			return nil, newBadRequestErr("too many validators in list, maximum is %d", maxValidatorsInList)
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
@@ -258,7 +287,7 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errBadRequest, err)
+		return nil, err
 	}
 	// convert to VDBId
 	dashboardId, err := h.getDashboardId(dashboardIdParam)
@@ -268,33 +297,33 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	return dashboardId, nil
 }
 
-func checkPrimaryDashboardId(handlerErr *error, param string) types.VDBIdPrimary {
-	return types.VDBIdPrimary(checkUint(handlerErr, param, "dashboard_id"))
+func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
+	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
-func checkGroupId(handlerErr *error, param string, allowEmpty bool) int64 {
+func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 	if param == "" && allowEmpty {
 		return types.AllGroups
 	}
-	return checkInt(handlerErr, param, "group_id")
+	return v.checkInt(param, "group_id")
 }
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
-func checkExistingGroupId(handlerErr *error, param string) int64 {
-	id := checkGroupId(handlerErr, param, forbidEmpty)
+func (v *validationError) checkExistingGroupId(param string) int64 {
+	id := v.checkGroupId(param, forbidEmpty)
 	if id < 0 {
-		joinErr(handlerErr, "given value '"+param+"' for parameter 'group_id' is not a valid group id")
+		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
 	}
 	return id
 }
 
-func checkValidatorDashboardPublicId(handlerErr *error, publicId string) types.VDBIdPublic {
-	return types.VDBIdPublic(checkRegex(handlerErr, reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
+func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
+	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-func checkPagingParams(handlerErr *error, q url.Values) Paging {
+func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
 		limit:  defaultReturnLimit,
@@ -304,112 +333,104 @@ func checkPagingParams(handlerErr *error, q url.Values) Paging {
 	if limitStr := q.Get("limit"); limitStr != "" {
 		limit, err := strconv.ParseUint(limitStr, 10, 64)
 		if err != nil {
-			joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter 'limit' is not a valid positive integer", limitStr))
+			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
 			return paging
 		}
 		if limit > maxQueryLimit {
-			joinErr(handlerErr, fmt.Sprintf("given value '%d' for parameter 'limit' is too large, maximum limit is %d", limit, maxQueryLimit))
+			v.add("limit", fmt.Sprintf("given value '%d' is too large, maximum limit is %d", limit, maxQueryLimit))
 			return paging
 		}
 		paging.limit = limit
 	}
 
 	if paging.cursor != "" {
-		paging.cursor = checkRegex(handlerErr, reCursor, paging.cursor, "cursor")
+		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
 	}
 
 	return paging
 }
 
-func parseEnum[T enums.EnumFactory[T]](enum string, name string) (T, error) {
+func checkEnum[T enums.EnumFactory[T]](v *validationError, enum string, name string) T {
 	var c T
 	col := c.NewFromString(enum)
 	if col.Int() == -1 {
-		return col, errors.New("given value '" + enum + "' for parameter '" + name + "' is not a valid value")
-	}
-	return col, nil
-}
-
-func checkEnum[T enums.EnumFactory[T]](handlerErr *error, enum string, name string) T {
-	col, err := parseEnum[T](enum, name)
-	if err != nil {
-		joinErr(handlerErr, err.Error())
+		v.add(name, fmt.Sprintf("given value '%s' for parameter '%s' is not valid", enum, name))
+		return c
 	}
 	return col
 }
 
-func parseSortOrder(order string) (bool, error) {
+func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending, nil
+		return defaultSortOrder == sortOrderDescending
 	case sortOrderAscending:
-		return false, nil
+		return false
 	case sortOrderDescending:
-		return true, nil
+		return true
 	default:
-		return false, errors.New("given value '" + order + "' for parameter 'sort' is not valid, allowed order values are: " + sortOrderAscending + ", " + sortOrderDescending + "")
+		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, allowed order values are: %s, %s", order, sortOrderAscending, sortOrderDescending))
+		return false
 	}
 }
 
-func checkSort[T enums.EnumFactory[T]](handlerErr *error, sort string) []types.Sort[T] {
-	if sort == "" {
-		var c T
-		return []types.Sort[T]{{Column: c, Desc: false}}
+func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
+	log.Info(sortString)
+	var c T
+	if sortString == "" {
+		return &types.Sort[T]{Column: c, Desc: false}
 	}
-	sortQueries := strings.Split(sort, ",")
-	sorts := make([]types.Sort[T], 0, len(sortQueries))
-	for _, v := range sortQueries {
-		sortSplit := strings.Split(v, ":")
-		if len(sortSplit) > 2 {
-			joinErr(handlerErr, "given value '"+v+"' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'")
-			return sorts
-		}
-		if len(sortSplit) == 1 {
-			sortSplit = append(sortSplit, "")
-		}
-		sort, err := parseEnum[T](sortSplit[0], "sort")
-		if err != nil {
-			joinErr(handlerErr, err.Error())
-			return sorts
-		}
-		order, err := parseSortOrder(sortSplit[1])
-		if err != nil {
-			joinErr(handlerErr, err.Error())
-		}
-		sorts = append(sorts, types.Sort[T]{Column: sort, Desc: order})
+	sortSplit := strings.Split(sortString, ":")
+	if len(sortSplit) > 2 {
+		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
+		return nil
 	}
-	return sorts
+	if len(sortSplit) == 1 {
+		sortSplit = append(sortSplit, "")
+	}
+	sortCol := checkEnum[T](v, sortSplit[0], "sort")
+	order := v.parseSortOrder(sortSplit[1])
+	return &types.Sort[T]{Column: sortCol, Desc: order}
 }
 
-func checkValidatorList(handlerErr *error, validators string) ([]uint64, []string) {
-	return checkValidatorArray(handlerErr, strings.Split(validators, ","))
+func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]uint64, []string) {
+	if validators == "" && !allowEmpty {
+		v.add("validators", "list of validators is must not be empty")
+		return nil, nil
+	}
+	return v.checkValidatorArray(strings.Split(validators, ","), allowEmpty)
 }
 
-func checkValidatorArray(handlerErr *error, validators []string) ([]uint64, []string) {
+func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]uint64, []string) {
+	if len(validators) == 0 && !allowEmpty {
+		v.add("validators", "list of validators is must not be empty")
+		return nil, nil
+	}
+	log.Info("a")
 	var indexes []uint64
 	var publicKeys []string
-	for _, v := range validators {
-		if reNumber.MatchString(v) {
-			indexes = append(indexes, checkUint(handlerErr, v, "validators"))
-		} else if reValidatorPubkey.MatchString(v) {
-			_, err := hexutil.Decode(v)
+	for _, validator := range validators {
+		if reNumber.MatchString(validator) {
+			indexes = append(indexes, v.checkUint(validator, "validators"))
+		} else if reValidatorPubkey.MatchString(validator) {
+			_, err := hexutil.Decode(validator)
 			if err != nil {
-				joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
 			}
-			publicKeys = append(publicKeys, v)
+			publicKeys = append(publicKeys, validator)
 		} else {
-			joinErr(handlerErr, fmt.Sprintf("invalid value '%s' in list of validators", v))
+			v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
 		}
 	}
 	return indexes, publicKeys
 }
 
-func checkNetwork(handlerErr *error, network string) uint64 {
+func (v *validationError) checkNetwork(network string) uint64 {
 	// try parsing as uint64
 	networkId, err := strconv.ParseUint(network, 10, 64)
 	if err != nil {
 		// TODO try to match string with network name
-		joinErr(handlerErr, fmt.Sprintf("given value '%s' for parameter 'network' is not a valid network id", network))
+		v.add("network", fmt.Sprintf("given value '%s'is not a valid network id", network))
 	}
 	return networkId
 }
@@ -476,23 +497,45 @@ func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-//nolint:unused
-func returnConflict(w http.ResponseWriter, err error) {
+/* func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
-}
+} */
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 0, nil)
+	// TODO: don't return the error message to the user in production
 	returnError(w, http.StatusInternalServerError, err)
 }
 
-func handleError(w http.ResponseWriter, err error) {
-	if errors.Is(err, dataaccess.ErrNotFound) {
+func handleErr(w http.ResponseWriter, err error) {
+	if _, ok := err.(validationError); ok || errors.Is(err, errBadRequest) {
+		returnBadRequest(w, err)
+		return
+	} else if errors.Is(err, dataaccess.ErrNotFound) {
 		returnNotFound(w, err)
 		return
-	} else if errors.Is(err, errBadRequest) {
-		returnBadRequest(w, err)
+	} else if errors.Is(err, errUnauthorized) {
+		returnUnauthorized(w, err)
 		return
 	}
 	returnInternalServerError(w, err)
+}
+
+// --------------------------------------
+//  Error Helpers
+
+func errWithMsg(err error, format string, args ...interface{}) error {
+	return fmt.Errorf("%w: %s", err, fmt.Sprintf(format, args...))
+}
+
+func newBadRequestErr(format string, args ...interface{}) error {
+	return errWithMsg(errBadRequest, format, args...)
+}
+
+func newUnauthorizedErr(format string, args ...interface{}) error {
+	return errWithMsg(errUnauthorized, format, args...)
+}
+
+func newNotFoundErr(format string, args ...interface{}) error {
+	return errWithMsg(dataaccess.ErrNotFound, format, args...)
 }
