@@ -192,6 +192,6 @@ For example
 makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen width passes through 600px.
 Children do not need this props, only parents and stand-alone components.
 
-MiddleEllipsis cannot detect and react when the font of the text changes. It does not forbids you to change the font, but is restricts the way you can do it:
+MiddleEllipsis cannot detect and react when the font of the text changes. It does not forbid you to change the font, but it restricts the way you can do it:
 If you change the font while the component is being resized, it is fine because the component checks the font before each reclipping.
 If you change the font independently of the width of the component, then perform the change by swapping a class of the component because it detects changes in its list of classes and reclips.
