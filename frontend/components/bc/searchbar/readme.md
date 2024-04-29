@@ -179,11 +179,11 @@ Here, the text will be clipped with one ellipsis if there is room for less than 
 
 ## Restrictions
 
-- Never set a padding on the left or right side of a MiddleEllipsis component (margin is not a problem).
+Never set a padding on the left or right side of a MiddleEllipsis component (margin is not a problem).
 
-- Never give a width to its left or right border.
+Never give a width to its left or right border.
 
-- If, somewhere in your CSS, some `@media (min-width: AAApx)` or `@media (max-width: AAApx)` queries have an (indirect) effect on the size of a MiddleEllipsis component,
+If, somewhere in your CSS, some `@media (min-width: AAApx)` or `@media (max-width: AAApx)` queries have an (indirect) effect on the size of a MiddleEllipsis component,
 you must inform the component that its width can jump unexpectedly. You do so by giving AAA to its `width-mediaquery-threshold` props.
 For example
 ```HTML
@@ -192,6 +192,6 @@ For example
 makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen width passes through 600px.
 Children do not need this props, only parents and stand-alone components.
 
-- MiddleEllipsis cannot detect and react when the font of the text changes. It does not forbids you to change the font, but is restricts the way you can do it:
+MiddleEllipsis cannot detect and react when the font of the text changes. It does not forbids you to change the font, but is restricts the way you can do it:
 If you change the font while the component is being resized, it is fine because the component checks the font before each reclipping.
 If you change the font independently of the width of the component, then perform the change by swapping a class of the component because it detects changes in its list of classes and reclips.
