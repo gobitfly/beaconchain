@@ -1,6 +1,9 @@
 package types
 
-import "github.com/gobitfly/beaconchain/pkg/consapi/utils"
+import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/consapi/utils"
+)
 
 type EventTopic string
 
@@ -57,35 +60,35 @@ func (e EventResponse) FinalizedCheckpoint() (*StandardFinalizedCheckpointRespon
 }
 
 type StandardEventHeadResponse struct {
-	Slot                      uint64      `json:"slot,string"`
-	Block                     string      `json:"block"`
-	State                     bytesHexStr `json:"state"`
-	EpochTransition           bool        `json:"epoch_transition"`
-	PreviousDutyDependentRoot bytesHexStr `json:"previous_duty_dependent_root"`
-	CurrentDutyDependentRoot  bytesHexStr `json:"current_duty_dependent_root"`
-	ExecutionOptimistic       bool        `json:"execution_optimistic"`
+	Slot                      uint64        `json:"slot,string"`
+	Block                     string        `json:"block"`
+	State                     hexutil.Bytes `json:"state"`
+	EpochTransition           bool          `json:"epoch_transition"`
+	PreviousDutyDependentRoot hexutil.Bytes `json:"previous_duty_dependent_root"`
+	CurrentDutyDependentRoot  hexutil.Bytes `json:"current_duty_dependent_root"`
+	ExecutionOptimistic       bool          `json:"execution_optimistic"`
 }
 
 type StandardEventBlockResponse struct {
-	Slot                uint64      `json:"slot,string"`
-	Block               bytesHexStr `json:"block"`
-	ExecutionOptimistic bool        `json:"execution_optimistic"`
+	Slot                uint64        `json:"slot,string"`
+	Block               hexutil.Bytes `json:"block"`
+	ExecutionOptimistic bool          `json:"execution_optimistic"`
 }
 
 type StandardEventChainReorg struct {
-	Slot                uint64      `json:"slot,string"`
-	Depth               uint64      `json:"depth,string"`
-	OldHeadBlock        bytesHexStr `json:"old_head_block"`
-	NewHeadBlock        bytesHexStr `json:"new_head_block"`
-	OldHeadState        bytesHexStr `json:"old_head_state"`
-	NewHeadState        bytesHexStr `json:"new_head_state"`
-	Epoch               uint64      `json:"epoch,string"`
-	ExecutionOptimistic bool        `json:"execution_optimistic"`
+	Slot                uint64        `json:"slot,string"`
+	Depth               uint64        `json:"depth,string"`
+	OldHeadBlock        hexutil.Bytes `json:"old_head_block"`
+	NewHeadBlock        hexutil.Bytes `json:"new_head_block"`
+	OldHeadState        hexutil.Bytes `json:"old_head_state"`
+	NewHeadState        hexutil.Bytes `json:"new_head_state"`
+	Epoch               uint64        `json:"epoch,string"`
+	ExecutionOptimistic bool          `json:"execution_optimistic"`
 }
 
 type StandardFinalizedCheckpointResponse struct {
-	Block               bytesHexStr `json:"block"`
-	State               bytesHexStr `json:"state"`
-	Epoch               uint64      `json:"epoch,string"`
-	ExecutionOptimistic bool        `json:"execution_optimistic"`
+	Block               hexutil.Bytes `json:"block"`
+	State               hexutil.Bytes `json:"state"`
+	Epoch               uint64        `json:"epoch,string"`
+	ExecutionOptimistic bool          `json:"execution_optimistic"`
 }

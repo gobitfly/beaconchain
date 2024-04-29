@@ -1,5 +1,7 @@
 package types
 
+import "github.com/ethereum/go-ethereum/common/hexutil"
+
 const (
 	PendingInitialized ValidatorStatus = "pending_initialized"
 	PendingQueued      ValidatorStatus = "pending_queued"
@@ -35,25 +37,25 @@ type StandardValidator struct {
 	Balance   uint64          `json:"balance,string"`
 	Status    ValidatorStatus `json:"status"`
 	Validator struct {
-		Pubkey                     bytesHexStr `json:"pubkey"`
-		WithdrawalCredentials      bytesHexStr `json:"withdrawal_credentials"`
-		EffectiveBalance           uint64      `json:"effective_balance,string"`
-		Slashed                    bool        `json:"slashed"`
-		ActivationEligibilityEpoch uint64      `json:"activation_eligibility_epoch,string"`
-		ActivationEpoch            uint64      `json:"activation_epoch,string"`
-		ExitEpoch                  uint64      `json:"exit_epoch,string"`
-		WithdrawableEpoch          uint64      `json:"withdrawable_epoch,string"`
+		Pubkey                     hexutil.Bytes `json:"pubkey"`
+		WithdrawalCredentials      hexutil.Bytes `json:"withdrawal_credentials"`
+		EffectiveBalance           uint64        `json:"effective_balance,string"`
+		Slashed                    bool          `json:"slashed"`
+		ActivationEligibilityEpoch uint64        `json:"activation_eligibility_epoch,string"`
+		ActivationEpoch            uint64        `json:"activation_epoch,string"`
+		ExitEpoch                  uint64        `json:"exit_epoch,string"`
+		WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`
 	} `json:"validator"`
 }
 
 // /eth/v1/validator/duties/proposer/{epoch}
 type StandardProposerAssignmentsResponse struct {
-	DependentRoot       bytesHexStr `json:"dependent_root"`
-	ExecutionOptimistic bool        `json:"execution_optimistic"`
+	DependentRoot       hexutil.Bytes `json:"dependent_root"`
+	ExecutionOptimistic bool          `json:"execution_optimistic"`
 	Data                []struct {
-		Pubkey         bytesHexStr `json:"pubkey"`
-		ValidatorIndex uint64      `json:"validator_index,string"`
-		Slot           int64       `json:"slot,string"`
+		Pubkey         hexutil.Bytes `json:"pubkey"`
+		ValidatorIndex uint64        `json:"validator_index,string"`
+		Slot           int64         `json:"slot,string"`
 	} `json:"data"`
 }
 
