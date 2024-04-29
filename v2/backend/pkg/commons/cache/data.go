@@ -94,35 +94,24 @@ type Cached[T any] struct {
 	cacheKey func() string
 }
 
-func (cfg Cached[T]) Get() T {
+func (cfg Cached[T]) Get() *T {
 	var wanted T
 	if wanted, err := TieredCache.GetWithLocalTimeout(cfg.cacheKey(), time.Second*5, &wanted); err == nil {
-		value, ok := wanted.(T)
-		if !ok {
-			log.Error(err, "error during type assertion for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
-		} else {
-			return value
-		}
+		return wanted.(*T)
 	} else {
 		log.Error(err, "error retrieving values for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
 	}
-	var defaultValue T
-	return defaultValue
+	return nil
 }
 
-func (cfg Cached[T]) GetOrDefault(provideDefault func() (T, error)) (T, error) {
+func (cfg Cached[T]) GetOrDefault(provideDefault func() (*T, error)) (*T, error) {
 	var wanted T
 	if wanted, err := TieredCache.GetWithLocalTimeout(cfg.cacheKey(), time.Second*5, &wanted); err == nil {
-		value, ok := wanted.(T)
-		if !ok {
-			log.Error(err, "error during type assertion for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
-		} else {
-			return value, nil
-		}
+		return wanted.(*T), nil
 	}
 	return provideDefault()
 }
 
-func (cfg Cached[T]) Set(value T) error {
+func (cfg Cached[T]) Set(value *T) error {
 	return TieredCache.Set(cfg.cacheKey(), value, utils.Day)
 }

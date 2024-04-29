@@ -212,12 +212,13 @@ type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingRespon
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
-	Epoch     uint64          `json:"epoch"`
-	Slot      uint64          `json:"slot"`
-	Index     uint64          `json:"index"`
-	GroupId   uint64          `json:"group_id"`
-	Recipient Address         `json:"recipient"`
-	Amount    decimal.Decimal `json:"amount"`
+	Epoch             uint64          `json:"epoch"`
+	Slot              uint64          `json:"slot"`
+	Index             uint64          `json:"index"`
+	GroupId           uint64          `json:"group_id"`
+	Recipient         Address         `json:"recipient"`
+	Amount            decimal.Decimal `json:"amount"`
+	IsMissingEstimate bool            `json:"is_missing_estimate"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
 
