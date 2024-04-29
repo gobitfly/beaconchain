@@ -75,7 +75,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 		WHERE uvds.public_id = $1
 	`, publicDashboardId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: dashboard with public id %v not found", ErrNotFound, publicDashboardId)
+		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
 	return result, err
 }
@@ -83,7 +83,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 // param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
-		return nil, nil
+		return []t.VDBValidator{}, nil
 	}
 
 	mapping, release, err := d.services.GetCurrentValidatorMapping()

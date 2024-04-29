@@ -38,12 +38,12 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	user, err := h.getUser(r)
 	if err != nil {
-		returnUnauthorized(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetUserDashboards(user.Id)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.ApiDataResponse[types.UserDashboardsData]{
@@ -115,30 +115,30 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 // Validator Dashboards
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	user, err := h.getUser(r)
 	if err != nil {
-		returnUnauthorized(w, err)
+		handleErr(w, err)
 		return
 	}
 	req := struct {
 		Name    string `json:"name"`
 		Network string `json:"network"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	name := checkNameNotEmpty(&err, req.Name)
-	network := checkNetwork(&err, req.Network)
-	if err != nil {
-		returnBadRequest(w, err)
+	name := v.checkNameNotEmpty(req.Name)
+	network := v.checkNetwork(req.Network)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(user.Id, name, network)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -150,12 +150,12 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardOverview(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardResponse{
@@ -166,39 +166,39 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	var err error
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
-	if err != nil {
-		returnBadRequest(w, err)
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
-	err = h.dai.RemoveValidatorDashboard(dashboardId)
+	err := h.dai.RemoveValidatorDashboard(dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	returnNoContent(w)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var err error
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	name := checkNameNotEmpty(&err, req.Name)
-	if err != nil {
-		returnBadRequest(w, err)
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	// TODO check group limit reached
 	data, err := h.dai.CreateValidatorDashboardGroup(dashboardId, name)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -210,25 +210,25 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
-	dashboardId := checkPrimaryDashboardId(&err, vars["dashboard_id"])
-	groupId := checkExistingGroupId(&err, vars["group_id"])
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
 	req := struct {
 		Name string `json:"name"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	name := checkNameNotEmpty(&err, req.Name)
-	if err != nil {
-		returnBadRequest(w, err)
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	if !groupExists {
@@ -237,7 +237,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 	}
 	data, err := h.dai.UpdateValidatorDashboardGroup(dashboardId, uint64(groupId), name)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -249,12 +249,12 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
-	groupId := checkExistingGroupId(&err, vars["group_id"])
-	if err != nil {
-		returnBadRequest(w, err)
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	if groupId == types.DefaultGroupId {
@@ -263,7 +263,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	if !groupExists {
@@ -272,7 +272,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 	}
 	err = h.dai.RemoveValidatorDashboardGroup(dashboardId, uint64(groupId))
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -280,20 +280,20 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var err error
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Validators []string `json:"validators"`
 		GroupId    string   `json:"group_id,omitempty"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	indices, pubkeys := checkValidatorArray(&err, req.Validators)
-	groupId := checkGroupId(&err, req.GroupId, allowEmpty)
-	if err != nil {
-		returnBadRequest(w, err)
+	indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
+	groupId := v.checkGroupId(req.GroupId, allowEmpty)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	// empty group id becomes default group
@@ -302,7 +302,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	if !groupExists {
@@ -311,13 +311,13 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	}
 	validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	// TODO check validator limit reached
 	data, err := h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -329,23 +329,23 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
-	groupId := checkGroupId(&err, q.Get("group_id"), allowEmpty)
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBManageValidatorsColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardValidators(*dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardValidatorsResponse{
@@ -356,25 +356,25 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	var err error
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	var indices []uint64
 	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
-		indices, publicKeys = checkValidatorList(&err, validatorsParam)
-		if err != nil {
-			returnBadRequest(w, err)
+		indices, publicKeys = v.checkValidatorList(validatorsParam, allowEmpty)
+		if v.hasErrors() {
+			handleErr(w, v)
 			return
 		}
 	}
 	validators, err := h.dai.GetValidatorsFromSlices(indices, publicKeys)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	err = h.dai.RemoveValidatorDashboardValidators(dashboardId, validators)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -382,26 +382,26 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	var err error
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	name := checkNameNotEmpty(&err, req.Name)
-	if err != nil {
-		returnBadRequest(w, err)
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -412,37 +412,37 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
 			GroupNames bool `json:"group_names"`
 		} `json:"share_settings"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
-	name := checkNameNotEmpty(&err, req.Name)
-	publicDashboardId := checkValidatorDashboardPublicId(&err, vars["public_id"])
-	if err != nil {
-		returnBadRequest(w, err)
+	name := v.checkNameNotEmpty(req.Name)
+	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(publicDashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	if dashboardInfo.Id != dashboardId {
-		returnNotFound(w, errors.New("public id not found"))
+		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.GroupNames)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.ApiResponse{
@@ -453,26 +453,26 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
-	dashboardId := checkPrimaryDashboardId(&err, mux.Vars(r)["dashboard_id"])
-	publicDashboardId := checkValidatorDashboardPublicId(&err, vars["public_id"])
-	if err != nil {
-		returnBadRequest(w, err)
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(publicDashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	if dashboardInfo.Id != dashboardId {
-		returnNotFound(w, errors.New("public id not found"))
+		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(publicDashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -482,13 +482,13 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardSlotViz(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSlotVizResponse{
@@ -499,23 +499,23 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBSummaryColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBSummaryColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryResponse{
@@ -526,22 +526,22 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	groupId := checkGroupId(&err, vars["group_id"], forbidEmpty)
-	if err != nil {
-		returnBadRequest(w, err)
+	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupSummary(*dashboardId, groupId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupSummaryResponse{
@@ -551,15 +551,14 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
-	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryChartResponse{
@@ -569,28 +568,24 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	groupId := checkGroupId(&err, r.URL.Query().Get("group_id"), allowEmpty)
-	if err != nil {
-		returnBadRequest(w, err)
-		return
-	}
+	groupId := v.checkGroupId(r.URL.Query().Get("group_id"), allowEmpty)
 	q := r.URL.Query()
-	period := checkEnum[enums.TimePeriod](&err, q.Get("period"), "period")
-	duty := checkEnum[enums.ValidatorDuty](&err, q.Get("duty"), "duty")
-	if err != nil {
-		returnBadRequest(w, err)
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -602,23 +597,23 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBRewardsColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardRewards(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardRewards(*dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsResponse{
@@ -629,23 +624,23 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	groupId := checkGroupId(&err, vars["group_id"], forbidEmpty)
-	epoch := checkUint(&err, vars["epoch"], "epoch")
-	if err != nil {
-		returnBadRequest(w, err)
+	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
+	epoch := v.checkUint(vars["epoch"], "epoch")
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupRewards(*dashboardId, groupId, epoch)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupRewardsResponse{
@@ -655,17 +650,16 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
-	var err error
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardRewardsChart(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsChartResponse{
@@ -675,26 +669,26 @@ func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(vars["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
-	groupId := checkGroupId(&err, q.Get("group_id"), allowEmpty)
-	epoch := checkUint(&err, vars["epoch"], "epoch")
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBDutiesColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
+	epoch := v.checkUint(vars["epoch"], "epoch")
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, groupId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardDuties(*dashboardId, epoch, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardDutiesResponse{
@@ -705,23 +699,23 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBBlocksColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardBlocks(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardBlocks(*dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardBlocksResponse{
@@ -732,16 +726,15 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
-	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardHeatmap(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardHeatmapResponse{
@@ -751,23 +744,23 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	groupId := checkExistingGroupId(&err, vars["group_id"])
-	epoch := checkUint(&err, vars["epoch"], "epoch")
-	if err != nil {
-		returnBadRequest(w, err)
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	epoch := v.checkUint(vars["epoch"], "epoch")
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupHeatmap(*dashboardId, uint64(groupId), epoch)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
@@ -777,21 +770,21 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	pagingParams := checkPagingParams(&err, r.URL.Query())
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(r.URL.Query())
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardElDeposits(*dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardExecutionLayerDepositsResponse{
@@ -802,21 +795,21 @@ func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w h
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	pagingParams := checkPagingParams(&err, r.URL.Query())
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(r.URL.Query())
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardClDeposits(*dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -831,12 +824,12 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w h
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardTotalClDeposits(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -850,12 +843,12 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w h
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardTotalElDeposits(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 
@@ -866,23 +859,23 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w h
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
-	pagingParams := checkPagingParams(&err, q)
-	sort := checkSort[enums.VDBWithdrawalsColumn](&err, q.Get("sort"))
-	if err != nil {
-		returnBadRequest(w, err)
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(*dashboardId, pagingParams.cursor, sort[0], pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(*dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{
@@ -896,12 +889,12 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.Re
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId)
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 

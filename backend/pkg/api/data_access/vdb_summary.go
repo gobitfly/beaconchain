@@ -792,7 +792,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, nil
+		return []uint64{}, nil
 	}
 
 	if duty == enums.ValidatorDuties.None {
