@@ -290,7 +290,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		handleErr(w, err)
 		return
 	}
-	indices, pubkeys := v.checkValidatorArray(req.Validators)
+	indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
 	groupId := v.checkGroupId(req.GroupId, allowEmpty)
 	if v.hasErrors() {
 		handleErr(w, v)
@@ -361,7 +361,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 	var indices []uint64
 	var publicKeys []string
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
-		indices, publicKeys = v.checkValidatorList(validatorsParam)
+		indices, publicKeys = v.checkValidatorList(validatorsParam, allowEmpty)
 		if v.hasErrors() {
 			handleErr(w, v)
 			return

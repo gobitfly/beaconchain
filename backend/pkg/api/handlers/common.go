@@ -93,25 +93,29 @@ func (v validationError) Error() string {
 		sb.WriteString(v)
 		sb.WriteString("\n")
 	}
-	return sb.String()
+	return sb.String()[:sb.Len()-1]
 }
 
-func (v validationError) add(paramName, problem string) {
-	v[paramName] = problem
+func (v *validationError) add(paramName, problem string) {
+	if v == nil || *v == nil {
+		*v = make(validationError)
+	}
+	validationMap := *v
+	validationMap[paramName] = problem
 }
 
-func (v validationError) hasErrors() bool {
-	return len(v) > 0
+func (v *validationError) hasErrors() bool {
+	return v != nil && len(*v) > 0
 }
 
-func (v validationError) checkRegex(regex *regexp.Regexp, param, paramName string) string {
+func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName string) string {
 	if !regex.MatchString(param) {
 		v.add(paramName, fmt.Sprintf(`given value '%s' has incorrect format`, param))
 	}
 	return param
 }
 
-func (v validationError) checkName(name string, minLength int) string {
+func (v *validationError) checkName(name string, minLength int) string {
 	if len(name) < minLength {
 		v.add("name", fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
 		return name
@@ -122,17 +126,17 @@ func (v validationError) checkName(name string, minLength int) string {
 	return v.checkRegex(reName, name, "name")
 }
 
-func (v validationError) checkNameNotEmpty(name string) string {
+func (v *validationError) checkNameNotEmpty(name string) string {
 	return v.checkName(name, 1)
 }
 
-func (v validationError) checkEmail(email string) string {
+func (v *validationError) checkEmail(email string) string {
 	return v.checkRegex(reEmail, email, "email")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
-func (v validationError) checkBody(data interface{}, r *http.Request) error {
+func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
@@ -201,7 +205,7 @@ func (v validationError) checkBody(data interface{}, r *http.Request) error {
 	return nil
 }
 
-func (v validationError) checkInt(param, paramName string) int64 {
+func (v *validationError) checkInt(param, paramName string) int64 {
 	num, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		v.add(paramName, fmt.Sprintf("given value '%s' is not an integer", param))
@@ -209,7 +213,7 @@ func (v validationError) checkInt(param, paramName string) int64 {
 	return num
 }
 
-func (v validationError) checkUint(param, paramName string) uint64 {
+func (v *validationError) checkUint(param, paramName string) uint64 {
 	num, err := strconv.ParseUint(param, 10, 64)
 	if err != nil {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
@@ -240,11 +244,11 @@ func parseDashboardId(id string) (interface{}, error) {
 	// given id must be an encoded set of validators
 	decodedId, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil {
-		return nil, newBadRequestErr("given value %s is not a valid dashboard id", id)
+		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
 	}
-	indexes, publicKeys := v.checkValidatorList(string(decodedId))
+	indexes, publicKeys := v.checkValidatorList(string(decodedId), forbidEmpty)
 	if v.hasErrors() {
-		return nil, v
+		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
 	}
 	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, nil
 }
@@ -293,13 +297,13 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 	return dashboardId, nil
 }
 
-func (v validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
+func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
-func (v validationError) checkGroupId(param string, allowEmpty bool) int64 {
+func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 	if param == "" && allowEmpty {
 		return types.AllGroups
 	}
@@ -307,7 +311,7 @@ func (v validationError) checkGroupId(param string, allowEmpty bool) int64 {
 }
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
-func (v validationError) checkExistingGroupId(param string) int64 {
+func (v *validationError) checkExistingGroupId(param string) int64 {
 	id := v.checkGroupId(param, forbidEmpty)
 	if id < 0 {
 		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
@@ -315,11 +319,11 @@ func (v validationError) checkExistingGroupId(param string) int64 {
 	return id
 }
 
-func (v validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
+func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-func (v validationError) checkPagingParams(q url.Values) Paging {
+func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
 		limit:  defaultReturnLimit,
@@ -356,7 +360,7 @@ func checkEnum[T enums.EnumFactory[T]](v validationError, enum string, name stri
 	return col
 }
 
-func (v validationError) parseSortOrder(order string) bool {
+func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
 		return defaultSortOrder == sortOrderDescending
@@ -388,11 +392,20 @@ func checkSort[T enums.EnumFactory[T]](v validationError, sortString string) *ty
 	return &types.Sort[T]{Column: sortCol, Desc: order}
 }
 
-func (v validationError) checkValidatorList(validators string) ([]uint64, []string) {
-	return v.checkValidatorArray(strings.Split(validators, ","))
+func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]uint64, []string) {
+	if validators == "" && !allowEmpty {
+		v.add("validators", "list of validators is must not be empty")
+		return nil, nil
+	}
+	return v.checkValidatorArray(strings.Split(validators, ","), allowEmpty)
 }
 
-func (v validationError) checkValidatorArray(validators []string) ([]uint64, []string) {
+func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]uint64, []string) {
+	if len(validators) == 0 && !allowEmpty {
+		v.add("validators", "list of validators is must not be empty")
+		return nil, nil
+	}
+	log.Info("a")
 	var indexes []uint64
 	var publicKeys []string
 	for _, validator := range validators {
@@ -411,7 +424,7 @@ func (v validationError) checkValidatorArray(validators []string) ([]uint64, []s
 	return indexes, publicKeys
 }
 
-func (v validationError) checkNetwork(network string) uint64 {
+func (v *validationError) checkNetwork(network string) uint64 {
 	// try parsing as uint64
 	networkId, err := strconv.ParseUint(network, 10, 64)
 	if err != nil {
