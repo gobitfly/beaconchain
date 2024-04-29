@@ -340,7 +340,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 	q := r.URL.Query()
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBManageValidatorsColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -509,7 +509,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBSummaryColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBSummaryColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -578,8 +578,8 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	}
 	groupId := v.checkGroupId(r.URL.Query().Get("group_id"), allowEmpty)
 	q := r.URL.Query()
-	period := checkEnum[enums.TimePeriod](v, q.Get("period"), "period")
-	duty := checkEnum[enums.ValidatorDuty](v, q.Get("duty"), "duty")
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -607,7 +607,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBRewardsColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -682,7 +682,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBDutiesColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -709,7 +709,7 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBBlocksColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -869,7 +869,7 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.VDBWithdrawalsColumn](v, q.Get("sort"))
+	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return

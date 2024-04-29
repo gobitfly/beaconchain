@@ -350,7 +350,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	return paging
 }
 
-func checkEnum[T enums.EnumFactory[T]](v validationError, enum string, name string) T {
+func checkEnum[T enums.EnumFactory[T]](v *validationError, enum string, name string) T {
 	var c T
 	col := c.NewFromString(enum)
 	if col.Int() == -1 {
@@ -374,7 +374,8 @@ func (v *validationError) parseSortOrder(order string) bool {
 	}
 }
 
-func checkSort[T enums.EnumFactory[T]](v validationError, sortString string) *types.Sort[T] {
+func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
+	log.Info(sortString)
 	var c T
 	if sortString == "" {
 		return &types.Sort[T]{Column: c, Desc: false}
