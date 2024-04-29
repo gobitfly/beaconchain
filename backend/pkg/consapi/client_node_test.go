@@ -120,7 +120,7 @@ func TestGetAttestationRewards(t *testing.T) {
 }
 
 func TestGetSyncCommitteesAssignments(t *testing.T) {
-	res, err := cl.GetSyncCommitteesAssignments(0, "head")
+	res, err := cl.GetSyncCommitteesAssignments(nil, "head")
 	if err != nil {
 		t.Errorf("Error getting sync committees assignments: %v", err)
 	}
