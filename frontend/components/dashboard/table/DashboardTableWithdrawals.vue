@@ -36,9 +36,9 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, (key) => {
+watch(dashboardKey, () => {
   loadData()
-  getTotalAmount(key)
+  getTotalAmount(dashboardKey.value)
 }, { immediate: true })
 
 watch(query, (q) => {
