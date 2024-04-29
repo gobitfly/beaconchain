@@ -37,7 +37,7 @@ const showAllCSSclipped = ref<boolean>(false)
   </p>
   <div style="position: relative;">
     <p><b>With 1 ellipsis:</b></p>
-    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" />
+    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
       <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :initial-flex-grow="1" />
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
@@ -58,7 +58,7 @@ const showAllCSSclipped = ref<boolean>(false)
       <br>
       * If the text looks short when it happens: with 2 ellipses, there would be 1 visible character ony, for example "…C…" or "A……" which is a loss of information without any advantage, therefore "A…D" is shown.
     </p>
-    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" :ellipses="2" />
+    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" :ellipses="2" />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
       <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="2" :initial-flex-grow="1" />
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="2" />
@@ -77,7 +77,7 @@ const showAllCSSclipped = ref<boolean>(false)
       * up to 3 ellipses if there is room for up to 64 characters,<br>
       * up to 4 ellipses if there is room for more than 64 characters.<br>
     </p>
-    <BcSearchbarMiddleEllipsis class="frame medium" :text="randomTexts[0]" :ellipses="[16,32,64]" />
+    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" :ellipses="[16,32,64]" />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
       <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
       <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="[16,32,64]" />
@@ -200,6 +200,9 @@ const showAllCSSclipped = ref<boolean>(false)
   }
   &.all {
     width: 100%;
+  }
+  &.standalone {
+    background-color: rgba(252, 204, 45, 0.397);
   }
 }
 

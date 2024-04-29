@@ -116,7 +116,7 @@ If the room allowed to the text is _defined_ (see the vocabulary above), you can
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" />
 ```
-This works only when the room that the component has is independent of the room that other MiddleEllipsis components take on the same line.
+But this works only when the room that the component has is independent of the room that other MiddleEllipsis components take on the same line.
 
 ### The interesting cases
 
@@ -124,7 +124,7 @@ This works only when the room that the component has is independent of the room 
 
 In real applications, the simple case above is not always sufficient. You might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
 which implies that the room that each component has depends on the room that other components take on the same line.
-In this case, the simple syntax above will clip their texts wrongly. The reason is that they have no way to know that their widths depend on the content of all of them.
+In this case, the simple syntax above will clip their texts wrongly. The reason is that they have no way to know that their widths depend on the content of the others.
 
 You must gather them in a parent MiddleEllipsis like so:
 ```HTML
@@ -136,34 +136,36 @@ You must gather them in a parent MiddleEllipsis like so:
 ```
 Note that :
 - A parent MiddleEllipsis can contain anything, so using a parent does not restrict the layout of your page. See it as a `div`. The parent displays components of other types as they are, unchanged. It recognizes and controls its children to make sure that they clip properly.
-- Regarding the children, their display modes can be `inline-flex` or `inline-block` (only `inline` modes make sense in our context).
+- Regarding the children, their display modes can mix `inline-flex` and `inline-block` (only `inline` modes make sense in our context).
 
 **Guaranteeing no gap between the clipped text and its neighbors**
 
 When you want
-- to have a room which adapts to its content (you are guaranteed that it is as large as its text, no matter how small the text is),
+- that the width of a MiddleEllipsis component adapts to its content,
+- the guarantee that it is as large as its text (no empty space), no matter how small the text is,
 - but you do not want this room to exceed some limit (the text must clip at some point),
 
-what width or flex-grow value should you use? There is no answer (unless the text is known in advance and fixed).
-To achieve that, you can display your text through a MiddleEllipsis of undefined width as follows.
+then you can display your text through a MiddleEllipsis of undefined width as follows.
 
 Take a parent of defined width. Inside, sit your MiddleEllipsis of undefined width and the other things to display on that line. For example:
 ```HTML
 <MiddleEllipsis class="papa">
   <MiddleEllipsis class="child1" text="a long text" />
+  blabla bla, look there is no gap:
   <MiddleEllipsis class="undefwidth-child2" text="another long text" :initial-flex-grow="1" />
-  ...
+  immediately followed by the rest without empty space
 </MiddleEllipsis>
 ```
-Note the use of props `initial-flex-grow`, which is mandatory for children of undefined width. It tells the component how much room it can give to its text with respect to the `flex-grow` properties of its neighbors. _initial_ means that the value gives room to clip the text during the computation. The real `flex-grow` of the component remains `0` so it collapses around its content, there is no empty space between it and its neighbors.
+Note the use of props `initial-flex-grow`, which is mandatory for children of undefined width. It tells the component how much room it can give to its text with respect to the `flex-grow` properties of its neighbors.
+_initial_ means that the value makes room during the computation only, the real `flex-grow` of the component remains `0` so the component collapses around its content, there is no empty space between it and its neighbors.
 
 **Using more than one ellipsis to clip the text**
 
-If you want your text to get clipped with a fixed number of ellipses, you can give a constant:
+If you want your text to get clipped with a certain number of ellipses, you can give a constant:
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" :ellipses="3" />
 ```
-MiddleEllipsis offers the possibility to adapt the number of ellipses to the length of the text. For example,
+MiddleEllipsis offers to adapt the number of ellipses to the length of the text. For example,
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" :ellipses="[8,30]" />
 ```
@@ -188,3 +190,5 @@ For example
   :width-mediaquery-threshold="600"
 ```
 makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen width passes through 600px.
+
+Children do not need this props, only parents and stand-alone components.
