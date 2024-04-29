@@ -309,15 +309,11 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 
 		// identifies unique sync periods in this epoch group
 		var syncCommitteePeriods = make(map[uint64]bool)
-		containsNewSyncCommitteeStartEpoch := false
 
 		// Step 1: fetch epoch data raw
 		for _, gap := range gapGroup.Epochs {
 			gap := gap
 			syncCommitteePeriods[utils.SyncPeriodOfEpoch(gap)] = true
-			if gap == utils.FirstEpochOfSyncPeriod(utils.SyncPeriodOfEpoch(gap)) {
-				containsNewSyncCommitteeStartEpoch = true
-			}
 
 			errGroup.Go(func() error {
 				for {
@@ -355,7 +351,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 		}
 
 		// Step 2: fetch sync committee data
-		d.getSyncCommitteesData(errGroup, syncCommitteePeriods, containsNewSyncCommitteeStartEpoch)
+		d.getSyncCommitteesData(errGroup, syncCommitteePeriods)
 
 		_ = errGroup.Wait() // no need to catch error since it will retry unless all clear without errors
 
@@ -432,11 +428,10 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 }
 
 // Fetches sync committee assignments of provided periods
-// and fetches the epoch validator state with all validators that were eligible for election to be part of the sync committee (state at start epoch of X-1 sync period)
-func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncCommitteePeriods map[uint64]bool, containsNewSyncCommitteeStartEpoch bool) {
+func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncCommitteePeriods map[uint64]bool) {
 	for syncPeriod := range syncCommitteePeriods {
 		syncPeriod := syncPeriod
-		// -- Part 1: Get current sync committee members and cache it
+		// -- Get current sync committee members and cache it
 		{
 			if found := d.responseCache.GetSyncCommittee(syncPeriod); found == nil {
 				errGroup.Go(func() error {
@@ -457,31 +452,6 @@ func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncComm
 				})
 			}
 		}
-
-		// --Part 2: Get the state of the current sync committee election and cache it
-		if containsNewSyncCommitteeStartEpoch {
-			if found := d.responseCache.GetSyncCommitteeElectedState(syncPeriod); found == nil {
-				// This is the epoch where the members of syncPeriod were elected
-				syncCommitteElectionEpoch := getSyncCommitteeElectionEpochOf(syncPeriod)
-				syncCommitteeElectedInSlot := syncCommitteElectionEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
-				errGroup.Go(func() error {
-					for {
-						start := time.Now()
-						data, err := d.CL.GetValidators(syncCommitteeElectedInSlot, nil, []constypes.ValidatorStatus{constypes.Active})
-						if err != nil {
-							d.log.Error(err, "cannot get validators state at sync committee election", 0, map[string]interface{}{"syncPeriod": syncPeriod, "syncCommitteeElectedInSlot": syncCommitteeElectedInSlot})
-							metrics.Errors.WithLabelValues("exporter_v2dash_node_committee_state_fail").Inc()
-							time.Sleep(time.Second * 10)
-							continue
-						}
-						d.responseCache.SetSyncCommitteeElectedState(syncPeriod, data)
-						d.log.Infof("retrieved validator state for sync committee period %d (election state is epoch %d) in %v", syncPeriod, syncCommitteElectionEpoch, time.Since(start))
-						break
-					}
-					return nil
-				})
-			}
-		}
 	}
 }
 
@@ -490,15 +460,7 @@ func (d *dashboardData) clearOldCache(syncCommitteePeriods map[uint64]bool) {
 	for key := range d.responseCache.cache {
 		stillNeeded := false
 
-		if strings.Contains(key, RawSyncCommitteeElectionEpochCacheKey) {
-			for syncPeriod := range syncCommitteePeriods {
-				syncCommitteeCacheKey := d.responseCache.GetSyncCommitteeElectionEpochCacheKey(syncPeriod)
-				if key == syncCommitteeCacheKey {
-					stillNeeded = true
-					break
-				}
-			}
-		} else if strings.Contains(key, RawSyncCommitteeCacheKey) {
+		if strings.Contains(key, RawSyncCommitteeCacheKey) {
 			for syncPeriod := range syncCommitteePeriods {
 				syncCommitteeCacheKey := d.responseCache.GetSyncCommitteeCacheKey(syncPeriod)
 				if key == syncCommitteeCacheKey {
@@ -972,18 +934,19 @@ func getSyncCommitteeElectionEpochOf(period uint64) uint64 {
 }
 
 type Data struct {
-	lastEpochStateEnd       *constypes.StandardValidatorsResponse
-	currentEpochStateEnd    *constypes.StandardValidatorsResponse
-	proposerAssignments     *constypes.StandardProposerAssignmentsResponse
-	attestationRewards      []constypes.AttestationReward
-	idealAttestationRewards map[int64]constypes.AttestationIdealReward // effective-balance -> ideal reward
-	beaconBlockData         map[uint64]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData   map[uint64]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
-	attestationAssignments  map[uint64]uint32
-	missedslots             map[uint64]bool
-	genesis                 bool
-	epoch                   uint64
+	lastEpochStateEnd         *constypes.StandardValidatorsResponse
+	currentEpochStateEnd      *constypes.StandardValidatorsResponse
+	proposerAssignments       *constypes.StandardProposerAssignmentsResponse
+	attestationRewards        []constypes.AttestationReward
+	idealAttestationRewards   map[int64]constypes.AttestationIdealReward // effective-balance -> ideal reward
+	beaconBlockData           map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData     map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData   map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
+	attestationAssignments    map[uint64]uint32
+	missedslots               map[uint64]bool
+	genesis                   bool
+	epoch                     uint64
+	syncCommitteeElectedState *constypes.StandardValidatorsResponse
 }
 
 const MAX_EFFECTIVE_BALANCE = 32e9
@@ -1018,6 +981,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	errGroup.Go(func() error {
 		// retrieve proposer assignments for the epoch in order to attribute missed slots
 		start := time.Now()
+		var err error
 		result.proposerAssignments, err = cl.GetPropoalAssignments(epoch)
 		if err != nil {
 			d.log.Error(err, "can not get proposer assignments", 0, map[string]interface{}{"epoch": epoch})
@@ -1083,6 +1047,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	errGroup.Go(func() error {
 		// retrieve the validator balances at the end of the epoch
 		start := time.Now()
+		var err error
 		result.currentEpochStateEnd, err = cl.GetValidators(lastSlotOfEpoch, nil, nil)
 		if err != nil {
 			d.log.Error(err, "can not get validators balances", 0, map[string]interface{}{"lastSlotOfEpoch": lastSlotOfEpoch})
@@ -1098,6 +1063,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		errGroup.Go(func() error {
 			// retrieve the validator balances at the start of the epoch
 			start := time.Now()
+			var err error
 			if lastSlotOfPreviousEpoch < 0 {
 				result.lastEpochStateEnd, err = d.CL.GetValidators("genesis", nil, nil)
 				result.genesis = true
@@ -1179,6 +1145,24 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 		})
 	}
 
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(epoch)
+	if epoch == utils.FirstEpochOfSyncPeriod(currentSyncPeriod) {
+		syncCommitteElectionEpoch := getSyncCommitteeElectionEpochOf(currentSyncPeriod)
+		syncCommitteeElectedInSlot := syncCommitteElectionEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
+		errGroup.Go(func() error {
+			start := time.Now()
+			var err error
+			result.syncCommitteeElectedState, err = d.CL.GetValidators(syncCommitteeElectedInSlot, nil, []constypes.ValidatorStatus{constypes.Active})
+			if err != nil {
+				d.log.Error(err, "can not get sync committee election state", 0, map[string]interface{}{"slot": syncCommitteeElectedInSlot})
+				return err
+			}
+			d.log.Infof("retrieved validator state for sync committee period %d (election state is epoch %d) in %v", currentSyncPeriod, syncCommitteElectionEpoch, time.Since(start))
+
+			return nil
+		})
+	}
+
 	err = errGroup.Wait()
 	if err != nil {
 		return nil, err
@@ -1241,25 +1225,24 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	// Get the total effective balance from the state where the current sync committee was elected
 	// And then calculate the chance of being in the sync committee from that state
 	if data.epoch == utils.FirstEpochOfSyncPeriod(currentSyncPeriod) {
-		syncCommitteeElectionState := d.responseCache.GetSyncCommitteeElectedState(currentSyncPeriod)
-		if syncCommitteeElectionState == nil && postAltair {
+		if data.syncCommitteeElectedState == nil && postAltair {
 			return nil, errors.New("sync committee election state not found")
 		}
 
 		syncCommitteeElectionStateTotalEffectiveBalanceETH := int64(0)
-		for _, valData := range syncCommitteeElectionState.Data {
+		for _, valData := range data.syncCommitteeElectedState.Data {
 			if valData.Status.IsActive() {
 				syncCommitteeElectionStateTotalEffectiveBalanceETH += int64(valData.Validator.EffectiveBalance / 1e9)
 			}
 		}
 
-		for _, valData := range syncCommitteeElectionState.Data {
+		for _, valData := range data.syncCommitteeElectedState.Data {
 			syncChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(syncCommitteeElectionStateTotalEffectiveBalanceETH)
 			if !valData.Status.IsActive() {
 				syncChance = 0
 			}
 
-			validatorsData[valData.Index].SyncChance = (syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)) // / float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod)
+			validatorsData[valData.Index].SyncChance = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
 		}
 	}
 
@@ -1588,7 +1571,6 @@ type validatorDashboardDataRow struct {
 const SLASHED_VIOLATION_ATTESTATION = 1
 const SLASHED_VIOLATION_PROPOSER = 2
 
-const RawSyncCommitteeElectionEpochCacheKey = "sync_elected_epoch_"
 const RawSyncCommitteeCacheKey = "sync_committee_period_"
 
 type ResponseCache struct {
@@ -1609,20 +1591,4 @@ func (r *ResponseCache) GetSyncCommittee(period uint64) *constypes.StandardSyncC
 
 func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 	return fmt.Sprintf("%s%d", RawSyncCommitteeCacheKey, period)
-}
-
-func (r *ResponseCache) SetSyncCommitteeElectedState(period uint64, data *constypes.StandardValidatorsResponse) {
-	r.cache[r.GetSyncCommitteeElectionEpochCacheKey(period)] = data
-}
-
-func (r *ResponseCache) GetSyncCommitteeElectedState(period uint64) *constypes.StandardValidatorsResponse {
-	temp, ok := r.cache[r.GetSyncCommitteeElectionEpochCacheKey(period)]
-	if !ok {
-		return nil
-	}
-	return temp.(*constypes.StandardValidatorsResponse)
-}
-
-func (r *ResponseCache) GetSyncCommitteeElectionEpochCacheKey(period uint64) string {
-	return fmt.Sprintf("%s%d", RawSyncCommitteeElectionEpochCacheKey, period)
 }
