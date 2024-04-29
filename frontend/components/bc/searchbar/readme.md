@@ -53,32 +53,32 @@ mySearchbar.value!.empty() // By itself, the search-bar never empties its input 
 _searchbar.ts_ has been designed as a "configuration file" for the search bar. For example, if the protocol to communicate with the API changes, it might
 not be necessary to modify the code of the search-bar (its behavior and look are hard-coded as little as possible).
 
-If the API returns a new type of result:
+**If the API returns a new type of result:**
   1. Add this type into the `ResultType` enum of _searchbar.ts_.
   2. Tell the bar how to read/display it by adding a new entry in the `TypeInfo` record.
 
-If the API gets the ability to return a new field in some or all elements of its response array:
+**If the API gets the ability to return a new field in some or all elements of its response array:**
   1. Write the name of the new field in `SingleAPIresult`.
   2. Create a reference to it in `Indirect`.
   3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
   4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`
   5. Add a case for the reference in function `realizeData()` in _SearchbarMain.vue_
 
-If for some type of result you want to change the information / order of the information that the user sees in the corresponding rows of the result-suggestion list:
+**If for some type of result you want to change the information / order of the information that the user sees in the corresponding rows of the result-suggestion list:**
   1. Locate this result type in record `TypeInfo`.
   2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
 
-If you want to change in depth the whole result-suggestion list (to change how every row displays the information):
+**If you want to change in depth the whole result-suggestion list (to change how every row displays the information):**
   1. Add a display-mode in the `SuggestionrowCells` enum in _searchbar.ts_
   2. Update the `SearchbarPurposeInfo` record there to tell the bar which Purpose must use your new mode.
   3. Implement this mode in a new root `<div>` at the end of the `<template>` of `SuggestionRow.vue`.
 
-You can create a new purpose if needed:
+**You can create a new purpose if needed:**
   1. Add a purpose name into the `SearchbarPurpose` enum of _searchbar.ts_.
   2. Define the behavior of the bar when it has this purpose, by adding an entry in the `SearchbarPurposeInfo` record.
   3. Now you can give this purpose to the `:bar-purpose` props.
 
-If you want to add or remove a filter button:
+**If you want to add or remove a filter button:**
   - Either you simply need create or modify a purpose to see more/less filters (see above).
   - Or:
     1. Add/remove an entry in enum `Category`.
@@ -87,11 +87,12 @@ If you want to add or remove a filter button:
     4. Update (add/remove/change) all relevant entries in record `TypeInfo` to take properly into account your new categorization of the result types.
     5. Update the entries of `SearchbarPurposeInfo` to take into account the new/removed category.
 
-If you want to change the order of the results in the drop-down, it is a bit less straightforward:
+**If you want to change the order of the results in the drop-down, it is a bit less straightforward:**
   - To change the order of the results inside each network set, modify the values of fields `priority` in the `TypeInfo` record of _searchbar.ts_.
   - Changing the order of the networks sets is a different task. You would need to change the `priority` fields in the `ChainInfo` record of _networks.ts_.
-  Note that if different types or networks have the same priority, two results of these types/networks will appear in the drop-down in the order of their `closeness` values
-  (a measure of similarity to the user input).
+
+Note that if different types or networks have the same priority, two results of these types/networks will appear in the drop-down in the order of their `closeness` values
+(a measure of similarity to the user input).
 
 # Usage of _MiddleEllipsis.vue_
 
@@ -103,7 +104,6 @@ It has been designed to adapt the text to its width as quickly as possible (test
 In the rest of the documentation, we will use those defintions:
 
 - a component of _defined width_ is a component whose width does not collapse to `0px` or `min-width` when it has no content. So, for example, it has a `flex-grow` or `width` property set, or it is a cell in a grid and the width of its column is fixed in `px` or set to `auto` or `fr` with `grid-template-columns`.
-
 - a component of _undefined width_ is a component whose width collapses to `0px` or `min-width` when it has no content.
 
 ## Syntax
@@ -139,6 +139,7 @@ Note that :
 When you want
 - to have a room which adapts to its content (you are guaranteed that it is as large as its text, no matter how small the text is),
 - but you do not want this room to exceed some limit (the text must clip at some point),
+
 what width or flex-grow value should you use? There is no answer (unless the text is known in advance and fixed).
 To achieve that, you can display your text through a MiddleEllipsis of undefined width as follows.
 
@@ -170,13 +171,16 @@ In practice, you will probably want a simple configuration like so:
 ```
 Here, the text will be clipped with one ellipsis if there is room for less than 9 characters, otherwise two ellipses.
 
-
 ## Restrictions
 
-- Never set a padding on the left or right side of a MiddleEllipsis component (margin is not a problem).
-- Never set a width for its left or right border.
+Never set a padding on the left or right side of a MiddleEllipsis component (margin is not a problem).
 
-Optional props:
-  
-  width-mediaquery-threshold="600"
-Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
+Never set a width for its left or right border.
+
+If a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of a MiddleEllipsis component,
+you must inform the component that its width can jump unexpectedly. You do so by giving AAA to its `width-mediaquery-threshold` props.
+For example
+```HTML
+  :width-mediaquery-threshold="600"
+```
+makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen width passes through 600px.
