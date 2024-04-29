@@ -6,7 +6,6 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard/index'
 
 const { dashboardKey } = useDashboardKey()
 
@@ -14,7 +13,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const { withdrawals, query: lastQuery, getWithdrawals, totalWithdrawals, getTotalWithdrawals } = useValidatorDashboardWithdrawalsStore()
+const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -37,9 +36,9 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch(dashboardKey, (key) => {
   loadData()
-  getTotalWithdrawals(dashboardKey.value)
+  getTotalAmount(key)
 }, { immediate: true })
 
 watch(query, (q) => {
@@ -48,21 +47,19 @@ watch(query, (q) => {
   }
 }, { immediate: true })
 
-watch(withdrawals, () => {
-  // keep total withdrawals sticky at the top
-  if (withdrawals.value?.data && totalWithdrawals.value !== undefined) {
-    if (withdrawals.value.data[0].group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
-      return
-    }
+const tableData = computed(() => {
+  if (!withdrawals.value?.data?.length) {
+    return
+  }
 
-    withdrawals.value.data.unshift({
-      epoch: 0,
-      slot: 0,
-      group_id: DAHSHBOARDS_ALL_GROUPS_ID,
-      recipient: { hash: '' },
-      amount: totalWithdrawals.value.data.total_amount,
-      index: 0
-    })
+  return {
+    paging: withdrawals.value.paging,
+    data: [
+      {
+        amount: totalAmount.value
+      },
+      ...withdrawals.value.data
+    ]
   }
 })
 
@@ -89,10 +86,14 @@ const setSearch = (value?: string) => {
 }
 
 const getRowClass = (row: VDBWithdrawalsTableRow) => {
-  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+  if (row.index === undefined) {
     return 'total-row'
   }
   // TODO: Future withdrawals
+}
+
+const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
+  return row.index !== undefined
 }
 
 </script>
@@ -106,7 +107,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="withdrawals"
+            :data="tableData"
             data-key="epoch"
             :expandable="!colsVisible.group"
             class="withdrawal-table"
@@ -114,6 +115,8 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :is-row-expandable="isRowExpandable"
+            :loading="isLoadingWithdrawals"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -126,11 +129,8 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               header-class="index"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id === DAHSHBOARDS_ALL_GROUPS_ID" class="all-time-total">
-                  {{ $t('dashboard.validator.withdrawals.all_time_total') }}
-                </div>
                 <NuxtLink
-                  v-else
+                  v-if="slotProps.data.group_id !== undefined"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
@@ -138,6 +138,9 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
                 >
                   <BcFormatNumber :value="slotProps.data.index" default="-" />
                 </NuxtLink>
+                <div v-else class="all-time-total">
+                  {{ $t('dashboard.validator.withdrawals.all_time_total') }}
+                </div>
               </template>
             </Column>
             <Column
@@ -161,7 +164,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
+                  v-if="slotProps.data.group_id !== undefined"
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
@@ -179,7 +182,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
+                  v-if="slotProps.data.group_id !== undefined"
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
@@ -199,7 +202,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID"
+                  v-if="slotProps.data.group_id !== undefined"
                   type="slot"
                   class="time-passed"
                   :value="slotProps.data.epoch"
@@ -215,7 +218,7 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.recipient')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id !== DAHSHBOARDS_ALL_GROUPS_ID">
+                <div v-if="slotProps.data.group_id !== undefined">
                   <BcFormatHash
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
@@ -236,9 +239,13 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.amount')"
             >
               <template #body="slotProps">
+                <div v-if="slotProps.data.index === undefined && isLoadingTotal">
+                  <BcLoadingSpinner :loading="true" size="small" />
+                </div>
                 <BcFormatValue
+                  v-else
                   :value="slotProps.data.amount"
-                  :class="{'all-time-total':slotProps.data.group_id === DAHSHBOARDS_ALL_GROUPS_ID}"
+                  :class="{'all-time-total':slotProps.data.group_id === undefined}"
                 />
               </template>
             </Column>
