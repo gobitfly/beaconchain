@@ -1214,11 +1214,10 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 	// Block Proposal Chance
 	for _, valData := range data.currentEpochStateEnd.Data {
-		proposalChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(activeTotalEffectiveBalanceETH)
-		if !valData.Status.IsActive() {
-			proposalChance = 0
+		if valData.Status.IsActive() {
+			proposalChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(activeTotalEffectiveBalanceETH)
+			validatorsData[valData.Index].BlockChance = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		}
-		validatorsData[valData.Index].BlockChance = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	}
 
 	// Sync Committee Chance
@@ -1237,12 +1236,10 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		}
 
 		for _, valData := range data.syncCommitteeElectedState.Data {
-			syncChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(syncCommitteeElectionStateTotalEffectiveBalanceETH)
-			if !valData.Status.IsActive() {
-				syncChance = 0
+			if valData.Status.IsActive() {
+				syncChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(syncCommitteeElectionStateTotalEffectiveBalanceETH)
+				validatorsData[valData.Index].SyncChance = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
 			}
-
-			validatorsData[valData.Index].SyncChance = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
 		}
 	}
 
