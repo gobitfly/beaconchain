@@ -97,7 +97,7 @@ func (v validationError) Error() string {
 }
 
 func (v *validationError) add(paramName, problem string) {
-	if v == nil || *v == nil {
+	if *v == nil {
 		*v = make(validationError)
 	}
 	validationMap := *v
