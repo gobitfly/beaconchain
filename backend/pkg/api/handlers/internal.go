@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 
@@ -437,7 +439,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		return
 	}
 	if dashboardInfo.Id != dashboardId {
-		returnNotFound(w, errors.New("public id not found"))
+		handleErr(w, fmt.Errorf("%w: public id %v not found", dataaccess.ErrNotFound, publicDashboardId))
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.GroupNames)
@@ -467,7 +469,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 		return
 	}
 	if dashboardInfo.Id != dashboardId {
-		returnNotFound(w, errors.New("public id not found"))
+		handleErr(w, fmt.Errorf("%w: public id %v not found", dataaccess.ErrNotFound, publicDashboardId))
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(publicDashboardId)
