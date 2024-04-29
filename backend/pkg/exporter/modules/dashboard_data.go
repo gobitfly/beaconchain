@@ -1086,7 +1086,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 				for slot := firstSlotOfEpoch - slotsPerEpoch; slot <= lastSlotOfEpoch-slotsPerEpoch; slot++ {
 					_, err := cl.GetBlockHeader(slot)
 					if err != nil {
-						httpErr, _ := network.SpecificError(err)
+						httpErr := network.SpecificError(err)
 						if httpErr != nil && httpErr.StatusCode == 404 {
 							result.missedslots[slot] = true
 							continue // missed
@@ -1108,7 +1108,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			// retrieve the data for all blocks that were proposed in this epoch
 			block, err := cl.GetSlot(slot)
 			if err != nil {
-				httpErr, _ := network.SpecificError(err)
+				httpErr := network.SpecificError(err)
 				if httpErr != nil && httpErr.StatusCode == 404 {
 					mutex.Lock()
 					result.missedslots[slot] = true

@@ -144,7 +144,7 @@ func (lc *LighthouseClient) GetValidatorQueue() (*types.ValidatorQueue, error) {
 	statusMap := make(map[string]uint64)
 
 	for _, validator := range parsedValidators.Data {
-		statusMap[string(validator.Status)] += 1
+		statusMap[validator.Status.String()] += 1
 	}
 	return &types.ValidatorQueue{
 		Activating: statusMap["pending_queued"],
@@ -284,7 +284,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			ActivationEpoch:            validator.Validator.ActivationEpoch,
 			ExitEpoch:                  validator.Validator.ExitEpoch,
 			WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-			Status:                     string(validator.Status),
+			Status:                     validator.Status.String(),
 		})
 	}
 
@@ -527,7 +527,7 @@ func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64,
 func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block, error) {
 	parsedHeaders, err := lc.cl.GetBlockHeader(fmt.Sprintf("0x%x", blockroot))
 	if err != nil {
-		httpErr, _ := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no block found
 			return &types.Block{}, nil
@@ -564,7 +564,7 @@ func (lc *LighthouseClient) GetBlockHeader(slot uint64) (*constypes.StandardBeac
 			Data: parsedHeader.Data[len(parsedHeader.Data)-1],
 		}
 	} else if err != nil {
-		httpErr, _ := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no block found
 			return nil, nil
@@ -643,7 +643,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 					ActivationEpoch:            validator.Validator.ActivationEpoch,
 					ExitEpoch:                  validator.Validator.ExitEpoch,
 					WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-					Status:                     string(validator.Status),
+					Status:                     validator.Status.String(),
 				})
 			}
 		}
@@ -704,7 +704,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 				ActivationEpoch:            validator.Validator.ActivationEpoch,
 				ExitEpoch:                  validator.Validator.ExitEpoch,
 				WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-				Status:                     string(validator.Status),
+				Status:                     validator.Status.String(),
 			})
 		}
 	}

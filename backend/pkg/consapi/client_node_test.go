@@ -130,11 +130,9 @@ func TestGetSyncCommitteesAssignments(t *testing.T) {
 func TestGetSpec(t *testing.T) {
 	res, err := cl.GetSpec()
 	if err != nil {
-		httpErr, rpcErr := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil {
 			t.Errorf("Error getting spec, http error: %v", err)
-		} else if rpcErr != nil {
-			t.Errorf("Error getting spec, rpc error: %v", err)
 		}
 		t.Errorf("Error getting spec: %v", err)
 	}
