@@ -551,7 +551,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		}
 
 		status := ""
-		switch constypes.ValidatorStatus(metadata.Status) {
+		switch s, _ := constypes.NewValidatorStatusFromString(metadata.Status); s {
 		case constypes.PendingInitialized:
 			status = "deposited"
 		case constypes.PendingQueued:

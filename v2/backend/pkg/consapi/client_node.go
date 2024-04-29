@@ -90,7 +90,7 @@ func (r *NodeClient) GetValidators(state any, ids []string, status []types.Valid
 		} else {
 			requestURL += "?"
 		}
-		statusStr := strings.Join(utils.ConvertToStringSlice(status), ",")
+		statusStr := strings.Join(types.ConvertToStringSlice(status), ",")
 		requestURL += fmt.Sprintf("status=%s", statusStr)
 	}
 
