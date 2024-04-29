@@ -10,7 +10,7 @@ const props = defineProps<{
   initialFlexGrow?: number, // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
   ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
   widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
-  // the props below are for internal use only
+  // !! The props below are for internal use only !!
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
   class?: string // to make the list of classes reactive
 }>()
@@ -391,7 +391,7 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
   for (const child of innerElements.widthUndefinedChildren) {
     child.settleAfterUpdate()
   }
-  // now that the undefined-width children got a width, we allow the others to use the remaining room
+  // now that the undefined-width children got a width, we will allow the others to use the remaining room
   let isAchildUnclipped = false
   for (const child of innerElements.widthDefinedChildren) {
     if (child.howMuchCanIshrinkOrGrow(false) < 0) {
@@ -399,11 +399,15 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
       break
     }
   }
-  /*
-  The following lines handle a specific case: several children have a width defined with `flex-grow`, among which at least 1 has a non-clipped text.
-  Without the following lines, after the texts are written, the flex rules would distribute the room in the span of the non-clipped text(s) to the spans of the longer text(s), after they all are written. That would create a gap around the longer text(s).
-  The following lines detect this case and distribute the room to the children before clipping and writing. */
-  if (isAchildUnclipped && !getComputedStyle(frameSpan.value).flexDirection.includes('column')) {
+  if (!isAchildUnclipped || getComputedStyle(frameSpan.value).flexDirection.includes('column')) {
+    for (const child of innerElements.widthDefinedChildren) {
+      child.updateContent(0, force)
+    }
+  } else {
+    /* The following lines handle a special case: several children have a width defined with `flex-grow`, among which at least 1 has a non-clipped text (its text is small enough to fit entirely).
+    Without the following lines, after the texts are written, the flex rules would distribute the room in the span of the non-clipped text(s) to the spans of the longer text(s), after they all are written.
+    That would create a gap around the clipped text(s), thus making them clipped short although there is room for more.
+    The following lines detect this case and distribute the room to the children before clipping and writing, so they can clip their text longer. */
     const canUseMoreRoom : {child: MiddleEllipsis, growth: number, flexGrow : number}[] = []
     const hasEnoughRoom : MiddleEllipsis[] = []
     let totalAdditionalRoom = 0
@@ -425,9 +429,7 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
     // now we distribute the room available
     for (const cumr of canUseMoreRoom) {
       const growth = totalAdditionalRoom * cumr.flexGrow / totalFlexGrow
-      if (growth > cumr.growth) {
-        // the distributable room exceeds the ability of this child to strech
-      } else {
+      if (growth < cumr.growth) {
         cumr.growth = growth
       }
       totalAdditionalRoom -= cumr.growth
@@ -440,12 +442,8 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
     for (const her of hasEnoughRoom) {
       her.updateContent(0, force)
     }
-  } else {
-    for (const child of innerElements.widthDefinedChildren) {
-      child.updateContent(0, force)
-    }
   }
-  // now that the children adapted their text to their width, we can fill them, their text is decided so they will not influence each other
+  // now that all children adapted their text to their width, we can fill them
   for (const child of innerElements.widthDefinedChildren) {
     child.settleAfterUpdate()
   }
@@ -560,15 +558,15 @@ function setFrameWidth (mode: WidthMode, x: number = 0) {
 function determineReason (considerThatTheChangeAffectsMeOnly : boolean) : UpdateReason {
   let reason : UpdateReason
   const gaps = calculateGaps()
-  if (gaps.before === undefined || didMyGivenContentChange() || whatIam.value === WhatIcanBe.Parent || gaps.now <= 0 || gaps.before <= 0) {
+  if (gaps.before === undefined || didMyGivenContentChange() || whatIam.value === WhatIcanBe.Parent || gaps.now < 0 || gaps.before < 0) {
     reason = UpdateReason.GapChangeToBeDetermined
   } else {
-    let changeMightNotRequireAnUpdate = gaps.now >= ResizeObserverLagMargin // the content still fits the frame
+    let changeMightNotRequireAnUpdate = gaps.now >= ResizeObserverLagMargin // the current content still fits the frame
     if (gaps.now < gaps.before) {
       reason = UpdateReason.GapChangeMinus
     } else if (gaps.now > gaps.before) {
       reason = UpdateReason.GapChangePlus
-      changeMightNotRequireAnUpdate &&= !isMyContentClipped() // despite the wider gap, the content cannot be clipped longer because it is already not clipped
+      changeMightNotRequireAnUpdate &&= !isMyContentClipped() // despite the wider gap, the content will not be clipped longer because it is already not clipped
     } else {
       reason = UpdateReason.None
     }
@@ -583,7 +581,7 @@ function determineReason (considerThatTheChangeAffectsMeOnly : boolean) : Update
     // TODO: If needed, calculate the actual gaps when we are a parent (frame width - sum of child widths). Currently not required.
     let before : number | undefined
     const frameWhidthToCompareTo = amIreadyForUpdate ? widthAvailableDuringLastUpdate : frameWidthAfterLastUpdate
-    const now = getFrameWidth() + currentAdditionalWidthAvailable - calculateTextWidth(currentText).width
+    const now = getFrameWidth() + (amIreadyForUpdate ? currentAdditionalWidthAvailable : 0) - calculateTextWidth(currentText).width
     if (frameWhidthToCompareTo) {
       before = frameWhidthToCompareTo - textAfterLastUpdate.width
     } else {
@@ -599,7 +597,7 @@ function whatIsMyFlexGrow () : number {
 
 /**
  * Assuming that the text is not clipped, this tells how much the frame could shrink or grow if it had to be as large as the text (or hit min-width or max-width).
- * @returns If `accurate` is `true`: positive means I can grow so much, negative means I can shrink so much. If `accurate` is `false`: positive means my text will be clipped, negative means my text fits entirely.
+ * @returns If `accurate` is `true`: positive means I can grow so much, negative means I can shrink so much. If `accurate` is `false`: positive means the text will be clipped, negative means the text fits entirely.
  */
 function howMuchCanIshrinkOrGrow (accurate : boolean) : number {
   const widthRightNow = getFrameWidth()
@@ -881,6 +879,7 @@ const frameClassList = computed(() => 'meframe-unique000name_16218934709 ' + pro
   display: inline-flex;
   position: relative;
   box-sizing: border-box;
+  flex-wrap: nowrap;
   white-space: nowrap;
   overflow: hidden;
 }
