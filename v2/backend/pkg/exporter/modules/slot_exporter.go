@@ -356,15 +356,18 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 			expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
 			expirationDuration := time.Until(expirationTime)
-			log.Infof("writing assignments data to redis with a TTL of %v", expirationDuration)
-			err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
-			if err != nil {
-				return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
+			if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
+				log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
+			} else {
+				log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
+				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+				if err != nil {
+					return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
+				}
+				// publish the event to inform the api about the new data (todo)
+				// db.PersistentRedisDbClient.Publish(context.Background(), fmt.Sprintf("%d:slotViz", utils.Config.Chain.ClConfig.DepositChainID), fmt.Sprintf("%s:%d", "ea", epoch)).Err()
+				log.Infof("writing current epoch assignments to redis completed")
 			}
-
-			// publish the event to inform the api about the new data (todo)
-			// db.PersistentRedisDbClient.Publish(context.Background(), fmt.Sprintf("%d:slotViz", utils.Config.Chain.ClConfig.DepositChainID), fmt.Sprintf("%s:%d", "ea", epoch)).Err()
-			log.Infof("writing current epoch assignments to redis completed")
 
 			if isHeadEpoch {
 				nextEpoch := epoch + 1
@@ -390,10 +393,14 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 				expirationTime := utils.EpochToTime(nextEpoch + 7) // keep it for at least 7 epochs in the cache
 				expirationDuration := time.Until(expirationTime)
-				log.Infof("writing assignments data for head+1 epoch to redis with a TTL of %v", expirationDuration)
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
-				if err != nil {
-					return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
+				if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
+					log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
+				} else {
+					log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
+					err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+					if err != nil {
+						return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
+					}
 				}
 			}
 

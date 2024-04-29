@@ -6,7 +6,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { BcDialogConfirm } from '#components'
+import { BcDialogConfirm, BcPremiumModal } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
@@ -17,7 +17,7 @@ const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const { width, isMobile } = useWindowSize()
 
@@ -73,6 +73,12 @@ const addGroup = async () => {
   if (!newGroupName.value?.length) {
     return
   }
+
+  if (premiumLimit.value) {
+    dialog.open(BcPremiumModal, {})
+    return
+  }
+
   await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: dashboardKey.value })
   await refreshOverview(dashboardKey.value)
   newGroupName.value = ''
@@ -124,8 +130,8 @@ const dashboardName = computed(() => {
 })
 
 // TODO: once we have a user management we need to check how to get the real premium limit
-const MaxGroupsPerDashboard = 40
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= MaxGroupsPerDashboard)
+const maxGroupsPerDashboard = computed(() => (isPublic.value ? 1 : 40))
+const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
 
 </script>
 
@@ -142,6 +148,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     </template>
     <BcTableControl
       :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')"
+      :disabled-filter="isPublic"
       @set-search="setSearch"
     >
       <template #header-left>
@@ -154,12 +161,11 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
           <InputText
             v-model="newGroupName"
             class="search-input"
-            :disabled="premiumLimit"
             maxlength="20"
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
             @keypress.enter="addGroup"
           />
-          <Button style="display: inline;" :disabled="!newGroupName.length || premiumLimit" @click="addGroup">
+          <Button style="display: inline;" :disabled="!newGroupName.length" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -183,7 +189,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
                   :value="slotProps.data.name"
                   :default="slotProps.data.id === 0 ? $t('common.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
-                  :disabled="false"
+                  :disabled="isPublic"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
@@ -215,10 +221,10 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= Ma
     <template #footer>
       <div class="footer">
         <div class="left">
-          <div v-if="MaxGroupsPerDashboard" class="labels" :class="{premiumLimit}">
+          <div class="labels" :class="{premiumLimit}">
             <span>
-              <BcFormatNumber :value="data.paging.total_count" default="0" />/
-              <BcFormatNumber :value="MaxGroupsPerDashboard" />
+              <BcFormatNumber :value="data.paging.total_count" default="0" /> /
+              <BcFormatNumber :value="maxGroupsPerDashboard" />
             </span>
             <span>{{ $t('dashboard.validator.group_management.groups_added') }}</span>
           </div>

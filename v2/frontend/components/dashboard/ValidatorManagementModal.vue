@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import { uniq } from 'lodash-es'
-import { BcDialogConfirm, DashboardGroupSelectionDialog } from '#components'
+import { BcDialogConfirm, BcPremiumModal, DashboardGroupSelectionDialog } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
@@ -30,7 +30,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate: groupsEnabled } = useDashboardKey()
+const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
 const { isLoggedIn } = useUserStore()
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
@@ -96,7 +96,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 
 const addValidator = (result : ResultSuggestion) => {
   if (premiumLimit.value) {
-    // TODO: show a BcDialogConfirm to invite the user to suscribe to a plan (see Figma).
+    dialog.open(BcPremiumModal, {})
     return
   }
 
@@ -104,35 +104,32 @@ const addValidator = (result : ResultSuggestion) => {
   switch (result.type) {
     case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
     case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = result.queryParam
+      selectedValidator.value = String(result.rawResult.num_value!)
       break
-    // Below, several validators correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
-      selectedValidator.value = result.queryParam // TODO: maybe handle these cases differently? (because `result.queryParam` identifies a list of validators instead of a single index/pubkey)
+      // TODO: add a batch of validators
       // If you need it: `result.count` is the size of the batch.
+      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
+      selectedValidator.value = ''
       break
     default :
       return
+  }
+  if (!selectedValidator.value) {
+    return
   }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities([selectedValidator.value])
   } else {
     changeGroup([selectedValidator.value], selectedGroup.value)
   }
-  // The following method hides the result in the drop-down, so the user can easily identify which validators he can still add:
-  searchBar.value!.hideResult(result)
-  // You probably want to call it later, after getting confirmation that the validator is added into the database,
-  // but `result` is no longer valid if the user changes the input (the bar ignores your call to hideResult() then).
-
-  // Because of props `:keep-dropdown-open="true"` in the template, the dropdown does not close when the user selects a validator.
-  // If there are cases that you want to close the dropdown, you can call this method:
-  // searchBar.value!.closeDropdown()
-  // Or, if you are sure that the dropdown should always be closed when the user selects something, simply remove `:keep-dropdown-open="true"`.
+  searchBar.value!.empty()
 }
 
 const editSelected = () => {
@@ -221,7 +218,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 // TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => groupsEnabled.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
@@ -238,14 +235,14 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span />
     </template>
-    <BcTableControl :search-placeholder="$t('dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
+    <BcTableControl :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-if="groupsEnabled" v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
           <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             ref="searchBar"
@@ -253,7 +250,6 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
             :only-networks="[ChainIDs.Ethereum]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
-            :keep-dropdown-open="true"
             class="search-bar"
             @go="addValidator"
           />
@@ -282,7 +278,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               </template>
             </Column>
             <Column
-              v-if="size.showGroup && groupsEnabled"
+              v-if="size.showGroup"
               field="group_id"
               :sortable="!size.expandable"
               :header="$t('dashboard.validator.col.group')"
@@ -351,7 +347,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
-                  <div v-if="groupsEnabled" class="label">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.group') }}
                   </div>
                   <DashboardGroupSelection

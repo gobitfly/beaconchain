@@ -29,38 +29,36 @@ const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 .frame {
   position: relative;
   display: inline-block;
-}
+  .icon {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+  }
 
-.icon {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%,-50%);
-}
+  // The following classes are used only if props `harmonize-perceived-size` has been set to true.
+  // It corrects what a human brain perceives, to give the feeling that all icons have a similar size (maybe a matter of surface area).
+  // Based on empirical trials an errors with author's brain.
+  .Ethereum {
+    height: 110%;
+  }
 
-// The following classes are used only if props `harmonize-perceived-size` has been set to true.
-// It corrects what a human brain perceives, to give the feeling that all icons have a similar size (maybe a matter of surface area).
-// Based on empirical trials an errors with author's brain.
+  .Arbitrum {
+    height: 90%;
+  }
 
-.Ethereum {
-  height: 110%;
-}
+  .Optimism {
+    height: 90%;
+  }
 
-.Arbitrum {
-  height: 90%;
-}
+  .Base {
+    height: 90%;
+  }
 
-.Optimism {
-  height: 90%;
-}
-
-.Base {
-  height: 90%;
-}
-
-.Gnosis {
-  height: 90%;
+  .Gnosis {
+    height: 90%;
+  }
 }
 </style>

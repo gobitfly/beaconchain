@@ -21,75 +21,27 @@ function selectionHasChanged (category : Category, selected : boolean) {
 </script>
 
 <template>
-  <div>
-    <span v-for="filter of liveState" :key="filter[0]">
-      <label class="filter-button">
-        <input
-          type="checkbox"
-          class="hidden-checkbox"
-          :true-value="true"
-          :false-value="false"
-          :checked="filter[1]"
-          :onchange="(e:any) => selectionHasChanged(filter[0], e.target.checked)"
-        >
-        <span class="face" :class="barStyle">
-          {{ t(...CategoryInfo[filter[0]].filterLabel) }}
-        </span>
-      </label>
-    </span>
+  <div class="group">
+    <BcSearchbarFilterButton
+      v-for="filter of liveState"
+      :key="filter[0]"
+      :state="filter[1]"
+      class="button"
+      :bar-style="barStyle"
+      @change="(selected : boolean) => selectionHasChanged(filter[0], selected)"
+    >
+      {{ t(...CategoryInfo[filter[0]].filterLabel) }}
+    </BcSearchbarFilterButton>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use "~/assets/css/fonts.scss";
-
-.filter-button {
-  @include fonts.small_text_bold;
-
-  .face{
-    display: inline-block;
-    cursor: pointer;
-    border-radius: 10px;
-    height: 17px;
-    padding-top: 2.5px;
-    padding-left: 8px;
-    padding-right: 8px;
-    text-align: center;
-    margin-right: 6px;
-    transition: 0.2s;
+.group {
+  display: inline-block;
+  vertical-align: top;
+  .button {
+    margin-right: var(--padding-small);
     margin-bottom: 8px;
-
-    &.gaudy {
-      color: var(--primary-contrast-color);
-      background-color: var(--searchbar-filter-unselected-gaudy);
-    }
-    &.discreet {
-      color: var(--light-black);
-      background-color: var(--light-grey);
-    }
-
-    &:hover {
-      background-color: var(--light-grey-3);
-    }
-    &:active {
-      background-color: var(--button-color-pressed);
-    }
-  }
-
-  .hidden-checkbox {
-    display: none;
-    width: 0;
-    height: 0;
-    &:checked + .face {
-      background-color: var(--button-color-active);
-      &:hover {
-        background-color: var(--button-color-hover);
-      }
-      &:active {
-        background-color: var(--button-color-pressed);
-      }
-    }
   }
 }
 </style>

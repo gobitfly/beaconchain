@@ -7,7 +7,7 @@ import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidato
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -85,14 +85,14 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.blocks.title')"
-      :search-placeholder="$t('dashboard.validator.blocks.search_placeholder')"
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.blocks.search_placeholder_public' : 'dashboard.validator.blocks.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="blocks"
-            data-key="epoch"
+            data-key="slot"
             :expandable="true"
             class="block-table"
             :cursor="cursor"

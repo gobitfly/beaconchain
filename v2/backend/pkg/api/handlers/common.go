@@ -113,9 +113,15 @@ func checkEmail(handlerErr *error, email string) string {
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise join error to handlerErr and/or return nil
-func checkBody(handlerErr *error, data interface{}, r io.Reader) error {
+func checkBody(handlerErr *error, data interface{}, r *http.Request) error {
+	// check if content type is application/json
+	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+		joinErr(handlerErr, "Content-Type header must be 'application/json'")
+	}
+	body := r.Body
+
 	// Read the entire request body (this consumes the request body)
-	bodyBytes, err := io.ReadAll(r)
+	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		log.Error(err, "error reading request body", 0, nil)
 		return errors.New("can't read request body")

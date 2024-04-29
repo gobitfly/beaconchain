@@ -55,7 +55,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
+	if bodyErr := checkBody(&err, &req, r); bodyErr != nil {
 		returnInternalServerError(w, bodyErr)
 		return
 	}
