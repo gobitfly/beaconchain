@@ -1,4 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
+import { warn } from 'vue'
+import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
 import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
@@ -22,6 +24,10 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
   DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
+  DASHBOARD_EL_DEPOSITS = '/dashboard/elDeposits',
+  DASHBOARD_EL_DEPOSITS_TOTAL = '/dashboard/elDepositsTotal',
+  DASHBOARD_CL_DEPOSITS = '/dashboard/clDeposits',
+  DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
@@ -134,6 +140,26 @@ const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards`,
     mock: false
   },
+  [API_PATH.DASHBOARD_EL_DEPOSITS]: {
+    path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
+    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_CL_DEPOSITS]: {
+    path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL]: {
+    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
+    mock: false
+  },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/summary-chart?',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
@@ -174,6 +200,7 @@ const mapping: Record<string, MappingData> = {
 
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
+  const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
 
@@ -205,7 +232,17 @@ export function useCustomFetch () {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
     options.credentials = 'include'
-    const method = map.method || 'GET'
+    const method = options.method || map.method || 'GET'
+
+    // For non GET method's we need to set the csrf header for security
+    if (method !== 'GET') {
+      if (csrfHeader.value) {
+        options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
+      } else {
+        warn('missing csrf header!')
+      }
+    }
+
     if (pathName === API_PATH.LOGIN) {
       const res = await $fetch<LoginResponse>(path, {
         method,
@@ -216,7 +253,12 @@ export function useCustomFetch () {
     }
 
     try {
-      return await $fetch<T>(path, { method, ...options, baseURL })
+      const res = await $fetch.raw<T>(path, { method, ...options, baseURL })
+      if (method === 'GET') {
+        // We get the csrf header from GET requests
+        setCsrfHeader(res.headers)
+      }
+      return res._data as T
     } catch (e: any) {
       if (!dontShowError) {
         showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })

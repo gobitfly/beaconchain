@@ -1,17 +1,19 @@
 package types
 
+import "github.com/ethereum/go-ethereum/common/hexutil"
+
 type StandardBeaconHeaderResponse struct {
 	Data struct {
-		Root   bytesHexStr `json:"root"`
+		Root   hexutil.Bytes `json:"root"`
 		Header struct {
 			Message struct {
-				Slot          uint64      `json:"slot,string"`
-				ProposerIndex uint64      `json:"proposer_index,string"`
-				ParentRoot    bytesHexStr `json:"parent_root"`
-				StateRoot     bytesHexStr `json:"state_root"`
-				BodyRoot      bytesHexStr `json:"body_root"`
+				Slot          uint64        `json:"slot,string"`
+				ProposerIndex uint64        `json:"proposer_index,string"`
+				ParentRoot    hexutil.Bytes `json:"parent_root"`
+				StateRoot     hexutil.Bytes `json:"state_root"`
+				BodyRoot      hexutil.Bytes `json:"body_root"`
 			} `json:"message"`
-			Signature bytesHexStr `json:"signature"`
+			Signature hexutil.Bytes `json:"signature"`
 		} `json:"header"`
 	} `json:"data"`
 	Finalized bool `json:"finalized"`
@@ -19,16 +21,16 @@ type StandardBeaconHeaderResponse struct {
 
 type StandardBeaconHeadersResponse struct {
 	Data []struct {
-		Root   bytesHexStr `json:"root"`
+		Root   hexutil.Bytes `json:"root"`
 		Header struct {
 			Message struct {
-				Slot          uint64      `json:"slot,string"`
-				ProposerIndex uint64      `json:"proposer_index,string"`
-				ParentRoot    bytesHexStr `json:"parent_root"`
-				StateRoot     bytesHexStr `json:"state_root"`
-				BodyRoot      bytesHexStr `json:"body_root"`
+				Slot          uint64        `json:"slot,string"`
+				ProposerIndex uint64        `json:"proposer_index,string"`
+				ParentRoot    hexutil.Bytes `json:"parent_root"`
+				StateRoot     hexutil.Bytes `json:"state_root"`
+				BodyRoot      hexutil.Bytes `json:"body_root"`
 			} `json:"message"`
-			Signature bytesHexStr `json:"signature"`
+			Signature hexutil.Bytes `json:"signature"`
 		} `json:"header"`
 	} `json:"data"`
 	Finalized bool `json:"finalized"`

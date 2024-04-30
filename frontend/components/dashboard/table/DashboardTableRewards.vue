@@ -8,7 +8,7 @@ import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -108,7 +108,7 @@ const findNextEpochDuties = (epoch: number) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.rewards.title')"
-      :search-placeholder="$t('dashboard.validator.rewards.search_placeholder')"
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.rewards.search_placeholder_public' : 'dashboard.validator.rewards.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
