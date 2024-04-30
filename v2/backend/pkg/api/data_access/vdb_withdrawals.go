@@ -474,3 +474,8 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 
 	return timeToWithdrawal
 }
+
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+	// TODO @ data access team
+	return d.dummy.GetValidatorDashboardTotalWithdrawals(dashboardId)
+}

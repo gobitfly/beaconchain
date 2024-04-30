@@ -7,7 +7,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
@@ -76,7 +76,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
-      :search-placeholder="$t('dashboard.validator.summary.search_placeholder')"
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
@@ -95,10 +95,10 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             @set-page-size="setPageSize"
           >
             <Column
-              v-if="groupsEnabled"
               field="group_id"
               :sortable="true"
-              body-class="bold"
+              body-class="group-id bold"
+              header-class="group-id"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -153,7 +153,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               <template #body="slotProps">
                 <DashboardTableValidators
                   :validators="slotProps.data.validators"
-                  :group-id="groupsEnabled ? slotProps.data.group_id : undefined"
+                  :group-id="slotProps.data.group_id"
                   context="group"
                 />
               </template>
@@ -177,6 +177,10 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 @use "~/assets/css/utils.scss";
 :deep(.summary_table) {
   --col-width: 216px;
+
+  .group-id {
+    @include utils.truncate-text;
+  }
 
   td:has(.validator_column) {
     @include utils.set-all-width(var(--col-width));

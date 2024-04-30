@@ -41,8 +41,8 @@ const props = defineProps<{
   barStyle: SearchbarStyle, // look of the bar
   barPurpose: SearchbarPurpose, // what the bar will be used for
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
-  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
-  keepDropdownOpen? : boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
+  pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
+  keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 
@@ -57,12 +57,12 @@ enum States {
 }
 
 interface GlobalState {
-  state : States,
+  state: States,
   functionToCallAfterResultsGetOrganized: Function | null
   showDropdown: boolean
 }
 
-let searchableTypes : ResultType[] = []
+let searchableTypes: ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
 const debouncer = useDebounceValue<string>('', MinimumTimeBetweenAPIcalls)
@@ -187,7 +187,7 @@ onUnmounted(() => {
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (!dropdown.value || !inputFieldAndButton.value ||
+  if (!globalState.value.showDropdown || !dropdown.value || !inputFieldAndButton.value ||
       dropdown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
     return
   }
@@ -229,7 +229,7 @@ function userPressedSearchButtonOrEnter () {
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
       resetGlobalState(States.WaitingForResults)
-      callAPIthenOrganizeResultsThenCallBack() // we start a new search
+      callAPIthenOrganizeResultsThenCallBack(inputted.value) // we start a new search
       return
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
       globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
@@ -254,7 +254,7 @@ function userPressedSearchButtonOrEnter () {
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one is array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
+      // here we assume that the result with the best `closeness` value is the first one in array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
       possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type, s: type.suggestions[0] } as Matching)
     }
   }
@@ -284,8 +284,7 @@ function refreshOutputArea () {
   updateGlobalState(globalState.value.state)
 }
 
-async function callAPIthenOrganizeResultsThenCallBack () {
-  const inputWhenAPIgotCalled = inputted.value
+async function callAPIthenOrganizeResultsThenCallBack (inputWhenIgotCalled : string) {
   let received : SearchAheadAPIresponse | undefined
 
   try {
@@ -293,7 +292,7 @@ async function callAPIthenOrganizeResultsThenCallBack () {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: {
-        input: inputted.value,
+        input: inputWhenIgotCalled,
         types: searchableTypes,
         count: isResultCountable(undefined)
       }
@@ -301,7 +300,7 @@ async function callAPIthenOrganizeResultsThenCallBack () {
   } catch (error) {
     received = undefined
   }
-  if (inputted.value !== inputWhenAPIgotCalled) { // result/error outdated. If there is an error, we ignore it because it is based on an outdated input.
+  if (inputted.value !== inputWhenIgotCalled) { // result/error outdated. If there is an error, we ignore it because it is based on an outdated input.
     return
   }
   if (!received || received.error !== undefined || received.data === undefined) {
@@ -507,10 +506,7 @@ function mustCategoryFiltersBeShown () : boolean {
 
 const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
 
-const classIfDropdownContainsSomething = computed(() => {
-  const dropdownContainsSomething = mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty
-  return dropdownContainsSomething ? 'dropdown-contains-something' : ''
-})
+const dropdownContainsSomething = computed(() => mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty)
 
 function areThereResultsHiddenByUser () : boolean {
   return results.organized.howManyResultsOut > 0
@@ -565,8 +561,8 @@ function informationIfHiddenResults () : string {
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="[barStyle, classIfDropdownContainsSomething]">
-        <div v-if="classIfDropdownContainsSomething" class="separation" :class="barStyle" />
+      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="barStyle">
+        <div v-if="dropdownContainsSomething" class="separation" :class="barStyle" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
@@ -592,7 +588,7 @@ function informationIfHiddenResults () : string {
                   :suggestion="suggestion"
                   :bar-style="barStyle"
                   :bar-purpose="barPurpose"
-                  @click="(e : Event) => {e.stopPropagation(); userClickedSuggestion(suggestion)}"
+                  @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
                 />
               </div>
             </div>
@@ -604,10 +600,12 @@ function informationIfHiddenResults () : string {
             {{ informationIfHiddenResults() }}
           </div>
         </div>
-        <div v-else class="output-area" :class="barStyle">
+        <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
-            {{ t('search_bar.searching') }}
-            <BcLoadingSpinner :loading="true" size="small" alignment="default" />
+            <div>
+              {{ t('search_bar.searching') }}
+              <BcLoadingSpinner :loading="true" size="small" alignment="center" />
+            </div>
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
             {{ t('search_bar.something_wrong') }}
@@ -629,13 +627,15 @@ function informationIfHiddenResults () : string {
   position: relative;
   display: flex;
   margin: auto;
+
   &.embedded {
     height: 30px;
     &.dropdown-is-opened {
-      @media (max-width: 469.9px) { // narrow window/screen
+      @media (max-width: 470px) { // narrow window/screen
         position: absolute;
         left: 0px;
         right: 0px;
+        top: 0px;
       }
     }
   }
@@ -644,7 +644,7 @@ function informationIfHiddenResults () : string {
     @media (min-width: 600px) { // large screen
       width: 460px;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       width: 380px;
     }
   }
@@ -653,7 +653,7 @@ function informationIfHiddenResults () : string {
     @media (min-width: 600px) { // large screen
       width: 735px;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       width: 380px;
     }
   }
@@ -747,9 +747,6 @@ function informationIfHiddenResults () : string {
     position: relative;
     left: 0px;
     right: 0px;
-    &.dropdown-contains-something {
-      padding-bottom: 4px;
-    }
 
     .separation {
       position: relative;
@@ -769,14 +766,18 @@ function informationIfHiddenResults () : string {
     }
 
     .filter-area {
-      display: flex;
-      flex-wrap: wrap;
+      position: relative;
+      display: block;
 
       .filter-networks {
-        margin-left: 6px;
+        position: relative;
+        display: inline-block;
+        margin-left: var(--padding-small);
       }
       .filter-categories {
-        margin-left: 6px;
+        position: relative;
+        display: inline-block;
+        margin-left: var(--padding-small);
       }
     }
 
@@ -786,6 +787,7 @@ function informationIfHiddenResults () : string {
       flex-direction: column;
       max-height: 270px;
       overflow: auto;
+      padding-bottom: 4px;
       @include fonts.standard_text;
       &.discreet {
         color: var(--searchbar-text-discreet);
@@ -812,7 +814,7 @@ function informationIfHiddenResults () : string {
               height: 1px;
 
               &.embedded {
-                @media (max-width: 600px) { // mobile
+                @media (max-width: 599.9px) { // mobile
                   display: block;
                 }
                 background-color: var(--input-border-color);
@@ -824,6 +826,7 @@ function informationIfHiddenResults () : string {
 
       .info {
         position: relative;
+        display: flex;
         @include fonts.standard_text;
         color: var(--text-color-disabled);
         justify-content: center;
@@ -836,6 +839,7 @@ function informationIfHiddenResults () : string {
         &.center {
           margin-bottom: auto;
           margin-top: auto;
+          height: 50px;
         }
         padding-left: 6px;
         padding-right: 6px;
