@@ -113,7 +113,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
           </template>
-          Withdrawals coming soon!
+          <DashboardTableWithdrawals />
         </TabPanel>
       </TabView>
     </BcPageWrapper>

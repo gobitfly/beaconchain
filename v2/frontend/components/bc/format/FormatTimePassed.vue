@@ -34,11 +34,13 @@ const label = computed(() => {
       return formatGoTimestamp(props.value as string, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     case 'slot':
       return formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+    case 'epoch':
     default:
       return formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
   }
 })
 </script>
+
 <template>
   <span v-if="label">{{ label }}</span>
 </template>

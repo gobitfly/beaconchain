@@ -179,9 +179,9 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   --col-width: 216px;
 
   .group-id {
-    @include utils.set-all-width(120px);
     @include utils.truncate-text;
   }
+
   td:has(.validator_column) {
     @include utils.set-all-width(var(--col-width));
   }

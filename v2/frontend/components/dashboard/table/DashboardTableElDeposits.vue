@@ -318,10 +318,6 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
       overflow: visible;
     }
   }
-
-  >table {
-    min-height: 200px;
-  }
 }
 
 .expansion {
