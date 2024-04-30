@@ -22,9 +22,11 @@ export function useValidatorDashboardWithdrawalsStore () {
   const isLoadingTotal = ref(false)
 
   async function getWithdrawals (dashboardKey: DashboardKey, query?: TableQueryParams) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      data.value = undefined
       return undefined
     }
+
     storedQuery.value = query
     isLoadingWithdrawals.value = true
     const res = await fetch<InternalGetValidatorDashboardWithdrawalsResponse>(API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS, undefined, { dashboardKey }, query)
@@ -39,9 +41,11 @@ export function useValidatorDashboardWithdrawalsStore () {
   }
 
   async function getTotalAmount (dashboardKey: DashboardKey) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      total.value = undefined
       return undefined
     }
+
     isLoadingTotal.value = true
     const res = await fetch<InternalGetValidatorDashboardTotalWithdrawalsResponse>(API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS, undefined, { dashboardKey })
     isLoadingTotal.value = false
