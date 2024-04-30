@@ -224,7 +224,8 @@
     },
     "deletion": {
       "title": "Delete Dashboard",
-      "text": "Do you want to delete dashboard {dashboard}?"
+      "delete_text": "Do you want to delete dashboard {dashboard}?",
+      "clear_text": "Do you want to clear this {dashboard}?"
     },
     "validator": {
       "manage_validators": "Manage Validators",
