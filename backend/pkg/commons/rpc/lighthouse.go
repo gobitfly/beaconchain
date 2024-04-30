@@ -144,7 +144,7 @@ func (lc *LighthouseClient) GetValidatorQueue() (*types.ValidatorQueue, error) {
 	statusMap := make(map[string]uint64)
 
 	for _, validator := range parsedValidators.Data {
-		statusMap[validator.Status.String()] += 1
+		statusMap[string(validator.Status)] += 1
 	}
 	return &types.ValidatorQueue{
 		Activating: statusMap["pending_queued"],
@@ -284,7 +284,7 @@ func (lc *LighthouseClient) GetEpochData(epoch uint64, skipHistoricBalances bool
 			ActivationEpoch:            validator.Validator.ActivationEpoch,
 			ExitEpoch:                  validator.Validator.ExitEpoch,
 			WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-			Status:                     validator.Status.String(),
+			Status:                     string(validator.Status),
 		})
 	}
 
@@ -643,7 +643,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 					ActivationEpoch:            validator.Validator.ActivationEpoch,
 					ExitEpoch:                  validator.Validator.ExitEpoch,
 					WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-					Status:                     validator.Status.String(),
+					Status:                     string(validator.Status),
 				})
 			}
 		}
@@ -704,7 +704,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 				ActivationEpoch:            validator.Validator.ActivationEpoch,
 				ExitEpoch:                  validator.Validator.ExitEpoch,
 				WithdrawableEpoch:          validator.Validator.WithdrawableEpoch,
-				Status:                     validator.Status.String(),
+				Status:                     string(validator.Status),
 			})
 		}
 	}

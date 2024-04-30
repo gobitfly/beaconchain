@@ -934,18 +934,20 @@ func getSyncCommitteeElectionEpochOf(period uint64) uint64 {
 }
 
 type Data struct {
-	lastEpochStateEnd         *constypes.StandardValidatorsResponse
-	currentEpochStateEnd      *constypes.StandardValidatorsResponse
-	proposerAssignments       *constypes.StandardProposerAssignmentsResponse
-	attestationRewards        []constypes.AttestationReward
-	idealAttestationRewards   map[int64]constypes.AttestationIdealReward // effective-balance -> ideal reward
-	beaconBlockData           map[uint64]*constypes.StandardBeaconSlotResponse
-	beaconBlockRewardData     map[uint64]*constypes.StandardBlockRewardsResponse
-	syncCommitteeRewardData   map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
-	attestationAssignments    map[uint64]uint32
-	missedslots               map[uint64]bool
-	genesis                   bool
-	epoch                     uint64
+	lastEpochStateEnd       *constypes.StandardValidatorsResponse
+	currentEpochStateEnd    *constypes.StandardValidatorsResponse
+	proposerAssignments     *constypes.StandardProposerAssignmentsResponse
+	attestationRewards      []constypes.AttestationReward
+	idealAttestationRewards map[int64]constypes.AttestationIdealReward // effective-balance -> ideal reward
+	beaconBlockData         map[uint64]*constypes.StandardBeaconSlotResponse
+	beaconBlockRewardData   map[uint64]*constypes.StandardBlockRewardsResponse
+	syncCommitteeRewardData map[uint64]*constypes.StandardSyncCommitteeRewardsResponse
+	attestationAssignments  map[uint64]uint32
+	missedslots             map[uint64]bool
+	genesis                 bool
+	epoch                   uint64
+
+	// Contains the validator state of the epoch where the current sync committee election took place
 	syncCommitteeElectedState *constypes.StandardValidatorsResponse
 }
 
