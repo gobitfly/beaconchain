@@ -138,6 +138,10 @@ watch(() => props.expandable, (expandable) => {
   :deep(.selection) {
     width: 20px;
   }
+
+  :deep(.p-datatable-emptymessage) {
+    height: 140px;
+  }
 }
 
 .toggle {

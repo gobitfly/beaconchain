@@ -287,6 +287,12 @@
           "total": "Total Rewards"
         }
       },
+      "withdrawals": {
+        "title": "Withdrawals",
+        "search_placeholder": "Index, Public Key, Address",
+        "all_time_total": "All time total",
+        "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
+      },
       "group_management":  {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
@@ -328,7 +334,9 @@
         "reward_recipient": "Rewards Recipient",
         "proposer_rewards": "Proposer Rewards",
         "depositor": "Depositor",
-        "signature": "Signature"
+        "signature": "Signature",
+        "recipient": "Recipient",
+        "amount": "Amount"
       },
       "summary": {
         "total_group_name": "Total Efficiency",

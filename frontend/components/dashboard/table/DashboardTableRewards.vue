@@ -141,8 +141,6 @@ const findNextEpochDuties = (epoch: number) => {
             <Column
               v-if="colsVisible.age"
               field="age"
-              body-class="age"
-              header-class="age"
             >
               <template #header>
                 <BcTableAgeHeader />

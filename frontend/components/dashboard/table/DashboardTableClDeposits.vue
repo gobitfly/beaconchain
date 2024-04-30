@@ -336,10 +336,6 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
       border-bottom-color: var(--primary-color);
     }
   }
-
-  >table {
-    min-height: 200px;
-  }
 }
 
 .expansion {

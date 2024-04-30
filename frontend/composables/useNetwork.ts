@@ -28,5 +28,5 @@ export function useNetwork () {
     return Math.floor(slot / slotsPerEpoch)
   }
 
-  return { epochToTs, epochsPerDay, slotsPerEpoch, slotToEpoch, slotToTs }
+  return { epochToTs, epochsPerDay, slotsPerEpoch, slotToTs, slotToEpoch }
 }
