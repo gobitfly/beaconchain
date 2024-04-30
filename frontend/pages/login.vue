@@ -1,36 +1,25 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
+import { string as yupString } from 'yup'
 import { useUserStore } from '~/stores/useUserStore'
 
+const { t } = useI18n()
 const { doLogin } = useUserStore()
 
-const { handleSubmit, errors, values } = useForm()
-const { value: email } = useField('email', validateField)
-const { value: password } = useField('password', validateField)
+const { handleSubmit, errors } = useForm()
+const { value: email } = useField<string>('email', yupString().email(t('login.invalid_email')).required(t('login.no_email')))
+const { value: password } = useField<string>('password', validatePassword)
 
-function validateField (value?: string) {
-  if (!value) {
-    return 'Input required.'
-  }
-
-  return true
+function validatePassword (value: string) : true|string {
+  return !!value || t('login.no_password')
 }
 
-const hasErrors = computed(() => {
-  return !!errors.value && !!Object.values(errors.value).filter(val => !!val).length
-})
-
-const inputValid = computed(() => {
-  return !!values.email?.length && !!values.password?.length && !hasErrors.value
-})
-
 const onSubmit = handleSubmit(async (values) => {
-  if (inputValid.value) {
-    await doLogin(values.email, values.password)
-    await navigateTo('/')
-  }
+  await doLogin(values.email, values.password)
+  await navigateTo('/')
 })
 
+const canSubmit = computed(() => !!email.value && !!password.value && !Object.keys(errors.value).length)
 </script>
 
 <template>
@@ -60,7 +49,7 @@ const onSubmit = handleSubmit(async (values) => {
           <small id="text-error" class="p-error">{{ errors?.password || '&nbsp;' }}</small>
         </div>
         <div class="botton_row">
-          <Button type="submit" :label="$t('login.submit')" :disabled="!inputValid" />
+          <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
         </div>
       </form>
       <Toast />

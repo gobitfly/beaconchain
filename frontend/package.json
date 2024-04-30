@@ -54,7 +54,8 @@
     "pinia": "^2.1.7",
     "primevue": "^3.46.0",
     "vee-validate": "^4.12.4",
-    "vue-echarts": "^6.6.9"
+    "vue-echarts": "^6.6.9",
+    "yup": "^1.4.0"
   },
   "overrides": {
     "vue": "^3.4.14"

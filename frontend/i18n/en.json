@@ -394,7 +394,10 @@
     "password": "Password",
     "submit": "Login",
     "title": "Login",
-    "email": "Email address"
+    "email": "Email address",
+    "invalid_email" : "Please enter a valid email address.",
+    "no_email" : "Please enter your email address.",
+    "no_password" : "Please enter your password."
   },
   "header": {
     "megamenu": {
