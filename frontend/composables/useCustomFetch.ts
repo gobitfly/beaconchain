@@ -26,6 +26,10 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
   DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
   DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
+  DASHBOARD_EL_DEPOSITS = '/dashboard/elDeposits',
+  DASHBOARD_EL_DEPOSITS_TOTAL = '/dashboard/elDepositsTotal',
+  DASHBOARD_CL_DEPOSITS = '/dashboard/clDeposits',
+  DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
@@ -146,6 +150,26 @@ const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
     path: '/validator-dashboards/{dashboardKey}/rewards',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_EL_DEPOSITS]: {
+    path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
+    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_CL_DEPOSITS]: {
+    path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL]: {
+    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
     mock: false
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
