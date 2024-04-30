@@ -2,6 +2,22 @@ package types
 
 import "github.com/ethereum/go-ethereum/common/hexutil"
 
+const (
+	PendingInitialized ValidatorStatus = "pending_initialized"
+	PendingQueued      ValidatorStatus = "pending_queued"
+	ActiveOngoing      ValidatorStatus = "active_ongoing"
+	ActiveExiting      ValidatorStatus = "active_exiting"
+	ActiveSlashed      ValidatorStatus = "active_slashed"
+	ExitedUnslashed    ValidatorStatus = "exited_unslashed"
+	ExitedSlashed      ValidatorStatus = "exited_slashed"
+	WithdrawalPossible ValidatorStatus = "withdrawal_possible"
+	WithdrawalDone     ValidatorStatus = "withdrawal_done"
+	Active             ValidatorStatus = "active"
+	Pending            ValidatorStatus = "pending"
+	Exited             ValidatorStatus = "exited"
+	Withdrawal         ValidatorStatus = "withdrawal"
+)
+
 // eth/v1/beacon/states/{state_id}/validators
 type StandardValidatorsResponse struct {
 	ExecutionOptimistic bool                `json:"execution_optimistic"`
