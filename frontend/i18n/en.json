@@ -290,7 +290,8 @@
       "withdrawals": {
         "title": "Withdrawals",
         "search_placeholder": "Index, Public Key, Address",
-        "all_time_total": "All time total"
+        "all_time_total": "All time total",
+        "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
       },
       "group_management":  {
         "title": "Manage Groups",
