@@ -24,6 +24,9 @@ const allExpanded = computed(() => {
     return false
   }
   return !!props.data?.data?.every((item) => {
+    if (props.isRowExpandable && !props.isRowExpandable(item)) {
+      return true // ignore rows that can't be expanded
+    }
     return !!expandedRows.value[item[props.dataKey!]]
   })
 })

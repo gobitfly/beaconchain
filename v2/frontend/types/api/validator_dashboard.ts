@@ -210,6 +210,7 @@ export interface VDBWithdrawalsTableRow {
   group_id: number /* uint64 */;
   recipient: Address;
   amount: string /* decimal.Decimal */;
+  is_missing_estimate: boolean;
 }
 export type InternalGetValidatorDashboardWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
 export interface VDBTotalWithdrawalsData {
