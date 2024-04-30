@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
+/*
+TODO: Use this for future withdrawals
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+*/
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
@@ -52,6 +57,8 @@ const tableData = computed(() => {
     return
   }
 
+  // TODO: Logic for future withdrawals
+
   return {
     paging: withdrawals.value.paging,
     data: [
@@ -89,14 +96,12 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
   if (row.index === undefined) {
     return 'total-row'
   }
-  // TODO: Future withdrawals
+  // TODO: Return class for future withdrawals
 }
 
 const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
   return row.index !== undefined
 }
-
-// TODO: Tooltip in future row for amount
 
 </script>
 <template>
@@ -238,11 +243,20 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
                 </div>
-                <BcFormatValue
-                  v-else
-                  :value="slotProps.data.amount"
-                  :class="{'all-time-total':slotProps.data.group_id === undefined}"
-                />
+                <div v-else class="amount-container">
+                  <BcFormatValue
+                    :value="slotProps.data.amount"
+                    :class="{'all-time-total':slotProps.data.group_id === undefined}"
+                  />
+                  <!-- TODO: Adapt v-if for future withdrawals tooltip
+                  <BcTooltip v-if="slotProps.data.index === undefined">
+                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <template #tooltip>
+                      {{ $t('dashboard.validator.withdrawals.future_tooltip') }}
+                    </template>
+                  </BcTooltip>
+                  -->
+                </div>
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -321,6 +335,11 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
     .all-time-total {
       @include fonts.standard_text;
       font-weight: var(--standard_text_medium_font_weight);
+    }
+
+    .amount-container {
+      display: flex;
+      gap: var(--padding);
     }
   }
 
