@@ -309,7 +309,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 }
 
 func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.VDBWithdrawalsTableRow, error) {
-
 	if len(queryValidators) == 0 {
 		return nil, nil
 	}
@@ -333,11 +332,14 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	sort.Slice(queryValidators, func(i, j int) bool {
 		return queryValidators[i] < queryValidators[j]
 	})
+
+	latestFinalized := cache.LatestFinalizedEpoch.Get()
+
 	var nextValidator *uint64
 	for _, validator := range queryValidators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 
-		if utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
+		if !utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
 			// Validator cannot withdraw because of invalid withdrawal credentials
 			continue
 		}
@@ -354,8 +356,21 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 			(metadata.EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && metadata.Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
 			// this validator is eligible for withdrawal, check if it is the next one
 			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
-				nextValidator = &validator
-				if *nextValidator > *stats.LatestValidatorWithdrawalIndex {
+				distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
+				if err != nil {
+					return nil, err
+				}
+
+				timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+
+				// it normally takes two epochs to finalize
+				if !timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
+					// this validator has a next withdrawal
+					nextValidatorInt := validator
+					nextValidator = &nextValidatorInt
+				}
+
+				if nextValidator != nil && *nextValidator > *stats.LatestValidatorWithdrawalIndex {
 					// the first validator after the cursor has to be the next validator
 					break
 				}
@@ -366,6 +381,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	if nextValidator == nil {
 		return nil, nil
 	}
+
 	nextValidatorData := validatorMapping.ValidatorMetadata[*nextValidator]
 
 	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{*nextValidator})
@@ -374,19 +390,12 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	}
 	lastWithdrawnEpoch := lastWithdrawnEpochs[*nextValidator]
 
-	distance, err := d.getWithdrawableCountFromCursor(*nextValidator, *stats.LatestValidatorWithdrawalIndex)
+	nextDistance, err := d.getWithdrawableCountFromCursor(*nextValidator, *stats.LatestValidatorWithdrawalIndex)
 	if err != nil {
 		return nil, err
 	}
-
-	timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
-	withdrawalSlot := utils.TimeToSlot(uint64(timeToWithdrawal.Unix()))
-
-	// it normally takes two epochs to finalize
-	latestFinalized := cache.LatestFinalizedEpoch.Get()
-	if timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
-		return nil, nil
-	}
+	nextTimeToWithdrawal := d.getTimeToNextWithdrawal(nextDistance)
+	nextWithdrawalSlot := utils.TimeToSlot(uint64(nextTimeToWithdrawal.Unix()))
 
 	address, err := utils.GetAddressOfWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
 	if err != nil {
@@ -407,8 +416,8 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	}
 
 	nextData := &t.VDBWithdrawalsTableRow{
-		Epoch: withdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
-		Slot:  withdrawalSlot,
+		Epoch: nextWithdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		Slot:  nextWithdrawalSlot,
 		Index: *nextValidator,
 		Recipient: t.Address{
 			Hash: t.Hash(address.String()),
