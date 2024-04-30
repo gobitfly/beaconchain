@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  faArrowDown,
   faChartLineUp,
   faCube,
   faCubes,
@@ -7,6 +8,7 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
 
@@ -54,11 +56,7 @@ watch(dashboardKey, (newKey, oldKey) => {
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController
-        class="panel-controller"
-        :display-type="'panel'"
-        :initially-visislbe="true"
-      />
+      <DashboardCreationController class="panel-controller" :display-type="'panel'" :initially-visislbe="true" />
     </BcPageWrapper>
   </div>
   <div v-else>
@@ -105,7 +103,11 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
           </template>
-          Deposits coming soon!
+          <div class="deposits">
+            <DashboardTableElDeposits />
+            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
+            <DashboardTableClDeposits />
+          </div>
         </TabPanel>
         <TabPanel>
           <template #header>
@@ -138,5 +140,10 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 .p-tabview {
   margin-top: var(--padding-large);
+}
+
+.down_icon {
+  width: 100%;
+  height: 28px;
 }
 </style>
