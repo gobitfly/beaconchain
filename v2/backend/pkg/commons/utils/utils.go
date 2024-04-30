@@ -384,12 +384,3 @@ func Deduplicate(slice []uint64) []uint64 {
 	}
 	return list
 }
-
-func RemoveElement[T comparable](slice []T, element T) {
-	for i, v := range slice {
-		if v == element {
-			slice = append(slice[:i], slice[i+1:]...)
-			break
-		}
-	}
-}
