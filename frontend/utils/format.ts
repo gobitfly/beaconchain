@@ -2,7 +2,7 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import type { AgeFormat } from '~/types/settings'
 
-const { epochToTs } = useNetwork()
+const { epochToTs, slotToTs } = useNetwork()
 
 const REGEXP_HAS_NUMBERS = /^(?!0+$)\d+$/
 
@@ -114,6 +114,30 @@ export function formatToRelative (targetTimestamp?: number, baseTimestamp?: numb
   }
   const date = baseTimestamp ? DateTime.fromMillis(baseTimestamp) : DateTime.now()
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
+}
+
+export function formatGoTimestamp (timestamp: string, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  if (timestamp === undefined) {
+    return undefined
+  }
+  const date = new Date(timestamp)
+  if (format === 'relative') {
+    return formatToRelative(date.getTime(), compareTimestamp, style, locales)
+  } else {
+    return formatTs(date.getTime() / 1000, locales, withTime)
+  }
+}
+
+export function formatSlotToDateTime (slot: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  const ts = slotToTs(slot)
+  if (ts === undefined) {
+    return undefined
+  }
+  if (format === 'relative') {
+    return formatToRelative(ts * 1000, timestamp, style, locales)
+  } else {
+    return formatTs(ts, locales, withTime)
+  }
 }
 
 export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {

@@ -64,7 +64,11 @@
     "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}",
-    "age": "Age"
+    "age": "Age",
+    "from": "From",
+    "amount": "Amount",
+    "valid": "Valid",
+    "all_time_total": "All time total"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -158,7 +162,8 @@
     },
     "col":{
       "proposer": "Proposer",
-      "graffiti": "Graffiti"
+      "graffiti": "Graffiti",
+      "tx_hash": "Tx Hash"
     }
   },
   "validator": {
@@ -235,6 +240,12 @@
         "validators_added": "validators added",
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
+      },
+      "cl_deposits":{
+        "title": "Consensus Layer"
+      },
+      "el_deposits":{
+        "title": "Execution Layer"
       },
       "blocks":{
         "title": "Blocks",
@@ -315,7 +326,9 @@
         "validators": "Validators",
         "rewards": "Rewards",
         "reward_recipient": "Rewards Recipient",
-        "proposer_rewards": "Proposer Rewards"
+        "proposer_rewards": "Proposer Rewards",
+        "depositor": "Depositor",
+        "signature": "Signature"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
