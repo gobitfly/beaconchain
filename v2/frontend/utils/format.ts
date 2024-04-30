@@ -129,6 +129,19 @@ function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, s
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
+export function formatGoTimestamp (timestamp: string, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  // TODO: Adapt
+  if (timestamp === undefined) {
+    return undefined
+  }
+  const date = new Date(timestamp)
+  if (format === 'relative') {
+    return formatToRelative(date.getTime(), compareTimestamp, style, locales)
+  } else {
+    return formatTs(date.getTime() / 1000, locales, withTime)
+  }
+}
+
 export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) : string | null | undefined {
   return formatTs(epochToTs(epoch), timestamp, format, style, locales, withTime)
 }
