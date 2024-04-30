@@ -10,8 +10,9 @@ import { BcDialogConfirm } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 
-const { dashboardKey, isPublic, setDashboardKey, dashboardType, publicEntities, removeEntities } = useDashboardKey()
-const { refreshDashboards, dashboards, getDashboardLabel } = useUserDashboardStore()
+const { isLoggedIn } = useUserStore()
+const { dashboardKey, isPublic, isPrivate, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
@@ -74,29 +75,34 @@ const onDelete = () => {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && deleteDashboard(dashboardKey.value),
+    onClose: response => response?.data && deleteAction(dashboardKey.value),
     data: {
       question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
-const deleteDashboard = async (key: DashboardKey) => {
-  if (isPublic.value) {
-    if (publicEntities.value?.length > 0) {
-      removeEntities(publicEntities.value)
+const deleteAction = async (key: DashboardKey) => {
+  if (isPrivate.value) {
+    // private dashboards get deleted via API
+    if (dashboardType.value === 'validator') {
+      await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
+    } else {
+      await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
     }
+
+    await refreshDashboards()
+  } else if (!isLoggedIn.value) {
+    // users that are not logged in cannot be forwarded to a private dashboard so we will just empty the public dashboard they are currently viewing
+    if (publicEntities.value?.length > 0) {
+      updateHash('validator', '')
+      setDashboardKey('')
+    }
+
     return
   }
 
-  if (dashboardType.value === 'validator') {
-    await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
-  } else {
-    await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
-  }
-
-  await refreshDashboards()
-
+  // try to forward the user to a private dashboard
   let preferedDashboards = dashboards.value?.validator_dashboards ?? []
   let fallbackDashboards = dashboards.value?.account_dashboards ?? []
   let fallbackUrl = '/account-dashboard/'
@@ -106,7 +112,6 @@ const deleteDashboard = async (key: DashboardKey) => {
     fallbackUrl = '/dashboard/'
   }
 
-  // forward user to another dashboard (if possible)
   if ((preferedDashboards?.length ?? 0) > 0) {
     setDashboardKey(`${preferedDashboards[0].id}`)
     return
@@ -117,7 +122,7 @@ const deleteDashboard = async (key: DashboardKey) => {
     return
   }
 
-  // no other dashboard available, forward to creation screen
+  // no private dashboard available, forward to creation screen
   setDashboardKey('')
 }
 </script>

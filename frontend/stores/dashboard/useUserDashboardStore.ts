@@ -50,6 +50,11 @@ export function useUserDashboardStore () {
 
   // Public dashboards are saved in a cookie (so that it's accessable during SSR)
   function saveToCookie () {
+    if (isLoggedIn.value) {
+      warn('saveToCookie should only be called when not logged in')
+      return
+    }
+
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
 
