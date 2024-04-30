@@ -46,38 +46,45 @@ function userSelectedValidator (result : ResultSuggestion) {
   <br>
   This tab is used to design and implement the bars embedded in the Account and Validator pages
   <br> <br>
-  <div class="container">
+  <div class="example container">
     Accounts: <span>{{ selectedAccount }}</span>
-    <br><br>
-    <BcSearchbarMain
-      ref="accountSearchBar"
-      :bar-style="SearchbarStyle.Embedded"
-      :bar-purpose="SearchbarPurpose.AccountAddition"
-      :pick-by-default="pickHighestPriorityAmongBestMatchings"
-      :keep-dropdown-open="true"
-      @go="userSelectedAnAccount"
-    />
+    <div class="bar-container">
+      <BcSearchbarMain
+        ref="accountSearchBar"
+        :bar-style="SearchbarStyle.Embedded"
+        :bar-purpose="SearchbarPurpose.AccountAddition"
+        :pick-by-default="pickHighestPriorityAmongBestMatchings"
+        :keep-dropdown-open="true"
+        @go="userSelectedAnAccount"
+      />
+    </div>
   </div>
   <br>
-  <div class="container">
+  <div class="example container">
     Validators: <span>{{ selectedValidator }}</span>
-    <br><br>
-    <BcSearchbarMain
-      ref="validatorSearchBar"
-      :bar-style="SearchbarStyle.Embedded"
-      :bar-purpose="SearchbarPurpose.ValidatorAddition"
-      :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
-      :pick-by-default="pickHighestPriorityAmongBestMatchings"
-      :keep-dropdown-open="true"
-      @go="userSelectedValidator"
-    />
+    <div class="bar-container">
+      <BcSearchbarMain
+        ref="validatorSearchBar"
+        :bar-style="SearchbarStyle.Embedded"
+        :bar-purpose="SearchbarPurpose.ValidatorAddition"
+        :only-networks="[ChainIDs.Ethereum, ChainIDs.Gnosis]"
+        :pick-by-default="pickHighestPriorityAmongBestMatchings"
+        :keep-dropdown-open="true"
+        @go="userSelectedValidator"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.container {
+.example {
+  position: relative;
   max-width: 500px;
   height: 200px;
   padding: 16px;
+
+  .bar-container {
+    position: relative;
+  }
 }
 </style>

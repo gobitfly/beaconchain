@@ -21,11 +21,14 @@ const (
 func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
 	if !authenticated {
-		return types.User{}, errors.New("not authenticated")
+		return types.User{}, newUnauthorizedErr("not authenticated")
 	}
-	userId := h.scs.Get(r.Context(), userIdKey).(uint64)
 	subscription := h.scs.GetString(r.Context(), subscriptionKey)
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
+	userId, ok := h.scs.Get(r.Context(), userIdKey).(uint64)
+	if !ok {
+		return types.User{}, errors.New("error parsind user id from session, not a uint64")
+	}
 
 	return types.User{
 		Id:        userId,
@@ -50,44 +53,44 @@ func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Requ
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
 	// validate request
-	var err error
+	var v validationError
 	req := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if bodyErr := checkBody(&err, &req, r.Body); bodyErr != nil {
-		returnInternalServerError(w, bodyErr)
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
 		return
 	}
 
-	email := checkEmail(&err, req.Email)
-	if err != nil {
-		returnBadRequest(w, err)
+	email := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
+	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
 	user, err := h.dai.GetUserInfo(email)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			returnBadRequest(w, errors.New("invalid email or password"))
-		} else {
-			handleError(w, err)
+			err = badCredentialsErr
 		}
+		handleErr(w, err)
 		return
 	}
 
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		returnBadRequest(w, errors.New("invalid email or password"))
+		handleErr(w, badCredentialsErr)
 		return
 	}
 
 	// change privileges
 	err = h.scs.RenewToken(r.Context())
 	if err != nil {
-		returnInternalServerError(w, errors.New("error creating session"))
+		handleErr(w, errors.New("error creating session"))
 		return
 	}
 
@@ -102,7 +105,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Request) {
 	err := h.scs.Destroy(r.Context())
 	if err != nil {
-		handleError(w, err)
+		handleErr(w, err)
 		return
 	}
 	returnOk(w, nil)
@@ -124,19 +127,18 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 
 		user, err := h.getUser(r)
 		if err != nil {
-			returnUnauthorized(w, err)
+			handleErr(w, err)
 			return
 		}
 		dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
 		if err != nil {
-			handleError(w, err)
+			handleErr(w, err)
 			return
 		}
 
 		if dashboard.UserId != user.Id {
 			// user does not have access to dashboard, return 404 to avoid leaking information
-			// TODO: make sure real non-existence of dashboard returns same error
-			returnNotFound(w, errors.New("dashboard not found"))
+			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
 			return
 		}
 		next.ServeHTTP(w, r)

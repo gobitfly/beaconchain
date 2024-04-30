@@ -209,6 +209,18 @@ type VDBConsensusDepositsTableRow struct {
 }
 type InternalGetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
+type VDBTotalExecutionDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalExecutionDepositsResponse ApiDataResponse[VDBTotalExecutionDepositsData]
+
+type VDBTotalConsensusDepositsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTotalConsensusDepositsData]
+
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
@@ -221,6 +233,12 @@ type VDBWithdrawalsTableRow struct {
 	IsMissingEstimate bool            `json:"is_missing_estimate"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
+
+type VDBTotalWithdrawalsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
 // Manage Modal

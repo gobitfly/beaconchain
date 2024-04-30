@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -18,15 +18,20 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *mux.Router {
+func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()
-
+	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
+
+	debug := cfg.Frontend.Debug
+	if !debug {
+		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
+	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
-	addRoutes(handlerService, publicRouter, internalRouter)
+	addRoutes(handlerService, publicRouter, internalRouter, debug)
 
 	return router
 }
@@ -37,19 +42,19 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 		return gorillaHandlers.CORS(
 			gorillaHandlers.AllowedOrigins([]string{"*"}),
 			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		)
 	}
 	return gorillaHandlers.CORS(
 		gorillaHandlers.AllowedOrigins(allowedHosts),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		gorillaHandlers.AllowCredentials(),
 	)
 }
 
-func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
-	addValidatorDashboardRoutes(hs, publicRouter, internalRouter)
+func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
+	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, debug)
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
@@ -172,7 +177,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
 }
 
-func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router) {
+func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
 	vdbPath := "/validator-dashboards"
 	publicRouter.HandleFunc(vdbPath, hs.PublicPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
 	internalRouter.HandleFunc(vdbPath, hs.InternalPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
@@ -180,8 +185,10 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
-	publicDashboardRouter.Use(hs.VDBAuthMiddleware)
-	internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	if !debug {
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware)
+		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	}
 
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
@@ -209,7 +216,10 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
+		{http.MethodGet, "/{dashboard_id}/total-execution-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionDeposits},
+		{http.MethodGet, "/{dashboard_id}/total-consensus-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusDeposits},
 		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
+		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
 }
