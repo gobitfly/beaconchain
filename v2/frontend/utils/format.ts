@@ -130,16 +130,8 @@ function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, s
 }
 
 export function formatGoTimestamp (timestamp: string, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
-  // TODO: Adapt
-  if (timestamp === undefined) {
-    return undefined
-  }
-  const date = new Date(timestamp)
-  if (format === 'relative') {
-    return formatToRelative(date.getTime(), compareTimestamp, style, locales)
-  } else {
-    return formatTs(date.getTime() / 1000, locales, withTime)
-  }
+  const dateTime = new Date(timestamp).getTime()
+  return formatTs(dateTime / 1000, compareTimestamp, format, style, locales, withTime)
 }
 
 export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) : string | null | undefined {
