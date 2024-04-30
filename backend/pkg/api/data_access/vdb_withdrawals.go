@@ -21,6 +21,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
 
 	// Initialize the cursor
@@ -61,14 +62,14 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 					indexSearch = int64(*index)
 				} else {
 					// No validator index for pubkey found, return empty results
-					return nil, &paging, nil
+					return result, &paging, nil
 				}
 			}
 		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(index)
 		} else {
 			// No allowed search term found, return empty results
-			return nil, &paging, nil
+			return result, &paging, nil
 		}
 	}
 
@@ -117,7 +118,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, &paging, nil
+		return result, &paging, nil
 	}
 
 	// Get the withdrawals for the validators
@@ -210,7 +211,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &paging, nil
+			return result, &paging, nil
 		}
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
@@ -228,7 +229,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	}
 
 	// Create the result
-	result := make([]t.VDBWithdrawalsTableRow, 0)
 	cursorData := make([]t.WithdrawalsCursor, 0)
 	for _, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
