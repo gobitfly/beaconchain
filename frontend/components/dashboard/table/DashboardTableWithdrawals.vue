@@ -96,6 +96,8 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
   return row.index !== undefined
 }
 
+// TODO: Tooltip in future row for amount
+
 </script>
 <template>
   <div>
@@ -192,11 +194,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                 </NuxtLink>
               </template>
             </Column>
-            <Column
-              field="age"
-              body-class="age"
-              header-class="age"
-            >
+            <Column field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -212,8 +210,6 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
             <Column
               v-if="colsVisible.recipient"
               field="recipient"
-              header-class="recipient"
-              body-class="recipient"
               :sortable="true"
               :header="$t('dashboard.validator.col.recipient')"
             >
@@ -307,8 +303,6 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
 
 :deep(.withdrawal-table) {
   .index {
-    @include utils.set-all-width(140px);
-
     .all-time-total {
       @include fonts.standard_text;
       font-weight: var(--standard_text_medium_font_weight);
@@ -316,16 +310,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
   }
 
   .group-id {
-    @include utils.set-all-width(160px);
     @include utils.truncate-text;
-  }
-
-  .age {
-    @include utils.set-all-width(195px);
-  }
-
-  .recipient {
-    @include utils.set-all-width(180px);
   }
 
   .time-passed {
@@ -343,7 +328,6 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
     border-bottom-color: var(--primary-color);
   }
 
-  // TODO: Tooltip in future row for amount
   .future-row > td {
     >a,
     >div,
