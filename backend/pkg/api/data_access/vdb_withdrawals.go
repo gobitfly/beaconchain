@@ -277,6 +277,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalWithdrawals(dashboardId)
 }
