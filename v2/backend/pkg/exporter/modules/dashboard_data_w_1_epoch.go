@@ -187,7 +187,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].WithdrawalsCount,
 				data[i].WithdrawalsAmount,
 				data[i].InclusionDelaySum,
-				data[i].BlockChance,
+				data[i].BlocksExpected,
 				data[i].AttestationsScheduled,
 				data[i].AttestationsExecuted,
 				data[i].AttestationHeadExecuted,
@@ -200,7 +200,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].LastSubmittedDutyEpoch,
 				data[i].BlocksClAttestestationsReward,
 				data[i].BlocksClSyncAggregateReward,
-				data[i].SyncChance,
+				data[i].SyncCommitteesExpected,
 			}, nil
 		}))
 
