@@ -71,13 +71,15 @@ const deleteButtonOptions = computed(() => {
 })
 
 const onDelete = () => {
+  const languageKey = isLoggedIn.value ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
+
   dialog.open(BcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
     onClose: response => response?.data && deleteAction(dashboardKey.value),
     data: {
-      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
+      question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
