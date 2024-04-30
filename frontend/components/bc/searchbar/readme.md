@@ -116,15 +116,15 @@ If the room allowed to the text is _defined_ (see the vocabulary above), you can
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" />
 ```
-But this works only when the room that the component has is independent of the room that other MiddleEllipsis components take on the same line.
+But this works only when the room that the component has is independent of the content of other MiddleEllipsis components.
 
 ### The interesting cases
 
 **Coordination of interdependent MiddleEllipsis components**
 
 In real applications, the simple case above is not always sufficient. You might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
-which implies that the room that each component has depends on the room that other components take on the same line.
-In this case, the simple syntax above will clip their texts wrongly. The reason is that they have no way to know that their widths depend on the content of the others.
+which implies that the room that each component has depends on the content of the others (the larger a text, the larger its component grows).
+In this case, the simple syntax above will clip their texts wrongly. The reason is that they have no way to know their final widths during the clippipng process.
 
 You must gather them in a parent MiddleEllipsis like so:
 ```HTML
@@ -135,7 +135,7 @@ You must gather them in a parent MiddleEllipsis like so:
 </MiddleEllipsis>
 ```
 Note that :
-- A parent MiddleEllipsis can contain anything, so using a parent does not restrict the layout of your page. See it as a `div`. The parent displays components of other types as they are, unchanged. It recognizes and controls its children to make sure that they clip properly.
+- A parent MiddleEllipsis can contain anything, so using a parent does not restrict the layout of your page. See it as a `div`. It recognizes and manages its children to make sure that they clip properly, and displays components of other types as they are, unchanged.
 - Regarding the children, their display modes can mix `inline-flex` and `inline-block` (only `inline` modes make sense in our context).
 
 **Guaranteeing no gap between the clipped text and its neighbors**

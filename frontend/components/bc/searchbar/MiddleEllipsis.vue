@@ -709,8 +709,7 @@ function whatIsMyGivenContent () : any {
 
 function searchForIdealLength (originalText: string = '', targetWidth: number): string {
   let current = calculateTextWidth(originalText)
-
-  // Now we search for the longest clipped text which fits in the target width
+  // we search for the longest clipped text which fits in the target width
   if (current.width > targetWidth) {
     let maxWidth = current.width
     let maxLength = current.text.length
