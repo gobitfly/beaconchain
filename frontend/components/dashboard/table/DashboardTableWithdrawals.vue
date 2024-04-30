@@ -261,13 +261,13 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
             </Column>
             <template #expansion="slotProps">
               <div class="expansion">
-                <div v-if="!colsVisible.group" class="row">
+                <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.group') }}:
                   </div>
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </div>
-                <div v-if="!colsVisible.group" class="row">
+                <div class="row">
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
@@ -275,7 +275,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
                   </NuxtLink>
                 </div>
-                <div v-if="!colsVisible.group" class="row">
+                <div class="row">
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
@@ -283,7 +283,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
                   </NuxtLink>
                 </div>
-                <div v-if="!colsVisible.group" class="row">
+                <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.recipient') }}:
                   </div>
@@ -296,7 +296,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                   />
                   <span v-else>-</span>
                 </div>
-                <div v-if="!colsVisible.group" class="row">
+                <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.amount') }}:
                   </div>
