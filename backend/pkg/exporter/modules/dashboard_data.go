@@ -59,6 +59,11 @@ const epochWriteParallelism = 6
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 3
 
+// How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
+// aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
+// Set to 0 to disable and write after every iteration. Recommended value for this is 1 or maybe 2.
+const backfillMaxUnaggregatedIterations = 0
+
 type dashboardData struct {
 	ModuleContext
 	log               ModuleLog
@@ -533,6 +538,8 @@ func getEpochParallelGroups(epochs []uint64, parallelism int) []EpochParallelGro
 	return groups
 }
 
+var unaggregatedWrites = 0
+
 // can be used to start a backfill up to epoch
 // returns true if there was nothing to backfill, otherwise returns false
 // if upToEpoch is nil, it will backfill until the latest finalized epoch
@@ -651,19 +658,23 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 			if len(datas) > 0 {
 				d.log.Info("storage got data, writing epoch data")
 				d.writeEpochDatas(datas)
+				unaggregatedWrites += len(datas)
 
-				d.log.Info("storage writing done, aggregate")
-				for {
-					err = d.aggregatePerEpoch(false, false)
-					if err != nil {
-						d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch})
-						metrics.Errors.WithLabelValues("exporter_v2dash_agg_per_epoch_fail").Inc()
-						time.Sleep(time.Second * 10)
-						continue
+				if unaggregatedWrites > backfillMaxUnaggregatedIterations*epochFetchParallelism || lastEpoch%225 < epochFetchParallelism {
+					unaggregatedWrites = 0
+					d.log.Info("storage writing done, aggregate")
+					for {
+						err = d.aggregatePerEpoch(false, false)
+						if err != nil {
+							d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch})
+							metrics.Errors.WithLabelValues("exporter_v2dash_agg_per_epoch_fail").Inc()
+							time.Sleep(time.Second * 10)
+							continue
+						}
+						break
 					}
-					break
+					d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
 				}
-				d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
 			}
 
 			if lastEpoch%225 < epochFetchParallelism {
@@ -1217,8 +1228,9 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	// Block Proposal Chance
 	for _, valData := range data.currentEpochStateEnd.Data {
 		if valData.Status.IsActive() {
+			// See https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#compute_proposer_index
 			proposalChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(activeTotalEffectiveBalanceETH)
-			validatorsData[valData.Index].BlockChance = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			validatorsData[valData.Index].BlocksExpected = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		}
 	}
 
@@ -1239,8 +1251,11 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 
 		for _, valData := range data.syncCommitteeElectedState.Data {
 			if valData.Status.IsActive() {
+				// See https://github.com/ethereum/annotated-spec/blob/master/altair/beacon-chain.md#get_sync_committee_indices
+				// Note that this formula is not 100% the chance as defined in the spec, but after running simulations we found
+				// it being precise enough for our purposes with an error margin of less than 0.003%
 				syncChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(syncCommitteeElectionStateTotalEffectiveBalanceETH)
-				validatorsData[valData.Index].SyncChance = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
+				validatorsData[valData.Index].SyncCommitteesExpected = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
 			}
 		}
 	}
@@ -1536,10 +1551,10 @@ type validatorDashboardDataRow struct {
 
 	LastSubmittedDutyEpoch sql.NullInt32 // does not include sync committee duty slots
 
-	BlockScheduled sql.NullInt16 // done
-	BlocksProposed sql.NullInt16 // done
-	BlockChance    float64       // done
-	SyncChance     float64       // done
+	BlockScheduled         sql.NullInt16 // done
+	BlocksProposed         sql.NullInt16 // done
+	BlocksExpected         float64       // done
+	SyncCommitteesExpected float64       // done
 
 	BlocksClReward                sql.NullInt64 // done
 	BlocksClAttestestationsReward sql.NullInt64 // done
