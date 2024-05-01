@@ -102,7 +102,7 @@ It has been designed to adapt the text to its width as quickly as possible (test
 
 ## Vocabulary
 
-In the rest of the documentation, we will use those definitions:
+In the rest of the documentation, we will use these definitions:
 
 - A component of _defined width_ is a component whose width does not collapse to `0px` or `min-width` when it has no content. So, for example, it has a `flex-grow` or `width` property set, or it is a cell in a grid and the width of its column is fixed in `px` or set to `auto` or `fr` with `grid-template-columns`.
 - A component of _undefined width_ is a component whose width collapses to `0px` or `min-width` when it has no content.
@@ -116,7 +116,7 @@ If the room allowed to the text is _defined_ (see the vocabulary above), you can
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" />
 ```
-But this works only when the room that the component has is independent of the content of other MiddleEllipsis components.
+But that clips the text perfectly only when the room that the component has is independent of the content of other MiddleEllipsis components (for example when its width is defined with `width` in `%` or `px`).
 
 ### The interesting cases
 
