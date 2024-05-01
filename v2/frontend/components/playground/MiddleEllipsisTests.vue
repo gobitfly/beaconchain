@@ -1,12 +1,19 @@
 <script setup lang="ts">
+let randomInt = 9129
 const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 const randomTexts = ref<string[]>([])
 
+// custom rnd because we need to start with the same seed during SSR and at the first client rendering
+function rand (max: number) : number {
+  randomInt = (214013 * randomInt + 2531011) & 0xFFFFFFFF
+  const normalized = ((randomInt >> 16) & 0xFFFF) / 65535
+  return Math.round(normalized * max)
+}
+
 function getRandomText () : string {
   let result = ''
-
-  for (let l = 20 + Math.floor(Math.random() * 100); l >= 0; l--) {
-    result += characters[Math.floor(Math.random() * characters.length)]
+  for (let l = 20 + rand(100); l > 0; l--) {
+    result += characters[rand(characters.length - 1)]
   }
   return result
 }
@@ -19,6 +26,7 @@ function reGenerateTextList () {
 }
 
 reGenerateTextList()
+
 const showAllME = ref<boolean>(false)
 const showAllCSSclipped = ref<boolean>(false)
 </script>
@@ -79,9 +87,9 @@ const showAllCSSclipped = ref<boolean>(false)
     </p>
     <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" :ellipses="[16,32,64]" />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="[16,32,64]" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="[16,32,64]" />
+      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[2]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[1]" :ellipses="[16,32,64]" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[5]" :ellipses="[16,32,64]" />
       <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
     </BcSearchbarMiddleEllipsis>
   </div>
@@ -92,10 +100,10 @@ const showAllCSSclipped = ref<boolean>(false)
     (enlarge your window or change the texts to see it)
     <br>
     <BcSearchbarMiddleEllipsis class="frame all nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[4]" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" />
       <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[5]" />
+      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[1]" />
+      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
     </BcSearchbarMiddleEllipsis>
   </div>
 
@@ -103,7 +111,7 @@ const showAllCSSclipped = ref<boolean>(false)
     <p>
       <b>{{ randomTexts.length }} MiddleEllipses to see the lower smoothness of the UI when you resize your window (for production-performance, make sure to deactivate the debug mode in the source of the component!):</b>
       <br>
-      <Button @click="showAllME=!showAllME">
+      <Button @click="showAllCSSclipped=false; showAllME=!showAllME">
         show/hide
       </Button>
     </p>
@@ -121,7 +129,7 @@ const showAllCSSclipped = ref<boolean>(false)
     <p>
       Compare the smoothness with {{ randomTexts.length }} spans clipped natively by CSS:
       <br>
-      <Button @click="showAllCSSclipped=!showAllCSSclipped">
+      <Button @click="showAllME=false; showAllCSSclipped=!showAllCSSclipped">
         show/hide
       </Button>
     </p>
