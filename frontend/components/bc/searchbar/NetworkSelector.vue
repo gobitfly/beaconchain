@@ -159,6 +159,9 @@ function oneOptionChanged (index : number) {
     border-radius: var(--padding);
     left: 0px;
     top: 21px;
+    @media (pointer: coarse) {
+      top: 31px;
+    }
     padding: var(--padding);
     @include fonts.small_text_bold;
 
