@@ -71,6 +71,7 @@ const innerElements = {
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle : CSSStyleDeclaration
+let frameText = props.text || '' // This variable always mirrors the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
 
 let delayedForcedUpdateIncoming = false
 let classPropsDuringLastUpdate = props.class || ''
@@ -521,6 +522,7 @@ function invalidateTextWidthCalculationCache () {
 
 function setFrameText (text: string) {
   if (frameSpan.value) {
+    frameText = text
     frameSpan.value.textContent = text
   }
 }
@@ -874,8 +876,12 @@ const frameClassList = computed(() => 'middle-ellipsis-root-frame ' + props.clas
 
 <template>
   <span ref="frameSpan" :class="frameClassList">
-    {{ props.text || '' }}
+    {{ frameText }}
     <!--
+      The text above is not reactive because its only purpose is to provide a content during SSR. During CSR, MiddleEllipsis clips and overwrites the text
+      of the frame with a direct assignment (frameSpan.value.textContent = ...), which has an immediate effect within one reflow unlike reactive properties.
+      If for some reason Vue were to rewrite the content of the frame with the variable above while the component is mounted, this would not cause any problem
+      because it always mirrors what has been directly assigned to the frame.
       The following line mounts our slot if we have one.
       To inform MiddleEllipsis components that they are children and give them the ability to send us information, we add a props. Also, we get a ref to each instantiated element.
     -->
