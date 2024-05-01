@@ -50,6 +50,11 @@ enum UpdateReason {
   GapChangePlus
 }
 
+enum SignalDirection {
+  ChildrenToParent,
+  ParentToChildren
+}
+
 type TextProperties = { text: string, width: number }
 
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
@@ -88,7 +93,7 @@ let totalIterationsWhenClipping = 0
 
 const amIofDefinedWidth = computed(() => {
   // TODO: Maybe check whether the width is defined in the CSS of the component if-and-only-if props.initialFlexGrow is not set.
-  //       Problem if done: it would be a slow operation at execution time just to provide a security against the programmer during development (because an inconsistency here causes unwanted results on the screen anyway).
+  //       Problem if done: it would be a slow operation at execution time just to provide a security against the programmer during development (because an inconsistency here causes unwanted results on the screen anyway)
   return !props.initialFlexGrow
 })
 
@@ -152,7 +157,7 @@ watch(slot, () => { // reacts to changes of components in our slot after they ar
   logStep('event', 'new slot instanciated')
   invalidateChildrenIdentities()
   identifyChildren()
-  nextTick(() => updateContent(0, false)) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (unfortunately, this slot-watcher ensured they were instanciated but not inserted in the real DOM)
+  nextTick(() => updateContent(0, false)) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (this slot-watcher ensured they were instantiated but not inserted in the real DOM)
 }, {
   flush: 'post'
 })
@@ -169,7 +174,7 @@ watch(() => props.class, (newClassList) => { // reacts to changes in our list of
     updateContent(0, false)
   } else {
     logStep('signal', 'notifying my parent')
-    props.meCallbackToInformParentAboutChanges!()
+    props.meCallbackToInformParentAboutChanges!(SignalDirection.ChildrenToParent)
   }
 })
 
@@ -183,7 +188,7 @@ watch(() => props.text, (newText) => { // reacts to changes of text
     updateContent(0, false)
   } else {
     logStep('signal', 'notifying my parent')
-    props.meCallbackToInformParentAboutChanges!()
+    props.meCallbackToInformParentAboutChanges!(SignalDirection.ChildrenToParent)
   }
 })
 
@@ -194,7 +199,7 @@ watch(() => props.initialFlexGrow, (newIFG) => { // reacts to changes of props i
   }
   logStep('event', 'new initial flex-grow received')
   logStep('signal', 'notifying my parent')
-  props.meCallbackToInformParentAboutChanges!()
+  props.meCallbackToInformParentAboutChanges!(SignalDirection.ChildrenToParent)
 })
 
 watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding the number of ellipses to use
@@ -208,7 +213,7 @@ watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding th
     updateContent(0, false)
   } else { // our width is not defined so we have a parent
     logStep('signal', 'notifying my parent')
-    props.meCallbackToInformParentAboutChanges!()
+    props.meCallbackToInformParentAboutChanges!(SignalDirection.ChildrenToParent)
   }
 })
 
@@ -271,7 +276,7 @@ function handleResizingEvent (force : boolean) {
     const reason = determineReason(false)
     if (reason) { // if our resize observer lags (old resize-observer signal, we have been updated just now), we abort
       logStep('signal', 'notifying my parent for reason #', reason)
-        props.meCallbackToInformParentAboutChanges!()
+        props.meCallbackToInformParentAboutChanges!(SignalDirection.ChildrenToParent)
     } else { logStep('good', 'parent not called because no width difference') }
   }
 }
@@ -358,20 +363,20 @@ function updateContent (additionalWidthAvailable: number, force: boolean) {
     return
   }
   if (whatIam.value === WhatIcanBe.Parent) {
-    enterUpdateCycleAsAparent(force)
+    enterUpdateCycleAsAparent(SignalDirection.ParentToChildren, force)
   } else {
     currentAdditionalWidthAvailable = additionalWidthAvailable
-    enterUpdateCycleAsTextclipper(force)
+    enterUpdateCycleAsTextClipper(force)
   }
 }
 
-function enterUpdateCycleAsAparent (force : boolean = false) {
-  if (amIinsideAparent.value) {
-    // if we are here, it means we are a parent inside a parent
+function enterUpdateCycleAsAparent (direction: SignalDirection, force : boolean = false) {
+  if (amIinsideAparent.value && direction === SignalDirection.ChildrenToParent) {
+    // we are a parent inside a parent, called by a child
     if (!amIreadyForUpdate) {
       logStep('signal', 'notifying my parent')
       // propagating up the refresh signal in the tree of MiddleEllipsis components
-      props.meCallbackToInformParentAboutChanges!()
+      props.meCallbackToInformParentAboutChanges!(direction)
     }
     return
   }
@@ -380,7 +385,6 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
     // A child calls us but we are not mounted yet. No problem, we update our children after we are mounted anyway.
     return
   }
-  identifyChildren()
   getReadyForUpdate()
   logStep('signal', 'asking children to update and settle')
   // first we allow children with an undefined width to update their content
@@ -424,13 +428,18 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
         hasEnoughRoom.push(child)
       }
     }
-    // thanks to this sorting, the first positions hold the children more likely to receive more additional room than they can accept
-    canUseMoreRoom.sort((a, b) => a.growth / a.flexGrow - b.growth / b.flexGrow)
-    // now we distribute the room available
+    // thanks to this sorting, the first positions hold the children that will receive more additional room than they can accept (due to max-width constraints)
+    canUseMoreRoom.sort((a, b) => a.growth * b.flexGrow - b.growth * a.flexGrow)
+    /* Note to the maintainer: a bug cannot have roots here, this sorting is proven to ensure that children receiving too much room during the distribution sequence (see next step) are served before the others at each iteration, so that their excess can be redistributed to the next ones:
+       At any iteration of the distribution sequence, a child x would be distributed too much room if and only if x.maxRoom/x.roomDistributable < 1. So, given two children a and b, it is sufficient to serve a before b if a.maxRoom/a.roomDistributable < b.maxRoom/b.roomDistributable.
+       At any iteration, x.roomDistributable is totalAdditionalRoom * x.flexGrow / totalFlexGrow. Noticing that totalAdditionalRoom and totalFlexGrow appear on both sides of the comparison, removing them would not change the order, so the comparison can be simplified into
+       a.maxRoom/a.flexGrow < b.maxRoom/b.flexGrow. Finally, as multiplications use less computing resources, the flex grow values are swapped, hence the sorting criteria above this comment block.
+     */
+    // Now we distribute the room available. After this step, each `cumr.growth` contains the additional room given to the child (until now, it contained its max room).
     for (const cumr of canUseMoreRoom) {
-      const growth = totalAdditionalRoom * cumr.flexGrow / totalFlexGrow
-      if (growth < cumr.growth) {
-        cumr.growth = growth
+      const roomDistributable = totalAdditionalRoom * cumr.flexGrow / totalFlexGrow
+      if (roomDistributable < cumr.growth) {
+        cumr.growth = roomDistributable
       }
       totalAdditionalRoom -= cumr.growth
       totalFlexGrow -= cumr.flexGrow
@@ -461,7 +470,7 @@ function enterUpdateCycleAsAparent (force : boolean = false) {
   logStep('neutral', 'update cycle completed')
 }
 
-function enterUpdateCycleAsTextclipper (force : boolean) {
+function enterUpdateCycleAsTextClipper (force : boolean) {
   currentText = textAfterLastUpdate.text
   getReadyForUpdate()
   if (determineReason(true) || force) {
@@ -596,12 +605,20 @@ function whatIsMyFlexGrow () : number {
 }
 
 /**
- * Assuming that the text is not clipped, this tells how much the frame could shrink or grow if it had to be as large as the text (or hit min-width or max-width).
- * @returns If `accurate` is `true`: positive means I can grow so much, negative means I can shrink so much. If `accurate` is `false`: positive means the text will be clipped, negative means the text fits entirely.
+ * Assuming that the content is not clipped, this tells how much the frame could shrink or grow if it had to be as large as the content (or hit min-width or max-width).
+ * @returns If `accurate` is `true`: positive means I can grow so much, negative means I can shrink so much. If `accurate` is `false`: positive means the content will be clipped, negative means the content fits entirely.
  */
 function howMuchCanIshrinkOrGrow (accurate : boolean) : number {
   const widthRightNow = getFrameWidth()
-  const withoutRestriction = calculateTextWidth(props.text).width - (widthRightNow - ResizeObserverLagMargin)
+  let withoutRestriction : number
+  if (whatIam.value === WhatIcanBe.Parent) {
+    withoutRestriction = 0
+    for (const child of innerElements.widthDefinedChildren) {
+      withoutRestriction += child.howMuchCanIshrinkOrGrow(true)
+    }
+  } else {
+    withoutRestriction = calculateTextWidth(props.text).width - (widthRightNow - ResizeObserverLagMargin)
+  }
   if (!accurate) {
     return withoutRestriction
   }
@@ -617,7 +634,6 @@ function howMuchCanIshrinkOrGrow (accurate : boolean) : number {
   }
 }
 
-// returns the text that was in the frame before it got emptied
 function getReadyForUpdate () {
   if (amIreadyForUpdate) {
     // we have a parent and he already called this function
@@ -860,7 +876,7 @@ const frameClassList = computed(() => 'meframe-unique000name_16218934709 ' + pro
   <span ref="frameSpan" :class="frameClassList">
     <!--
       The following line mounts our slot if we have one.
-      To inform MiddleEllipsis components that they are children and give them the ability to send us information, we add a props. Also, we get a ref to each instanciated element.
+      To inform MiddleEllipsis components that they are children and give them the ability to send us information, we add a props. Also, we get a ref to each instantiated element.
     -->
     <component
       :is="slotElem"

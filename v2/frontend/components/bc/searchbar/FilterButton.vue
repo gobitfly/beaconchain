@@ -22,7 +22,9 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
       :checked="state"
       :onchange="(e:any) => {emit('change', e.target.checked)}"
     >
-    <slot />
+    <div class="content">
+      <slot />
+    </div>
   </label>
 </template>
 
@@ -30,14 +32,17 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 @use "~/assets/css/fonts.scss";
 
 .frame {
-  display: inline-block;
+  display: inline-flex;
   position: relative;
   box-sizing: border-box;
   cursor: pointer;
   user-select: none;
   border-radius: 10px;
   height: 20px;
-  padding-top: 2.3px;
+  @media (pointer: coarse) {
+    border-radius: 15px;
+    height: 30px;
+  }
   padding-left: 8px;
   padding-right: 8px;
   text-align: center;
@@ -102,5 +107,12 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   &.discreet {
     color: var(--light-black);
   }
+}
+
+.content {
+  display: inline-flex;
+  position: relative;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 </style>
