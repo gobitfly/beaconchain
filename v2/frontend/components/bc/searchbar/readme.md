@@ -123,10 +123,10 @@ But that clips the text perfectly only when the room that the component has is i
 **Coordination of interdependent MiddleEllipsis components**
 
 In real applications, the simple case above is not always sufficient. You might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
-which implies that the room that each component has depends on the content of the others (the larger a text, the larger its component grows).
-In this case, the simple syntax above will clip their texts wrongly. The reason is that they have no way to know their final widths during the clippipng process.
+which implies that the room that each component has depends on the content of the others (texts push or pull their containers depending on their relative lengths).
+In this case, the simple syntax above will clip the texts wrongly. The reason is that the components have no way to know their final widths during the clipping process.
 
-You must gather them in a parent MiddleEllipsis like so:
+To make them aware of each other, you gather them in a parent MiddleEllipsis like so:
 ```HTML
 <MiddleEllipsis class="papa">
   <MiddleEllipsis class="child1" text="a long text" />
