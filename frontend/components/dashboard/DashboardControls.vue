@@ -67,26 +67,44 @@ const share = () => {
 const deleteButtonOptions = computed(() => {
   const disabled = isPublic.value && publicEntities.value?.length === 0
 
-  return { disabled }
+  // private dashboards always get deleted, public dashboards cannot be deleted
+  const deleteDashboard = isPrivate.value
+
+  // we can only forward if there is something to forward to after a potential deletion
+  const privateDashboardsCount = isLoggedIn.value ? ((dashboards.value?.validator_dashboards?.length ?? 0) + (dashboards.value?.account_dashboards?.length ?? 0)) : 0
+  const forward = deleteDashboard ? (privateDashboardsCount > 1) : (privateDashboardsCount > 0)
+
+  // only public dashboards can be cleared and this only happens if there is nothing to forward to
+  const clearDashboard = !deleteDashboard && (!isLoggedIn.value || !forward) && publicEntities.value?.length > 0
+
+  return { disabled, deleteDashboard, forward, clearDashboard }
 })
 
 const onDelete = () => {
-  const languageKey = isLoggedIn.value ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
+  const languageKey = deleteButtonOptions.value.clearDashboard ? 'dashboard.deletion.clear_text' : 'dashboard.deletion.delete_text'
 
   dialog.open(BcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && deleteAction(dashboardKey.value),
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward, deleteButtonOptions.value.clearDashboard),
     data: {
       question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
-const deleteAction = async (key: DashboardKey) => {
-  if (isPrivate.value) {
-    // private dashboards get deleted via API
+const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean, clearDashboard: boolean) => {
+  if (clearDashboard) {
+    // simply clear the public dashboard by emptying the hash
+    if (!isLoggedIn.value) {
+      updateHash(dashboardType.value, '')
+    }
+    setDashboardKey('')
+    return
+  }
+
+  if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
       await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
     } else {
@@ -94,34 +112,28 @@ const deleteAction = async (key: DashboardKey) => {
     }
 
     await refreshDashboards()
-  } else if (!isLoggedIn.value) {
-    // users that are not logged in cannot be forwarded to a private dashboard so we will just empty the public dashboard they are currently viewing
-    if (publicEntities.value?.length > 0) {
-      updateHash(dashboardType.value, '')
-      setDashboardKey('')
+  }
+
+  if (forward) {
+    // try to forward the user to a private dashboard
+    let preferedDashboards = dashboards.value?.validator_dashboards ?? []
+    let fallbackDashboards = dashboards.value?.account_dashboards ?? []
+    let fallbackUrl = '/account-dashboard/'
+    if (dashboardType.value === 'account') {
+      preferedDashboards = dashboards.value?.account_dashboards ?? []
+      fallbackDashboards = dashboards.value?.validator_dashboards ?? []
+      fallbackUrl = '/dashboard/'
     }
 
-    return
-  }
+    if ((preferedDashboards?.length ?? 0) > 0) {
+      setDashboardKey(`${preferedDashboards[0].id}`)
+      return
+    }
 
-  // try to forward the user to a private dashboard
-  let preferedDashboards = dashboards.value?.validator_dashboards ?? []
-  let fallbackDashboards = dashboards.value?.account_dashboards ?? []
-  let fallbackUrl = '/account-dashboard/'
-  if (dashboardType.value === 'account') {
-    preferedDashboards = dashboards.value?.account_dashboards ?? []
-    fallbackDashboards = dashboards.value?.validator_dashboards ?? []
-    fallbackUrl = '/dashboard/'
-  }
-
-  if ((preferedDashboards?.length ?? 0) > 0) {
-    setDashboardKey(`${preferedDashboards[0].id}`)
-    return
-  }
-
-  if ((fallbackDashboards.length ?? 0) > 0) {
-    await navigateTo(`${fallbackUrl}${fallbackDashboards[0].id}`)
-    return
+    if ((fallbackDashboards.length ?? 0) > 0) {
+      await navigateTo(`${fallbackUrl}${fallbackDashboards[0].id}`)
+      return
+    }
   }
 
   // no private dashboard available, forward to creation screen
