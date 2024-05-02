@@ -142,8 +142,10 @@
       color: var(--primary-contrast-color);
     }
     &:hover {
-      background: var(--button-color-hover);
-      color: var(--primary-contrast-color);
+      @media (hover: hover) {
+        background: var(--button-color-hover);
+        color: var(--primary-contrast-color);
+      }
     }
     &.p-disabled {
       background: var(--button-color-disabled);

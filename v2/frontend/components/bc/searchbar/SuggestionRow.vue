@@ -136,6 +136,7 @@ function formatDescriptionCell () : string {
 
 @mixin common-to-all-rowstyles {
   cursor: pointer;
+  user-select: none;
   display: grid;
   position: relative;
   right: 0px;
