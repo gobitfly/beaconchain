@@ -111,14 +111,13 @@ In the rest of the documentation, we will use these definitions:
 
 ### The simplest case
 
-If the width of the component is _defined_ (see the vocabulary above), you can write
+If the width of the component is _defined_ (see the vocabulary above) and its width is independent of the content of other MiddleEllipsis components, you can write
 
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" />
 ```
-But that clips the text correctly only if the width of the component is independent of the content of other MiddleEllipsis components.
 
-When the width of the component is undefined or depends on the content of other MiddleEllipses around, the syntax is different, as we will see now:
+When the width of the component is undefined or depends on the content of other MiddleEllipses around, the syntax is different, as we will explain now:
 
 ### The interesting cases
 
