@@ -41,3 +41,20 @@ export function getRewardChartColors () {
     cl: '#7DB5EC'
   }
 }
+
+export function getHeatmapColors (theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+  if (theme === 'light') {
+    return [styles.getPropertyValue('--light-red'), styles.getPropertyValue('--light-green')]
+  }
+  return [styles.getPropertyValue('--flashy-red'), styles.getPropertyValue('--green')]
+}
+
+export function getHeatmapContentColors (_theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+  return {
+    proposal: styles.getPropertyValue('--flashy-green'),
+    sync: styles.getPropertyValue('--melllow-blue'),
+    slashing: styles.getPropertyValue('--orange')
+  }
+}

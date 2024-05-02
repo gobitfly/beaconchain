@@ -26,6 +26,8 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  DASHBOARD_HEATMAP = '/dashboard/heatmap',
+  DASHBOARD_HEATMAP_DETAILS = '/dashboard/heatmapDetails',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   SEARCH = '/search'
@@ -168,6 +170,16 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_HEATMAP]: {
+    path: '/validator-dashboards/{dashboardKey}/heatmap',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/heatmap`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_HEATMAP_DETAILS]: {
+    path: '/validator-dashboards/{dashboardKey}/heatmap',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/heatmap/${values?.epoch}`,
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
