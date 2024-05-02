@@ -149,7 +149,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </NuxtLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age" body-class="age" header-class="age">
+            <Column v-if="colsVisible.age" field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -327,7 +327,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   font-size: var(--small_text_font_size);
 
   .row {
-
     display: flex;
     align-items: center;
 
