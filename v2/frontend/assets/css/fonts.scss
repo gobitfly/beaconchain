@@ -113,7 +113,6 @@
   --small_text_font_size: 12px;
   --small_text_font_weight: var(--roboto-light);
   --small_text_bold_font_weight: var(--roboto-medium);
-  --discreet_text_font_size: 14px;
 
   --tooltip_text_font_family: var(--inter-family);
   --tooltip_text_font_size: 10px;
@@ -190,15 +189,6 @@ h1 {
   @include small_text
 }
 
-@mixin discreet_text(){
-  @include small_text;
-  font-size: var(--discreet_text_font_size);
-}
-
-.discreet_text{
-  @include discreet_text
-}
-
 @mixin small_text_bold(){
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
@@ -207,15 +197,6 @@ h1 {
 
 .small_text_bold{
   @include small_text_bold
-}
-
-@mixin discreet_text_bold(){
-  @include small_text_bold;
-  font-size: var(--discreet_text_font_size);
-}
-
-.discreet_text_bold{
-  @include discreet_text_bold
 }
 
 @mixin tooltip_text(){

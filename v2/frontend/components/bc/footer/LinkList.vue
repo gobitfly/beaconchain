@@ -66,12 +66,10 @@ const columns: Row[] = [
 </template>
 
 <style lang="scss" scoped>
-@use "~/assets/css/fonts.scss";
-
 .title {
-  @include fonts.big_text_label;
-  font-weight: var(--roboto-medium);
   color: var(--Light-Grey);
+  font-size: 20px;
+  font-weight: bold;
   line-height: 33px;
 
   @media (min-width: 600px) {
@@ -84,8 +82,8 @@ const columns: Row[] = [
 }
 
 .link-line {
-  @include fonts.standard_text;
   line-height: 27px;
+  font-size: 16px;
 }
 
 .icon {
