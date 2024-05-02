@@ -18,6 +18,7 @@ import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroun
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { API_PATH } from '~/types/customFetch'
 
 use([
   CanvasRenderer,

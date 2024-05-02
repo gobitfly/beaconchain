@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { BcDialogConfirm } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
+import { API_PATH } from '~/types/customFetch'
 
 const { isLoggedIn } = useUserStore()
 const { dashboardKey, isPublic, isPrivate, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
