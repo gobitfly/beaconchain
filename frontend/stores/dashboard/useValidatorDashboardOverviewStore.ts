@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { VDBOverviewData, InternalGetValidatorDashboardResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
+import { API_PATH } from '~/types/customFetch'
 
 const validatorOverviewStore = defineStore('validator_overview_store', () => {
   const data = ref<VDBOverviewData | undefined | null>()
