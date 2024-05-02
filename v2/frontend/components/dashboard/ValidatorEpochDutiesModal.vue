@@ -4,6 +4,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { InternalGetValidatorDashboardDutiesResponse } from '~/types/api/validator_dashboard'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
+import type { PathValues } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()

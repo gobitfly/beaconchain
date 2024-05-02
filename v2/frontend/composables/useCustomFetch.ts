@@ -2,7 +2,7 @@ import type { NitroFetchOptions } from 'nitropack'
 import { warn } from 'vue'
 import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
-import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
+import { mapping, type PathValues } from '~/types/customFetch'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
@@ -40,174 +40,12 @@ export enum API_PATH {
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]
 
-export type PathValues = Record<string, string | number>
-
-interface MockFunction {
-  (body?: any, param?: PathValues, query?: PathValues) : any
-}
-
-type MappingData = {
-  path: string,
-  getPath?: (values?: PathValues) => string,
-  mock?: boolean,
-  mockFunction?: MockFunction,
-  legacy?: boolean
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' // 'GET' will be used as default
-}
-
 function addQueryParams (path: string, query?: PathValues) {
   if (!query) {
     return path
   }
   const q = Object.entries(query).filter(([_, value]) => value !== undefined).map(([key, value]) => `${key}=${value}`).join('&')
   return `${path}?${q}`
-}
-
-const mapping: Record<string, MappingData> = {
-  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
-    path: 'validator-dashboards/{dashboard_id}/validators',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validators`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
-    path: 'validator-dashboards/{dashboard_id}/blocks',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/blocks`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS]: {
-    path: 'validator-dashboards/{dashboard_id}/withdrawals',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS]: {
-    path: 'validator-dashboards/{dashboard_id}/total-withdrawals',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-withdrawals`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {
-    path: 'validator-dashboards/{dashboard_id}/groups',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups`,
-    mock: false,
-    method: 'POST'
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY]: {
-    path: 'validator-dashboards/{dashboard_id}/groups/{group_id}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
-    mock: false,
-    method: 'PUT' // can be 'DELETE' = delete group or 'PUT' = modify group
-  },
-  [API_PATH.AD_CONFIGURATIONs]: {
-    path: '/ad-configurations?={keys}',
-    getPath: values => `/ad-configurations?keys=${values?.keys}`,
-    mock: true
-  },
-  [API_PATH.USER_DASHBOARDS]: {
-    path: '/users/me/dashboards',
-    mock: false
-  },
-  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
-    path: '/account-dashboards',
-    mock: true,
-    method: 'POST'
-  },
-  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
-    path: '/validator-dashboards',
-    mock: false,
-    method: 'POST'
-  },
-  [API_PATH.DASHBOARD_DELETE_ACCOUNT]: {
-    path: '/account-dashboards/{dashboardKey}',
-    getPath: values => `/account-dashboards/${values?.dashboardKey}`,
-    mock: true,
-    method: 'DELETE'
-  },
-  [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
-    path: '/validator-dashboards/{dashboardKey}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: false,
-    method: 'DELETE'
-  },
-  [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
-    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_SUMMARY]: {
-    path: '/validator-dashboards/{dashboardKey}/summary',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
-    path: '/validator-dashboards/{dashboardKey}/rewards-chart',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
-    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
-    path: '/validator-dashboards/{dashboardKey}/rewards',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_EL_DEPOSITS]: {
-    path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
-    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_CL_DEPOSITS]: {
-    path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL]: {
-    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_SUMMARY_CHART]: {
-    path: '/validator-dashboards/{dashboardKey}/summary-chart?',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_OVERVIEW]: {
-    path: '/validator-dashboards/{dashboardKey}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_SLOTVIZ]: {
-    path: '/validator-dashboards/{dashboardKey}/slot-viz',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
-    path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
-    mock: false
-  },
-  [API_PATH.LATEST_STATE]: {
-    path: '/latestState',
-    legacy: true,
-    mock: false
-  },
-  [API_PATH.LOGIN]: {
-    path: '/login',
-    method: 'POST',
-    mock: false
-  },
-  [API_PATH.SEARCH]: {
-    path: '/search',
-    method: 'POST',
-    mock: true,
-    mockFunction: simulateAPIresponseForTheSearchBar
-  }
 }
 
 export function useCustomFetch () {
