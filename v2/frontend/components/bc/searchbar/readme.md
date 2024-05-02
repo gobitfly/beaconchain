@@ -124,10 +124,10 @@ When the width of the component is undefined or depends on the content of other 
 **Coordination of interdependent MiddleEllipsis components**
 
 In real applications, you might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
-which implies that the room that each component has depends on the content of the others (texts push or pull their containers depending on their relative lengths).
+which implies that the room that each component has depends on the content of the others (because the texts push or pull their containers depending on their relative lengths).
 
 In that case, the simple syntax above causes 2 problems:
-1. The page can become slow and freeze. The reason is that each reclipping in a component changes its width, so the width of its neighbiors, thus triggering them, which initiates an infinite loop of updates.
+1. The page can become slow and freeze. The reason is that each reclipping in a component changes its width, so the width of its neighbors, thus triggering them, which initiates an infinite loop of updates.
 2. It will clip the texts wrongly. The reason is that each component does not know the final widths of its neighbors while they are clipping independently.
 
 So, in that case, you must give the components a way to deal properly with each other. You do it by gathering them in a parent MiddleEllipsis like so:
@@ -142,7 +142,7 @@ Note that :
 - A parent MiddleEllipsis can contain anything, so using a parent does not restrict the layout of your page. See it as a `div`. It recognizes and manages its children to make sure that they clip properly, and displays components of other types as they are, unchanged.
 - Regarding the children, their display modes can mix `inline-flex` and `inline-block` (only `inline` modes make sense in our context).
 
-**Guaranteeing no gap between the clipped text and its neighbors: using the concept of undefined width**
+**Guaranteeing no gap between the clipped text and its neighbors: using the concept of _undefined width_**
 
 When you want
 - a MiddleEllipsis component to be as narrow as its text (no empty space), no matter how small the text is,
