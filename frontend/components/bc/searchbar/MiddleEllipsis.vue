@@ -3,7 +3,7 @@ import { type ComponentPublicInstance, warn } from 'vue'
 
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
-const ResizeObserverLagMargin = 1.5 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
+const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
 
 const props = defineProps<{
   text?: string,
@@ -71,7 +71,7 @@ const innerElements = {
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle : CSSStyleDeclaration
-let frameText = props.text || '' // This variable always mirrors the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
+let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
 
 let delayedForcedUpdateIncoming = false
 let classPropsDuringLastUpdate = props.class || ''

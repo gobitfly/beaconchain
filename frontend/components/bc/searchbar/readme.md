@@ -104,29 +104,34 @@ It has been designed to adapt the text to its width as quickly as possible (test
 
 In the rest of the documentation, we will use these definitions:
 
-- A component of _defined width_ is a component whose width does not collapse to `0px` or `min-width` when it has no content. So, for example, it has a `flex-grow` or `width` property set, or it is a cell in a grid and the width of its column is fixed in `px` or set to `auto` or `fr` with `grid-template-columns`.
+- A component of _defined width_ is a component whose width does not collapse to `0px` or `min-width` when it has no content. So, for example, it has a `flex-grow` or `width` property set, or it is a cell in a grid and the width of its column is fixed in `px` or set to `auto` or `fr` with `grid-template-columns`, ...
 - A component of _undefined width_ is a component whose width collapses to `0px` or `min-width` when it has no content.
 
 ## Syntax
 
 ### The simplest case
 
-If the room allowed to the text is _defined_ (see the vocabulary above), you can write
+If the width of the component is _defined_ (see the vocabulary above), you can write
 
 ```HTML
 <MiddleEllipsis class="myclass" text="my long text" />
 ```
-But that clips the text perfectly only when the room that the component has is independent of the content of other MiddleEllipsis components (for example when its width is defined with `width` in `%` or `px`).
+But that clips the text correctly only if the width of the component is independent of the content of other MiddleEllipsis components.
+
+When the width of the component is undefined or depends on the content of other MiddleEllipses around, the syntax is different, as we will see now:
 
 ### The interesting cases
 
 **Coordination of interdependent MiddleEllipsis components**
 
-In real applications, the simple case above is not always sufficient. You might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
+In real applications, you might need to display on the same line several MiddleEllipsis components whose widths are defined with `flex-grow` values,
 which implies that the room that each component has depends on the content of the others (texts push or pull their containers depending on their relative lengths).
-In this case, the simple syntax above will clip the texts wrongly. The reason is that each component has no way to know the final widths of its neighbors during the clipping process.
 
-To make them deal properly with each other, you gather them in a parent MiddleEllipsis like so:
+In that case, the simple syntax above causes 2 problems:
+1. The page can become slow and freeze. The reason is that each reclipping in a component changes its width, so the width of its neighbiors, thus triggering them, which initiates an infinite loop of updates.
+2. It will clip the texts wrongly. The reason is that each component does not know the final widths of its neighbors while they are clipping independently.
+
+So, in that case, you must give the components a way to deal properly with each other. You do it by gathering them in a parent MiddleEllipsis like so:
 ```HTML
 <MiddleEllipsis class="papa">
   <MiddleEllipsis class="child1" text="a long text" />
