@@ -67,43 +67,31 @@ const share = () => {
 const deleteButtonOptions = computed(() => {
   const disabled = isPublic.value && publicEntities.value?.length === 0
 
-  // private dashboards always get deleted, public dashboards cannot be deleted
+  // private dashboards always get deleted, public dashboards only get cleared
   const deleteDashboard = isPrivate.value
 
   // we can only forward if there is something to forward to after a potential deletion
   const privateDashboardsCount = isLoggedIn.value ? ((dashboards.value?.validator_dashboards?.length ?? 0) + (dashboards.value?.account_dashboards?.length ?? 0)) : 0
   const forward = deleteDashboard ? (privateDashboardsCount > 1) : (privateDashboardsCount > 0)
 
-  // only public dashboards can be cleared and this only happens if there is nothing to forward to
-  const clearDashboard = !deleteDashboard && (!isLoggedIn.value || !forward) && publicEntities.value?.length > 0
-
-  return { disabled, deleteDashboard, forward, clearDashboard }
+  return { disabled, deleteDashboard, forward }
 })
 
 const onDelete = () => {
-  const languageKey = deleteButtonOptions.value.clearDashboard ? 'dashboard.deletion.clear_text' : 'dashboard.deletion.delete_text'
+  const languageKey = deleteButtonOptions.value.deleteDashboard ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
 
   dialog.open(BcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward, deleteButtonOptions.value.clearDashboard),
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
     data: {
       question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
-const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean, clearDashboard: boolean) => {
-  if (clearDashboard) {
-    // simply clear the public dashboard by emptying the hash
-    if (!isLoggedIn.value) {
-      updateHash(dashboardType.value, '')
-    }
-    setDashboardKey('')
-    return
-  }
-
+const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
   if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
       await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
@@ -112,6 +100,11 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
     }
 
     await refreshDashboards()
+  } else if (!isLoggedIn.value) {
+    // simply clear the public dashboard by emptying the hash
+    updateHash(dashboardType.value, '')
+    setDashboardKey('')
+    return
   }
 
   if (forward) {
