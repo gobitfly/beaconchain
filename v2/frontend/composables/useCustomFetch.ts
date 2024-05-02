@@ -2,40 +2,9 @@ import type { NitroFetchOptions } from 'nitropack'
 import { warn } from 'vue'
 import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
-import { mapping, type PathValues } from '~/types/customFetch'
+import { mapping, type PathValues, API_PATH } from '~/types/customFetch'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
-
-export enum API_PATH {
-  AD_CONFIGURATIONs = '/adConfigurations',
-  USER_DASHBOARDS = '/user/dashboards',
-  DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
-  DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
-  DASHBOARD_DELETE_ACCOUNT = '/dashboard/accountValidator',
-  DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidator',
-  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
-  DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
-  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group-modify',
-  DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
-  DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
-  DASHBOARD_VALIDATOR_WITHDRAWALS = '/validator-dashboards/withdrawals',
-  DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS = '/validator-dashboards/total-withdrawals',
-  DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
-  DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
-  DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
-  DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
-  DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
-  DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
-  DASHBOARD_EL_DEPOSITS = '/dashboard/elDeposits',
-  DASHBOARD_EL_DEPOSITS_TOTAL = '/dashboard/elDepositsTotal',
-  DASHBOARD_CL_DEPOSITS = '/dashboard/clDeposits',
-  DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
-  DASHBOARD_OVERVIEW = '/dashboard/overview',
-  DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
-  LATEST_STATE = '/latestState',
-  LOGIN = '/login',
-  SEARCH = '/search'
-}
 
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]

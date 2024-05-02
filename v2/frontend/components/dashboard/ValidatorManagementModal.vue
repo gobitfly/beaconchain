@@ -14,7 +14,7 @@ import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
-import type { PathValues } from '~/types/customFetch'
+import { API_PATH, type PathValues } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()

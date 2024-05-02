@@ -5,6 +5,7 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
+import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardElDepositsStore = defineStore(
   'validator_dashboard_el_deposits',
