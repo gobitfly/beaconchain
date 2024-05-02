@@ -30,7 +30,7 @@ const onSubmit = () => handleSubmit(async (values) => {
   await navigateTo('/')
 })
 
-const canSubmit = computed(() => !!email.value && !!password.value && !Object.keys(errors.value).length)
+const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
 const addressError = ref<string|undefined>(undefined)
 const passwordError = ref<string|undefined>(undefined)
 </script>
