@@ -21,7 +21,8 @@ export function useValidatorDashboardRewardsStore () {
   const query = computed(() => storedQuery.value)
 
   async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      data.value = undefined
       return undefined
     }
     storedQuery.value = query

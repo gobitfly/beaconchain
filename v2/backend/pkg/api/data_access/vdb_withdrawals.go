@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
@@ -18,6 +21,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
 
 	// Initialize the cursor
@@ -58,14 +62,14 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 					indexSearch = int64(*index)
 				} else {
 					// No validator index for pubkey found, return empty results
-					return nil, &paging, nil
+					return result, &paging, nil
 				}
 			}
 		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(index)
 		} else {
 			// No allowed search term found, return empty results
-			return nil, &paging, nil
+			return result, &paging, nil
 		}
 	}
 
@@ -114,7 +118,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, &paging, nil
+		return result, &paging, nil
 	}
 
 	// Get the withdrawals for the validators
@@ -207,7 +211,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &paging, nil
+			return result, &paging, nil
 		}
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
@@ -225,7 +229,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	}
 
 	// Create the result
-	result := make([]t.VDBWithdrawalsTableRow, 0)
 	cursorData := make([]t.WithdrawalsCursor, 0)
 	for _, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
@@ -251,10 +254,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
-		// No paging required
-		return result, &paging, nil
-	}
 
 	// Remove the last entry from data as it is only required for the check
 	if moreDataFlag {
@@ -268,6 +267,39 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		slices.Reverse(cursorData)
 	}
 
+	// Find the next withdrawal if we are currently at the first page
+	// If we have a prev_cursor but not enough data it means the next data is missing
+	if !currentCursor.IsValid() || (currentCursor.IsReverse() && len(result) < int(limit)) {
+		nextData, err := d.getNextWithdrawalRow(validators)
+		if err != nil {
+			return nil, nil, err
+		}
+		if nextData != nil {
+			// Complete the next data
+			nextData.GroupId = validatorGroupMap[nextData.Index]
+			nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+		} else {
+			// If there is no next data, add a missing estimate row
+			nextData = &t.VDBWithdrawalsTableRow{
+				IsMissingEstimate: true,
+			}
+		}
+		result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
+
+		// Flag if above limit
+		moreDataFlag = moreDataFlag || len(result) > int(limit)
+		if !moreDataFlag && !currentCursor.IsValid() {
+			// No paging required
+			return result, &paging, nil
+		}
+
+		// Remove the last entry from data as it is only required for the check
+		if moreDataFlag {
+			result = result[:len(result)-1]
+			cursorData = cursorData[:len(cursorData)-1]
+		}
+	}
+
 	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
@@ -276,7 +308,174 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	return result, p, nil
 }
 
+func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.VDBWithdrawalsTableRow, error) {
+	if len(queryValidators) == 0 {
+		return nil, nil
+	}
+
+	stats := cache.LatestStats.Get()
+	if stats == nil || stats.LatestValidatorWithdrawalIndex == nil {
+		return nil, errors.New("stats not available")
+	}
+
+	// Get the current validator state
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
+	epoch := cache.LatestEpoch.Get()
+
+	// find subscribed validators that are active and have valid withdrawal credentials
+	// order by validator index to ensure that "last withdrawal" cursor handling works
+	sort.Slice(queryValidators, func(i, j int) bool {
+		return queryValidators[i] < queryValidators[j]
+	})
+
+	latestFinalized := cache.LatestFinalizedEpoch.Get()
+
+	var nextValidator *uint64
+	for _, validator := range queryValidators {
+		metadata := validatorMapping.ValidatorMetadata[validator]
+
+		if !utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
+			// Validator cannot withdraw because of invalid withdrawal credentials
+			continue
+		}
+		if !metadata.ActivationEpoch.Valid || metadata.ActivationEpoch.Int64 > int64(epoch) {
+			// Validator is not active yet
+			continue
+		}
+		if metadata.ExitEpoch.Valid && metadata.ExitEpoch.Int64 <= int64(epoch) {
+			// Validator has already exited
+			continue
+		}
+
+		if (metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)) ||
+			(metadata.EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && metadata.Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
+			// this validator is eligible for withdrawal, check if it is the next one
+			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
+				distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
+				if err != nil {
+					return nil, err
+				}
+
+				timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+
+				// it normally takes two epochs to finalize
+				if !timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
+					// this validator has a next withdrawal
+					nextValidatorInt := validator
+					nextValidator = &nextValidatorInt
+				}
+
+				if nextValidator != nil && *nextValidator > *stats.LatestValidatorWithdrawalIndex {
+					// the first validator after the cursor has to be the next validator
+					break
+				}
+			}
+		}
+	}
+
+	if nextValidator == nil {
+		return nil, nil
+	}
+
+	nextValidatorData := validatorMapping.ValidatorMetadata[*nextValidator]
+
+	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{*nextValidator})
+	if err != nil {
+		return nil, err
+	}
+	lastWithdrawnEpoch := lastWithdrawnEpochs[*nextValidator]
+
+	nextDistance, err := d.getWithdrawableCountFromCursor(*nextValidator, *stats.LatestValidatorWithdrawalIndex)
+	if err != nil {
+		return nil, err
+	}
+	nextTimeToWithdrawal := d.getTimeToNextWithdrawal(nextDistance)
+	nextWithdrawalSlot := utils.TimeToSlot(uint64(nextTimeToWithdrawal.Unix()))
+
+	address, err := utils.GetAddressOfWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
+	if err != nil {
+		return nil, err
+	}
+
+	var withdrawalAmount uint64
+	if nextValidatorData.WithdrawableEpoch.Valid && nextValidatorData.WithdrawableEpoch.Int64 <= int64(epoch) {
+		// full withdrawal
+		withdrawalAmount = nextValidatorData.Balance
+	} else {
+		// partial withdrawal
+		withdrawalAmount = nextValidatorData.Balance - utils.Config.Chain.ClConfig.MaxEffectiveBalance
+	}
+
+	if lastWithdrawnEpoch == epoch || nextValidatorData.Balance < utils.Config.Chain.ClConfig.MaxEffectiveBalance {
+		withdrawalAmount = 0
+	}
+
+	nextData := &t.VDBWithdrawalsTableRow{
+		Epoch: nextWithdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+		Slot:  nextWithdrawalSlot,
+		Index: *nextValidator,
+		Recipient: t.Address{
+			Hash: t.Hash(address.String()),
+		},
+		Amount: utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
+	}
+
+	return nextData, nil
+}
+
+func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex uint64, cursor uint64) (uint64, error) {
+	// the validators' balance will not be checked here as this is only a rough estimation
+	// checking the balance for hundreds of thousands of validators is too expensive
+
+	stats := cache.LatestStats.Get()
+	if stats == nil || stats.ActiveValidatorCount == nil || stats.TotalValidatorCount == nil {
+		return 0, errors.New("stats not available")
+	}
+
+	var maxValidatorIndex uint64
+	if *stats.TotalValidatorCount > 0 {
+		maxValidatorIndex = *stats.TotalValidatorCount - 1
+	}
+	if maxValidatorIndex == 0 {
+		return 0, nil
+	}
+
+	activeValidators := *stats.ActiveValidatorCount
+	if activeValidators == 0 {
+		activeValidators = maxValidatorIndex
+	}
+
+	if validatorindex > cursor {
+		// if the validatorindex is after the cursor, simply return the number of validators between the cursor and the validatorindex
+		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
+		return (validatorindex - cursor) * activeValidators / maxValidatorIndex, nil
+	} else if validatorindex < cursor {
+		// if the validatorindex is before the cursor (wraparound case) return the number of validators between the cursor and the most recent validator plus the amount of validators from the validator 0 to the validatorindex
+		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
+		return (maxValidatorIndex - cursor + validatorindex) * activeValidators / maxValidatorIndex, nil
+	} else {
+		return 0, nil
+	}
+}
+
+// GetTimeToNextWithdrawal calculates the time it takes for the validators next withdrawal to be processed.
+func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
+	minTimeToWithdrawal := time.Now().Add(time.Second * time.Duration((distance/utils.Config.Chain.ClConfig.MaxValidatorsPerWithdrawalSweep)*utils.Config.Chain.ClConfig.SecondsPerSlot))
+	timeToWithdrawal := time.Now().Add(time.Second * time.Duration((float64(distance)/float64(utils.Config.Chain.ClConfig.MaxWithdrawalsPerPayload))*float64(utils.Config.Chain.ClConfig.SecondsPerSlot)))
+
+	if timeToWithdrawal.Before(minTimeToWithdrawal) {
+		return minTimeToWithdrawal
+	}
+
+	return timeToWithdrawal
+}
+
 func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalWithdrawals(dashboardId)
 }

@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Clipping in the middle">
+      <PlaygroundMiddleEllipsisTests />
+    </TabPanel>
     <TabPanel header="Tags">
       <PlaygroundTags />
     </TabPanel>
@@ -11,9 +14,6 @@
     </TabPanel>
     <TabPanel header="Icons">
       <PlaygroundIcons />
-    </TabPanel>
-    <TabPanel header="Clipping in the middle">
-      <PlaygroundMiddleEllipsisTests />
     </TabPanel>
     <TabPanel header="Search bars">
       <PlaygroundEmbeddedSearchbars />

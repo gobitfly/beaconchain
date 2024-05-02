@@ -97,7 +97,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               field="group_id"
               :sortable="true"
-              body-class="bold"
+              body-class="group-id bold"
+              header-class="group-id"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -176,6 +177,10 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 @use "~/assets/css/utils.scss";
 :deep(.summary_table) {
   --col-width: 216px;
+
+  .group-id {
+    @include utils.truncate-text;
+  }
 
   td:has(.validator_column) {
     @include utils.set-all-width(var(--col-width));
