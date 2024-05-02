@@ -3,7 +3,12 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState, refreshLatestState } = useLatestStateStore()
+const { isLoggedIn } = useUserStore()
 await useAsyncData('latest_state', () => refreshLatestState())
+
+const loginText = computed(() => {
+  return isLoggedIn.value ? 'Logged in' : 'Login'
+})
 
 </script>
 <template>
@@ -12,7 +17,7 @@ await useAsyncData('latest_state', () => refreshLatestState())
       <div>Current Epoch: {{ latestState?.currentEpoch }}</div>
       <BcSearchbarGeneral v-if="!props.isHomePage" bar-style="discreet" />
       <NuxtLink to="/login">
-        Login
+        {{ loginText }}
       </NuxtLink>
     </div>
   </div>
