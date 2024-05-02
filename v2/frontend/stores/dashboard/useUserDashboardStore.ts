@@ -4,6 +4,7 @@ import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import { type DashboardKey, type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
+import { API_PATH } from '~/types/customFetch'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()

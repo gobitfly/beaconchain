@@ -12,6 +12,7 @@ import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
+import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
