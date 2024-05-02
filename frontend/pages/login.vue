@@ -92,6 +92,8 @@ const passwordError = ref<string|undefined>(undefined)
   margin: auto;
   width: 300px;
   height: 230px;
+  margin-top: 60px;
+  margin-bottom: 50px;
   padding: var(--padding);
   border: 1px solid var(--primary-color);
 
@@ -129,7 +131,7 @@ const passwordError = ref<string|undefined>(undefined)
 
       .account-invitation {
         position: relative;
-        @include fonts.discreet_text;
+        @include fonts.small_text;
         margin-right: auto;
       }
     }
