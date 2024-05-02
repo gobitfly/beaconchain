@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-/*
-TODO: Use this for future withdrawals
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-*/
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
@@ -18,6 +15,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
+const { latestState } = useLatestStateStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
@@ -57,12 +55,11 @@ const tableData = computed(() => {
     return
   }
 
-  // TODO: Logic for future withdrawals
-
   return {
     paging: withdrawals.value.paging,
     data: [
       {
+        // leaves index undefined to indicate that this is the total row
         amount: totalAmount.value
       },
       ...withdrawals.value.data
@@ -96,11 +93,28 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
   if (row.index === undefined) {
     return 'total-row'
   }
-  // TODO: Return class for future withdrawals
+
+  if (isRowInFuture(row) || row.is_missing_estimate) {
+    return 'gray-out'
+  }
+}
+
+const getExpansionValueClass = (row: VDBWithdrawalsTableRow) => {
+  if (isRowInFuture(row)) {
+    return 'gray-out'
+  }
 }
 
 const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
   return row.index !== undefined
+}
+
+const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
+  if (latestState?.value) {
+    return row.epoch > latestState.value.currentEpoch
+  }
+
+  return false
 }
 
 </script>
@@ -136,8 +150,17 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
               header-class="index"
             >
               <template #body="slotProps">
+                <div v-if="slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
+                  {{ $t('dashboard.validator.withdrawals.pending') }}
+                  <BcTooltip>
+                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <template #tooltip>
+                      {{ $t('dashboard.validator.withdrawals.pending_tooltip') }}
+                    </template>
+                  </BcTooltip>
+                </div>
                 <NuxtLink
-                  v-if="slotProps.data.group_id !== undefined"
+                  v-else-if="slotProps.data.index !== undefined"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
@@ -158,7 +181,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                <span>
+                <span v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate">
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </span>
               </template>
@@ -171,7 +194,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.group_id !== undefined"
+                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
@@ -189,7 +212,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.group_id !== undefined"
+                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
@@ -205,10 +228,10 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  v-if="slotProps.data.group_id !== undefined"
+                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
                   type="slot"
                   class="time-passed"
-                  :value="slotProps.data.epoch"
+                  :value="slotProps.data.slot"
                 />
               </template>
             </Column>
@@ -219,7 +242,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.recipient')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id !== undefined">
+                <div v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate">
                   <BcFormatHash
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
@@ -243,19 +266,17 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
                 </div>
-                <div v-else class="amount-container">
+                <div v-else-if="!slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
                   <BcFormatValue
                     :value="slotProps.data.amount"
-                    :class="{'all-time-total':slotProps.data.group_id === undefined}"
+                    :class="{'all-time-total':slotProps.data.index === undefined}"
                   />
-                  <!-- TODO: Adapt v-if for future withdrawals tooltip
-                  <BcTooltip v-if="slotProps.data.index === undefined">
+                  <BcTooltip v-if="isRowInFuture(slotProps.data)">
                     <FontAwesomeIcon :icon="faInfoCircle" />
                     <template #tooltip>
                       {{ $t('dashboard.validator.withdrawals.future_tooltip') }}
                     </template>
                   </BcTooltip>
-                  -->
                 </div>
               </template>
             </Column>
@@ -265,13 +286,15 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.group') }}:
                   </div>
-                  {{ groupNameLabel(slotProps.data.group_id) }}
+                  <div :class="getExpansionValueClass(slotProps.data)">
+                    {{ groupNameLabel(slotProps.data.group_id) }}
+                  </div>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
                   </NuxtLink>
                 </div>
@@ -279,7 +302,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
                   </NuxtLink>
                 </div>
@@ -291,6 +314,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
                     class="recipient"
+                    :class="getExpansionValueClass(slotProps.data)"
                     :hash="slotProps.data.recipient?.hash"
                     :ens="slotProps.data.recipient?.ens"
                   />
@@ -300,7 +324,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.amount') }}:
                   </div>
-                  <BcFormatValue :value="slotProps.data.amount" />
+                  <BcFormatValue :value="slotProps.data.amount" :class="getExpansionValueClass(slotProps.data)" />
                 </div>
               </div>
             </template>
@@ -316,11 +340,9 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
-  .index {
-    .all-time-total {
-      @include fonts.standard_text;
-      font-weight: var(--standard_text_medium_font_weight);
-    }
+  .index .all-time-total {
+    @include fonts.standard_text;
+    font-weight: var(--standard_text_medium_font_weight);
   }
 
   .group-id {
@@ -331,23 +353,21 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
     white-space: nowrap;
   }
 
-  .amount {
-    .all-time-total {
-      @include fonts.standard_text;
-      font-weight: var(--standard_text_medium_font_weight);
-    }
+  .amount .all-time-total {
+    @include fonts.standard_text;
+    font-weight: var(--standard_text_medium_font_weight);
+  }
 
-    .amount-container {
-      display: flex;
-      gap: var(--padding);
-    }
+  .value-with-tooltip-container {
+    display: flex;
+    gap: var(--padding);
   }
 
   tr.total-row > td {
     border-bottom-color: var(--primary-color);
   }
 
-  .future-row > td {
+  .gray-out > td {
     >a,
     >div,
     >span {
@@ -374,9 +394,8 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
       flex-shrink: 0;
     }
 
-    .value {
-      text-wrap: wrap;
-      word-break: break-all;
+    .gray-out {
+      opacity: 0.5;
     }
   }
 }
