@@ -1,66 +1,82 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
+import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
+import { Target } from '~/types/links'
 
+const { t } = useI18n()
 const { doLogin } = useUserStore()
 
-const { handleSubmit, errors, values } = useForm()
-const { value: email } = useField('email', validateField)
-const { value: password } = useField('password', validateField)
+const { handleSubmit, errors } = useForm()
+const { value: email } = useField<string>('email', validateAddress)
+const { value: password } = useField<string>('password', validatePassword)
 
-function validateField (value?: string) {
+function validateAddress (value: string) : true|string {
   if (!value) {
-    return 'Input required.'
+    return t('login.no_email')
   }
-
+  if (!REGEXP_VALID_EMAIL.test(value)) {
+    return t('login.invalid_email')
+  }
   return true
 }
 
-const hasErrors = computed(() => {
-  return !!errors.value && !!Object.values(errors.value).filter(val => !!val).length
+function validatePassword (value: string) : true|string {
+  return (value && value.length > 5) || t('login.no_password')
+}
+
+const onSubmit = () => handleSubmit(async (values) => {
+  await doLogin(values.email, values.password)
+  await navigateTo('/')
 })
 
-const inputValid = computed(() => {
-  return !!values.email?.length && !!values.password?.length && !hasErrors.value
-})
-
-const onSubmit = handleSubmit(async (values) => {
-  if (inputValid.value) {
-    await doLogin(values.email, values.password)
-    await navigateTo('/')
-  }
-})
-
+const canSubmit = computed(() => !!email.value && !!password.value && !Object.keys(errors.value).length)
+const addressError = ref<string|undefined>(undefined)
+const passwordError = ref<string|undefined>(undefined)
 </script>
 
 <template>
   <BcPageWrapper>
     <div class="container">
       <form @submit="onSubmit">
-        <div class="input_row">
-          <label for="email">{{ $t('login.email') }}</label>
+        <div class="input-row first">
+          <label for="email" class="label">{{ $t('login.email') }}</label>
           <InputText
             id="email"
             v-model="email"
             type="text"
             :class="{ 'p-invalid': errors?.email }"
             aria-describedby="text-error"
+            @focus="addressError = undefined"
+            @blur="addressError = errors?.email"
           />
-          <small id="text-error" class="p-error">{{ errors?.email || '&nbsp;' }}</small>
+          <div class="p-error">
+            {{ addressError || '&nbsp;' }}
+          </div>
         </div>
-        <div class="input_row">
-          <label for="password">{{ $t('login.password') }}</label>
+        <div class="input-row second">
+          <label for="password" class="label">{{ $t('login.password') }}</label>
           <InputText
             id="password"
             v-model="password"
             type="password"
             :class="{ 'p-invalid': errors?.password }"
             aria-describedby="text-error"
+            @focus="passwordError = undefined"
+            @blur="passwordError = errors?.password"
           />
-          <small id="text-error" class="p-error">{{ errors?.password || '&nbsp;' }}</small>
+          <div class="p-error">
+            {{ passwordError || '&nbsp;' }}
+          </div>
         </div>
-        <div class="botton_row">
-          <Button type="submit" :label="$t('login.submit')" :disabled="!inputValid" />
+        <div class="last">
+          <div class="account-invitation">
+            {{ t('login.dont_have_account') }}<br>
+            <NuxtLink to="/signup" :target="Target.Internal" class="link">
+              {{ t('login.signup_here') }}
+            </NuxtLink>
+          </div>
+          <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
         </div>
       </form>
       <Toast />
@@ -69,22 +85,57 @@ const onSubmit = handleSubmit(async (values) => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+
 .container {
-  display: flex;
-  justify-content: center;
-  align-content: center;
+  position: relative;
+  margin: auto;
+  width: 300px;
+  height: 230px;
+  padding: var(--padding);
+  border: 1px solid var(--primary-color);
 
   form {
-    max-width: 50%;
+    @include fonts.standard_text;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 
-    .input_row {
+    .input-row {
+      position: relative;
       display: flex;
       flex-direction: column;
+      margin: auto;
+      width: 80%;
+
+      .label {
+        margin-bottom: var(--padding-small);
+      }
     }
 
-    .botton_row {
+    .first {
+      margin-bottom: var(--padding-small);
+    }
+    .second {
+      margin-top: var(--padding-small);
+    }
+
+    .last {
+      position: relative;
       display: flex;
-      justify-content: flex-end;
+      margin-top: auto;
+
+      .account-invitation {
+        position: relative;
+        @include fonts.discreet_text;
+        margin-right: auto;
+      }
+    }
+
+    .p-error {
+      @include fonts.small_text;
     }
   }
 }
