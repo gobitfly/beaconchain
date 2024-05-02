@@ -99,6 +99,12 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
   }
 }
 
+const getExpansionValueClass = (row: VDBWithdrawalsTableRow) => {
+  if (isRowInFuture(row)) {
+    return 'gray-out'
+  }
+}
+
 const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
   return row.index !== undefined
 }
@@ -280,13 +286,15 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.group') }}:
                   </div>
-                  {{ groupNameLabel(slotProps.data.group_id) }}
+                  <div :class="getExpansionValueClass(slotProps.data)">
+                    {{ groupNameLabel(slotProps.data.group_id) }}
+                  </div>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
                   </NuxtLink>
                 </div>
@@ -294,7 +302,7 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
                   </NuxtLink>
                 </div>
@@ -306,6 +314,7 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
                     class="recipient"
+                    :class="getExpansionValueClass(slotProps.data)"
                     :hash="slotProps.data.recipient?.hash"
                     :ens="slotProps.data.recipient?.ens"
                   />
@@ -315,7 +324,7 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.amount') }}:
                   </div>
-                  <BcFormatValue :value="slotProps.data.amount" />
+                  <BcFormatValue :value="slotProps.data.amount" :class="getExpansionValueClass(slotProps.data)" />
                 </div>
               </div>
             </template>
@@ -385,9 +394,8 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
       flex-shrink: 0;
     }
 
-    .value {
-      text-wrap: wrap;
-      word-break: break-all;
+    .gray-out {
+      opacity: 0.5;
     }
   }
 }
