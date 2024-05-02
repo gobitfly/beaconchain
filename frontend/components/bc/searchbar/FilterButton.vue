@@ -47,7 +47,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   padding-right: 8px;
   text-align: center;
   transition: 0.2s;
-  @include fonts.small_text_bold;
+  @include fonts.discreet_text_bold;
   white-space: nowrap;
   overflow: clip;
   &.gaudy,
