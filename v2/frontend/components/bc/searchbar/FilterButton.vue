@@ -48,6 +48,9 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   text-align: center;
   transition: 0.2s;
   @include fonts.discreet_text_bold;
+  @media (max-width: 599.9px) { // mobile
+    letter-spacing: -0.02em;
+  }
   white-space: nowrap;
   overflow: clip;
   &.gaudy,

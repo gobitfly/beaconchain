@@ -138,7 +138,7 @@ function oneOptionChanged (index : number) {
     .content {
       position: relative;
       display: inline-flex;
-      width: 85px;
+      width: 98px;
       .label {
         display: inline-flex;
         flex-grow: 1;
