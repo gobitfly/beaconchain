@@ -97,7 +97,7 @@ const deleteAction = async (key: DashboardKey) => {
   } else if (!isLoggedIn.value) {
     // users that are not logged in cannot be forwarded to a private dashboard so we will just empty the public dashboard they are currently viewing
     if (publicEntities.value?.length > 0) {
-      updateHash('validator', '')
+      updateHash(dashboardType.value, '')
       setDashboardKey('')
     }
 
