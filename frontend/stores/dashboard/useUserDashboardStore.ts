@@ -50,6 +50,11 @@ export function useUserDashboardStore () {
 
   // Public dashboards are saved in a cookie (so that it's accessable during SSR)
   function saveToCookie () {
+    if (isLoggedIn.value) {
+      warn('saveToCookie should only be called when not logged in')
+      return
+    }
+
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
 
@@ -136,11 +141,6 @@ export function useUserDashboardStore () {
 
       // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
       return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
-    }
-
-    const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === key)
-    if (cookieDb || (isLoggedIn.value && !key)) {
-      return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
     }
 
     return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
