@@ -4,11 +4,6 @@
 @import "~/assets/css/prime_megamenu.scss";
 @import "~/assets/css/prime_menubar.scss";
 
-
-.p-error {
-  color: #e24c4c;
-}
-
 // Button
 // https://primevue.org/button/
 .p-button {
@@ -147,8 +142,10 @@
       color: var(--primary-contrast-color);
     }
     &:hover {
-      background: var(--button-color-hover);
-      color: var(--primary-contrast-color);
+      @media (hover: hover) {
+        background: var(--button-color-hover);
+        color: var(--primary-contrast-color);
+      }
     }
     &.p-disabled {
       background: var(--button-color-disabled);
