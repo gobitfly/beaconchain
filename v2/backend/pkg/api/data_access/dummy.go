@@ -246,7 +246,7 @@ func (d *DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cur
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
 	r := t.VDBTotalWithdrawalsData{}
 	err := commonFakeData(&r)
 	return &r, err

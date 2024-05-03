@@ -886,13 +886,20 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
+	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId)
+	pagingParams := v.checkPagingParams(q)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId, pagingParams.search)
 	if err != nil {
 		handleErr(w, err)
 		return
