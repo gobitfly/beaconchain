@@ -24,7 +24,6 @@
   src: url("/fonts/Roboto-LightItalic.ttf") format("truetype");
 }
 
-
 @font-face {
   font-family: "Roboto";
   font-weight: 400;
@@ -104,16 +103,20 @@
   --big_text_label_bold_font_weight: var(--roboto-bold);
 
   --standard_text_font_family: var(--roboto-family);
-  --standard_text_font_size: 14px;
+  --standard_text_font_size: 16px;
   --standard_text_font_weight: var(--roboto-regular);
   --standard_text_medium_font_weight: var(--roboto-medium);
   --standard_text_bold_font_weight: var(--roboto-bold);
 
   --small_text_font_family: var(--roboto-family);
-  --small_text_font_size: 12px;
+  --small_text_font_size: 14px;
   --small_text_font_weight: var(--roboto-light);
   --small_text_bold_font_weight: var(--roboto-medium);
-  --discreet_text_font_size: 14px;
+
+  --tiny_text_font_family: var(--roboto-family);
+  --tiny_text_font_size: 12px;
+  --tiny_text_font_weight: var(--roboto-light);
+  --tiny_text_bold_font_weight: var(--roboto-medium);
 
   --tooltip_text_font_family: var(--inter-family);
   --tooltip_text_font_size: 10px;
@@ -180,6 +183,16 @@ h1 {
   @include standard_text
 }
 
+@mixin standard_text_bold(){
+  font-family: var(--standard_text_font_family);
+  font-size: var(--standard_text_font_size);
+  font-weight: var(--standard_text_bold_font_weight);
+}
+
+.standard_text_bold{
+  @include standard_text_bold
+}
+
 @mixin small_text(){
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
@@ -188,15 +201,6 @@ h1 {
 
 .small_text{
   @include small_text
-}
-
-@mixin discreet_text(){
-  @include small_text;
-  font-size: var(--discreet_text_font_size);
-}
-
-.discreet_text{
-  @include discreet_text
 }
 
 @mixin small_text_bold(){
@@ -209,13 +213,24 @@ h1 {
   @include small_text_bold
 }
 
-@mixin discreet_text_bold(){
-  @include small_text_bold;
-  font-size: var(--discreet_text_font_size);
+@mixin tiny_text(){
+  font-family: var(--tiny_text_font_family);
+  font-size: var(--tiny_text_font_size);
+  font-weight: var(--tiny_text_font_weight);
 }
 
-.discreet_text_bold{
-  @include discreet_text_bold
+.tiny_text{
+  @include tiny_text
+}
+
+@mixin tiny_text_bold(){
+  font-family: var(--tiny_text_font_family);
+  font-size: var(--tiny_text_font_size);
+  font-weight: var(--tiny_text_bold_font_weight);
+}
+
+.tiny_text_bold{
+  @include tiny_text_bold
 }
 
 @mixin tooltip_text(){

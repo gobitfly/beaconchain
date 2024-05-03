@@ -158,12 +158,12 @@ function oneOptionChanged (index : number) {
     z-index: 1024;
     border-radius: var(--padding);
     left: 0px;
-    top: 22px;
+    top: 24px;
     @media (pointer: coarse) {
       top: 32px;
     }
     padding: var(--padding);
-    @include fonts.discreet_text_bold;
+    @include fonts.small_text_bold;
 
     &.gaudy,
     &.embedded {

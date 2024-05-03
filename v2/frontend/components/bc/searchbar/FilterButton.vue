@@ -38,7 +38,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   cursor: pointer;
   user-select: none;
   border-radius: 10px;
-  height: 20px;
+  height: 22px;
   @media (pointer: coarse) {
     border-radius: 15px;
     height: 30px;
@@ -47,7 +47,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   padding-right: 8px;
   text-align: center;
   transition: 0.2s;
-  @include fonts.discreet_text_bold;
+  @include fonts.small_text_bold;
   @media (max-width: 599.9px) { // mobile
     letter-spacing: -0.02em;
   }
