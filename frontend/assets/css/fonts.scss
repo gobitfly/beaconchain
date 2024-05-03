@@ -159,14 +159,10 @@ h1 {
   @include big_text
 }
 
-@mixin big_text_label() {
+.big_text_label{
   font-family: var(--big_text_label_font_family);
   font-size: var(--big_text_label_font_size);
   font-weight: var(--big_text_label_font_weight);
-}
-
-.big_text_label {
-  @include big_text_label
 }
 
 @mixin standard_text(){
