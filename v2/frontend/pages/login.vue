@@ -6,6 +6,7 @@ import { Target } from '~/types/links'
 
 const { t } = useI18n()
 const { doLogin } = useUserStore()
+const toast = useBcToast()
 
 const { handleSubmit, errors } = useForm()
 const { value: email } = useField<string>('email', validateAddress)
@@ -25,9 +26,14 @@ function validatePassword (value: string) : true|string {
   return (value && value.length > 5) || t('login.no_password')
 }
 
-const onSubmit = () => handleSubmit(async (values) => {
-  await doLogin(values.email, values.password)
-  await navigateTo('/')
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    await doLogin(values.email, values.password)
+    await navigateTo('/')
+  } catch (error) {
+    password.value = ''
+    toast.showError({ summary: t('login.error_toast_title'), group: t('login.error_toast_group'), detail: t('login.error_toast_message') })
+  }
 })
 
 const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
@@ -39,7 +45,7 @@ const passwordError = ref<string|undefined>(undefined)
   <BcPageWrapper>
     <div class="container">
       <form @submit="onSubmit">
-        <div class="input-row first">
+        <div class="input-row">
           <label for="email" class="label">{{ $t('login.email') }}</label>
           <InputText
             id="email"
@@ -54,7 +60,7 @@ const passwordError = ref<string|undefined>(undefined)
             {{ addressError || '&nbsp;' }}
           </div>
         </div>
-        <div class="input-row second">
+        <div class="input-row">
           <label for="password" class="label">{{ $t('login.password') }}</label>
           <InputText
             id="password"
@@ -69,7 +75,7 @@ const passwordError = ref<string|undefined>(undefined)
             {{ passwordError || '&nbsp;' }}
           </div>
         </div>
-        <div class="last">
+        <div class="last-row">
           <div class="account-invitation">
             {{ t('login.dont_have_account') }}<br>
             <NuxtLink to="/signup" :target="Target.Internal" class="link">
@@ -79,7 +85,6 @@ const passwordError = ref<string|undefined>(undefined)
           <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
         </div>
       </form>
-      <Toast />
     </div>
   </BcPageWrapper>
 </template>
@@ -89,9 +94,9 @@ const passwordError = ref<string|undefined>(undefined)
 
 .container {
   position: relative;
-  margin: auto;
   width: 300px;
   height: 230px;
+  margin: auto;
   margin-top: 60px;
   margin-bottom: 50px;
   padding: var(--padding);
@@ -112,19 +117,19 @@ const passwordError = ref<string|undefined>(undefined)
       margin: auto;
       width: 80%;
 
+      &:first-child {
+        margin-bottom: var(--padding-small);
+      }
+      &:nth-child(2) {
+        margin-top: var(--padding-small);
+      }
+
       .label {
         margin-bottom: var(--padding-small);
       }
     }
 
-    .first {
-      margin-bottom: var(--padding-small);
-    }
-    .second {
-      margin-top: var(--padding-small);
-    }
-
-    .last {
+    .last-row {
       position: relative;
       display: flex;
       margin-top: auto;
