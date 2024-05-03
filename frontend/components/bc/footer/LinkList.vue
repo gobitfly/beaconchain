@@ -70,7 +70,7 @@ const columns: Row[] = [
 
 .title {
   @include fonts.big_text_label;
-  font-weight: var(--roboto-medium);
+  font-weight: var(--standard_text_medium_font_weight);
   color: var(--Light-Grey);
   line-height: 33px;
 
