@@ -86,7 +86,7 @@ func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*
 	for i, group := range ret.GroupIds {
 		groupIdxMap[group] = uint64(i)
 	}
-	for _, res := range queryResult {
+	/*for _, res := range queryResult {
 		if len(ret.Epochs) == 0 || ret.Epochs[len(ret.Epochs)-1] < res.Epoch {
 			ret.Epochs = append(ret.Epochs, res.Epoch)
 		}
@@ -98,13 +98,13 @@ func (d *DataAccessService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*
 			cell.Value = res.Rewards * 100
 		}
 		ret.Data = append(ret.Data, cell)
-	}
+	}*/
 	return ret, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
 	// WORKING Rami
-	ret := &t.VDBHeatmapTooltipData{Epoch: epoch}
+	ret := &t.VDBHeatmapTooltipData{}
 
 	var validators []uint64
 	err := d.alloyReader.Select(&validators, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2`, dashboardId.Id, groupId)
@@ -167,12 +167,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBI
 		return nil, err
 	}
 
-	for _, slashed := range slashings {
+	/*for _, slashed := range slashings {
 		ret.Slashings = append(ret.Slashings, t.VDBHeatmapTooltipDuty{
 			Validator: slashed,
 			Status:    "success",
 		})
-	}
+	}*/
 
 	var totalAttestationReward int64
 	var totalAttestationIdealReward int64
@@ -181,13 +181,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBI
 	var totalAttestationsSourceExecuted uint64
 	var totalAttestationsTargetExecuted uint64
 	for _, res := range queryResult {
-		if res.Slashed {
+		/*if res.Slashed {
 			ret.Slashings = append(ret.Slashings, t.VDBHeatmapTooltipDuty{
 				Validator: res.Validator,
 				Status:    "failed",
 			})
 		}
-		if res.SyncScheduled > 0 /* && epoch % 256 == 0 */ { // move to circle logic
+		if res.SyncScheduled > 0  { // && epoch % 256 == 0 move to circle logic
 			ret.Syncs = append(ret.Syncs, res.Validator)
 		}
 		for i := uint8(0); i < res.BlocksScheduled; i++ {
@@ -199,7 +199,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBI
 				Validator: res.Validator,
 				Status:    status,
 			})
-		}
+		}*/
 
 		totalAttestationReward += res.AttestationReward
 		totalAttestationIdealReward += res.AttestationIdealReward

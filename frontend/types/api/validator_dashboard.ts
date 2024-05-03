@@ -128,33 +128,29 @@ export type InternalGetValidatorDashboardBlocksResponse = ApiPagingResponse<VDBB
  * Heatmap Tab
  */
 export interface VDBHeatmapCell {
-  x: number /* uint64 */; // Epoch
+  x: number /* uint64 */; // Timestamp
   y: number /* uint64 */; // Group ID
   value: number /* float64 */; // Attestaton Rewards
 }
 export interface VDBHeatmapEvent {
-  x: number /* uint64 */; // Epoch
+  x: number /* uint64 */; // Timestamp
   y: number /* uint64 */; // Group ID
   proposal: boolean;
   slash: boolean;
   sync: boolean;
 }
 export interface VDBHeatmap {
-  epochs: number /* uint64 */[]; // X-Axis Categories
+  timestamps: string /* time.Time */[]; // X-Axis Categories
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
   events: VDBHeatmapEvent[];
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
-export interface VDBHeatmapTooltipDuty {
-  validator: number /* uint64 */;
-  status: 'success' | 'failed' | 'orphaned';
-}
 export interface VDBHeatmapTooltipData {
-  epoch: number /* uint64 */;
-  proposers: VDBHeatmapTooltipDuty[];
-  syncs: number /* uint64 */[];
-  slashings: VDBHeatmapTooltipDuty[];
+  timestamp: string /* time.Time */; // epoch or day
+  proposers: StatusCount;
+  syncs: number /* uint64 */;
+  slashings: StatusCount;
   attestations_head: StatusCount;
   attestations_source: StatusCount;
   attestations_target: StatusCount;
