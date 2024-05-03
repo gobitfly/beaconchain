@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -18,6 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
@@ -98,6 +101,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
 		if err != nil {
+			// TODO: Why do I return an error here if no rows are found?
 			return nil, nil, err
 		}
 
@@ -210,10 +214,12 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 
 	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return result, &paging, nil
-		}
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
+	}
+
+	if len(queryResult) == 0 {
+		// No withdrawals found
+		return result, &paging, nil
 	}
 
 	// Prepare the ENS map
@@ -475,7 +481,169 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardTotalWithdrawals(dashboardId)
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
+	startTimeTotal := time.Now()
+
+	result := &t.VDBTotalWithdrawalsData{
+		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
+	}
+
+	// Analyze the search term
+	validatorSearch, err := d.getValidatorSearch(search)
+	if err != nil {
+		return nil, err
+	}
+	if validatorSearch == nil {
+		// No validators found
+		return result, nil
+	}
+
+	startTime := time.Now()
+
+	queryResult := []struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		Epoch          uint64 `db:"epoch_end"`
+		Amount         int64  `db:"acc_withdrawals_amount"`
+	}{}
+
+	queryArgs := []interface{}{}
+	withdrawalsQuery := `
+		SELECT 
+			t.validator_index,
+			MAX(t.epoch_end) AS epoch_end,
+			SUM(COALESCE(t.withdrawals_amount, 0)) AS acc_withdrawals_amount
+		FROM validator_dashboard_data_rolling_total t
+		%s
+		GROUP BY t.validator_index
+		`
+
+	if dashboardId.Validators == nil {
+		queryArgs = append(queryArgs, dashboardId.Id)
+		dashboardIdQuery := fmt.Sprintf(`
+			INNER JOIN users_val_dashboards_validators v ON v.validator_index = t.validator_index
+			WHERE v.dashboard_id = $%d`, len(queryArgs))
+
+		if len(validatorSearch) > 0 {
+			queryArgs = append(queryArgs, pq.Array(validatorSearch))
+			dashboardIdQuery += fmt.Sprintf(" AND t.validator_index = ANY ($%d)", len(queryArgs))
+		}
+
+		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, dashboardIdQuery)
+	} else {
+		validatorSearchMap := utils.SliceToMap(validatorSearch)
+
+		var validators []uint64
+		for _, validator := range dashboardId.Validators {
+			if _, ok := validatorSearchMap[validator.Index]; len(validatorSearchMap) == 0 || ok {
+				validators = append(validators, validator.Index)
+			}
+		}
+		if len(validators) == 0 {
+			// No validators to search for
+			return result, nil
+		}
+
+		queryArgs = append(queryArgs, pq.Array(validators))
+		validatorsQuery := fmt.Sprintf(`
+			WHERE t.validator_index = ANY ($%d)`, len(queryArgs))
+
+		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
+	}
+
+	err = d.alloyReader.Select(&queryResult, withdrawalsQuery, queryArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
+	}
+
+	fmt.Printf("total withdrawals: %v\n", time.Since(startTime))
+	startTime = time.Now()
+
+	var totalAmount int64
+	var validators []uint64
+	lastEpoch := queryResult[0].Epoch
+	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
+
+	for _, res := range queryResult {
+		// Calculate the total amount of withdrawals
+		totalAmount += res.Amount
+
+		// Calculate the current validators
+		validators = append(validators, res.ValidatorIndex)
+	}
+
+	var latestWithdrawalsAmount int64
+	err = d.readerDb.Get(&latestWithdrawalsAmount, `
+		SELECT
+			COALESCE(SUM(w.amount), 0)
+		FROM
+		    blocks_withdrawals w
+		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
+		`, lastSlot, validators)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("error getting latest withdrawals for validators: %+v: %w", dashboardId, err)
+	}
+
+	fmt.Printf("latest withdrawals: %v\n", time.Since(startTime))
+
+	totalAmount += latestWithdrawalsAmount
+	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
+
+	fmt.Printf("total time: %v\n", time.Since(startTimeTotal))
+
+	return result, nil
+}
+
+func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) {
+	validatorSearch := make([]uint64, 0)
+
+	if search != "" {
+		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			defer releaseLock()
+			if err != nil {
+				return nil, err
+			}
+
+			if utils.IsHash(search) {
+				// Ensure that we have a "0x" prefix for the search term
+				if !strings.HasPrefix(search, "0x") {
+					search = "0x" + search
+				}
+				search = strings.ToLower(search)
+
+				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+					validatorSearch = append(validatorSearch, uint64(*index))
+				} else {
+					// No validator index for pubkey found, return empty results
+					return nil, nil
+				}
+			} else {
+				// Get the withdrawal credentials of the address
+				address, err := hexutil.Decode(search)
+				if err != nil {
+					return nil, fmt.Errorf("failed to decode search term %s as address: %w", search, err)
+				}
+				withdrawalCredentials := utils.GetWithdrawalCredentialsOfAddress(common.BytesToAddress(address))
+
+				for index, metadata := range validatorMapping.ValidatorMetadata {
+					if bytes.Equal(withdrawalCredentials, metadata.WithdrawalCredentials) {
+						validatorSearch = append(validatorSearch, uint64(index))
+					}
+				}
+
+				if len(validatorSearch) == 0 {
+					// No validator index for withdrawal credentials found, return empty results
+					return nil, nil
+				}
+			}
+		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
+			validatorSearch = append(validatorSearch, index)
+		} else {
+			// No allowed search term found, return empty results
+			return nil, nil
+		}
+	}
+
+	return validatorSearch, nil
 }
