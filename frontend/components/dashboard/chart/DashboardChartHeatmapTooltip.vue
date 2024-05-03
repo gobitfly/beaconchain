@@ -30,7 +30,7 @@ const mapDuties = (duties?: VDBHeatmapTooltipDuty[]) => {
 
 const mapped = computed(() => {
   return {
-    attestationIncome: props.weiToValue(props.tooltipData?.attestation_income),
+    attestationIncome: `${props.weiToValue(props.tooltipData?.attestation_income)?.label}`,
     proposers: mapDuties(props.tooltipData?.proposers),
     slashings: mapDuties(props.tooltipData?.slashings),
     syncs: props.tooltipData?.syncs?.length
@@ -49,12 +49,32 @@ const mapped = computed(() => {
       <div v-if="mapped.proposers" class="row">
         <div class="circle" :style="{ backgroundColor: colors.proposal }" />
         <span>{{ t('dashboard.validator.heatmap.proposers') }}</span>
-        <BcTableStatusCount :count="props.tooltipData?.attestations_head" />
+        <BcTableStatusCount class="value" :count="props.tooltipData?.attestations_head" />
       </div>
       <div v-if="mapped.slashings" class="row">
         <div class="circle" :style="{ backgroundColor: colors.slashing }" />
         <span>{{ t('dashboard.validator.heatmap.slashings') }}</span>
-        <BcTableStatusCount :count="props.tooltipData?.attestations_head" />
+        <BcTableStatusCount class="value" :count="props.tooltipData?.attestations_head" />
+      </div>
+      <div v-if="mapped.attestationIncome !== undefined" class="row">
+        <span>{{ t('dashboard.validator.heatmap.attestations_income') }}</span>
+        <BcFormatNumber class="value" :text="mapped.attestationIncome" />
+      </div>
+      <div v-if="props.tooltipData?.attestation_efficiency !== undefined" class="row">
+        <span>{{ t('dashboard.validator.heatmap.attestation_efficiency') }}</span>
+        <BcFormatPercent class="value" :value="props.tooltipData?.attestation_efficiency" />
+      </div>
+      <div v-if="props.tooltipData?.attestations_head !== undefined" class="row">
+        <BcTableStatusCount class="value" :count="props.tooltipData?.attestations_head" />
+        <span>{{ t('dashboard.validator.heatmap.attestations_head') }}</span>
+      </div>
+      <div v-if="props.tooltipData?.attestations_source !== undefined" class="row">
+        <BcTableStatusCount class="value" :count="props.tooltipData?.attestations_source" />
+        <span>{{ t('dashboard.validator.heatmap.attestations_source') }}</span>
+      </div>
+      <div v-if="props.tooltipData?.attestations_target !== undefined" class="row">
+        <BcTableStatusCount class="value" :count="props.tooltipData?.attestations_target" />
+        <span>{{ t('dashboard.validator.heatmap.attestations_target') }}</span>
       </div>
     </div>
   </div>
