@@ -49,16 +49,12 @@ const mapped = computed(() => {
       <div v-if="mapped.proposers" class="row">
         <div class="circle" :style="{ backgroundColor: colors.proposal }" />
         <span>{{ t('dashboard.validator.heatmap.proposers') }}</span>
-        <span class="value" :class="{ positive: !!mapped.proposers[0] }"><span>{{ mapped.proposers[0] }}</span>, <span
-          :class="{ negative: !!mapped.proposers[1] }"
-        >{{ mapped.proposers[1] ?? 0 }}</span></span>
+        <BcTableStatusCount :count="props.tooltipData?.attestations_head" />
       </div>
       <div v-if="mapped.slashings" class="row">
         <div class="circle" :style="{ backgroundColor: colors.slashing }" />
         <span>{{ t('dashboard.validator.heatmap.slashings') }}</span>
-        <span class="value" :class="{ positive: !!mapped.slashings[0] }"><span>{{ mapped.slashings[0] }}</span>, <span
-          :class="{ negative: !!mapped.slashings[1] }"
-        >{{ mapped.slashings[1] ?? 0 }}</span></span>
+        <BcTableStatusCount :count="props.tooltipData?.attestations_head" />
       </div>
     </div>
   </div>

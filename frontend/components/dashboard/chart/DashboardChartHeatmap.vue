@@ -20,6 +20,7 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardHeatmapStore } from '~/stores/dashboard/useValidatorDashboardHeatmapStore'
 import { getRichBackgroundOptions, getBackgroundFormat } from '~/utils/dashboard/heatmap'
 import { BcLoadingSpinner, DashboardChartHeatmapTooltip } from '#components'
+import { HeatmapTimeFrames, type HeatmapTimeFrame } from '~/types/dashboard/heatmap'
 
 use([
   GridComponent,
@@ -38,11 +39,17 @@ const { heatmap, isLoading, getHeatmap, getHeatmapTooltip } = useValidatorDashbo
 
 const { overview } = useValidatorDashboardOverviewStore()
 
-watch([dashboardKey, overview], () => {
-  getHeatmap(dashboardKey.value)
+const { t: $t } = useI18n()
+
+const timeFrameSelection = ref<HeatmapTimeFrame>('last_24h')
+const timeFrames = computed(() => {
+  return HeatmapTimeFrames.map(h => ({ value: h, label: $t(`dashboard.validator.heatmap.timeframe.${h}`) }))
+})
+
+watch([dashboardKey, overview, timeFrameSelection], () => {
+  getHeatmap(dashboardKey.value, timeFrameSelection.value)
 }, { immediate: true })
 
-const { t: $t } = useI18n()
 const colorMode = useColorMode()
 const { converter } = useValue()
 
@@ -110,9 +117,9 @@ const option = computed<ECBasicOption | undefined>(() => {
       calculable: true,
       orient: 'horizontal',
       right: '5%',
-      bottom: '0',
-      left: '5%',
-      itemHeight: '500px',
+      bottom: 10,
+      left: 'center',
+      itemHeight: '300px',
       inRange: {
         color: colors.value.heatmap
       }
@@ -157,7 +164,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       type: 'slider',
       start: 60,
       end: 100,
-      bottom: 50,
+      bottom: 60,
       dataBackground: {
         lineStyle: {
           color: colors.value.label
@@ -174,6 +181,18 @@ const option = computed<ECBasicOption | undefined>(() => {
 
 <template>
   <div class="heatmap">
+    <div class="header">
+      <div class="h1">
+        {{ $t('dashboard.validator.heatmap.title') }}
+      </div>
+      <BcDropdown
+        v-model="timeFrameSelection"
+        :options="timeFrames"
+        option-value="value"
+        option-label="label"
+        variant="table"
+      />
+    </div>
     <ClientOnly>
       <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
       <VChart v-else class="chart" :option="option" autoresize />
@@ -182,8 +201,18 @@ const option = computed<ECBasicOption | undefined>(() => {
 </template>
 
 <style lang="scss">
-.heatmap {
-  height: 870px;
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--padding);
+  margin-top: 22px;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.chart {
+  height: 770px;
   width: 100%;
 }
 </style>

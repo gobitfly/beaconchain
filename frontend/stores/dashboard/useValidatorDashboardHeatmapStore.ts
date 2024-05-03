@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { InternalGetValidatorDashboardGroupHeatmapResponse, InternalGetValidatorDashboardHeatmapResponse, VDBHeatmap, VDBHeatmapTooltipData } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
+import type { HeatmapTimeFrame } from '~/types/dashboard/heatmap'
 
 const validatorDashboardHeatmapStore = defineStore('validator_dashboard_heatmap_store', () => {
   const data = ref < VDBHeatmap>()
@@ -21,7 +22,7 @@ export function useValidatorDashboardHeatmapStore () {
     return `${group}_${epoch}`
   }
 
-  async function getHeatmap (dashboardKey: DashboardKey) {
+  async function getHeatmap (dashboardKey: DashboardKey, timeFrame: HeatmapTimeFrame) {
     if (!dashboardKey) {
       data.value = undefined
       return
@@ -29,7 +30,7 @@ export function useValidatorDashboardHeatmapStore () {
     tooltipDataMap.value = {}
     isLoading.value = true
 
-    const res = await fetch<InternalGetValidatorDashboardHeatmapResponse>(API_PATH.DASHBOARD_HEATMAP, undefined, { dashboardKey })
+    const res = await fetch<InternalGetValidatorDashboardHeatmapResponse>(API_PATH.DASHBOARD_HEATMAP, { query: { timeFrame } }, { dashboardKey })
     isLoading.value = false
 
     data.value = res.data

@@ -51,6 +51,9 @@ watch(dashboardKey, (newKey, oldKey) => {
     }
   }
 })
+
+const heatmapDisabled = computed(() => !isLoggedIn.value) // TODO: replace with Primum check, once we have user Tiers
+
 </script>
 
 <template>
@@ -93,9 +96,10 @@ watch(dashboardKey, (newKey, oldKey) => {
           </template>
           <DashboardTableBlocks />
         </TabPanel>
-        <TabPanel>
+        <TabPanel :disabled="heatmapDisabled">
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
+            <BcPremiumGem v-if="heatmapDisabled" class="gem" :disabled="false" />
           </template>
           <DashboardChartHeatmap />
         </TabPanel>
@@ -140,6 +144,10 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 .p-tabview {
   margin-top: var(--padding-large);
+}
+
+.gem {
+  margin-left: var(--padding);
 }
 
 .down_icon {

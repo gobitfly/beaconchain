@@ -25,8 +25,8 @@ const openPremiumModal = () => {
 
 <template>
   <BcTooltip :text="$t('premium.subscribe')">
-    <div @click.stop.prevent="openPremiumModal()">
-      <FontAwesomeIcon :icon="faGem" class="gem" />
+    <div class="gem" @click.stop.prevent="openPremiumModal()">
+      <FontAwesomeIcon :icon="faGem" />
     </div>
   </BcTooltip>
 </template>
@@ -34,6 +34,7 @@ const openPremiumModal = () => {
 <style lang="scss" scoped>
 .gem {
   color: var(--primary-color);
-  cursor: pointer;
+    pointer-events: all;
+    cursor: pointer;
 }
 </style>

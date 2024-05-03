@@ -153,14 +153,14 @@
       }
     }
   },
-  "block":{
+  "block": {
     "status": {
       "missed": "Missed",
       "orphaned": "Orphaned",
       "scheduled": "Scheduled",
       "success": "Proposed"
     },
-    "col":{
+    "col": {
       "proposer": "Proposer",
       "graffiti": "Graffiti",
       "tx_hash": "Tx Hash"
@@ -180,8 +180,8 @@
       "slashing_success": "You slashed a validator",
       "slashing_failed": "You got slashed",
       "slashing_partial": "You slashed a validator and got slashed"
-    }, 
-    "rewards":{
+    },
+    "rewards": {
       "total": "Total",
       "attestation_head": "Attestation Head",
       "attestation_source": "Attestation Source",
@@ -242,13 +242,13 @@
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
-      "cl_deposits":{
+      "cl_deposits": {
         "title": "Consensus Layer"
       },
-      "el_deposits":{
+      "el_deposits": {
         "title": "Execution Layer"
       },
-      "blocks":{
+      "blocks": {
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
@@ -305,9 +305,15 @@
         "attestation_efficiency": "Attestation Efficiency",
         "attestation_head": "Head correct",
         "attestation_source": "Source correct",
-        "attestation_target": "Target correct"
+        "attestation_target": "Target correct",
+        "timeframe": {
+          "last_24h": "Last 1h (epoch based)",
+          "last_7d": "Last 7d (daily)",
+          "last_30d": "Last 30d (daily)",
+          "last_365d": "Last 1 year (daily)"
+        }
       },
-      "group_management":  {
+      "group_management": {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
         "validators_added": "validators added",
