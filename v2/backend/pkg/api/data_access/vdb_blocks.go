@@ -6,11 +6,13 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
 )
@@ -31,14 +33,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	validatorGroupMap := make(map[uint64]uint64)
-	withGroups := ""
 	params := []interface{}{}
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
@@ -63,6 +58,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			extraConds = append(extraConds, fmt.Sprintf(`LOWER(name) LIKE LOWER($%d)`, len(paramsGroups)))
 		}
 		if searchPubkey {
+			validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+			defer releaseValMapLock()
+			if err != nil {
+				return nil, nil, err
+			}
 			index, ok := validatorMapping.ValidatorIndices[search]
 			if !ok && len(extraConds) == 0 {
 				// don't even need to query
@@ -75,26 +75,35 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			where += ` AND (` + strings.Join(extraConds, ` OR `) + `)`
 		}
 
+		startTime := time.Now()
+		log.Infof(selectStr + from + where)
 		err := d.alloyReader.Select(&queryResult, selectStr+from+where, paramsGroups...)
+		log.Infof("=== getting (filtered) validators took %s", time.Since(startTime))
 		if err != nil {
 			return nil, nil, err
 		}
 		if len(queryResult) == 0 {
 			return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 		}
-		validatorGroupQryValues := ""
-		for i, res := range queryResult {
+		validators := []uint64{}
+		for _, res := range queryResult {
 			validatorGroupMap[res.ValidatorIndex] = res.GroupId
 
-			validatorGroupQryValues = validatorGroupQryValues + fmt.Sprintf(`($%d::int, $%d::int), `, i*2+1, (i+1)*2)
-			params = append(params, res.ValidatorIndex)
-			params = append(params, res.GroupId)
+			validators = append(validators, res.ValidatorIndex)
+			// groups = append(groups, res.GroupId)
 		}
+		params = append(params, validators)
+		// params = append(params, groups)
 		// TODO once the blocks table has been migrated, this can be replaced with a simple join
-		withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
+		// withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (SELECT * FROM unnest($%d::int[], $%d::int[]))`, len(params)-1, len(params))
 	} else {
 		// In case a list of validators is provided, set the group to default 0
 		validatorGroupQryValues := ""
+		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+		defer releaseValMapLock()
+		if err != nil {
+			return nil, nil, err
+		}
 		for _, validator := range dashboardId.Validators {
 			if searchIndex && fmt.Sprint(validator.Index) != search ||
 				searchPubkey && (validatorMapping.ValidatorIndices[search] == nil || validator.Index != *validatorMapping.ValidatorIndices[search]) {
@@ -111,12 +120,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 		}
 		// using where on the (filtered) list of validator indices later down would obv be better for this, but let's not make this even less readable
-		withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
+		// withGroups = fmt.Sprintf(`WITH validator_groups (validator_index, group_id) AS (VALUES %s)`, validatorGroupQryValues[:len(validatorGroupQryValues)-2])
 	}
 
 	type proposal struct {
-		Proposer     int64         `db:"proposer"`
-		Group        int64         `db:"group_id"`
+		Proposer     int64 `db:"proposer"`
+		Group        int64
 		Epoch        uint64        `db:"epoch"`
 		Slot         int64         `db:"slot"`
 		Status       int64         `db:"status"`
@@ -132,26 +141,30 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	// scheduled blocks aren't written to blocks table, get from duties
 	dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseLock()
-	if err != nil {
-		return nil, nil, err
-	}
 	// just pass scheduled proposals to query and let db do the sorting etc
-	scheduledPropsQryValues := ""
-	for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
-		// only gather scheduled slots
-		if _, ok := dutiesInfo.SlotStatus[slot]; ok {
-			continue
+	var props []uint64
+	var epochs []uint64
+	var slots []uint64
+	defer releaseLock()
+	if err == nil {
+		for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
+			// only gather scheduled slots
+			if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+				continue
+			}
+			// only gather slots scheduled for our validators
+			if _, ok := validatorGroupMap[vali]; !ok {
+				continue
+			}
+			props = append(props, dutiesInfo.PropAssignmentsForSlot[slot])
+			epochs = append(epochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			slots = append(slots, slot)
 		}
-		// only gather slots scheduled for our validators
-		if _, ok := validatorGroupMap[vali]; !ok {
-			continue
-		}
-		params = append(params, dutiesInfo.PropAssignmentsForSlot[slot])
-		params = append(params, validatorGroupMap[dutiesInfo.PropAssignmentsForSlot[slot]])
-		params = append(params, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
-		params = append(params, slot)
-		scheduledPropsQryValues = scheduledPropsQryValues + fmt.Sprintf(`($%d::int, $%d::int, $%d::int, $%d::int, '0', null::int, null::bytea, null::int, null::bytea, ''), `, len(params)-3, len(params)-2, len(params)-1, len(params))
+		params = append(params, props)
+		params = append(params, epochs)
+		params = append(params, slots)
+	} else {
+		log.Debugf("duties info not available, skipping scheduled slots: %s", err)
 	}
 
 	where := ``
@@ -210,13 +223,13 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		}
 		orderBy += `, slot ` + secSort
 	}
-	if len(scheduledPropsQryValues) > 0 {
+	if len(props) > 0 {
 		// make sure the distinct clause filters out the correct row (e.g. block=nil)
 		orderBy += `, exec_block_number`
 	}
 
 	query := ""
-	if len(scheduledPropsQryValues) > 0 {
+	if len(props) > 0 {
 		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
 		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
 		distinct := "slot"
@@ -225,7 +238,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		}
 		query = fmt.Sprintf(`SELECT distinct on (%s) * FROM (WITH scheduled_proposals (
 			proposer,
-			group_id,
 			epoch,
 			slot,
 			status,
@@ -234,16 +246,22 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			mev_reward,
 			proposer_fee_recipient,
 			graffiti_text
-		) AS (VALUES %s)
+		) AS (SELECT 
+			*,
+			'0',
+			null::int,
+			null::bytea,
+			null::int,
+			null::bytea,
+			''
+			FROM unnest($2::int[], $3::int[], $4::int[]))
 		SELECT * FROM scheduled_proposals
 		UNION
-		(`, distinct, scheduledPropsQryValues[:len(scheduledPropsQryValues)-2])
+		(`, distinct)
 	}
-
-	query += withGroups + `
+	query += `
 	SELECT
 		proposer,
-		group_id,
 		epoch,
 		slot,
 		status,
@@ -252,11 +270,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		relays_blocks.value AS mev_reward,
 		COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
 		graffiti_text
-	FROM validator_groups
-	LEFT JOIN blocks ON blocks.proposer = validator_groups.validator_index
+	FROM blocks
 	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+	WHERE proposer = ANY($1)
 	`
-	if len(scheduledPropsQryValues) > 0 {
+	if len(props) > 0 {
 		query += `)) as u `
 	}
 
@@ -265,9 +283,15 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		LIMIT $%d
 	`, len(params))
 
+	// fmt.Println(query + where + orderBy + limitStr)
+	startTime := time.Now()
 	err = d.readerDb.Select(&proposals, query+where+orderBy+limitStr, params...)
+	log.Infof("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
+	}
+	if len(proposals) == 0 {
+		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 	}
 	moreDataFlag := len(proposals) > int(limit)
 	if moreDataFlag {
@@ -285,7 +309,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		}
 	}
 	// (non-mev) tx reward is in bt
+	startTime = time.Now()
 	indexedBlocksNoRelay, err := d.bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
+	log.Infof("=== bigtable took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
 	}
