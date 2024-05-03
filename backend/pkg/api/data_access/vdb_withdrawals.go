@@ -46,34 +46,13 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	}
 
 	// Analyze the search term
-	indexSearch := int64(-1)
-	if search != "" {
-		if utils.IsHash(search) || utils.IsEth1Address(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
-			search = strings.ToLower(search)
-			if utils.IsHash(search) {
-				// Get the current validator state to convert pubkey to index
-				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-				defer releaseLock()
-				if err != nil {
-					return nil, nil, err
-				}
-				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					indexSearch = int64(*index)
-				} else {
-					// No validator index for pubkey found, return empty results
-					return result, &paging, nil
-				}
-			}
-		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
-			indexSearch = int64(index)
-		} else {
-			// No allowed search term found, return empty results
-			return result, &paging, nil
-		}
+	validatorSearch, err := d.getValidatorSearch(search)
+	if err != nil {
+		return nil, nil, err
+	}
+	if validatorSearch == nil {
+		// No validators found
+		return result, &paging, nil
 	}
 
 	validatorGroupMap := make(map[uint64]uint64)
@@ -94,14 +73,13 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			WHERE dashboard_id = $%d
 			`, len(queryArgs))
 
-		if indexSearch != -1 {
-			queryArgs = append(queryArgs, indexSearch)
-			validatorsQuery += fmt.Sprintf(" AND validator_index = $%d", len(queryArgs))
+		if len(validatorSearch) > 0 {
+			queryArgs = append(queryArgs, pq.Array(validatorSearch))
+			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryArgs))
 		}
 
 		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
 		if err != nil {
-			// TODO: Why do I return an error here if no rows are found?
 			return nil, nil, err
 		}
 
@@ -111,12 +89,13 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
+		validatorSearchMap := utils.SliceToMap(validatorSearch)
+
 		for _, validator := range dashboardId.Validators {
-			if indexSearch != -1 && validator.Index != uint64(indexSearch) {
-				continue
+			if _, ok := validatorSearchMap[validator.Index]; len(validatorSearchMap) == 0 || ok {
+				validatorGroupMap[validator.Index] = t.DefaultGroupId
+				validators = append(validators, validator.Index)
 			}
-			validatorGroupMap[validator.Index] = t.DefaultGroupId
-			validators = append(validators, validator.Index)
 		}
 	}
 
@@ -152,16 +131,6 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	whereQuery := fmt.Sprintf(`
 		WHERE
 		    validatorindex = ANY ($%d)`, len(queryParams))
-
-	// Limit the query using the search term if it is an address
-	if utils.IsEth1Address(search) {
-		searchAddress, err := hexutil.Decode(search)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode search term %s as address: %w", search, err)
-		}
-		queryParams = append(queryParams, searchAddress)
-		whereQuery += fmt.Sprintf(" AND w.address = $%d", len(queryParams))
-	}
 
 	// Limit the query using sorting and the cursor
 	orderQuery := ""
