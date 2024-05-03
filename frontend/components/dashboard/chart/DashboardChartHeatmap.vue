@@ -19,7 +19,7 @@ import { getChartTextColor, getChartTooltipBackgroundColor, getHeatmapColors, ge
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardHeatmapStore } from '~/stores/dashboard/useValidatorDashboardHeatmapStore'
 import { getRichBackgroundOptions, getBackgroundFormat } from '~/utils/dashboard/heatmap'
-import { BcLoadingSpinner } from '#components'
+import { BcLoadingSpinner, DashboardChartHeatmapTooltip } from '#components'
 
 use([
   GridComponent,
@@ -44,6 +44,7 @@ watch([dashboardKey, overview], () => {
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
+const { converter } = useValue()
 
 const colors = computed(() => {
   return {
@@ -67,12 +68,12 @@ const groupNameLabel = (groupId?: number) => {
 
 const ttFormatter = ({ data }: { data: number[] }): HTMLElement => {
   const d = document.createElement('div')
-  d.style.width = '100px'
-  d.style.height = '100px'
+  d.style.minWidth = '100px'
+  d.style.minHeight = '100px'
   render(h(BcLoadingSpinner, { loading: true, alignment: 'center' }), d)
 
   getHeatmapTooltip(dashboardKey.value, data[0], data[1]).then((tt) => {
-    d.innerHTML = tt ? JSON.stringify(tt) : 'no data'
+    render(h(DashboardChartHeatmapTooltip, { t: $t, weiToValue: converter.value.weiToValue, startEpoch: data[0], theme: colorMode.value, tooltipData: tt }), d)
   })
   return d
 }

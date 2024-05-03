@@ -180,7 +180,7 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_HEATMAP_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/heatmap',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/heatmap/${values?.epoch}`,
-    mock: false
+    mock: true
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',

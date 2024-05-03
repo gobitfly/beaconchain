@@ -1,0 +1,76 @@
+{
+  "data": {
+    "epoch": 49006,
+    "proposers": [{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "failed"
+    },{
+      "validator": 1234,
+      "status": "orphaned"
+    }],
+    "syncs": [123, 32],
+    "slashings":  [{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "success"
+    },{
+      "validator": 1234,
+      "status": "failed"
+    },{
+      "validator": 1234,
+      "status": "failed"
+    },{
+      "validator": 1234,
+      "status": "orphaned"
+    }],
+    "attestations_head": {
+      "success": 123,
+      "failed": 12
+    },
+    "attestations_source": {
+      "success": 223,
+      "failed": 22
+    },
+    "attestations_target": {
+      "success": 323,
+      "failed": 32
+    },
+    "attestation_income": "1456748000000000000",
+    "attestation_efficiency": 95.2331
+  }
+}
