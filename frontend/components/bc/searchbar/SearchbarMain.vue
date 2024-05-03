@@ -631,7 +631,7 @@ function informationIfHiddenResults () : string {
   &.embedded {
     height: 30px;
     &.dropdown-is-opened {
-      @media (max-width: 470px) { // narrow window/screen
+      @media (max-width: 510px) { // narrow window/screen
         position: absolute;
         left: 0px;
         right: 0px;
@@ -788,7 +788,7 @@ function informationIfHiddenResults () : string {
       max-height: 270px;
       overflow: auto;
       padding-bottom: 4px;
-      @include fonts.standard_text;
+
       &.discreet {
         color: var(--searchbar-text-discreet);
       }
@@ -805,6 +805,13 @@ function informationIfHiddenResults () : string {
 
           .suggestionrow-container {
             position: relative;
+            @include fonts.small_text; // on mobile in all styles, or on a large screen when the bar is in discreet style
+            @media (min-width: 600px) {
+              &.gaudy,
+              &.embedded {
+                @include fonts.standard_text;  // on a large screen with the gaudy or embedded style
+              }
+            }
 
             .separation-between-suggestions {
               position: relative;

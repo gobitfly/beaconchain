@@ -129,13 +129,13 @@ const passwordError = ref<string|undefined>(undefined)
 
       .account-invitation {
         position: relative;
-        @include fonts.discreet_text;
+        @include fonts.small_text;
         margin-right: auto;
       }
     }
 
     .p-error {
-      @include fonts.small_text;
+      @include fonts.tiny_text;
     }
   }
 }
