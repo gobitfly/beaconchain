@@ -4,6 +4,8 @@ import type { AgeFormat } from '~/types/settings'
 
 const { epochToTs, slotToTs } = useNetwork()
 
+export const REGEXP_HAS_NUMBERS = /^(?!0+$)\d+$/
+
 export interface NumberFormatConfig {
   precision?: number
   fixed?:number
