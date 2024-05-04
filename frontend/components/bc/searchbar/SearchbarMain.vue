@@ -805,21 +805,12 @@ function informationIfHiddenResults () : string {
 
           .suggestionrow-container {
             position: relative;
-            @include fonts.small_text; // on mobile in all styles, or on a large screen when the bar is in discreet style
-            @media (min-width: 600px) {
-              &.gaudy,
-              &.embedded {
-                @include fonts.standard_text;  // on a large screen with the gaudy or embedded style
-              }
-            }
-
             .separation-between-suggestions {
               position: relative;
-              display: none;
               margin-left: 8px;
               margin-right: 8px;
               height: 1px;
-
+              display: none;
               &.embedded {
                 @media (max-width: 599.9px) { // mobile
                   display: block;
