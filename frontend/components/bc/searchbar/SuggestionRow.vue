@@ -333,7 +333,7 @@ function formatDescriptionCell () : string {
     grid-template-columns: 40px auto min-content;
   }
 
-  .cell-subcategory {border: 1px solid red;
+  .cell-subcategory {
     @media (min-width: 600px) { // large screen
       font-weight: var(--standard_text_medium_font_weight);
       padding-right: 16px;
@@ -367,7 +367,7 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cell_bi_description {border: 1px solid red;
+  .cell_bi_description {
     @include cells_blockchain-info_common;
 
     @media (min-width: 600px) { // large screen
