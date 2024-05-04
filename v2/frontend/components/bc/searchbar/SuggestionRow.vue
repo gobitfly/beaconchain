@@ -147,6 +147,7 @@ function formatDescriptionCell () : string {
   padding-top: 7px;
   padding-bottom: 7px;
   border-radius: var(--border-radius);
+  @include fonts.standard_text;
 
   &:hover {
     &.gaudy,
@@ -227,11 +228,11 @@ function formatDescriptionCell () : string {
       grid-template-columns: 40px 130px auto 130px;
     }
     &.discreet {
-      grid-template-columns: 40px 114px auto;
+      grid-template-columns: 40px 130px auto;
     }
   }
   @media (max-width: 599.9px) { // mobile
-    grid-template-columns: 40px 114px auto;
+    grid-template-columns: 40px 130px auto;
   }
 
   .cell_name {
@@ -332,16 +333,17 @@ function formatDescriptionCell () : string {
     grid-template-columns: 40px auto min-content;
   }
 
-  .cell-subcategory {
+  .cell-subcategory {border: 1px solid red;
     @media (min-width: 600px) { // large screen
       font-weight: var(--standard_text_medium_font_weight);
+      padding-right: 16px;
     }
     @media (max-width: 599.9px) { // mobile
       font-weight: var(--standard_text_font_weight);
     }
     box-sizing: border-box;
-    padding-right: 16px;
     margin-right: auto;
+    white-space: nowrap;
   }
 
   @mixin cells_blockchain-info_common {
@@ -365,11 +367,13 @@ function formatDescriptionCell () : string {
     }
   }
 
-  .cell_bi_description {
+  .cell_bi_description {border: 1px solid red;
     @include cells_blockchain-info_common;
 
     @media (min-width: 600px) { // large screen
       grid-column: 4;
+      width: 128px;
+      padding-left: 16px;
     }
     @media (max-width: 599.9px) { // mobile
       grid-row: 1;
@@ -377,10 +381,9 @@ function formatDescriptionCell () : string {
       color: var(--searchbar-text-detail-gaudy);
     }
     box-sizing: border-box;
-    width: 128px;
     margin-left: auto;
-    padding-left: 16px;
     justify-content: right;
+    white-space: nowrap;
   }
 }
 </style>
