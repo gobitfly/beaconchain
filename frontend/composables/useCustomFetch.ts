@@ -38,12 +38,12 @@ export function useCustomFetch () {
     }
 
     const url = useRequestURL()
-    const { public: { apiClient, legacyApiClient, apiKey }, private: pConfig } = useRuntimeConfig()
+    const { public: { apiClient, legacyApiClient, apiKey, domain }, private: pConfig } = useRuntimeConfig()
     const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
     options.headers = new Headers({ ...options.headers, ...headers })
