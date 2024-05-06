@@ -577,9 +577,10 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	groupId := v.checkGroupId(r.URL.Query().Get("group_id"), allowEmpty)
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_24h, last_7d, last_30d
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last24h, enums.TimePeriods.Last7d, enums.TimePeriods.Last30d}
-	period := checkEnumWithAllowed[enums.TimePeriod](&v, q.Get("period"), "period", allowedPeriods)
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last24h, enums.TimePeriods.Last7d, enums.TimePeriods.Last30d}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -754,9 +755,10 @@ func (h *HandlerService) InternalGetValidatorDashboardDailyHeatmap(w http.Respon
 	}
 
 	var v validationError
+	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: last_7d, last_30d, last_365d
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.Last7d, enums.TimePeriods.Last30d, enums.TimePeriods.Last365d}
-	period := checkEnumWithAllowed[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period", allowedPeriods)
+	allowedPeriods := []enums.Enum{enums.TimePeriods.Last7d, enums.TimePeriods.Last30d, enums.TimePeriods.Last365d}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return

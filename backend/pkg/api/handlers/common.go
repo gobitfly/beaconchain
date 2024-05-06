@@ -188,7 +188,6 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 	if !result.Valid() {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
-		return nil
 	}
 
 	// Decode into the target data structure
@@ -362,19 +361,19 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// checkEnumWithAllowed validates the given enum string from a list of allowed values and returns the corresponding enum value.
-func checkEnumWithAllowed[T enums.EnumFactory[T]](v *validationError, enumString string, name string, allowed []T) T {
-	enum := checkEnum[T](v, enumString, name)
+// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
+// precondition: the enum is the same type as the allowed enums.
+func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
-		return enum
+		// expected error message is already set
+		return
 	}
 	for _, a := range allowed {
 		if enum.Int() == a.Int() {
-			return enum
+			return
 		}
 	}
-	v.add(name, fmt.Sprintf("given value '%s' for parameter '%s' is not allowed", enumString, name))
-	return enum
+	v.add(name, "parameter is missing or invalid, please check the API documentation")
 }
 
 func (v *validationError) parseSortOrder(order string) bool {
@@ -392,7 +391,6 @@ func (v *validationError) parseSortOrder(order string) bool {
 }
 
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
-	log.Info(sortString)
 	var c T
 	if sortString == "" {
 		return &types.Sort[T]{Column: c, Desc: false}
@@ -423,7 +421,6 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	log.Info("a")
 	var indexes []uint64
 	var publicKeys []string
 	for _, validator := range validators {
