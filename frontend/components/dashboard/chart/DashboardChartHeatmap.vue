@@ -77,6 +77,7 @@ const ttFormatter = ({ data }: { data: number[] }): HTMLElement => {
   const d = document.createElement('div')
   d.style.minWidth = '100px'
   d.style.minHeight = '100px'
+  d.style.height = '100px'
   render(h(BcLoadingSpinner, { loading: true, alignment: 'center' }), d)
 
   getHeatmapTooltip(dashboardKey.value, data[0], data[1]).then((tt) => {
