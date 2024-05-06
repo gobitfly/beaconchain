@@ -31,7 +31,7 @@ const label = computed(() => {
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
   switch (props.type) {
     case 'go-timestamp':
-      return formatGoTimestamp(props.value as string, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      return formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     case 'slot':
       return formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
     case 'epoch':
