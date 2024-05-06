@@ -139,26 +139,24 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 
 // ------------------------------------------------------------
 // Heatmap Tab
-type VDBHeatmapCell struct {
-	X uint64 `json:"x"` // Timestamp
-	Y uint64 `json:"y"` // Group ID
 
-	Value float64 `json:"value"` // Attestaton Rewards
-}
-type VDBHeatmapEvent struct {
-	X uint64 `json:"x"` // Timestamp
-	Y uint64 `json:"y"` // Group ID
-
+type VDBHeatmapEvents struct {
 	Proposal bool `json:"proposal"`
 	Slash    bool `json:"slash"`
 	Sync     bool `json:"sync"`
 }
+type VDBHeatmapCell struct {
+	X int64  `json:"x"` // Timestamp
+	Y uint64 `json:"y"` // Group ID
 
+	Value  float64           `json:"value"` // Attestaton Rewards
+	Events *VDBHeatmapEvents `json:"events,omitempty"`
+}
 type VDBHeatmap struct {
-	Timestamp []time.Time       `json:"timestamps"` // X-Axis Categories
-	GroupIds  []uint64          `json:"group_ids"`  // Y-Axis Categories
-	Data      []VDBHeatmapCell  `json:"data"`
-	Events    []VDBHeatmapEvent `json:"events"`
+	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
+	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
+	Data        []VDBHeatmapCell `json:"data"`
+	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'day'" faker:"oneof: epoch, day"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 

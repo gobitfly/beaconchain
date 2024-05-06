@@ -1,5 +1,7 @@
 package enums
 
+import "time"
+
 type Enum interface {
 	Int() int
 }
@@ -8,6 +10,10 @@ type Enum interface {
 type EnumFactory[T Enum] interface {
 	Enum
 	NewFromString(string) T
+}
+
+func IsInvalidEnum(e Enum) bool {
+	return e.Int() == -1
 }
 
 // ----------------
@@ -341,7 +347,7 @@ var SortOrderColumns = struct {
 }
 
 // ----------------
-// Summary Dashboard Table Enums
+// Time Periods
 
 type TimePeriod int
 
@@ -350,6 +356,7 @@ const (
 	Last24h
 	Last7d
 	Last30d
+	Last365d
 )
 
 func (t TimePeriod) Int() int {
@@ -364,24 +371,47 @@ func (TimePeriod) NewFromString(s string) TimePeriod {
 		return Last24h
 	case "7d":
 		return Last7d
-	case "31d":
+	case "30d":
 		return Last30d
+	case "365d":
+		return Last365d
 	default:
 		return TimePeriod(-1)
 	}
 }
 
 var TimePeriods = struct {
-	AllTime TimePeriod
-	Last24h TimePeriod
-	Last7d  TimePeriod
-	Last30d TimePeriod
+	AllTime  TimePeriod
+	Last24h  TimePeriod
+	Last7d   TimePeriod
+	Last30d  TimePeriod
+	Last365d TimePeriod
 }{
 	AllTime,
 	Last24h,
 	Last7d,
 	Last30d,
+	Last365d,
 }
+
+func (t TimePeriod) Duration() time.Duration {
+	day := 24 * time.Hour
+	switch t {
+	case Last24h:
+		return day
+	case Last7d:
+		return 7 * day
+	case Last30d:
+		return 30 * day
+	case Last365d:
+		return 365 * day
+	default:
+		return 0
+	}
+}
+
+// ----------------
+// Validator Duties
 
 type ValidatorDuty int
 

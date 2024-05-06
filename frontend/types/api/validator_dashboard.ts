@@ -123,27 +123,22 @@ export interface VDBBlocksTableRow {
   graffiti: string;
 }
 export type InternalGetValidatorDashboardBlocksResponse = ApiPagingResponse<VDBBlocksTableRow>;
-/**
- * ------------------------------------------------------------
- * Heatmap Tab
- */
-export interface VDBHeatmapCell {
-  x: number /* uint64 */; // Timestamp
-  y: number /* uint64 */; // Group ID
-  value: number /* float64 */; // Attestaton Rewards
-}
-export interface VDBHeatmapEvent {
-  x: number /* uint64 */; // Timestamp
-  y: number /* uint64 */; // Group ID
+export interface VDBHeatmapEvents {
   proposal: boolean;
   slash: boolean;
   sync: boolean;
 }
+export interface VDBHeatmapCell {
+  x: number /* int64 */; // Timestamp
+  y: number /* uint64 */; // Group ID
+  value: number /* float64 */; // Attestaton Rewards
+  events?: VDBHeatmapEvents;
+}
 export interface VDBHeatmap {
-  timestamps: string /* time.Time */[]; // X-Axis Categories
+  timestamps: number /* int64 */[]; // X-Axis Categories (unix timestamp)
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
-  events: VDBHeatmapEvent[];
+  aggregation: 'epoch' | 'day';
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {

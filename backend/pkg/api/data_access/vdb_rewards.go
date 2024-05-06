@@ -17,7 +17,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
-	// TODO @recy21
+	// WORKING spletka
 	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
 	// series id is group id, series property is 'cl' or 'el'
 	return d.dummy.GetValidatorDashboardRewardsChart(dashboardId)

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -350,14 +351,30 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	return paging
 }
 
-func checkEnum[T enums.EnumFactory[T]](v *validationError, enum string, name string) T {
-	var c T
-	col := c.NewFromString(enum)
-	if col.Int() == -1 {
-		v.add(name, fmt.Sprintf("given value '%s' for parameter '%s' is not valid", enum, name))
-		return c
+// checkEnum validates the given enum string and returns the corresponding enum value.
+func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, name string) T {
+	var e T
+	enum := e.NewFromString(enumString)
+	if enums.IsInvalidEnum(enum) {
+		v.add(name, fmt.Sprintf("given value '%s' is not valid", enumString))
+		return enum
 	}
-	return col
+	return enum
+}
+
+// checkEnumWithAllowed validates the given enum string from a list of allowed values and returns the corresponding enum value.
+func checkEnumWithAllowed[T enums.EnumFactory[T]](v *validationError, enumString string, name string, allowed []T) T {
+	enum := checkEnum[T](v, enumString, name)
+	if enums.IsInvalidEnum(enum) {
+		return enum
+	}
+	for _, a := range allowed {
+		if enum.Int() == a.Int() {
+			return enum
+		}
+	}
+	v.add(name, fmt.Sprintf("given value '%s' for parameter '%s' is not allowed", enumString, name))
+	return enum
 }
 
 func (v *validationError) parseSortOrder(order string) bool {
@@ -433,6 +450,15 @@ func (v *validationError) checkNetwork(network string) uint64 {
 		v.add("network", fmt.Sprintf("given value '%s'is not a valid network id", network))
 	}
 	return networkId
+}
+
+func (v *validationError) checkDate(dateString string) time.Time {
+	// expecting date in format "YYYY-MM-DD"
+	date, err := time.Parse("2006-01-02", dateString)
+	if err != nil {
+		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
+	}
+	return date
 }
 
 // --------------------------------------
