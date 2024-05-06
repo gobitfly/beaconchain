@@ -60,7 +60,9 @@ func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint6
 		return nil, errors.Wrap(err, "failed to get missing 90d tail epochs")
 	}
 
-	d.log.Infof("missing tail 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+	d.log.Infof("missing tail 7d: %v", week)
+	d.log.Infof("missing tail 30d: %v", month)
+	d.log.Infof("missing tail 90d: %v", ninety)
 
 	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
@@ -80,7 +82,9 @@ func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint6
 		return nil, errors.Wrap(err, "failed to get missing 90d head epochs")
 	}
 
-	d.log.Infof("missing head 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+	d.log.Infof("missing head 7d: %v", week)
+	d.log.Infof("missing head 30d: %v", month)
+	d.log.Infof("missing head 90d: %v", ninety)
 
 	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
@@ -153,10 +157,8 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	}
 	latestDay := latestDayBounds.Day
 
-	xDayOldDay, err := edb.GetXDayOldDay(days)
-	if err != nil {
-		return errors.Wrap(err, "failed to get old day")
-	}
+	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days))
+	xDayOldDay := utils.EpochToTime(tailStart).Format("2006-01-02")
 
 	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
 
