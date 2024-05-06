@@ -372,6 +372,17 @@ func GetAddressOfWithdrawalCredentials(withCred []byte) (*common.Address, error)
 	addr := common.BytesToAddress(withCred[12:])
 	return &addr, nil
 }
+func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
+	// Create a new byte slice with the desired prefix
+	prefix := []byte{0x01}
+	padding := make([]byte, 11)
+	fullPrefix := append(prefix, padding...)
+
+	// Prepend the prefix to the address
+	result := append(fullPrefix, addr.Bytes()...)
+
+	return result
+}
 
 func Deduplicate(slice []uint64) []uint64 {
 	keys := make(map[uint64]bool)
