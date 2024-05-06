@@ -576,7 +576,7 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 				search = strings.ToLower(search)
 
 				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					validatorSearch = append(validatorSearch, uint64(*index))
+					validatorSearch = append(validatorSearch, *index)
 				} else {
 					// No validator index for pubkey found, return empty results
 					return nil, nil
