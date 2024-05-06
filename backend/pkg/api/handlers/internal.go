@@ -808,6 +808,10 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.R
 	}
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	date := v.checkDate(vars["date"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 
 	data, err := h.dai.GetValidatorDashboardGroupDailyHeatmap(*dashboardId, uint64(groupId), date)
 	if err != nil {
