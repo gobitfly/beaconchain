@@ -193,14 +193,25 @@ const option = computed<ECBasicOption | undefined>(() => {
         variant="table"
       />
     </div>
+    <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
     <ClientOnly>
-      <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
-      <VChart v-else class="chart" :option="option" autoresize />
+      <VChart v-if="option" class="chart" :option="option" autoresize />
     </ClientOnly>
   </div>
 </template>
 
 <style lang="scss">
+.heatmap {
+  position: relative;
+  height: 770px;
+  width: 100%;
+}
+
+.spinner{
+  position: absolute;
+  z-index: 10;
+}
+
 .header {
   display: flex;
   justify-content: center;

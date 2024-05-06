@@ -1,63 +1,15 @@
 {
   "data": {
     "epoch": 49006,
-    "proposers": [{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "failed"
-    },{
-      "validator": 1234,
-      "status": "orphaned"
-    }],
-    "syncs": [123, 32],
-    "slashings":  [{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "success"
-    },{
-      "validator": 1234,
-      "status": "failed"
-    },{
-      "validator": 1234,
-      "status": "failed"
-    },{
-      "validator": 1234,
-      "status": "orphaned"
-    }],
+    "proposers": {
+      "success": 23,
+      "failed": 42
+    },
+    "syncs": 2344,
+    "slashings": {
+      "success": 12,
+      "failed": 1
+    },
     "attestations_head": {
       "success": 123,
       "failed": 12
