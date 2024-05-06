@@ -139,38 +139,33 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 
 // ------------------------------------------------------------
 // Heatmap Tab
-type VDBHeatmapCell struct {
-	X uint64 `json:"x"` // Epoch
-	Y uint64 `json:"y"` // Group ID
 
-	Value float64 `json:"value"` // Attestaton Rewards
-}
-type VDBHeatmapEvent struct {
-	X uint64 `json:"x"` // Epoch
-	Y uint64 `json:"y"` // Group ID
-
+type VDBHeatmapEvents struct {
 	Proposal bool `json:"proposal"`
 	Slash    bool `json:"slash"`
 	Sync     bool `json:"sync"`
 }
+type VDBHeatmapCell struct {
+	X int64  `json:"x"` // Timestamp
+	Y uint64 `json:"y"` // Group ID
+
+	Value  float64           `json:"value"` // Attestaton Rewards
+	Events *VDBHeatmapEvents `json:"events,omitempty"`
+}
 type VDBHeatmap struct {
-	Epochs   []uint64          `json:"epochs"`    // X-Axis Categories
-	GroupIds []uint64          `json:"group_ids"` // Y-Axis Categories
-	Data     []VDBHeatmapCell  `json:"data"`
-	Events   []VDBHeatmapEvent `json:"events"`
+	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
+	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
+	Data        []VDBHeatmapCell `json:"data"`
+	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'day'" faker:"oneof: epoch, day"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
-type VDBHeatmapTooltipDuty struct {
-	Validator uint64 `json:"validator"`
-	Status    string `json:"status" tstype:"'success' | 'failed' | 'orphaned'"`
-}
 type VDBHeatmapTooltipData struct {
-	Epoch uint64 `json:"epoch"`
+	Timestamp time.Time `json:"timestamp"` // epoch or day
 
-	Proposers []VDBHeatmapTooltipDuty `json:"proposers"`
-	Syncs     []uint64                `json:"syncs"`
-	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
+	Proposers StatusCount `json:"proposers"`
+	Syncs     uint64      `json:"syncs"`
+	Slashings StatusCount `json:"slashings"`
 
 	AttestationsHead      StatusCount     `json:"attestations_head"`
 	AttestationsSource    StatusCount     `json:"attestations_source"`
