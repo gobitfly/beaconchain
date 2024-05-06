@@ -127,7 +127,10 @@ function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, s
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
-export function formatGoTimestamp (timestamp: string, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+export function formatGoTimestamp (timestamp: string | number, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  if (typeof timestamp === 'number') {
+    timestamp *= 1000
+  }
   const dateTime = new Date(timestamp).getTime()
   return formatTs(dateTime / 1000, compareTimestamp, format, style, locales, withTime)
 }
