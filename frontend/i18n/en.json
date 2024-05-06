@@ -405,7 +405,15 @@
     "password": "Password",
     "submit": "Login",
     "title": "Login",
-    "email": "Email address"
+    "email": "Email address",
+    "dont_have_account": "You do not have an account?",
+    "signup_here": "Click here to sign up.",
+    "invalid_email" : "Please enter a valid email address.",
+    "no_email" : "Please enter your email address.",
+    "no_password" : "Please enter your password.",
+    "error_toast_title" : "Error",
+    "error_toast_group" : "Cannot log in",
+    "error_toast_message" : "your email or your password is unknown."
   },
   "header": {
     "megamenu": {
