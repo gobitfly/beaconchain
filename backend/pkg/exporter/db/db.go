@@ -861,13 +861,13 @@ type DayBounds struct {
 
 func GetLastExportedTotalEpoch() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_rolling_total ORDER BY epoch_start DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, "SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM validator_dashboard_data_rolling_total")
 	return &epoch, err
 }
 
 func GetLastExportedHour() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, "SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly")
 	return &epoch, err
 }
 
@@ -875,12 +875,6 @@ func GetLastExportedDay() (*DayBounds, error) {
 	var epoch DayBounds
 	err := db.AlloyWriter.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
 	return &epoch, err
-}
-
-func GetXDayOldDay(dayOffset int) (time.Time, error) {
-	var day time.Time
-	err := db.AlloyWriter.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset-1))
-	return day, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
@@ -908,6 +902,7 @@ func GetDashboardEpochGapsBetween(targetEpoch uint64, minEpoch int64) ([]uint64,
 		distinct_present_epochs AS (
 			SELECT DISTINCT epoch
 			FROM validator_dashboard_data_epoch
+			WHERE epoch >= $1 AND epoch <= $2
 		)
 		SELECT epoch_range.epoch
 		FROM epoch_range

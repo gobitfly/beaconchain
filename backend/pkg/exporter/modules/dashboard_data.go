@@ -47,22 +47,22 @@ const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: tr
 
 // How many epochs will be fetched in parallel from the node (relevant for backfill and rolling tail fetching). We are fetching the head epoch and
 // one epoch for each rolling table (tail), so if you want to fetch all epochs in one go (and your node can handle that) set this to at least 5.
-const epochFetchParallelism = 6
+const epochFetchParallelism = 5
 
 // Fetching one epoch consists of multiple calls. You can define how many concurrent calls each epoch fetch will do. Keep in mind that
 // the total number of concurrent requests is epochFetchParallelism * epochFetchParallelismWithinEpoch
-const epochFetchParallelismWithinEpoch = 4
+const epochFetchParallelismWithinEpoch = 5
 
 // How many epochs will be written in parallel to the database
 const epochWriteParallelism = 6
 
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
-const databaseAggregationParallelism = 3
+const databaseAggregationParallelism = 4
 
 // How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
 // aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
 // Set to 0 to disable and write after every iteration. Recommended value for this is 1 or maybe 2.
-const backfillMaxUnaggregatedIterations = 0
+const backfillMaxUnaggregatedIterations = 1
 
 type dashboardData struct {
 	ModuleContext
@@ -115,6 +115,7 @@ func (d *dashboardData) Init() error {
 			d.log.Fatal(err, "failed to set work_mem", 0)
 		}
 
+		start := time.Now()
 		for {
 			var upToEpochPtr *uint64 = nil // nil will backfill back to head
 			if debugTargetBackfillEpoch > 0 {
@@ -133,7 +134,9 @@ func (d *dashboardData) Init() error {
 			if done {
 				d.log.Infof("dashboard data up to date, starting head export")
 				if debugSetBackfillCompleted {
-					utils.SendMessage(fmt.Sprintf("🎉🎉🎉 v2 Dashboard %s - Reached head, exporting from head now", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
+					if time.Since(start) > time.Hour {
+						utils.SendMessage(fmt.Sprintf("🎉🎉🎉 v2 Dashboard %s - Reached head, exporting from head now", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
+					}
 					d.backFillCompleted = true
 				}
 				break
@@ -148,14 +151,26 @@ func (d *dashboardData) Init() error {
 }
 
 func (d *dashboardData) processHeadQueue() {
+	reachedHead := false
 	for {
 		epoch := <-d.headEpochQueue
+
+		// After initial sync or long downtime first head processing might take a long time, so by the time we finished
+		// the queue might have filled up significantly. To get back on head more quickly we skip some epochs and let the backfill handle those
+		// before processing the more recent epoch
+		for len(d.headEpochQueue) > 1 {
+			epoch = <-d.headEpochQueue
+		}
+		if len(d.headEpochQueue) == 0 && !reachedHead {
+			d.log.Infof("exporter is at head of the chain")
+			reachedHead = true
+		}
 
 		startTime := time.Now()
 		d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
 		stage := 0
 		for { // retry this epoch until no errors occur
-			currentFinalizedEpoch, err := d.CL.GetFinalityCheckpoints("finalized")
+			currentFinalizedEpoch, err := d.CL.GetFinalityCheckpoints("head")
 			if err != nil {
 				d.log.Error(err, "failed to get finalized checkpoint", 0)
 				metrics.Errors.WithLabelValues("exporter_v2dash_node_get_finalize_fail").Inc()
@@ -231,9 +246,10 @@ func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
 // fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
 func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails bool) error {
 	missingTails := make([]uint64, 0)
+	var err error
 	if fetchRollingTails {
 		// for 24h aggregation
-		missingTails, err := d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
+		missingTails, err = d.epochToDay.getMissingRolling24TailEpochs(headEpoch)
 		if err != nil {
 			return errors.Wrap(err, "failed to get missing 24h tail epochs")
 		}
@@ -272,9 +288,9 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails 
 	// append head
 	if !hasHeadAlreadyExported {
 		missingTails = append(missingTails, headEpoch)
-		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", missingTails, headEpoch)
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", len(missingTails)-1, headEpoch)
 	} else {
-		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: -", missingTails)
+		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: -", len(missingTails))
 	}
 
 	var nextDataChan chan []DataEpochProcessed = make(chan []DataEpochProcessed, 1)
@@ -544,8 +560,9 @@ var unaggregatedWrites = 0
 // returns true if there was nothing to backfill, otherwise returns false
 // if upToEpoch is nil, it will backfill until the latest finalized epoch
 func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
+	backfillToChainFinalizedHead := upToEpoch == nil
 	if upToEpoch == nil {
-		res, err := d.CL.GetFinalityCheckpoints("finalized")
+		res, err := d.CL.GetFinalityCheckpoints("head")
 		if err != nil {
 			return false, errors.Wrap(err, "failed to get finalized checkpoint")
 		}
@@ -664,7 +681,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 					unaggregatedWrites = 0
 					d.log.Info("storage writing done, aggregate")
 					for {
-						err = d.aggregatePerEpoch(false, false)
+						err = d.aggregatePerEpoch(false, done) // prevent cleaning old epochs in case head export got interupted and we are already done in this backfill iteration
 						if err != nil {
 							d.log.Error(err, "backfill, failed to aggregate", 0, map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch})
 							metrics.Errors.WithLabelValues("exporter_v2dash_agg_per_epoch_fail").Inc()
@@ -688,6 +705,20 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 			}
 		}
 	}
+
+	// Return with "complete" only if task was to sync to chain finalized head and we finished
+	if backfillToChainFinalizedHead {
+		res, err := d.CL.GetFinalityCheckpoints("head")
+		if err != nil {
+			return false, errors.Wrap(err, "failed to get finalized checkpoint")
+		}
+		if utils.IsByteArrayAllZero(res.Data.Finalized.Root) {
+			return false, errors.New("network not finalized yet")
+		}
+
+		return res.Data.Finalized.Epoch-1 <= *upToEpoch, nil
+	}
+
 	return true, nil
 }
 
@@ -874,7 +905,7 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 	// An epoch becomes finalized once the next epoch gets justified
 	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
 	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
-	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	res, err := d.CL.GetFinalityCheckpoints("head")
 	if err != nil {
 		return err
 	}
@@ -1225,16 +1256,16 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[i].Slashed = data.currentEpochStateEnd.Data[i].Validator.Slashed
 	}
 
-	// Block Proposal Chance
+	// Expected Block Proposal
 	for _, valData := range data.currentEpochStateEnd.Data {
 		if valData.Status.IsActive() {
 			// See https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#compute_proposer_index
 			proposalChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(activeTotalEffectiveBalanceETH)
-			validatorsData[valData.Index].BlocksExpected = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			validatorsData[valData.Index].BlocksExpectedThisEpoch = proposalChance * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		}
 	}
 
-	// Sync Committee Chance
+	// Expected Sync Committees
 	// Get the total effective balance from the state where the current sync committee was elected
 	// And then calculate the chance of being in the sync committee from that state
 	if data.epoch == utils.FirstEpochOfSyncPeriod(currentSyncPeriod) {
@@ -1255,7 +1286,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 				// Note that this formula is not 100% the chance as defined in the spec, but after running simulations we found
 				// it being precise enough for our purposes with an error margin of less than 0.003%
 				syncChance := float64(valData.Validator.EffectiveBalance/1e9) / float64(syncCommitteeElectionStateTotalEffectiveBalanceETH)
-				validatorsData[valData.Index].SyncCommitteesExpected = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
+				validatorsData[valData.Index].SyncCommitteesExpectedThisPeriod = syncChance * float64(utils.Config.Chain.ClConfig.SyncCommitteeSize)
 			}
 		}
 	}
@@ -1551,10 +1582,10 @@ type validatorDashboardDataRow struct {
 
 	LastSubmittedDutyEpoch sql.NullInt32 // does not include sync committee duty slots
 
-	BlockScheduled         sql.NullInt16 // done
-	BlocksProposed         sql.NullInt16 // done
-	BlocksExpected         float64       // done
-	SyncCommitteesExpected float64       // done
+	BlockScheduled                   sql.NullInt16 // done
+	BlocksProposed                   sql.NullInt16 // done
+	BlocksExpectedThisEpoch          float64       // done
+	SyncCommitteesExpectedThisPeriod float64       // done
 
 	BlocksClReward                sql.NullInt64 // done
 	BlocksClAttestestationsReward sql.NullInt64 // done
