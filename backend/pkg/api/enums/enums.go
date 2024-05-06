@@ -80,7 +80,6 @@ var _ EnumFactory[VDBRewardsColumn] = VDBRewardsColumn(0)
 
 const (
 	VDBRewardEpoch VDBRewardsColumn = iota
-	VDBRewardDuty                   // Sort by sum of percentages
 )
 
 func (c VDBRewardsColumn) Int() int {
@@ -91,8 +90,6 @@ func (VDBRewardsColumn) NewFromString(s string) VDBRewardsColumn {
 	switch s {
 	case "epoch":
 		return VDBRewardEpoch
-	case "duty":
-		return VDBRewardDuty
 	default:
 		return VDBRewardsColumn(-1)
 	}
@@ -100,10 +97,8 @@ func (VDBRewardsColumn) NewFromString(s string) VDBRewardsColumn {
 
 var VDBRewardsColumns = struct {
 	Epoch VDBRewardsColumn
-	Duty  VDBRewardsColumn
 }{
 	VDBRewardEpoch,
-	VDBRewardDuty,
 }
 
 // ----------------
