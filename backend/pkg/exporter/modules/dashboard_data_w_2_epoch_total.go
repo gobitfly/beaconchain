@@ -45,7 +45,7 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 		return errors.Wrap(err, "total export nothing to do, currentEpoch <= lastTotalExported.EpochEnd")
 	}
 
-	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(lastTotalExported.EpochEnd))
+	gaps, err := edb.GetMissingEpochsBetween(int64(lastTotalExported.EpochEnd), int64(currentExportedEpoch+1))
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}

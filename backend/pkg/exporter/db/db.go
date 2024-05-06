@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"regexp"
@@ -19,6 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -889,28 +891,72 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	return true, nil
 }
 
-func GetDashboardEpochGapsBetween(targetEpoch uint64, minEpoch int64) ([]uint64, error) {
-	if minEpoch < 0 {
-		minEpoch = 0
+// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
+func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
+	if start < 0 {
+		start = 0
 	}
-	var epochs []uint64
-	err := db.AlloyWriter.Select(&epochs, `
-		WITH
-		epoch_range AS (
-			SELECT generate_series($1::bigint, $2::bigint) AS epoch
-		),
-		distinct_present_epochs AS (
-			SELECT DISTINCT epoch
-			FROM validator_dashboard_data_epoch
-			WHERE epoch >= $1 AND epoch <= $2
-		)
-		SELECT epoch_range.epoch
-		FROM epoch_range
-		LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
-		WHERE distinct_present_epochs.epoch IS NULL
-		ORDER BY epoch_range.epoch
-	`, minEpoch, targetEpoch)
-	return epochs, err
+	if end <= start {
+		return nil, nil
+	}
+
+	if end-start > 100 {
+		// for large ranges we use a different approach to avoid making tons of selects
+		// this performs better for large ranges but is slow for short ranges
+		var epochs []uint64
+		err := db.AlloyWriter.Select(&epochs, `
+			WITH
+			epoch_range AS (
+				SELECT generate_series($1::bigint, $2::bigint) AS epoch
+			),
+			distinct_present_epochs AS (
+				SELECT DISTINCT epoch
+				FROM validator_dashboard_data_epoch
+				WHERE epoch >= $1 AND epoch <= $2
+			)
+			SELECT epoch_range.epoch
+			FROM epoch_range
+			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
+			WHERE distinct_present_epochs.epoch IS NULL
+			ORDER BY epoch_range.epoch
+		`, start, end-1)
+		return epochs, err
+	}
+
+	query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
+
+	for epoch := start; epoch < end; epoch++ {
+		if epoch != start {
+			query += " UNION "
+		}
+		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM validator_dashboard_data_epoch WHERE epoch = %[1]d LIMIT 1)`, epoch)
+	}
+
+	query += `) AS result_array;`
+
+	var jsonArray sql.NullString
+
+	err := db.AlloyReader.Get(&jsonArray, query)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query")
+	}
+
+	if !jsonArray.Valid {
+		return nil, nil
+	}
+
+	missingEpochs := make([]uint64, 0)
+	err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal")
+	}
+
+	// sort asc
+	sort.Slice(missingEpochs, func(i, j int) bool {
+		return missingEpochs[i] < missingEpochs[j]
+	})
+
+	return missingEpochs, nil
 }
 
 func GetPartitionNamesOfTable(tableName string) ([]string, error) {

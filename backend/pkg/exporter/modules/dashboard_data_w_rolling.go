@@ -138,7 +138,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	d.log.Infof("rolling %dd epochs: %d - %d, %d - %d", days, aggHeadEpochStart, aggHeadEpochEnd, aggTailEpochStart, aggTailEpochEnd)
 
 	// sanity check if all tail epochs are present in db
-	missing, err := getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
+	missing, err := edb.GetMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing tail epochs")
 	}
@@ -147,7 +147,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	}
 
 	// sanity check if all head epochs are present in db
-	missingHead, err := getMissingEpochsBetween(int64(aggHeadEpochStart), int64(aggHeadEpochEnd))
+	missingHead, err := edb.GetMissingEpochsBetween(int64(aggHeadEpochStart), int64(aggHeadEpochEnd))
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing head epochs")
 	}
@@ -205,7 +205,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, intendedHeadEpoch)
 
-	return getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
+	return edb.GetMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 }
 
 // Adds the new epochs (headEpochStart to headEpochEnd) to the rolling table and removes the old ones (tailEpochStart to tailEpochEnd)
