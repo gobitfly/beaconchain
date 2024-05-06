@@ -451,8 +451,6 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
-	startTimeTotal := time.Now()
-
 	result := &t.VDBTotalWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
@@ -466,8 +464,6 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 		// No validators found
 		return result, nil
 	}
-
-	startTime := time.Now()
 
 	queryResult := []struct {
 		ValidatorIndex uint64 `db:"validator_index"`
@@ -524,8 +520,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
-	fmt.Printf("total withdrawals: %v\n", time.Since(startTime))
-	startTime = time.Now()
+	if len(queryResult) == 0 {
+		// No validators to search for
+		return result, nil
+	}
 
 	var totalAmount int64
 	var validators []uint64
@@ -553,12 +551,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 		return nil, fmt.Errorf("error getting latest withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
-	fmt.Printf("latest withdrawals: %v\n", time.Since(startTime))
-
 	totalAmount += latestWithdrawalsAmount
 	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
-
-	fmt.Printf("total time: %v\n", time.Since(startTimeTotal))
 
 	return result, nil
 }
