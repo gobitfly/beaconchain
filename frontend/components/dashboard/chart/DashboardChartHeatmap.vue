@@ -34,6 +34,8 @@ use([
 ])
 
 const { dashboardKey } = useDashboardKey()
+const heatmapContainer = ref<HTMLElement | null>(null)
+const { value: containerWidth, bounce: setContainerWidtdh } = useDebounceValue(heatmapContainer.value?.clientWidth || 1000)
 
 const { heatmap, isLoading, getHeatmap, getHeatmapTooltip } = useValidatorDashboardHeatmapStore()
 
@@ -86,17 +88,31 @@ const ttFormatter = ({ data }: { data: number[] }): HTMLElement => {
   return d
 }
 
+const updateWidth = () => {
+  setContainerWidtdh(heatmapContainer.value?.clientWidth || 1000, true)
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWidth)
+  updateWidth()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth)
+})
+
 const option = computed<ECBasicOption | undefined>(() => {
   if (heatmap.value === undefined) {
     return undefined
   }
   return {
     grid: {
-      containLabel: true,
+      containLabel: false,
       top: 20,
-      left: '5%',
+      left: '10%',
       right: '5%',
-      height: '75%'
+      height: '75%',
+      width: '85%'
     },
     xAxis: {
       type: 'category',
@@ -107,7 +123,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     },
     yAxis: {
       type: 'category',
-      data: heatmap.value.group_ids.map(groupNameLabel),
+      data: heatmap.value.group_ids.map(v => ({ value: groupNameLabel(v), textStyle: { width: 100, overflow: 'truncate' } })),
       splitArea: {
         show: true
       }
@@ -117,10 +133,9 @@ const option = computed<ECBasicOption | undefined>(() => {
       max: 100,
       calculable: true,
       orient: 'horizontal',
-      right: '5%',
+      left: '10%',
       bottom: 10,
-      left: 'center',
-      itemHeight: '300px',
+      itemHeight: containerWidth.value * 0.85 - 10,
       inRange: {
         color: colors.value.heatmap
       }
@@ -181,31 +196,37 @@ const option = computed<ECBasicOption | undefined>(() => {
 </script>
 
 <template>
-  <div class="heatmap">
-    <div class="header">
-      <div class="h1">
-        {{ $t('dashboard.validator.heatmap.title') }}
+  <div class="wrapper">
+    <div ref="heatmapContainer" class="heatmap">
+      <div class="header">
+        <div class="h1">
+          {{ $t('dashboard.validator.heatmap.title') }}
+        </div>
+        <BcDropdown
+          v-model="timeFrameSelection"
+          :options="timeFrames"
+          option-value="value"
+          option-label="label"
+          variant="table"
+        />
       </div>
-      <BcDropdown
-        v-model="timeFrameSelection"
-        :options="timeFrames"
-        option-value="value"
-        option-label="label"
-        variant="table"
-      />
+      <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
+      <ClientOnly>
+        <VChart v-if="option" class="chart" :option="option" autoresize />
+      </ClientOnly>
     </div>
-    <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
-    <ClientOnly>
-      <VChart v-if="option" class="chart" :option="option" autoresize />
-    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss">
+.wrapper{
+  overflow-x: auto;
+}
 .heatmap {
   position: relative;
-  height: 770px;
+  height: 808px;
   width: 100%;
+  min-width: 1000px;
 }
 
 .spinner{
