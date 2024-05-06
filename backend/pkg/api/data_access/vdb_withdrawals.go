@@ -204,7 +204,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			sortColName, sortSearchOrder)
 	}
 
-	limitQuery := fmt.Sprintf(" LIMIT %d", limit+1)
+	queryParams = append(queryParams, limit+1)
+	limitQuery := fmt.Sprintf(" LIMIT $%d", len(queryParams))
 
 	withdrawalsQuery += whereQuery + orderQuery + limitQuery
 

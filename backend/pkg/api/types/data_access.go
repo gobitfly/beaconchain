@@ -75,6 +75,13 @@ type ValidatorsCursor struct {
 	Index uint64 `json:"vi"`
 }
 
+type RewardsCursor struct {
+	GenericCursor
+
+	Epoch   uint64
+	GroupId uint64
+}
+
 type WithdrawalsCursor struct {
 	GenericCursor
 
