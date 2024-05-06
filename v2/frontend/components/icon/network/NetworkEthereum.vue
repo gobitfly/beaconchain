@@ -20,9 +20,27 @@
   fill: #3C3C3B;
 }
 .color4 {
-  fill: #141414;
+  fill: #2A262C;
 }
 .color5 {
   fill: #393939;
+}
+
+.pastel {
+  .color1 {
+  fill: #9A9A9A;
+  }
+  .color2 {
+    fill: #C6C6C6;
+  }
+  .color3 {
+    fill: #9E9E9D;
+  }
+  .color4 {
+    fill: #8A8A8A;
+  }
+  .color5 {
+    fill: #9C9C9C;
+  }
 }
 </style>
