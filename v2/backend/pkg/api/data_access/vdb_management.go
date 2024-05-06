@@ -478,7 +478,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			v.group_id,
 			g.name AS group_name
 		FROM users_val_dashboards_validators v
-		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+		INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
 		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}
