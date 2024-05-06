@@ -152,7 +152,7 @@ func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string,
 	err = tx.Get(result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
-		RETURNING id, user_id, name, network, created_at
+		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
 	`, userId, network, name)
 	if err != nil {
 		return nil, err
