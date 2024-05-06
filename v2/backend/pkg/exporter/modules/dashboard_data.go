@@ -224,24 +224,6 @@ func (d *dashboardData) processHeadQueue() {
 	}
 }
 
-// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
-func getMissingEpochsBetween(start, end int64) ([]uint64, error) {
-	if end <= start {
-		return nil, nil
-	}
-	missingEpochs := make([]uint64, 0)
-	for epoch := start; epoch < end; epoch++ {
-		hasEpoch, err := edb.HasDashboardDataForEpoch(uint64(epoch))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get epoch")
-		}
-		if !hasEpoch {
-			missingEpochs = append(missingEpochs, uint64(epoch))
-		}
-	}
-	return missingEpochs, nil
-}
-
 // exports the provided headEpoch plus any tail epochs that are needed for rolling aggregation
 // fE a tail epoch for rolling 1 day aggregation (225 epochs) for head 227 on ethereum would correspond to two tail epochs [0,1]
 func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails bool) error {
@@ -582,7 +564,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	// while each epoch is its own transaction and hence writes the complete epoch or nothing,
 	// it could happen that epochs have been written out of order due to the parallel nature of the exporter.
 	// Meaning that there is a gap in the last ~epochFetchParallelism epochs
-	uncleanShutdownGaps, err := edb.GetDashboardEpochGapsBetween(latestExportedEpoch, int64(latestExportedEpoch-epochFetchParallelism))
+	uncleanShutdownGaps, err := edb.GetMissingEpochsBetween(int64(latestExportedEpoch-epochFetchParallelism), int64(latestExportedEpoch+1))
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}
@@ -605,7 +587,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 		d.log.Infof("Fixed unclean shutdown gaps")
 	}
 
-	gaps, err := edb.GetDashboardEpochGapsBetween(*upToEpoch, int64(latestExportedEpoch))
+	gaps, err := edb.GetMissingEpochsBetween(int64(latestExportedEpoch), int64(*upToEpoch+1))
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get epoch gaps")
 	}

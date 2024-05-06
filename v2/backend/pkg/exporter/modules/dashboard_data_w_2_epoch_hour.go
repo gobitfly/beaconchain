@@ -84,7 +84,7 @@ func (d *epochToHourAggregator) aggregate1h(currentExportedEpoch uint64) error {
 		return nil
 	}
 
-	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(currentExportedEpoch+1-d.epochWriter.getRetentionEpochDuration()))
+	gaps, err := edb.GetMissingEpochsBetween(int64(lastHourExported.EpochEnd), int64(currentExportedEpoch+1))
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}

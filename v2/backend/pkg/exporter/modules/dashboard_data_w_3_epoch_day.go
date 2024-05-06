@@ -86,7 +86,7 @@ func (d *epochToDayAggregator) utcDayAggregate(currentExportedEpoch uint64) erro
 		return errors.Wrap(err, "failed to get latest daily epoch")
 	}
 
-	gaps, err := edb.GetDashboardEpochGapsBetween(currentExportedEpoch, int64(latestExportedDay.EpochEnd))
+	gaps, err := edb.GetMissingEpochsBetween(int64(latestExportedDay.EpochEnd), int64(currentExportedEpoch+1))
 	if err != nil {
 		return errors.Wrap(err, "failed to get dashboard epoch gaps")
 	}
