@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { type DashboardType, type ValidatorDashboardNetwork } from '~/types/dashboard'
 import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
+import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 

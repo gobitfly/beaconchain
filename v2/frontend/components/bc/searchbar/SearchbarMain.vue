@@ -31,6 +31,7 @@ import {
   type NetworkFilter
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { API_PATH } from '~/types/customFetch'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
 

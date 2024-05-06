@@ -45,7 +45,7 @@ watch(dashboardKey, (newKey, oldKey) => {
   if (!isLoggedIn.value) {
     // We update the key for our public dashboard
     const cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-    // If the old key does not match the dashboards key then it probabbly means we opened a different pub. dashboard as a link
+    // If the old key does not match the dashboards key then it probabbly means we opened a different public dashboard as a link
     if (cd && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
     }

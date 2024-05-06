@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
+import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
   const data = ref<{user_id: number, user_name: string} | undefined | null>()
