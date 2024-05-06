@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { VDBGroupSummaryData, InternalGetValidatorDashboardGroupSummaryResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
+import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardSummaryDetailsStore = defineStore('validator_dashboard_sumary_details_store', () => {
   const data = ref < Record<string, VDBGroupSummaryData >>({})

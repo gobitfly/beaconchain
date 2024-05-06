@@ -23,6 +23,7 @@ import { type ChartData } from '~/types/api/common'
 import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
+import { API_PATH } from '~/types/customFetch'
 
 const { currency } = useCurrency()
 // TODO: once we have different chains we migh need to change the default from 'ETH' to the dashboard currency
