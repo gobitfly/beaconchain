@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -187,7 +188,6 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 	if !result.Valid() {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
-		return nil
 	}
 
 	// Decode into the target data structure
@@ -350,14 +350,30 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	return paging
 }
 
-func checkEnum[T enums.EnumFactory[T]](v *validationError, enum string, name string) T {
-	var c T
-	col := c.NewFromString(enum)
-	if col.Int() == -1 {
-		v.add(name, fmt.Sprintf("given value '%s' for parameter '%s' is not valid", enum, name))
-		return c
+// checkEnum validates the given enum string and returns the corresponding enum value.
+func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, name string) T {
+	var e T
+	enum := e.NewFromString(enumString)
+	if enums.IsInvalidEnum(enum) {
+		v.add(name, fmt.Sprintf("given value '%s' is not valid", enumString))
+		return enum
 	}
-	return col
+	return enum
+}
+
+// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
+// precondition: the enum is the same type as the allowed enums.
+func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
+	if enums.IsInvalidEnum(enum) {
+		// expected error message is already set
+		return
+	}
+	for _, a := range allowed {
+		if enum.Int() == a.Int() {
+			return
+		}
+	}
+	v.add(name, "parameter is missing or invalid, please check the API documentation")
 }
 
 func (v *validationError) parseSortOrder(order string) bool {
@@ -375,7 +391,6 @@ func (v *validationError) parseSortOrder(order string) bool {
 }
 
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
-	log.Info(sortString)
 	var c T
 	if sortString == "" {
 		return &types.Sort[T]{Column: c, Desc: false}
@@ -406,7 +421,6 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	log.Info("a")
 	var indexes []uint64
 	var publicKeys []string
 	for _, validator := range validators {
@@ -433,6 +447,15 @@ func (v *validationError) checkNetwork(network string) uint64 {
 		v.add("network", fmt.Sprintf("given value '%s'is not a valid network id", network))
 	}
 	return networkId
+}
+
+func (v *validationError) checkDate(dateString string) time.Time {
+	// expecting date in format "YYYY-MM-DD"
+	date, err := time.Parse("2006-01-02", dateString)
+	if err != nil {
+		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
+	}
+	return date
 }
 
 // --------------------------------------
