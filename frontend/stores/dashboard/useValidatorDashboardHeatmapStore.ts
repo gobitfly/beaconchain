@@ -30,19 +30,22 @@ export function useValidatorDashboardHeatmapStore () {
     tooltipDataMap.value = {}
     isLoading.value = true
 
-    const res = await fetch<InternalGetValidatorDashboardHeatmapResponse>(API_PATH.DASHBOARD_HEATMAP, { query: { timeFrame } }, { dashboardKey })
+    const path = timeFrame === '24h' ? API_PATH.DASHBOARD_HEATMAP_EPOCH : API_PATH.DASHBOARD_HEATMAP_DAILY
+
+    const res = await fetch<InternalGetValidatorDashboardHeatmapResponse>(path, { query: { period: timeFrame === '24h' ? null : timeFrame } }, { dashboardKey })
     isLoading.value = false
 
     data.value = res.data
     return res.data
   }
 
-  async function getHeatmapTooltip (dashboardKey: DashboardKey, groupId: number, epoch: number) {
-    const key = getKey(groupId, epoch)
+  async function getHeatmapTooltip (dashboardKey: DashboardKey, groupId: number, date: number /** can either be a ts or an epoch */, timeFrame: HeatmapTimeFrame) {
+    const key = getKey(groupId, date)
     if (tooltipDataMap.value[key]) {
       return tooltipDataMap.value[key]
     }
-    const res = await fetch<InternalGetValidatorDashboardGroupHeatmapResponse>(API_PATH.DASHBOARD_HEATMAP_DETAILS, undefined, { dashboardKey, groupId, epoch })
+    const path = timeFrame === '24h' ? API_PATH.DASHBOARD_HEATMAP_EPOCH_DETAILS : API_PATH.DASHBOARD_HEATMAP_DAILY_DETAILS
+    const res = await fetch<InternalGetValidatorDashboardGroupHeatmapResponse>(path, undefined, { dashboardKey, groupId, date })
 
     tooltipDataMap.value[key] = res.data
     return res.data

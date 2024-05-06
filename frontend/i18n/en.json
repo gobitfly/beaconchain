@@ -307,10 +307,10 @@
         "attestations_source": "Source correct",
         "attestations_target": "Target correct",
         "timeframe": {
-          "last_24h": "Last 1h (epoch based)",
-          "last_7d": "Last 7d (daily)",
-          "last_30d": "Last 30d (daily)",
-          "last_365d": "Last 1 year (daily)"
+          "24h": "Last 24h (epoch based)",
+          "7d": "Last 7d (daily)",
+          "30d": "Last 30d (daily)",
+          "365d": "Last 1 year (daily)"
         }
       },
       "group_management": {

@@ -43,13 +43,13 @@ const { overview } = useValidatorDashboardOverviewStore()
 
 const { t: $t } = useI18n()
 
-const timeFrameSelection = ref<HeatmapTimeFrame>('last_24h')
+const selectedTimeFrame = ref<HeatmapTimeFrame>('24h')
 const timeFrames = computed(() => {
   return HeatmapTimeFrames.map(h => ({ value: h, label: $t(`dashboard.validator.heatmap.timeframe.${h}`) }))
 })
 
-watch([dashboardKey, overview, timeFrameSelection], () => {
-  getHeatmap(dashboardKey.value, timeFrameSelection.value)
+watch([dashboardKey, overview, selectedTimeFrame], () => {
+  getHeatmap(dashboardKey.value, selectedTimeFrame.value)
 }, { immediate: true })
 
 const colorMode = useColorMode()
@@ -82,7 +82,7 @@ const ttFormatter = ({ data }: { data: number[] }): HTMLElement => {
   d.style.height = '100px'
   render(h(BcLoadingSpinner, { loading: true, alignment: 'center' }), d)
 
-  getHeatmapTooltip(dashboardKey.value, data[0], data[1]).then((tt) => {
+  getHeatmapTooltip(dashboardKey.value, data[0], data[1], selectedTimeFrame.value).then((tt) => {
     render(h(DashboardChartHeatmapTooltip, { t: $t, weiToValue: converter.value.weiToValue, startEpoch: data[0], theme: colorMode.value, tooltipData: tt }), d)
   })
   return d
@@ -197,20 +197,20 @@ const option = computed<ECBasicOption | undefined>(() => {
 
 <template>
   <div class="wrapper">
+    <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
     <div ref="heatmapContainer" class="heatmap">
       <div class="header">
         <div class="h1">
           {{ $t('dashboard.validator.heatmap.title') }}
         </div>
         <BcDropdown
-          v-model="timeFrameSelection"
+          v-model="selectedTimeFrame"
           :options="timeFrames"
           option-value="value"
           option-label="label"
           variant="table"
         />
       </div>
-      <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
       <ClientOnly>
         <VChart v-if="option" class="chart" :option="option" autoresize />
       </ClientOnly>
@@ -221,9 +221,9 @@ const option = computed<ECBasicOption | undefined>(() => {
 <style lang="scss">
 .wrapper{
   overflow-x: auto;
+  position: relative;
 }
 .heatmap {
-  position: relative;
   height: 808px;
   width: 100%;
   min-width: 1000px;

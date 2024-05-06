@@ -26,8 +26,10 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
-  DASHBOARD_HEATMAP = '/dashboard/heatmap',
-  DASHBOARD_HEATMAP_DETAILS = '/dashboard/heatmapDetails',
+  DASHBOARD_HEATMAP_EPOCH = '/dashboard/heatmapEpoch',
+  DASHBOARD_HEATMAP_DAILY = '/dashboard/heatmapDaily',
+  DASHBOARD_HEATMAP_EPOCH_DETAILS = '/dashboard/heatmapEpochDetails',
+  DASHBOARD_HEATMAP_DAILY_DETAILS = '/dashboard/heatmapDailyDetails',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   SEARCH = '/search'
@@ -172,15 +174,25 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
-  [API_PATH.DASHBOARD_HEATMAP]: {
-    path: '/validator-dashboards/{dashboardKey}/heatmap',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/heatmap`,
+  [API_PATH.DASHBOARD_HEATMAP_EPOCH]: {
+    path: '/validator-dashboards/{dashboardKey}/epoch-heatmap',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/epoch-heatmap`,
     mock: false
   },
-  [API_PATH.DASHBOARD_HEATMAP_DETAILS]: {
+  [API_PATH.DASHBOARD_HEATMAP_DAILY]: {
     path: '/validator-dashboards/{dashboardKey}/heatmap',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/heatmap/${values?.epoch}`,
-    mock: true
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/daily-heatmap`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_HEATMAP_EPOCH_DETAILS]: {
+    path: '/validator-dashboards/{dashboardKey}/groups/{groupId}/epoch-heatmap/{epoch}',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/epoch-heatmap/${values?.date}`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_HEATMAP_DAILY_DETAILS]: {
+    path: '/validator-dashboards/{dashboardKey}/groups/{groupId}/daily-heatmap/{epoch}',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/daily-heatmap/${values?.date}`,
+    mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
