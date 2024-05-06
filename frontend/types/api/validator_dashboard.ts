@@ -142,7 +142,7 @@ export interface VDBHeatmap {
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {
-  timestamp: string /* time.Time */; // epoch or day
+  timestamp: number /* int64 */; // epoch or day
   proposers: StatusCount;
   syncs: number /* uint64 */;
   slashings: StatusCount;
@@ -162,7 +162,7 @@ export interface VDBExecutionDepositsTableRow {
   index?: number /* uint64 */;
   group_id: number /* uint64 */;
   block: number /* uint64 */;
-  timestamp: string /* time.Time */;
+  timestamp: number /* int64 */;
   from: Address;
   depositor: Address;
   tx_hash: Hash;
@@ -231,7 +231,7 @@ export interface VDBPostReturnData {
   user_id: number /* uint64 */;
   name: string;
   network: number /* uint64 */;
-  created_at: string /* time.Time */;
+  created_at: number /* int64 */;
 }
 export interface VDBPostCreateGroupData {
   id: number /* uint64 */;
