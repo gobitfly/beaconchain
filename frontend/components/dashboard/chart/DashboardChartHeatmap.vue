@@ -116,7 +116,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     },
     xAxis: {
       type: 'category',
-      data: heatmap.value.epochs,
+      data: heatmap.value.timestamps,
       splitArea: {
         show: true
       }
@@ -148,14 +148,14 @@ const option = computed<ECBasicOption | undefined>(() => {
         label: {
           show: true,
           formatter: ({ data }: { data: number[] }) => {
-            const event = heatmap.value?.events?.find(e => e.x === data[0] && e.x === data[1])
-            if (!event) {
+            const events = heatmap.value?.data?.find(e => e.x === data[0] && e.x === data[1])?.events
+            if (!events) {
               return ''
             }
             const f = getBackgroundFormat({
-              proposal: event.proposal,
-              sync: event.sync,
-              slashing: event.slash
+              proposal: events.proposal,
+              sync: events.sync,
+              slashing: events.slash
             })
             return f
           },

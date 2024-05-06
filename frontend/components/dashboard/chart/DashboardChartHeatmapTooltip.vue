@@ -2,7 +2,6 @@
 import { type ComposerTranslation } from 'vue-i18n'
 import type { WeiToValue } from '~/types/value'
 import type { VDBHeatmapTooltipData } from '~/types/api/validator_dashboard'
-import type { StatusCount } from '~/types/api/common'
 
 interface Props {
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
@@ -33,17 +32,17 @@ const mapped = computed(() => {
       <div v-if="props.tooltipData?.proposers" class="row top">
         <div class="circle" :style="{ backgroundColor: colors.proposal }" />
         <span>{{ t('dashboard.validator.heatmap.proposers') }}:</span>
-        <BcTableStatusCount class="value" :count="(props.tooltipData?.proposers as any as StatusCount)" />
+        <BcTableStatusCount class="value" :count="(props.tooltipData?.proposers)" />
       </div>
       <div v-if="props.tooltipData?.slashings" class="row top">
         <div class="circle" :style="{ backgroundColor: colors.slashing }" />
         <span>{{ t('dashboard.validator.heatmap.slashings') }}:</span>
-        <BcTableStatusCount class="value" :count="(props.tooltipData?.slashings as any as StatusCount)" />
+        <BcTableStatusCount class="value" :count="(props.tooltipData?.slashings)" />
       </div>
       <div v-if="props.tooltipData?.syncs" class="row top">
         <div class="circle" :style="{ backgroundColor: colors.sync }" />
         <span>{{ t('dashboard.validator.heatmap.syncs') }}:</span>
-        <BcFormatNumber class="value" :value="(props.tooltipData?.syncs as any as number)" />
+        <BcFormatNumber class="value" :value="(props.tooltipData?.syncs)" />
       </div>
       <div v-if="mapped.hasAttestation">
         <div v-if="mapped.attestationIncome !== undefined" class="row">
