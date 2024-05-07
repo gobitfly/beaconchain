@@ -67,6 +67,7 @@ export default defineNuxtConfig({
       autoprefixer: {}
     }
   },
+  debug: true,
   build: {
     transpile: ['echarts', 'zrender', 'tslib', 'resize-detector']
   }
