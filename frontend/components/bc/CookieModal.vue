@@ -9,6 +9,7 @@ const setCookiePreference = (value: CookiesPreference) => {
 }
 
 const visible = ref(cookiePreference.value === undefined)
+const modalText = computed(() => formatMultiPartSpan($t, 'cookies.text', [undefined, 'link', undefined], [undefined, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', undefined]))
 
 </script>
 
@@ -21,9 +22,8 @@ const visible = ref(cookiePreference.value === undefined)
     position="bottom"
   >
     <div class="dialog-container">
-      <div class="text-container">
-        {{ $t('cookies.text') }}
-      </div>
+      <!--eslint-disable-next-line vue/no-v-html-->
+      <div class="text-container" v-html="modalText" />
       <div class="button-container">
         <Button class="necessary-button" @click="setCookiePreference('functional')">
           {{ $t('cookies.only_necessary') }}
