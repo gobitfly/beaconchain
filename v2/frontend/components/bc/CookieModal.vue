@@ -44,10 +44,8 @@ const visible = computed(() => cookiePreference.value === undefined)
   }
 
   .text-container {
-    // TODO: Required? Check once font size PR is merged
     @include fonts.standard_text;
-    //line-height: 1.5; // TODO: Required?
-    width: 297px;
+    width: 320px;
 
     @media (max-width: 670px) {
       width: auto;
