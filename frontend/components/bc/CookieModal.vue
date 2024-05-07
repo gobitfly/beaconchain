@@ -8,12 +8,18 @@ const setCookiePreference = (value: CookiesPreference) => {
   cookiePreference.value = value
 }
 
-const visible = computed(() => cookiePreference.value === undefined)
+const visible = ref(cookiePreference.value === undefined)
 
 </script>
 
 <template>
-  <BcDialog v-model="visible">
+  <Dialog
+    v-model:visible="visible"
+    :dismissable-mask="false"
+    :draggable="false"
+    :close-on-escape="false"
+    position="bottom"
+  >
     <div class="dialog-container">
       <div class="text-container">
         {{ $t('cookies.text') }}
@@ -27,7 +33,7 @@ const visible = computed(() => cookiePreference.value === undefined)
         </Button>
       </div>
     </div>
-  </BcDialog>
+  </Dialog>
 </template>
 
 <style lang="scss" scoped>
