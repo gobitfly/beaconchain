@@ -409,7 +409,7 @@
     "dont_have_account": "You do not have an account?",
     "signup_here": "Click here to sign up.",
     "invalid_email" : "Please enter a valid email address.",
-    "invalid_password" : "Your password contains at least 5 characters.",
+    "invalid_password" : "Your password must contain at least 5 characters.",
     "no_email" : "Please enter your email address.",
     "no_password" : "Please enter your password.",
     "error_toast_title" : "Error",
