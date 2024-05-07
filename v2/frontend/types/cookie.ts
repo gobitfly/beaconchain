@@ -1,5 +1,5 @@
 export enum COOKIE_KEY {
-  COOKIES_PREFERENCE = 'cookie-preference',
+  COOKIES_PREFERENCE = 'cookies-preference',
   CURRENCY= 'currency',
   REFRESH_TOKEN= 'refresh-token',
   ACCESS_TOKEN= 'access-token',
