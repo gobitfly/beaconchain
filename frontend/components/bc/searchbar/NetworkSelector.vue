@@ -144,7 +144,7 @@ function oneOptionChanged (index : number) {
     .content {
       position: relative;
       display: inline-flex;
-      width: 85px;
+      width: 98px;
       .label {
         display: inline-flex;
         flex-grow: 1;
@@ -164,9 +164,9 @@ function oneOptionChanged (index : number) {
     z-index: 1024;
     border-radius: var(--padding);
     left: 0px;
-    top: 21px;
+    top: 24px;
     @media (pointer: coarse) {
-      top: 31px;
+      top: 32px;
     }
     padding: var(--padding);
     @include fonts.small_text_bold;
