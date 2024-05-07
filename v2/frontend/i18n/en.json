@@ -46,7 +46,7 @@
     "copied": "Copied!"
   },
   "cookies": {
-    "text": "By using our site you agree to our use of cookies to deliver a better user experience.",
+    "text": ["By using our site you agree to our use of", "cookies", "to deliver a better user experience."],
     "accept_all": "Accept All",
     "only_necessary": "Only Necessary"
   },
