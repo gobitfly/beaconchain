@@ -119,16 +119,12 @@ const passwordError = ref<string|undefined>(undefined)
       position: relative;
       display: flex;
       flex-direction: column;
-      margin: auto;
+      margin: var(--padding) auto 0px auto;
       width: 80%;
 
       &:first-child {
-        margin-bottom: var(--padding-small);
+        padding-top: var(--padding-small)
       }
-      &:nth-child(2) {
-        margin-top: var(--padding-small);
-      }
-
       .label {
         margin-bottom: var(--padding-small);
       }
