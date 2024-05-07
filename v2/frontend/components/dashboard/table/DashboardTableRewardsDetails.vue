@@ -169,6 +169,7 @@ const openDuties = () => {
                 v-else-if="!item.hasNoReward"
                 :success="item.value?.status_count?.success!"
                 :failed="item.value?.status_count?.failed!"
+                :hide-percentage="true"
               />
               <div v-else class="text-disabled">
                 0 / 0
@@ -213,6 +214,7 @@ const openDuties = () => {
 }
 
 .details-container {
+  font-size: var(--small_text_font_size);
   padding: 14px 28px;
 
   .small-screen-value {
