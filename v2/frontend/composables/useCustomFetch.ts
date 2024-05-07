@@ -1,5 +1,6 @@
 import type { NitroFetchOptions } from 'nitropack'
 import { warn } from 'vue'
+import { useLogger } from '@nuxt/kit'
 import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
 import { mapping, type PathValues, API_PATH } from '~/types/customFetch'
@@ -24,6 +25,7 @@ export function useCustomFetch () {
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
+  const logger = useLogger('fetch', {})
 
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
@@ -56,7 +58,7 @@ export function useCustomFetch () {
     const method = options.method || map.method || 'GET'
 
     if (process.server && logIp === 'LOG') {
-      warn(`x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}`)
+      logger.error(new Error(`x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`), headers)
     }
 
     // For non GET method's we need to set the csrf header for security
