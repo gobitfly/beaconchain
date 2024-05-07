@@ -19,6 +19,8 @@ function addQueryParams (path: string, query?: PathValues) {
 
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
+  const xForwardedFor = useRequestHeader('x-forwarded-for')
+  const xRealIp = useRequestHeader('x-real-ip')
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
@@ -38,7 +40,7 @@ export function useCustomFetch () {
     }
 
     const url = useRequestURL()
-    const { public: { apiClient, legacyApiClient, apiKey, domain }, private: pConfig } = useRuntimeConfig()
+    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = useRuntimeConfig()
     const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
@@ -52,6 +54,10 @@ export function useCustomFetch () {
     }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
+
+    if (process.server && logIp === 'LOG') {
+      warn(`x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}`)
+    }
 
     // For non GET method's we need to set the csrf header for security
     if (method !== 'GET') {
