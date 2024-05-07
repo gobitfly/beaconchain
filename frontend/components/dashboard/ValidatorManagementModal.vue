@@ -476,11 +476,12 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     .labels {
       display: flex;
       gap: var(--padding-small);
-      &.premiumLimit{
+
+      &.premiumLimit {
         color: var(--negative-color);
       }
 
-      @media (max-width: 959px) {
+      @media (max-width: 450px) {
         flex-direction: column;
       }
     }
