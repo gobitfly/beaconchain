@@ -278,6 +278,6 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
-	// TODO @recy21
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, groupId, cursor, colSort, search, limit)
 }
