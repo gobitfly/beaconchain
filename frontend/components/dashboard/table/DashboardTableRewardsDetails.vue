@@ -214,6 +214,7 @@ const openDuties = () => {
 }
 
 .details-container {
+  font-size: var(--small_text_font_size);
   padding: 14px 28px;
 
   .small-screen-value {
