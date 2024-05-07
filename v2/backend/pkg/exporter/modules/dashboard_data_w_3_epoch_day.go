@@ -54,11 +54,11 @@ func (d *epochToDayAggregator) dayAggregate(currentExportedEpoch uint64) error {
 // used to retrieve missing historic epochs in database for rolling 24h aggregation
 // intentedHeadEpoch is the head you currently want to export
 func (d *epochToDayAggregator) getMissingRolling24TailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
-	return d.rollingAggregator.getMissingRollingTailEpochs(1, intendedHeadEpoch, "validator_dashboard_data_rolling_daily")
+	return d.rollingAggregator.getMissingRollingTailEpochs(1, intendedHeadEpoch, edb.RollingDailyWriterTable)
 }
 
 func (d *epochToDayAggregator) rolling24hAggregate(currentEpochHead uint64) error {
-	return d.rollingAggregator.Aggregate(1, "validator_dashboard_data_rolling_daily", currentEpochHead)
+	return d.rollingAggregator.Aggregate(1, edb.RollingDailyWriterTable, currentEpochHead)
 }
 
 // Returns the epoch_start and epoch_end (the epoch bounds of a UTC day) for a given epoch.
@@ -151,13 +151,13 @@ func (d *epochToDayAggregator) aggregateUtcDayWithBounds(firstEpochOfDay, lastEp
 		StartEpoch:           firstEpochOfDay,
 		EndEpoch:             lastEpochOfDay,
 		StartBoundEpoch:      int64(boundsStart),
-		TableFrom:            "validator_dashboard_data_epoch",
-		TableTo:              "validator_dashboard_data_daily",
+		TableFrom:            edb.EpochWriterTableName,
+		TableTo:              edb.DayWriterTableName,
 		TableFromEpochColumn: "epoch",
 		Log:                  d.log,
-		TailBalancesQuery: `balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $3
-		),`,
+		TailBalancesQuery: fmt.Sprintf(`balance_starts as (
+				SELECT validator_index, balance_start FROM %s WHERE epoch = $3
+		),`, edb.EpochWriterTableName),
 		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
 		TailBalancesInsertColumnQuery: `balance_start,`,
 		TableDayColum:                 "day,",
@@ -181,11 +181,11 @@ func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, ti
 
 func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily_%s_%s
-		PARTITION OF validator_dashboard_data_daily
-			FOR VALUES FROM ('%s') TO ('%s')
+		CREATE TABLE IF NOT EXISTS %[5]s_%[1]s_%[2]s
+		PARTITION OF %[5]s
+			FOR VALUES FROM ('%[3]s') TO ('%[4]s')
 		`,
-		dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo), dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo),
+		dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo), dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo), edb.DayWriterTableName,
 	))
 	return err
 }
@@ -238,31 +238,31 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochEnd, 1)
 
 	var found bool
-	err = db.AlloyWriter.Get(&found, `
-		SELECT true FROM validator_dashboard_data_hourly WHERE epoch_start = $1 LIMIT 1 
-	`, dayOldBoundsStart)
+	err = db.AlloyWriter.Get(&found, fmt.Sprintf(`
+		SELECT true FROM %s WHERE epoch_start = $1 LIMIT 1 
+	`, edb.HourWriterTableName), dayOldBoundsStart)
 	if err != nil || !found {
-		return errors.Wrap(err, fmt.Sprintf("failed to check if tail validator_dashboard_data_hourly epoch_start %v exists", dayOldBoundsStart))
+		return errors.Wrap(err, fmt.Sprintf("failed to check if tail %s epoch_start %v exists", edb.HourWriterTableName, dayOldBoundsStart))
 	}
 
 	latestHourlyStartBound, _ := getHourAggregateBounds(latestHourlyEpoch - 1) // excl
 	d.log.Infof("latestHourlyEpoch (excl): %d, dayOldHourlyEpoch: %d, latestHourlyStartBound (incl): %d", latestHourlyEpoch, dayOldBoundsStart, latestHourlyStartBound)
 
-	_, err = tx.Exec(`TRUNCATE validator_dashboard_data_rolling_daily`)
+	_, err = tx.Exec(fmt.Sprintf(`TRUNCATE %s`, edb.RollingDailyWriterTable))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete old rolling 24h aggregate")
 	}
 
-	_, err = tx.Exec(`
+	_, err = tx.Exec(fmt.Sprintf(`
 		WITH
 			epoch_ends as (
-				SELECT max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly WHERE epoch_start = $2 LIMIT 1
+				SELECT max(epoch_end) as epoch_end FROM %[2]s WHERE epoch_start = $2 LIMIT 1
 			),
 			balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_hourly WHERE epoch_start = $1
+				SELECT validator_index, balance_start FROM %[2]s WHERE epoch_start = $1
 			),
 			balance_ends as (
-				SELECT validator_index, balance_end FROM validator_dashboard_data_hourly WHERE epoch_start = $2
+				SELECT validator_index, balance_end FROM %[2]s WHERE epoch_start = $2
 			),
 			aggregate as (
 				SELECT 
@@ -305,11 +305,11 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 					MAX(slashed_by) as slashed_by,
 					MAX(slashed_violation) as slashed_violation,
 					MAX(last_executed_duty_epoch) as last_executed_duty_epoch		
-				FROM validator_dashboard_data_hourly
+				FROM %[2]s
 				WHERE epoch_start >= $1 AND epoch_start <= $2
 				GROUP BY validator_index
 			)
-			INSERT INTO validator_dashboard_data_rolling_daily (
+			INSERT INTO %[1]s (
 				validator_index,
 				epoch_start,
 				epoch_end,
@@ -401,7 +401,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
-	`, dayOldBoundsStart, latestHourlyStartBound)
+	`, edb.RollingDailyWriterTable, edb.HourWriterTableName), dayOldBoundsStart, latestHourlyStartBound)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert rolling 24h aggregate")

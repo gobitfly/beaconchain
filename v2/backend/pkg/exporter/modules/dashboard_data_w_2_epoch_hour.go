@@ -35,13 +35,13 @@ func newEpochToHourAggregator(d *dashboardData) *epochToHourAggregator {
 }
 
 func (d *epochToHourAggregator) clearOldHourAggregations(removeBelowEpoch int64) error {
-	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_hourly")
+	partitions, err := edb.GetPartitionNamesOfTable(edb.HourWriterTableName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get partitions")
 	}
 
 	for _, partition := range partitions {
-		epochFrom, epochTo, err := parseEpochRange(`validator_dashboard_data_hourly_(\d+)_(\d+)`, partition)
+		epochFrom, epochTo, err := parseEpochRange(fmt.Sprintf(`%s_(\d+)_(\d+)`, edb.HourWriterTableName), partition)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse epoch range")
 		}
@@ -151,20 +151,20 @@ func (d *epochToHourAggregator) getHourRetentionDurationEpochs() uint64 {
 
 func (d *epochToHourAggregator) createHourlyPartition(epochStartFrom, epochStartTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS validator_dashboard_data_hourly_%d_%d 
-		PARTITION OF validator_dashboard_data_hourly
+		CREATE TABLE IF NOT EXISTS %[3]s_%[1]d_%[2]d 
+		PARTITION OF %[3]s
 			FOR VALUES FROM (%[1]d) TO (%[2]d)
 		`,
-		epochStartFrom, epochStartTo,
+		epochStartFrom, epochStartTo, edb.HourWriterTableName,
 	))
 	return err
 }
 
 func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStartTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		DROP TABLE IF EXISTS validator_dashboard_data_hourly_%d_%d
+		DROP TABLE IF EXISTS %s_%d_%d
 		`,
-		epochStartFrom, epochStartTo,
+		edb.HourWriterTableName, epochStartFrom, epochStartTo,
 	))
 
 	return err
@@ -188,7 +188,7 @@ func (d *epochToHourAggregator) aggregate1hWithBounds(epochStart, epochEnd uint6
 	boundsStart, _ := getHourAggregateBounds(epochStart)
 
 	if epochStart == partitionStartRange && debugAddToColumnEngine {
-		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("validator_dashboard_data_hourly_%d_%d", partitionStartRange, partitionEndRange))
+		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("%s_%d_%d", edb.HourWriterTableName, partitionStartRange, partitionEndRange))
 		if err != nil {
 			d.log.Warnf("Failed to add epoch to column engine: %v", err)
 		}
@@ -200,13 +200,13 @@ func (d *epochToHourAggregator) aggregate1hWithBounds(epochStart, epochEnd uint6
 		StartEpoch:           epochStart,
 		EndEpoch:             epochEnd,
 		StartBoundEpoch:      int64(boundsStart),
-		TableFrom:            "validator_dashboard_data_epoch",
-		TableTo:              "validator_dashboard_data_hourly",
+		TableFrom:            edb.EpochWriterTableName,
+		TableTo:              edb.HourWriterTableName,
 		TableFromEpochColumn: "epoch",
 		Log:                  d.log,
-		TailBalancesQuery: `balance_starts as (
-				SELECT validator_index, balance_start FROM validator_dashboard_data_epoch WHERE epoch = $3
-		),`,
+		TailBalancesQuery: fmt.Sprintf(`balance_starts as (
+				SELECT validator_index, balance_start FROM %s WHERE epoch = $3
+		),`, edb.EpochWriterTableName),
 		TailBalancesJoinQuery:         `LEFT JOIN balance_starts ON aggregate_head.validator_index = balance_starts.validator_index`,
 		TailBalancesInsertColumnQuery: `balance_start,`,
 		TableConflict:                 "(epoch_start, validator_index)",

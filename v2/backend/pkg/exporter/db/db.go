@@ -834,19 +834,19 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 func GetLatestDashboardEpoch() (uint64, error) {
 	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
 	return lastEpoch, err
 }
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
 	return epoch, err
 }
 
 func GetMinOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
 	return epoch, err
 }
 
@@ -863,25 +863,25 @@ type DayBounds struct {
 
 func GetLastExportedTotalEpoch() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM validator_dashboard_data_rolling_total")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s", RollingTotalWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedHour() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM validator_dashboard_data_hourly")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s", HourWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedDay() (*DayBounds, error) {
 	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %s ORDER BY day DESC LIMIT 1", DayWriterTableName))
 	return &epoch, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -904,14 +904,14 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 		// for large ranges we use a different approach to avoid making tons of selects
 		// this performs better for large ranges but is slow for short ranges
 		var epochs []uint64
-		err := db.AlloyWriter.Select(&epochs, `
+		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
 			WITH
 			epoch_range AS (
 				SELECT generate_series($1::bigint, $2::bigint) AS epoch
 			),
 			distinct_present_epochs AS (
 				SELECT DISTINCT epoch
-				FROM validator_dashboard_data_epoch
+				FROM %s
 				WHERE epoch >= $1 AND epoch <= $2
 			)
 			SELECT epoch_range.epoch
@@ -919,7 +919,7 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
 			WHERE distinct_present_epochs.epoch IS NULL
 			ORDER BY epoch_range.epoch
-		`, start, end-1)
+		`, EpochWriterTableName), start, end-1)
 		return epochs, err
 	}
 
@@ -929,7 +929,7 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 		if epoch != start {
 			query += " UNION "
 		}
-		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM validator_dashboard_data_epoch WHERE epoch = %[1]d LIMIT 1)`, epoch)
+		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
 	}
 
 	query += `) AS result_array;`
@@ -987,3 +987,13 @@ func AddToColumnEngineAllColumns(table string) error {
 		`, table))
 	return err
 }
+
+const EpochWriterTableName = "validator_dashboard_data_epoch"
+const DayWriterTableName = "validator_dashboard_data_daily"
+const HourWriterTableName = "validator_dashboard_data_hourly"
+
+const RollingTotalWriterTableName = "validator_dashboard_data_rolling_total"
+const RollingDailyWriterTable = "validator_dashboard_data_rolling_daily"
+const RollingWeeklyWriterTable = "validator_dashboard_data_rolling_weekly"
+const RollingMonthlyWriterTable = "validator_dashboard_data_rolling_monthly"
+const RollingNinetyDaysWriterTable = "validator_dashboard_data_rolling_90d"
