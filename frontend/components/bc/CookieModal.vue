@@ -25,11 +25,11 @@ const visible = ref(cookiePreference.value === undefined)
         {{ $t('cookies.text') }}
       </div>
       <div class="button-container">
-        <Button @click="setCookiePreference('all')">
-          {{ $t('cookies.accept_all') }}
-        </Button>
         <Button class="necessary-button" @click="setCookiePreference('functional')">
           {{ $t('cookies.only_necessary') }}
+        </Button>
+        <Button @click="setCookiePreference('all')">
+          {{ $t('cookies.accept_all') }}
         </Button>
       </div>
     </div>
