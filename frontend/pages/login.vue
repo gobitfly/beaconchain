@@ -23,7 +23,13 @@ function validateAddress (value: string) : true|string {
 }
 
 function validatePassword (value: string) : true|string {
-  return (value && value.length > 5) || t('login.no_password')
+  if (!value) {
+    return t('login.no_password')
+  }
+  if (value.length < 5) {
+    return t('login.invalid_password')
+  }
+  return true
 }
 
 const onSubmit = handleSubmit(async (values) => {
@@ -100,7 +106,6 @@ const passwordError = ref<string|undefined>(undefined)
   margin-top: 60px;
   margin-bottom: 50px;
   padding: var(--padding);
-  border: 1px solid var(--primary-color);
 
   form {
     @include fonts.standard_text;
@@ -114,16 +119,12 @@ const passwordError = ref<string|undefined>(undefined)
       position: relative;
       display: flex;
       flex-direction: column;
-      margin: auto;
+      margin: var(--padding) auto 0px auto;
       width: 80%;
 
       &:first-child {
-        margin-bottom: var(--padding-small);
+        padding-top: var(--padding-small)
       }
-      &:nth-child(2) {
-        margin-top: var(--padding-small);
-      }
-
       .label {
         margin-bottom: var(--padding-small);
       }

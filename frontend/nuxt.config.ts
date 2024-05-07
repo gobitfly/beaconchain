@@ -33,7 +33,8 @@ export default defineNuxtConfig({
       apiKey: '',
       gitVersion,
       domain: '',
-      logIp: ''
+      logIp: '',
+      showInDevelopment: ''
     },
     private: {
       apiServer: '',
