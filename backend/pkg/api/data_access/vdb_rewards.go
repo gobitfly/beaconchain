@@ -126,13 +126,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					FROM users_val_dashboards_validators
 					WHERE dashboard_id = $1 AND validator_index = $2
 					`, dashboardId.Id, indexSearch)
-				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					// Index not in the dashboard
-					return nil, nil, err
+				if err != nil {
+					if !errors.Is(err, sql.ErrNoRows) {
+						return nil, nil, err
+					}
+				} else {
+					// Index in the dashboard, add the group to the search
+					queryParams = append(queryParams, groupIdSearch)
+					groupIdSearchQuery = fmt.Sprintf("OR v.group_id = $%d", len(queryParams))
 				}
-
-				queryParams = append(queryParams, groupIdSearch)
-				groupIdSearchQuery = fmt.Sprintf("OR v.group_id = $%d", len(queryParams))
 			}
 			queryParams = append(queryParams, search)
 			whereQuery += fmt.Sprintf(` AND (g.name ILIKE ($%d||'%%') %s %s)`, len(queryParams), epochSearchQuery, groupIdSearchQuery)
