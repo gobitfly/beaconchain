@@ -75,10 +75,10 @@ type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uin
 // ------------------------------------------------------------
 // Rewards Tab
 type VDBRewardesTableDuty struct {
-	Attestation *float64 `json:"attestation"`
-	Proposal    *float64 `json:"proposal"`
-	Sync        *float64 `json:"sync"`
-	Slashing    *uint64  `json:"slashing"`
+	Attestation *float64 `json:"attestation,omitempty"`
+	Proposal    *float64 `json:"proposal,omitempty"`
+	Sync        *float64 `json:"sync,omitempty"`
+	Slashing    *uint64  `json:"slashing,omitempty"`
 }
 
 type VDBRewardsTableRow struct {
