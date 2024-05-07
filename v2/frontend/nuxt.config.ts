@@ -32,7 +32,8 @@ export default defineNuxtConfig({
       legacyApiClient: '',
       apiKey: '',
       gitVersion,
-      domain: ''
+      domain: '',
+      logIp: ''
     },
     private: {
       apiServer: '',
@@ -66,6 +67,7 @@ export default defineNuxtConfig({
       autoprefixer: {}
     }
   },
+  debug: true,
   build: {
     transpile: ['echarts', 'zrender', 'tslib', 'resize-detector']
   }

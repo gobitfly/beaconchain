@@ -345,6 +345,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   flex-direction: column;
   gap: var(--padding);
   padding: var(--padding);
+  font-size: var(--small_text_font_size);
 
   .row {
     display: flex;

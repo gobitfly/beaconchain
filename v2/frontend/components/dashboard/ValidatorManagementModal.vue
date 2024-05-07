@@ -43,10 +43,11 @@ const hasNoOpenDialogs = ref(true)
 
 const size = computed(() => {
   return {
-    expandable: width.value < 960,
-    showBalance: width.value >= 960,
-    showGroup: width.value >= 760,
-    showWithdrawalCredentials: width.value >= 560
+    expandable: width.value < 970,
+    showBalance: width.value >= 970,
+    showGroup: width.value >= 835,
+    showWithdrawalCredentials: width.value >= 660,
+    showPublicKey: width.value >= 480
   }
 })
 
@@ -273,7 +274,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
           >
             <Column field="index" :sortable="true" :header="$t('dashboard.validator.col.index')" />
 
-            <Column field="public_key" :sortable="!size.expandable" :header="$t('dashboard.validator.col.public_key')">
+            <Column v-if="size.showPublicKey" field="public_key" :sortable="!size.expandable" :header="$t('dashboard.validator.col.public_key')">
               <template #body="slotProps">
                 <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
               </template>
@@ -299,7 +300,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.balance')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.balance" />
+                <div class="balance-col">
+                  <BcFormatValue :value="slotProps.data.balance" />
+                </div>
               </template>
             </Column>
             <Column
@@ -323,7 +326,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
-                <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                <div class="withdrawal-col">
+                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                </div>
               </template>
             </Column>
             <Column field="action">
@@ -341,6 +346,12 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             </Column>
             <template #expansion="slotProps">
               <div class="expansion">
+                <div class="info">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.public_key') }}
+                  </div>
+                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                </div>
                 <div class="info">
                   <div class="label">
                     {{ $t('dashboard.validator.col.balance') }}
@@ -465,11 +476,12 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     .labels {
       display: flex;
       gap: var(--padding-small);
-      &.premiumLimit{
+
+      &.premiumLimit {
         color: var(--negative-color);
       }
 
-      @media (max-width: 959px) {
+      @media (max-width: 450px) {
         flex-direction: column;
       }
     }
@@ -488,13 +500,19 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   margin-left: var(--padding-small);
 }
 
-.action-col {
-  width: 94px;
-  display: flex;
-  justify-content: flex-end;
+.balance-col {
+  width: 110px;
 }
 
-@media (max-width: 959px) {
+.withdrawal-col {
+  width: 200px
+}
+
+.action-col {
+  width: 10px;
+}
+
+@media (max-width: 969px) {
   :deep(.edit-button) {
     padding: 8px 6px;
 
@@ -507,18 +525,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     width: unset;
   }
 
-  .action-col {
-    width: 33px;
-  }
-
   :deep(.status-col) {
     .p-column-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 20px;
+      width: 35px;
     }
-
   }
 }
 
@@ -528,6 +538,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   display: flex;
   flex-direction: column;
   gap: var(--padding);
+  font-size: var(--small_text_font_size);
 
   .info {
     display: flex;

@@ -632,7 +632,7 @@ function informationIfHiddenResults () : string {
   &.embedded {
     height: 30px;
     &.dropdown-is-opened {
-      @media (max-width: 470px) { // narrow window/screen
+      @media (max-width: 510px) { // narrow window/screen
         position: absolute;
         left: 0px;
         right: 0px;
@@ -789,7 +789,7 @@ function informationIfHiddenResults () : string {
       max-height: 270px;
       overflow: auto;
       padding-bottom: 4px;
-      @include fonts.standard_text;
+
       &.discreet {
         color: var(--searchbar-text-discreet);
       }
@@ -806,14 +806,12 @@ function informationIfHiddenResults () : string {
 
           .suggestionrow-container {
             position: relative;
-
             .separation-between-suggestions {
               position: relative;
-              display: none;
               margin-left: 8px;
               margin-right: 8px;
               height: 1px;
-
+              display: none;
               &.embedded {
                 @media (max-width: 599.9px) { // mobile
                   display: block;
