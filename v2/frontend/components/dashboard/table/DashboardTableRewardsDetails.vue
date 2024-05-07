@@ -244,17 +244,16 @@ const openDuties = () => {
   }
 
   .rewards-container {
-
     display: flex;
     flex-wrap: wrap;
     gap: var(--padding-xl);
+    font-size: var(--small_text_font_size);
 
     .rewards-group {
       display: flex;
       width: 360px;
 
       .col {
-
         >div,
         >span {
           height: 32px;
@@ -263,7 +262,7 @@ const openDuties = () => {
 
           &:last-child {
             border-top: solid 1px var(--container-border-color);
-            font-weight: var(--standard_text_medium_font_weight);
+            font-weight: var(--small_text_bold_font_weight);
           }
         }
 
@@ -305,7 +304,7 @@ const openDuties = () => {
 
         &:last-child {
           border-top: solid 1px var(--container-border-color);
-          font-weight: var(--standard_text_medium_font_weight);
+          font-weight: var(--small_text_bold_font_weight);
         }
       }
     }
@@ -313,7 +312,6 @@ const openDuties = () => {
 }
 
 @media screen and (max-width: 1180px) {
-
   .details-container {
     .small-screen-value {
       display: flex;
@@ -322,7 +320,6 @@ const openDuties = () => {
 }
 
 @media screen and (max-width: 900px) {
-
   .details-container {
     width: 400px;
     padding: var(--padding) var(--padding-large);
