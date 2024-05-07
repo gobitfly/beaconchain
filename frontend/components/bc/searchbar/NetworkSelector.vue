@@ -119,7 +119,13 @@ function oneOptionChanged (index : number) {
         <label :for="String(line.chainId)" class="label">
           {{ line.label }}
         </label>
-        <IconNetwork :chain-id="line.chainId" :colored="true" :harmonize-perceived-size="true" class="icon" />
+        <IconNetwork
+          :chain-id="line.chainId"
+          :colored="true"
+          :harmonize-perceived-size="true"
+          :do-not-adapt-to-color-theme="barStyle==='discreet'"
+          class="icon"
+        />
       </div>
     </div>
   </div>
@@ -138,7 +144,7 @@ function oneOptionChanged (index : number) {
     .content {
       position: relative;
       display: inline-flex;
-      width: 85px;
+      width: 98px;
       .label {
         display: inline-flex;
         flex-grow: 1;
@@ -158,9 +164,9 @@ function oneOptionChanged (index : number) {
     z-index: 1024;
     border-radius: var(--padding);
     left: 0px;
-    top: 21px;
+    top: 24px;
     @media (pointer: coarse) {
-      top: 31px;
+      top: 32px;
     }
     padding: var(--padding);
     @include fonts.small_text_bold;

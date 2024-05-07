@@ -160,6 +160,7 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 
 <style lang="scss" scoped>
 @use '~/assets/css/utils.scss';
+@use '~/assets/css/fonts.scss';
 
 .header-row {
   height: 30px;
@@ -181,9 +182,9 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
       height: 30px;
+      @include fonts.button_text;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
-      font-weight: var(--standard_text_medium_font_weight);
       border-color: var(--button-color-active);
 
       >.p-menuitem-content {
