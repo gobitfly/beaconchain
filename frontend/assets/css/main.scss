@@ -58,43 +58,38 @@ a {
   * Scrollbar styling
 ***/
 * {
+  /* Firefox has only limited customisation, which should also work on Safari. */
+  /* this style only sets the default color for the track and thumb, unfortunately we can't change the drag color */
+  scrollbar-color: var(--scrollbar-thumb-color) transparent;
+  scrollbar-width: thin;
 
-  /* width */
-  ::-webkit-scrollbar {
-    width: 3px;
-    height: 3px;
+  /* Chrome: we must remove the styles above otherwise the styles below will not work correctly */
+  @supports (-webkit-appearance:none){
+    scrollbar-color: unset;
+    scrollbar-width: unset;
   }
-
-  /* Track */
+  /* Chrome: width */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  /* Chrome: track */
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-
-  /* Handle */
+  /* Chrome: handle */
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb-color);
   }
-
-  /* Handle on hover */
+  /* Chrome: handle on hover */
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover-color);
   }
-
-  /* Firefox has only limited customistion. Which should also work on Safari */
-  /* this style only set the default color for the track and thumb, unfortunatly we cant change the drag color */
-    scrollbar-color: var(--scrollbar-thumb-color) transaprent;
-    scrollbar-width: thin;
-
-    /* but for chrome we must remove this styles otherwise the above styles are not working correctly */
-    @supports (-webkit-appearance:none){
-      scrollbar-color: unset;
-      scrollbar-width: unset;
-    }
 }
 
-// To make a SVG monochromatic, assign it to the class `monochromatic`.
-// It will work if you replace every `fill="#..."` in the SVG with `class="colorX shape"` or `class="colorX background"` (with X depending on the color and as high as the number of colors)
-// and, in the <style> section of the SVG, you define every `.colorX {fill: #...}` accordingly.
+/** To make a SVG monochromatic, assign it to the class `monochromatic`.
+ *  It will work if you replace every `fill="#..."` in the SVG with `class="colorX shape"` or `class="colorX background"` (with X depending on the color and as high as the number of colors)
+ *  and, in the <style> section of the SVG, you define every `.colorX {fill: #...}` accordingly. */
 svg{
   &.monochromatic {
     .shape {

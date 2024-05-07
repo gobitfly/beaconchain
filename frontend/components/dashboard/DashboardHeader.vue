@@ -155,7 +155,10 @@ const title = computed(() => {
     .button-content {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+      &:has(.toggle) {
+        justify-content: space-between;
+      }
 
       .text {
         @include utils.truncate-text;
