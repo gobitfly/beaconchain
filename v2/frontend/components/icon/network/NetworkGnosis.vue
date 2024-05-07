@@ -18,4 +18,10 @@
 .color1 {
   fill: #187D61;
 }
+
+.pastel {
+  .color1 {
+    fill: #6EAB9A;
+  }
+}
 </style>
