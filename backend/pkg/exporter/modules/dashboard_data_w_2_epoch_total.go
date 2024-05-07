@@ -76,8 +76,8 @@ func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uin
 		StartEpoch:                    epochStart,
 		EndEpoch:                      epochEnd,
 		StartBoundEpoch:               0,
-		TableFrom:                     "validator_dashboard_data_epoch",
-		TableTo:                       "validator_dashboard_data_rolling_total",
+		TableFrom:                     edb.EpochWriterTableName,
+		TableTo:                       edb.RollingTotalWriterTableName,
 		TailBalancesInsertColumnQuery: "0 as balance_start,", // Since all validators start with a 0 balance until deposit is voted in, we can just set it to 0. Genesis validators will be set to 0 to unify the data access approach
 		TableFromEpochColumn:          "epoch",
 		Log:                           d.log,

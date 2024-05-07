@@ -248,7 +248,7 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 		StartEpoch:           startEpoch,
 		EndEpoch:             endEpoch,
 		StartBoundEpoch:      tailEnd,
-		TableFrom:            "validator_dashboard_data_epoch",
+		TableFrom:            edb.EpochWriterTableName,
 		TableTo:              tableName,
 		TableFromEpochColumn: "epoch",
 		Log:                  d.log,
@@ -514,7 +514,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 					sync_scheduled = NULLIF(COALESCE({{ .TableTo }}.sync_scheduled, 0) + EXCLUDED.sync_scheduled, 0),
 					sync_executed = NULLIF(COALESCE({{ .TableTo }}.sync_executed, 0) + EXCLUDED.sync_executed, 0),
 					sync_rewards = NULLIF(COALESCE({{ .TableTo }}.sync_rewards, 0) + EXCLUDED.sync_rewards, 0),
-					slashed = COALESCE(EXCLUDED.slashed, {{ .TableTo }}.slashed),
+					slashed = EXCLUDED.slashed OR {{ .TableTo }}.slashed,
 					balance_end = COALESCE(EXCLUDED.balance_end, {{ .TableTo }}.balance_end),
 					deposits_count = NULLIF(COALESCE({{ .TableTo }}.deposits_count, 0) + EXCLUDED.deposits_count, 0),
 					deposits_amount = NULLIF(COALESCE({{ .TableTo }}.deposits_amount, 0) + EXCLUDED.deposits_amount, 0),
@@ -581,7 +581,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 	result, err := tx.Exec(fmt.Sprintf(`
 		WITH
 			footer_balance_starts as (
-				SELECT validator_index, balance_end as balance_start FROM validator_dashboard_data_epoch WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from
+				SELECT validator_index, balance_end as balance_start FROM %[2]s WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from
 			),
 			aggregate_tail as (
 				SELECT 
@@ -620,10 +620,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					SUM(attestation_target_executed) as attestation_target_executed,
 					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
 					SUM(slasher_reward) as slasher_reward,
-					MAX(slashed_by) as slashed_by,
-					MAX(slashed_violation) as slashed_violation,
 					MAX(last_executed_duty_epoch) as last_executed_duty_epoch
-				FROM validator_dashboard_data_epoch
+				FROM %[2]s
 				WHERE epoch >= $1 AND epoch < $2
 				GROUP BY validator_index
 			),
@@ -670,7 +668,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 				FROM aggregate_tail  
 				LEFT JOIN footer_balance_starts ON aggregate_tail.validator_index = footer_balance_starts.validator_index
 			)
-			UPDATE %s AS v SET
+			UPDATE %[1]s AS v SET
 					attestations_source_reward = COALESCE(v.attestations_source_reward, 0) - result.attestations_source_reward,
 					attestations_target_reward = COALESCE(v.attestations_target_reward, 0) - result.attestations_target_reward,
 					attestations_head_reward = COALESCE(v.attestations_head_reward, 0) - result.attestations_head_reward,
@@ -711,7 +709,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 				FROM result
 				WHERE v.validator_index = result.validator_index;
 			
-	`, tableName), startEpoch, endEpoch)
+	`, tableName, edb.EpochWriterTableName), startEpoch, endEpoch)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to update rolling table")
