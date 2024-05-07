@@ -119,7 +119,13 @@ function oneOptionChanged (index : number) {
         <label :for="String(line.chainId)" class="label">
           {{ line.label }}
         </label>
-        <IconNetwork :chain-id="line.chainId" :colored="true" :harmonize-perceived-size="true" class="icon" />
+        <IconNetwork
+          :chain-id="line.chainId"
+          :colored="true"
+          :harmonize-perceived-size="true"
+          :do-not-adapt-to-color-theme="barStyle==='discreet'"
+          class="icon"
+        />
       </div>
     </div>
   </div>
