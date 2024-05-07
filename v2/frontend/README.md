@@ -31,6 +31,7 @@ Then type:
 cp .env-example .env
 ```
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
+The variable evoking the development is used to show/hide features and components that are not ready for production.
 
 Set the following mapping in your `/etc/hosts` file:
 ```
