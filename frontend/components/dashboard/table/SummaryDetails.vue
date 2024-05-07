@@ -152,5 +152,9 @@ const rowClass = (data:SummaryRow) => {
       }
     }
   }
+
+  .p-datatable-wrapper>.p-datatable-table>.p-datatable-tbody>tr>td {
+    font-size: var(--small_text_font_size);
+  }
 }
 </style>
