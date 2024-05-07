@@ -8,7 +8,7 @@ const setCookiePreference = (value: CookiesPreference) => {
   cookiePreference.value = value
 }
 
-const visible = ref(cookiePreference.value === undefined)
+const visible = computed(() => cookiePreference.value === undefined)
 const modalText = computed(() => formatMultiPartSpan($t, 'cookies.text', [undefined, 'link', undefined], [undefined, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', undefined]))
 
 </script>
