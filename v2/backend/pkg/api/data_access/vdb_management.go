@@ -152,7 +152,7 @@ func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string,
 	err = tx.Get(result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
-		RETURNING id, user_id, name, network, created_at
+		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
 	`, userId, network, name)
 	if err != nil {
 		return nil, err
@@ -478,7 +478,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			v.group_id,
 			g.name AS group_name
 		FROM users_val_dashboards_validators v
-		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+		INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
 		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}

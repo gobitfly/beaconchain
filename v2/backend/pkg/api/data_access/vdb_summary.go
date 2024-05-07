@@ -763,6 +763,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	return ret, nil
 }
 
+// allowed periods are: all_time, last_24h, last_7d, last_30d
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
 	var validators []uint64
 	if dashboardId.Validators == nil {

@@ -576,8 +576,11 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	}
 	groupId := v.checkGroupId(r.URL.Query().Get("group_id"), allowEmpty)
 	q := r.URL.Query()
-	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	// allowed periods are: all_time, last_24h, last_7d, last_30d
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last24h, enums.TimePeriods.Last7d, enums.TimePeriods.Last30d}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -725,14 +728,15 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardEpochHeatmap(w http.ResponseWriter, r *http.Request) {
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardHeatmap(*dashboardId)
+	// implicit time period is last hour
+	data, err := h.dai.GetValidatorDashboardEpochHeatmap(*dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -743,7 +747,34 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardDailyHeatmap(w http.ResponseWriter, r *http.Request) {
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	var v validationError
+	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
+	// allowed periods are: last_7d, last_30d, last_365d
+	allowedPeriods := []enums.Enum{enums.TimePeriods.Last7d, enums.TimePeriods.Last30d, enums.TimePeriods.Last365d}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardDailyHeatmap(*dashboardId, period)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardHeatmapResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
@@ -758,7 +789,33 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupHeatmap(*dashboardId, uint64(groupId), epoch)
+	data, err := h.dai.GetValidatorDashboardGroupEpochHeatmap(*dashboardId, uint64(groupId), epoch)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	date := v.checkDate(vars["date"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardGroupDailyHeatmap(*dashboardId, uint64(groupId), date)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -886,13 +943,20 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
-	var err error
+	var v validationError
+	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId)
+	pagingParams := v.checkPagingParams(q)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(*dashboardId, pagingParams.search)
 	if err != nil {
 		handleErr(w, err)
 		return
