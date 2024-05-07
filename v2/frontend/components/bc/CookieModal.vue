@@ -73,6 +73,7 @@ const visible = ref(cookiePreference.value === undefined)
     .necessary-button {
       background-color: var(--button-color-dark-pattern);
       border-color: var(--button-color-dark-pattern);
+      color: var(--button-text-color-dark-pattern);
     }
   }
 }
