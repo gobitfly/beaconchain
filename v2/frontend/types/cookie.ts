@@ -4,5 +4,6 @@ export enum COOKIE_KEY {
   ACCESS_TOKEN= 'access-token',
   VALIDATOR_DASHOBARD_KEY= 'validator-dashboard-key',
   ACCOUNT_DASHOBARD_KEY= 'account-dashboard-key',
-  USER_DASHBOARDS= 'user-dashboards'
+  USER_DASHBOARDS= 'user-dashboards',
+  SLOT_VIZ_SELECTED_CATEGORIES = 'slot-viz-selected-categories'
 }

@@ -4,17 +4,17 @@ import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slo
 interface Props {
   data: VDBSlotVizSlot,
   currentSlotId?: number,
-  selectedCategoris: SlotVizCategories[]
+  selectedCategories: SlotVizCategories[]
 }
 const props = defineProps<Props>()
 
 const data = computed(() => {
   const slot:VDBSlotVizSlot = {
     ...props.data,
-    attestations: props.selectedCategoris.includes('attestation') ? props.data.attestations : undefined,
-    proposal: props.selectedCategoris.includes('proposal') ? props.data.proposal : undefined,
-    slashing: props.selectedCategoris.includes('slashing') ? props.data.slashing : undefined,
-    sync: props.selectedCategoris.includes('sync') ? props.data.sync : undefined
+    attestations: props.selectedCategories.includes('attestation') ? props.data.attestations : undefined,
+    proposal: props.selectedCategories.includes('proposal') ? props.data.proposal : undefined,
+    slashing: props.selectedCategories.includes('slashing') ? props.data.slashing : undefined,
+    sync: props.selectedCategories.includes('sync') ? props.data.sync : undefined
   }
   let outer = ''
   const icons: SlotVizIcons[] = []
