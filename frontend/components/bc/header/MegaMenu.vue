@@ -895,6 +895,10 @@ const items = [
     url: '/dashboard'
   },
   {
+    label: $t('header.megamenu.pricing'),
+    url: '/pricing'
+  },
+  {
     label: $t('header.megamenu.notifications'),
     url: '/user/notifications'
   }
