@@ -12,12 +12,18 @@ const isYearly = ref(true)
         <div class="premium">
           Beaconcha.in Premium
         </div>
-        <h1 class="monitoring">
+        <div class="monitoring">
           Monitoring without limits on web and mobile.
-        </h1>
+        </div>
+      </div>
+      <div class="toggle-container">
+        <BcToggle v-model="isYearly" class="toggle" true-option="Yearly" false-option="Monthly" />
+        <div class="save-up-text">
+          SAVE UP TO 20%
+        </div>
       </div>
       <div>
-        <BcToggle v-model="isYearly" true-option="Yearly" false-option="Monthly" />
+        [Guppy] [Dolphin] [Orca]
       </div>
     </div>
   </BcPageWrapper>
@@ -27,6 +33,10 @@ const isYearly = ref(true)
 @use '~/assets/css/fonts.scss';
 
 .page-container {
+  // The pricing page uses unique font styles
+  font-family: var(--montserrat-family);
+  font-weight: var(--montserrat-medium);
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,14 +49,36 @@ const isYearly = ref(true)
     width: 100%;
     border: 1px solid var(--container-border-color);
     background: var(--container-background);
+    margin-bottom: 55px;
 
     .premium {
-      @include fonts.subtitle_text;
+      font-size: 18px;
       color: var(--primary-color);
+      margin-bottom: var(--padding);
     }
 
     .monitoring {
+      font-size: 32px;
+    }
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    gap: var(--padding);
+    margin-bottom: 55px;
+
+    .toggle{
+      font-size: 20px;
       margin-bottom: 0;
+    }
+
+    .save-up-text {
+      width: 75px;
+      color: var(--primary-color);
+      text-align: center;
+      font-size: 15px;
+      font-weight: var(--montserrat-semi-bold);
     }
   }
 }
