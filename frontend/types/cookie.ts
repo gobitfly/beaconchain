@@ -5,5 +5,5 @@ export enum COOKIE_KEY {
   VALIDATOR_DASHOBARD_KEY= 'validator-dashboard-key',
   ACCOUNT_DASHOBARD_KEY= 'account-dashboard-key',
   USER_DASHBOARDS= 'user-dashboards',
-  SLOT_VIZ_TOGGLE_STATES = 'slot-viz-toggle-states'
+  SLOT_VIZ_SELECTED_CATEGORIES = 'slot-viz-selected-categories'
 }
