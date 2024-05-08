@@ -140,6 +140,7 @@ const title = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: var(--padding);
   margin-bottom: var(--padding-large);
 
   .dashboard-title {
@@ -159,6 +160,8 @@ const title = computed(() => {
       &:has(.toggle) {
         justify-content: space-between;
       }
+      padding-left: var(--padding);
+      padding-right: var(--padding);
 
       .text {
         @include utils.truncate-text;
@@ -174,7 +177,7 @@ const title = computed(() => {
     }
 
     :deep(.p-menubar-root-list > .p-menuitem) {
-      width: 130px;
+      width: 145px;
     }
   }
 }
