@@ -14,10 +14,11 @@ import (
 type searchTypeKey string
 
 const (
-	validatorByIndex                 searchTypeKey = "validator_by_index"
-	validatorByPublicKey             searchTypeKey = "validator_by_public_key"
-	validatorsByDepositAddress       searchTypeKey = "validators_by_deposit_address"
-	validatorsByDepositEnsName       searchTypeKey = "validators_by_deposit_ens_name"
+	validatorByIndex           searchTypeKey = "validator_by_index"
+	validatorByPublicKey       searchTypeKey = "validator_by_public_key"
+	validatorsByDepositAddress searchTypeKey = "validators_by_deposit_address"
+	validatorsByDepositEnsName searchTypeKey = "validators_by_deposit_ens_name"
+	// nolint:gosec
 	validatorsByWithdrawalCredential searchTypeKey = "validators_by_withdrawal_credential"
 	validatorsByWithdrawalAddress    searchTypeKey = "validators_by_withdrawal_address"
 	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens"
