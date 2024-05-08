@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -17,6 +18,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+	result := make([]t.VDBRewardsTableRow, 0)
 	var paging t.Paging
 
 	// Initialize the cursor
@@ -47,19 +49,18 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				search = "0x" + search
 			}
 			search = strings.ToLower(search)
-			if utils.IsHash(search) {
-				// Get the current validator state to convert pubkey to index
-				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-				defer releaseLock()
-				if err != nil {
-					return nil, nil, err
-				}
-				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					indexSearch = int64(*index)
-				} else {
-					// No validator index for pubkey found, return empty results
-					return nil, &paging, nil
-				}
+
+			// Get the current validator state to convert pubkey to index
+			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			defer releaseLock()
+			if err != nil {
+				return nil, nil, err
+			}
+			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+				indexSearch = int64(*index)
+			} else {
+				// No validator index for pubkey found, return empty results
+				return result, &paging, nil
 			}
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
@@ -182,7 +183,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
 				}
 			} else {
-				return nil, &paging, nil
+				return result, &paging, nil
 			}
 		}
 
@@ -206,7 +207,6 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	// Create the result
-	result := make([]t.VDBRewardsTableRow, 0)
 	for _, res := range queryResult {
 		duty := t.VDBRewardesTableDuty{}
 		if res.AttestationsScheduled > 0 {
@@ -278,6 +278,313 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardDuties(dashboardId, epoch, groupId, cursor, colSort, search, limit)
+	result := make([]t.VDBEpochDutiesTableRow, 0)
+	var paging t.Paging
+
+	startTimeTotal := time.Now()
+
+	// Initialize the cursor
+	var currentCursor t.ValidatorDutiesCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.ValidatorDutiesCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+		}
+	}
+
+	// Prepare the sorting
+	sortSearchDirection := ">"
+	sortSearchOrder := " ASC"
+	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+		sortSearchDirection = "<"
+		sortSearchOrder = " DESC"
+	}
+
+	// Analyze the search term
+	indexSearch := int64(-1)
+	if search != "" {
+		if utils.IsHash(search) {
+			// Ensure that we have a "0x" prefix for the search term
+			if !strings.HasPrefix(search, "0x") {
+				search = "0x" + search
+			}
+			search = strings.ToLower(search)
+
+			// Get the current validator state to convert pubkey to index
+			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			defer releaseLock()
+			if err != nil {
+				return nil, nil, err
+			}
+			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+				indexSearch = int64(*index)
+			} else {
+				// No validator index for pubkey found, return empty results
+				return result, &paging, nil
+			}
+		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
+			indexSearch = int64(number)
+		}
+	}
+
+	queryResult := []struct {
+		ValidatorIndex              uint64          `db:"validator_index"`
+		TotalReward                 decimal.Decimal `db:"total_reward"`
+		AttestationsScheduled       uint64          `db:"attestations_scheduled"`
+		AttestationsSourceExecuted  uint64          `db:"attestation_source_executed"`
+		AttestationsSourceReward    int64           `db:"attestations_source_reward"`
+		AttestationsTargetExecuted  uint64          `db:"attestation_target_executed"`
+		AttestationsTargetReward    int64           `db:"attestations_target_reward"`
+		AttestationsHeadExecuted    uint64          `db:"attestation_head_executed"`
+		AttestationsHeadReward      int64           `db:"attestations_head_reward"`
+		SyncScheduled               uint64          `db:"sync_scheduled"`
+		SyncExecuted                uint64          `db:"sync_executed"`
+		SyncRewards                 int64           `db:"sync_rewards"`
+		Slashed                     bool            `db:"slashed"`
+		SlashedViolation            uint64          `db:"slashed_violation"`
+		SlasherReward               int64           `db:"slasher_reward"`
+		BlocksScheduled             uint64          `db:"blocks_scheduled"`
+		BlocksProposed              uint64          `db:"blocks_proposed"`
+		BlocksElReward              decimal.Decimal `db:"blocks_el_reward"`
+		BlocksClAttestationsReward  int64           `db:"blocks_cl_attestations_reward"`
+		BlocksClSyncAggregateReward int64           `db:"blocks_cl_sync_aggregate_reward"`
+	}{}
+
+	queryParams := []interface{}{}
+
+	joinQuery := ""
+
+	queryParams = append(queryParams, epoch)
+	whereQuery := fmt.Sprintf(`WHERE epoch = $%d
+		AND (
+			COALESCE(attestations_reward, 0) +
+			COALESCE(blocks_cl_reward,0) +
+			COALESCE(sync_rewards,0) +
+			CASE WHEN slashed THEN 1 ELSE 0 END +
+			COALESCE(slashed_violation,0) 
+		) > 0
+		`, len(queryParams))
+
+	orderQuery := ""
+
+	queryParams = append(queryParams, limit+1)
+	limitQuery := fmt.Sprintf(`LIMIT $%d
+	`, len(queryParams))
+
+	if dashboardId.Validators == nil {
+		joinQuery = `INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
+		`
+
+		queryParams = append(queryParams, dashboardId.Id)
+		whereQuery += fmt.Sprintf(`AND v.dashboard_id = $%d
+		`, len(queryParams))
+
+		if groupId != t.AllGroups {
+			queryParams = append(queryParams, groupId)
+			whereQuery += fmt.Sprintf(`AND group_id = $%d
+			`, len(queryParams))
+		}
+
+		if indexSearch != -1 {
+			queryParams = append(queryParams, indexSearch)
+			whereQuery += fmt.Sprintf(`AND e.validator_index = $%d"
+			`, len(queryParams))
+		}
+
+	} else {
+		// In case a list of validators is provided set the group to the default id
+		validators := make([]uint64, 0)
+		for _, validator := range dashboardId.Validators {
+			if indexSearch == -1 || validator.Index == uint64(indexSearch) {
+				validators = append(validators, validator.Index)
+			}
+		}
+		if len(validators) == 0 {
+			// No validators to search for
+			return result, &paging, nil
+		}
+
+		queryParams = append(queryParams, pq.Array(validators))
+		whereQuery += fmt.Sprintf(`AND e.validator_index = ANY($%d)
+		`, len(queryParams))
+	}
+
+	if colSort.Column == enums.VDBDutiesColumns.Validator {
+		if currentCursor.IsValid() {
+			// If we have a valid cursor only check the results before/after it
+			queryParams = append(queryParams, currentCursor.Index)
+			whereQuery += fmt.Sprintf(`AND e.validator_index%s$%d
+			`, sortSearchDirection, len(queryParams))
+		}
+		orderQuery = fmt.Sprintf(`ORDER BY e.validator_index %s
+		`, sortSearchOrder)
+	} else if colSort.Column == enums.VDBDutiesColumns.Reward {
+		if currentCursor.IsValid() {
+			// If we have a valid cursor only check the results before/after it
+			queryParams = append(queryParams, currentCursor.Reward, currentCursor.Index)
+
+			whereQuery += fmt.Sprintf(`AND (total_reward%[1]s$%[2]d OR (total_reward=$%[2]d AND e.validator_index%[1]s$%[3]d))
+			`, sortSearchDirection, len(queryParams)-1, len(queryParams))
+		}
+		orderQuery = fmt.Sprintf(`ORDER BY total_reward %[1]s, e.validator_index %[1]s
+		`, sortSearchOrder)
+	}
+
+	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
+	rewardsQuery := fmt.Sprintf(`
+		SELECT
+			e.validator_index,
+			(
+				COALESCE(e.blocks_el_reward, 0) +
+				CAST((
+					COALESCE(e.attestations_reward, 0) +
+					COALESCE(e.blocks_cl_reward, 0) +
+					COALESCE(e.sync_rewards, 0) +
+					COALESCE(e.slasher_reward, 0)
+				) AS numeric) * 10^9
+			) AS total_reward,	
+			COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
+			COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
+			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
+			COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
+			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
+			COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
+			COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
+			COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
+			COALESCE(e.sync_executed, 0) AS sync_executed,
+			COALESCE(e.sync_rewards, 0) AS sync_rewards,
+			COALESCE(e.slashed, false) AS slashed,
+			COALESCE(e.slashed_violation, 0) AS slashed_violation,
+			COALESCE(e.slasher_reward, 0) AS slasher_reward,
+			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
+			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
+			COALESCE(e.blocks_el_reward, 0) AS blocks_el_reward,
+			COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
+			COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
+		FROM validator_dashboard_data_epoch e
+		%s
+		%s
+		%s
+		%s`, joinQuery, whereQuery, orderQuery, limitQuery)
+
+	queryTime := time.Now()
+
+	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fmt.Println("Query time: ", time.Since(queryTime))
+
+	// Check if we need to fetch block status data
+	for _, res := range queryResult {
+		if res.BlocksScheduled > 0 {
+			// We need to fetch the block status data
+			break
+		}
+	}
+
+	// Create the result
+	cursorData := make([]t.ValidatorDutiesCursor, 0)
+	for _, res := range queryResult {
+		row := t.VDBEpochDutiesTableRow{
+			Validator: res.ValidatorIndex,
+		}
+
+		// Get attestation data
+		row.Duties.AttestationSource = d.getValidatorHistoryEvent(res.AttestationsSourceReward, res.AttestationsScheduled, res.AttestationsSourceExecuted)
+		row.Duties.AttestationTarget = d.getValidatorHistoryEvent(res.AttestationsTargetReward, res.AttestationsScheduled, res.AttestationsTargetExecuted)
+		row.Duties.AttestationHead = d.getValidatorHistoryEvent(res.AttestationsHeadReward, res.AttestationsScheduled, res.AttestationsHeadExecuted)
+
+		// Get sync data
+		row.Duties.Sync = d.getValidatorHistoryEvent(res.SyncRewards, res.SyncScheduled, res.SyncExecuted)
+		row.Duties.SyncCount = res.SyncExecuted
+
+		// Get slashing data
+		if res.Slashed || res.SlashedViolation > 0 {
+			slashedEvent := t.ValidatorHistoryEvent{
+				Income: utils.GWeiToWei(big.NewInt(res.SlasherReward)),
+			}
+			if res.Slashed {
+				if res.SlashedViolation > 0 {
+					slashedEvent.Status = "partial"
+				}
+				slashedEvent.Status = "failed"
+			} else if res.SlashedViolation > 0 {
+				slashedEvent.Status = "success"
+			}
+			row.Duties.Slashing = &slashedEvent
+		}
+
+		// Get proposal data
+		if res.BlocksScheduled > 0 {
+			proposalEvent := t.ValidatorHistoryProposal{
+				ElIncome:                     res.BlocksElReward,
+				ClAttestationInclusionIncome: utils.GWeiToWei(big.NewInt(res.BlocksClAttestationsReward)),
+				ClSyncInclusionIncome:        utils.GWeiToWei(big.NewInt(res.BlocksClSyncAggregateReward)),
+				ClSlashingInclusionIncome:    utils.GWeiToWei(big.NewInt(res.SlasherReward)),
+			}
+			if res.BlocksProposed == 0 {
+				proposalEvent.Status = "failed"
+			} else if res.BlocksProposed < res.BlocksScheduled {
+				proposalEvent.Status = "partial"
+			} else {
+				proposalEvent.Status = "success"
+			}
+			row.Duties.Proposal = &proposalEvent
+		}
+
+		result = append(result, row)
+		cursorData = append(cursorData, t.ValidatorDutiesCursor{
+			Index:  res.ValidatorIndex,
+			Reward: res.TotalReward,
+		})
+	}
+
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
+	}
+
+	// Remove the last entries from data
+	if moreDataFlag {
+		result = result[:limit]
+		cursorData = cursorData[:limit]
+	}
+
+	// Reverse the data if the cursor is reversed to correct it to the requested direction
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+		slices.Reverse(cursorData)
+	}
+
+	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	fmt.Println("Total time: ", time.Since(startTimeTotal))
+	fmt.Println("----------------------------------------------")
+
+	return result, p, nil
+}
+
+func (d *DataAccessService) getValidatorHistoryEvent(income int64, scheduledEvents, executedEvents uint64) *t.ValidatorHistoryEvent {
+	if scheduledEvents > 0 {
+		validatorHistoryEvent := t.ValidatorHistoryEvent{
+			Income: utils.GWeiToWei(big.NewInt(income)),
+		}
+		if executedEvents == 0 {
+			validatorHistoryEvent.Status = "failed"
+		} else if executedEvents < scheduledEvents {
+			validatorHistoryEvent.Status = "partial"
+		} else {
+			validatorHistoryEvent.Status = "success"
+		}
+		return &validatorHistoryEvent
+	}
+	return nil
 }
