@@ -20,8 +20,10 @@ import (
 
 type DataAccessor interface {
 	ValidatorDashboardRepository
+	SearchRepository
+	NetworkRepository
 
-	CloseDataAccessService()
+	Close()
 
 	GetUserInfo(email string) (*t.User, error)
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
@@ -199,7 +201,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	return &dataAccessService
 }
 
-func (d *DataAccessService) CloseDataAccessService() {
+func (d *DataAccessService) Close() {
 	if d.readerDb != nil {
 		d.readerDb.Close()
 	}

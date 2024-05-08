@@ -68,6 +68,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
+		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
+
 		{http.MethodPost, "/account-dashboards", hs.PublicPostAccountDashboards, hs.InternalPostAccountDashboards},
 		{http.MethodGet, "/account-dashboards/{dashboard_id}", hs.PublicGetAccountDashboard, hs.InternalGetAccountDashboard},
 		{http.MethodDelete, "/account-dashboards/{dashboard_id}", hs.PublicDeleteAccountDashboard, hs.InternalDeleteAccountDashboard},

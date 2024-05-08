@@ -109,3 +109,8 @@ type BlocksCursor struct {
 	Status   int64
 	Reward   int64
 }
+
+type NetworkInfo struct {
+	ChainId uint64
+	Name    string
+}
