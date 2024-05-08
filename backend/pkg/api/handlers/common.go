@@ -573,6 +573,7 @@ func newNotFoundErr(format string, args ...interface{}) error {
 // network helpers
 
 // network is a custom type for network chain IDs.
+// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
 type network int64
 
 func (v *validationError) checkNetwork(network network) network {
@@ -582,13 +583,14 @@ func (v *validationError) checkNetwork(network network) network {
 	return network
 }
 
-// implement json.Unmarshaler interface to allow unmarshalling network from chain ID or network name
 var _ json.Unmarshaler = (*network)(nil)
 
 func (n network) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n)
 }
 
+// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
+// if the inputted network is not found, it is set to -1.
 func (n *network) UnmarshalJSON(data []byte) error {
 	var chainId int64 = -1
 	var networkName string

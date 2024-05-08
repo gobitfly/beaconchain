@@ -1,5 +1,7 @@
 package types
 
+// search types to be used between the data access layer and the api layer, shouldn't be exported to typescript
+
 type SearchValidator struct {
 	Index     uint64
 	PublicKey Hash
