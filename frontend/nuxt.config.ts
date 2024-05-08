@@ -34,6 +34,7 @@ export default defineNuxtConfig({
       gitVersion,
       domain: '',
       logIp: '',
+      logFile: '',
       showInDevelopment: ''
     },
     private: {
