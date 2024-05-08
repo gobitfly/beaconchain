@@ -72,7 +72,6 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	searchResultChan := make(chan types.SearchResult)
 
 	// iterate over all combinations of search types and networks
-	// iterate over all combinations of search types and networks
 	for searchType := range searchTypeSet {
 		// check if input matches the regex for the search type
 		if !searchTypeToRegex[searchType].MatchString(req.Input) {
