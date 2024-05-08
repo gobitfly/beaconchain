@@ -25,6 +25,7 @@ export function useCustomFetch () {
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
   const { $bcLogger } = useNuxtApp()
+  const uuid = inject<{value: string}>('app-uuid')
 
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
@@ -57,7 +58,7 @@ export function useCustomFetch () {
     const method = options.method || map.method || 'GET'
 
     if (process.server && logIp === 'LOG') {
-      $bcLogger.warn(`fullPath: ${fullPath}, redirectedFrom: ${redirectedFrom}  x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
+      $bcLogger.warn(`${uuid?.value} | fullPath: ${fullPath}, redirectedFrom: ${redirectedFrom}  x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
     }
 
     // For non GET method's we need to set the csrf header for security
@@ -65,7 +66,7 @@ export function useCustomFetch () {
       if (csrfHeader.value) {
         options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
       } else {
-        $bcLogger.warn('missing csrf header!')
+        $bcLogger.warn(`${uuid?.value} | missing csrf header!`)
       }
     }
 

@@ -13,7 +13,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
             const filePath = path.resolve(logFile)
             fs.appendFileSync(filePath, `${ts}: ${msg} | ${JSON.stringify(rest)}\n`)
           }
-          warn(`${ts}: `, ...rest)
+          warn(`${ts}: ${msg}`, ...rest)
         }
       }
     }
