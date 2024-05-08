@@ -11,15 +11,26 @@ const percentage = 20
 <template>
   <BcPageWrapper>
     <div class="page-container">
-      <div>
-        Beaconcha.in/API Keys Toggle
-      </div>
-      <div class="header-line">
-        <div class="title">
-          {{ t('pricing.premium') }}
+      <div class="type-toggle-container">
+        <div class="premium">
+          <div class="text">
+            {{ t('pricing.premium') }}
+          </div>
         </div>
-        <div class="subtitle">
-          {{ t('pricing.subtitle') }}
+        <div class="api-keys" disabled>
+          <div class="text">
+            {{ t('pricing.API_keys') }}
+          </div>
+        </div>
+      </div>
+      <div class="header-line-container">
+        <div class="header-line">
+          <div class="title">
+            {{ t('pricing.premium') }}
+          </div>
+          <div class="subtitle">
+            {{ t('pricing.subtitle') }}
+          </div>
         </div>
       </div>
       <div class="toggle-container">
@@ -44,7 +55,9 @@ const percentage = 20
 @use '~/assets/css/fonts.scss';
 
 .page-container {
-  // The pricing page uses unique font styles
+  // The pricing page uses unique styling, dimensions, font settings and so on that are not used anywhere else
+  // That's why this component includes a lot of css
+  // If a new page is introduced that uses the same parameters, consider moving them to a shared location
   font-family: var(--montserrat-family);
   font-weight: var(--montserrat-medium);
 
@@ -53,23 +66,77 @@ const percentage = 20
   align-items: center;
   justify-content: center;
 
-  .header-line {
+  .type-toggle-container {
+    width: 237px;
+    height: 41px;
+    margin-top: 25px;
+    margin-bottom: 37px;
     display: flex;
-    flex-direction: column;
-    padding: 21px 0 21px 360px;
-    width: 100%;
-    border: 1px solid var(--container-border-color);
-    background: var(--container-background);
-    margin-bottom: 55px;
+    align-items: center;
 
-    .title {
-      font-size: 18px;
-      color: var(--primary-color);
-      margin-bottom: var(--padding);
+    // not interactive for beta launch
+    .premium {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      border-top-left-radius: 3px;
+      border-bottom-left-radius: 3px;
+      background: var(--button-color-active);
+
+      .text {
+        color: var(--primary-contrast-color);
+        font-size: 13px;
+        font-weight: var(--montserrat-semi-bold);
+        padding-left: 16px;
+      }
     }
 
-    .subtitle {
-      font-size: 32px;
+    .api-keys {
+      flex: 1;
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--container-background);
+      border-width: 1px 1px 1px 0;
+      border-style: solid;
+      border-color: var(--container-border-color);
+      border-top-right-radius: 3px;
+      border-bottom-right-radius: 3px;
+
+      .text {
+        color: var(--grey);
+        font-size: 14px;
+        font-weight: var(--montserrat-semi-bold);
+      }
+    }
+  }
+
+  .header-line-container {
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      padding: 21px 0;
+      border: 1px solid var(--container-border-color);
+      background: var(--container-background);
+      margin-bottom: 55px;
+
+      .header-line {
+        width: var(--content-width);
+        display: flex;
+        flex-direction: column;
+
+        .title {
+          font-size: 18px;
+          color: var(--primary-color);
+          margin-bottom: var(--padding);
+        }
+
+        .subtitle {
+          font-size: 32px;
+        }
     }
   }
 
