@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-
+const isYearly = ref(true)
 </script>
 
 <template>
@@ -17,7 +17,7 @@
         </h1>
       </div>
       <div>
-        Monthly/Yearly Toggle
+        <BcToggle v-model="isYearly" true-option="Yearly" false-option="Monthly" />
       </div>
     </div>
   </BcPageWrapper>
