@@ -52,6 +52,8 @@ import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 
 import { Target } from '~/types/links'
 
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
 const { t: $t } = useI18n()
 
 const minFullViewWidth = '1360px'
@@ -893,16 +895,20 @@ const items = [
   {
     label: $t('header.megamenu.dashboard'),
     url: '/dashboard'
-  },
-  {
-    label: $t('header.megamenu.pricing'),
-    url: '/pricing'
-  },
-  {
-    label: $t('header.megamenu.notifications'),
-    url: '/user/notifications'
   }
 ]
+
+if (showInDevelopment) {
+  items.push({
+    label: $t('header.megamenu.pricing'),
+    url: '/pricing'
+  })
+}
+
+items.push({
+  label: $t('header.megamenu.notifications'),
+  url: '/user/notifications'
+})
 </script>
 
 <template>
