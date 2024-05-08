@@ -3,8 +3,7 @@ interface Props {
   trueOption?: string,
   falseOption?: string,
 }
-const props = defineProps<Props>()
-console.log(props) // TODO: Remove once done :()
+defineProps<Props>()
 
 const selected = defineModel<boolean>({ required: true })
 
