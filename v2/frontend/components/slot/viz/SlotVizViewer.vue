@@ -3,12 +3,14 @@ import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { type SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
 import { IconSlotAttestation, IconSlotBlockProposal, IconSlotSlashing, IconSlotSync } from '#components'
+import { COOKIE_KEY } from '~/types/cookie'
+
 interface Props {
   data: SlotVizEpoch[]
 }
 const props = defineProps<Props>()
 
-const selectedCategoris = shallowRef<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
+const selectedCategoris = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_TOGGLE_STATES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 
 const icons:{ component: Component, value: SlotVizCategories }[] = [
   {
