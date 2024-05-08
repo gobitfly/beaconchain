@@ -31,11 +31,22 @@ type HandlerService struct {
 }
 
 func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+	if allNetworks == nil {
+		networks, err := dataAccessor.GetAllNetworks()
+		if err != nil {
+			log.Fatal(err, "error getting networks for handler", 0, nil)
+		}
+		allNetworks = networks
+	}
+
 	return &HandlerService{
 		dai: dataAccessor,
 		scs: sessionManager,
 	}
 }
+
+// all allNetworks available in the system, filled on startup in NewHandlerService
+var allNetworks []types.NetworkInfo
 
 // --------------------------------------
 
@@ -44,10 +55,14 @@ var (
 	reName                       = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
 	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	//reAccountDashboardPublicId   = regexp.MustCompile(`^a-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPubkey = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
-	reCursor          = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
-	reEmail           = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	reValidatorPublicKey         = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
+	reEthereumAddress            = regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
+	reWithdrawalCredential       = regexp.MustCompile(`^0x00[0-9a-fA-F]{62}$`)
+	reWithdrawalAddress          = regexp.MustCompile(`^0x01[0-9a-fA-F]{62}$`)
+	reEnsName                    = regexp.MustCompile(`^.+\.eth$`)
+	reNonEmpty                   = regexp.MustCompile(`^\s*\S.*$`)
+	reCursor                     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
+	reEmail                      = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 )
 
 const (
@@ -79,7 +94,7 @@ type Paging struct {
 // All changes to common functions MUST NOT break any public handler behavior (not in effect yet)
 
 // --------------------------------------
-//   Validation
+//   Input Validation
 
 // validationError is a map of parameter names to error messages.
 // It is used to collect multiple validation errors before returning them to the user.
@@ -188,6 +203,7 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 	if !result.Valid() {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
+		return nil
 	}
 
 	// Decode into the target data structure
@@ -311,12 +327,12 @@ func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 }
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
-func (v *validationError) checkExistingGroupId(param string) int64 {
+func (v *validationError) checkExistingGroupId(param string) uint64 {
 	id := v.checkGroupId(param, forbidEmpty)
 	if id < 0 {
 		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
 	}
-	return id
+	return uint64(id)
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
@@ -365,7 +381,7 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 // precondition: the enum is the same type as the allowed enums.
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
-		// expected error message is already set
+		v.add(name, "parameter is missing or invalid, please check the API documentation")
 		return
 	}
 	for _, a := range allowed {
@@ -426,7 +442,7 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 	for _, validator := range validators {
 		if reNumber.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
-		} else if reValidatorPubkey.MatchString(validator) {
+		} else if reValidatorPublicKey.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
 			if err != nil {
 				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
@@ -437,16 +453,6 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 		}
 	}
 	return indexes, publicKeys
-}
-
-func (v *validationError) checkNetwork(network string) uint64 {
-	// try parsing as uint64
-	networkId, err := strconv.ParseUint(network, 10, 64)
-	if err != nil {
-		// TODO try to match string with network name
-		v.add("network", fmt.Sprintf("given value '%s'is not a valid network id", network))
-	}
-	return networkId
 }
 
 func (v *validationError) checkDate(dateString string) time.Time {
@@ -561,4 +567,57 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+// --------------------------------------
+// network helpers
+
+// network is a custom type for network chain IDs.
+type network int64
+
+func (v *validationError) checkNetwork(network network) network {
+	if network == -1 {
+		v.add("network", "given value is not a valid network")
+	}
+	return network
+}
+
+// implement json.Unmarshaler interface to allow unmarshalling network from chain ID or network name
+var _ json.Unmarshaler = (*network)(nil)
+
+func (n network) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n)
+}
+
+func (n *network) UnmarshalJSON(data []byte) error {
+	var chainId int64 = -1
+	var networkName string
+
+	// Try to unmarshal as either chain ID or network name
+	if err := json.Unmarshal(data, &chainId); err != nil {
+		// If unmarshalling as chain ID fails, try unmarshalling as network name
+		if err := json.Unmarshal(data, &networkName); err != nil {
+			return fmt.Errorf("failed to unmarshal network from json: %s", err)
+		}
+	}
+
+	// Search for the network in the networks slice
+	for _, realNetwork := range allNetworks {
+		if realNetwork.ChainId == uint64(chainId) || realNetwork.Name == networkName {
+			*n = network(realNetwork.ChainId)
+			return nil
+		}
+	}
+
+	// network is semantically invalid, set to -1
+	*n = network(-1)
+	return nil
+}
+
+func (network) JSONSchema() *jsonschema.Schema {
+	return &jsonschema.Schema{
+		OneOf: []*jsonschema.Schema{
+			{Type: "string"}, {Type: "integer"},
+		},
+	}
 }
