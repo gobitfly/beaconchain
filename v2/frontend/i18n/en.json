@@ -514,5 +514,13 @@
     "validator_by_name": "Validator by name",
     "network_filter_label": "Networks:",
     "all_networks": "All"
+  },
+  "pricing": {
+    "premium": "beaconcha.in Premium",
+    "API_keys": "API Keys",
+    "subtitle": "Monitoring without limits on web and mobile.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save_up_to": "Save up to {percentage}%"
   }
 }

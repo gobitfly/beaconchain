@@ -1,5 +1,11 @@
 <script lang="ts" setup>
+const { t } = useI18n()
+
 const isYearly = ref(true)
+
+// TODO: Replace with calculated percentage once real values are available
+const percentage = 20
+
 </script>
 
 <template>
@@ -9,17 +15,22 @@ const isYearly = ref(true)
         Beaconcha.in/API Keys Toggle
       </div>
       <div class="header-line">
-        <div class="premium">
-          Beaconcha.in Premium
+        <div class="title">
+          {{ t('pricing.premium') }}
         </div>
-        <div class="monitoring">
-          Monitoring without limits on web and mobile.
+        <div class="subtitle">
+          {{ t('pricing.subtitle') }}
         </div>
       </div>
       <div class="toggle-container">
-        <BcToggle v-model="isYearly" class="toggle" true-option="Yearly" false-option="Monthly" />
+        <BcToggle
+          v-model="isYearly"
+          class="toggle"
+          :true-option="t('pricing.yearly')"
+          :false-option="t('pricing.monthly')"
+        />
         <div class="save-up-text">
-          SAVE UP TO 20%
+          {{ t('pricing.save_up_to', {percentage}) }}
         </div>
       </div>
       <div>
@@ -51,13 +62,13 @@ const isYearly = ref(true)
     background: var(--container-background);
     margin-bottom: 55px;
 
-    .premium {
+    .title {
       font-size: 18px;
       color: var(--primary-color);
       margin-bottom: var(--padding);
     }
 
-    .monitoring {
+    .subtitle {
       font-size: 32px;
     }
   }
