@@ -28,7 +28,7 @@ const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 const { dashboards } = useUserDashboardStore()
 
 const cursor = ref<Cursor>(0)
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const newGroupName = ref<string>('')
 const search = ref<string>()
 const sortField = ref<string>()
