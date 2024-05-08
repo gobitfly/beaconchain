@@ -29,7 +29,7 @@ var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 	validatorByIndex:                 reNumber,
 	validatorByPublicKey:             reValidatorPublicKey,
 	validatorsByDepositAddress:       reEthereumAddress,
-	validatorsByDepositEnsName:       reName,
+	validatorsByDepositEnsName:       reEnsName,
 	validatorsByWithdrawalCredential: reWithdrawalCredential,
 	validatorsByWithdrawalAddress:    reWithdrawalAddress,
 	validatorsByWithdrawalEns:        reEnsName,
@@ -64,47 +64,46 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	_, containsEthereum := networkSet[1]
 	if !req.IncludeValidators || !containsEthereum || len(networkSet) > 1 {
 		returnError(w, http.StatusServiceUnavailable, errors.New("feature not available, please set `include_validators` to true and only query the Ethereum network"))
+		return
 	}
 
 	g, ctx := errgroup.WithContext(r.Context())
 	g.SetLimit(20)
-	quit := make(chan struct{})
 	searchResultChan := make(chan types.SearchResult)
-	data := make([]types.SearchResult, 0)
 
-	// goroutine to collect search results
-	go func() {
-		for {
-			select {
-			case <-quit:
-				return
-			case <-ctx.Done():
-				return
-			case result := <-searchResultChan:
-				data = append(data, result)
-			}
-		}
-	}()
-
+	// iterate over all combinations of search types and networks
 	// iterate over all combinations of search types and networks
 	for searchType := range searchTypeSet {
 		// check if input matches the regex for the search type
-		if searchTypeToRegex[searchType].MatchString(req.Input) {
-			for network := range networkSet {
-				network := network
-				searchType := searchType
-				g.Go(func() error {
-					searchResult, err := h.handleSearch(ctx, req.Input, searchType, uint64(network))
-					searchResultChan <- *searchResult
-					return err
-				})
-			}
+		if !searchTypeToRegex[searchType].MatchString(req.Input) {
+			continue
 		}
+		for network := range networkSet {
+			network := network
+			searchType := searchType
+			g.Go(func() error {
+				searchResult, err := h.handleSearch(ctx, req.Input, searchType, uint64(network))
+				if err != nil {
+					return err
+				}
+				searchResultChan <- *searchResult
+				return nil
+			})
+		}
+
 	}
 
-	// wait for all goroutines to finish and quit the result collection goroutine
-	err := g.Wait()
-	quit <- struct{}{}
+	var err error
+	go func() {
+		err = g.Wait()
+		close(searchResultChan)
+	}()
+
+	data := make([]types.SearchResult, 0)
+	for result := range searchResultChan {
+		data = append(data, result)
+	}
+
 	if err != nil {
 		handleErr(w, err)
 		return
