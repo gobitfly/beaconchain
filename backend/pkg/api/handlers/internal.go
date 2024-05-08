@@ -6,7 +6,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/gorilla/mux"
 )
@@ -130,7 +129,6 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	log.Info(req.Network)
 	name := v.checkNameNotEmpty(req.Name)
 	network := v.checkNetwork(req.Network)
 	if v.hasErrors() {
