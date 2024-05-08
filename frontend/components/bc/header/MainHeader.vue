@@ -60,6 +60,10 @@ const loginText = computed(() => {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    margin-top: auto;
+    margin-bottom: auto;
+    vertical-align: middle;
+    align-items: center;
   }
 
   .logo {

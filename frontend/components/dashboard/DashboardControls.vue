@@ -167,7 +167,7 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   display: flex;
   justify-content: space-between;
   gap: var(--padding);
-  margin-bottom: var(--padding);
+  margin-bottom: var(--padding-large);
 
   .action-button-container{
     display: flex;
@@ -182,7 +182,6 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
       height: 30px;
-      @include fonts.button_text;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
       border-color: var(--button-color-active);
