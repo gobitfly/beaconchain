@@ -516,11 +516,11 @@
     "all_networks": "All"
   },
   "pricing": {
-    "premium": "beaconcha.in Premium",
+    "premium": "Beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "save_up_to": "Save up to {percentage}%"
+    "save_up_to": "SAVE UP TO {percentage}%"
   }
 }
