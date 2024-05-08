@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
+import { Target } from '~/types/links'
 
 const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
 const { t: $t } = useI18n()
@@ -9,8 +10,6 @@ const setCookiePreference = (value: CookiesPreference) => {
 }
 
 const visible = computed(() => cookiePreference.value === undefined)
-const modalText = computed(() => formatMultiPartSpan($t, 'cookies.text', [undefined, 'link', undefined], [undefined, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', undefined]))
-
 </script>
 
 <template>
@@ -22,8 +21,13 @@ const modalText = computed(() => formatMultiPartSpan($t, 'cookies.text', [undefi
     position="bottom"
   >
     <div class="dialog-container">
-      <!--eslint-disable-next-line vue/no-v-html-->
-      <div class="text-container" v-html="modalText" />
+      <div class="text-container">
+        {{ tOf($t, 'cookies.text', 0) }}
+        <NuxtLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
+          {{ tOf($t, 'cookies.text', 1) }}
+        </NuxtLink>
+        {{ tOf($t, 'cookies.text', 2) }}
+      </div>
       <div class="button-container">
         <Button class="necessary-button" @click="setCookiePreference('functional')">
           {{ $t('cookies.only_necessary') }}
@@ -77,5 +81,4 @@ const modalText = computed(() => formatMultiPartSpan($t, 'cookies.text', [undefi
     }
   }
 }
-
 </style>
