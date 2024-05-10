@@ -1,4 +1,5 @@
 export enum COOKIE_KEY {
+  COOKIES_PREFERENCE = 'cookies-preference',
   CURRENCY= 'currency',
   REFRESH_TOKEN= 'refresh-token',
   ACCESS_TOKEN= 'access-token',
@@ -7,3 +8,5 @@ export enum COOKIE_KEY {
   USER_DASHBOARDS= 'user-dashboards',
   SLOT_VIZ_SELECTED_CATEGORIES = 'slot-viz-selected-categories'
 }
+
+export type CookiesPreference = 'all' | 'functional' | undefined
