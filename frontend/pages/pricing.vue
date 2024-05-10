@@ -73,6 +73,7 @@ const percentage = 20
     margin-bottom: 37px;
     display: flex;
     align-items: center;
+    user-select: none;
 
     // not interactive for beta launch
     .premium {
