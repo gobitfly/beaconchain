@@ -43,12 +43,14 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 			gorillaHandlers.AllowedOrigins([]string{"*"}),
 			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
 			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
+			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		)
 	}
 	return gorillaHandlers.CORS(
 		gorillaHandlers.AllowedOrigins(allowedHosts),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
 		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
+		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		gorillaHandlers.AllowCredentials(),
 	)
 }
@@ -65,6 +67,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
+
+		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
 
 		{http.MethodPost, "/account-dashboards", hs.PublicPostAccountDashboards, hs.InternalPostAccountDashboards},
 		{http.MethodGet, "/account-dashboards/{dashboard_id}", hs.PublicGetAccountDashboard, hs.InternalGetAccountDashboard},

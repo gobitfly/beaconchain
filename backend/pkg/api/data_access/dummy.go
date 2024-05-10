@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"time"
 
 	"github.com/go-faker/faker/v4"
@@ -26,7 +27,7 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
-func (d *DummyService) CloseDataAccessService() {
+func (d *DummyService) Close() {
 	// nothing to close
 }
 
@@ -260,8 +261,62 @@ func (d *DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cur
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
 	r := t.VDBTotalWithdrawalsData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
+	r := []t.NetworkInfo{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
+	r := t.SearchValidator{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey string) (*t.SearchValidator, error) {
+	r := t.SearchValidator{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address string) (*t.SearchValidatorsByDepositAddress, error) {
+	r := t.SearchValidatorsByDepositAddress{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
+	r := t.SearchValidatorsByDepositEnsName{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential string) (*t.SearchValidatorsByWithdrwalCredential, error) {
+	r := t.SearchValidatorsByWithdrwalCredential{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByWithdrawalAddress(ctx context.Context, chainId uint64, address string) (*t.SearchValidatorsByDepositAddress, error) {
+	r := t.SearchValidatorsByDepositAddress{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
+	r := t.SearchValidatorsByWithrawalEnsName{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
+	r := t.SearchValidatorsByGraffiti{}
 	err := commonFakeData(&r)
 	return &r, err
 }

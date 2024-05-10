@@ -4,18 +4,19 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState, refreshLatestState } = useLatestStateStore()
 const { isLoggedIn } = useUserStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 await useAsyncData('latest_state', () => refreshLatestState())
 
 const loginText = computed(() => {
   return isLoggedIn.value ? 'Logged in' : 'Login'
 })
-
 </script>
+
 <template>
   <div class="header top">
     <div class="content">
       <div>Current Epoch: {{ latestState?.currentEpoch }}</div>
-      <BcSearchbarGeneral v-if="!props.isHomePage" bar-style="discreet" />
+      <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" bar-style="discreet" />
       <NuxtLink to="/login">
         {{ loginText }}
       </NuxtLink>

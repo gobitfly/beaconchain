@@ -21,8 +21,8 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    slot: width.value > 1010,
-    age: width.value > 930,
+    slot: width.value > 1120,
+    age: width.value > 1005,
     rewardsRecipient: width.value > 850,
     status: width.value > 750,
     mobileStatus: width.value < 1060,

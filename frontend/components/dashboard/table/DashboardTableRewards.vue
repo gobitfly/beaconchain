@@ -24,9 +24,9 @@ const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     duty: width.value > 1180,
-    clRewards: width.value >= 860,
-    elRewards: width.value >= 740,
-    age: width.value >= 620
+    clRewards: width.value >= 900,
+    elRewards: width.value >= 780,
+    age: width.value >= 660
   }
 })
 
@@ -103,6 +103,16 @@ const findNextEpochDuties = (epoch: number) => {
   return list.join(', ')
 }
 
+const wrappedRewards = computed(() => {
+  if (!rewards.value) {
+    return
+  }
+  return {
+    paging: rewards.value.paging,
+    data: rewards.value.data.map(d => ({ ...d, identifier: `${d.epoch}-${d.group_id}` }))
+  }
+})
+
 </script>
 <template>
   <div>
@@ -114,8 +124,8 @@ const findNextEpochDuties = (epoch: number) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="rewards"
-            data-key="epoch"
+            :data="wrappedRewards"
+            data-key="identifier"
             :expandable="true"
             class="rewards-table"
             :cursor="cursor"
@@ -252,12 +262,20 @@ const findNextEpochDuties = (epoch: number) => {
   --col-width: 154px;
 
   .epoch {
-    @include utils.set-all-width(80px);
+    @include utils.set-all-width(84px);
   }
 
-  .group_id,
-  .reward {
+  .group-id {
     @include utils.set-all-width(120px);
+    @include utils.truncate-text;
+
+    @media (max-width: 450px) {
+    @include utils.set-all-width(60px);
+    }
+  }
+
+  .reward {
+    @include utils.set-all-width(154px);
   }
 
   .time-passed {

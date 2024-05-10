@@ -1,5 +1,4 @@
 import type { NitroFetchOptions } from 'nitropack'
-import { warn } from 'vue'
 import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
 import { mapping, type PathValues, API_PATH } from '~/types/customFetch'
@@ -19,9 +18,14 @@ function addQueryParams (path: string, query?: PathValues) {
 
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
+  const xForwardedFor = useRequestHeader('x-forwarded-for')
+  const xRealIp = useRequestHeader('x-real-ip')
+  const { redirectedFrom, fullPath } = useRoute()
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
+  const { $bcLogger } = useNuxtApp()
+  const uuid = inject<{value: string}>('app-uuid')
 
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
@@ -38,12 +42,12 @@ export function useCustomFetch () {
     }
 
     const url = useRequestURL()
-    const { public: { apiClient, legacyApiClient, apiKey }, private: pConfig } = useRuntimeConfig()
+    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = useRuntimeConfig()
     const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
-      baseURL = map.mock ? `${url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
     options.headers = new Headers({ ...options.headers, ...headers })
@@ -53,12 +57,16 @@ export function useCustomFetch () {
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
 
+    if (process.server && logIp === 'LOG') {
+      $bcLogger.warn(`${uuid?.value} | fullPath: ${fullPath}, redirectedFrom: ${redirectedFrom}  x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
+    }
+
     // For non GET method's we need to set the csrf header for security
     if (method !== 'GET') {
       if (csrfHeader.value) {
         options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
       } else {
-        warn('missing csrf header!')
+        $bcLogger.warn(`${uuid?.value} | missing csrf header!`)
       }
     }
 

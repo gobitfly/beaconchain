@@ -336,7 +336,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
         color: var(--negative-color);
       }
 
-      @media (max-width: 959px) {
+      @media (max-width: 450px) {
         flex-direction: column;
       }
     }

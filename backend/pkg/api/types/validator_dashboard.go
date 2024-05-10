@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -77,10 +75,10 @@ type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uin
 // ------------------------------------------------------------
 // Rewards Tab
 type VDBRewardesTableDuty struct {
-	Attestation *float64 `json:"attestation"`
-	Proposal    *float64 `json:"proposal"`
-	Sync        *float64 `json:"sync"`
-	Slashing    *uint64  `json:"slashing"`
+	Attestation *float64 `json:"attestation,omitempty"`
+	Proposal    *float64 `json:"proposal,omitempty"`
+	Sync        *float64 `json:"sync,omitempty"`
+	Slashing    *uint64  `json:"slashing,omitempty"`
 }
 
 type VDBRewardsTableRow struct {
@@ -182,7 +180,7 @@ type VDBExecutionDepositsTableRow struct {
 	Index                 *uint64         `json:"index,omitempty"`
 	GroupId               uint64          `json:"group_id"`
 	Block                 uint64          `json:"block"`
-	Timestamp             time.Time       `json:"timestamp"`
+	Timestamp             int64           `json:"timestamp"`
 	From                  Address         `json:"from"`
 	Depositor             Address         `json:"depositor"`
 	TxHash                Hash            `json:"tx_hash"`
@@ -252,11 +250,11 @@ type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManage
 // ------------------------------------------------------------
 // Misc.
 type VDBPostReturnData struct {
-	Id        uint64    `db:"id" json:"id"`
-	UserID    uint64    `db:"user_id" json:"user_id"`
-	Name      string    `db:"name" json:"name"`
-	Network   uint64    `db:"network" json:"network"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Id        uint64 `db:"id" json:"id"`
+	UserID    uint64 `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	Network   uint64 `db:"network" json:"network"`
+	CreatedAt int64  `db:"created_at" json:"created_at"`
 }
 
 type VDBPostCreateGroupData struct {

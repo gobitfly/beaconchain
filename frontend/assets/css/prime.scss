@@ -4,7 +4,6 @@
 @import "~/assets/css/prime_megamenu.scss";
 @import "~/assets/css/prime_menubar.scss";
 
-
 .p-error {
   color: #e24c4c;
 }
@@ -75,7 +74,7 @@
   }
 }
 
-.p-dialog-mask {
+.p-dialog-mask.p-component-overlay {
   background: var(--black-transparent-3);
 }
 

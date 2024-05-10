@@ -45,6 +45,11 @@
     "copy": "Copy to clipboard",
     "copied": "Copied!"
   },
+  "cookies": {
+    "text": ["By using our site you agree to our use of", "cookies", "to deliver a better user experience."],
+    "accept_all": "Accept All",
+    "only_necessary": "Only Necessary"
+  },
   "navigation": {
     "back": "Back",
     "continue": "Continue",
@@ -409,6 +414,7 @@
     "dont_have_account": "You do not have an account?",
     "signup_here": "Click here to sign up.",
     "invalid_email" : "Please enter a valid email address.",
+    "invalid_password" : "Your password must contain at least 5 characters.",
     "no_email" : "Please enter your email address.",
     "no_password" : "Please enter your password.",
     "error_toast_title" : "Error",
