@@ -224,7 +224,7 @@ const items = [
             {
               label: $t('header.megamenu.beaconchain_premium'),
               icon: faGem,
-              url: '/premium'
+              url: '/pricing'
             },
             {
               label: $t('header.megamenu.webhooks'),
@@ -237,6 +237,7 @@ const items = [
               url: '/api/v1/docs/index.html'
             },
             {
+              // TODO: Requires pricing page to set the toggle at the top to "API Pricing"
               label: $t('header.megamenu.api_pricing'),
               icon: faLaptopCode,
               url: '/pricing'
