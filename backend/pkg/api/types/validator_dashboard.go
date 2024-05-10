@@ -161,7 +161,7 @@ type VDBHeatmap struct {
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmapTooltipData struct {
-	Timestamp time.Time `json:"timestamp"` // epoch or day
+	Timestamp int64 `json:"timestamp"` // epoch or day
 
 	Proposers StatusCount `json:"proposers"`
 	Syncs     uint64      `json:"syncs"`
