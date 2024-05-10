@@ -156,9 +156,7 @@ const title = computed(() => {
     .button-content {
       display: flex;
       align-items: center;
-      @media (min-width: 540px) { // not mobile
-        justify-content: center;
-      }
+      justify-content: center;
       &:has(.toggle) {
         justify-content: space-between;
       }
