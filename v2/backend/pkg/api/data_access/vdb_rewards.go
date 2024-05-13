@@ -288,7 +288,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(sync_rewards, 0) as sync_rewards,
+			COALESCE(blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
+			COALESCE(blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward
 		from users_val_dashboards_validators
 		join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2 and epoch = $3)
@@ -316,13 +317,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		SyncScheduled uint32          `db:"sync_scheduled"`
 		SyncExecuted  uint32          `db:"sync_executed"`
 		SyncRewards   decimal.Decimal `db:"sync_rewards"`
+
+		BlocksClAttestationsReward decimal.Decimal `db:"blocks_cl_attestations_reward"`
+		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
 	var rows []*queryResult
 
 	err := d.alloyReader.Select(&rows, query, dashboardId, groupId, epoch)
 	if err != nil {
-		log.Error(err, "Error while getting validator dashboard group rewards", 0)
+		log.Error(err, "error while getting validator dashboard group rewards", 0)
 		return nil, err
 	}
 
@@ -350,6 +354,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		ret.Sync.Income.Add(row.SyncRewards.Mul(gWei))
 		ret.Sync.StatusCount.Success += uint64(row.SyncExecuted)
 		ret.Sync.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
+
+		ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
+		ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
 	}
 
 	return ret, nil
