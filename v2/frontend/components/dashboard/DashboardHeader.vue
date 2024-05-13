@@ -158,11 +158,9 @@ const title = computed(() => {
       &:has(.toggle) {
         justify-content: space-between;
       }
-
       .text {
         @include utils.truncate-text;
       }
-
       .toggle {
         flex-shrink: 0;
         margin-top: auto;
