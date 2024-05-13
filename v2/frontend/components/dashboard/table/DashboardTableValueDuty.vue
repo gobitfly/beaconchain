@@ -11,15 +11,15 @@ defineProps<Props>()
   <div v-if="duty" class="duty">
     <div v-if="duty.attestation !== undefined" class="group">
       {{ $t('dashboard.validator.rewards.attestation') }}
-      <BcFormatPercent class="round-brackets" :percent="duty.attestation" :fixed="0" :precision="0" />,
+      <BcFormatPercent class="round-brackets" :percent="duty.attestation" :fixed="0" :precision="0" />
     </div>
     <div v-if="duty.proposal !== undefined" class="group">
       {{ $t('dashboard.validator.rewards.proposal') }}
-      <BcFormatPercent class="round-brackets" :percent="duty.proposal" :fixed="0" :precision="0" />,
+      <BcFormatPercent class="round-brackets" :percent="duty.proposal" :fixed="0" :precision="0" />
     </div>
     <div v-if="duty.sync !== undefined" class="group">
       {{ $t('dashboard.validator.rewards.sync_committee') }}
-      <BcFormatPercent class="round-brackets" :percent="duty.sync" :fixed="0" :precision="0" />,
+      <BcFormatPercent class="round-brackets" :percent="duty.sync" :fixed="0" :precision="0" />
     </div>
     <div v-if="duty.slashing !== undefined" class="group">
       {{ $t('dashboard.validator.rewards.slashing') }}
@@ -41,7 +41,7 @@ defineProps<Props>()
 
     &:not(:last-child) {
       &:after {
-        content: "\00a0";
+        content: ",\00a0";
       }
     }
   }
