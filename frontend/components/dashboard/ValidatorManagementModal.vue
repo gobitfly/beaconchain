@@ -43,11 +43,11 @@ const hasNoOpenDialogs = ref(true)
 
 const size = computed(() => {
   return {
-    expandable: width.value < 970,
-    showBalance: width.value >= 970,
-    showGroup: width.value >= 835,
-    showWithdrawalCredentials: width.value >= 660,
-    showPublicKey: width.value >= 480
+    expandable: width.value < 1060,
+    showBalance: width.value >= 1060,
+    showGroup: width.value >= 925,
+    showWithdrawalCredentials: width.value >= 750,
+    showPublicKey: width.value >= 570
   }
 })
 
@@ -63,7 +63,7 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]):NumberOrString[] => {
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): NumberOrString[] => {
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
@@ -74,7 +74,7 @@ const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
   }
   const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
+  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -96,7 +96,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const addValidator = (result : ResultSuggestion) => {
+const addValidator = (result: ResultSuggestion) => {
   if (premiumLimit.value) {
     dialog.open(BcPremiumModal, {})
     return
@@ -104,23 +104,23 @@ const addValidator = (result : ResultSuggestion) => {
 
   // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
   switch (result.type) {
-    case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
-    case ResultType.ValidatorsByPubkey :
+    case ResultType.ValidatorsByIndex: // for example, here, `result.queryParam` contains the `Index` (of the validator)
+    case ResultType.ValidatorsByPubkey:
       selectedValidator.value = String(result.rawResult.num_value!)
       break
     // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
-    case ResultType.ValidatorsByGraffiti :
+    case ResultType.ValidatorsByDepositAddress:
+    case ResultType.ValidatorsByDepositEnsName:
+    case ResultType.ValidatorsByWithdrawalCredential:
+    case ResultType.ValidatorsByWithdrawalAddress:
+    case ResultType.ValidatorsByWithdrawalEnsName:
+    case ResultType.ValidatorsByGraffiti:
       // TODO: add a batch of validators
       // If you need it: `result.count` is the size of the batch.
       warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
       selectedValidator.value = ''
       break
-    default :
+    default:
       return
   }
   if (!selectedValidator.value) {
@@ -232,12 +232,15 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     :header="$t('dashboard.validator.management.title')"
     :close-on-escape="hasNoOpenDialogs"
     class="validator-managment-modal-container"
-    @update:visible="(visible: boolean)=>!visible && resetData()"
+    @update:visible="(visible: boolean) => !visible && resetData()"
   >
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span />
     </template>
-    <BcTableControl :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
+    <BcTableControl
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      @set-search="setSearch"
+    >
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
@@ -274,7 +277,12 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
           >
             <Column field="index" :sortable="true" :header="$t('dashboard.validator.col.index')" />
 
-            <Column v-if="size.showPublicKey" field="public_key" :sortable="!size.expandable" :header="$t('dashboard.validator.col.public_key')">
+            <Column
+              v-if="size.showPublicKey"
+              field="public_key"
+              :sortable="!size.expandable"
+              :header="$t('dashboard.validator.col.public_key')"
+            >
               <template #body="slotProps">
                 <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
               </template>
@@ -376,22 +384,26 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                 </div>
               </div>
             </template>
+
+            <template #bc-table-footer-left>
+              <div v-if="maxValidatorsPerDashboard" class="left">
+                <div class="labels" :class="{ premiumLimit }">
+                  <span>
+                    <BcFormatNumber :value="total" default="0" />/
+                    <BcFormatNumber :value="maxValidatorsPerDashboard" default="0" />
+                  </span>
+                </div>
+                <BcPremiumGem />
+              </div>
+            </template>
+
+            <template #bc-table-footer-right>
+              <Button :label="$t('navigation.done')" @click="onClose" />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
     </BcTableControl>
-    <template #footer>
-      <div class="footer">
-        <div v-if="maxValidatorsPerDashboard" class="left">
-          <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="total" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
-            <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
-          </div>
-          <BcPremiumGem />
-        </div>
-        <Button :label="$t('navigation.done')" @click="onClose" />
-      </div>
-    </template>
   </BcDialog>
 </template>
 
@@ -401,7 +413,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 @use '~/assets/css/fonts.scss';
 
 :global(.validator-managment-modal-container) {
-  width: 960px;
+  width: 1060px;
   height: 800px;
 
 }
@@ -448,7 +460,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 .add-row {
-  position:relative;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -461,34 +473,26 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   }
 }
 
-.footer {
+.left {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: var(--padding-large);
-  gap: var(--padding);
+  gap: var(--padding-small);
 
-  .left {
+  .labels {
     display: flex;
-    align-items: center;
     gap: var(--padding-small);
 
-    .labels {
-      display: flex;
-      gap: var(--padding-small);
-
-      &.premiumLimit {
-        color: var(--negative-color);
-      }
-
-      @media (max-width: 450px) {
-        flex-direction: column;
-      }
+    &.premiumLimit {
+      color: var(--negative-color);
     }
 
-    .gem {
-      color: var(--primary-color);
+    @media (max-width: 450px) {
+      flex-direction: column;
     }
+  }
+
+  .gem {
+    color: var(--primary-color);
   }
 }
 
@@ -512,7 +516,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   width: 10px;
 }
 
-@media (max-width: 969px) {
+@media (max-width: 959px) {
   :deep(.edit-button) {
     padding: 8px 6px;
 
