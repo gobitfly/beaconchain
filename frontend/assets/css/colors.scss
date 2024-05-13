@@ -53,6 +53,8 @@
   --button-color-hover: var(--primary-orange-hover);
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
+  --button-color-dark-pattern: var(--light-grey-2);
+  --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
 
   --checkbox-background-color: var(--light-grey-4);
@@ -76,6 +78,8 @@
   --searchbar-text-detail-gaudy: var(--dark-grey);
   --searchbar-text-detail-discreet: var(--grey);
   --searchbar-filter-unselected-gaudy: var(--button-color-disabled);
+  --searchbar-networkdropdown-bgroung-discreet: var(--light-grey);
+  --searchbar-networkdropdown-border-discreet: var(--light-grey-3);
   --dropdown-background-hover: var(--grey);
   --tooltip-background: var(--light-grey-2);
   --tooltip-text-color: var(--light-black);
@@ -124,6 +128,7 @@
     --button-color-hover: var(--primary-orange-hover);
     --button-color-pressed: var(--primary-orange-pressed);
     --button-color-disabled: var(--grey);
+    --button-color-dark-pattern: var(--light-grey);
     --button-text-color-disabled: var(--light-grey);
 
     --checkbox-background-color: var(--light-grey);

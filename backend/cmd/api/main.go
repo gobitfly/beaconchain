@@ -46,11 +46,9 @@ func main() {
 	} else {
 		dataAccessor = dataaccess.NewDataAccessService(cfg)
 	}
-	defer dataAccessor.CloseDataAccessService()
+	defer dataAccessor.Close()
 
-	sessionManager := api.NewSessionManager(cfg)
-
-	router := api.NewApiRouter(dataAccessor, sessionManager, cfg.Frontend.Debug)
+	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts), api.GetAuthMiddleware(cfg.ApiKeySecret))
 
 	srv := &http.Server{

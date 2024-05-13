@@ -45,6 +45,11 @@
     "copy": "Copy to clipboard",
     "copied": "Copied!"
   },
+  "cookies": {
+    "text": ["By using our site you agree to our use of", "cookies", "to deliver a better user experience."],
+    "accept_all": "Accept All",
+    "only_necessary": "Only Necessary"
+  },
   "navigation": {
     "back": "Back",
     "continue": "Continue",
@@ -64,7 +69,11 @@
     "last": "Last",
     "of": "of",
     "showing": "Showing {from} to {to} of {total}",
-    "age": "Age"
+    "age": "Age",
+    "from": "From",
+    "amount": "Amount",
+    "valid": "Valid",
+    "all_time_total": "All time total"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -158,7 +167,8 @@
     },
     "col":{
       "proposer": "Proposer",
-      "graffiti": "Graffiti"
+      "graffiti": "Graffiti",
+      "tx_hash": "Tx Hash"
     }
   },
   "validator": {
@@ -224,7 +234,8 @@
     },
     "deletion": {
       "title": "Delete Dashboard",
-      "text": "Do you want to delete dashboard {dashboard}?"
+      "delete_text": "Do you want to delete dashboard {dashboard}?",
+      "clear_text": "Do you want to clear this {dashboard}?"
     },
     "validator": {
       "manage_validators": "Manage Validators",
@@ -236,15 +247,23 @@
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
+      "cl_deposits":{
+        "title": "Consensus Layer"
+      },
+      "el_deposits":{
+        "title": "Execution Layer"
+      },
       "blocks":{
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
         "el_rewards": "Execution Layer Reward",
         "cl_rewards": "Consensus Layer Reward"
       },
       "rewards": {
         "title": "Rewards",
         "search_placeholder": "Epoch, Index, Pubkey, Group",
+        "search_placeholder_public": "Epoch, Index, Pubkey",
         "attestation": "Attestation",
         "proposal": "Proposal",
         "sync_committee": "Sync Committee",
@@ -273,6 +292,14 @@
           "el": "Execution Rewards",
           "total": "Total Rewards"
         }
+      },
+      "withdrawals": {
+        "title": "Withdrawals",
+        "search_placeholder": "Index, Public Key, Address",
+        "all_time_total": "All time total",
+        "pending": "Pending",
+        "pending_tooltip": "Estimation for next withdrawal currently unavailable",
+        "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
       },
       "group_management":  {
         "title": "Manage Groups",
@@ -313,12 +340,17 @@
         "validators": "Validators",
         "rewards": "Rewards",
         "reward_recipient": "Rewards Recipient",
-        "proposer_rewards": "Proposer Rewards"
+        "proposer_rewards": "Proposer Rewards",
+        "depositor": "Depositor",
+        "signature": "Signature",
+        "recipient": "Recipient",
+        "amount": "Amount"
       },
       "summary": {
         "total_group_name": "Total Efficiency",
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
         "row": {
           "efficiency_all_time": "Efficiency",
           "attestations": "Attestations",
@@ -378,7 +410,16 @@
     "password": "Password",
     "submit": "Login",
     "title": "Login",
-    "email": "Email address"
+    "email": "Email address",
+    "dont_have_account": "You do not have an account?",
+    "signup_here": "Click here to sign up.",
+    "invalid_email" : "Please enter a valid email address.",
+    "invalid_password" : "Your password must contain at least 5 characters.",
+    "no_email" : "Please enter your email address.",
+    "no_password" : "Please enter your password.",
+    "error_toast_title" : "Error",
+    "error_toast_group" : "Cannot log in",
+    "error_toast_message" : "your email or your password is unknown."
   },
   "header": {
     "megamenu": {

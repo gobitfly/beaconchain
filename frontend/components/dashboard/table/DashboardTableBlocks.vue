@@ -7,10 +7,10 @@ import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidato
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey } = useDashboardKey()
+const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { blocks, query: lastQuery, getBlocks } = useValidatorDashboardBlocksStore()
@@ -21,8 +21,8 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    slot: width.value > 1010,
-    age: width.value > 930,
+    slot: width.value > 1120,
+    age: width.value > 1005,
     rewardsRecipient: width.value > 850,
     status: width.value > 750,
     mobileStatus: width.value < 1060,
@@ -85,14 +85,14 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.blocks.title')"
-      :search-placeholder="$t('dashboard.validator.blocks.search_placeholder')"
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.blocks.search_placeholder_public' : 'dashboard.validator.blocks.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="blocks"
-            data-key="epoch"
+            data-key="slot"
             :expandable="true"
             class="block-table"
             :cursor="cursor"
@@ -149,7 +149,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </NuxtLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age" body-class="age" header-class="age">
+            <Column v-if="colsVisible.age" field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -327,7 +327,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   font-size: var(--small_text_font_size);
 
   .row {
-
     display: flex;
     align-items: center;
 

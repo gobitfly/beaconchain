@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"slices"
 	"strings"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
-	"github.com/shopspring/decimal"
 )
 
 func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		for i, v := range dashboardId.Validators {
 			validatorsArray[i] = v.Index
 		}
-		validatorPubkeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -50,17 +50,17 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 
 	// Custom type for log_index
 	var data []struct {
-		GroupId               sql.NullInt64   `db:"group_id"`
-		PublicKey             []byte          `db:"publickey"`
-		BlockNumber           int64           `db:"block_number"`
-		LogIndex              int64           `db:"log_index"`
-		Timestamp             time.Time       `db:"block_ts"`
-		From                  []byte          `db:"from_address"`
-		Depositor             []byte          `db:"msg_sender"`
-		TxHash                []byte          `db:"tx_hash"`
-		WithdrawalCredentials []byte          `db:"withdrawal_credentials"`
-		Amount                decimal.Decimal `db:"amount"`
-		Valid                 bool            `db:"valid_signature"`
+		GroupId               sql.NullInt64 `db:"group_id"`
+		PublicKey             []byte        `db:"publickey"`
+		BlockNumber           int64         `db:"block_number"`
+		LogIndex              int64         `db:"log_index"`
+		Timestamp             time.Time     `db:"block_ts"`
+		From                  []byte        `db:"from_address"`
+		Depositor             []byte        `db:"msg_sender"`
+		TxHash                []byte        `db:"tx_hash"`
+		WithdrawalCredentials []byte        `db:"withdrawal_credentials"`
+		Amount                int64         `db:"amount"`
+		Valid                 bool          `db:"valid_signature"`
 	}
 
 	query := `
@@ -137,11 +137,11 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		responseData[i] = t.VDBExecutionDepositsTableRow{
 			PublicKey:             t.PubKey(pubkeys[i]),
 			Block:                 uint64(row.BlockNumber),
-			Timestamp:             row.Timestamp,
+			Timestamp:             row.Timestamp.Unix(),
 			From:                  t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 			TxHash:                t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredentials: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
-			Amount:                row.Amount,
+			Amount:                utils.GWeiToWei(big.NewInt(row.Amount)),
 			Valid:                 row.Valid,
 		}
 		if row.GroupId.Valid {
@@ -205,7 +205,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		for i, v := range dashboardId.Validators {
 			validatorsArray[i] = v.Index
 		}
-		validatorPubkeys, err := d.services.GetPubkeysOfValidatorIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -219,13 +219,13 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 
 	// Custom type for block_index
 	var data []struct {
-		GroupId              sql.NullInt64   `db:"group_id"`
-		PublicKey            []byte          `db:"publickey"`
-		Slot                 int64           `db:"block_slot"`
-		SlotIndex            int64           `db:"block_index"`
-		WithdrawalCredential []byte          `db:"withdrawalcredentials"`
-		Amount               decimal.Decimal `db:"amount"`
-		Signature            []byte          `db:"signature"`
+		GroupId              sql.NullInt64 `db:"group_id"`
+		PublicKey            []byte        `db:"publickey"`
+		Slot                 int64         `db:"block_slot"`
+		SlotIndex            int64         `db:"block_index"`
+		WithdrawalCredential []byte        `db:"withdrawalcredentials"`
+		Amount               int64         `db:"amount"`
+		Signature            []byte        `db:"signature"`
 	}
 
 	query := `
@@ -286,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	for i, row := range data {
 		pubkeys[i] = hexutil.Encode(row.PublicKey)
 	}
-	indices, err := d.services.GetValidatorIndicesOfPubkeySlice(pubkeys)
+	indices, err := d.services.GetIndexSliceFromPubkeySlice(pubkeys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to recover indices after query: %w", err)
 	}
@@ -299,7 +299,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 			Epoch:                utils.EpochOfSlot(uint64(row.Slot)),
 			Slot:                 uint64(row.Slot),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
-			Amount:               row.Amount,
+			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Signature:            t.Hash(hexutil.Encode(row.Signature)),
 		}
 		if row.GroupId.Valid {

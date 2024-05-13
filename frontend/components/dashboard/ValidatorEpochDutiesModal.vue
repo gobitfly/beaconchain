@@ -4,6 +4,8 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { InternalGetValidatorDashboardDutiesResponse } from '~/types/api/validator_dashboard'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
+import type { PathValues } from '~/types/customFetch'
+import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -26,7 +28,7 @@ const { props, setHeader } = useBcDialog<Props>({ showHeader: size.value.expanda
 
 const isLoading = ref(false)
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 

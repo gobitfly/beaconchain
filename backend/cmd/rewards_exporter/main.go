@@ -259,12 +259,16 @@ func export(epoch uint64, bt *db.Bigtable, client *beacon.Client, elClient *stri
 
 	expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
 	expirationDuration := time.Until(expirationTime)
-	log.Infof("writing rewards data to redis with a TTL of %v", expirationDuration)
-	err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedRewardsData.Bytes(), expirationDuration).Err()
-	if err != nil {
-		return fmt.Errorf("error writing rewards data to redis for epoch %v: %w", epoch, err)
+	if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
+		log.Warnf("NOT writing rewards data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
+	} else {
+		log.Infof("writing rewards data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
+		err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedRewardsData.Bytes(), expirationDuration).Err()
+		if err != nil {
+			return fmt.Errorf("error writing rewards data to redis for epoch %v: %w", epoch, err)
+		}
+		log.Infof("writing epoch rewards to redis completed")
 	}
-	log.Infof("writing epoch rewards to redis completed")
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
 

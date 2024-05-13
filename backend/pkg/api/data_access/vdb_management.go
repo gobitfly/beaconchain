@@ -75,7 +75,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 		WHERE uvds.public_id = $1
 	`, publicDashboardId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: dashboard with public id %v not found", ErrNotFound, publicDashboardId)
+		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
 	return result, err
 }
@@ -83,28 +83,28 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 // param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
-		return nil, nil
+		return []t.VDBValidator{}, nil
 	}
 
-	existingIndices, err := d.services.GetExistingValidatorIndices(indices)
+	mapping, release, err := d.services.GetCurrentValidatorMapping()
+	defer release()
 	if err != nil {
 		return nil, err
 	}
 
-	extraIndices, err := d.services.GetExistingValidatorIndexesOfPubkeySlice(publicKeys)
-	if err != nil {
-		return nil, err
+	validators := make(map[t.VDBValidator]bool, 0)
+	for _, pubkey := range publicKeys {
+		if v, ok := mapping.ValidatorIndices[pubkey]; ok {
+			validators[t.VDBValidator{Index: *v}] = true
+		}
+	}
+	for _, index := range indices {
+		if index < uint64(len(mapping.ValidatorPubkeys)) {
+			validators[t.VDBValidator{Index: index}] = true
+		}
 	}
 
-	// convert to t.VDBValidator slice
-	validators := make([]t.VDBValidator, len(existingIndices)+len(publicKeys))
-	for i, index := range append(existingIndices, extraIndices...) {
-		validators[i] = t.VDBValidator{Index: index}
-	}
-
-	// Create a map to remove potential duplicates
-	validatorResultMap := utils.SliceToMap(validators)
-	result := maps.Keys(validatorResultMap)
+	result := maps.Keys(validators)
 
 	return result, nil
 }
@@ -152,7 +152,7 @@ func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string,
 	err = tx.Get(result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
-		RETURNING id, user_id, name, network, created_at
+		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
 	`, userId, network, name)
 	if err != nil {
 		return nil, err
@@ -478,7 +478,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			v.group_id,
 			g.name AS group_name
 		FROM users_val_dashboards_validators v
-		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+		INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
 		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}

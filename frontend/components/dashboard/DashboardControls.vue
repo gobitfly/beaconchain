@@ -9,9 +9,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { BcDialogConfirm } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
+import { API_PATH } from '~/types/customFetch'
 
-const { dashboardKey, isPublic, setDashboardKey, dashboardType } = useDashboardKey()
-const { refreshDashboards, dashboards, getDashboardLabel } = useUserDashboardStore()
+const { isLoggedIn } = useUserStore()
+const { dashboardKey, isPublic, isPrivate, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
@@ -53,52 +55,82 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   return buttons
 })
 
+const shareButtonOptions = computed(() => {
+  const label = isPublic.value ? $t('dashboard.shared') : $t('dashboard.share')
+  const icon = isPublic.value ? faUsers : faShare
+  return { label, icon }
+})
+
 const share = () => {
   alert('Not implemented yet')
 }
 
-const remove = () => {
+const deleteButtonOptions = computed(() => {
+  const disabled = isPublic.value && publicEntities.value?.length === 0
+
+  // private dashboards always get deleted, public dashboards only get cleared
+  const deleteDashboard = isPrivate.value
+
+  // we can only forward if there is something to forward to after a potential deletion
+  const privateDashboardsCount = isLoggedIn.value ? ((dashboards.value?.validator_dashboards?.length ?? 0) + (dashboards.value?.account_dashboards?.length ?? 0)) : 0
+  const forward = deleteDashboard ? (privateDashboardsCount > 1) : (privateDashboardsCount > 0)
+
+  return { disabled, deleteDashboard, forward }
+})
+
+const onDelete = () => {
+  const languageKey = deleteButtonOptions.value.deleteDashboard ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
+
   dialog.open(BcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
-    onClose: response => response?.data && removeDashboard(dashboardKey.value),
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
     data: {
-      question: $t('dashboard.deletion.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
+      question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
     }
   })
 }
 
-const removeDashboard = async (key: DashboardKey) => {
-  if (dashboardType.value === 'validator') {
-    await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
-  } else {
-    await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
-  }
+const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
+  if (deleteDashboard) {
+    if (dashboardType.value === 'validator') {
+      await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
+    } else {
+      await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
+    }
 
-  await refreshDashboards()
-
-  let preferedDashboards = dashboards.value?.validator_dashboards ?? []
-  let fallbackDashboards = dashboards.value?.account_dashboards ?? []
-  let fallbackUrl = '/account-dashboard/'
-  if (dashboardType.value === 'account') {
-    preferedDashboards = dashboards.value?.account_dashboards ?? []
-    fallbackDashboards = dashboards.value?.validator_dashboards ?? []
-    fallbackUrl = '/dashboard/'
-  }
-
-  // forward user to another dashboard (if possible)
-  if ((preferedDashboards?.length ?? 0) > 0) {
-    setDashboardKey(`${preferedDashboards[0].id}`)
+    await refreshDashboards()
+  } else if (!isLoggedIn.value) {
+    // simply clear the public dashboard by emptying the hash
+    updateHash(dashboardType.value, '')
+    setDashboardKey('')
     return
   }
 
-  if ((fallbackDashboards.length ?? 0) > 0) {
-    await navigateTo(`${fallbackUrl}${fallbackDashboards[0].id}`)
-    return
+  if (forward) {
+    // try to forward the user to a private dashboard
+    let preferedDashboards = dashboards.value?.validator_dashboards ?? []
+    let fallbackDashboards = dashboards.value?.account_dashboards ?? []
+    let fallbackUrl = '/account-dashboard/'
+    if (dashboardType.value === 'account') {
+      preferedDashboards = dashboards.value?.account_dashboards ?? []
+      fallbackDashboards = dashboards.value?.validator_dashboards ?? []
+      fallbackUrl = '/dashboard/'
+    }
+
+    if ((preferedDashboards?.length ?? 0) > 0) {
+      setDashboardKey(`${preferedDashboards[0].id}`)
+      return
+    }
+
+    if ((fallbackDashboards.length ?? 0) > 0) {
+      await navigateTo(`${fallbackUrl}${fallbackDashboards[0].id}`)
+      return
+    }
   }
 
-  // no other dashboard available, forward to creation screen
+  // no private dashboard available, forward to creation screen
   setDashboardKey('')
 }
 </script>
@@ -107,16 +139,11 @@ const removeDashboard = async (key: DashboardKey) => {
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
-    <div v-if="isPublic" class="action-button-container">
-      <Button class="share-button" :disabled="true">
-        {{ $t('dashboard.shared') }}<FontAwesomeIcon :icon="faUsers" />
+    <div class="action-button-container">
+      <Button class="share-button" :disabled="isPublic" @click="share()">
+        {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
-    </div>
-    <div v-else class="action-button-container">
-      <Button class="share-button" @click="share()">
-        {{ $t('dashboard.share') }}<FontAwesomeIcon :icon="faShare" />
-      </Button>
-      <Button class="p-button-icon-only" @click="remove()">
+      <Button class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
@@ -133,6 +160,7 @@ const removeDashboard = async (key: DashboardKey) => {
 
 <style lang="scss" scoped>
 @use '~/assets/css/utils.scss';
+@use '~/assets/css/fonts.scss';
 
 .header-row {
   height: 30px;
@@ -154,9 +182,9 @@ const removeDashboard = async (key: DashboardKey) => {
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
       height: 30px;
+      @include fonts.button_text;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
-      font-weight: var(--standard_text_medium_font_weight);
       border-color: var(--button-color-active);
 
       >.p-menuitem-content {

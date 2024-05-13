@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
+import { warn } from 'vue'
 import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
+import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
   const data = ref<{user_id: number, user_name: string} | undefined | null>()
@@ -41,6 +43,13 @@ export function useUserStore () {
         setUser(1, 'My temp solution')
       }
     } catch (e) {
+      // TODO: replace hacky sollution once we have a currentState request in the v2 api
+      // We need to call at least once GET request wen we load the page to get the csrf header
+      try {
+        await fetch(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: 'MQ' })
+      } catch (e) {
+        warn('we could not load the db to get the csrf token')
+      }
       // We are not logged in
       setUser(undefined)
     }

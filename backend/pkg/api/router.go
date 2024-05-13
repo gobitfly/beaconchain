@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -18,12 +18,17 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, debug bool) *mux.Router {
+func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter().PathPrefix("/api").Subrouter()
 	publicRouter := router.PathPrefix("/v2").Subrouter()
 	internalRouter := router.PathPrefix("/i").Subrouter()
-
+	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
+
+	debug := cfg.Frontend.Debug
+	if !debug {
+		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
+	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
 	addRoutes(handlerService, publicRouter, internalRouter, debug)
@@ -37,13 +42,15 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 		return gorillaHandlers.CORS(
 			gorillaHandlers.AllowedOrigins([]string{"*"}),
 			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
+			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		)
 	}
 	return gorillaHandlers.CORS(
 		gorillaHandlers.AllowedOrigins(allowedHosts),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
+		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		gorillaHandlers.AllowCredentials(),
 	)
 }
@@ -60,6 +67,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
+
+		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
 
 		{http.MethodPost, "/account-dashboards", hs.PublicPostAccountDashboards, hs.InternalPostAccountDashboards},
 		{http.MethodGet, "/account-dashboards/{dashboard_id}", hs.PublicGetAccountDashboard, hs.InternalGetAccountDashboard},
@@ -207,8 +216,10 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{http.MethodGet, "/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
+		{http.MethodGet, "/{dashboard_id}/epoch-heatmap", hs.PublicGetValidatorDashboardEpochHeatmap, hs.InternalGetValidatorDashboardEpochHeatmap},
+		{http.MethodGet, "/{dashboard_id}/daily-heatmap", hs.PublicGetValidatorDashboardDailyHeatmap, hs.InternalGetValidatorDashboardDailyHeatmap},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/epoch-heatmap/{epoch}", hs.PublicGetValidatorDashboardGroupEpochHeatmap, hs.InternalGetValidatorDashboardGroupEpochHeatmap},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/daily-heatmap/{date}", hs.PublicGetValidatorDashboardGroupDailyHeatmap, hs.InternalGetValidatorDashboardGroupDailyHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-execution-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionDeposits},

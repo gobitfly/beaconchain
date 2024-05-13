@@ -75,6 +75,13 @@ type ValidatorsCursor struct {
 	Index uint64 `json:"vi"`
 }
 
+type RewardsCursor struct {
+	GenericCursor
+
+	Epoch   uint64
+	GroupId uint64
+}
+
 type WithdrawalsCursor struct {
 	GenericCursor
 
@@ -101,4 +108,9 @@ type BlocksCursor struct {
 	Group    int64
 	Status   int64
 	Reward   int64
+}
+
+type NetworkInfo struct {
+	ChainId uint64
+	Name    string
 }

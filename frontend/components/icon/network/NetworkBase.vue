@@ -8,4 +8,10 @@
 .color1 {
   fill: #0052FF;
 }
+
+.pastel {
+  .color1 {
+    fill: #6697FF;
+  }
+}
 </style>

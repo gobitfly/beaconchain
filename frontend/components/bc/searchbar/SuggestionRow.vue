@@ -75,8 +75,9 @@ function formatDescriptionCell () : string {
       class="cell_name"
       :class="barStyle"
       :text="suggestion.output.name"
+      :width-mediaquery-threshold="600"
     />
-    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle">
+    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle" :width-mediaquery-threshold="600">
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
@@ -115,11 +116,12 @@ function formatDescriptionCell () : string {
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
-      class="cells_blockchain-info_common cell_bi_identification"
+      class="cell_bi_identification"
       :class="barStyle"
       :text="formatIdentificationCell()"
+      :width-mediaquery-threshold="600"
     />
-    <div v-if="suggestion.output.description !== ''" class="cells_blockchain-info_common cell_bi_description" :class="barStyle">
+    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="barStyle">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -134,6 +136,7 @@ function formatDescriptionCell () : string {
 
 @mixin common-to-all-rowstyles {
   cursor: pointer;
+  user-select: none;
   display: grid;
   position: relative;
   right: 0px;
@@ -144,6 +147,7 @@ function formatDescriptionCell () : string {
   padding-top: 7px;
   padding-bottom: 7px;
   border-radius: var(--border-radius);
+  @include fonts.standard_text;
 
   &:hover {
     &.gaudy,
@@ -168,7 +172,7 @@ function formatDescriptionCell () : string {
     position: relative;
     grid-column: 1;
     grid-row: 1;
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row-end: span 2;
     }
     &.discreet {
@@ -219,19 +223,20 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
-    &.gaudy {
-      grid-template-columns: 40px 106px auto 114px;
+    &.gaudy,
+    &.embedded {
+      grid-template-columns: 40px 130px auto 130px;
     }
     &.discreet {
-      grid-template-columns: 40px 114px auto;
+      grid-template-columns: 40px 130px auto;
     }
   }
-  @media (max-width: 600px) { // mobile
-    grid-template-columns: 40px 114px auto;
+  @media (max-width: 599.9px) { // mobile
+    grid-template-columns: 40px 130px auto;
   }
 
   .cell_name {
-    font-weight: var(--roboto-medium);
+    font-weight: var(--standard_text_medium_font_weight);
     margin-right: 16px;
   }
 
@@ -239,7 +244,7 @@ function formatDescriptionCell () : string {
     grid-column: 3;
     grid-row: 1;
     display: flex;
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row-end: span 2;
       flex-direction: column;
     }
@@ -250,13 +255,14 @@ function formatDescriptionCell () : string {
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
-    font-weight: var(--roboto-medium);
-    white-space: nowrap;  // this has an effect on a large screen in gaudy mode only, it makes sure that the two spans (description + lowleveldata) stay on the same line
+    font-weight: var(--standard_text_medium_font_weight);
+    white-space: nowrap;  // makes sure that the two spans (description + lowleveldata) stay on the same line
 
     .cell_bi_description {
       position: relative;
       @media (min-width: 600px) { // large screen
-        &.gaudy {
+        &.gaudy,
+        &.embedded {
           margin-right: 0.5em;
         }
       }
@@ -265,10 +271,11 @@ function formatDescriptionCell () : string {
     .cell_bi_low-level-data {
       position: relative;
       flex-grow: 1;
-      text-align: justify;
-      text-justify: inter-character;
-      &.greyish.gaudy {
-        color: var(--searchbar-text-detail-gaudy);
+      &.greyish {
+        &.gaudy,
+        &.embedded {
+          color: var(--searchbar-text-detail-gaudy);
+        }
       }
       &.greyish.discreet {
         color: var(--searchbar-text-detail-discreet);
@@ -277,30 +284,35 @@ function formatDescriptionCell () : string {
   }
 
   .cell-category {
-    display: block;
+    display: flex;
     position: relative;
     @media (min-width: 600px) { // large screen
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         grid-column: 4;
         grid-row: 1;
         margin-top: auto;
         margin-bottom: auto;
-        margin-left: auto;
+        margin-left: 16px;
       }
       &.discreet {
         grid-column: 2;
         grid-row: 2;
       }
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-column: 2;
       grid-row: 2;
     }
     .category-label {
-      display: inline-block;
+      display: inline-flex;
       position: relative;
-      &.gaudy {
+      &.gaudy,
+      &.embedded {
         color: var(--searchbar-text-detail-gaudy);
+        @media (min-width: 600px) { // large screen
+          margin-left: auto;
+        }
       }
       &.discreet {
         color: var(--searchbar-text-detail-discreet);
@@ -315,22 +327,26 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   @media (min-width: 600px) { // large screen
-    grid-template-columns: 40px 106px auto min-content;
+    grid-template-columns: 40px 126px auto min-content;
   }
-  @media (max-width: 600px) { // mobile
+  @media (max-width: 599.9px) { // mobile
     grid-template-columns: 40px auto min-content;
   }
 
   .cell-subcategory {
     @media (min-width: 600px) { // large screen
-      font-weight: var(--roboto-medium);
+      font-weight: var(--standard_text_medium_font_weight);
+      padding-right: 16px;
     }
-    @media (max-width: 600px) { // mobile
-      font-weight: var(--roboto-regular);
+    @media (max-width: 599.9px) { // mobile
+      font-weight: var(--standard_text_font_weight);
     }
+    box-sizing: border-box;
+    margin-right: auto;
+    white-space: nowrap;
   }
 
-  .cells_blockchain-info_common {
+  @mixin cells_blockchain-info_common {
     display: flex;
     position: relative;
     margin-top: auto;
@@ -338,32 +354,36 @@ function formatDescriptionCell () : string {
   }
 
   .cell_bi_identification {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 3;
-      font-weight: var(--roboto-medium);
+      font-weight: var(--standard_text_medium_font_weight);
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row: 2;
       grid-column-end: span 2;
-      font-weight: var(--roboto-regular);
+      font-weight: var(--standard_text_font_weight);
     }
-    width: 100%;
-    text-align: justify;
-    text-justify: inter-character;
   }
 
   .cell_bi_description {
+    @include cells_blockchain-info_common;
+
     @media (min-width: 600px) { // large screen
       grid-column: 4;
+      width: 128px;
+      padding-left: 16px;
     }
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 599.9px) { // mobile
       grid-row: 1;
       grid-column: 3;
       color: var(--searchbar-text-detail-gaudy);
     }
-    width: 100px;
+    box-sizing: border-box;
     margin-left: auto;
     justify-content: right;
+    white-space: nowrap;
   }
 }
 </style>

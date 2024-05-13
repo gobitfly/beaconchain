@@ -21,6 +21,7 @@ defineProps<Props>()
 </template>
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+@use "~/assets/css/fonts.scss";
 
 .tag {
   min-width: 80px;
@@ -30,8 +31,7 @@ defineProps<Props>()
   justify-content: center;
   align-items: center;
   border-radius: 10px;
-  font-size: var(--small_text_font_size);
-  font-weight: var(--small_text_bold_font_weight);
+  @include fonts.tiny_text_bold;
   cursor: default;
 
   svg {
