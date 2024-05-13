@@ -357,11 +357,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	queryParams = append(queryParams, epoch)
 	whereQuery := fmt.Sprintf(`WHERE epoch = $%d
 		AND (
-			COALESCE(attestations_reward, 0) +
-			COALESCE(blocks_cl_reward,0) +
-			COALESCE(sync_rewards,0) +
-			CASE WHEN slashed THEN 1 ELSE 0 END +
-			COALESCE(slashed_violation,0) 
+			COALESCE(e.attestations_reward, 0) +
+			COALESCE(e.blocks_cl_reward,0) +
+			COALESCE(e.sync_rewards,0) +
+			CASE WHEN e.slashed THEN 1 ELSE 0 END +
+			COALESCE(e.slashed_violation,0) 
 		) > 0
 		`, len(queryParams))
 
@@ -381,7 +381,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 
 		if groupId != t.AllGroups {
 			queryParams = append(queryParams, groupId)
-			whereQuery += fmt.Sprintf(`AND group_id = $%d
+			whereQuery += fmt.Sprintf(`AND v.group_id = $%d
 			`, len(queryParams))
 		}
 
