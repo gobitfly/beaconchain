@@ -45,7 +45,7 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 }
 
-// all allNetworks available in the system, filled on startup in NewHandlerService
+// all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
 
 // --------------------------------------
