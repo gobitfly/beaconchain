@@ -45,9 +45,6 @@ const openEpochDuties = () => {
     <div class="premium-row">
       Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" />
     </div>
-    <div class="premium-row">
-      This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" />
-    </div>
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />
   </div>

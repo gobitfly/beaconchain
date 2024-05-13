@@ -3,12 +3,14 @@ import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { type SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
 import { IconSlotAttestation, IconSlotBlockProposal, IconSlotSlashing, IconSlotSync } from '#components'
+import { COOKIE_KEY } from '~/types/cookie'
+
 interface Props {
   data: SlotVizEpoch[]
 }
 const props = defineProps<Props>()
 
-const selectedCategoris = shallowRef<SlotVizCategories[]>(['attestation', 'proposal', 'slashing', 'sync'])
+const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 
 const icons:{ component: Component, value: SlotVizCategories }[] = [
   {
@@ -60,10 +62,10 @@ const currentSlotId = computed(() => {
     </div>
     <div class="rows">
       <div class="row">
-        <BcToggleMultiBar v-model="selectedCategoris" :icons="icons" />
+        <BcToggleMultiBar v-model="selectedCategories" :icons="icons" />
       </div>
       <div v-for="row in props.data" :key="row.epoch" class="row">
-        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categoris="selectedCategoris" :current-slot-id="currentSlotId" />
+        <SlotVizTile v-for="slot in row.slots" :key="slot.slot" :data="slot" :selected-categories="selectedCategories" :current-slot-id="currentSlotId" />
       </div>
     </div>
   </div>

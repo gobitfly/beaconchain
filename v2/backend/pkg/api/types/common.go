@@ -76,18 +76,6 @@ type ChartData[I int | string, D float64 | decimal.Decimal] struct {
 	Series     []ChartSeries[I, D] `json:"series"`
 }
 
-type SearchResult struct {
-	Type      string `json:"type"`
-	ChainId   uint64 `json:"chain_id"`
-	HashValue string `json:"hash_value,omitempty"`
-	NumValue  uint64 `json:"num_value,omitempty"`
-	StrValue  string `json:"str_value,omitempty"`
-}
-
-type SearchResponse struct {
-	Data []SearchResult `json:"data"`
-}
-
 type ValidatorHistoryEvent struct {
 	Status string          `json:"status" tstype:"'success' | 'partial' | 'failed'" faker:"oneof: success, partial, failed"`
 	Income decimal.Decimal `json:"income"`
@@ -111,3 +99,20 @@ type ValidatorHistoryDuties struct {
 
 	SyncCount uint64 `json:"sync_count,omitempty"` // count of successful sync duties for the epoch
 }
+
+type ChainConfig struct {
+	ChainId uint64 `json:"chain_id"`
+	Name    string `json:"name"`
+	// TODO: add more fields, depending on what frontend needs
+}
+
+type SearchResult struct {
+	Type       string   `json:"type"`
+	ChainId    uint64   `json:"chain_id"`
+	HashValue  Hash     `json:"hash_value,omitempty"`
+	StrValue   string   `json:"str_value,omitempty"`
+	NumValue   *uint64  `json:"num_value,omitempty"`
+	Validators []uint64 `json:"validators,omitempty"`
+}
+
+type InternalPostSearchResponse ApiDataResponse[[]SearchResult]

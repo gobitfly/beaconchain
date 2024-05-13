@@ -3,6 +3,7 @@ import type { InternalGetValidatorDashboardRewardsResponse } from '~/types/api/v
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
+import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards', () => {
   const data = ref < InternalGetValidatorDashboardRewardsResponse>()
@@ -21,7 +22,8 @@ export function useValidatorDashboardRewardsStore () {
   const query = computed(() => storedQuery.value)
 
   async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      data.value = undefined
       return undefined
     }
     storedQuery.value = query

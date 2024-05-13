@@ -23,15 +23,15 @@ Type
 ```bash
 cp .npmrc-example .npmrc
 ```
-Go to [fontawesome.com/account/general](https://fontawesome.com/account/general), log in and copy the API key from section "Package Token".
 
-In your `.npmrc` file, replace `FA_TOKEN` with the actual key.
+In your `.npmrc` file, replace `FA_TOKEN` with an actual key for Font Awesome.
 
 Then type:
 ```bash
 cp .env-example .env
 ```
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
+The variable evoking the development is used to show/hide features and components that are not ready for production.
 
 Set the following mapping in your `/etc/hosts` file:
 ```

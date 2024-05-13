@@ -24,6 +24,9 @@ const allExpanded = computed(() => {
     return false
   }
   return !!props.data?.data?.every((item) => {
+    if (props.isRowExpandable && !props.isRowExpandable(item)) {
+      return true // ignore rows that can't be expanded
+    }
     return !!expandedRows.value[item[props.dataKey!]]
   })
 })
@@ -134,6 +137,15 @@ watch(() => props.expandable, (expandable) => {
 
   :deep(.selection) {
     width: 20px;
+  }
+
+  :deep(.p-datatable-emptymessage) {
+    height: 140px;
+    background: transparent;
+
+    >td {
+      border: none;
+    }
   }
 }
 

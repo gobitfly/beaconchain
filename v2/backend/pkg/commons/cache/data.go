@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
@@ -54,6 +55,12 @@ var LatestExportedStatisticDay UInt64Cached = UInt64Cached{
 	},
 }
 
+var LatestStats Cached[types.Stats] = Cached[types.Stats]{
+	cacheKey: func() string {
+		return fmt.Sprintf("%d:frontend:latestStats", utils.Config.Chain.ClConfig.DepositChainID)
+	},
+}
+
 // FinalizationDelay will return the current Finalization Delay
 func FinalizationDelay() uint64 {
 	return LatestNodeEpoch.Get() - LatestNodeFinalizedEpoch.Get()
@@ -81,4 +88,30 @@ func (cfg UInt64Cached) GetOrDefault(provideDefault func() (uint64, error)) (uin
 
 func (cfg UInt64Cached) Set(epoch uint64) error {
 	return TieredCache.SetUint64(cfg.cacheKey(), epoch, utils.Day)
+}
+
+type Cached[T any] struct {
+	cacheKey func() string
+}
+
+func (cfg Cached[T]) Get() *T {
+	var wanted T
+	if wanted, err := TieredCache.GetWithLocalTimeout(cfg.cacheKey(), time.Second*5, &wanted); err == nil {
+		return wanted.(*T)
+	} else {
+		log.Error(err, "error retrieving values for key", 0, map[string]interface{}{"cacheKey": cfg.cacheKey(), "err": err})
+	}
+	return nil
+}
+
+func (cfg Cached[T]) GetOrDefault(provideDefault func() (*T, error)) (*T, error) {
+	var wanted T
+	if wanted, err := TieredCache.GetWithLocalTimeout(cfg.cacheKey(), time.Second*5, &wanted); err == nil {
+		return wanted.(*T), nil
+	}
+	return provideDefault()
+}
+
+func (cfg Cached[T]) Set(value *T) error {
+	return TieredCache.Set(cfg.cacheKey(), value, utils.Day)
 }

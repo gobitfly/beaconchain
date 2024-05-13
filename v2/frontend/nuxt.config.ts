@@ -31,7 +31,11 @@ export default defineNuxtConfig({
       apiClient: '',
       legacyApiClient: '',
       apiKey: '',
-      gitVersion
+      gitVersion,
+      domain: '',
+      logIp: '',
+      logFile: '',
+      showInDevelopment: ''
     },
     private: {
       apiServer: '',

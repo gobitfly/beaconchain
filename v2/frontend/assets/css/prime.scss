@@ -4,6 +4,10 @@
 @import "~/assets/css/prime_megamenu.scss";
 @import "~/assets/css/prime_menubar.scss";
 
+.p-error {
+  color: #e24c4c;
+}
+
 // Button
 // https://primevue.org/button/
 .p-button {
@@ -39,6 +43,7 @@
 
   &.p-button-icon-only {
     padding: 8px;
+    width: var(--default-button-height);
   }
 }
 
@@ -70,7 +75,7 @@
   }
 }
 
-.p-dialog-mask {
+.p-dialog-mask.p-component-overlay {
   background: var(--black-transparent-3);
 }
 
@@ -150,6 +155,7 @@
     }
     .p-checkbox-icon {
       transition-duration: 0.2s;
+      pointer-events: none; // prevents the checkbox from letting click events pass through (like a hole) when unchecking
       .p-icon {
         width: 14px;
         height: 14px;
