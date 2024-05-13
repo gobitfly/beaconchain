@@ -389,7 +389,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               <div v-if="maxValidatorsPerDashboard" class="left">
                 <div class="labels" :class="{ premiumLimit }">
                   <span>
-                    <BcFormatNumber :value="total" default="0" />/
+                    <BcFormatNumber :value="total" default="0" /> /
                     <BcFormatNumber :value="maxValidatorsPerDashboard" default="0" />
                   </span>
                 </div>
