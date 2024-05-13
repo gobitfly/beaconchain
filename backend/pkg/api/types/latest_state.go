@@ -12,7 +12,7 @@ type EthConversionRate struct {
 }
 
 type LatestStateData struct {
-	CurrentSlot   uint64              `json:"current_slot"`
+	LatestSlot    uint64              `json:"current_slot"`
 	ExchangeRates []EthConversionRate `json:"exchange_rates" faker:"len=3"`
 }
 

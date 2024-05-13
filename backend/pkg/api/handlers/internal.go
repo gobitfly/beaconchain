@@ -14,7 +14,7 @@ import (
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
-	currentSlot, err := h.dai.GetLatestSlot()
+	latestSlot, err := h.dai.GetLatestSlot()
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -26,7 +26,7 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 		return
 	}
 	data := types.LatestStateData{
-		CurrentSlot:   currentSlot,
+		LatestSlot:    latestSlot,
 		ExchangeRates: exchangeRates,
 	}
 
