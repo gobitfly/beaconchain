@@ -210,15 +210,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	for _, res := range queryResult {
 		duty := t.VDBRewardesTableDuty{}
 		if res.AttestationsScheduled > 0 {
-			attestationPercentage := float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled)
+			attestationPercentage := (float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled)) * 100.0
 			duty.Attestation = &attestationPercentage
 		}
 		if res.BlocksScheduled > 0 {
-			ProposalPercentage := float64(res.BlocksProposed) / float64(res.BlocksScheduled)
+			ProposalPercentage := (float64(res.BlocksProposed) / float64(res.BlocksScheduled)) * 100.0
 			duty.Proposal = &ProposalPercentage
 		}
 		if res.SyncScheduled > 0 {
-			SyncPercentage := float64(res.SyncExecuted) / float64(res.SyncScheduled)
+			SyncPercentage := (float64(res.SyncExecuted) / float64(res.SyncScheduled)) * 100.0
 			duty.Sync = &SyncPercentage
 		}
 		// TODO: Slashing data is not yet available in the db
