@@ -164,6 +164,45 @@
   }
 }
 
+// Input Switch
+// https://primevue.org/inputswitch/
+.p-inputswitch {
+  width: 43px;
+  height: 22px;
+
+  .p-inputswitch-slider {
+    background: var(--button-color-active);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    border-radius: 30px;
+  }
+
+  .p-inputswitch-slider:before {
+    background: var(--toggle-button-slider-color);
+    width: 20px;
+    height: 20px;
+    left: 0.3px;
+    margin-top: -10px;
+    border-radius: 50%;
+    transition-duration: 0.2s;
+  }
+
+  &.p-inputswitch-checked .p-inputswitch-slider:before {
+    transform: translateX(20.6px);
+  }
+
+  &:not(.p-disabled):hover .p-inputswitch-slider {
+    background: var(--button-color-hover);
+  }
+
+  &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
+    background: var(--primary-color);
+  }
+
+  &.p-disabled .p-inputswitch-slider {
+    background: var(--button-color-disabled);
+  }
+}
+
 // Toast
 // https://primevue.org/toast/
 // TODO: apply our styles

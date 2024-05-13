@@ -469,7 +469,8 @@
       "knowledge_base": "Knowledge Base",
       "slot_finder": "Slot Finder",
       "community": "Community",
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "pricing": "Pricing"
     }
   },
   "footer": {
@@ -518,5 +519,13 @@
     "validator_by_name": "Validator by name",
     "network_filter_label": "Networks:",
     "all_networks": "All"
+  },
+  "pricing": {
+    "premium": "Beaconcha.in Premium",
+    "API_keys": "API Keys",
+    "subtitle": "Monitoring without limits on web and mobile.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save_up_to": "SAVE UP TO {percentage}%"
   }
 }
