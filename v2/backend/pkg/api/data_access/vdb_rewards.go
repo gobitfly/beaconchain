@@ -342,7 +342,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		SyncExecuted                uint64          `db:"sync_executed"`
 		SyncRewards                 int64           `db:"sync_rewards"`
 		Slashed                     bool            `db:"slashed"`
-		SlashedViolation            uint64          `db:"slashed_violation"`
 		SlasherReward               int64           `db:"slasher_reward"`
 		BlocksScheduled             uint64          `db:"blocks_scheduled"`
 		BlocksProposed              uint64          `db:"blocks_proposed"`
@@ -455,7 +454,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			COALESCE(e.sync_executed, 0) AS sync_executed,
 			COALESCE(e.sync_rewards, 0) AS sync_rewards,
 			COALESCE(e.slashed, false) AS slashed,
-			COALESCE(e.slashed_violation, 0) AS slashed_violation,
 			COALESCE(e.slasher_reward, 0) AS slasher_reward,
 			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
 			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
@@ -477,12 +475,29 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 
 	fmt.Println("Query time: ", time.Since(queryTime))
 
-	// Check if we need to fetch block status data
-	for _, res := range queryResult {
-		if res.BlocksScheduled > 0 {
-			// We need to fetch the block status data
-			break
-		}
+	// Get the orphaned block data
+	startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	endSlot := (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
+
+	orphaned := []struct {
+		Proposer uint64 `db:"proposer"`
+		Slot     uint64 `db:"slot"`
+	}{}
+	err = d.alloyReader.Select(&orphaned, `
+		SELECT
+			proposer,
+			slot
+		FROM blocks
+		WHERE slot >= $1 AND slot <= $2 AND status = '3'
+		`, startSlot, endSlot)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the orphaned block count
+	orphanedCount := make(map[uint64]uint64)
+	for _, block := range orphaned {
+		orphanedCount[block.Proposer]++
 	}
 
 	// Create the result
@@ -502,18 +517,19 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		row.Duties.SyncCount = res.SyncExecuted
 
 		// Get slashing data
-		if res.Slashed || res.SlashedViolation > 0 {
+		// TODO: Slashing data is not yet available in the db
+		if res.Slashed /*|| "Validators slashed" > 0*/ {
 			slashedEvent := t.ValidatorHistoryEvent{
 				Income: utils.GWeiToWei(big.NewInt(res.SlasherReward)),
 			}
 			if res.Slashed {
-				if res.SlashedViolation > 0 {
-					slashedEvent.Status = "partial"
-				}
+				// if "Validators slashed" > 0 {
+				// 	slashedEvent.Status = "partial"
+				// }
 				slashedEvent.Status = "failed"
-			} else if res.SlashedViolation > 0 {
+			} /*else if "Validators slashed" > 0 {
 				slashedEvent.Status = "success"
-			}
+			}*/
 			row.Duties.Slashing = &slashedEvent
 		}
 
@@ -525,12 +541,17 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 				ClSyncInclusionIncome:        utils.GWeiToWei(big.NewInt(res.BlocksClSyncAggregateReward)),
 				ClSlashingInclusionIncome:    utils.GWeiToWei(big.NewInt(res.SlasherReward)),
 			}
+
+			// TODO: Assumes that res.BlocksProposed also contains orphaned blocks
+			blocksOrphaned := orphanedCount[res.ValidatorIndex]
 			if res.BlocksProposed == 0 {
 				proposalEvent.Status = "failed"
-			} else if res.BlocksProposed < res.BlocksScheduled {
-				proposalEvent.Status = "partial"
-			} else {
+			} else if res.BlocksProposed == res.BlocksScheduled && blocksOrphaned == 0 {
 				proposalEvent.Status = "success"
+			} else if blocksOrphaned == res.BlocksScheduled {
+				proposalEvent.Status = "orphaned"
+			} else {
+				proposalEvent.Status = "partial"
 			}
 			row.Duties.Proposal = &proposalEvent
 		}
