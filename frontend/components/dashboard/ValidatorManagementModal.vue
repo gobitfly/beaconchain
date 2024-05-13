@@ -34,7 +34,7 @@ const selectedValidator = ref<string>('')
 const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
 const { isLoggedIn } = useUserStore()
 
-const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -268,6 +268,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             class="management-table"
             :cursor="cursor"
             :page-size="pageSize"
+            :selected-sort="tempQuery?.sort as string"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

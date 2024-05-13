@@ -10,7 +10,7 @@ import { BcDialogConfirm, BcPremiumModal } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type { Cursor } from '~/types/datatable'
+import type { Cursor, SortOrder } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 import { API_PATH } from '~/types/customFetch'
 
@@ -32,8 +32,8 @@ const cursor = ref<Cursor>(0)
 const pageSize = ref<number>(25)
 const newGroupName = ref<string>('')
 const search = ref<string>()
-const sortField = ref<string>()
-const sortOrder = ref<number | null>()
+const sortField = ref<string>('name')
+const sortOrder = ref<SortOrder>(-1)
 const hasNoOpenDialogs = ref(true)
 
 const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
@@ -141,6 +141,8 @@ const dashboardName = computed(() => {
 const maxGroupsPerDashboard = computed(() => (isPublic.value ? 1 : 40))
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
 
+const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getSortOrder(sortOrder.value)}` : undefined)
+
 </script>
 
 <template>
@@ -185,6 +187,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
             class="management-table"
             :cursor="cursor"
             :page-size="pageSize"
+            :selected-sort="selectedSort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

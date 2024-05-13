@@ -16,7 +16,7 @@ const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -33,7 +33,7 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value }
+    query = { limit: pageSize.value, sort: 'slot:desc' }
   }
   setQuery(query, true, true)
 }
@@ -59,9 +59,13 @@ const tableData = computed(() => {
     data: [
       {
         // leaves index undefined to indicate that this is the total row
-        amount: totalAmount.value
+        amount: totalAmount.value,
+        identifier: 'total'
       },
-      ...withdrawals.value.data
+      ...withdrawals.value.data.map(w => ({
+        ...w,
+        identifier: `${w.slot}-${w.index}`
+      }))
     ]
   }
 })
@@ -128,7 +132,7 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="tableData"
-            data-key="epoch"
+            data-key="identifier"
             :expandable="!colsVisible.group"
             class="withdrawal-table"
             :cursor="cursor"
@@ -137,6 +141,7 @@ const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
             :loading="isLoadingWithdrawals"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
