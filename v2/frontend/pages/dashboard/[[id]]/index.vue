@@ -124,8 +124,8 @@ watch(dashboardKey, (newKey, oldKey) => {
 .panel-controller {
   display: flex;
   justify-content: center;
-  margin-top: 60px;
-  margin-bottom: 60px;
+  margin-top: 136px;
+  margin-bottom: 307px;
   overflow: hidden;
 }
 

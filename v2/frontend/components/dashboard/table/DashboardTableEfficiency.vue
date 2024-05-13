@@ -16,18 +16,20 @@ const data = computed(() => {
 
 </script>
 <template>
-  <BcFormatNumber class="positive" :value="props.success " />
-  <span class="slash"> / </span>
-  <BcFormatNumber :class="data.failedClass" :value="props.failed " />
-  <BcFormatPercent
-    v-if="!hidePercentage"
-    class="percent"
-    :base="data.sum"
-    :value="props.success"
-    :fixed="undefined"
-    :color-break-point="80"
-    :full-on-empty-base="true"
-  />
+  <span class="efficiency">
+    <BcFormatNumber class="positive" :value="props.success " />
+    <span class="slash"> / </span>
+    <BcFormatNumber :class="data.failedClass" :value="props.failed " />
+    <BcFormatPercent
+      v-if="!hidePercentage"
+      class="percent"
+      :base="data.sum"
+      :value="props.success"
+      :fixed="undefined"
+      :color-break-point="80"
+      :full-on-empty-base="true"
+    />
+  </span>
 </template>
 
 <style lang="scss" scoped>

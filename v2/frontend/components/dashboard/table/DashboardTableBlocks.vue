@@ -10,7 +10,7 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { blocks, query: lastQuery, getBlocks } = useValidatorDashboardBlocksStore()
