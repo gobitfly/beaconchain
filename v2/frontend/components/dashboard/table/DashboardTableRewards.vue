@@ -139,12 +139,12 @@ const wrappedRewards = computed(() => {
             <Column
               field="epoch"
               :sortable="true"
-              body-class="link epoch"
+              body-class="epoch"
               header-class="epoch"
               :header="$t('common.epoch')"
             >
               <template #body="slotProps">
-                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" :no-prefetch="true">
+                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
                   <BcFormatNumber :value="slotProps.data.epoch" />
                 </NuxtLink>
               </template>
