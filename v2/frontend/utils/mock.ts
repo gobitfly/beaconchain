@@ -4,8 +4,9 @@ const probabilityOfNoResultOrError = 0.0
 
 export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadAPIresponse {
   const searched = body?.input as string
-  const searchable = body?.types as ResultType[]
-  const countIdenticalResults = body?.count as boolean
+  const searchableTypes = body?.types as ResultType[]
+  const searchableNetworks = body?.networks as number[]
+  const countIdenticalValidators = body?.include_validators as boolean
   const response : SearchAheadAPIresponse = {}; response.data = []
 
   if (Math.random() < probabilityOfNoResultOrError / 2) {
@@ -292,10 +293,10 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     )
   }
 
-  // keeping only the types that the API is asked for
-  response.data = response.data.filter((singleRes) => { return searchable.includes(singleRes.type as ResultType) })
-  // if asked by the bar, making-up a number of identical results for the validators
-  if (countIdenticalResults) {
+  // keeping only the results that the API is asked for
+  response.data = response.data.filter(singleRes => searchableTypes.includes(singleRes.type as ResultType) && searchableNetworks.includes(singleRes.chain_id))
+  // adding fake numbers of identical results
+  if (countIdenticalValidators) {
     for (const singleRes of response.data) {
       if (TypeInfo[singleRes.type as ResultType].countable) {
         singleRes.num_value = (Math.random() < 1 / 2.0) ? 2 + Math.floor(1000 * Math.random()) : 1

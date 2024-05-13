@@ -126,7 +126,6 @@ function clearOrganizedResults () {
 }
 
 /**
- *
  * @param state the new state that the search-bar enters
  * @returns old state, so you can read it after the call if you need
  */
@@ -153,8 +152,8 @@ function reconfigureSearchbar () {
   closeDropdown()
   empty()
   searchableTypes = []
-  allTypesBelongToAllNetworks = true
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
+  allTypesBelongToAllNetworks = true
   for (const t of getListOfResultTypes(false)) {
     if (SearchbarPurposeInfo[props.barPurpose].searchable.includes(TypeInfo[t].category) && !SearchbarPurposeInfo[props.barPurpose].unsearchable.includes(t)) {
       searchableTypes.push(t)
@@ -174,7 +173,7 @@ function reconfigureSearchbar () {
   }
 }
 
-watch(() => props, reconfigureSearchbar, { immediate: true })
+watch(props, reconfigureSearchbar, { immediate: true })
 
 onMounted(() => {
   // listens to clicks outside the component
@@ -295,7 +294,8 @@ async function callAPIthenOrganizeResultsThenCallBack (inputWhenIgotCalled : str
       body: {
         input: inputWhenIgotCalled,
         types: searchableTypes,
-        count: isResultCountable(undefined)
+        networks: [],
+        include_validators: isResultCountable(undefined)
       }
     })
   } catch (error) {
@@ -441,7 +441,8 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
   if (isResultCountable(type)) {
-    count = (apiResponseElement.num_value === undefined) ? NaN : apiResponseElement.num_value
+    // for now, the only case that identical results exist is when the API returns a list of validators
+    count = (apiResponseElement.validators === undefined) ? NaN : apiResponseElement.validators.length
   }
 
   // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti and token names).
