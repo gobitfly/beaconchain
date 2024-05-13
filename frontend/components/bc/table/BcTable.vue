@@ -141,6 +141,11 @@ watch(() => props.expandable, (expandable) => {
 
   :deep(.p-datatable-emptymessage) {
     height: 140px;
+    background: transparent;
+
+    >td {
+      border: none;
+    }
   }
 }
 

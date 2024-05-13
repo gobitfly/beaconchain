@@ -28,7 +28,7 @@ const { props, setHeader } = useBcDialog<Props>({ showHeader: size.value.expanda
 
 const isLoading = ref(false)
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 
 const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
 
