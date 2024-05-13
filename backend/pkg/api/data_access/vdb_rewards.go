@@ -267,8 +267,6 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
-	// TODO @peter_bitfly
-
 	ret := &t.VDBGroupRewardsData{}
 
 	query := `select
