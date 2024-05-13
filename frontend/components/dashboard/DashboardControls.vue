@@ -181,29 +181,27 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
-      height: 30px;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
       border-color: var(--button-color-active);
 
-      >.p-submenu-list {
-        font-weight: var(--standard_text_font_weight);
-
-        >.p-menuitem .button-content{
-          .text {
-            @include utils.truncate-text;
+      >.p-menuitem-content {
+        margin-top: 1px;
+        .button-content{
+          .toggle {
+            margin-left: var(--padding);
           }
         }
+      }
+
+      >.p-submenu-list {
+        font-weight: var(--standard_text_font_weight);
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
         background: var(--button-color-hover);
       }
     }
-  }
-
-  .toggle {
-    margin-left: var(--padding);
   }
 }
 </style>
