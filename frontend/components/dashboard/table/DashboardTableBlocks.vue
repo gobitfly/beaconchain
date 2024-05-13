@@ -2,7 +2,6 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -16,7 +15,7 @@ const { t: $t } = useI18n()
 const { blocks, query: lastQuery, getBlocks } = useValidatorDashboardBlocksStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -49,7 +48,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {

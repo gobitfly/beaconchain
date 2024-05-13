@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -19,7 +18,7 @@ const { latestState } = useLatestStateStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -68,7 +67,7 @@ const tableData = computed(() => {
 })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups, '')
+  return getGroupLabel($t, groupId, groups.value, '')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
