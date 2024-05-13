@@ -116,7 +116,7 @@ const addValidator = (result : ResultSuggestion) => {
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
       // TODO: add a batch of validators
-      // If you need it: `result.count` is the size of the batch.
+      // `result.count` is the size of the batch and the list of validators is in result.rawResult.validators
       warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
       selectedValidator.value = ''
       break

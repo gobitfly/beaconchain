@@ -88,7 +88,8 @@ export interface SingleAPIresult {
   type: string,
   str_value?: string,
   num_value?: number,
-  hash_value?: string
+  hash_value?: string,
+  validators?: number[]
 }
 
 export interface SearchAheadAPIresponse {
