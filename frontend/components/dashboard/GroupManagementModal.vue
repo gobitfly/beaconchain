@@ -43,14 +43,20 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
     processedGroups = processedGroups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
   }
   if (sortField.value?.length && sortOrder.value) {
-    processedGroups = orderBy(processedGroups, sortField.value, getSortOrder(sortOrder.value))
+    if (sortField.value === 'name') {
+      // lodash needs some help when sorting strings alphabetically
+      processedGroups = orderBy(processedGroups, [g => g.name.toLowerCase()], getSortOrder(sortOrder.value))
+    } else {
+      processedGroups = orderBy(processedGroups, sortField.value, getSortOrder(sortOrder.value))
+    }
   }
   const totalCount = processedGroups.length
+  const index = cursor.value as number
   return {
     paging: {
       total_count: totalCount
     },
-    data: processedGroups.slice(cursor.value as number, pageSize.value)
+    data: processedGroups.slice(index, index + pageSize.value)
   }
 })
 
