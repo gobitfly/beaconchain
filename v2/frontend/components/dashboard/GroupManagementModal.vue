@@ -149,7 +149,7 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
     :close-on-escape="hasNoOpenDialogs"
     :header="$t('dashboard.validator.group_management.title')"
     class="validator-group-managment-modal-container"
-    @update:visible="(visible: boolean)=>!visible && resetData()"
+    @update:visible="(visible: boolean) => !visible && resetData()"
   >
     <template v-if="!size.showSubTitle" #header>
       <span />
@@ -189,7 +189,12 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="name" class="edit-group" :sortable="true" :header="$t('dashboard.validator.group_management.col.name')">
+            <Column
+              field="name"
+              class="edit-group"
+              :sortable="true"
+              :header="$t('dashboard.validator.group_management.col.name')"
+            >
               <template #body="slotProps">
                 <!-- TODO: wait for the backend to implement group renaming the activate this input and finish the logic -->
                 <BcInputLabel
@@ -222,25 +227,26 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
                 </div>
               </template>
             </Column>
+
+            <template #bc-table-footer-left>
+              <div class="left">
+                <div class="labels" :class="{ premiumLimit }">
+                  <span>
+                    <BcFormatNumber :value="data.paging.total_count" default="0" /> /
+                    <BcFormatNumber :value="maxGroupsPerDashboard" />
+                  </span>
+                </div>
+                <BcPremiumGem />
+              </div>
+            </template>
+
+            <template #bc-table-footer-right>
+              <Button :label="$t('navigation.done')" @click="onClose" />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
     </BcTableControl>
-    <template #footer>
-      <div class="footer">
-        <div class="left">
-          <div class="labels" :class="{premiumLimit}">
-            <span>
-              <BcFormatNumber :value="data.paging.total_count" default="0" /> /
-              <BcFormatNumber :value="maxGroupsPerDashboard" />
-            </span>
-            <span>{{ $t('dashboard.validator.group_management.groups_added') }}</span>
-          </div>
-          <BcPremiumGem />
-        </div>
-        <Button :label="$t('navigation.done')" @click="onClose" />
-      </div>
-    </template>
   </BcDialog>
 </template>
 
@@ -270,11 +276,12 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
 :global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
 }
+
 :global(.validator-group-managment-modal-container .bc-pageinator .left-info) {
   padding-left: var(--padding-large);
 }
 
-:global(.validator-group-managment-modal-container .edit-group ){
+:global(.validator-group-managment-modal-container .edit-group) {
   max-width: 201px;
   height: 27px;
   width: 201px;
@@ -323,34 +330,26 @@ const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= ma
   }
 }
 
-.footer {
+.left {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: var(--padding-large);
-  gap: var(--padding);
+  gap: var(--padding-small);
 
-  .left {
+  .labels {
     display: flex;
-    align-items: center;
     gap: var(--padding-small);
 
-    .labels {
-      display: flex;
-      gap: var(--padding-small);
-
-      &.premiumLimit {
-        color: var(--negative-color);
-      }
-
-      @media (max-width: 450px) {
-        flex-direction: column;
-      }
+    &.premiumLimit {
+      color: var(--negative-color);
     }
 
-    .gem {
-      color: var(--primary-color);
+    @media (max-width: 450px) {
+      flex-direction: column;
     }
+  }
+
+  .gem {
+    color: var(--primary-color);
   }
 }
 
