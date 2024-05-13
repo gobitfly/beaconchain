@@ -9,7 +9,7 @@ import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useVali
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardElDepositsStore()
@@ -136,7 +136,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   class="link"
                   :no-prefetch="true"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" />
+                  {{ slotProps.data.index }}
                 </NuxtLink>
                 <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
               </template>
