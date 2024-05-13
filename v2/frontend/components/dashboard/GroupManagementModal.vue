@@ -24,7 +24,8 @@ const { width, isMobile } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
-const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 const { dashboards } = useUserDashboardStore()
 
 const cursor = ref<Cursor>(0)
@@ -36,20 +37,20 @@ const sortOrder = ref<number | null>()
 const hasNoOpenDialogs = ref(true)
 
 const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
-  let groups = (overview.value?.groups ?? [])
+  let processedGroups = groups.value
   if (search.value?.length) {
     const s = search.value.toLowerCase()
-    groups = groups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
+    processedGroups = processedGroups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
   }
   if (sortField.value?.length && sortOrder.value) {
-    groups = orderBy(groups, sortField.value, getSortOrder(sortOrder.value))
+    processedGroups = orderBy(processedGroups, sortField.value, getSortOrder(sortOrder.value))
   }
-  const totalCount = groups.length
+  const totalCount = processedGroups.length
   return {
     paging: {
       total_count: totalCount
     },
-    data: groups.slice(cursor.value as number, pageSize.value)
+    data: processedGroups.slice(cursor.value as number, pageSize.value)
   }
 })
 
