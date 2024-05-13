@@ -53,7 +53,7 @@ func (d *DataAccessService) queryHeatmap(params []interface{}, data interface{},
 	return d.alloyReader.Select(data, query, params...)
 }
 
-func (d *DataAccessService) queryHeatmapDetails(data *t.VDBHeatmapTooltipData, params []interface{}, days bool) error {
+func (d *DataAccessService) queryHeatmapDetails(data *t.VDBHeatmapTooltipData, dashboardId t.VDBId, params []interface{}, days bool) error {
 	// TODO slashed_by subquery is slow, need an index; missing permissions to create
 	queryResult := struct {
 		BlocksScheduled uint64 `db:"blocks_scheduled"`
@@ -75,13 +75,30 @@ func (d *DataAccessService) queryHeatmapDetails(data *t.VDBHeatmapTooltipData, p
 		timeframe = "day"
 		table = "validator_dashboard_data_daily"
 	}
+	where := "validator_index = ANY($2)"
+	inner_where := "slashed_by = ANY($2)"
+	from := table
+	inner_from := table
+	if len(dashboardId.Validators) == 0 {
+		params = append(params, dashboardId.Id)
+		from += fmt.Sprintf(" RIGHT JOIN users_val_dashboards_validators validators ON validators.validator_index = %s.validator_index", table)
+		where = "validators.dashboard_id = $2"
+		inner_where = where
+		inner_from += fmt.Sprintf(" INNER JOIN users_val_dashboards_validators validators ON validators.validator_index = %s.slashed_by", table)
+	} else {
+		validatorsArray := make([]uint32, 0, len(dashboardId.Validators))
+		for _, validator := range dashboardId.Validators {
+			validatorsArray = append(validatorsArray, uint32(validator.Index))
+		}
+		params = append(params, validatorsArray)
+	}
 	query := fmt.Sprintf(`
 		SELECT
 			COALESCE(SUM(blocks_scheduled), 0) AS blocks_scheduled,
 			COALESCE(SUM(blocks_proposed), 0) AS blocks_proposed,
 			COALESCE(SUM(sync_scheduled), 0) AS sync_scheduled,
 			COALESCE(SUM(slashed::int) FILTER (WHERE slashed_by IS NOT NULL), 0) AS own_slashed,
-			(SELECT COUNT(*) FROM %s WHERE slashed_by = ANY($1) AND %s = $2) AS others_slashed,
+			(SELECT COUNT(*) FROM %s WHERE %s AND %s = $1 AND slashed = TRUE) AS others_slashed,
 			COALESCE(SUM(attestations_reward), 0) AS attestations_reward,
 			COALESCE(SUM(attestations_reward)::decimal / SUM(attestations_ideal_reward) * 100, 0) AS attestations_eff,
 			COALESCE(SUM(attestations_scheduled), 0) AS attestations_scheduled,
@@ -91,7 +108,7 @@ func (d *DataAccessService) queryHeatmapDetails(data *t.VDBHeatmapTooltipData, p
 		FROM
 			%s
 		WHERE
-			validator_index = ANY($1) AND %s = $2`, table, timeframe, table, timeframe)
+			%s AND %s = $1`, inner_from, inner_where, timeframe, from, where, timeframe)
 
 	err := d.alloyReader.Get(&queryResult, query, params...)
 	if err != nil {
@@ -242,16 +259,7 @@ func (d *DataAccessService) GetValidatorDashboardDailyHeatmap(dashboardId t.VDBI
 func (d *DataAccessService) GetValidatorDashboardGroupEpochHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
 	ret := &t.VDBHeatmapTooltipData{Timestamp: utils.EpochToTime(epoch).Unix()}
 
-	validators, err := d.getDashboardValidators(dashboardId)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(validators) == 0 {
-		return ret, nil
-	}
-
-	err = d.queryHeatmapDetails(ret, []interface{}{validators, epoch}, false)
+	err := d.queryHeatmapDetails(ret, dashboardId, []interface{}{epoch}, false)
 	if err != nil {
 		return nil, err
 	}
@@ -262,16 +270,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupEpochHeatmap(dashboardId t
 func (d *DataAccessService) GetValidatorDashboardGroupDailyHeatmap(dashboardId t.VDBId, groupId uint64, day time.Time) (*t.VDBHeatmapTooltipData, error) {
 	ret := &t.VDBHeatmapTooltipData{Timestamp: day.Unix()}
 
-	validators, err := d.getDashboardValidators(dashboardId)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(validators) == 0 {
-		return ret, nil
-	}
-
-	err = d.queryHeatmapDetails(ret, []interface{}{validators, day.Format("2006-01-02")}, true)
+	err := d.queryHeatmapDetails(ret, dashboardId, []interface{}{day.Format("2006-01-02")}, true)
 	if err != nil {
 		return nil, err
 	}
