@@ -28,7 +28,7 @@ const visible = defineModel<boolean>()
 const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
 const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
