@@ -78,7 +78,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		BlocksProposed        uint64          `db:"blocks_proposed"`
 		SyncScheduled         uint64          `db:"sync_scheduled"`
 		SyncExecuted          uint64          `db:"sync_executed"`
-		SlashedViolation      uint64          `db:"slashed_violation"`
+		Slashed               uint64          `db:"slashed"`
 	}{}
 
 	queryParams := []interface{}{}
@@ -95,7 +95,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed,
 		SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled,
 		SUM(COALESCE(e.sync_executed, 0)) AS sync_executed,
-		SUM(COALESCE(e.slashed_violation, 0)) AS slashed_violation
+		SUM(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed
 		`
 
 	if dashboardId.Validators == nil {
@@ -221,9 +221,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			SyncPercentage := float64(res.SyncExecuted) / float64(res.SyncScheduled)
 			duty.Sync = &SyncPercentage
 		}
-		if res.SlashedViolation > 0 {
-			slashedViolation := res.SlashedViolation
-			duty.Slashing = &slashedViolation
+		// TODO: Slashing data is not yet available in the db
+		slashingInfo := res.Slashed /*+ "Validators slashed"*/
+		if slashingInfo > 0 {
+			duty.Slashing = &slashingInfo
 		}
 		reward := t.ClElValue[decimal.Decimal]{
 			El: res.ElRewards,
