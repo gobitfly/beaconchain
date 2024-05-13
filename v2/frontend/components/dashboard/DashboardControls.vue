@@ -186,28 +186,10 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
       background: var(--button-color-active);
       border-color: var(--button-color-active);
 
-      >.p-menuitem-content {
-        padding: 0;
-
-        >.button-content{
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 7px 17px;
-
-          .pointer {
-            cursor: pointer;
-          }
-        }
-      }
-
       >.p-submenu-list {
         font-weight: var(--standard_text_font_weight);
 
         >.p-menuitem .button-content{
-          gap: 0;
-          padding: 0;
-
           .text {
             @include utils.truncate-text;
           }
@@ -218,6 +200,10 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
         background: var(--button-color-hover);
       }
     }
+  }
+
+  .toggle {
+    margin-left: var(--padding);
   }
 }
 </style>

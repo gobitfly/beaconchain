@@ -1,4 +1,5 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.button_text;
@@ -23,8 +24,12 @@
       }
 
       > .p-menuitem-content {
-        padding: var(--padding-small) var(--padding);
+        padding: var(--padding-small) var(--padding-large);
         border-radius: var(--border-radius);
+        .button-content {
+          justify-content: center;
+          text-align: center;
+        }
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {

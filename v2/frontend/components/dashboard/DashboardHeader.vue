@@ -155,13 +155,9 @@ const title = computed(() => {
 
     .button-content {
       display: flex;
-      align-items: center;
-      justify-content: center;
       &:has(.toggle) {
         justify-content: space-between;
       }
-      padding-left: var(--padding);
-      padding-right: var(--padding);
 
       .text {
         @include utils.truncate-text;
@@ -169,6 +165,8 @@ const title = computed(() => {
 
       .toggle {
         flex-shrink: 0;
+        margin-top: auto;
+        margin-bottom: auto;
       }
 
       .pointer {
