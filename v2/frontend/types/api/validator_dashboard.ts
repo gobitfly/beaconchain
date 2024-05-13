@@ -166,7 +166,7 @@ export interface VDBExecutionDepositsTableRow {
   from: Address;
   depositor: Address;
   tx_hash: Hash;
-  withdrawal_credentials: Hash;
+  withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
   valid: boolean;
 }

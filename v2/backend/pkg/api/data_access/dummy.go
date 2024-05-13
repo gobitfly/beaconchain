@@ -31,6 +31,18 @@ func (d *DummyService) Close() {
 	// nothing to close
 }
 
+func (d *DummyService) GetLatestSlot() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
+	r := []t.EthConversionRate{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetUserInfo(email string) (*t.User, error) {
 	r := t.User{}
 	err := commonFakeData(&r)
