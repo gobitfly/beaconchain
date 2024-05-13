@@ -81,8 +81,14 @@ const dropdown = ref<HTMLDivElement>()
 const inputFieldAndButton = ref<HTMLDivElement>()
 const inputField = ref<HTMLInputElement>()
 
-const networkFilter = ref<NetworkFilter>(new Map<ChainIDs, boolean>()) // each entry will have a chain ID as key and the state of the option as value
-const categoryFilter = ref<CategoryFilter>(new Map<Category, boolean>()) // each entry will have a Category as key and the state of the button as value
+const networkFilterState = ref<NetworkFilter>(new Map<ChainIDs, boolean>()) // each entry will have a chain ID as key and the state of the option as value
+const categoryFilterState = ref<CategoryFilter>(new Map<Category, boolean>()) // each entry will have a Category as key and the state of the button as value
+
+interface SearchedFor {
+  term: string,
+  categories: CategoryFilter,
+  networks: NetworkFilter
+}
 
 const results = {
   raw: { data: [] } as SearchAheadAPIresponse, // response of the API, without structure nor order
@@ -161,15 +167,15 @@ function reconfigureSearchbar () {
     }
   }
   // creates the entries storing the state of the category filter, and deselect all categories
-  categoryFilter.value.clear()
+  categoryFilterState.value.clear()
   for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
-    categoryFilter.value.set(s, false)
+    categoryFilterState.value.set(s, false)
   }
   // creates the entries storing the state of the network filter, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
-  networkFilter.value.clear()
+  networkFilterState.value.clear()
   for (const nw of networks) {
-    networkFilter.value.set(nw, false)
+    networkFilterState.value.set(nw, false)
   }
 }
 
@@ -326,11 +332,11 @@ function filterAndOrganizeResults () {
 
   // determining whether filters are used
   let noNetworkIsSelected = true
-  for (const nw of networkFilter.value) {
+  for (const nw of networkFilterState.value) {
     noNetworkIsSelected &&= !nw[1]
   }
   let noCategoryIsSelected = true
-  for (const cat of categoryFilter.value) {
+  for (const cat of categoryFilterState.value) {
     noCategoryIsSelected &&= !cat[1]
   }
 
@@ -344,12 +350,12 @@ function filterAndOrganizeResults () {
     }
     // discarding findings that our configuration (given in the props) forbids
     const category = TypeInfo[toBeAdded.type].category
-    if ((toBeAdded.chainId !== ChainIDs.Any && !networkFilter.value.has(toBeAdded.chainId)) || !categoryFilter.value.has(category)) {
+    if ((toBeAdded.chainId !== ChainIDs.Any && !networkFilterState.value.has(toBeAdded.chainId)) || !categoryFilterState.value.has(category)) {
       continue
     }
     // determining whether the finding is filtered in or out, sending it to the corresponding list
-    const acceptTheChainID = networkFilter.value.get(toBeAdded.chainId) || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
-    const acceptTheCategory = categoryFilter.value.get(category) || noCategoryIsSelected
+    const acceptTheChainID = networkFilterState.value.get(toBeAdded.chainId) || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
+    const acceptTheCategory = categoryFilterState.value.get(category) || noCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       resultsIn.push(toBeAdded)
     } else {
@@ -499,11 +505,11 @@ function isResultCountable (type : ResultType | undefined) : boolean {
 }
 
 function mustNetworkFilterBeShown () : boolean {
-  return networkFilter.value.size >= 2 && !allTypesBelongToAllNetworks
+  return networkFilterState.value.size >= 2 && !allTypesBelongToAllNetworks
 }
 
 function mustCategoryFiltersBeShown () : boolean {
-  return categoryFilter.value.size >= 2
+  return categoryFilterState.value.size >= 2
 }
 
 const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
@@ -568,14 +574,14 @@ function informationIfHiddenResults () : string {
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
-            v-model="networkFilter"
+            v-model="networkFilterState"
             class="filter-networks"
             :bar-style="barStyle"
             @change="refreshOutputArea"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
-            v-model="categoryFilter"
+            v-model="categoryFilterState"
             class="filter-categories"
             :bar-style="barStyle"
             @change="refreshOutputArea"
