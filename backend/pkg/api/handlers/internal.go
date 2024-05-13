@@ -10,6 +10,32 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// --------------------------------------
+// Latest State
+
+func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
+	latestSlot, err := h.dai.GetLatestSlot()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	exchangeRates, err := h.dai.GetLatestExchangeRates()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	data := types.LatestStateData{
+		LatestSlot:    latestSlot,
+		ExchangeRates: exchangeRates,
+	}
+
+	response := types.InternalGetLatestStateResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
 // All handler function names must include the HTTP method and the path they handle
 // Internal handlers may only be authenticated by an OAuth token
 

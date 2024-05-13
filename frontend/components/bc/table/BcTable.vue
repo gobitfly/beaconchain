@@ -138,7 +138,14 @@ const sort = computed(() => {
         :cursor="cursor"
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
-      />
+      >
+        <template #bc-table-footer-left>
+          <slot name="bc-table-footer-left" />
+        </template>
+        <template v-if="$slots['bc-table-footer-right']" #bc-table-footer-right>
+          <slot name="bc-table-footer-right" />
+        </template>
+      </BcTablePager>
     </template>
   </DataTable>
 </template>

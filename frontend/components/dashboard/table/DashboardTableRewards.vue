@@ -140,12 +140,14 @@ const wrappedRewards = computed(() => {
             <Column
               field="epoch"
               :sortable="true"
-              body-class="bold epoch"
+              body-class="epoch"
               header-class="epoch"
               :header="$t('common.epoch')"
             >
               <template #body="slotProps">
-                <BcFormatNumber :value="slotProps.data.epoch" />
+                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
+                  <BcFormatNumber :value="slotProps.data.epoch" />
+                </NuxtLink>
               </template>
             </Column>
             <Column
@@ -162,7 +164,7 @@ const wrappedRewards = computed(() => {
             <Column
               v-if="colsVisible.duty"
               field="duty"
-              body-class="bold duty"
+              body-class="duty"
               header-class="duty"
               :header="$t('dashboard.validator.col.duty')"
             >
