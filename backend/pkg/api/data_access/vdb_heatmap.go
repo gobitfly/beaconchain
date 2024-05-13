@@ -8,7 +8,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
-	"golang.org/x/sync/errgroup"
 )
 
 func (d *DataAccessService) queryHeatmap(params []interface{}, data interface{}, timeframe string, days, validators bool) error {
@@ -52,6 +51,68 @@ func (d *DataAccessService) queryHeatmap(params []interface{}, data interface{},
 			%s`,
 		group_id, timestampCol, from, where, group_by, order_by)
 	return d.alloyReader.Select(data, query, params...)
+}
+
+func (d *DataAccessService) queryHeatmapDetails(data *t.VDBHeatmapTooltipData, params []interface{}, days bool) error {
+	// TODO slashed_by subquery is slow, need an index; missing permissions to create
+	queryResult := struct {
+		BlocksScheduled uint64 `db:"blocks_scheduled"`
+		BlocksProposed  uint64 `db:"blocks_proposed"`
+		SyncScheduled   uint64 `db:"sync_scheduled"`
+		// SyncExecuted               uint8  `db:"sync_executed"`
+		OwnSlashed                 uint64  `db:"own_slashed"`
+		OthersSlashed              uint64  `db:"others_slashed"`
+		AttestationReward          int64   `db:"attestations_reward"`
+		AttestationEfficiency      float64 `db:"attestations_eff"`
+		AttestationsScheduled      uint64  `db:"attestations_scheduled"`
+		AttestationsHeadExecuted   uint64  `db:"attestation_head_executed"`
+		AttestationsSourceExecuted uint64  `db:"attestation_source_executed"`
+		AttestationsTargetExecuted uint64  `db:"attestation_target_executed"`
+	}{}
+	timeframe := "epoch"
+	table := "validator_dashboard_data_epoch"
+	if days {
+		timeframe = "day"
+		table = "validator_dashboard_data_daily"
+	}
+	query := fmt.Sprintf(`
+		SELECT
+			COALESCE(SUM(blocks_scheduled), 0) AS blocks_scheduled,
+			COALESCE(SUM(blocks_proposed), 0) AS blocks_proposed,
+			COALESCE(SUM(sync_scheduled), 0) AS sync_scheduled,
+			COALESCE(SUM(slashed::int) FILTER (WHERE slashed_by IS NOT NULL), 0) AS own_slashed,
+			(SELECT COUNT(*) FROM %s WHERE slashed_by = ANY($1) AND %s = $2) AS others_slashed,
+			COALESCE(SUM(attestations_reward), 0) AS attestations_reward,
+			COALESCE(SUM(attestations_reward)::decimal / SUM(attestations_ideal_reward) * 100, 0) AS attestations_eff,
+			COALESCE(SUM(attestations_scheduled), 0) AS attestations_scheduled,
+			COALESCE(SUM(attestation_head_executed), 0) AS attestation_head_executed,
+			COALESCE(SUM(attestation_source_executed), 0) AS attestation_source_executed,
+			COALESCE(SUM(attestation_target_executed), 0) AS attestation_target_executed
+		FROM
+			%s
+		WHERE
+			validator_index = ANY($1) AND %s = $2`, table, timeframe, table, timeframe)
+
+	err := d.alloyReader.Get(&queryResult, query, params...)
+	if err != nil {
+		return err
+	}
+
+	data.Proposers.Success = queryResult.BlocksProposed
+	data.Proposers.Failed = queryResult.BlocksScheduled - queryResult.BlocksProposed
+	data.Syncs = queryResult.SyncScheduled
+	data.Slashings.Success = queryResult.OthersSlashed
+	data.Slashings.Failed = queryResult.OwnSlashed
+
+	data.AttestationsHead.Success = queryResult.AttestationsHeadExecuted
+	data.AttestationsHead.Failed = queryResult.AttestationsScheduled - queryResult.AttestationsHeadExecuted
+	data.AttestationsSource.Success = queryResult.AttestationsSourceExecuted
+	data.AttestationsSource.Failed = queryResult.AttestationsScheduled - queryResult.AttestationsSourceExecuted
+	data.AttestationsTarget.Success = queryResult.AttestationsTargetExecuted
+	data.AttestationsTarget.Failed = queryResult.AttestationsScheduled - queryResult.AttestationsTargetExecuted
+	data.AttestationIncome = decimal.NewFromInt(queryResult.AttestationReward)
+	data.AttestationEfficiency = queryResult.AttestationEfficiency
+	return nil
 }
 
 // retrieve data for last hour
@@ -179,123 +240,41 @@ func (d *DataAccessService) GetValidatorDashboardDailyHeatmap(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupEpochHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
-	ret := &t.VDBHeatmapTooltipData{}
+	ret := &t.VDBHeatmapTooltipData{Timestamp: utils.EpochToTime(epoch).Unix()}
 
-	var validators []uint64
-	err := d.alloyReader.Select(&validators, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2`, dashboardId.Id, groupId)
+	validators, err := d.getDashboardValidators(dashboardId)
 	if err != nil {
 		return nil, err
 	}
 
-	queryResult := []struct {
-		Validator                  uint64 `db:"validator_index"`
-		BlocksScheduled            uint8  `db:"blocks_scheduled"`
-		BlocksProposed             uint8  `db:"blocks_proposed"`
-		SyncScheduled              uint8  `db:"sync_scheduled"`
-		SyncExecuted               uint8  `db:"sync_executed"`
-		Slashed                    bool   `db:"slashed"`
-		AttestationReward          int64  `db:"attestations_reward"`
-		AttestationIdealReward     int64  `db:"attestations_ideal_reward"`
-		AttestationsScheduled      uint8  `db:"attestations_scheduled"`
-		AttestationsHeadExecuted   uint8  `db:"attestation_head_executed"`
-		AttestationsSourceExecuted uint8  `db:"attestation_source_executed"`
-		AttestationsTargetExecuted uint8  `db:"attestation_target_executed"`
-	}{}
-	wg := errgroup.Group{}
-	wg.Go(func() error {
-		query := `
-			SELECT
-				validator_index,
-				blocks_scheduled,
-				blocks_proposed,
-				sync_scheduled,
-				sync_executed,
-				slashed,
-				attestations_reward,
-				attestations_ideal_reward,
-				attestations_scheduled,
-				attestation_head_executed,
-				attestation_source_executed,
-				attestation_target_executed
-			FROM
-				validator_dashboard_data_epoch
-			WHERE
-				validator_index = ANY($1) AND epoch = $2`
+	if len(validators) == 0 {
+		return ret, nil
+	}
 
-		return d.alloyReader.Select(&queryResult, query, validators, epoch)
-	})
-
-	var slashings []uint64
-	wg.Go(func() error {
-		query := `
-			SELECT
-				validator_index
-			FROM
-				validator_dashboard_data_rolling_daily
-			WHERE
-				slashed_by = ANY($1)`
-
-		return d.alloyReader.Select(&slashings, query, validators, epoch)
-	})
-
-	if err := wg.Wait(); err != nil {
+	err = d.queryHeatmapDetails(ret, []interface{}{validators, epoch}, false)
+	if err != nil {
 		return nil, err
 	}
-
-	/*for _, slashed := range slashings {
-		ret.Slashings = append(ret.Slashings, t.VDBHeatmapTooltipDuty{
-			Validator: slashed,
-			Status:    "success",
-		})
-	}*/
-
-	var totalAttestationReward int64
-	var totalAttestationIdealReward int64
-	var totalAttestationsScheduled uint64
-	var totalAttestationsHeadExecuted uint64
-	var totalAttestationsSourceExecuted uint64
-	var totalAttestationsTargetExecuted uint64
-	for _, res := range queryResult {
-		/*if res.Slashed {
-			ret.Slashings = append(ret.Slashings, t.VDBHeatmapTooltipDuty{
-				Validator: res.Validator,
-				Status:    "failed",
-			})
-		}
-		if res.SyncScheduled > 0  { // && epoch % 256 == 0 move to circle logic
-			ret.Syncs = append(ret.Syncs, res.Validator)
-		}
-		for i := uint8(0); i < res.BlocksScheduled; i++ {
-			status := "success"
-			if i >= res.BlocksProposed {
-				status = "failed"
-			}
-			ret.Proposers = append(ret.Proposers, t.VDBHeatmapTooltipDuty{
-				Validator: res.Validator,
-				Status:    status,
-			})
-		}*/
-
-		totalAttestationReward += res.AttestationReward
-		totalAttestationIdealReward += res.AttestationIdealReward
-		totalAttestationsScheduled += uint64(res.AttestationsScheduled)
-		totalAttestationsHeadExecuted += uint64(res.AttestationsHeadExecuted)
-		totalAttestationsSourceExecuted += uint64(res.AttestationsSourceExecuted)
-		totalAttestationsTargetExecuted += uint64(res.AttestationsTargetExecuted)
-	}
-
-	ret.AttestationIncome = decimal.NewFromInt(totalAttestationReward)
-	if totalAttestationIdealReward != 0 {
-		ret.AttestationEfficiency = float64(totalAttestationReward) / float64(totalAttestationIdealReward)
-	}
-	ret.AttestationsHead = t.StatusCount{Success: totalAttestationsHeadExecuted, Failed: totalAttestationsScheduled - totalAttestationsHeadExecuted}
-	ret.AttestationsSource = t.StatusCount{Success: totalAttestationsSourceExecuted, Failed: totalAttestationsScheduled - totalAttestationsSourceExecuted}
-	ret.AttestationsTarget = t.StatusCount{Success: totalAttestationsTargetExecuted, Failed: totalAttestationsScheduled - totalAttestationsTargetExecuted}
 
 	return ret, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupDailyHeatmap(dashboardId t.VDBId, groupId uint64, day time.Time) (*t.VDBHeatmapTooltipData, error) {
-	// TODO @remoterami
-	return d.dummy.GetValidatorDashboardGroupDailyHeatmap(dashboardId, groupId, day)
+	ret := &t.VDBHeatmapTooltipData{Timestamp: day.Unix()}
+
+	validators, err := d.getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(validators) == 0 {
+		return ret, nil
+	}
+
+	err = d.queryHeatmapDetails(ret, []interface{}{validators, day.Format("2006-01-02")}, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
 }
