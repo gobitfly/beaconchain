@@ -106,6 +106,12 @@
     "total": "All Time",
     "all": "All Time"
   },
+  "currency":{
+    "label": {
+      "ETH": "Ethereum",
+      "NAT": "Native"
+    }
+  },
   "main":{
     "current_slot": "Current Slot",
     "current_epoch": "Current Epoch"

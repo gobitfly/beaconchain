@@ -31,7 +31,7 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
 <template>
   <div class="header top">
     <div class="content">
-      <div class="left-info">
+      <div class="left-content">
         <span v-if="latestState?.current_slot"><span>{{ $t('main.current_slot') }}</span>:
           <NuxtLink :to="`/slot/${latestState.current_slot}`" class="bold" :no-prefetch="true">
             <BcFormatNumber :value="latestState.current_slot" />
@@ -47,9 +47,12 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
         </span>
       </div>
       <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" bar-style="discreet" />
-      <NuxtLink to="/login">
-        {{ loginText }}
-      </NuxtLink>
+      <div class="right-content">
+        <BcCurrencySelection />
+        <NuxtLink to="/login">
+          {{ loginText }}
+        </NuxtLink>
+      </div>
     </div>
   </div>
   <div class="header bottom">
@@ -88,11 +91,12 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
     margin-left: var(--content-margin);
     margin-right: var(--content-margin);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
 
-    .left-info {
+    .left-content {
       display: flex;
+      align-items: center;
       gap: var(--padding-large);
       font-weight: var(--standard_text_light_font_weight);
       font-size: var(--title_font_size);
@@ -107,6 +111,11 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
         margin-right: var(--padding-small);
       }
 
+    }
+    .right-content{
+      display: flex;
+      align-items: center;
+      gap: var(--padding-large);
     }
   }
 
