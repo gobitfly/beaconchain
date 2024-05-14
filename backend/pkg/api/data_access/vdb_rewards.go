@@ -312,7 +312,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			COALESCE(validator_dashboard_data_epoch.blocks_el_reward, 0) as blocks_el_reward,
 			COALESCE(validator_dashboard_data_epoch.sync_scheduled, 0) as sync_scheduled,
 			COALESCE(validator_dashboard_data_epoch.sync_executed, 0) as sync_executed,
-			COALESCE(validator_dashboard_data_epoch.sync_rewards, 0) as sync_executed,
+			COALESCE(validator_dashboard_data_epoch.sync_rewards, 0) as sync_rewards,
 			COALESCE(validator_dashboard_data_epoch.slasher_reward, 0) as slasher_reward,
 			COALESCE(validator_dashboard_data_epoch.blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
 			COALESCE(validator_dashboard_data_epoch.blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward
@@ -321,7 +321,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	var rows []*queryResult
 
 	// handle the case when we have a list of validators
-	if dashboardId.Validators != nil && len(dashboardId.Validators) > 0 {
+	if len(dashboardId.Validators) > 0 {
 		validators := make([]uint64, 0)
 		for _, validator := range dashboardId.Validators {
 			validators = append(validators, validator.Index)
@@ -329,14 +329,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 
 		whereClause := "from validator_dashboard_data_epoch where validator_index = any($1) and epoch = $2"
 		query = fmt.Sprintf("%s %s", query, whereClause)
-		err := d.alloyReader.Select(&rows, query, validators, epoch)
+		err := d.alloyReader.Select(&rows, query, pq.Array(validators), epoch)
 		if err != nil {
 			log.Error(err, "error while getting validator dashboard group rewards", 0)
 			return nil, err
 		}
 	} else { // handle the case when we have a dashboard id and an optional group id
 		joinAndWhereClause := `from users_val_dashboards_validators inner join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
-			where (dashboard_id = $1 and (group_id = $2 or group_id = -1) and epoch = $3)`
+			where (dashboard_id = $1 and (group_id = $2 or $2 = -1) and epoch = $3)`
 		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
 		err := d.alloyReader.Select(&rows, query, dashboardId.Id, groupId, epoch)
 		if err != nil {
@@ -378,6 +378,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		ret.ProposalClAttIncReward = ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
 		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
 		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
+
+		// TODO: Add slashing info once available
 	}
 
 	return ret, nil
