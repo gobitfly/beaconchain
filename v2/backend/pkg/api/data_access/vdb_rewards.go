@@ -269,32 +269,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
 	ret := &t.VDBGroupRewardsData{}
 
-	query := `select
-			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
-			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
-			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
-			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
-			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
-			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestations_executed, 0) as attestations_executed,
-			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
-			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
-			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
-			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
-			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
-			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
-			COALESCE(sync_scheduled, 0) as sync_scheduled,
-			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
-			COALESCE(blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward
-		from users_val_dashboards_validators
-		join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
-		where (dashboard_id = $1 and group_id = $2 and epoch = $3)
-		`
-
 	type queryResult struct {
-		ValidatorIndex               uint32          `db:"validator_index"`
 		AttestationSourceReward      decimal.Decimal `db:"attestations_source_reward"`
 		AttestationTargetReward      decimal.Decimal `db:"attestations_target_reward"`
 		AttestationHeadReward        decimal.Decimal `db:"attestations_head_reward"`
@@ -302,7 +277,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		AttestationInclusionReward   decimal.Decimal `db:"attestations_inclusion_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
-		AttestationsExecuted      int64 `db:"attestations_executed"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
 		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
 		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
@@ -316,16 +290,55 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		SyncExecuted  uint32          `db:"sync_executed"`
 		SyncRewards   decimal.Decimal `db:"sync_rewards"`
 
+		SlasherRewards decimal.Decimal `db:"slasher_reward"`
+
 		BlocksClAttestationsReward decimal.Decimal `db:"blocks_cl_attestations_reward"`
 		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
+	query := `select
+			COALESCE(validator_dashboard_data_epoch.attestations_source_reward, 0) as attestations_source_reward,
+			COALESCE(validator_dashboard_data_epoch.attestations_target_reward, 0) as attestations_target_reward,
+			COALESCE(validator_dashboard_data_epoch.attestations_head_reward, 0) as attestations_head_reward,
+			COALESCE(validator_dashboard_data_epoch.attestations_inactivity_reward, 0) as attestations_inactivity_reward,
+			COALESCE(validator_dashboard_data_epoch.attestations_inclusion_reward, 0) as attestations_inclusion_reward,
+			COALESCE(validator_dashboard_data_epoch.attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(validator_dashboard_data_epoch.attestation_head_executed, 0) as attestation_head_executed,
+			COALESCE(validator_dashboard_data_epoch.attestation_source_executed, 0) as attestation_source_executed,
+			COALESCE(validator_dashboard_data_epoch.attestation_target_executed, 0) as attestation_target_executed,
+			COALESCE(validator_dashboard_data_epoch.blocks_scheduled, 0) as blocks_scheduled,
+			COALESCE(validator_dashboard_data_epoch.blocks_proposed, 0) as blocks_proposed,
+			COALESCE(validator_dashboard_data_epoch.blocks_cl_reward, 0) as blocks_cl_reward,
+			COALESCE(validator_dashboard_data_epoch.blocks_el_reward, 0) as blocks_el_reward,
+			COALESCE(validator_dashboard_data_epoch.sync_scheduled, 0) as sync_scheduled,
+			COALESCE(validator_dashboard_data_epoch.sync_executed, 0) as sync_executed,
+			COALESCE(validator_dashboard_data_epoch.sync_rewards, 0) as sync_executed,
+			COALESCE(validator_dashboard_data_epoch.slasher_reward, 0) as slasher_reward,
+			COALESCE(validator_dashboard_data_epoch.blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
+			COALESCE(validator_dashboard_data_epoch.blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward
+		from users_val_dashboards_validators
+		`
+
 	var rows []*queryResult
 
-	err := d.alloyReader.Select(&rows, query, dashboardId, groupId, epoch)
-	if err != nil {
-		log.Error(err, "error while getting validator dashboard group rewards", 0)
-		return nil, err
+	// handle the case when we have a list of validators
+	if len(dashboardId.Validators) > 0 {
+		whereClause := "where validator_index = any($1) and epoch = $2"
+		query = fmt.Sprintf("%s %s", query, whereClause)
+		err := d.alloyReader.Select(&rows, query, dashboardId.Validators, epoch)
+		if err != nil {
+			log.Error(err, "error while getting validator dashboard group rewards", 0)
+			return nil, err
+		}
+	} else { // handle the case when we have a dashboard id and an optional group id
+		joinAndWhereClause := `inner join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
+			where (dashboard_id = $1 and (group_id = $2 or group_id = -1) and epoch = $3)`
+		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
+		err := d.alloyReader.Select(&rows, query, dashboardId.Id, groupId, epoch)
+		if err != nil {
+			log.Error(err, "error while getting validator dashboard group rewards", 0)
+			return nil, err
+		}
 	}
 
 	gWei := decimal.NewFromInt(1e9)
@@ -355,6 +368,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 
 		ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
 		ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
+		ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
 	}
 
 	return ret, nil
