@@ -7,7 +7,7 @@ type AccountDashboard struct {
 type ValidatorDashboard struct {
 	Id        uint64        `json:"id"`
 	Name      string        `json:"name"`
-	PublicIds []VDBPublicId `json:"public_ids"`
+	PublicIds []VDBPublicId `json:"public_ids,omitempty"`
 }
 type UserDashboardsData struct {
 	ValidatorDashboards []ValidatorDashboard `json:"validator_dashboards"`
