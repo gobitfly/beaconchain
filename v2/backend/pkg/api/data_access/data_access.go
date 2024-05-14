@@ -25,8 +25,11 @@ type DataAccessor interface {
 
 	Close()
 
-	GetUserInfo(email string) (*t.User, error)
+	GetLatestSlot() (uint64, error)
+	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
+	// TODO: move to user repository
+	GetUserInfo(email string) (*t.User, error)
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 }
 

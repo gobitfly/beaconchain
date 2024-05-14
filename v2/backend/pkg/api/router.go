@@ -66,6 +66,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
+		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
+
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
