@@ -69,7 +69,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	queryResult := []struct {
 		Epoch                 uint64          `db:"epoch"`
-		GroupId               uint64          `db:"group_id"`
+		GroupId               int64           `db:"group_id"`
 		ClRewards             int64           `db:"cl_rewards"`
 		ElRewards             decimal.Decimal `db:"el_rewards"`
 		AttestationsScheduled uint64          `db:"attestations_scheduled"`
@@ -207,6 +207,21 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	// Create the result
 	result := make([]t.VDBRewardsTableRow, 0)
+
+	type RewardsPerEpoch struct {
+		GroupCount            uint8
+		ClRewards             int64
+		ElRewards             decimal.Decimal
+		AttestationsScheduled uint64
+		AttestationsExecuted  uint64
+		BlocksScheduled       uint64
+		BlocksProposed        uint64
+		SyncScheduled         uint64
+		SyncExecuted          uint64
+		Slashed               uint64
+	}
+	rewardsPerEpoch := make(map[uint64]*RewardsPerEpoch, 0)
+
 	for _, res := range queryResult {
 		duty := t.VDBRewardesTableDuty{}
 		if res.AttestationsScheduled > 0 {
@@ -231,13 +246,28 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 		}
 		if duty.Attestation != nil || duty.Proposal != nil || duty.Sync != nil || duty.Slashing != nil {
-			// Only add groups that had some duty
+			// Only add groups that had some duty or got slashed
 			result = append(result, t.VDBRewardsTableRow{
 				Epoch:   res.Epoch,
 				Duty:    duty,
 				GroupId: res.GroupId,
 				Reward:  reward,
 			})
+
+			// Add it to the rewards per epoch
+			if _, ok := rewardsPerEpoch[res.Epoch]; !ok {
+				rewardsPerEpoch[res.Epoch] = &RewardsPerEpoch{}
+			}
+			rewardsPerEpoch[res.Epoch].GroupCount++
+			rewardsPerEpoch[res.Epoch].ClRewards += res.ClRewards
+			rewardsPerEpoch[res.Epoch].ElRewards = rewardsPerEpoch[res.Epoch].ElRewards.Add(res.ElRewards)
+			rewardsPerEpoch[res.Epoch].AttestationsScheduled += res.AttestationsScheduled
+			rewardsPerEpoch[res.Epoch].AttestationsExecuted += res.AttestationsExecuted
+			rewardsPerEpoch[res.Epoch].BlocksScheduled += res.BlocksScheduled
+			rewardsPerEpoch[res.Epoch].BlocksProposed += res.BlocksProposed
+			rewardsPerEpoch[res.Epoch].SyncScheduled += res.SyncScheduled
+			rewardsPerEpoch[res.Epoch].SyncExecuted += res.SyncExecuted
+			rewardsPerEpoch[res.Epoch].Slashed += res.Slashed
 		}
 	}
 
