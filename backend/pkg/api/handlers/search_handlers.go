@@ -21,7 +21,7 @@ const (
 	//nolint:gosec
 	validatorsByWithdrawalCredential searchTypeKey = "validators_by_withdrawal_credential"
 	validatorsByWithdrawalAddress    searchTypeKey = "validators_by_withdrawal_address"
-	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens"
+	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens_name"
 	validatorsByGraffiti             searchTypeKey = "validators_by_graffiti"
 )
 
