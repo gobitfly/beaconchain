@@ -14,7 +14,7 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
@@ -29,7 +29,7 @@ const colsVisible = computed(() => {
 
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
   }
   setQuery(q, true, true)
 }
@@ -91,6 +91,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
