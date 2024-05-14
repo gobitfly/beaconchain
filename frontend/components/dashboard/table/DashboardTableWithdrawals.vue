@@ -269,13 +269,13 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.amount')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.index === undefined && isLoadingTotal">
+                <div v-if="slotProps.data.identifier === totalIdentifier && isLoadingTotal">
                   <BcLoadingSpinner :loading="true" size="small" />
                 </div>
                 <div v-else-if="!slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
                   <BcFormatValue
                     :value="slotProps.data.amount"
-                    :class="{'all-time-total':slotProps.data.index === undefined}"
+                    :class="{'all-time-total':slotProps.data.identifier === totalIdentifier}"
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
                     <FontAwesomeIcon :icon="faInfoCircle" />
