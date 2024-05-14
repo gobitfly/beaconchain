@@ -17,7 +17,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const dialog = useDialog()
 
@@ -33,7 +33,7 @@ const openValidatorModal = () => {
 }
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.groupId, overview.value?.groups)
+  return getGroupLabel($t, props.groupId, groups.value)
 })
 
 const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
