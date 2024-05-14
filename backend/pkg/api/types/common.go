@@ -116,3 +116,11 @@ type SearchResult struct {
 }
 
 type InternalPostSearchResponse ApiDataResponse[[]SearchResult]
+
+type VDBPublicId struct {
+	PublicId      string `json:"public_id"`
+	Name          string `json:"name"`
+	ShareSettings struct {
+		GroupNames bool `json:"group_names"`
+	} `json:"share_settings"`
+}

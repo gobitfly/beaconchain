@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -157,29 +156,18 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
-	body := r.Body
 
-	// Read the entire request body (this consumes the request body)
-	bodyBytes, err := io.ReadAll(body)
+	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Error(err, "error reading request body", 0, nil)
 		return errors.New("can't read request body")
 	}
 
-	// Use bytes.NewReader to create an io.Reader for the body bytes, so it can be reused
-	bodyReader := bytes.NewReader(bodyBytes)
-
-	// First check: Decode into an empty interface to check JSON format
+	// First check: Unmarshal into an empty interface to check JSON format
 	var i interface{}
-	if err := json.NewDecoder(bodyReader).Decode(&i); err != nil {
+	if err := json.Unmarshal(bodyBytes, &i); err != nil {
 		v.add("request body", "not in JSON format")
 		return nil
-	}
-
-	// Reset the reader for the next use
-	_, err = bodyReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return errors.New("couldn't seek to start of the body")
 	}
 
 	// Second check: Validate against the expected schema
@@ -206,13 +194,8 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 		return nil
 	}
 
-	// Decode into the target data structure
-	// Reset the reader again for the final decode
-	_, err = bodyReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return errors.New("couldn't seek to start of the body")
-	}
-	if err := json.NewDecoder(bodyReader).Decode(data); err != nil {
+	// Unmarshal into the target struct
+	if err := json.Unmarshal(bodyBytes, data); err != nil {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
 	}
