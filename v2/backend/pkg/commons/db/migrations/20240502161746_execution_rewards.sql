@@ -16,6 +16,10 @@ CREATE TABLE execution_payloads (
 );
 -- +goose StatementEnd
 -- +goose StatementBegin
+SELECT('up SQL query - create index on execution_payloads table');
+CREATE UNIQUE INDEX execution_payloads_block_hash_idx ON public.execution_payloads USING btree (block_hash, fee_recipient_reward);
+-- +goose StatementEnd
+-- +goose StatementBegin
 SELECT('up SQL query - prefilling execution_payloads table with empty values');
 INSERT INTO execution_payloads (block_hash) SELECT exec_block_hash FROM blocks where exec_block_hash IS NOT NULL;
 -- +goose StatementEnd

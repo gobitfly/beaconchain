@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -58,7 +59,44 @@ func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.Stand
 		return fmt.Errorf("error maintaining table: %w", err)
 	}
 
+	start := time.Now()
+	// update cached view
+	err = d.updateCachedView()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("updating execution payloads cached view took %v", time.Since(start))
 	return nil
+}
+
+func (d *executionPayloadsExporter) updateCachedView() (err error) {
+	err = db.CacheQuery(`
+		SELECT DISTINCT ON (uvdv.dashboard_id, uvdv.group_id, b.slot)
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			b.slot,
+			coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS reward,
+			rb.value IS NOT NULL AS is_mev,
+			case
+				when rb.value IS NOT NULL then rb.proposer_fee_recipient
+				else b.exec_fee_recipient
+			end as fee_recipient
+		FROM
+			blocks b
+			INNER JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			INNER JOIN users_val_dashboards_validators uvdv ON b.proposer = uvdv.validator_index
+			LEFT JOIN relays_blocks rb ON rb.exec_block_hash = b.exec_block_hash
+		WHERE
+			b.status = '1'
+			AND b.exec_block_hash IS NOT NULL
+		ORDER BY
+			dashboard_id,
+			group_id,
+			slot DESC;
+	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"})
+	return err
+
 }
 
 // this is basically synchronous, each time it gets called it will kill the previous export and replace it with itself
