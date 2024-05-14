@@ -236,7 +236,7 @@ func (d *executionDepositsExporter) exportTillBlock(block uint64) (err error) {
 		return err
 	}
 
-	log.Debugf("updating cached view took %v", time.Since(start))
+	log.Debugf("updating cached deposits view took %v", time.Since(start))
 
 	if len(depositsToSave) > 0 {
 		err = d.aggregateDeposits()
