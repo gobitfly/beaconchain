@@ -316,22 +316,26 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			COALESCE(validator_dashboard_data_epoch.slasher_reward, 0) as slasher_reward,
 			COALESCE(validator_dashboard_data_epoch.blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
 			COALESCE(validator_dashboard_data_epoch.blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward
-		from users_val_dashboards_validators
 		`
 
 	var rows []*queryResult
 
 	// handle the case when we have a list of validators
-	if len(dashboardId.Validators) > 0 {
-		whereClause := "where validator_index = any($1) and epoch = $2"
+	if dashboardId.Validators != nil && len(dashboardId.Validators) > 0 {
+		validators := make([]uint64, 0)
+		for _, validator := range dashboardId.Validators {
+			validators = append(validators, validator.Index)
+		}
+
+		whereClause := "from validator_dashboard_data_epoch where validator_index = any($1) and epoch = $2"
 		query = fmt.Sprintf("%s %s", query, whereClause)
-		err := d.alloyReader.Select(&rows, query, dashboardId.Validators, epoch)
+		err := d.alloyReader.Select(&rows, query, validators, epoch)
 		if err != nil {
 			log.Error(err, "error while getting validator dashboard group rewards", 0)
 			return nil, err
 		}
 	} else { // handle the case when we have a dashboard id and an optional group id
-		joinAndWhereClause := `inner join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
+		joinAndWhereClause := `from users_val_dashboards_validators inner join validator_dashboard_data_epoch on validator_dashboard_data_epoch.validator_index = users_val_dashboards_validators.validator_index
 			where (dashboard_id = $1 and (group_id = $2 or group_id = -1) and epoch = $3)`
 		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
 		err := d.alloyReader.Select(&rows, query, dashboardId.Id, groupId, epoch)
@@ -345,16 +349,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 
 	for _, row := range rows {
 		ret.AttestationsHead.Income = ret.AttestationsHead.Income.Add(row.AttestationHeadReward.Mul(gWei))
-		ret.AttestationsHead.StatusCount.Success = uint64(row.AttestationHeadExecuted)
-		ret.AttestationsHead.StatusCount.Failed = uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+		ret.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
+		ret.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
 
 		ret.AttestationsSource.Income = ret.AttestationsSource.Income.Add(row.AttestationSourceReward.Mul(gWei))
-		ret.AttestationsSource.StatusCount.Success = uint64(row.AttestationSourceExecuted)
-		ret.AttestationsSource.StatusCount.Failed = uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.StatusCount.Success += uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
 
 		ret.AttestationsTarget.Income = ret.AttestationsTarget.Income.Add(row.AttestationTargetReward.Mul(gWei))
-		ret.AttestationsTarget.StatusCount.Success = uint64(row.AttestationTargetExecuted)
-		ret.AttestationsTarget.StatusCount.Failed = uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.StatusCount.Success += uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
 
 		ret.Inactivity.Income = ret.Inactivity.Income.Add(row.AttestationInactivitytReward.Mul(gWei))
 
@@ -362,13 +366,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		ret.Proposal.StatusCount.Success += uint64(row.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
 
-		ret.Sync.Income.Add(row.SyncRewards.Mul(gWei))
+		ret.Sync.Income = ret.Sync.Income.Add(row.SyncRewards.Mul(gWei))
 		ret.Sync.StatusCount.Success += uint64(row.SyncExecuted)
 		ret.Sync.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
 
-		ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
-		ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
-		ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
+		ret.ProposalClAttIncReward = ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
+		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
+		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
 	}
 
 	return ret, nil
