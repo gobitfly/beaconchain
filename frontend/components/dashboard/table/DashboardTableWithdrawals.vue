@@ -61,7 +61,6 @@ const tableData = computed(() => {
     paging: withdrawals.value.paging,
     data: [
       {
-        // leaves index undefined to indicate that this is the total row
         amount: totalAmount.value,
         identifier: totalIdentifier
       },
@@ -167,7 +166,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   </BcTooltip>
                 </div>
                 <NuxtLink
-                  v-else-if="slotProps.data.index !== undefined"
+                  v-else-if="slotProps.data.identifier !== totalIdentifier"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
@@ -188,7 +187,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                <span v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate">
+                <span v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate">
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </span>
               </template>
@@ -201,7 +200,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
+                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
@@ -219,7 +218,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <NuxtLink
-                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
+                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
@@ -235,7 +234,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate"
+                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   type="slot"
                   class="time-passed"
                   :value="slotProps.data.slot"
@@ -249,7 +248,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.recipient')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.index !== undefined && !slotProps.data.is_missing_estimate">
+                <div v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate">
                   <BcFormatHash
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
