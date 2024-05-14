@@ -8,6 +8,8 @@ import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useVal
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
+type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: string}
+
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
@@ -17,6 +19,7 @@ const { t: $t } = useI18n()
 const { latestState } = useLatestStateStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const totalIdentifier = 'total'
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -60,7 +63,7 @@ const tableData = computed(() => {
       {
         // leaves index undefined to indicate that this is the total row
         amount: totalAmount.value,
-        identifier: 'total'
+        identifier: totalIdentifier
       },
       ...withdrawals.value.data.map(w => ({
         ...w,
@@ -92,8 +95,8 @@ const setSearch = (value?: string) => {
   loadData(setQuerySearch(value, lastQuery.value))
 }
 
-const getRowClass = (row: VDBWithdrawalsTableRow) => {
-  if (row.index === undefined) {
+const getRowClass = (row: ExtendedVDBWithdrawalsTableRow) => {
+  if (row.identifier === totalIdentifier) {
     return 'total-row'
   }
 
@@ -102,17 +105,17 @@ const getRowClass = (row: VDBWithdrawalsTableRow) => {
   }
 }
 
-const getExpansionValueClass = (row: VDBWithdrawalsTableRow) => {
+const getExpansionValueClass = (row: ExtendedVDBWithdrawalsTableRow) => {
   if (isRowInFuture(row)) {
     return 'gray-out'
   }
 }
 
-const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
-  return row.index !== undefined
+const isRowExpandable = (row: ExtendedVDBWithdrawalsTableRow) => {
+  return row.identifier !== totalIdentifier
 }
 
-const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
+const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   if (latestState?.value) {
     return row.epoch > latestState.value.currentEpoch
   }
