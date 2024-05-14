@@ -106,7 +106,7 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
       }
 
       .icon{
-        height: 12px;
+        height: 14px;
         width: auto;
         margin-right: var(--padding-small);
       }
