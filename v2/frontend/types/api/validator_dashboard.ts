@@ -241,10 +241,3 @@ export interface VDBPostValidatorsData {
   public_key: string;
   group_id: number /* uint64 */;
 }
-export interface VDBPostPublicIdData {
-  public_id: string;
-  name: string;
-  share_settings: {
-    group_names: boolean;
-  };
-}

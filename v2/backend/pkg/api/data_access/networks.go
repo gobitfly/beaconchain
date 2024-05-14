@@ -15,5 +15,9 @@ func (d *DataAccessService) GetAllNetworks() ([]types.NetworkInfo, error) {
 			ChainId: 1,
 			Name:    "ethereum",
 		},
+		{
+			ChainId: 100,
+			Name:    "gnosis",
+		},
 	}, nil
 }
