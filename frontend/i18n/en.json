@@ -106,6 +106,10 @@
     "total": "All Time",
     "all": "All Time"
   },
+  "main":{
+    "current_slot": "Current Slot",
+    "current_epoch": "Current Epoch"
+  }, 
   "slotViz": {
     "head": "Head",
     "tooltip": {

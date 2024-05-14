@@ -15,7 +15,7 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
-const { slotsPerEpoch } = useNetwork()
+const { slotToEpoch } = useNetwork()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
@@ -111,7 +111,7 @@ const isRowExpandable = (row: VDBWithdrawalsTableRow) => {
 
 const isRowInFuture = (row: VDBWithdrawalsTableRow) => {
   if (latestState?.value) {
-    return row.epoch > latestState.value.current_slot * slotsPerEpoch
+    return row.epoch > slotToEpoch(latestState.value.current_slot)
   }
 
   return false

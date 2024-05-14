@@ -2,10 +2,10 @@
 // The DataWrapper is for loading the Data that used in the whole app.
 // We can't load the data directly in the app.vue as this would conflict with some providers being initialized there.
 const { getUser } = useUserStore()
-const timer = useInterval(12)
+const { tick } = useInterval(12)
 const { refreshLatestState } = useLatestStateStore()
 
-await useAsyncData('latest_state', () => refreshLatestState(), { watch: [timer] })
+await useAsyncData('latest_state', () => refreshLatestState(), { watch: [tick] })
 await useAsyncData('get_user', () => getUser())
 
 </script>
