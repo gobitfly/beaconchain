@@ -37,12 +37,12 @@ export function useValue () {
       }
 
       // If we don't show the native currency but the input is not ETH we first convert it to ETH
-      if (!useNative && source !== 'ETH' && source !== target && rates.value[source]) {
-        value = bigDiv(value, rates.value[source])
+      if (!useNative && source !== 'ETH' && source !== target && rates.value[source]?.rate) {
+        value = bigDiv(value, rates.value[source]!.rate)
       }
       // If source and target are different we convert it in the target currency
-      if (source !== target && rates.value[target]) {
-        value = bigMul(value, rates.value[target])
+      if (source !== target && rates.value[target]?.rate) {
+        value = bigMul(value, rates.value[target]!.rate)
       }
       let currencyLabel: string = target
       const minDecimalCount: number | undefined = options?.fixedDecimalCount

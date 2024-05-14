@@ -1,4 +1,6 @@
+import { reduce } from 'lodash-es'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
 
@@ -11,16 +13,21 @@ export function useCurrency () {
     selectedCurrency.value = newCurrency
   }
 
-  const rates = computed(() => {
-    return latestState.value?.rates || {} as Record<Currency, number>
+  const rates = computed<Partial<Record<Currency, EthConversionRate>>>(() => {
+    const rec: Partial<Record<Currency, EthConversionRate>> = {}
+    return reduce(
+      latestState.value?.exchange_rates || [],
+      (list, rate) => {
+        list[rate.code as Currency] = rate
+        return list
+      },
+      rec
+    )
   })
 
-  const available = computed(() => {
-    let list: Currency[] = ['NAT', 'ETH']
-    if (latestState.value?.rates) {
-      list = list.concat(Object.keys(latestState.value.rates) as Currency[])
-    }
-    return list
+  const available = computed<Currency[]>(() => {
+    const list: Currency[] = ['NAT', 'ETH']
+    return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 
   return { currency, setCurrency, available, rates }
