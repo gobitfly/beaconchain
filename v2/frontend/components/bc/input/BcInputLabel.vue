@@ -41,7 +41,7 @@ const iconClick = () => {
 
 const icon = computed(() => ({
   icon: isEditing.value ? faCheck : faEdit,
-  disabled: props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty))
+  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty))) ? true : null
 }))
 
 watch(() => props.value, (v) => {
@@ -64,8 +64,7 @@ watch([isEditing, inputRef], ([edit, input]) => {
     <span v-if="!isEditing" class="label">
       {{ label || value }}
     </span>
-    <FontAwesomeIcon v-if="icon.disabled" class="link" :icon="icon.icon" disabled @click="iconClick" />
-    <FontAwesomeIcon v-else class="link" :icon="icon.icon" @click="iconClick" />
+    <FontAwesomeIcon class="link" :icon="icon.icon" :disabled="icon.disabled" @click="iconClick" />
   </div>
 </template>
 
