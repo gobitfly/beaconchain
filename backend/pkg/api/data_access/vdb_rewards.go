@@ -352,16 +352,26 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 
 	queryParams := []interface{}{}
 
+	totalRewardQuery := `
+		(
+			COALESCE(e.blocks_el_reward, 0) +
+			CAST((
+				COALESCE(e.attestations_reward, 0) +
+				COALESCE(e.blocks_cl_reward, 0) +
+				COALESCE(e.sync_rewards, 0) +
+				COALESCE(e.slasher_reward, 0)
+			) AS numeric) * 10^9
+		)`
+
 	joinQuery := ""
 
 	queryParams = append(queryParams, epoch)
 	whereQuery := fmt.Sprintf(`WHERE epoch = $%d
 		AND (
-			COALESCE(e.attestations_reward, 0) +
-			COALESCE(e.blocks_cl_reward,0) +
-			COALESCE(e.sync_rewards,0) +
-			CASE WHEN e.slashed THEN 1 ELSE 0 END +
-			COALESCE(e.slashed_violation,0) 
+			COALESCE(e.attestations_scheduled, 0) +
+			COALESCE(e.sync_scheduled,0) +
+			COALESCE(e.blocks_scheduled,0) +
+			CASE WHEN e.slashed THEN 1 ELSE 0 END
 		) > 0
 		`, len(queryParams))
 
@@ -387,7 +397,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 
 		if indexSearch != -1 {
 			queryParams = append(queryParams, indexSearch)
-			whereQuery += fmt.Sprintf(`AND e.validator_index = $%d"
+			whereQuery += fmt.Sprintf(`AND e.validator_index = $%d
 			`, len(queryParams))
 		}
 
@@ -423,8 +433,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			// If we have a valid cursor only check the results before/after it
 			queryParams = append(queryParams, currentCursor.Reward, currentCursor.Index)
 
-			whereQuery += fmt.Sprintf(`AND (total_reward%[1]s$%[2]d OR (total_reward=$%[2]d AND e.validator_index%[1]s$%[3]d))
-			`, sortSearchDirection, len(queryParams)-1, len(queryParams))
+			whereQuery += fmt.Sprintf(`AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND e.validator_index%[2]s$%[4]d))
+			`, totalRewardQuery, sortSearchDirection, len(queryParams)-1, len(queryParams))
 		}
 		orderQuery = fmt.Sprintf(`ORDER BY total_reward %[1]s, e.validator_index %[1]s
 		`, sortSearchOrder)
@@ -434,15 +444,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	rewardsQuery := fmt.Sprintf(`
 		SELECT
 			e.validator_index,
-			(
-				COALESCE(e.blocks_el_reward, 0) +
-				CAST((
-					COALESCE(e.attestations_reward, 0) +
-					COALESCE(e.blocks_cl_reward, 0) +
-					COALESCE(e.sync_rewards, 0) +
-					COALESCE(e.slasher_reward, 0)
-				) AS numeric) * 10^9
-			) AS total_reward,	
+			%s AS total_reward,	
 			COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
 			COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
 			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
@@ -464,7 +466,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		%s
 		%s
 		%s
-		%s`, joinQuery, whereQuery, orderQuery, limitQuery)
+		%s`, totalRewardQuery, joinQuery, whereQuery, orderQuery, limitQuery)
 
 	queryTime := time.Now()
 
@@ -474,31 +476,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	}
 
 	fmt.Println("Query time: ", time.Since(queryTime))
-
-	// Get the orphaned block data
-	startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	endSlot := (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
-
-	orphaned := []struct {
-		Proposer uint64 `db:"proposer"`
-		Slot     uint64 `db:"slot"`
-	}{}
-	err = d.alloyReader.Select(&orphaned, `
-		SELECT
-			proposer,
-			slot
-		FROM blocks
-		WHERE slot >= $1 AND slot <= $2 AND status = '3'
-		`, startSlot, endSlot)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Get the orphaned block count
-	orphanedCount := make(map[uint64]uint64)
-	for _, block := range orphaned {
-		orphanedCount[block.Proposer]++
-	}
 
 	// Create the result
 	cursorData := make([]t.ValidatorDutiesCursor, 0)
@@ -542,14 +519,10 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 				ClSlashingInclusionIncome:    utils.GWeiToWei(big.NewInt(res.SlasherReward)),
 			}
 
-			// TODO: Assumes that res.BlocksProposed also contains orphaned blocks
-			blocksOrphaned := orphanedCount[res.ValidatorIndex]
 			if res.BlocksProposed == 0 {
 				proposalEvent.Status = "failed"
-			} else if res.BlocksProposed == res.BlocksScheduled && blocksOrphaned == 0 {
+			} else if res.BlocksProposed == res.BlocksScheduled {
 				proposalEvent.Status = "success"
-			} else if blocksOrphaned == res.BlocksScheduled {
-				proposalEvent.Status = "orphaned"
 			} else {
 				proposalEvent.Status = "partial"
 			}
