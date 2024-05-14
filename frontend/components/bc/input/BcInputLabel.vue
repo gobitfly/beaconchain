@@ -64,7 +64,8 @@ watch([isEditing, inputRef], ([edit, input]) => {
     <span v-if="!isEditing" class="label">
       {{ label || value }}
     </span>
-    <FontAwesomeIcon class="link" :icon="icon.icon" :disabled="icon.disabled" @click="iconClick" />
+    <FontAwesomeIcon v-if="icon.disabled" class="link" :icon="icon.icon" disabled @click="iconClick" />
+    <FontAwesomeIcon v-else class="link" :icon="icon.icon" @click="iconClick" />
   </div>
 </template>
 
