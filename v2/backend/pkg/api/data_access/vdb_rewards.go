@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -281,8 +280,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
 
-	startTimeTotal := time.Now()
-
 	// Initialize the cursor
 	var currentCursor t.ValidatorDutiesCursor
 	var err error
@@ -352,28 +349,18 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 
 	queryParams := []interface{}{}
 
-	totalRewardQuery := `
-		(
-			COALESCE(e.blocks_el_reward, 0) +
-			CAST((
-				COALESCE(e.attestations_reward, 0) +
-				COALESCE(e.blocks_cl_reward, 0) +
-				COALESCE(e.sync_rewards, 0) +
-				COALESCE(e.slasher_reward, 0)
-			) AS numeric) * 10^9
-		)`
-
-	joinQuery := ""
+	joinSubquery := ""
 
 	queryParams = append(queryParams, epoch)
-	whereQuery := fmt.Sprintf(`WHERE epoch = $%d
+	whereSubquery := fmt.Sprintf(`WHERE epoch = $%d
 		AND (
 			COALESCE(e.attestations_scheduled, 0) +
 			COALESCE(e.sync_scheduled,0) +
 			COALESCE(e.blocks_scheduled,0) +
 			CASE WHEN e.slashed THEN 1 ELSE 0 END
 		) > 0
-		`, len(queryParams))
+	`, len(queryParams))
+	whereQuery := ""
 
 	orderQuery := ""
 
@@ -382,22 +369,22 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	`, len(queryParams))
 
 	if dashboardId.Validators == nil {
-		joinQuery = `INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
+		joinSubquery = `INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
 		`
 
 		queryParams = append(queryParams, dashboardId.Id)
-		whereQuery += fmt.Sprintf(`AND v.dashboard_id = $%d
+		whereSubquery += fmt.Sprintf(`AND v.dashboard_id = $%d
 		`, len(queryParams))
 
 		if groupId != t.AllGroups {
 			queryParams = append(queryParams, groupId)
-			whereQuery += fmt.Sprintf(`AND v.group_id = $%d
+			whereSubquery += fmt.Sprintf(`AND v.group_id = $%d
 			`, len(queryParams))
 		}
 
 		if indexSearch != -1 {
 			queryParams = append(queryParams, indexSearch)
-			whereQuery += fmt.Sprintf(`AND e.validator_index = $%d
+			whereSubquery += fmt.Sprintf(`AND e.validator_index = $%d
 			`, len(queryParams))
 		}
 
@@ -415,7 +402,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		}
 
 		queryParams = append(queryParams, pq.Array(validators))
-		whereQuery += fmt.Sprintf(`AND e.validator_index = ANY($%d)
+		whereSubquery += fmt.Sprintf(`AND e.validator_index = ANY($%d)
 		`, len(queryParams))
 	}
 
@@ -423,59 +410,68 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
 			queryParams = append(queryParams, currentCursor.Index)
-			whereQuery += fmt.Sprintf(`AND e.validator_index%s$%d
+			whereSubquery += fmt.Sprintf(`AND e.validator_index%s$%d
 			`, sortSearchDirection, len(queryParams))
 		}
-		orderQuery = fmt.Sprintf(`ORDER BY e.validator_index %s
+		orderQuery = fmt.Sprintf(`ORDER BY validator_index %s
 		`, sortSearchOrder)
 	} else if colSort.Column == enums.VDBDutiesColumns.Reward {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
 			queryParams = append(queryParams, currentCursor.Reward, currentCursor.Index)
 
-			whereQuery += fmt.Sprintf(`AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND e.validator_index%[2]s$%[4]d))
-			`, totalRewardQuery, sortSearchDirection, len(queryParams)-1, len(queryParams))
+			whereQuery += fmt.Sprintf(`WHERE (total_reward%[1]s$%[2]d OR (total_reward=$%[2]d AND validator_index%[1]s$%[3]d))
+			`, sortSearchDirection, len(queryParams)-1, len(queryParams))
 		}
-		orderQuery = fmt.Sprintf(`ORDER BY total_reward %[1]s, e.validator_index %[1]s
+		orderQuery = fmt.Sprintf(`ORDER BY total_reward %[1]s, validator_index %[1]s
 		`, sortSearchOrder)
 	}
 
+	// Use a subquery to allow access to total_reward in the where clause
 	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	rewardsQuery := fmt.Sprintf(`
-		SELECT
-			e.validator_index,
-			%s AS total_reward,	
-			COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-			COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-			COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-			COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-			COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-			COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-			COALESCE(e.sync_executed, 0) AS sync_executed,
-			COALESCE(e.sync_rewards, 0) AS sync_rewards,
-			COALESCE(e.slashed, false) AS slashed,
-			COALESCE(e.slasher_reward, 0) AS slasher_reward,
-			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-			COALESCE(e.blocks_el_reward, 0) AS blocks_el_reward,
-			COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-			COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
-		FROM validator_dashboard_data_epoch e
+		SELECT *
+		FROM (
+			SELECT
+				e.validator_index,
+				(
+					COALESCE(e.blocks_el_reward, 0) +
+					CAST((
+						COALESCE(e.attestations_reward, 0) +
+						COALESCE(e.blocks_cl_reward, 0) +
+						COALESCE(e.sync_rewards, 0) +
+						COALESCE(e.slasher_reward, 0)
+					) AS numeric) * 10^9
+				) AS total_reward,	
+				COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
+				COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
+				COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
+				COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
+				COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
+				COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
+				COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
+				COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
+				COALESCE(e.sync_executed, 0) AS sync_executed,
+				COALESCE(e.sync_rewards, 0) AS sync_rewards,
+				COALESCE(e.slashed, false) AS slashed,
+				COALESCE(e.slasher_reward, 0) AS slasher_reward,
+				COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
+				COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
+				COALESCE(e.blocks_el_reward, 0) AS blocks_el_reward,
+				COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
+				COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
+			FROM validator_dashboard_data_epoch e
+			%s
+			%s
+		) AS subquery
 		%s
 		%s
-		%s
-		%s`, totalRewardQuery, joinQuery, whereQuery, orderQuery, limitQuery)
-
-	queryTime := time.Now()
+		%s`, joinSubquery, whereSubquery, whereQuery, orderQuery, limitQuery)
 
 	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	fmt.Println("Query time: ", time.Since(queryTime))
 
 	// Create the result
 	cursorData := make([]t.ValidatorDutiesCursor, 0)
@@ -559,9 +555,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
-
-	fmt.Println("Total time: ", time.Since(startTimeTotal))
-	fmt.Println("----------------------------------------------")
 
 	return result, p, nil
 }
