@@ -102,8 +102,27 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		queryParams = append(queryParams, dashboardId.Id)
 		whereQuery := fmt.Sprintf("WHERE v.dashboard_id = $%d", len(queryParams))
 		if currentCursor.IsValid() {
-			queryParams = append(queryParams, currentCursor.Epoch, currentCursor.GroupId)
-			whereQuery += fmt.Sprintf(" AND (e.epoch%[1]s$%[2]d OR (e.epoch=$%[2]d AND v.group_id%[1]s$%[3]d))", sortSearchDirection, len(queryParams)-1, len(queryParams))
+			if currentCursor.IsReverse() {
+				if currentCursor.GroupId == t.AllGroups {
+					// The cursor is on the total rewards so get the data for all groups excluding the cursor epoch
+					queryParams = append(queryParams, currentCursor.Epoch)
+					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s$%[2]d", sortSearchDirection, len(queryParams))
+				} else {
+					// The cursor is on a specific group, get the data for the whole epoch since we could need it for the total rewards
+					queryParams = append(queryParams, currentCursor.Epoch)
+					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s=$%[2]d", sortSearchDirection, len(queryParams))
+				}
+			} else {
+				if currentCursor.GroupId == t.AllGroups {
+					// The cursor is on the total rewards so get the data for all groups including the cursor epoch
+					queryParams = append(queryParams, currentCursor.Epoch)
+					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s=$%[2]d", sortSearchDirection, len(queryParams))
+				} else {
+					// The cursor is on a specific group so get the data for groups before/after it
+					queryParams = append(queryParams, currentCursor.Epoch, currentCursor.GroupId)
+					whereQuery += fmt.Sprintf(" AND (e.epoch%[1]s$%[2]d OR (e.epoch=$%[2]d AND v.group_id%[1]s$%[3]d))", sortSearchDirection, len(queryParams)-1, len(queryParams))
+				}
+			}
 		}
 
 		joinQuery := ""
@@ -206,9 +225,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	// Create the result
+	resultWoTotal := make([]t.VDBRewardsTableRow, 0)
 	result := make([]t.VDBRewardsTableRow, 0)
 
-	type RewardsPerEpoch struct {
+	type TotalEpochInfo struct {
 		GroupCount            uint8
 		ClRewards             int64
 		ElRewards             decimal.Decimal
@@ -220,7 +240,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		SyncExecuted          uint64
 		Slashed               uint64
 	}
-	rewardsPerEpoch := make(map[uint64]*RewardsPerEpoch, 0)
+	totalEpochInfo := make(map[uint64]*TotalEpochInfo, 0)
 
 	for _, res := range queryResult {
 		duty := t.VDBRewardesTableDuty{}
@@ -241,34 +261,102 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		if slashingInfo > 0 {
 			duty.Slashing = &slashingInfo
 		}
-		reward := t.ClElValue[decimal.Decimal]{
-			El: res.ElRewards,
-			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
-		}
+
 		if duty.Attestation != nil || duty.Proposal != nil || duty.Sync != nil || duty.Slashing != nil {
 			// Only add groups that had some duty or got slashed
-			result = append(result, t.VDBRewardsTableRow{
+			resultWoTotal = append(resultWoTotal, t.VDBRewardsTableRow{
 				Epoch:   res.Epoch,
 				Duty:    duty,
 				GroupId: res.GroupId,
-				Reward:  reward,
+				Reward: t.ClElValue[decimal.Decimal]{
+					El: res.ElRewards,
+					Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
+				},
 			})
 
-			// Add it to the rewards per epoch
-			if _, ok := rewardsPerEpoch[res.Epoch]; !ok {
-				rewardsPerEpoch[res.Epoch] = &RewardsPerEpoch{}
+			// Add it to the total epoch info
+			if _, ok := totalEpochInfo[res.Epoch]; !ok {
+				totalEpochInfo[res.Epoch] = &TotalEpochInfo{}
 			}
-			rewardsPerEpoch[res.Epoch].GroupCount++
-			rewardsPerEpoch[res.Epoch].ClRewards += res.ClRewards
-			rewardsPerEpoch[res.Epoch].ElRewards = rewardsPerEpoch[res.Epoch].ElRewards.Add(res.ElRewards)
-			rewardsPerEpoch[res.Epoch].AttestationsScheduled += res.AttestationsScheduled
-			rewardsPerEpoch[res.Epoch].AttestationsExecuted += res.AttestationsExecuted
-			rewardsPerEpoch[res.Epoch].BlocksScheduled += res.BlocksScheduled
-			rewardsPerEpoch[res.Epoch].BlocksProposed += res.BlocksProposed
-			rewardsPerEpoch[res.Epoch].SyncScheduled += res.SyncScheduled
-			rewardsPerEpoch[res.Epoch].SyncExecuted += res.SyncExecuted
-			rewardsPerEpoch[res.Epoch].Slashed += res.Slashed
+			totalEpochInfo[res.Epoch].GroupCount++
+			totalEpochInfo[res.Epoch].ClRewards += res.ClRewards
+			totalEpochInfo[res.Epoch].ElRewards = totalEpochInfo[res.Epoch].ElRewards.Add(res.ElRewards)
+			totalEpochInfo[res.Epoch].AttestationsScheduled += res.AttestationsScheduled
+			totalEpochInfo[res.Epoch].AttestationsExecuted += res.AttestationsExecuted
+			totalEpochInfo[res.Epoch].BlocksScheduled += res.BlocksScheduled
+			totalEpochInfo[res.Epoch].BlocksProposed += res.BlocksProposed
+			totalEpochInfo[res.Epoch].SyncScheduled += res.SyncScheduled
+			totalEpochInfo[res.Epoch].SyncExecuted += res.SyncExecuted
+			totalEpochInfo[res.Epoch].Slashed += res.Slashed
 		}
+	}
+
+	// Get the total rewards for the epoch if there is more than one group
+	totalRewards := make(map[uint64]t.VDBRewardsTableRow, 0)
+	for epoch, totalInfo := range totalEpochInfo {
+		if totalInfo.GroupCount < 2 {
+			// Only one group, no need to show the data
+			continue
+		}
+		duty := t.VDBRewardesTableDuty{}
+		if totalInfo.AttestationsScheduled > 0 {
+			attestationPercentage := (float64(totalInfo.AttestationsExecuted) / float64(totalInfo.AttestationsScheduled)) * 100.0
+			duty.Attestation = &attestationPercentage
+		}
+		if totalInfo.BlocksScheduled > 0 {
+			ProposalPercentage := (float64(totalInfo.BlocksProposed) / float64(totalInfo.BlocksScheduled)) * 100.0
+			duty.Proposal = &ProposalPercentage
+		}
+		if totalInfo.SyncScheduled > 0 {
+			SyncPercentage := (float64(totalInfo.SyncExecuted) / float64(totalInfo.SyncScheduled)) * 100.0
+			duty.Sync = &SyncPercentage
+		}
+		// TODO: Slashing data is not yet available in the db
+		slashingInfo := totalInfo.Slashed /*+ "Validators slashed"*/
+		if slashingInfo > 0 {
+			duty.Slashing = &slashingInfo
+		}
+
+		totalRewards[epoch] = t.VDBRewardsTableRow{
+			Epoch:   epoch,
+			Duty:    duty,
+			GroupId: t.AllGroups,
+			Reward: t.ClElValue[decimal.Decimal]{
+				El: totalInfo.ElRewards,
+				Cl: utils.GWeiToWei(big.NewInt(totalInfo.ClRewards)),
+			},
+		}
+	}
+
+	// Reverse the data if the cursor is reversed to correct it to the requested direction
+	if currentCursor.IsReverse() {
+		slices.Reverse(resultWoTotal)
+	}
+
+	// Place the total rewards in the result data at the correct position
+	// Ascending or descending order makes no difference but the cursor direction does
+	if len(totalRewards) > 0 {
+		previousEpoch := int64(-1)
+		if currentCursor.IsValid() && !currentCursor.IsReverse() {
+			previousEpoch = int64(currentCursor.Epoch)
+		}
+		for _, res := range resultWoTotal {
+			// If we reach the cursor which should only happen if the cursor is reversed don't include it and stop
+			if currentCursor.Epoch == res.Epoch &&
+				(currentCursor.GroupId == res.GroupId || currentCursor.GroupId == t.AllGroups) {
+				break
+			}
+
+			if previousEpoch != int64(res.Epoch) {
+				if totalReward, ok := totalRewards[res.Epoch]; ok {
+					result = append(result, totalReward)
+				}
+			}
+			result = append(result, res)
+			previousEpoch = int64(res.Epoch)
+		}
+	} else {
+		result = resultWoTotal
 	}
 
 	// Flag if above limit
@@ -280,12 +368,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	// Remove the last entries from data
 	if moreDataFlag {
-		result = result[:limit]
-	}
-
-	// Reverse the data if the cursor is reversed to correct it to the requested direction
-	if currentCursor.IsReverse() {
-		slices.Reverse(result)
+		if currentCursor.IsReverse() {
+			result = result[len(result)-int(limit):]
+		} else {
+			result = result[:limit]
+		}
 	}
 
 	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
