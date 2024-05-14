@@ -387,7 +387,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			whereSubquery += fmt.Sprintf(`AND e.validator_index = $%d
 			`, len(queryParams))
 		}
-
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		validators := make([]uint64, 0)
