@@ -13,7 +13,7 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { blocks, query: lastQuery, getBlocks } = useValidatorDashboardBlocksStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -32,7 +32,7 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value }
+    query = { limit: pageSize.value, sort: 'block:desc' }
   }
   setQuery(query, true, true)
 }
@@ -99,6 +99,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

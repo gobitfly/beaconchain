@@ -903,7 +903,7 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -922,7 +922,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {

@@ -14,7 +14,7 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
@@ -31,7 +31,7 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value }
+    query = { limit: pageSize.value, sort: 'epoch:desc' }
   }
   setQuery(query, true, true)
 }
@@ -132,6 +132,7 @@ const wrappedRewards = computed(() => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
