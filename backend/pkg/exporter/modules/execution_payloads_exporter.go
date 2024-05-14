@@ -96,7 +96,6 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			slot DESC;
 	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"})
 	return err
-
 }
 
 // this is basically synchronous, each time it gets called it will kill the previous export and replace it with itself
