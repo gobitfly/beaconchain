@@ -13,7 +13,7 @@ type EthConversionRate struct {
 
 type LatestStateData struct {
 	LatestSlot    uint64              `json:"current_slot"`
-	ExchangeRates []EthConversionRate `json:"exchange_rates" faker:"len=3"`
+	ExchangeRates []EthConversionRate `json:"exchange_rates" faker:"slice_len=3"`
 }
 
 type InternalGetLatestStateResponse ApiDataResponse[LatestStateData]
