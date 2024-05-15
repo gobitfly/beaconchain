@@ -36,14 +36,18 @@ const props = defineProps<Props>()
           <FontAwesomeIcon :icon="faInfoCircle" /> i
         </BcTooltip>
       </div>
-      <BcPricingFeature name="1 Validator Dashboard" :available="true" :bar-fill-percentage="50" />
-      <BcPricingFeature name="100 Validators per Dashboard" subtext="€0.0899 per validator" :available="true" :bar-fill-percentage="50" />
-      <BcPricingFeature name="7 days dashboard chart history" :available="true" :bar-fill-percentage="15" />
-      <BcPricingFeature name="7 days Heatmap chart history" :available="true" :bar-fill-percentage="15" />
-      <BcPricingFeature name="No Ads" :available="true" />
-      <BcPricingFeature name="Share Dashboard" :available="true" />
-      <BcPricingFeature name="Mobile App Widget" :available="true" />
-      <BcPricingFeature name="Manage Dashboard via API" :available="false" />
+      <div class="main-features-container">
+        <BcPricingFeature name="1 Validator Dashboard" :available="true" :bar-fill-percentage="50" />
+        <BcPricingFeature name="100 Validators per Dashboard" subtext="€0.0899 per validator" :available="true" :bar-fill-percentage="50" />
+        <BcPricingFeature name="7 days dashboard chart history" :available="true" :bar-fill-percentage="15" />
+        <BcPricingFeature name="7 days Heatmap chart history" :available="true" :bar-fill-percentage="15" />
+      </div>
+      <div class="small-features-container">
+        <BcPricingFeature name="No Ads" :available="true" />
+        <BcPricingFeature name="Share Dashboard" :available="true" />
+        <BcPricingFeature name="Mobile App Widget" :available="true" />
+        <BcPricingFeature name="Manage Dashboard via API" :available="false" />
+      </div>
     </div>
   </div>
 </template>
@@ -64,7 +68,6 @@ const props = defineProps<Props>()
   .features-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
     padding: 18px 35px;
 
     .prize {
@@ -77,6 +80,7 @@ const props = defineProps<Props>()
       font-weight: 400;
       display: flex;
       flex-direction: column;
+      margin-bottom: 21px;
     }
 
     .saving-info {
@@ -89,6 +93,20 @@ const props = defineProps<Props>()
       border-radius: 18px;
       background: var(--subcontainer-background);
       font-size: 17px;
+      margin-bottom: 28px;
+    }
+
+    .main-features-container {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      margin-bottom: 35px;
+    }
+
+    .small-features-container{
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
     }
   }
 }

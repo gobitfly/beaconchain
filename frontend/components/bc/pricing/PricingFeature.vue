@@ -15,7 +15,7 @@ defineProps<Props>()
   <div class="feature-container">
     <div class="main-row">
       <BcFeatureCheck :available="available" class="check" />
-      <div class="text">
+      <div class="text" :class="{ 'unavailable': !available }">
         <div class="name">
           {{ name }}
         </div>
@@ -50,6 +50,10 @@ defineProps<Props>()
       flex-direction: column;
       gap: 5px;
       text-align: left;
+
+      &.unavailable {
+        color: var(--text-color-discreet);
+      }
 
       .name {
         font-size: 17px;
