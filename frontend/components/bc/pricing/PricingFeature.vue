@@ -37,6 +37,7 @@ defineProps<Props>()
     display: flex;
     align-items: center;
     gap: 7px;
+    padding-left: 14px;
     margin-bottom: 14px;
 
     .check {
