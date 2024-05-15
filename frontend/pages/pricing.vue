@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 const { t } = useI18n()
+const { premiumPlans, getPremiumPlans } = usePremiumPlansStore()
 
 const isYearly = ref(true)
 
 // TODO: Replace with calculated percentage once real values are available
 const percentage = 20
+
+await getPremiumPlans()
 
 </script>
 
@@ -44,8 +47,11 @@ const percentage = 20
           {{ t('pricing.save_up_to', {percentage}) }}
         </div>
       </div>
-      <div>
-        [Guppy] [Dolphin] [Orca]
+      <div class="plans-container">
+        <div v-for="plan in premiumPlans?.data" :key="plan.Name" :plan="plan">
+          <!--TODO: Currently the name is used to find the free plan (which must not be shown here), should work somehow else-->
+          <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan="plan" />
+        </div>
       </div>
     </div>
   </BcPageWrapper>
@@ -159,6 +165,12 @@ const percentage = 20
       font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
     }
+  }
+
+  .plans-container {
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
   }
 }
 </style>
