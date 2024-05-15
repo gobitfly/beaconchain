@@ -14,9 +14,10 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -28,7 +29,7 @@ const colsVisible = computed(() => {
 
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
   }
   setQuery(q, true, true)
 }
@@ -44,7 +45,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -90,6 +91,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
