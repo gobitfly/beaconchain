@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -45,24 +44,24 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 }
 
-// all allNetworks available in the system, filled on startup in NewHandlerService
+// all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
 
 // --------------------------------------
 
 var (
 	// Subject to change, just examples
-	reName                       = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
-	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
-	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPublicKey         = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
-	reEthereumAddress            = regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
-	reWithdrawalCredential       = regexp.MustCompile(`^0x00[0-9a-fA-F]{62}$`)
-	reWithdrawalAddress          = regexp.MustCompile(`^0x01[0-9a-fA-F]{62}$`)
-	reEnsName                    = regexp.MustCompile(`^.+\.eth$`)
-	reNonEmpty                   = regexp.MustCompile(`^\s*\S.*$`)
-	reCursor                     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
-	reEmail                      = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
+	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
+	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
+	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
+	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
+	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
+	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
+	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
+	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
+	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 )
 
 const (
@@ -157,29 +156,18 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
-	body := r.Body
 
-	// Read the entire request body (this consumes the request body)
-	bodyBytes, err := io.ReadAll(body)
+	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Error(err, "error reading request body", 0, nil)
 		return errors.New("can't read request body")
 	}
 
-	// Use bytes.NewReader to create an io.Reader for the body bytes, so it can be reused
-	bodyReader := bytes.NewReader(bodyBytes)
-
-	// First check: Decode into an empty interface to check JSON format
+	// First check: Unmarshal into an empty interface to check JSON format
 	var i interface{}
-	if err := json.NewDecoder(bodyReader).Decode(&i); err != nil {
+	if err := json.Unmarshal(bodyBytes, &i); err != nil {
 		v.add("request body", "not in JSON format")
 		return nil
-	}
-
-	// Reset the reader for the next use
-	_, err = bodyReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return errors.New("couldn't seek to start of the body")
 	}
 
 	// Second check: Validate against the expected schema
@@ -206,13 +194,8 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 		return nil
 	}
 
-	// Decode into the target data structure
-	// Reset the reader again for the final decode
-	_, err = bodyReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return errors.New("couldn't seek to start of the body")
-	}
-	if err := json.NewDecoder(bodyReader).Decode(data); err != nil {
+	// Unmarshal into the target struct
+	if err := json.Unmarshal(bodyBytes, data); err != nil {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
 	}
@@ -442,7 +425,7 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 	for _, validator := range validators {
 		if reNumber.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
-		} else if reValidatorPublicKey.MatchString(validator) {
+		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
 			if err != nil {
 				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))

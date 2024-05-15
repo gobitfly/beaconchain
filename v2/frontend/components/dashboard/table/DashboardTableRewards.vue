@@ -2,7 +2,6 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
@@ -15,10 +14,10 @@ const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -32,7 +31,7 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value }
+    query = { limit: pageSize.value, sort: 'epoch:desc' }
   }
   setQuery(query, true, true)
 }
@@ -48,7 +47,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -133,6 +132,7 @@ const wrappedRewards = computed(() => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -140,12 +140,14 @@ const wrappedRewards = computed(() => {
             <Column
               field="epoch"
               :sortable="true"
-              body-class="bold epoch"
+              body-class="epoch"
               header-class="epoch"
               :header="$t('common.epoch')"
             >
               <template #body="slotProps">
-                <BcFormatNumber :value="slotProps.data.epoch" />
+                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
+                  <BcFormatNumber :value="slotProps.data.epoch" />
+                </NuxtLink>
               </template>
             </Column>
             <Column
@@ -162,7 +164,7 @@ const wrappedRewards = computed(() => {
             <Column
               v-if="colsVisible.duty"
               field="duty"
-              body-class="bold duty"
+              body-class="duty"
               header-class="duty"
               :header="$t('dashboard.validator.col.duty')"
             >

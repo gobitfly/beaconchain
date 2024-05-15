@@ -41,7 +41,7 @@ const iconClick = () => {
 
 const icon = computed(() => ({
   icon: isEditing.value ? faCheck : faEdit,
-  disabled: props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty))
+  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty))) ? true : null
 }))
 
 watch(() => props.value, (v) => {

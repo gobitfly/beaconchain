@@ -1,5 +1,3 @@
-import type { Dashboard } from '../api/dashboard'
-
 // can be either a dashboard id or a list of hashed validators
 export type DashboardKey = string
 
@@ -24,6 +22,12 @@ export type DashboardKeyData = {
   addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
   setDashboardKey:(key:string) =>void,
+}
+
+// smallest similarites of AccountDashboard and ValidatorDashboard
+export interface Dashboard {
+  id: number;
+  name: string;
 }
 
 // For not logged in Users we store the Dashboard in Cookies
