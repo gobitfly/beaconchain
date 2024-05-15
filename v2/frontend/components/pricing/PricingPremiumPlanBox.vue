@@ -37,7 +37,13 @@ const props = defineProps<Props>()
         </BcTooltip>
       </div>
       <BcPricingFeature name="1 Validator Dashboard" :available="true" :bar-fill-percentage="50" />
-      <BcPricingFeature name="100 Validators per Dashboard" subtext="€0.0899 per validator" :available="true" :bar-fill-percentage="100" />
+      <BcPricingFeature name="100 Validators per Dashboard" subtext="€0.0899 per validator" :available="true" :bar-fill-percentage="50" />
+      <BcPricingFeature name="7 days dashboard chart history" :available="true" :bar-fill-percentage="15" />
+      <BcPricingFeature name="7 days Heatmap chart history" :available="true" :bar-fill-percentage="15" />
+      <BcPricingFeature name="No Ads" :available="true" />
+      <BcPricingFeature name="Share Dashboard" :available="true" />
+      <BcPricingFeature name="Mobile App Widget" :available="true" />
+      <BcPricingFeature name="Manage Dashboard via API" :available="false" />
     </div>
   </div>
 </template>
