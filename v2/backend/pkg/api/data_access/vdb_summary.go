@@ -679,6 +679,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 				from  validator_dashboard_data_daily
 			WHERE day > $1 AND validator_index = ANY($2)
+			group by 1
 		) as a ORDER BY epoch_start, group_id;`
 		err := d.alloyReader.Select(&queryResults, query, cutOffDate, validatorList)
 		if err != nil {
