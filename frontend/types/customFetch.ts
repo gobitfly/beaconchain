@@ -28,6 +28,7 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
+  LOGOUT = '/logout',
   SEARCH = '/search'
 }
 
@@ -181,6 +182,11 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.LOGIN]: {
     path: '/login',
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.LOGOUT]: {
+    path: '/logout',
     method: 'POST',
     mock: false
   },

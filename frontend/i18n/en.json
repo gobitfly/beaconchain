@@ -114,7 +114,9 @@
   },
   "main":{
     "current_slot": "Current Slot",
-    "current_epoch": "Current Epoch"
+    "current_epoch": "Current Epoch",
+    "login": "Login",
+    "logout": "Logout"
   }, 
   "slotViz": {
     "head": "Head",

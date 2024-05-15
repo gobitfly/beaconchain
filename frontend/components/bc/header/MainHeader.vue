@@ -4,13 +4,10 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetwork()
+const { doLogout } = useUserStore()
 const { isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-
-const loginText = computed(() => {
-  return isLoggedIn.value ? 'Logged in' : 'Login'
-})
 
 const rate = computed(() => {
   if (isFiat(currency.value) && rates.value?.[currency.value]) {
@@ -49,9 +46,12 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
       <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" bar-style="discreet" />
       <div class="right-content">
         <BcCurrencySelection />
-        <NuxtLink to="/login">
-          {{ loginText }}
+        <NuxtLink v-if="!isLoggedIn" to="/login">
+          {{ $t('main.login') }}
         </NuxtLink>
+        <div v-else @click="doLogout">
+          logout
+        </div>
       </div>
     </div>
   </div>

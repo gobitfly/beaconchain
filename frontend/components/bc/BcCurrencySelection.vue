@@ -45,6 +45,7 @@ const mapped = computed(() => {
 
   &.in-header {
     justify-content: flex-end;
+    color: var(--light-grey);
     font-weight: var(--standard_text_light_font_weight);
     font-size: var(--title_font_size);
   }
@@ -53,7 +54,7 @@ const mapped = computed(() => {
     height: 20px;
     width: 30px;
     display: flex;
-    justify-content: end;
+    justify-content: flex-end;
     margin-right: var(--padding);
 
     :deep(img),
