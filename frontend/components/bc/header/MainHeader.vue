@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faBars
+  faBars,
+  faCircleUser
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
@@ -9,10 +10,14 @@ import { useLatestStateStore } from '~/stores/useLatestStateStore'
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetwork()
-const { doLogout } = useUserStore()
-const { isLoggedIn } = useUserStore()
+const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { width } = useWindowSize()
+const { t: $t } = useI18n()
+
+const isSmallScreen = computed(() => width.value <= 1023)
+const isMobile = computed(() => width.value <= 469)
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -33,6 +38,15 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggleMegaMenu(evt)
 }
+
+const userMenu = computed(() => {
+  return [
+    {
+      label: $t('header.logout'),
+      command: () => doLogout()
+    }
+  ]
+})
 
 </script>
 
@@ -60,14 +74,33 @@ const toggleMegaMenu = (evt: Event) => {
       </div>
       <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" bar-style="discreet" />
       <div class="right-content">
-        <BcCurrencySelection />
-        <NuxtLink v-if="!isLoggedIn" to="/login">
-          {{ $t('header.login') }}
-        </NuxtLink>
-        <div v-else @click="doLogout">
-          logout
+        <BcCurrencySelection v-if="!isMobile" />
+        <div v-if="!isLoggedIn" class="logged-out">
+          <NuxtLink to="/login">
+            {{ $t('header.login') }}
+          </NuxtLink>
+          /
+          <NuxtLink to="/signup">
+            <Button class="signup" :label="$t('header.signup')" />
+          </NuxtLink>
         </div>
-        <div class="burger" @click.stop.prevent="toggleMegaMenu">
+        <div v-else-if="!isSmallScreen">
+          <BcDropdown
+            :options="userMenu"
+            variant="header"
+            option-label="label"
+          >
+            <template #value>
+              <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
+            </template>
+            <template #option="slotProps">
+              <span @click="slotProps.command?.()">
+                {{ slotProps.label }}
+              </span>
+            </template>
+          </BcDropdown>
+        </div>
+        <div v-if="isSmallScreen" class="burger" @click.stop.prevent="toggleMegaMenu">
           <FontAwesomeIcon :icon="faBars" />
         </div>
       </div>
@@ -98,6 +131,12 @@ const toggleMegaMenu = (evt: Event) => {
 
     .content {
       align-items: center;
+    }
+
+    .user-menu-icon {
+      width: 19px;
+      height: 18px;
+      color: var(--light-grey);
     }
   }
 
@@ -135,6 +174,17 @@ const toggleMegaMenu = (evt: Event) => {
       display: flex;
       align-items: center;
       gap: var(--padding-large);
+
+      .logged-out {
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: var(--padding-small);
+
+        .signup {
+          padding: 8px;
+        }
+      }
     }
   }
 

@@ -6,10 +6,12 @@ import { type Currency } from '~/types/currencies'
 
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
+  const { t: $t } = useI18n()
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
   function setCurrency (newCurrency: Currency) {
+    console.log('setCurrency', newCurrency)
     selectedCurrency.value = newCurrency
   }
 
@@ -30,5 +32,12 @@ export function useCurrency () {
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 
-  return { currency, setCurrency, available, rates }
+  const withLabel = computed(() => {
+    return available.value?.map(currency => ({
+      currency,
+      label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency)
+    }))
+  })
+
+  return { currency, setCurrency, available, rates, withLabel }
 }

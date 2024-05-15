@@ -1,22 +1,14 @@
 <script setup lang="ts">
 import type { Currency } from '~/types/currencies'
 
-const { available, rates, currency, setCurrency } = useCurrency()
-const { t: $t } = useI18n()
-
-const mapped = computed(() => {
-  return available.value?.map(currency => ({
-    currency,
-    label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency)
-  }))
-})
+const { currency, withLabel, setCurrency } = useCurrency()
 
 </script>
 
 <template>
   <BcDropdown
     v-model="currency"
-    :options="mapped"
+    :options="withLabel"
     option-value="currency"
     option-label="label"
     variant="header"

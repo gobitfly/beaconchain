@@ -56,18 +56,20 @@ import { Target } from '~/types/links'
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
+const { withLabel, currency, setCurrency } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const megaMenu = ref<{toggle:(evt:Event)=>void} | null>(null)
 
-const smallScreenWidth = 1360
+const smallScreenWidth = 1023
 const breakpoint = `${smallScreenWidth}px`
 const isSmallScreen = computed(() => width.value <= smallScreenWidth)
+const isMobile = computed(() => width.value <= 469)
 
 const items = computed(() => {
   let list: MenuItem[] = []
 
-  if (showInDevelopment) {
+  if (!showInDevelopment) {
     list = [
       {
         label: 'Ethereum',
@@ -933,6 +935,16 @@ const items = computed(() => {
       }
     ]
   }
+  if (isMobile.value) {
+    list.push({
+      label: currency.value,
+      currency: currency.value,
+      items: [[{
+        label: $t('header.megamenu.select_currency'),
+        items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
+      }]]
+    })
+  }
   if (isSmallScreen.value && isLoggedIn.value) {
     list.push(
       {
@@ -955,9 +967,10 @@ defineExpose({
   <ClientOnly>
     <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
       <template #itemicon="{ item }">
-        <span v-if="item.svg || item.icon" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
+        <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
           <component :is="item.svg" v-if="item.svg" class="monochromatic" />
           <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
+          <IconCurrency v-else-if="item.currency" :currency="item.currency" />
         </span>
       </template>
     </MegaMenu>
@@ -969,6 +982,7 @@ defineExpose({
   width: 25px;
   position: relative;
 
+  img,
   svg,
   i {
     position: absolute;
