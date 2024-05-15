@@ -4,7 +4,7 @@ import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
 import { API_PATH } from '~/types/customFetch'
 
-const userStore = defineStore('user-store', () => {
+const userStore = defineStore('user_store', () => {
   const data = ref<{user_id: number, user_name: string} | undefined | null>()
   return { data }
 })

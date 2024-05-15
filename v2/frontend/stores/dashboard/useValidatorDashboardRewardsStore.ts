@@ -5,7 +5,7 @@ import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards', () => {
+const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards_store', () => {
   const data = ref < InternalGetValidatorDashboardRewardsResponse>()
   const query = ref < TableQueryParams>()
 
