@@ -316,7 +316,7 @@ export function mockPremiumPlansResponse () : PremiumPlanAPIresponse {
     {
       Name: 'Free',
       AdFree: false,
-      ValidatorDasboards: 1,
+      ValidatorDashboards: 1,
       ValidatorsPerDashboard: 20,
       ValidatorGroupsPerDashboard: 1,
       ShareCustomDashboards: false,
@@ -336,7 +336,7 @@ export function mockPremiumPlansResponse () : PremiumPlanAPIresponse {
     {
       Name: 'Guppy',
       AdFree: true,
-      ValidatorDasboards: 1,
+      ValidatorDashboards: 1,
       ValidatorsPerDashboard: 100,
       ValidatorGroupsPerDashboard: 3,
       ShareCustomDashboards: true,
@@ -356,7 +356,7 @@ export function mockPremiumPlansResponse () : PremiumPlanAPIresponse {
     {
       Name: 'Dolphin',
       AdFree: true,
-      ValidatorDasboards: 1,
+      ValidatorDashboards: 1,
       ValidatorsPerDashboard: 300,
       ValidatorGroupsPerDashboard: 10,
       ShareCustomDashboards: true,
@@ -376,7 +376,7 @@ export function mockPremiumPlansResponse () : PremiumPlanAPIresponse {
     {
       Name: 'Orca',
       AdFree: true,
-      ValidatorDasboards: 2,
+      ValidatorDashboards: 2,
       ValidatorsPerDashboard: 1000,
       ValidatorGroupsPerDashboard: 30,
       ShareCustomDashboards: true,

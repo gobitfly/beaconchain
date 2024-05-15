@@ -5,7 +5,7 @@
 export interface PremiumPlan {
   Name: string; // TODO: Was not part of the struct draft coming from backend team
   AdFree: boolean;
-  ValidatorDasboards: number;
+  ValidatorDashboards: number;
   ValidatorsPerDashboard: number;
   ValidatorGroupsPerDashboard: number;
   ShareCustomDashboards: boolean;
