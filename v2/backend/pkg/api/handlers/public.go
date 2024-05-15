@@ -18,10 +18,6 @@ func (h *HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Req
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetUser(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
