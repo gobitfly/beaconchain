@@ -335,28 +335,29 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	// Place the total rewards in the result data at the correct position
 	// Ascending or descending order makes no difference but the cursor direction does
-	if len(totalRewards) > 0 {
-		previousEpoch := int64(-1)
-		if currentCursor.IsValid() && !currentCursor.IsReverse() {
-			previousEpoch = int64(currentCursor.Epoch)
+	previousEpoch := int64(-1)
+	if currentCursor.IsValid() && !currentCursor.IsReverse() {
+		previousEpoch = int64(currentCursor.Epoch)
+	}
+	for _, res := range resultWoTotal {
+		// If we reach the "epoch total" cursor which should only happen if the cursor is reversed don't include it and stop
+		if currentCursor.IsReverse() && currentCursor.Epoch == res.Epoch && currentCursor.GroupId == t.AllGroups {
+			break
 		}
-		for _, res := range resultWoTotal {
-			// If we reach the cursor which should only happen if the cursor is reversed don't include it and stop
-			if currentCursor.Epoch == res.Epoch &&
-				(currentCursor.GroupId == res.GroupId || currentCursor.GroupId == t.AllGroups) {
-				break
-			}
 
-			if previousEpoch != int64(res.Epoch) {
-				if totalReward, ok := totalRewards[res.Epoch]; ok {
-					result = append(result, totalReward)
-				}
+		if previousEpoch != int64(res.Epoch) {
+			if totalReward, ok := totalRewards[res.Epoch]; ok {
+				result = append(result, totalReward)
 			}
-			result = append(result, res)
-			previousEpoch = int64(res.Epoch)
 		}
-	} else {
-		result = resultWoTotal
+
+		// If we reach a specific group cursor which should only happen if the cursor is reversed don't include it and stop
+		if currentCursor.IsReverse() && currentCursor.Epoch == res.Epoch && currentCursor.GroupId == res.GroupId {
+			break
+		}
+
+		result = append(result, res)
+		previousEpoch = int64(res.Epoch)
 	}
 
 	// Flag if above limit
