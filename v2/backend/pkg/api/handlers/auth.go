@@ -71,7 +71,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
-	user, err := h.dai.GetUserInfo(email)
+	user, err := h.dai.GetUser(email)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = badCredentialsErr

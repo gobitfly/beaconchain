@@ -21,32 +21,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetUserInfo(email string) (*t.User, error) {
-	// TODO @recy21
-	result := &t.User{}
-	err := d.userReader.Get(result, `
-		WITH
-			latest_and_greatest_sub AS (
-				SELECT user_id, product_id FROM users_app_subscriptions 
-				left join users on users.id = user_id 
-				WHERE users.email = $1 AND active = true
-				ORDER BY CASE product_id
-					WHEN 'whale' THEN 1
-					WHEN 'goldfish' THEN 2
-					WHEN 'plankton' THEN 3
-					ELSE 4  -- For any other product_id values
-				END, users_app_subscriptions.created_at DESC LIMIT 1
-			)
-		SELECT users.id as id, password, COALESCE(product_id, '') as product_id, COALESCE(user_group, '') AS user_group 
-		FROM users
-		left join latest_and_greatest_sub on latest_and_greatest_sub.user_id = users.id  
-		WHERE email = $1`, email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
-	}
-	return result, err
-}
-
 func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
