@@ -2,6 +2,7 @@
 
 // TODO: Use translations and mind singular/plural, relevant for example for "X Validator Dashboards"
 // TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
+// TODO: "Manage Dashboard via API" requries subtext for when it is available
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumPlan } from '~/types/pricing'
@@ -23,7 +24,9 @@ const props = defineProps<Props>()
         €9.99
       </div>
       <div class="prize-subtext">
-        <div>per month</div>
+        <div>
+          <span>per month</span><span v-if="!isYearly">*</span>
+        </div>
         <div v-if="isYearly">
           €1077,88 yearly*
         </div>
