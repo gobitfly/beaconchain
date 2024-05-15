@@ -27,9 +27,14 @@ type DataAccessor interface {
 
 	GetLatestSlot() (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
-	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
+
+	GetProductSummary() (*t.ProductSummary, error)
 	// TODO: move to user repository
-	GetUserInfo(email string) (*t.User, error)
+	GetUser(email string) (*t.User, error)
+
+	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
+
+	GetUserInfo(id uint64) (*t.UserInfo, error)
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 }
 

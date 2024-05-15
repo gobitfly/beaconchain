@@ -43,8 +43,20 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
-func (d *DummyService) GetUserInfo(email string) (*t.User, error) {
+func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+	r := t.UserInfo{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetUser(email string) (*t.User, error) {
 	r := t.User{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
+	r := t.ProductSummary{}
 	err := commonFakeData(&r)
 	return &r, err
 }
