@@ -11,6 +11,21 @@ import (
 )
 
 // --------------------------------------
+// Premium Plans
+
+func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetProductSummary()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.ProductSummary]{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+// --------------------------------------
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +71,27 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
+}
+
+// --------------------------------------
+// User
+
+func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
+	// TODO patrick
+	user, err := h.getUser(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.UserInfo]{
+		Data: *userInfo,
+	}
+	returnOk(w, response)
 }
 
 // --------------------------------------
