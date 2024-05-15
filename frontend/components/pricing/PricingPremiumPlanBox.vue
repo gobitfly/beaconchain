@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 
-// TODO: Use translations and mind singular/plural, relevant for example for "X Validator Dashboards"
+// TODO: Use format value for currency and normal numbers
 // TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
 // TODO: "Manage Dashboard via API" requries subtext for when it is available
+// TODO: Mobile App Widget requires link
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumPlan } from '~/types/pricing'
+
+const { t } = useI18n()
 
 interface Props {
   plan?: PremiumPlan,
@@ -25,31 +28,48 @@ const props = defineProps<Props>()
       </div>
       <div class="prize-subtext">
         <div>
-          <span>per month</span><span v-if="!isYearly">*</span>
+          <span>{{ t('pricing.plans.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          €1077,88 yearly*
+          €1077,88 {{ t('pricing.plans.yearly') }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          You save money!
+          {{ t('pricing.plans.you_save', {amount: '€12'}) }}
         </div>
         <BcTooltip position="top" text="Compared to paying monthly, dawg.">
           <FontAwesomeIcon :icon="faInfoCircle" /> i
         </BcTooltip>
       </div>
       <div class="main-features-container">
-        <BcPricingFeature name="1 Validator Dashboard" :available="true" :bar-fill-percentage="50" />
-        <BcPricingFeature name="100 Validators per Dashboard" subtext="€0.0899 per validator" :available="true" :bar-fill-percentage="50" />
-        <BcPricingFeature name="7 days dashboard chart history" :available="true" :bar-fill-percentage="15" />
-        <BcPricingFeature name="7 days Heatmap chart history" :available="true" :bar-fill-percentage="15" />
+        <BcPricingFeature
+          :name="t('pricing.plans.validator_dashboards', {amount: plan?.ValidatorDashboards}, (plan?.ValidatorDashboards || 0) > 1 ? 0 : 1)"
+          :available="true"
+          :bar-fill-percentage="50"
+        />
+        <BcPricingFeature
+          :name="t('pricing.plans.validators_per_dashboard', {amount: plan?.ValidatorsPerDashboard})"
+          :subtext="t('pricing.plans.per_validator', {amount: '€0.0899'})"
+          :available="true"
+          :bar-fill-percentage="50"
+        />
+        <BcPricingFeature
+          :name="t('pricing.plans.timeframe_dashboard_chart', {timeframe: '7 days'})"
+          :available="true"
+          :bar-fill-percentage="15"
+        />
+        <BcPricingFeature
+          :name="t('pricing.plans.timeframe_heatmap_chart', {timeframe: '7 days'})"
+          :available="true"
+          :bar-fill-percentage="15"
+        />
       </div>
       <div class="small-features-container">
-        <BcPricingFeature name="No Ads" :available="true" />
-        <BcPricingFeature name="Share Dashboard" :available="true" />
-        <BcPricingFeature name="Mobile App Widget" :available="true" />
-        <BcPricingFeature name="Manage Dashboard via API" :available="false" />
+        <BcPricingFeature :name="t('pricing.plans.no_ads')" :available="true" />
+        <BcPricingFeature :name="t('pricing.plans.share_dashboard')" :available="true" />
+        <BcPricingFeature :name="t('pricing.plans.mobile_app_widget')" :available="true" />
+        <BcPricingFeature :name="t('pricing.plans.manage_dashboard_via_api')" :available="false" />
       </div>
     </div>
   </div>

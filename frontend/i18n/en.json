@@ -523,6 +523,20 @@
     "subtitle": "Monitoring without limits on web and mobile.",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "save_up_to": "SAVE UP TO {percentage}%"
+    "save_up_to": "SAVE UP TO {percentage}%",
+    "plans": {
+      "per_month": "per month",
+      "yearly": "yearly",
+      "you_save": "You save {amount} a year",
+      "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
+      "validators_per_dashboard": "{amount} Validators per Dashboard",
+      "per_validator": "{amount} per validator",
+      "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
+      "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
+      "no_ads": "No Ads",
+      "share_dashboard": "Share Dashboard",
+      "mobile_app_widget": "Mobile App Widget",
+      "manage_dashboard_via_api": "Manage Dashboard via API"
+    }
   }
 }
