@@ -50,7 +50,7 @@ await getPremiumPlans()
       <div class="plans-container">
         <div v-for="plan in premiumPlans?.data" :key="plan.Name" :plan="plan">
           <!--TODO: Currently the name is used to find the free plan (which must not be shown here), should work somehow else-->
-          <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan="plan" />
+          <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan :is-yearly="isYearly" />
         </div>
       </div>
     </div>
