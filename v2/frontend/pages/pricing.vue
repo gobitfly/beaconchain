@@ -48,9 +48,14 @@ await getPremiumPlans()
         </div>
       </div>
       <div class="plans-container">
-        <div v-for="plan in premiumPlans?.data" :key="plan.Name" :plan="plan">
-          <!--TODO: Currently the name is used to find the free plan (which must not be shown here), should work somehow else-->
-          <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan :is-yearly="isYearly" />
+        <div class="plans-row">
+          <div v-for="plan in premiumPlans?.data" :key="plan.Name" :plan="plan">
+            <!--TODO: Currently the name is used to find the free plan (which must not be shown here), should work somehow else-->
+            <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan :is-yearly="isYearly" />
+          </div>
+        </div>
+        <div class="footnote">
+          * All prices are excluding VAT
         </div>
       </div>
     </div>
@@ -168,9 +173,19 @@ await getPremiumPlans()
   }
 
   .plans-container {
-    display: flex;
-    gap: 18px;
-    justify-content: space-between;
+    .plans-row {
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .footnote{
+      font-size: 21px;
+      font-weight: 400;
+      display: flex;
+      justify-content: end;
+    }
   }
 }
 </style>
