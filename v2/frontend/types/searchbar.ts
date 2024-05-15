@@ -57,8 +57,8 @@ export enum ResultType {
   EnsAddresses = 'ens_addresses',
   EnsOverview = 'ens_overview',
   Graffiti = 'graffiti',
-  ValidatorsByIndex = 'validators_by_index',
-  ValidatorsByPubkey = 'validators_by_pubkey',
+  ValidatorsByIndex = 'validator_by_index',
+  ValidatorsByPubkey = 'validator_by_public_key',
   ValidatorsByDepositAddress = 'validators_by_deposit_address',
   ValidatorsByDepositEnsName = 'validators_by_deposit_ens_name',
   ValidatorsByWithdrawalCredential = 'validators_by_withdrawal_credential',
@@ -134,7 +134,11 @@ export interface ResultSuggestion {
   count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
   chainId : ChainIDs, // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
   type : ResultType, // Tells what thing(s) this result corresponds to.
-  rawResult: SingleAPIresult // Original data given by the API. For internal use.
+  rawResult: SingleAPIresult // Original data given by the API.
+}
+
+export interface ResultSuggestionInternal extends ResultSuggestion {
+  stringifyiedRawResult : string, // Original data given by the API.
   nameWasUnknown : boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not. For internal use.
 }
 
@@ -143,7 +147,7 @@ export interface OrganizedResults {
     chainId: ChainIDs,
     types: {
       type: ResultType,
-      suggestions: ResultSuggestion[]
+      suggestions: ResultSuggestionInternal[]
     }[]
   }[]
 }
@@ -219,7 +223,7 @@ interface TypeInfoFields {
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
-  countable: boolean, // whether it is possible for the API to find several identical results of this type and count them
+  countSource: undefined | keyof SingleAPIresult, // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
   queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
   howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
 }
@@ -231,7 +235,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
   },
@@ -241,7 +245,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -251,7 +255,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -261,7 +265,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -271,7 +275,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -281,7 +285,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -291,7 +295,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -301,7 +305,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -311,7 +315,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -321,7 +325,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -331,7 +335,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
@@ -341,7 +345,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 2,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -351,7 +355,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -361,7 +365,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.EnsOverview,
     priority: 15,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRstr_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -371,7 +375,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -381,7 +385,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -391,7 +395,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -401,7 +405,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -411,7 +415,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -421,7 +425,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.SASRhash_value }
   },
@@ -431,7 +435,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -441,7 +445,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -451,7 +455,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -461,7 +465,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
   }
@@ -502,11 +506,10 @@ export function getListOfResultTypes (sortByPriority : boolean) : ResultType[] {
     }
     listOfResultTypesPrioritized.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
   }
-
   return sortByPriority ? listOfResultTypesPrioritized : listOfResultTypesAsDeclared
 }
 
-const searchableTypesPerCategory : Record<string, ResultType[]> = {}
+const searchableTypesPerCategory : Record<Category, ResultType[]> = {} as Record<Category, ResultType[]>
 /**
  * @returns the list of types belonging to the given category.
  * This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
@@ -521,7 +524,6 @@ export function getListOfResultTypesInCategory (category: Category) : ResultType
       searchableTypesPerCategory[c].push(t)
     }
   }
-
   return searchableTypesPerCategory[category]
 }
 

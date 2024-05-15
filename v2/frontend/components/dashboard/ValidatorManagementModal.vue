@@ -102,21 +102,19 @@ const addValidator = (result : ResultSuggestion) => {
     return
   }
 
-  // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
   switch (result.type) {
-    case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
+    case ResultType.ValidatorsByIndex :
     case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = String(result.rawResult.num_value!)
+      selectedValidator.value = String(result.rawResult.num_value!) // The API, by specification, has written the index of the validator in `num_value`
       break
-    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
+    // Below, several validators can correspond to the result.
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
-      // TODO: add a batch of validators
-      // `result.count` is the size of the batch and the list of validators is in result.rawResult.validators
+      // TODO: add a batch of validators. The list of validator indices is in `result.rawResult.validators!`
       warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
       selectedValidator.value = ''
       break
