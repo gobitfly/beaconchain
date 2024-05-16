@@ -65,6 +65,7 @@ interface GlobalState {
   showDropdown: boolean
 }
 
+let differentialRequests : boolean
 let searchableTypes: ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
@@ -169,6 +170,7 @@ function updateGlobalState (state : States) {
 }
 
 function reconfigureSearchbar () {
+  differentialRequests = SearchbarPurposeInfo[props.barPurpose].differentialRequests
   closeDropdown()
   empty()
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
@@ -269,13 +271,13 @@ function userFiltersChanged () {
   // determining which networks and categories need to be searched in
   calculateNextSearchScope()
   // if the scope did not widen, we simply update the list of result suggestions shown to the user
-  if (nextSearchScope.networks.size + nextSearchScope.categories.size === 0) {
+  if ((!differentialRequests || nextSearchScope.networks.size + nextSearchScope.categories.size === 0) && globalState.value.state !== States.Error) {
     refreshOutputArea()
-    return
+  } else {
+    // the scope is larger so a new request will be sent to the API
+    resetGlobalState(States.WaitingForResults)
+    debouncer.bounce(userInputNonce, false, true)
   }
-  // the scope is larger so a new request will be sent to the API
-  resetGlobalState(States.WaitingForResults)
-  debouncer.bounce(userInputNonce, false, true)
 }
 
 function userPressedSearchButtonOrEnter () {
@@ -350,14 +352,23 @@ function refreshOutputArea () {
 function calculateNextSearchScope () {
   nextSearchScope.networks.clear()
   nextSearchScope.categories.clear()
-  for (const nw of userInputNetworks.value) {
-    if (!nw[1] && !userInputNoNetworkIsSelected) { continue }
-    for (const cat of userInputCategories.value) {
-      if (!cat[1] && !userInputNoCategoryIsSelected) { continue }
-      if (results.raw.scopeMatrix[nw[0]][cat[0]]) { continue }
-      // The previous lines ensure that this network × category combination is not in the scope already.
-      // The next two lines inventor the network and the category and the Set object ensures that they are inventored only once.
+  if (differentialRequests) {
+    for (const nw of userInputNetworks.value) {
+      if (!nw[1] && !userInputNoNetworkIsSelected) { continue }
+      for (const cat of userInputCategories.value) {
+        if (!cat[1] && !userInputNoCategoryIsSelected) { continue }
+        if (results.raw.scopeMatrix[nw[0]][cat[0]]) { continue }
+        // The previous lines ensure that this network × category combination is not in the scope already.
+        // The next two lines inventor the network and the category and the Set object ensures that they are inventored only once.
+        nextSearchScope.networks.add(nw[0])
+        nextSearchScope.categories.add(cat[0])
+      }
+    }
+  } else {
+    for (const nw of userInputNetworks.value) {
       nextSearchScope.networks.add(nw[0])
+    }
+    for (const cat of userInputCategories.value) {
       nextSearchScope.categories.add(cat[0])
     }
   }
@@ -606,18 +617,19 @@ const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDrop
 const dropdownContainsSomething = computed(() => mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.NoText)
 
 function areThereResultsHiddenByUser () : boolean {
-  return results.organized.howManyResultsOut > 0
+  return !differentialRequests && results.organized.howManyResultsOut > 0
 }
 
 function informationIfNoResult () : string {
   let info = t('search_bar.no_result_matches') + ' '
 
-  if (areThereResultsHiddenByUser()) {
+  if (differentialRequests) {
+    info += t('search_bar.your_filters') + t('search_bar.or') + t('search_bar.your_input')
+  } else if (areThereResultsHiddenByUser()) {
     info += t('search_bar.your_filters')
   } else {
     info += t('search_bar.your_input')
   }
-
   return info
 }
 
