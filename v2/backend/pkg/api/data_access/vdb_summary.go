@@ -27,14 +27,14 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	// retrieve efficiency data for each time period, we cannot do sorting & filtering here as we need access to the whole set
 	wg := errgroup.Group{}
 
-	validators := make([]uint64, 0)
+	validators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
 		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
+			validators = append(validators, validator)
 		}
 
 		ret[0] = &t.VDBSummaryTableRow{
-			Validators: append([]uint64{}, validators...),
+			Validators: append([]t.VDBValidator{}, validators...),
 		}
 	}
 
@@ -45,7 +45,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
 
-	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []uint64, tableName string) (map[uint64]float64, error) {
+	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []t.VDBValidator, tableName string) (map[uint64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
@@ -89,8 +89,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	if len(validators) == 0 { // retrieve the validators & groups from the dashboard table
 		wg.Go(func() error {
 			type validatorsPerGroup struct {
-				GroupId        uint64 `db:"group_id"`
-				ValidatorIndex uint64 `db:"validator_index"`
+				GroupId        uint64         `db:"group_id"`
+				ValidatorIndex t.VDBValidator `db:"validator_index"`
 			}
 
 			var queryResult []validatorsPerGroup
@@ -109,7 +109,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 				}
 
 				if ret[result.GroupId].Validators == nil {
-					ret[result.GroupId].Validators = make([]uint64, 0, 10)
+					ret[result.GroupId].Validators = make([]t.VDBValidator, 0, 10)
 				}
 
 				if len(ret[result.GroupId].Validators) < 10 {
@@ -297,11 +297,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	`
 	}
 
-	validators := make([]uint64, 0)
+	validators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
-		}
+		validators = dashboardId.Validators
 	}
 
 	type queryResult struct {
@@ -350,7 +348,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []uint64) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		var err error
@@ -375,9 +373,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		totalInclusionDelaySum := int64(0)
 		totalInclusionDelayDivisor := int64(0)
 
-		syncValidators := make([]uint64, 0)
+		syncValidators := make([]t.VDBValidator, 0)
 		for _, row := range rows {
-			syncValidators = append(syncValidators, uint64(row.ValidatorIndex))
+			syncValidators = append(syncValidators, t.VDBValidator(row.ValidatorIndex))
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
 
@@ -401,9 +399,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 			if row.BlocksScheduled > 0 {
 				if data.Proposals.Validators == nil {
-					data.Proposals.Validators = make([]uint64, 0, 10)
+					data.Proposals.Validators = make([]t.VDBValidator, 0, 10)
 				}
-				data.Proposals.Validators = append(data.Proposals.Validators, uint64(row.ValidatorIndex))
+				data.Proposals.Validators = append(data.Proposals.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
 
 			data.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
@@ -411,16 +409,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 			if row.SyncScheduled > 0 {
 				if data.SyncCommittee.Validators == nil {
-					data.SyncCommittee.Validators = make([]uint64, 0, 10)
+					data.SyncCommittee.Validators = make([]t.VDBValidator, 0, 10)
 				}
-				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, uint64(row.ValidatorIndex))
+				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
 
 			if row.Slashed {
 				data.Slashed.StatusCount.Failed++
 				if data.Slashed.Validators == nil {
-					data.Slashed.Validators = make([]uint64, 0, 10)
-					data.Slashed.Validators = append(data.Slashed.Validators, uint64(row.ValidatorIndex))
+					data.Slashed.Validators = make([]t.VDBValidator, 0, 10)
+					data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
 				}
 			} else {
 				data.Slashed.StatusCount.Success++
@@ -510,7 +508,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 31, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 30, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -533,7 +531,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getExpectedSyncCommitteeSlots(validators []uint64, startEpoch, endEpoch uint64) (expectedSlots uint64, err error) {
+func (d *DataAccessService) internal_getExpectedSyncCommitteeSlots(validators []t.VDBValidator, startEpoch, endEpoch uint64) (expectedSlots uint64, err error) {
 	if endEpoch < utils.Config.Chain.ClConfig.AltairForkEpoch {
 		// no sync committee duties before altair fork
 		return 0, nil
@@ -666,11 +664,6 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	cutOffDate := time.Date(2023, 9, 27, 23, 59, 59, 0, time.UTC).Add(time.Hour*24*30).AddDate(0, 0, -30)
 
 	if dashboardId.Validators != nil {
-		validatorList := make([]uint64, 0)
-		for _, validator := range dashboardId.Validators {
-			validatorList = append(validatorList, validator.Index)
-		}
-
 		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 			select
 			epoch_start,
@@ -681,7 +674,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 			WHERE day > $1 AND validator_index = ANY($2)
 			group by 1
 		) as a ORDER BY epoch_start, group_id;`
-		err := d.alloyReader.Select(&queryResults, query, cutOffDate, validatorList)
+		err := d.alloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -764,8 +757,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 }
 
 // allowed periods are: all_time, last_24h, last_7d, last_30d
-func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
-	var validators []uint64
+func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]t.VDBValidator, error) {
+	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators in case a dashboard id is provided
 		validatorsQuery := `
@@ -786,14 +779,12 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 		}
 	} else {
 		// In case a list of validators is provided use them
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
-		}
+		validators = dashboardId.Validators
 	}
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return []uint64{}, nil
+		return []t.VDBValidator{}, nil
 	}
 
 	if duty == enums.ValidatorDuties.None {
@@ -834,7 +825,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 		FROM %s
 		WHERE validator_index = ANY($1) AND %s`, tableName, columnCond)
 
-	var result []uint64
+	var result []t.VDBValidator
 	err := d.alloyReader.Select(&result, query, pq.Array(validators))
 	return result, err
 }

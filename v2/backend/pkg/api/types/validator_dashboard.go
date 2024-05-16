@@ -177,7 +177,7 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
-	Index                *uint64         `json:"index,omitempty"`
+	Index                *VDBValidator   `json:"index,omitempty"`
 	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
 	Timestamp            int64           `json:"timestamp"`
@@ -192,7 +192,7 @@ type InternalGetValidatorDashboardExecutionLayerDepositsResponse ApiPagingRespon
 
 type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
-	Index                uint64          `json:"index"`
+	Index                VDBValidator    `json:"index"`
 	GroupId              uint64          `json:"group_id"`
 	Epoch                uint64          `json:"epoch"`
 	Slot                 uint64          `json:"slot"`
@@ -219,7 +219,7 @@ type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse
 type VDBWithdrawalsTableRow struct {
 	Epoch             uint64          `json:"epoch"`
 	Slot              uint64          `json:"slot"`
-	Index             uint64          `json:"index"`
+	Index             VDBValidator    `json:"index"`
 	GroupId           uint64          `json:"group_id"`
 	Recipient         Address         `json:"recipient"`
 	Amount            decimal.Decimal `json:"amount"`
@@ -236,12 +236,12 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 // ------------------------------------------------------------
 // Manage Modal
 type VDBManageValidatorsTableRow struct {
-	Index                uint64          `json:"index"`
+	Index                VDBValidator    `json:"index"`
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
 	Status               string          `json:"status" tstype:"'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn'" faker:"oneof: pending, online, offline, exiting, exited, slashed, withdrawn"`
-	QueuePosition        uint64          `json:"queue_position,omitempty"`
+	QueuePosition        *uint64         `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }
 

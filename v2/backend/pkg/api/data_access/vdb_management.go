@@ -55,7 +55,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 }
 
 // param validators: slice of validator public keys or indices
-func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
+func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return []t.VDBValidator{}, nil
 	}
@@ -69,12 +69,12 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 	validators := make(map[t.VDBValidator]bool, 0)
 	for _, pubkey := range publicKeys {
 		if v, ok := mapping.ValidatorIndices[pubkey]; ok {
-			validators[t.VDBValidator{Index: *v}] = true
+			validators[v] = true
 		}
 	}
 	for _, index := range indices {
-		if index < uint64(len(mapping.ValidatorPubkeys)) {
-			validators[t.VDBValidator{Index: index}] = true
+		if index < t.VDBValidator(len(mapping.ValidatorPubkeys)) {
+			validators[index] = true
 		}
 	}
 
@@ -437,14 +437,14 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		GroupId   uint64
 		GroupName string
 	}
-	validatorGroupMap := make(map[uint64]ValidatorGroupInfo)
-	var validators []uint64
+	validatorGroupMap := make(map[t.VDBValidator]ValidatorGroupInfo)
+	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
 		queryResult := []struct {
-			ValidatorIndex uint64 `db:"validator_index"`
-			GroupId        uint64 `db:"group_id"`
-			GroupName      string `db:"group_name"`
+			ValidatorIndex t.VDBValidator `db:"validator_index"`
+			GroupId        uint64         `db:"group_id"`
+			GroupName      string         `db:"group_name"`
 		}{}
 
 		validatorsQuery := `
@@ -477,11 +477,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 	} else {
 		// In case a list of validators is provided, set the group to the default
 		for _, validator := range dashboardId.Validators {
-			validatorGroupMap[validator.Index] = ValidatorGroupInfo{
+			validatorGroupMap[validator] = ValidatorGroupInfo{
 				GroupId:   t.DefaultGroupId,
 				GroupName: t.DefaultGroupName,
 			}
-			validators = append(validators, validator.Index)
+			validators = append(validators, validator)
 		}
 	}
 	var paging t.Paging
@@ -532,11 +532,12 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		case constypes.PendingQueued:
 			status = "pending"
 			if metadata.Queues.ActivationIndex.Valid {
-				row.QueuePosition = uint64(metadata.Queues.ActivationIndex.Int64)
+				activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
+				row.QueuePosition = &activationIndex
 			}
 		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
 			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[uint32(validator)] {
+			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
 				if attested && slot > lastAttestionSlot {
 					lastAttestionSlot = slot
 				}
@@ -675,19 +676,14 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 		return nil, nil
 	}
 
-	validatorIndices := make([]uint64, 0, len(validators))
-	for _, v := range validators {
-		validatorIndices = append(validatorIndices, v.Index)
-	}
-
 	pubkeys := []struct {
-		ValidatorIndex uint64 `db:"validatorindex"`
-		Pubkey         []byte `db:"pubkey"`
+		ValidatorIndex t.VDBValidator `db:"validatorindex"`
+		Pubkey         []byte         `db:"pubkey"`
 	}{}
 
 	addedValidators := []struct {
-		ValidatorIndex uint64 `db:"validator_index"`
-		GroupId        uint64 `db:"group_id"`
+		ValidatorIndex t.VDBValidator `db:"validator_index"`
+		GroupId        uint64         `db:"group_id"`
 	}{}
 
 	// Query to find the pubkey for each validator index
@@ -705,7 +701,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 			VALUES 
 	`
 
-	for idx := range validatorIndices {
+	for idx := range validators {
 		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d), ", idx+3)
 	}
 	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
@@ -721,14 +717,14 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	`
 
 	// Find all the pubkeys
-	err := d.alloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validatorIndices))
+	err := d.alloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validators))
 	if err != nil {
 		return nil, err
 	}
 
 	// Add all the validators to the dashboard and group
 	addValidatorsArgsIntf := []interface{}{dashboardId, groupId}
-	for _, validatorIndex := range validatorIndices {
+	for _, validatorIndex := range validators {
 		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
 	}
 	err = d.alloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
@@ -737,18 +733,18 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	}
 
 	// Combine the pubkeys and group ids for the result
-	pubkeysMap := make(map[uint64]string, len(pubkeys))
+	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
 	for _, pubKeyInfo := range pubkeys {
 		pubkeysMap[pubKeyInfo.ValidatorIndex] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
 	}
 
-	addedValidatorsMap := make(map[uint64]uint64, len(addedValidators))
+	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
 	for _, addedValidatorInfo := range addedValidators {
 		addedValidatorsMap[addedValidatorInfo.ValidatorIndex] = addedValidatorInfo.GroupId
 	}
 
 	result := []t.VDBPostValidatorsData{}
-	for _, validator := range validatorIndices {
+	for _, validator := range validators {
 		result = append(result, t.VDBPostValidatorsData{
 			PublicKey: pubkeysMap[validator],
 			GroupId:   addedValidatorsMap[validator],
@@ -768,11 +764,6 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 		return err
 	}
 
-	validatorIndices := make([]uint64, 0, len(validators))
-	for _, v := range validators {
-		validatorIndices = append(validatorIndices, v.Index)
-	}
-
 	//Create the query to delete validators
 	deleteValidatorsQuery := `
 		DELETE FROM users_val_dashboards_validators
@@ -780,7 +771,7 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 	`
 
 	// Delete the validators
-	_, err := d.alloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validatorIndices))
+	_, err := d.alloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validators))
 
 	return err
 }
