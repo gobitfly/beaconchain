@@ -271,17 +271,13 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 }
 
 :global(.validator-group-managment-modal-container .bc-table-header) {
-  height: unset;
-  padding: var(--padding) 0;
+  height: unset !important;
+  padding: var(--padding) 0 !important;
   @include fonts.subtitle_text;
 }
 
 :global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
-}
-
-:global(.validator-group-managment-modal-container .bc-pageinator .left-info) {
-  padding-left: var(--padding-large);
 }
 
 :global(.validator-group-managment-modal-container .edit-group) {
