@@ -390,14 +390,16 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
   let received : SearchAheadAPIresponse | undefined
 
   try {
+    const networks = Array.from(nextSearchScope.networks)
+    const types = generateTypesFromCategories(nextSearchScope.categories)
     received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: {
         input: userInputText.value,
-        networks: Array.from(nextSearchScope.networks),
-        types: generateTypesFromCategories(nextSearchScope.categories),
-        include_validators: isResultCountable(undefined)
+        networks,
+        types,
+        include_validators: areResultsCountable(types)
       }
     })
   } catch (error) {
@@ -533,7 +535,7 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
-  if (isResultCountable(type)) {
+  if (areResultsCountable([type])) {
     const countSource = apiResponseElement[TypeInfo[type].countSource!]
     if (!countSource) {
       count = NaN
@@ -580,13 +582,9 @@ function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFro
   return undefined
 }
 
-function isResultCountable (type : ResultType | undefined) : boolean {
-  if (type !== undefined) {
-    return !!TypeInfo[type].countSource
-  }
-  // from here, there is uncertainty but we must simply tell whether counting is possible for some results
+function areResultsCountable (types : ResultType[]) : boolean {
   if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults) {
-    for (const type of searchableTypes) {
+    for (const type of types) {
       if (TypeInfo[type].countSource) {
         return true
       }
