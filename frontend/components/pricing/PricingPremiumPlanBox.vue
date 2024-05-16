@@ -4,6 +4,7 @@
 // TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
 // TODO: "Manage Dashboard via API" requries subtext for when it is available
 // TODO: Mobile App Widget requires link
+// TODO: Implement new feedback from PO (see txt)
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumPlan } from '~/types/pricing'
