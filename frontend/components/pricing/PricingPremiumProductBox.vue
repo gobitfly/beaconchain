@@ -5,6 +5,7 @@
 // TODO: Mobile App Widget requires link
 // TODO: Implement new feedback from PO (see txt)
 // TODO: Orca box is higher than the others
+// TODO: Fill bars based on Orca
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct } from '~/types/api/user'
@@ -17,6 +18,17 @@ interface Props {
   isYearly?: boolean
 }
 const props = defineProps<Props>()
+
+const monthlyPrice = computed(() => {
+  if (props.isYearly) {
+    return (props.product?.price_per_year_eur || 0) / 12 / 100
+  }
+  return (props.product?.price_per_month_eur || 0) / 100
+})
+
+const saving = computed(() => {
+  return ((props.product?.price_per_month_eur || 0) * 12 - (props.product?.price_per_year_eur || 0)) / 100
+})
 </script>
 
 <template>
@@ -26,7 +38,7 @@ const props = defineProps<Props>()
     </div>
     <div class="features-container">
       <div class="prize">
-        €{{ (product?.price_per_month_eur || 0) / 100 }}
+        €{{ monthlyPrice }}
       </div>
       <div class="prize-subtext">
         <div>
@@ -38,7 +50,7 @@ const props = defineProps<Props>()
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ t('pricing.premium_product.you_save', {amount: '€12'}) }}
+          {{ t('pricing.premium_product.you_save', {amount: '€' + saving}) }}
         </div>
         <BcTooltip position="top" text="Compared to paying monthly, dawg.">
           <FontAwesomeIcon :icon="faInfoCircle" /> i
