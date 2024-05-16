@@ -2,6 +2,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
 import {
+  faCaretRight,
   faHistory,
   faCube,
   faCubes,
@@ -69,7 +70,7 @@ const isMobile = computed(() => width.value <= 469)
 const items = computed(() => {
   let list: MenuItem[] = []
 
-  if (!showInDevelopment) {
+  if (showInDevelopment) {
     list = [
       {
         label: 'Ethereum',
@@ -966,11 +967,22 @@ defineExpose({
 <template>
   <ClientOnly>
     <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
-      <template #itemicon="{ item }">
-        <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
-          <component :is="item.svg" v-if="item.svg" class="monochromatic" />
-          <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
-          <IconCurrency v-else-if="item.currency" :currency="item.currency" />
+      <template #item="{item, hasSubmenu}">
+        <span class="p-menuitem-link">
+          <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
+            <component :is="item.svg" v-if="item.svg" class="monochromatic" />
+            <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
+            <IconCurrency v-else-if="item.currency" :currency="item.currency" />
+          </span>
+          <NuxtLink v-if="item.url" :to="item.url">
+            <span :class="[item.class]" class="p-menuitem-text">
+              <span>{{ item.label }}</span>
+            </span>
+          </NuxtLink>
+          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="()=>item.command?.()">
+            {{ item.label }}
+          </span>
+          <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
         </span>
       </template>
     </MegaMenu>
