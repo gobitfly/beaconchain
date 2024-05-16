@@ -178,6 +178,7 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',
+    mockFunction: mockLatestState,
     mock: false
   },
   [API_PATH.LOGIN]: {
