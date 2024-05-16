@@ -174,8 +174,8 @@ function reconfigureSearchbar () {
   closeDropdown()
   empty()
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
-  allTypesBelongToAllNetworks = true
   searchableTypes = generateTypesFromCategories(SearchbarPurposeInfo[props.barPurpose].searchable)
+  allTypesBelongToAllNetworks = true
   for (const t of searchableTypes) {
     allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
   }
@@ -345,7 +345,7 @@ function refreshOutputArea () {
 /**
  * Calculate two lists (`nextSearchScope.networks` and `nextSearchScope.categories`) telling where we need new results from.
  * For each filter that the user deselects, the scope is not shrinked because we can simply hide the corresponding results in the drop down.
- * For each filter added, the scope is augmented properly ("properly": for example, if a new category is selected, it is not sufficient to add it the set of categories,
+ * For each filter added, the scope is augmented properly ("properly": for example, if a new category is selected, it is not sufficient to add it to the set of categories,
  *  all networks currently selected are also needed and those are not necessarily all the networks in the scope due to the path followed by the user
  *  while clicking the filters).
  */
@@ -376,7 +376,7 @@ function calculateNextSearchScope () {
 
 /**
  * Once new results are received and added to `results.raw.stringifyiedList`,
- * this function is called add the newly selected filters to `results.raw.scopeMatrix`.
+ * this function is called to add the newly selected filters to `results.raw.scopeMatrix`.
  */
 function saveNewSearchScope () {
   for (const nw of nextSearchScope.networks) {
