@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
@@ -17,13 +18,38 @@ type SearchRepository interface {
 }
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorByIndex(ctx, chainId, index)
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
+	if int(index) < len(validatorMapping.ValidatorPubkeys) {
+		return &t.SearchValidator{
+			Index:     index,
+			PublicKey: hexutil.MustDecode(validatorMapping.ValidatorPubkeys[index]),
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
+	b := hexutil.Encode(publicKey)
+	if index, found := validatorMapping.ValidatorIndices[b]; found {
+		return &t.SearchValidator{
+			Index:     *index,
+			PublicKey: publicKey,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
