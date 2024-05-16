@@ -699,15 +699,14 @@ function informationIfHiddenResults () : string {
         </div>
         <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
-            <div>
-              {{ t('search_bar.searching') }}
-              <BcLoadingSpinner :loading="true" size="small" alignment="center" />
-            </div>
+            {{ t('search_bar.searching') }}
+            <BcLoadingSpinner :loading="true" size="small" alignment="center" />
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
-            {{ t('search_bar.something_wrong') }}
-            <IconErrorFace :inline="true" />
-            <br>
+            <span>
+              {{ t('search_bar.something_wrong') }}
+              <IconErrorFace :inline="true" />
+            </span>
             {{ t('search_bar.try_again') }}
           </div>
         </div>
@@ -922,6 +921,7 @@ function informationIfHiddenResults () : string {
       .info {
         position: relative;
         display: flex;
+        flex-direction: column;
         @include fonts.standard_text;
         color: var(--text-color-disabled);
         justify-content: center;
@@ -934,7 +934,7 @@ function informationIfHiddenResults () : string {
         &.center {
           margin-bottom: auto;
           margin-top: auto;
-          height: 50px;
+          height: 60px;
         }
         padding-left: 6px;
         padding-right: 6px;
