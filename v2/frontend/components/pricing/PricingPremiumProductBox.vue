@@ -1,15 +1,14 @@
 <script lang="ts" setup>
 
-// TODO: Use format value for currency and normal numbers
-// TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
+// TODO: Use format value for currency and normal numbers (maybe use many computed values to slim down the template code)
 // TODO: Mobile App Widget requires link
-// TODO: Implement new feedback from PO (see txt)
-// TODO: Orca box is higher than the others
 // TODO: Fill bars based on Orca
+// TODO: Add Select Plan button
 
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct } from '~/types/api/user'
-import { formatTimeDuration } from '~/utils/format'
+// import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { t } = useI18n()
 
@@ -50,10 +49,15 @@ const saving = computed(() => {
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ t('pricing.premium_product.you_save', {amount: '€' + saving}) }}
+          {{ t('pricing.premium_product.savings', {amount: '€' + saving}) }}
         </div>
-        <BcTooltip position="top" text="Compared to paying monthly, dawg.">
-          <FontAwesomeIcon :icon="faInfoCircle" /> i
+        <BcTooltip position="top" :fit-content="true">
+          <FontAwesomeIcon :icon="faInfoCircle" />
+          <template #tooltip>
+            <div class="saving-tooltip-container">
+              {{ t('pricing.premium_product.savings_tooltip', {monthly: '€' + (product?.price_per_month_eur || 0) / 100, monthly_yearly: '€' + (product?.price_per_year_eur || 0)/ 12 / 100}) }}
+            </div>
+          </template>
         </BcTooltip>
       </div>
       <div class="main-features-container">
@@ -68,13 +72,23 @@ const saving = computed(() => {
           :available="true"
           :bar-fill-percentage="50"
         />
-        <BcPricingFeature
+        <!--
+          TODO: For now we hide the number until the backend knows what it is capable of
           :name="t('pricing.premium_product.timeframe_dashboard_chart', {timeframe: formatTimeDuration(product?.premium_perks.summary_chart_history_seconds, t)})"
+        -->
+        <BcPricingFeature
+          :name="t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe')"
+          :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
           :bar-fill-percentage="15"
         />
-        <BcPricingFeature
+        <!--
+          TODO: For now we hide the number until the backend knows what it is capable of
           :name="t('pricing.premium_product.timeframe_heatmap_chart', {timeframe: formatTimeDuration(product?.premium_perks.heatmap_history_seconds, t)})"
+        -->
+        <BcPricingFeature
+          :name="t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe')"
+          :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
           :bar-fill-percentage="15"
         />
@@ -85,7 +99,7 @@ const saving = computed(() => {
         <BcPricingFeature :name="t('pricing.premium_product.mobile_app_widget')" :available="product?.premium_perks.mobile_app_widget" />
         <BcPricingFeature
           :name="t('pricing.premium_product.manage_dashboard_via_api')"
-          :subtext="product?.premium_perks.manage_dashboard_via_api ? '(' + t('pricing.premium_product.coming_soon') + ')' : undefined"
+          :subtext="t('pricing.premium_product.coming_soon')"
           :available="product?.premium_perks.manage_dashboard_via_api"
         />
       </div>
@@ -96,6 +110,7 @@ const saving = computed(() => {
 <style lang="scss" scoped>
 .box-container {
   width: 353px;
+  height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
   text-align: center;
@@ -150,5 +165,10 @@ const saving = computed(() => {
       gap: 9px;
     }
   }
+}
+
+.saving-tooltip-container {
+  width: 150px;
+  text-align: left;
 }
 </style>
