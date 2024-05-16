@@ -73,7 +73,9 @@ func StartAll(context ModuleContext) {
 	} else {
 		modules = append(modules,
 			NewSlotExporter(context),
-			NewExecutionDepositsExporter(context))
+			NewExecutionDepositsExporter(context),
+			NewExecutionPayloadsExporter(context),
+		)
 	}
 
 	startSubscriptionModules(&context, modules)
