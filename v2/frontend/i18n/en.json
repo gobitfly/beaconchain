@@ -524,7 +524,7 @@
     "monthly": "Monthly",
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
-    "plans": {
+    "premium_product": {
       "per_month": "per month",
       "yearly": "yearly",
       "you_save": "You save {amount} a year",

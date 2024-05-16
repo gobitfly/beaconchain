@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 const { t } = useI18n()
-const { premiumPlans, getPremiumPlans } = usePremiumPlansStore()
+const { products, getProducts } = useProductsStore()
 
 const isYearly = ref(true)
 
 // TODO: Replace with calculated percentage once real values are available
 const percentage = 20
 
-await getPremiumPlans()
+await getProducts()
 
 </script>
 
@@ -47,11 +47,10 @@ await getPremiumPlans()
           {{ t('pricing.save_up_to', {percentage}) }}
         </div>
       </div>
-      <div class="plans-container">
-        <div class="plans-row">
-          <div v-for="plan in premiumPlans?.data" :key="plan.Name" :plan="plan">
-            <!--TODO: Currently the name is used to find the free plan (which must not be shown here), should work somehow else-->
-            <PricingPremiumPlanBox v-if="plan.Name!='Free'" :plan :is-yearly="isYearly" />
+      <div class="premium-products-container">
+        <div class="premium-products-row">
+          <div v-for="product in products?.data.premium_products" :key="product.product_id">
+            <PricingPremiumProductBox v-if="product.price_per_year_eur > 0" :product :is-yearly="isYearly" />
           </div>
         </div>
         <div class="footnote">
@@ -172,8 +171,8 @@ await getPremiumPlans()
     }
   }
 
-  .plans-container {
-    .plans-row {
+  .premium-products-container {
+    .premium-products-row {
       display: flex;
       gap: 18px;
       justify-content: space-between;
@@ -184,7 +183,7 @@ await getPremiumPlans()
       font-size: 21px;
       font-weight: 400;
       display: flex;
-      justify-content: end;
+      justify-content: flex-end;
     }
   }
 }
