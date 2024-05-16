@@ -101,33 +101,31 @@ const addValidator = (result: ResultSuggestion) => {
     dialog.open(BcPremiumModal, {})
     return
   }
-
+  let list: number[]
   switch (result.type) {
+    // in the two following cases, we handle a single validator
     case ResultType.ValidatorsByIndex :
     case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = String(result.rawResult.num_value!) // The API, by specification, has written the index of the validator in `num_value`
+      list = [result.rawResult.num_value!] // the API has written the index of the validator in `num_value`
+      selectedValidator.value = String(list[0])
       break
-    // Below, several validators can correspond to the result.
+    // below, we handle a list of validators
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
     case ResultType.ValidatorsByGraffiti :
-      // TODO: add a batch of validators. The list of validator indices is in `result.rawResult.validators!`
-      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
+      list = result.rawResult.validators!
       selectedValidator.value = ''
       break
     default:
       return
   }
-  if (!selectedValidator.value) {
-    return
-  }
   if (isPublic.value || !isLoggedIn.value) {
-    addEntities([selectedValidator.value])
+    addEntities(list)
   } else {
-    changeGroup([selectedValidator.value], selectedGroup.value)
+    changeGroup(list, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
