@@ -134,13 +134,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
 
 .bc-pageinator {
   position: relative;
-  width: calc(100% - var(--padding-large));
   height: 78px;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: var(--standard_text_medium_font_weight);
-  padding: var(--padding);
+  margin: var(--padding) var(--padding-large);
 
   .left-info {
     position: absolute;
@@ -149,7 +148,6 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
     height: 100%;
     display: flex;
     align-items: center;
-    padding-left: var(--padding);
   }
 
   .right-info {
@@ -231,6 +229,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
     .left-info {
       position: relative;
       height: unset;
+      padding-left: unset;
     }
   }
 }
