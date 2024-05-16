@@ -1,4 +1,4 @@
-import { simulateAPIresponseForTheSearchBar, mockPremiumPlansResponse } from '~/utils/mock'
+import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -29,7 +29,7 @@ export enum API_PATH {
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   SEARCH = '/search',
-  PREMIUM_PLANS = '/premiumPlans'
+  PRODUCT_SUMMARY = '/productSummary'
 }
 
 export type PathValues = Record<string, string | number>
@@ -192,9 +192,8 @@ export const mapping: Record<string, MappingData> = {
     mock: true,
     mockFunction: simulateAPIresponseForTheSearchBar
   },
-  [API_PATH.PREMIUM_PLANS]: {
-    path: '/premium-plans',
-    mock: true,
-    mockFunction: mockPremiumPlansResponse
+  [API_PATH.PRODUCT_SUMMARY]: {
+    path: '/product-summary',
+    mock: true
   }
 }

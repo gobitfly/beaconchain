@@ -1,5 +1,4 @@
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
-import { type PremiumPlanAPIresponse } from '~/types/pricing'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -304,96 +303,6 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       }
     }
   }
-
-  return response
-}
-
-export function mockPremiumPlansResponse () : PremiumPlanAPIresponse {
-  const response : PremiumPlanAPIresponse = {}
-  response.data = []
-
-  response.data.push(
-    {
-      Name: 'Free',
-      AdFree: false,
-      ValidatorDashboards: 1,
-      ValidatorsPerDashboard: 20,
-      ValidatorGroupsPerDashboard: 1,
-      ShareCustomDashboards: false,
-      ManageDashboardViaApi: false,
-      HeatmapHistorySeconds: 0,
-      SummaryChartHistorySeconds: 12 * 60 * 60, // 12 hours
-      EmailNotificationsPerDay: 5,
-      ConfigureNotificationsViaApi: false,
-      ValidatorGroupNotifications: 1,
-      WebhookEndpoints: 1,
-      MobileAppCustomThemes: false,
-      MobileAppWidget: false,
-      MonitorMachines: 1,
-      MachineMonitoringHistorySeconds: 3 * 60 * 60, // 3 hours
-      CustomMachineAlerts: false
-    },
-    {
-      Name: 'Guppy',
-      AdFree: true,
-      ValidatorDashboards: 1,
-      ValidatorsPerDashboard: 100,
-      ValidatorGroupsPerDashboard: 3,
-      ShareCustomDashboards: true,
-      ManageDashboardViaApi: false,
-      HeatmapHistorySeconds: 7 * 24 * 60 * 60, // 7 days
-      SummaryChartHistorySeconds: 7 * 24 * 60 * 60, // 7 days
-      EmailNotificationsPerDay: 15,
-      ConfigureNotificationsViaApi: false,
-      ValidatorGroupNotifications: 3,
-      WebhookEndpoints: 3,
-      MobileAppCustomThemes: true,
-      MobileAppWidget: true,
-      MonitorMachines: 2,
-      MachineMonitoringHistorySeconds: 30 * 24 * 60 * 60, // 30 days
-      CustomMachineAlerts: true
-    },
-    {
-      Name: 'Dolphin',
-      AdFree: true,
-      ValidatorDashboards: 1,
-      ValidatorsPerDashboard: 300,
-      ValidatorGroupsPerDashboard: 10,
-      ShareCustomDashboards: true,
-      ManageDashboardViaApi: false,
-      HeatmapHistorySeconds: 30 * 24 * 60 * 60, // 30 days
-      SummaryChartHistorySeconds: 14 * 24 * 60 * 60, // 14 days
-      EmailNotificationsPerDay: 20,
-      ConfigureNotificationsViaApi: false,
-      ValidatorGroupNotifications: 10,
-      WebhookEndpoints: 10,
-      MobileAppCustomThemes: true,
-      MobileAppWidget: true,
-      MonitorMachines: 10,
-      MachineMonitoringHistorySeconds: 30 * 24 * 60 * 60, // 30 days
-      CustomMachineAlerts: true
-    },
-    {
-      Name: 'Orca',
-      AdFree: true,
-      ValidatorDashboards: 2,
-      ValidatorsPerDashboard: 1000,
-      ValidatorGroupsPerDashboard: 30,
-      ShareCustomDashboards: true,
-      ManageDashboardViaApi: true,
-      HeatmapHistorySeconds: 365 * 24 * 60 * 60, // 1 year
-      SummaryChartHistorySeconds: 365 * 24 * 60 * 60, // 1 year
-      EmailNotificationsPerDay: 50,
-      ConfigureNotificationsViaApi: true,
-      ValidatorGroupNotifications: 60,
-      WebhookEndpoints: 30,
-      MobileAppCustomThemes: true,
-      MobileAppWidget: true,
-      MonitorMachines: 10,
-      MachineMonitoringHistorySeconds: 30 * 24 * 60 * 60, // 30 days
-      CustomMachineAlerts: true
-    }
-  )
 
   return response
 }

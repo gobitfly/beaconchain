@@ -4,17 +4,16 @@
 // TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
 // TODO: Mobile App Widget requires link
 // TODO: Implement new feedback from PO (see txt)
-// TODO: Make use of now available structs from backend
 // TODO: Orca box is higher than the others
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumPlan } from '~/types/pricing'
+import { type PremiumProduct } from '~/types/api/user'
 import { formatTimeDuration } from '~/utils/format'
 
 const { t } = useI18n()
 
 interface Props {
-  plan?: PremiumPlan,
+  product?: PremiumProduct,
   isYearly?: boolean
 }
 const props = defineProps<Props>()
@@ -23,23 +22,23 @@ const props = defineProps<Props>()
 <template>
   <div class="box-container">
     <div class="name-container">
-      {{ props.plan?.Name }}
+      {{ props.product?.product_name }}
     </div>
     <div class="features-container">
       <div class="prize">
-        €9.99
+        €{{ (product?.price_per_month_eur || 0) / 100 }}
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ t('pricing.plans.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          €1077,88 {{ t('pricing.plans.yearly') }}*
+          €{{ (product?.price_per_year_eur || 0) / 100 }} {{ t('pricing.premium_product.yearly') }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ t('pricing.plans.you_save', {amount: '€12'}) }}
+          {{ t('pricing.premium_product.you_save', {amount: '€12'}) }}
         </div>
         <BcTooltip position="top" text="Compared to paying monthly, dawg.">
           <FontAwesomeIcon :icon="faInfoCircle" /> i
@@ -47,35 +46,35 @@ const props = defineProps<Props>()
       </div>
       <div class="main-features-container">
         <BcPricingFeature
-          :name="t('pricing.plans.validator_dashboards', {amount: plan?.ValidatorDashboards}, (plan?.ValidatorDashboards || 0) <= 1 ? 1 : 2)"
+          :name="t('pricing.premium_product.validator_dashboards', {amount: product?.premium_perks.validator_dashboards}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
           :bar-fill-percentage="50"
         />
         <BcPricingFeature
-          :name="t('pricing.plans.validators_per_dashboard', {amount: plan?.ValidatorsPerDashboard})"
-          :subtext="t('pricing.plans.per_validator', {amount: '€0.0899'})"
+          :name="t('pricing.premium_product.validators_per_dashboard', {amount: product?.premium_perks.validators_per_dashboard})"
+          :subtext="t('pricing.premium_product.per_validator', {amount: '€0.0899'})"
           :available="true"
           :bar-fill-percentage="50"
         />
         <BcPricingFeature
-          :name="t('pricing.plans.timeframe_dashboard_chart', {timeframe: formatTimeDuration(plan?.SummaryChartHistorySeconds, t)})"
+          :name="t('pricing.premium_product.timeframe_dashboard_chart', {timeframe: formatTimeDuration(product?.premium_perks.summary_chart_history_seconds, t)})"
           :available="true"
           :bar-fill-percentage="15"
         />
         <BcPricingFeature
-          :name="t('pricing.plans.timeframe_heatmap_chart', {timeframe: formatTimeDuration(plan?.HeatmapHistorySeconds, t)})"
+          :name="t('pricing.premium_product.timeframe_heatmap_chart', {timeframe: formatTimeDuration(product?.premium_perks.heatmap_history_seconds, t)})"
           :available="true"
           :bar-fill-percentage="15"
         />
       </div>
       <div class="small-features-container">
-        <BcPricingFeature :name="t('pricing.plans.no_ads')" :available="plan?.AdFree" />
-        <BcPricingFeature :name="t('pricing.plans.share_dashboard')" :available="plan?.ShareCustomDashboards" />
-        <BcPricingFeature :name="t('pricing.plans.mobile_app_widget')" :available="plan?.MobileAppWidget" />
+        <BcPricingFeature :name="t('pricing.premium_product.no_ads')" :available="product?.premium_perks.ad_free" />
+        <BcPricingFeature :name="t('pricing.premium_product.share_dashboard')" :available="product?.premium_perks.share_custom_dashboards" />
+        <BcPricingFeature :name="t('pricing.premium_product.mobile_app_widget')" :available="product?.premium_perks.mobile_app_widget" />
         <BcPricingFeature
-          :name="t('pricing.plans.manage_dashboard_via_api')"
-          :subtext="plan?.ManageDashboardViaApi ? '(' + t('pricing.plans.coming_soon') + ')' : undefined"
-          :available="plan?.ManageDashboardViaApi"
+          :name="t('pricing.premium_product.manage_dashboard_via_api')"
+          :subtext="product?.premium_perks.manage_dashboard_via_api ? '(' + t('pricing.premium_product.coming_soon') + ')' : undefined"
+          :available="product?.premium_perks.manage_dashboard_via_api"
         />
       </div>
     </div>
