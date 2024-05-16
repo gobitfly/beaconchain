@@ -1,13 +1,22 @@
 <script lang="ts" setup>
 const { t } = useI18n()
+
 const { products, getProducts } = useProductsStore()
+await getProducts()
 
 const isYearly = ref(true)
 
-// TODO: Replace with calculated percentage once real values are available
-const percentage = 20
+const savingPercentage = computed(() => {
+  let highestSaving = 0
+  products.value?.data.premium_products.forEach((product) => {
+    const savingPercentage = (1 - (product.price_per_year_eur / (product.price_per_month_eur * 12))) * 100
+    if (savingPercentage > highestSaving) {
+      highestSaving = savingPercentage
+    }
+  })
 
-await getProducts()
+  return Math.floor(highestSaving)
+})
 
 </script>
 
@@ -43,8 +52,8 @@ await getProducts()
           :true-option="t('pricing.yearly')"
           :false-option="t('pricing.monthly')"
         />
-        <div class="save-up-text">
-          {{ t('pricing.save_up_to', {percentage}) }}
+        <div v-if="savingPercentage > 0" class="save-up-text">
+          {{ t('pricing.save_up_to', {percentage: savingPercentage}) }}
         </div>
       </div>
       <div class="premium-products-container">
@@ -172,6 +181,8 @@ await getProducts()
   }
 
   .premium-products-container {
+    height: min-content;
+
     .premium-products-row {
       display: flex;
       gap: 18px;
