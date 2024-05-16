@@ -13,7 +13,7 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
 
   function getKey () {
-    return `${dashboardKey}_${groupId}`
+    return `${dashboardKey}_${groupId}_${epoch}`
   }
 
   async function getDetails () {
