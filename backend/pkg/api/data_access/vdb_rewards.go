@@ -56,7 +56,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					return nil, nil, err
 				}
 				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					indexSearch = int64(*index)
+					indexSearch = int64(index)
 				} else {
 					// No validator index for pubkey found, return empty results
 					return nil, &paging, nil
@@ -156,12 +156,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			%s`, rewardsDataQuery, joinQuery, whereQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		validators := make([]uint64, 0)
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
-		}
-
-		queryParams = append(queryParams, pq.Array(validators))
+		queryParams = append(queryParams, pq.Array(dashboardId.Validators))
 		whereQuery := fmt.Sprintf("WHERE e.validator_index = ANY($%d)", len(queryParams))
 		if currentCursor.IsValid() {
 			queryParams = append(queryParams, currentCursor.Epoch)
@@ -174,7 +169,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					// Find whether the index is in the list of validators
 					// If it is then show all the data
 					for _, validator := range dashboardId.Validators {
-						if validator.Index == uint64(indexSearch) {
+						if validator == t.VDBValidator(indexSearch) {
 							found = true
 							break
 						}
@@ -324,14 +319,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
-		validators := make([]uint64, 0)
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
-		}
-
 		whereClause := "from validator_dashboard_data_epoch where validator_index = any($1) and epoch = $2"
 		query = fmt.Sprintf("%s %s", query, whereClause)
-		err := d.alloyReader.Select(&rows, query, pq.Array(validators), epoch)
+		err := d.alloyReader.Select(&rows, query, pq.Array(dashboardId.Validators), epoch)
 		if err != nil {
 			log.Error(err, "error while getting validator dashboard group rewards", 0)
 			return nil, err
@@ -422,12 +412,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 			ORDER BY e.epoch, v.group_id`, rewardsDataQuery, len(queryParams))
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		validators := make([]uint64, 0)
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator.Index)
-		}
-
-		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(validators))
+		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(dashboardId.Validators))
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
