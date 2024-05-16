@@ -61,12 +61,12 @@ const saving = computed(() => {
         </BcTooltip>
       </div>
       <div class="main-features-container">
-        <BcPricingFeature
+        <PricingPremiumFeature
           :name="t('pricing.premium_product.validator_dashboards', {amount: product?.premium_perks.validator_dashboards}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
           :bar-fill-percentage="50"
         />
-        <BcPricingFeature
+        <PricingPremiumFeature
           :name="t('pricing.premium_product.validators_per_dashboard', {amount: product?.premium_perks.validators_per_dashboard})"
           :subtext="t('pricing.premium_product.per_validator', {amount: '€0.0899'})"
           :available="true"
@@ -76,7 +76,7 @@ const saving = computed(() => {
           TODO: For now we hide the number until the backend knows what it is capable of
           :name="t('pricing.premium_product.timeframe_dashboard_chart', {timeframe: formatTimeDuration(product?.premium_perks.summary_chart_history_seconds, t)})"
         -->
-        <BcPricingFeature
+        <PricingPremiumFeature
           :name="t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
@@ -86,7 +86,7 @@ const saving = computed(() => {
           TODO: For now we hide the number until the backend knows what it is capable of
           :name="t('pricing.premium_product.timeframe_heatmap_chart', {timeframe: formatTimeDuration(product?.premium_perks.heatmap_history_seconds, t)})"
         -->
-        <BcPricingFeature
+        <PricingPremiumFeature
           :name="t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
@@ -94,10 +94,10 @@ const saving = computed(() => {
         />
       </div>
       <div class="small-features-container">
-        <BcPricingFeature :name="t('pricing.premium_product.no_ads')" :available="product?.premium_perks.ad_free" />
-        <BcPricingFeature :name="t('pricing.premium_product.share_dashboard')" :available="product?.premium_perks.share_custom_dashboards" />
-        <BcPricingFeature :name="t('pricing.premium_product.mobile_app_widget')" :available="product?.premium_perks.mobile_app_widget" />
-        <BcPricingFeature
+        <PricingPremiumFeature :name="t('pricing.premium_product.no_ads')" :available="product?.premium_perks.ad_free" />
+        <PricingPremiumFeature :name="t('pricing.premium_product.share_dashboard')" :available="product?.premium_perks.share_custom_dashboards" />
+        <PricingPremiumFeature :name="t('pricing.premium_product.mobile_app_widget')" :available="product?.premium_perks.mobile_app_widget" />
+        <PricingPremiumFeature
           :name="t('pricing.premium_product.manage_dashboard_via_api')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="product?.premium_perks.manage_dashboard_via_api"
