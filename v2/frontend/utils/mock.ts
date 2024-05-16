@@ -7,10 +7,10 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const searchableTypes = body?.types as ResultType[]
   const searchableNetworks = body?.networks as number[]
   const countIdenticalValidators = body?.include_validators as boolean
-  const response : SearchAheadAPIresponse = {}; response.data = []
+  const response : SearchAheadAPIresponse = {} as SearchAheadAPIresponse; response.data = []
 
   if (Math.random() < probabilityOfNoResultOrError / 2) {
-    return {}
+    return {} as SearchAheadAPIresponse
   }
   if (Math.random() < probabilityOfNoResultOrError / 2) {
     return response
