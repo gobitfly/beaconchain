@@ -1,4 +1,5 @@
 import { ChainIDs } from '~/types/networks'
+import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
 export enum SearchbarStyle {
   Gaudy = 'gaudy',
@@ -83,19 +84,8 @@ export type Matching = {
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
-export interface SingleAPIresult {
-  chain_id: number,
-  type: string,
-  str_value?: string,
-  num_value?: number,
-  hash_value?: string,
-  validators?: number[]
-}
-
-export interface SearchAheadAPIresponse {
-  data?: SingleAPIresult[],
-  error?: string
-}
+export type SingleAPIresult = SearchResult
+export interface SearchAheadAPIresponse extends ApiErrorResponse, InternalPostSearchResponse {}
 
 // in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
 export type ResultSuggestionOutput = {

@@ -97,7 +97,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = (result: ResultSuggestion) => {
-  if (premiumLimit.value || result.count > maxValidatorsPerDashboard.value) {
+  if (total.value + result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
   }

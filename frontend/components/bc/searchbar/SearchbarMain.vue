@@ -538,6 +538,10 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   if (areResultsCountable([type], false)) {
     const countSource = apiResponseElement[TypeInfo[type].countSource!]
     if (!countSource) {
+      if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults) {
+        warn('The API returned a search-ahead result of type ', type, ' but the batch or count data is missing.')
+        return undefined
+      }
       count = NaN
     } else {
       count = (Array.isArray(countSource)) ? countSource.length : Number(countSource)
