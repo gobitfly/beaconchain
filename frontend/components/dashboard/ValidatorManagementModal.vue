@@ -409,17 +409,13 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 :global(.validator-managment-modal-container .bc-table-header) {
-  height: unset;
-  padding: var(--padding) 0;
+  height: unset !important;
+  padding: var(--padding) 0 !important;
   @include fonts.subtitle_text;
 }
 
 :global(.validator-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
-}
-
-:global(.validator-managment-modal-container .bc-pageinator .left-info) {
-  padding-left: var(--padding-large);
 }
 
 .small-title {
