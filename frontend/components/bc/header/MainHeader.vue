@@ -59,12 +59,12 @@ const userMenu = computed(() => {
           beaconcha.in
         </NuxtLink>
         <span v-if="latestState?.current_slot" class="info"><span>{{ $t('header.current_slot') }}</span>:
-          <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true">
+          <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment">
             <BcFormatNumber :value="latestState.current_slot" />
           </NuxtLink>
         </span>
         <span v-if="currentEpoch !== undefined" class="info"><span>{{ $t('header.current_epoch') }}</span>:
-          <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true">
+          <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true" :disabled="!showInDevelopment">
             <BcFormatNumber :value="currentEpoch" />
           </NuxtLink>
         </span>
