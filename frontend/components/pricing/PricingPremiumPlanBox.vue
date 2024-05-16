@@ -5,9 +5,11 @@
 // TODO: "Manage Dashboard via API" requries subtext for when it is available
 // TODO: Mobile App Widget requires link
 // TODO: Implement new feedback from PO (see txt)
+// TODO: Make use of now available structs from backend
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumPlan } from '~/types/pricing'
+import { formatTimeDuration } from '~/utils/format'
 
 const { t } = useI18n()
 
@@ -45,7 +47,7 @@ const props = defineProps<Props>()
       </div>
       <div class="main-features-container">
         <BcPricingFeature
-          :name="t('pricing.plans.validator_dashboards', {amount: plan?.ValidatorDashboards}, (plan?.ValidatorDashboards || 0) > 1 ? 0 : 1)"
+          :name="t('pricing.plans.validator_dashboards', {amount: plan?.ValidatorDashboards}, (plan?.ValidatorDashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
           :bar-fill-percentage="50"
         />
@@ -56,12 +58,12 @@ const props = defineProps<Props>()
           :bar-fill-percentage="50"
         />
         <BcPricingFeature
-          :name="t('pricing.plans.timeframe_dashboard_chart', {timeframe: '7 days'})"
+          :name="t('pricing.plans.timeframe_dashboard_chart', {timeframe: formatTimeDuration(plan?.SummaryChartHistorySeconds, t)})"
           :available="true"
           :bar-fill-percentage="15"
         />
         <BcPricingFeature
-          :name="t('pricing.plans.timeframe_heatmap_chart', {timeframe: '7 days'})"
+          :name="t('pricing.plans.timeframe_heatmap_chart', {timeframe: formatTimeDuration(plan?.HeatmapHistorySeconds, t)})"
           :available="true"
           :bar-fill-percentage="15"
         />
@@ -70,7 +72,11 @@ const props = defineProps<Props>()
         <BcPricingFeature :name="t('pricing.plans.no_ads')" :available="true" />
         <BcPricingFeature :name="t('pricing.plans.share_dashboard')" :available="true" />
         <BcPricingFeature :name="t('pricing.plans.mobile_app_widget')" :available="true" />
-        <BcPricingFeature :name="t('pricing.plans.manage_dashboard_via_api')" :available="false" />
+        <BcPricingFeature
+          :name="t('pricing.plans.manage_dashboard_via_api')"
+          :subtext="'(' + t('pricing.plans.coming_soon') + ')'"
+          :available="false"
+        />
       </div>
     </div>
   </div>

@@ -536,7 +536,15 @@
       "no_ads": "No Ads",
       "share_dashboard": "Share Dashboard",
       "mobile_app_widget": "Mobile App Widget",
-      "manage_dashboard_via_api": "Manage Dashboard via API"
+      "manage_dashboard_via_api": "Manage Dashboard via API",
+      "coming_soon": "coming soon"
     }
+  },
+  "time_duration": {
+    "seconds": "{amount} second | {amount} seconds",
+    "minutes": "{amount} minute | {amount} minutes",
+    "hours": "{amount} hour | {amount} hours",
+    "days": "{amount} day | {amount} days",
+    "years": "{amount} year | {amount} years"
   }
 }
