@@ -95,7 +95,6 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 	return err
 }
 
-// this is basically synchronous, each time it gets called it will kill the previous export and replace it with itself
 func (d *executionPayloadsExporter) maintainTable() (err error) {
 	blocks := struct {
 		MinBlock sql.NullInt64 `db:"min"`
@@ -125,9 +124,9 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	minBlock := uint64(blocks.MinBlock.Int64)
 	maxBlock := uint64(blocks.MaxBlock.Int64)
 
-	if minBlock == 0 {
-		log.Infof("no missing blocks found")
-		return nil
+	// limit to 1mil blocks to prevent reading too much from bigtable
+	if maxBlock-minBlock > 1e6 {
+		maxBlock = minBlock + 1e6
 	}
 
 	log.Infof("min block: %v, max block: %v", blocks.MinBlock, blocks.MaxBlock)
