@@ -2,10 +2,10 @@
 
 // TODO: Use format value for currency and normal numbers
 // TODO: Tooltip icon is not visible right now and has been substituted with a simple "i"
-// TODO: "Manage Dashboard via API" requries subtext for when it is available
 // TODO: Mobile App Widget requires link
 // TODO: Implement new feedback from PO (see txt)
 // TODO: Make use of now available structs from backend
+// TODO: Orca box is higher than the others
 
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumPlan } from '~/types/pricing'
@@ -69,13 +69,13 @@ const props = defineProps<Props>()
         />
       </div>
       <div class="small-features-container">
-        <BcPricingFeature :name="t('pricing.plans.no_ads')" :available="true" />
-        <BcPricingFeature :name="t('pricing.plans.share_dashboard')" :available="true" />
-        <BcPricingFeature :name="t('pricing.plans.mobile_app_widget')" :available="true" />
+        <BcPricingFeature :name="t('pricing.plans.no_ads')" :available="plan?.AdFree" />
+        <BcPricingFeature :name="t('pricing.plans.share_dashboard')" :available="plan?.ShareCustomDashboards" />
+        <BcPricingFeature :name="t('pricing.plans.mobile_app_widget')" :available="plan?.MobileAppWidget" />
         <BcPricingFeature
           :name="t('pricing.plans.manage_dashboard_via_api')"
-          :subtext="'(' + t('pricing.plans.coming_soon') + ')'"
-          :available="false"
+          :subtext="plan?.ManageDashboardViaApi ? '(' + t('pricing.plans.coming_soon') + ')' : undefined"
+          :available="plan?.ManageDashboardViaApi"
         />
       </div>
     </div>
