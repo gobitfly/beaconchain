@@ -76,12 +76,9 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			uvdv.dashboard_id,
 			uvdv.group_id,
 			b.slot,
-			coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS reward,
-			rb.value IS NOT NULL AS is_mev,
-			case
-				when rb.value IS NOT NULL then rb.proposer_fee_recipient
-				else b.exec_fee_recipient
-			end as fee_recipient
+			coalesce(rb.value / 1e18, ep.fee_recipient_reward) as reward,
+			coalesce(rb.proposer_fee_recipient, b.exec_fee_recipient) as fee_recipient, 
+			rb.value IS NOT NULL AS is_mev
 		FROM
 			blocks b
 			INNER JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
