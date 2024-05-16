@@ -1,5 +1,6 @@
 import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
+import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
 
 const { epochToTs, slotToTs } = useNetwork()
@@ -149,4 +150,31 @@ export function formatEpochToDate (epoch: number, locales: string): string | nul
 
 export function formattedNumberToHtml (value?:string):string | undefined {
   return value?.split(',').join("<span class='comma' />")
+}
+
+export function formatTimeDuration (seconds: number | undefined, t: ComposerTranslation) : string | undefined {
+  if (seconds === undefined) {
+    return undefined
+  }
+
+  let translationId = 'time_duration.years'
+  let divider = 31536000
+
+  if (seconds < 60) {
+    translationId = 'time_duration.seconds'
+    divider = 1
+  } else if (seconds < 3600) {
+    translationId = 'time_duration.minutes'
+    divider = 60
+  } else if (seconds < 86400) {
+    translationId = 'time_duration.hours'
+    divider = 3600
+  } else if (seconds < 31536000) {
+    translationId = 'time_duration.days'
+    divider = 86400
+  }
+
+  const amount = Math.floor(seconds / divider)
+
+  return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
