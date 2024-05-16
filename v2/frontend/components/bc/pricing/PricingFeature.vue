@@ -3,7 +3,7 @@
 
 interface Props {
   name: string,
-  available: boolean,
+  available?: boolean,
   barFillPercentage?: number,
   subtext?: string,
 }
