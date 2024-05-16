@@ -217,7 +217,7 @@ const userMenu = computed(() => {
     .right-content {
       display: flex;
       align-items: center;
-      gap: var(--padding-large);
+      gap: var(--padding);
 
       .logged-out {
         white-space: nowrap;
@@ -240,7 +240,7 @@ const userMenu = computed(() => {
     font-size: var(--logo_font_size);
     font-weight: var(--logo_font_weight);
     letter-spacing: var(--logo_letter_spacing);
-    line-height: 18px;
+    line-height: 20px;
 
     @media (max-width: 1359px) {
       font-size: var(--logo_small_font_size);

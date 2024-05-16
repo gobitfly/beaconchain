@@ -38,7 +38,7 @@ const { currency, withLabel, setCurrency } = useCurrency()
   &.in-header {
     justify-content: flex-end;
     color: var(--light-grey);
-    font-family: var(--main_header_font_size);
+    font-family: var(--main_header_font_family);
     font-size: var(--main_header_font_size);
     font-weight: var(--main_header_font_weight);
   }

@@ -11,7 +11,6 @@ export function useCurrency () {
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
   function setCurrency (newCurrency: Currency) {
-    console.log('setCurrency', newCurrency)
     selectedCurrency.value = newCurrency
   }
 

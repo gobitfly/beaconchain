@@ -112,8 +112,19 @@
   },
   "currency": {
     "label": {
-      "ETH": "Ethereum",
-      "NAT": "Native"
+      "ETH": "Ether",
+      "NAT": "Native",
+      "AUD": "Australian Dollar",
+      "CAD": "Canadian Dollar",
+      "DAI": "DAI stablecoin",
+      "xDAI": "xDAI stablecoin",
+      "EUR": "Euro",
+      "GBP": "Pound Sterling",
+      "GNO": "Gnosis",
+      "mGNO": "mGnosis",
+      "JPY": "apanese Yen",
+      "RUB": "Russian Ruble",
+      "USD": "United States Dollar"
     }
   },
   "slotViz": {
