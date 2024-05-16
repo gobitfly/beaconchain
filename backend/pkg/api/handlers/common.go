@@ -51,17 +51,17 @@ var allNetworks []types.NetworkInfo
 
 var (
 	// Subject to change, just examples
-	reName                       = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
-	reNumber                     = regexp.MustCompile(`^[0-9]+$`)
-	reValidatorDashboardPublicId = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPublicKey         = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
-	reEthereumAddress            = regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
-	reWithdrawalCredential       = regexp.MustCompile(`^0x00[0-9a-fA-F]{62}$`)
-	reWithdrawalAddress          = regexp.MustCompile(`^0x01[0-9a-fA-F]{62}$`)
-	reEnsName                    = regexp.MustCompile(`^.+\.eth$`)
-	reNonEmpty                   = regexp.MustCompile(`^\s*\S.*$`)
-	reCursor                     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
-	reEmail                      = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
+	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
+	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
+	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
+	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
+	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
+	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
+	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
+	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
+	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 )
 
 const (
@@ -425,7 +425,7 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 	for _, validator := range validators {
 		if reNumber.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
-		} else if reValidatorPublicKey.MatchString(validator) {
+		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
 			if err != nil {
 				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
