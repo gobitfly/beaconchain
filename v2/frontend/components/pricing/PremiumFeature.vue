@@ -1,11 +1,13 @@
 <script lang="ts" setup>
-// TODO: Checkmark is too small
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 
 interface Props {
   name: string,
   available?: boolean,
   barFillPercentage?: number,
   subtext?: string,
+  link?: string
 }
 defineProps<Props>()
 
@@ -23,6 +25,12 @@ defineProps<Props>()
           {{ subtext }}
         </div>
       </div>
+      <NuxtLink v-if="link" class="link" :to="link" target="_blank">
+        <FontAwesomeIcon
+          class="popout"
+          :icon="faArrowUpRightFromSquare"
+        />
+      </NuxtLink>
     </div>
     <BcFractionBar v-if="barFillPercentage" :bar-fill-percentage="barFillPercentage" class="fraction-bar-container" />
   </div>
@@ -42,7 +50,7 @@ defineProps<Props>()
 
     .check {
       width: 22px;
-      height: 17px;
+      height: auto;
     }
 
     .text {
@@ -64,6 +72,12 @@ defineProps<Props>()
         font-size: 14px;
         font-weight: 300;
       }
+    }
+
+    .popout {
+      width: 14px;
+      height: auto;
+      margin-left: 7px;
     }
   }
 

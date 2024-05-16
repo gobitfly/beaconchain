@@ -1,7 +1,6 @@
 <script lang="ts" setup>
-
+// TODO: Checkmark in PremiumFeature is too small
 // TODO: Use format value for currency and normal numbers (maybe use many computed values to slim down the template code)
-// TODO: Mobile App Widget requires link
 // TODO: Fill bars based on Orca
 // TODO: Add Select Plan button
 
@@ -96,7 +95,11 @@ const saving = computed(() => {
       <div class="small-features-container">
         <PricingPremiumFeature :name="t('pricing.premium_product.no_ads')" :available="product?.premium_perks.ad_free" />
         <PricingPremiumFeature :name="t('pricing.premium_product.share_dashboard')" :available="product?.premium_perks.share_custom_dashboards" />
-        <PricingPremiumFeature :name="t('pricing.premium_product.mobile_app_widget')" :available="product?.premium_perks.mobile_app_widget" />
+        <PricingPremiumFeature
+          :name="t('pricing.premium_product.mobile_app_widget')"
+          link="/mobile"
+          :available="product?.premium_perks.mobile_app_widget"
+        />
         <PricingPremiumFeature
           :name="t('pricing.premium_product.manage_dashboard_via_api')"
           :subtext="t('pricing.premium_product.coming_soon')"
