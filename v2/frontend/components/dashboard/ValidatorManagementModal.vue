@@ -12,7 +12,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 import { API_PATH, type PathValues } from '~/types/customFetch'
 
@@ -97,30 +97,17 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = (result: ResultSuggestion) => {
-  if (premiumLimit.value) {
+  if (premiumLimit.value || result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
   }
   let list: number[]
-  switch (result.type) {
-    // in the two following cases, we handle a single validator
-    case ResultType.ValidatorsByIndex :
-    case ResultType.ValidatorsByPubkey :
-      list = [result.rawResult.num_value!] // the API has written the index of the validator in `num_value`
-      selectedValidator.value = String(list[0])
-      break
-    // below, we handle a list of validators
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
-    case ResultType.ValidatorsByGraffiti :
-      list = result.rawResult.validators!
-      selectedValidator.value = ''
-      break
-    default:
-      return
+  if (result.count === 1) {
+    list = [result.rawResult.num_value!]
+    selectedValidator.value = String(list[0])
+  } else {
+    list = result.rawResult.validators!
+    selectedValidator.value = ''
   }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
