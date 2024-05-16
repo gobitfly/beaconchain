@@ -85,11 +85,7 @@ const userMenu = computed(() => {
           </NuxtLink>
         </div>
         <div v-else-if="!isSmallScreen">
-          <BcDropdown
-            :options="userMenu"
-            variant="header"
-            option-label="label"
-          >
+          <BcDropdown :options="userMenu" variant="header" option-label="label">
             <template #value>
               <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
             </template>
@@ -108,8 +104,9 @@ const userMenu = computed(() => {
   </div>
   <div class="header bottom">
     <div class="content">
-      <NuxtLink to="/" class="logo">
+      <NuxtLink to="/dashboard" class="logo">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
+        beaconcha.in
       </NuxtLink>
 
       <BcHeaderMegaMenu ref="megaMenu" />
@@ -129,10 +126,6 @@ const userMenu = computed(() => {
     height: var(--navbar-height);
     background-color: var(--dark-blue);
 
-    .content {
-      align-items: center;
-    }
-
     .user-menu-icon {
       width: 19px;
       height: 18px;
@@ -151,6 +144,7 @@ const userMenu = computed(() => {
     width: var(--content-width);
     margin-left: var(--content-margin);
     margin-right: var(--content-margin);
+    align-items: center;
     display: flex;
     justify-content: space-between;
     font-family: var(--main_header_font_size);
@@ -189,9 +183,14 @@ const userMenu = computed(() => {
   }
 
   .logo {
-    height: var(--navbar2-height);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    gap: var(--padding);
+    font-family: var(--logo_font_family);
+    font-size: var(--logo_font_size);
+    font-weight: var(--logo_font_weight);
+    letter-spacing: var(--logo_letter_spacing);
+    line-height: 18px;
   }
 
   .burger {
