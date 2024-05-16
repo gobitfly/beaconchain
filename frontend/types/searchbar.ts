@@ -64,8 +64,8 @@ export enum ResultType {
   ValidatorsByWithdrawalCredential = 'validators_by_withdrawal_credential',
   ValidatorsByWithdrawalAddress = 'validators_by_withdrawal_address',
   ValidatorsByWithdrawalEnsName = 'validators_by_withdrawal_ens_name',
-  ValidatorsByGraffiti = 'validators_by_graffiti',
-  ValidatorsByName = 'validators_by_name'
+  ValidatorsByGraffiti = 'validators_by_graffiti'
+  // ValidatorsByName = 'validators_by_name'  // for users having given a name to their validator in our DB
 }
 
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
@@ -153,12 +153,13 @@ export interface OrganizedResults {
 }
 
 interface SearchbarPurposeInfoField {
-  searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
-  unsearchable : ResultType[], // List of types that the bar will not search for.
-  askAPItoCountResults : boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
-  button : 'search' | 'add', // Utility of the button.
-  placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
-  cellsInSuggestionRows : SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
+  searchable: Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
+  unsearchable: ResultType[], // List of types that the bar will not search for.
+  askAPItoCountResults: boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
+  button: 'search' | 'add', // Utility of the button.
+  placeHolder: string, // I18n path of the hint to display in the input field when it is empty.
+  cellsInSuggestionRows: SuggestionrowCells, // Determines what is shown in each row of the result-suggestion list.
+  differentialRequests: boolean // If activated, the bar decreases the workload for the API **in certain scenarii** by asking only for results that it does not know yet (which can happen when the user started a search with filters and activates a new filter, then the bar asks only for results corresponding to the newly selected filter). The downside is that the bar cannot help the user by mentionning the number of filtered-out results at the bottom of the suggestion list.
 }
 // this Record describes the look and behavior of the search-bar according to the value that you pass in its props `:bar-purpose`
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
@@ -168,7 +169,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: false,
     button: 'search',
     placeHolder: 'search_bar.general_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory
+    cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory,
+    differentialRequests: true
   },
   [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
@@ -176,7 +178,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.account_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    differentialRequests: true
   },
   [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
@@ -184,7 +187,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.validator_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    differentialRequests: true
   }
 }
 
@@ -458,8 +462,8 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
-  },
-  [ResultType.ValidatorsByName]: {
+  }
+  /* [ResultType.ValidatorsByName]: {
     title: ['search_bar.validator_by_name', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
@@ -468,7 +472,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
-  }
+  } */
 }
 
 export interface ExposedSearchbarMethods { // for internal use

@@ -304,7 +304,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   if (countIdenticalValidators) {
     for (const singleRes of response.data) {
       if (TypeInfo[singleRes.type as ResultType].countSource) {
-        const size = (Math.random() < 1 / 2.0) ? 2 + Math.floor(1000 * Math.random()) : 1
+        const size = 2 + Math.floor(50 * Math.random())
         singleRes.validators = [] as number[]
         for (let v = 0; v < size; v++) {
           singleRes.validators.push(Math.floor(1400000 * Math.random()))
