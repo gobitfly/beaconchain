@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 )
 
 type SearchRepository interface {
@@ -53,26 +54,56 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
+	ret := &t.SearchValidatorsByDepositAddress{
+		Address:    address,
+		Validators: make([]uint64, 0),
+	}
+	err := db.ReaderDb.Select(&ret.Validators, "select validatorindex from validators where pubkey in (select publickey from eth1_deposits where from_address = $1) order by validatorindex LIMIT 10;", address)
+	if err != nil {
+		return nil, err
+	}
+	if len(ret.Validators) == 0 {
+		return nil, nil
+	}
+	return ret, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorsByDepositEnsName(ctx, chainId, ensName)
+	// TODO: finalize ens implementation first
+	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, credential)
+	ret := &t.SearchValidatorsByWithdrwalCredential{
+		WithdrawalCredential: credential,
+		Validators:           make([]uint64, 0),
+	}
+	err := db.ReaderDb.Select(&ret.Validators, "select validatorindex from validators where withdrawalcredentials = $1 order by validatorindex LIMIT 10;", credential)
+	if err != nil {
+		return nil, err
+	}
+	if len(ret.Validators) == 0 {
+		return nil, nil
+	}
+	return ret, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorsByWithdrawalEnsName(ctx, chainId, ensName)
+	// TODO: finalize ens implementation first
+	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
-	// TODO: @recy21
-	return d.dummy.GetSearchValidatorsByGraffiti(ctx, chainId, graffiti)
+	ret := &t.SearchValidatorsByGraffiti{
+		Graffiti:   graffiti,
+		Validators: make([]uint64, 0),
+	}
+	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text ilike '$1%' limit 10;", graffiti) // added a limit here to keep the query fast
+	if err != nil {
+		return nil, err
+	}
+	if len(ret.Validators) == 0 {
+		return nil, nil
+	}
+	return ret, nil
 }
