@@ -45,7 +45,6 @@ const filter = ref<string>('')
       opacity: 0;
       padding: 0;
       position: absolute;
-      right: 100%;
       transition:
         width 0.2s ease-in-out,
         opacity 0.01s ease-in-out 0.19s,

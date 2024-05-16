@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"golang.org/x/sync/errgroup"
@@ -32,7 +34,7 @@ var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 	validatorsByDepositAddress:       reEthereumAddress,
 	validatorsByDepositEnsName:       reEnsName,
 	validatorsByWithdrawalCredential: reWithdrawalCredential,
-	validatorsByWithdrawalAddress:    reWithdrawalAddress,
+	validatorsByWithdrawalAddress:    reEthereumAddress,
 	validatorsByWithdrawalEns:        reEnsName,
 	validatorsByGraffiti:             reNonEmpty,
 }
@@ -163,7 +165,7 @@ func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input
 		return &types.SearchResult{
 			Type:       string(validatorByIndex),
 			ChainId:    chainId,
-			HashValue:  result.PublicKey,
+			HashValue:  hex.EncodeToString(result.PublicKey),
 			NumValue:   &result.Index,
 			Validators: []uint64{result.Index},
 		}, nil
@@ -175,7 +177,12 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 	case <-ctx.Done():
 		return nil, nil
 	default:
-		result, err := h.dai.GetSearchValidatorByPublicKey(ctx, chainId, input)
+		publicKey, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+		if err != nil {
+			// input should've been checked by the regex before, this should never happen
+			return nil, err
+		}
+		result, err := h.dai.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +190,7 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		return &types.SearchResult{
 			Type:       string(validatorByPublicKey),
 			ChainId:    chainId,
-			HashValue:  result.PublicKey,
+			HashValue:  hex.EncodeToString(result.PublicKey),
 			NumValue:   &result.Index,
 			Validators: []uint64{result.Index},
 		}, nil
@@ -195,7 +202,11 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 	case <-ctx.Done():
 		return nil, nil
 	default:
-		result, err := h.dai.GetSearchValidatorsByDepositAddress(ctx, chainId, input)
+		address, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+		if err != nil {
+			return nil, err
+		}
+		result, err := h.dai.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +214,7 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 		return &types.SearchResult{
 			Type:       string(validatorsByDepositAddress),
 			ChainId:    chainId,
-			HashValue:  result.Address,
+			HashValue:  hex.EncodeToString(result.Address),
 			Validators: result.Validators,
 		}, nil
 	}
@@ -233,7 +244,11 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 	case <-ctx.Done():
 		return nil, nil
 	default:
-		result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, input)
+		withdrawalCredential, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+		if err != nil {
+			return nil, err
+		}
+		result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +256,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 		return &types.SearchResult{
 			Type:       string(validatorsByWithdrawalCredential),
 			ChainId:    chainId,
-			HashValue:  result.WithdrawalCredential,
+			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
 			Validators: result.Validators,
 		}, nil
 	}
@@ -252,7 +267,12 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 	case <-ctx.Done():
 		return nil, nil
 	default:
-		result, err := h.dai.GetSearchValidatorsByWithdrawalAddress(ctx, chainId, input)
+		withdrawalString := "010000000000000000000000" + strings.TrimPrefix(input, "0x")
+		withdrawalCredential, err := hex.DecodeString(withdrawalString)
+		if err != nil {
+			return nil, err
+		}
+		result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
 		if err != nil {
 			return nil, err
 		}
@@ -260,7 +280,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 		return &types.SearchResult{
 			Type:       string(validatorsByWithdrawalAddress),
 			ChainId:    chainId,
-			HashValue:  result.Address,
+			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
 			Validators: result.Validators,
 		}, nil
 	}

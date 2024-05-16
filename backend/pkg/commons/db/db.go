@@ -97,13 +97,13 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		sslMode = "require"
 	}
 
-	log.Infof("initializing writer db connection to %v with %v/%v conn limit", writer.Host, writer.MaxIdleConns, writer.MaxOpenConns)
+	log.Infof("initializing writer db connection to %v:%v/%v with %v/%v conn limit", writer.Host, writer.Port, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslMode))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
 
-	dbTestConnection(dbConnWriter, "database")
+	dbTestConnection(dbConnWriter, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
 	dbConnWriter.SetConnMaxIdleTime(time.Second * 30)
 	dbConnWriter.SetConnMaxLifetime(time.Minute)
 	dbConnWriter.SetMaxOpenConns(writer.MaxOpenConns)
@@ -124,7 +124,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
-	dbTestConnection(dbConnReader, "read replica database")
+	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
 	dbConnReader.SetConnMaxIdleTime(time.Second * 30)
 	dbConnReader.SetConnMaxLifetime(time.Minute)
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
