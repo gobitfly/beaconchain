@@ -630,7 +630,7 @@ function informationIfHiddenResults () : string {
   margin: auto;
 
   &.embedded {
-    height: 30px;
+    height: 28px;
     &.dropdown-is-opened {
       @media (max-width: 510px) { // narrow window/screen
         position: absolute;
@@ -712,7 +712,7 @@ function informationIfHiddenResults () : string {
         }
       }
       &.embedded {
-        height: 30px;
+        height: 28px;
         padding-right: 31px;
       }
 
@@ -738,8 +738,8 @@ function informationIfHiddenResults () : string {
       &.embedded {
         right: -1px;
         top: -1px;
-        width: 32px;
-        height: 32px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
       }
     }
   }
