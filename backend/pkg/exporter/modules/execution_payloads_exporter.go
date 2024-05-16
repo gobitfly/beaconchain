@@ -86,7 +86,7 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			LEFT JOIN relays_blocks rb ON rb.exec_block_hash = b.exec_block_hash
 		WHERE
 			b.status = '1'
-			AND b.exec_block_hash IS NOT NULL
+			AND b.exec_block_hash IS NOT NULL AND ep.fee_recipient_reward IS NOT NULL
 		ORDER BY
 			dashboard_id,
 			group_id,
