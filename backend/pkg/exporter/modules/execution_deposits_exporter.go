@@ -33,6 +33,8 @@ import (
 
 // if we ever end up in a situation where we possibly have gaps in the data remember: the merkletree_index is unique.
 // if one is missing, simple take the blocks from the merkletree_index before and after and fetch the deposits again.
+// tho it is sadly stored as a little endian encoded int so you will have to convert it to a number first.
+// fixing this would've required messing with v1, better to do when its gone
 
 type executionDepositsExporter struct {
 	ModuleContext
@@ -234,7 +236,7 @@ func (d *executionDepositsExporter) exportTillBlock(block uint64) (err error) {
 		return err
 	}
 
-	log.Debugf("updating cached view took %v", time.Since(start))
+	log.Debugf("updating cached deposits view took %v", time.Since(start))
 
 	if len(depositsToSave) > 0 {
 		err = d.aggregateDeposits()
