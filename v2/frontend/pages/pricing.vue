@@ -54,7 +54,7 @@ await getProducts()
           </div>
         </div>
         <div class="footnote">
-          * All prices are excluding VAT
+          {{ t('pricing.excluding_vat') }}
         </div>
       </div>
     </div>

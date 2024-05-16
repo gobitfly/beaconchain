@@ -524,6 +524,7 @@
     "monthly": "Monthly",
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
+    "excluding_vat": "* All prices are excluding VAT",
     "premium_product": {
       "per_month": "per month",
       "yearly": "yearly",
