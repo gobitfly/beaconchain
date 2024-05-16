@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-// TODO: Checkmark in PremiumFeature is too small
 // TODO: Use format value for currency and normal numbers (maybe use many computed values to slim down the template code)
 // TODO: Fill bars based on Orca
 // TODO: Add Select Plan button

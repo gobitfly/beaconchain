@@ -21,6 +21,11 @@ defineProps<Props>()
 
 <style lang="scss" scoped>
 .check-container {
+  svg{
+    width: 100%;
+    height: 100%;
+  }
+
   .checkmark {
     color: var(--primary-orange);
   }
