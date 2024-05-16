@@ -399,7 +399,7 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
         input: userInputText.value,
         networks,
         types,
-        include_validators: areResultsCountable(types)
+        include_validators: areResultsCountable(types, true)
       }
     })
   } catch (error) {
@@ -535,7 +535,7 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
-  if (areResultsCountable([type])) {
+  if (areResultsCountable([type], false)) {
     const countSource = apiResponseElement[TypeInfo[type].countSource!]
     if (!countSource) {
       count = NaN
@@ -582,8 +582,8 @@ function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFro
   return undefined
 }
 
-function areResultsCountable (types : ResultType[]) : boolean {
-  if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults) {
+function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : boolean {
+  if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults || !toTellTheAPI) {
     for (const type of types) {
       if (TypeInfo[type].countSource) {
         return true
