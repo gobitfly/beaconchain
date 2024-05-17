@@ -6,6 +6,12 @@
     outline: none;
   }
 
+  .p-menuitem-active{
+    .p-submenu-icon {
+      transform: rotate(90deg);
+    }
+  }
+
   .p-menuitem > .p-menuitem-content .p-menuitem-link {
     padding: 12px 20px;
     display: flex;
@@ -75,8 +81,8 @@
         }
         &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
           background: var(--container-background);
-          .p-menuitem-link .p-menuitem-text {
-            color: var(--text-color);
+          .p-menuitem-link >.p-menuitem-text {
+            opacity: 0.8;
           }
         }
       }

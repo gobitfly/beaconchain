@@ -60,12 +60,12 @@ const userMenu = computed(() => {
         </NuxtLink>
         <span v-if="latestState?.current_slot" class="info"><span>{{ $t('header.current_slot') }}</span>:
           <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment">
-            <BcFormatNumber :value="latestState.current_slot" />
+            <BcFormatNumber class="bold" :value="latestState.current_slot" />
           </NuxtLink>
         </span>
         <span v-if="currentEpoch !== undefined" class="info"><span>{{ $t('header.current_epoch') }}</span>:
           <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true" :disabled="!showInDevelopment">
-            <BcFormatNumber :value="currentEpoch" />
+            <BcFormatNumber class="bold" :value="currentEpoch" />
           </NuxtLink>
         </span>
         <span v-if="rate" class="info">
@@ -73,7 +73,7 @@ const userMenu = computed(() => {
             <IconNetworkEthereum class="icon monochromatic" />ETH
           </span>:
           <span> {{ rate.symbol }}
-            <BcFormatNumber :value="rate.rate" :max-decimals="2" />
+            <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
           </span>
         </span>
       </div>
@@ -200,6 +200,10 @@ const userMenu = computed(() => {
     font-family: var(--main_header_font_family);
     font-size: var(--main_header_font_size);
     font-weight: var(--main_header_font_weight);
+
+    .bold {
+      font-weight: var(--main_header_bold_font_weight);
+    }
 
     .left-content {
       display: flex;
