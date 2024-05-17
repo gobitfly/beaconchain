@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 // TODO: Use format value for currency and normal numbers (maybe use many computed values to slim down the template code)
-// TODO: Fill bars based on Orca
 // TODO: Add Select Plan button
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -11,8 +10,9 @@ import { type PremiumProduct } from '~/types/api/user'
 const { t } = useI18n()
 
 interface Props {
-  product?: PremiumProduct,
-  isYearly?: boolean
+  product: PremiumProduct,
+  compareProduct?: PremiumProduct,
+  isYearly: boolean
 }
 const props = defineProps<Props>()
 
@@ -25,6 +25,15 @@ const monthlyPrice = computed(() => {
 
 const saving = computed(() => {
   return ((props.product?.price_per_month_eur || 0) * 12 - (props.product?.price_per_year_eur || 0)) / 100
+})
+
+const barFillPercentages = computed(() => {
+  return {
+    validatorDashboards: props.product.premium_perks.validator_dashboards / (props.compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
+    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (props.compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
+    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (props.compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
+    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (props.compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+  }
 })
 </script>
 
@@ -62,13 +71,13 @@ const saving = computed(() => {
         <PricingPremiumFeature
           :name="t('pricing.premium_product.validator_dashboards', {amount: product?.premium_perks.validator_dashboards}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
-          :bar-fill-percentage="50"
+          :bar-fill-percentage="barFillPercentages.validatorDashboards"
         />
         <PricingPremiumFeature
           :name="t('pricing.premium_product.validators_per_dashboard', {amount: product?.premium_perks.validators_per_dashboard})"
           :subtext="t('pricing.premium_product.per_validator', {amount: '€0.0899'})"
           :available="true"
-          :bar-fill-percentage="50"
+          :bar-fill-percentage="barFillPercentages.validatorsPerDashboard"
         />
         <!--
           TODO: For now we hide the number until the backend knows what it is capable of
@@ -78,7 +87,7 @@ const saving = computed(() => {
           :name="t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
-          :bar-fill-percentage="15"
+          :bar-fill-percentage="barFillPercentages.summaryChart"
         />
         <!--
           TODO: For now we hide the number until the backend knows what it is capable of
@@ -88,7 +97,7 @@ const saving = computed(() => {
           :name="t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
-          :bar-fill-percentage="15"
+          :bar-fill-percentage="barFillPercentages.heatmapChart"
         />
       </div>
       <div class="small-features-container">
