@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ValidatorHistoryDuties } from '~/types/api/common'
+import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { totalDutyRewards } from '~/utils/dashboard/validator'
 
 interface Props {
@@ -48,7 +49,7 @@ const mapped = computed(() => {
   <BcFormatValue
     :value="mapped.total"
     :use-colors="true"
-    :options="{ addPlus: true, fixedDecimalCount: 5 }"
+    :options="formatRewardValueOption"
   >
     <template v-if="mapped.details?.length" #tooltip>
       <div class="tooltip">
@@ -57,7 +58,7 @@ const mapped = computed(() => {
           <BcFormatValue
             :value="detail.value"
             :use-colors="true"
-            :options="{ addPlus: true, fixedDecimalCount: 5, minUnitDecimalCount:0 }"
+            :options="formatRewardValueOption"
           />
         </div>
       </div>

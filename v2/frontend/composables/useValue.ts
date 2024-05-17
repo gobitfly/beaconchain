@@ -45,8 +45,8 @@ export function useValue () {
         value = bigMul(value, rates.value[target])
       }
       let currencyLabel: string = target
-      const minDecimalCount: number | undefined = options?.fixedDecimalCount
-      let maxDecimalCount: number = options?.fixedDecimalCount ?? 5
+      const minDecimalCount: number | undefined = options?.fixedDecimalCount ?? options?.minDecimalCount
+      let maxDecimalCount: number = options?.fixedDecimalCount ?? options?.maxDecimalCount ?? 5
 
       if (isFiat(target)) {
         maxDecimalCount = Math.min(maxDecimalCount, 2)
