@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-// TODO: Use format value for currency and normal numbers (maybe use many computed values to slim down the template code)
 // TODO: Add Select Plan button
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct } from '~/types/api/user'
+import { formatFiat } from '~/utils/format'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { t } = useI18n()
@@ -16,15 +16,24 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const monthlyPrice = computed(() => {
-  if (props.isYearly) {
-    return (props.product?.price_per_year_eur || 0) / 12 / 100
-  }
-  return (props.product?.price_per_month_eur || 0) / 100
-})
+const formatPremiumProductPrice = (price: number, digits?: number) => {
+  return formatFiat(price / 100, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
+}
 
-const saving = computed(() => {
-  return ((props.product?.price_per_month_eur || 0) * 12 - (props.product?.price_per_year_eur || 0)) / 100
+const prices = computed(() => {
+  const mainPrice = props.isYearly ? props.product.price_per_year_eur / 12 : props.product.price_per_month_eur
+
+  const savingAmount = props.product.price_per_month_eur * 12 - props.product.price_per_year_eur
+  const savingDigits = savingAmount % 100 === 0 ? 0 : 2
+
+  return {
+    main: formatPremiumProductPrice(mainPrice),
+    monthly: formatPremiumProductPrice(props.product.price_per_month_eur),
+    monthly_based_on_yearly: formatPremiumProductPrice(props.product.price_per_year_eur / 12),
+    yearly: formatPremiumProductPrice(props.product.price_per_year_eur),
+    saving: formatPremiumProductPrice(savingAmount, savingDigits),
+    perValidator: formatPremiumProductPrice(mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+  }
 })
 
 const barFillPercentages = computed(() => {
@@ -44,25 +53,25 @@ const barFillPercentages = computed(() => {
     </div>
     <div class="features-container">
       <div class="prize">
-        €{{ monthlyPrice }}
+        {{ prices.main }}
       </div>
       <div class="prize-subtext">
         <div>
           <span>{{ t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          €{{ (product?.price_per_year_eur || 0) / 100 }} {{ t('pricing.premium_product.yearly') }}*
+          {{ prices.yearly }} {{ t('pricing.premium_product.yearly') }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ t('pricing.premium_product.savings', {amount: '€' + saving}) }}
+          {{ t('pricing.premium_product.savings', {amount: prices.saving}) }}
         </div>
         <BcTooltip position="top" :fit-content="true">
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ t('pricing.premium_product.savings_tooltip', {monthly: '€' + (product?.price_per_month_eur || 0) / 100, monthly_yearly: '€' + (product?.price_per_year_eur || 0)/ 12 / 100}) }}
+              {{ t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
             </div>
           </template>
         </BcTooltip>
@@ -75,7 +84,7 @@ const barFillPercentages = computed(() => {
         />
         <PricingPremiumFeature
           :name="t('pricing.premium_product.validators_per_dashboard', {amount: product?.premium_perks.validators_per_dashboard})"
-          :subtext="t('pricing.premium_product.per_validator', {amount: '€0.0899'})"
+          :subtext="t('pricing.premium_product.per_validator', {amount: prices.perValidator})"
           :available="true"
           :bar-fill-percentage="barFillPercentages.validatorsPerDashboard"
         />

@@ -1,6 +1,7 @@
 {
   "locales": {
-    "date": "en-US"
+    "date": "en-US",
+    "currency": "en-US"
   },
   "common": {
     "age": "Age",
