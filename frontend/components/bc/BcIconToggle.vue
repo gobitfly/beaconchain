@@ -50,7 +50,7 @@ const toggle = () => {
 
   &[disabled='true']{
     cursor: unset;
-    user-select: none;
+    pointer-events: none;
     opacity: 0.5;
   }
 
