@@ -58,7 +58,7 @@ const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
 const { withLabel, currency, setCurrency } = useCurrency()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment) === false
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const megaMenu = ref<{toggle:(evt:Event)=>void} | null>(null)
 
