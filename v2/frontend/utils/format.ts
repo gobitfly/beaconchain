@@ -178,3 +178,14 @@ export function formatTimeDuration (seconds: number | undefined, t: ComposerTran
 
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
+
+export function formatFiat (value:number, currency: string, locales: string, minimumFractionDigits?: number, maximumFractionDigits?: number) {
+  const formatter = new Intl.NumberFormat(locales, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits,
+    maximumFractionDigits
+  })
+
+  return formatter.format(value)
+}
