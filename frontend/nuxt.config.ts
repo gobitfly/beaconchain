@@ -33,6 +33,7 @@ export default defineNuxtConfig({
       apiKey: '',
       gitVersion,
       domain: '',
+      v1Domain: '',
       logIp: '',
       logFile: '',
       showInDevelopment: ''
