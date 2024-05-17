@@ -10,7 +10,7 @@ import {
   TypeInfo,
   ResultType,
   wasOutputDataGivenByTheAPI,
-  type ResultSuggestion,
+  type ResultSuggestionInternal,
   SearchbarStyle,
   SearchbarPurpose,
   SearchbarPurposeInfo,
@@ -19,7 +19,7 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-    suggestion: ResultSuggestion,
+    suggestion: ResultSuggestionInternal,
     barStyle: SearchbarStyle,
     barPurpose: SearchbarPurpose
 }>()
