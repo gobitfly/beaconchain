@@ -63,11 +63,11 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): NumberOrString[] => {
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] => {
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
-const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
+const changeGroup = async (validators?: string[], groupId?: number) => {
   if (!validators?.length) {
     warn('no validators selected to change group')
     return
@@ -101,12 +101,12 @@ const addValidator = (result: ResultSuggestion) => {
     dialog.open(BcPremiumModal, {})
     return
   }
-  let list: number[]
+  let list: string[]
   if (result.count === 1) {
-    list = [result.rawResult.num_value!]
+    list = [String(result.rawResult.num_value!)]
     selectedValidator.value = String(list[0])
   } else {
-    list = result.rawResult.validators!
+    list = result.rawResult.validators!.map(index => String(index))
     selectedValidator.value = ''
   }
   if (isPublic.value || !isLoggedIn.value) {

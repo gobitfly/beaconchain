@@ -2,7 +2,6 @@ import { pullAll, union } from 'lodash-es'
 import { provide, warn } from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
-import type { NumberOrString } from '~/types/value'
 export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
@@ -69,12 +68,8 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     setDashboardKey(key)
   }
 
-  const addEntities = (list:NumberOrString[]) => {
-    if (list.length === 0) {
-      return
-    }
-    const stringArray = (typeof list[0] === 'string') ? list as string[] : list.map(index => String(index))
-    updateEntities(union(publicEntities.value, stringArray))
+  const addEntities = (list:string[]) => {
+    updateEntities(union(publicEntities.value, list))
   }
 
   const removeEntities = (list:string[]) => {

@@ -1,5 +1,3 @@
-import type { NumberOrString } from '~/types/value'
-
 // can be either a dashboard id or a list of hashed validators
 export type DashboardKey = string
 
@@ -21,7 +19,7 @@ export type DashboardKeyData = {
   dashboardKey:globalThis.Ref<string>,
   isPublic:globalThis.Ref<boolean>,
   publicEntities:globalThis.Ref<string[]>,
-  addEntities:(list:NumberOrString[]) =>void,
+  addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
   setDashboardKey:(key:string) =>void,
 }
