@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardValidatorEpochDutiesModal, IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
+import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 interface Props {
   row: VDBRewardsTableRow
@@ -183,7 +184,7 @@ const openDuties = () => {
               :value="item.value.income"
               :use-colors="item.value.income !== '0'"
               :class="item.className"
-              :options="{ addPlus: true, fixedDecimalCount: 5 }"
+              :options="formatRewardValueOption"
             />
           </div>
         </div>
@@ -192,7 +193,7 @@ const openDuties = () => {
             <div class="label">
               {{ item.label }}
             </div>
-            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="{ addPlus: true, fixedDecimalCount: 5 }" />
+            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="formatRewardValueOption" />
           </div>
         </div>
       </div>
