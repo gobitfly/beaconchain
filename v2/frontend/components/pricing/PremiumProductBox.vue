@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 // TODO: Add Select Plan button
+// TODO: Test and most likely fix mobile
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
