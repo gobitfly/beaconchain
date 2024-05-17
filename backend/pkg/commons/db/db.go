@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"encoding/hex"
@@ -25,7 +26,10 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/go-redis/redis/v8"
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 //go:embed migrations/*.sql
@@ -2345,6 +2349,7 @@ func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	if err != nil {
 		return fmt.Errorf("error granting all on %s materialized view: %w", tmpViewName, err)
 	}
+
 	// swap views
 	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW if exists %s RENAME TO %s;`, viewName, trashViewName))
 	if err != nil {
@@ -2370,6 +2375,49 @@ func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing tx: %w", err)
+	}
+	return nil
+}
+
+// copy from utils func
+func CopyToTable[T []any](tableName string, columns []string, data []T) error {
+	conn, err := WriterDb.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
+	}
+	defer conn.Close()
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+
+		pgxdecimal.Register(conn.TypeMap())
+		tx, err := conn.Begin(context.Background())
+
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{tableName}, columns,
+			pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
+				return data[i], nil
+			}))
+
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(context.Background())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error copying data to %s: %w", tableName, err)
 	}
 	return nil
 }

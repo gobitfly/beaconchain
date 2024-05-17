@@ -19,7 +19,7 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 		handleErr(w, err)
 		return
 	}
-	response := types.ApiDataResponse[types.ProductSummary]{
+	response := types.InternalGetProductSummaryResponse{
 		Data: *data,
 	}
 	returnOk(w, response)
@@ -88,7 +88,7 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 		handleErr(w, err)
 		return
 	}
-	response := types.ApiDataResponse[types.UserInfo]{
+	response := types.InternalGetUserInfoResponse{
 		Data: *userInfo,
 	}
 	returnOk(w, response)
