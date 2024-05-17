@@ -12,7 +12,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 import { API_PATH, type PathValues } from '~/types/customFetch'
 
@@ -102,12 +102,15 @@ const addValidator = (result: ResultSuggestion) => {
     return
   }
   let list: string[]
-  if (result.count === 1) {
-    list = [String(result.rawResult.num_value!)]
-    selectedValidator.value = String(list[0])
-  } else {
-    list = result.rawResult.validators!.map(index => String(index))
-    selectedValidator.value = ''
+  switch (result.type) {
+    case ResultType.ValidatorsByIndex:
+    case ResultType.ValidatorsByPubkey:
+      list = [String(result.rawResult.num_value!)]
+      selectedValidator.value = String(list[0])
+      break
+    default:
+      list = result.rawResult.validators!.map(index => String(index))
+      selectedValidator.value = ''
   }
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
