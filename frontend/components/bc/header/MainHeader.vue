@@ -54,7 +54,7 @@ const userMenu = computed(() => {
   <div class="header top">
     <div class="content">
       <div class="left-content">
-        <NuxtLink to="/dashboard" class="logo">
+        <NuxtLink to="/" class="logo">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
           beaconcha.in
         </NuxtLink>
