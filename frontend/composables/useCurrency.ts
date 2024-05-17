@@ -38,5 +38,12 @@ export function useCurrency () {
     }))
   })
 
+  watch([latestState, currency], () => {
+    // once we loaded our latestState and see that we don't support the currency we switch back to the first item
+    if (latestState.value && !available.value.includes(currency.value)) {
+      selectedCurrency.value = available.value[0]
+    }
+  })
+
   return { currency, setCurrency, available, rates, withLabel }
 }

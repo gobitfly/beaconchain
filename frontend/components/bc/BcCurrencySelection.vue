@@ -23,9 +23,11 @@ const { currency, withLabel, setCurrency } = useCurrency()
     </template>
     <template #option="slotProps">
       <span class="item">
+        <span class="label">{{ slotProps.label }}</span>
+        <span class="currency">{{ slotProps.currency }}</span>
         <span class="icon">
           <IconCurrency :currency="slotProps.currency" />
-        </span>{{ slotProps.label }}
+        </span>
       </span>
     </template>
   </BcDropdown>
@@ -34,6 +36,7 @@ const { currency, withLabel, setCurrency } = useCurrency()
 .item {
   display: flex;
   justify-content: space-between;
+  gap: var(--padding);
 
   &.in-header {
     justify-content: flex-end;
@@ -43,17 +46,31 @@ const { currency, withLabel, setCurrency } = useCurrency()
     font-weight: var(--main_header_font_weight);
   }
 
+  .label {
+    flex-grow: 1;
+  }
+
+  .currency {
+    width: 30px;
+    text-align: right;
+  }
+
   .icon {
     height: 20px;
     width: 30px;
     display: flex;
     justify-content: flex-end;
-    margin-right: var(--padding);
 
     :deep(img),
     :deep(svg) {
       max-height: 100%;
       width: auto;
+    }
+  }
+
+  &:not(.in-header) {
+    .icon {
+      justify-content: center;
     }
   }
 }

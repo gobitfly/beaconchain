@@ -928,11 +928,6 @@ const items = computed(() => {
       {
         label: $t('header.megamenu.pricing'),
         url: '/pricing'
-      },
-      {
-        label: $t('header.megamenu.notifications'),
-        url: '/user/notifications',
-        disabled: true
       }
     ]
   }
