@@ -116,13 +116,13 @@
       "NAT": "Native",
       "AUD": "Australian Dollar",
       "CAD": "Canadian Dollar",
-      "DAI": "DAI stablecoin",
-      "xDAI": "xDAI stablecoin",
+      "DAI": "DAI Stablecoin",
+      "xDAI": "xDAI Stablecoin",
       "EUR": "Euro",
       "GBP": "Pound Sterling",
       "GNO": "Gnosis",
       "mGNO": "mGnosis",
-      "JPY": "apanese Yen",
+      "JPY": "Japanese Yen",
       "RUB": "Russian Ruble",
       "USD": "United States Dollar"
     }
