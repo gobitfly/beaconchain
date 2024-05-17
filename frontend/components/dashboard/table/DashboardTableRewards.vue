@@ -12,6 +12,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
@@ -118,6 +119,7 @@ const wrappedRewards = computed(() => {
     <BcTableControl
       :title="$t('dashboard.validator.rewards.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.rewards.search_placeholder_public' : 'dashboard.validator.rewards.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
