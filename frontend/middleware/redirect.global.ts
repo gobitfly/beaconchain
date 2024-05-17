@@ -15,7 +15,7 @@ export default function ({ name, params }: RouteLocationNormalizedLoaded) {
         external: true
       })
     case 'epoch':
-      return navigateTo(`${v1Domain}/slot/${params.id || params.slug?.[1]}`, {
+      return navigateTo(`${v1Domain}/epoch/${params.id || params.slug?.[1]}`, {
         external: true
       })
     case 'tx':
