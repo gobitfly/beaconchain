@@ -2,6 +2,7 @@ import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  USER = '/user/me',
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
@@ -83,6 +84,10 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
+    mock: true
+  },
+  [API_PATH.USER]: {
+    path: '/users/me',
     mock: true
   },
   [API_PATH.USER_DASHBOARDS]: {

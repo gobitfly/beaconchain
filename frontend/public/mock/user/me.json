@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": 0,
+    "email": "test@mail.com",
+    "subscriptions": [
+      {
+        "product_id": 2,
+        "product_name": "Dolphin"
+      }
+    ]
+  }
+}
