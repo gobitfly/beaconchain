@@ -50,7 +50,8 @@
     .p-menuitem {
       border-radius: var(--border-radius);
       padding: var(--padding);
-      @include utils.truncate-text;
+      white-space: nowrap;
+      text-overflow: ellipsis;
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
