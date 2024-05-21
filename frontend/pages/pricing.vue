@@ -189,7 +189,7 @@ const savingPercentage = computed(() => {
 
     .premium-products-row {
       display: flex;
-      gap: 18px;
+      gap: 17px;
       justify-content: space-between;
       margin-bottom: 8px;
     }
