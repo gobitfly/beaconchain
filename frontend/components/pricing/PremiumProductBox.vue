@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-// TODO: Add Select Plan button
+// TODO: Add tooltips in plans for "validator per dashboard" (Pectra)
 // TODO: Test and most likely fix mobile
+// TODO: Some text has line breaks even though the design does not
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
@@ -8,11 +9,12 @@ import { type PremiumProduct } from '~/types/api/user'
 import { formatFiat } from '~/utils/format'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
+const { products } = useProductsStore()
+const { user } = useUserStore()
 const { t } = useI18n()
 
 interface Props {
   product: PremiumProduct,
-  compareProduct?: PremiumProduct,
   isYearly: boolean
 }
 const props = defineProps<Props>()
@@ -38,11 +40,31 @@ const prices = computed(() => {
 })
 
 const barFillPercentages = computed(() => {
+  // compare with the last product in the list
+  const compareProduct = products.value?.data.premium_products[products.value.data.premium_products.length - 1]
+
   return {
-    validatorDashboards: props.product.premium_perks.validator_dashboards / (props.compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
-    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (props.compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
-    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (props.compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
-    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (props.compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+    validatorDashboards: props.product.premium_perks.validator_dashboards / (compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
+    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
+    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
+    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+  }
+})
+
+const planButtonText = computed(() => {
+  const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
+  if (!subscription) {
+    return t('pricing.premium_product.button.select_plan')
+  }
+
+  if (subscription.product_id === props.product.product_id) {
+    return t('pricing.premium_product.button.manage_plan')
+  }
+
+  if (subscription.product_id < props.product.product_id) {
+    return t('pricing.premium_product.button.upgrade')
+  } else {
+    return t('pricing.premium_product.button.downgrade')
   }
 })
 </script>
@@ -124,6 +146,7 @@ const barFillPercentages = computed(() => {
           :available="product?.premium_perks.manage_dashboard_via_api"
         />
       </div>
+      <Button :label="planButtonText" class="plan-button" />
     </div>
   </div>
 </template>
@@ -184,7 +207,14 @@ const barFillPercentages = computed(() => {
       display: flex;
       flex-direction: column;
       gap: 9px;
+      margin-bottom: 35px;
     }
+  }
+
+  .plan-button {
+    width: 100%;
+    height: 52px;
+    font-size: 25px;
   }
 }
 

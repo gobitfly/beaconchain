@@ -570,7 +570,13 @@
       "share_dashboard": "Share Dashboard",
       "mobile_app_widget": "Mobile App Widget",
       "manage_dashboard_via_api": "Manage Dashboard via API",
-      "coming_soon": "(coming soon)"
+      "coming_soon": "(coming soon)",
+      "button": {
+        "select_plan": "Select Plan",
+        "manage_plan": "Manage Plan",
+        "downgrade": "Downgrade",
+        "upgrade": "Upgrade"
+      }
     }
   },
   "time_duration": {
