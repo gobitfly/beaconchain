@@ -560,7 +560,10 @@
       "savings": "You save {amount} a year",
       "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
-      "validators_per_dashboard": "{amount} Validators per Dashboard",
+      "validators_per_dashboard": {
+        "text": "{amount} Validators per Dashboard",
+        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maxEB"
+      },
       "per_validator": "{amount} per validator",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
       "timeframe_heatmap_chart": "{timeframe} heatmap chart history",

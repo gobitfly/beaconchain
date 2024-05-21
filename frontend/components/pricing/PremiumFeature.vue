@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+import BcTooltip from '../bc/BcTooltip.vue'
 
 interface Props {
   name: string,
   available?: boolean,
+  tooltip?: string,
   barFillPercentage?: number,
   subtext?: string,
   link?: string
@@ -20,6 +23,12 @@ defineProps<Props>()
       <div class="text" :class="{ 'unavailable': !available }">
         <div class="name">
           {{ name }}
+          <BcTooltip v-if="tooltip" position="top" :fit-content="true">
+            <FontAwesomeIcon :icon="faInfoCircle" />
+            <template #tooltip>
+              {{ tooltip }}
+            </template>
+          </BcTooltip>
         </div>
         <div v-if="subtext" class="subtext">
           {{ subtext }}
@@ -65,6 +74,10 @@ defineProps<Props>()
 
       .name {
         font-size: 17px;
+
+        .slot_container {
+          margin-left: 8px;
+        }
       }
 
       .subtext {
