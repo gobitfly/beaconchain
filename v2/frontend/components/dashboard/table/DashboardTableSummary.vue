@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faCirclePlus } from '@fortawesome/pro-regular-svg-icons'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
@@ -10,7 +12,8 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
+const manageValidatorsModalVisisble = ref(false)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -71,6 +74,10 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
   }
+}
+
+const addValidator = () => {
+  manageValidatorsModalVisisble.value = true
 }
 
 </script>
@@ -165,6 +172,12 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <template #expansion="slotProps">
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
+            <template #empty>
+              <div class="empty" @click="addValidator">
+                <span>{{ $t('dashboard.validator.summary.add_validator') }}</span>
+                <FontAwesomeIcon :icon="faCirclePlus" />
+              </div>
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
@@ -174,13 +187,19 @@ const getRowClass = (row: VDBSummaryTableRow) => {
         </div>
       </template>
     </BcTableControl>
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
   </div>
 </template>
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.summary_table) {
   --col-width: 216px;
+
+  >.p-datatable-wrapper {
+    min-height: 529px;
+  }
 
   .group-id {
     @include utils.truncate-text;
@@ -214,6 +233,18 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       border-bottom-color: var(--primary-color);
     }
   }
+}
+
+.empty {
+  width: 100%;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-color-disabled);
+  gap: var(--padding);
+  cursor: pointer;
 }
 
 .chart-container {

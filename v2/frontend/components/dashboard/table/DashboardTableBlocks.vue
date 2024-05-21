@@ -9,7 +9,7 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
 const { blocks, query: lastQuery, getBlocks } = useValidatorDashboardBlocksStore()
@@ -270,6 +270,9 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.block-table) {
+  >.p-datatable-wrapper {
+    min-height: 529px;
+  }
 
   .proposer {
     @include utils.set-all-width(110px);
