@@ -265,6 +265,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				},
 				PricePerMonthEur: 49.99,
 				PricePerYearEur:  49.99 * 12 * 0.9,
+				IsPopular:        true,
 			},
 		},
 		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
