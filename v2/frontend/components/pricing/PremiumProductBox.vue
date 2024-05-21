@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-// TODO: Add tooltips in plans for "validator per dashboard" (Pectra)
 // TODO: Test and most likely fix mobile
 // TODO: Some text has line breaks even though the design does not
+// TODO: Downgrade button should be discreet
+// TODO: Orca card has to be wider and have an orange border as well as the "Popular!" text
+// TODO: Button should have rounder edges
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
@@ -105,8 +107,10 @@ const planButtonText = computed(() => {
           :available="true"
           :bar-fill-percentage="barFillPercentages.validatorDashboards"
         />
+        <!--TODO: Hardcoded 32 and "ETH" in language file don't work for Gnosis. Replace with real network data once available-->
         <PricingPremiumFeature
-          :name="t('pricing.premium_product.validators_per_dashboard', {amount: product?.premium_perks.validators_per_dashboard})"
+          :name="t('pricing.premium_product.validators_per_dashboard.text', {amount: product?.premium_perks.validators_per_dashboard})"
+          :tooltip="t('pricing.premium_product.validators_per_dashboard.tooltip', {effectiveBalance: formatNumber(product?.premium_perks.validators_per_dashboard * 32)})"
           :subtext="t('pricing.premium_product.per_validator', {amount: prices.perValidator})"
           :available="true"
           :bar-fill-percentage="barFillPercentages.validatorsPerDashboard"
@@ -213,7 +217,7 @@ const planButtonText = computed(() => {
 
   .plan-button {
     width: 100%;
-    height: 52px;
+    height: 53px;
     font-size: 25px;
   }
 }
