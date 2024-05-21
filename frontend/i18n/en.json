@@ -556,6 +556,7 @@
     "save_up_to": "SAVE UP TO {percentage}%",
     "excluding_vat": "* All prices are excluding VAT",
     "premium_product": {
+      "popular": "Popular!",
       "per_month": "per month",
       "yearly": "yearly",
       "savings": "You save {amount} a year",
