@@ -17,6 +17,8 @@ type UserSubscription struct {
 	End             int64           `json:"end" faker:"unix_time"`
 }
 
+type InternalGetUserInfoResponse ApiDataResponse[UserInfo]
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"
@@ -28,6 +30,8 @@ type ProductSummary struct {
 	PremiumProducts                      []PremiumProduct                       `json:"premium_products"`
 	ExtraDashboardValidatorsPremiumAddon []ExtraDashboardValidatorsPremiumAddon `json:"extra_dashboard_validators_premium_addons"`
 }
+
+type InternalGetProductSummaryResponse ApiDataResponse[ProductSummary]
 
 type ApiProduct struct {
 	ProductId        string   `json:"product_id"`
