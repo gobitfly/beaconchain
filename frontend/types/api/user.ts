@@ -37,6 +37,7 @@ export interface ApiProduct {
   api_perks: ApiPerks;
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
+  is_popular: boolean;
 }
 export interface ApiPerks {
   units_per_second: number /* uint64 */;
@@ -54,6 +55,7 @@ export interface PremiumProduct {
   premium_perks: PremiumPerks;
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
+  is_popular: boolean;
 }
 export interface ExtraDashboardValidatorsPremiumAddon {
   product_id: string;
