@@ -62,7 +62,6 @@ const savingPercentage = computed(() => {
             <PricingPremiumProductBox
               v-if="product.price_per_year_eur > 0"
               :product
-              :compare-product="products?.data.premium_products[products.data.premium_products.length - 1]"
               :is-yearly="isYearly"
             />
           </div>
