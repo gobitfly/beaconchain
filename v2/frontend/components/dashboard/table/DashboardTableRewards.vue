@@ -6,6 +6,7 @@ import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/da
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -201,7 +202,7 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="totalElCl(slotProps.data.reward)"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
@@ -220,7 +221,7 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="slotProps.data.reward?.el"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
@@ -239,7 +240,7 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="slotProps.data.reward?.cl"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
