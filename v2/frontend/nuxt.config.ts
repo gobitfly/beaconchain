@@ -33,6 +33,7 @@ export default defineNuxtConfig({
       apiKey: '',
       gitVersion,
       domain: '',
+      v1Domain: '',
       logIp: '',
       logFile: '',
       showInDevelopment: ''
@@ -63,6 +64,11 @@ export default defineNuxtConfig({
   },
   i18n: {
     vueI18n: './i18n.config.ts'
+  },
+  routeRules: {
+    '/': {
+      redirect: '/dashboard'
+    }
   },
   postcss: {
     plugins: {

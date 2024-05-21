@@ -1,4 +1,5 @@
 import { ChainIDs } from '~/types/networks'
+import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
 export enum SearchbarStyle {
   Gaudy = 'gaudy',
@@ -57,15 +58,15 @@ export enum ResultType {
   EnsAddresses = 'ens_addresses',
   EnsOverview = 'ens_overview',
   Graffiti = 'graffiti',
-  ValidatorsByIndex = 'validators_by_index',
-  ValidatorsByPubkey = 'validators_by_pubkey',
+  ValidatorsByIndex = 'validator_by_index',
+  ValidatorsByPubkey = 'validator_by_public_key',
   ValidatorsByDepositAddress = 'validators_by_deposit_address',
   ValidatorsByDepositEnsName = 'validators_by_deposit_ens_name',
   ValidatorsByWithdrawalCredential = 'validators_by_withdrawal_credential',
   ValidatorsByWithdrawalAddress = 'validators_by_withdrawal_address',
   ValidatorsByWithdrawalEnsName = 'validators_by_withdrawal_ens_name',
-  ValidatorsByGraffiti = 'validators_by_graffiti',
-  ValidatorsByName = 'validators_by_name'
+  ValidatorsByGraffiti = 'validators_by_graffiti'
+  // ValidatorsByName = 'validators_by_name'  // for users having given a name to their validator in our DB
 }
 
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
@@ -83,18 +84,8 @@ export type Matching = {
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
-export interface SingleAPIresult {
-  chain_id: number,
-  type: string,
-  str_value?: string,
-  num_value?: number,
-  hash_value?: string
-}
-
-export interface SearchAheadAPIresponse {
-  data?: SingleAPIresult[],
-  error?: string
-}
+export type SingleAPIresult = SearchResult
+export interface SearchAheadAPIresponse extends ApiErrorResponse, InternalPostSearchResponse {}
 
 // in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
 export type ResultSuggestionOutput = {
@@ -133,8 +124,12 @@ export interface ResultSuggestion {
   count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
   chainId : ChainIDs, // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
   type : ResultType, // Tells what thing(s) this result corresponds to.
-  rawResult: SingleAPIresult // Original data given by the API. For internal use.
-  nameWasUnknown : boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not. For internal use.
+  rawResult: SingleAPIresult // Original data given by the API.
+}
+
+export interface ResultSuggestionInternal extends ResultSuggestion {
+  stringifyiedRawResult : string, // Original data given by the API.
+  nameWasUnknown : boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not.
 }
 
 export interface OrganizedResults {
@@ -142,18 +137,19 @@ export interface OrganizedResults {
     chainId: ChainIDs,
     types: {
       type: ResultType,
-      suggestions: ResultSuggestion[]
+      suggestions: ResultSuggestionInternal[]
     }[]
   }[]
 }
 
 interface SearchbarPurposeInfoField {
-  searchable : Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
-  unsearchable : ResultType[], // List of types that the bar will not search for.
-  askAPItoCountResults : boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
-  button : 'search' | 'add', // Utility of the button.
-  placeHolder : string, // I18n path of the hint to display in the input field when it is empty.
-  cellsInSuggestionRows : SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
+  searchable: Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
+  unsearchable: ResultType[], // List of types that the bar will not search for.
+  askAPItoCountResults: boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
+  button: 'search' | 'add', // Utility of the button.
+  placeHolder: string, // I18n path of the hint to display in the input field when it is empty.
+  cellsInSuggestionRows: SuggestionrowCells, // Determines what is shown in each row of the result-suggestion list.
+  differentialRequests: boolean // If activated, the bar decreases the workload for the API **in certain scenarii** by asking only for results that it does not know yet (which can happen when the user started a search with filters and activates a new filter, then the bar asks only for results corresponding to the newly selected filter). The downside is that the bar cannot help the user by mentionning the number of filtered-out results at the bottom of the suggestion list.
 }
 // this Record describes the look and behavior of the search-bar according to the value that you pass in its props `:bar-purpose`
 export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
@@ -163,7 +159,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: false,
     button: 'search',
     placeHolder: 'search_bar.general_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory
+    cellsInSuggestionRows: SuggestionrowCells.NameDescriptionLowlevelCategory,
+    differentialRequests: true
   },
   [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
@@ -171,7 +168,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.account_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    differentialRequests: true
   },
   [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
@@ -179,7 +177,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: true,
     button: 'add',
     placeHolder: 'search_bar.validator_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription
+    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    differentialRequests: true
   }
 }
 
@@ -218,7 +217,7 @@ interface TypeInfoFields {
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
-  countable: boolean, // whether it is possible for the API to find several identical results of this type and count them
+  countSource: undefined | keyof SingleAPIresult, // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
   queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
   howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
 }
@@ -230,7 +229,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
   },
@@ -240,7 +239,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -250,7 +249,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -260,7 +259,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -270,7 +269,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -280,7 +279,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -290,7 +289,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -300,7 +299,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -310,7 +309,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -320,7 +319,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
   },
@@ -330,7 +329,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
@@ -340,7 +339,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 2,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -350,7 +349,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
   },
@@ -360,7 +359,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.EnsOverview,
     priority: 15,
     belongsToAllNetworks: true,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRstr_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -370,7 +369,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -380,7 +379,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRnum_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -390,7 +389,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countable: false,
+    countSource: undefined,
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
   },
@@ -400,7 +399,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -410,7 +409,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -420,7 +419,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.SASRhash_value }
   },
@@ -430,7 +429,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -440,7 +439,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -450,20 +449,20 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
-  },
-  [ResultType.ValidatorsByName]: {
+  }
+  /* [ResultType.ValidatorsByName]: {
     title: ['search_bar.validator_by_name', 0],
     category: Category.Validators,
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countable: true,
+    countSource: 'validators',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
-  }
+  } */
 }
 
 export interface ExposedSearchbarMethods { // for internal use
@@ -501,11 +500,10 @@ export function getListOfResultTypes (sortByPriority : boolean) : ResultType[] {
     }
     listOfResultTypesPrioritized.sort((a, b) => { return TypeInfo[a].priority - TypeInfo[b].priority })
   }
-
   return sortByPriority ? listOfResultTypesPrioritized : listOfResultTypesAsDeclared
 }
 
-const searchableTypesPerCategory : Record<string, ResultType[]> = {}
+const searchableTypesPerCategory : Record<Category, ResultType[]> = {} as Record<Category, ResultType[]>
 /**
  * @returns the list of types belonging to the given category.
  * This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
@@ -520,7 +518,6 @@ export function getListOfResultTypesInCategory (category: Category) : ResultType
       searchableTypesPerCategory[c].push(t)
     }
   }
-
   return searchableTypesPerCategory[category]
 }
 
