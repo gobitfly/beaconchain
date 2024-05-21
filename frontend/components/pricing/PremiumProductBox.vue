@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 // TODO: Test and most likely fix mobile
 // TODO: Add links to Buttons (don't forget Downgrade "button")
-// TODO: Test lightmode
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
