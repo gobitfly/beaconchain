@@ -197,6 +197,10 @@ const userMenu = computed(() => {
     align-items: center;
     display: flex;
     justify-content: space-between;
+    margin-top: auto;
+    margin-bottom: auto;
+    vertical-align: middle;
+    align-items: center;
     font-family: var(--main_header_font_family);
     font-size: var(--main_header_font_size);
     font-weight: var(--main_header_font_weight);
