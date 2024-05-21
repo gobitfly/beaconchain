@@ -176,17 +176,17 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // ------------------------------------------------------------
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
-	PublicKey             PubKey          `json:"public_key"`
-	Index                 *uint64         `json:"index,omitempty"`
-	GroupId               uint64          `json:"group_id"`
-	Block                 uint64          `json:"block"`
-	Timestamp             int64           `json:"timestamp"`
-	From                  Address         `json:"from"`
-	Depositor             Address         `json:"depositor"`
-	TxHash                Hash            `json:"tx_hash"`
-	WithdrawalCredentials Hash            `json:"withdrawal_credentials"`
-	Amount                decimal.Decimal `json:"amount"`
-	Valid                 bool            `json:"valid"`
+	PublicKey            PubKey          `json:"public_key"`
+	Index                *uint64         `json:"index,omitempty"`
+	GroupId              uint64          `json:"group_id"`
+	Block                uint64          `json:"block"`
+	Timestamp            int64           `json:"timestamp"`
+	From                 Address         `json:"from"`
+	Depositor            Address         `json:"depositor"`
+	TxHash               Hash            `json:"tx_hash"`
+	WithdrawalCredential Hash            `json:"withdrawal_credential"`
+	Amount               decimal.Decimal `json:"amount"`
+	Valid                bool            `json:"valid"`
 }
 type InternalGetValidatorDashboardExecutionLayerDepositsResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
@@ -265,12 +265,4 @@ type VDBPostCreateGroupData struct {
 type VDBPostValidatorsData struct {
 	PublicKey string `json:"public_key"`
 	GroupId   uint64 `json:"group_id"`
-}
-
-type VDBPostPublicIdData struct {
-	PublicId      string `json:"public_id"`
-	Name          string `json:"name"`
-	ShareSettings struct {
-		GroupNames bool `json:"group_names"`
-	} `json:"share_settings"`
 }

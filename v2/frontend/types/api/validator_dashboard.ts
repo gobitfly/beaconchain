@@ -166,7 +166,7 @@ export interface VDBExecutionDepositsTableRow {
   from: Address;
   depositor: Address;
   tx_hash: Hash;
-  withdrawal_credentials: Hash;
+  withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
   valid: boolean;
 }
@@ -240,11 +240,4 @@ export interface VDBPostCreateGroupData {
 export interface VDBPostValidatorsData {
   public_key: string;
   group_id: number /* uint64 */;
-}
-export interface VDBPostPublicIdData {
-  public_id: string;
-  name: string;
-  share_settings: {
-    group_names: boolean;
-  };
 }

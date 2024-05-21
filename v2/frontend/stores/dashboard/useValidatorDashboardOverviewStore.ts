@@ -10,7 +10,6 @@ const validatorOverviewStore = defineStore('validator_overview_store', () => {
 
 export function useValidatorDashboardOverviewStore () {
   const { fetch } = useCustomFetch()
-  const { t: $t } = useI18n()
   const { data } = storeToRefs(validatorOverviewStore())
 
   const overview = computed(() => data.value)
@@ -22,15 +21,6 @@ export function useValidatorDashboardOverviewStore () {
     }
     const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
     data.value = res.data
-
-    if (data.value.groups === null) {
-      data.value.groups = []
-      data.value.groups.push({
-        id: 0,
-        name: $t('dashboard.group.selection.default'),
-        count: 0
-      })
-    }
 
     return overview.value
   }

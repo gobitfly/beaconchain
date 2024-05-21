@@ -28,9 +28,9 @@ const { props, setHeader } = useBcDialog<Props>({ showHeader: size.value.expanda
 
 const isLoading = ref(false)
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 
-const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'validator:asc' }, 500)
 
 const data = ref<InternalGetValidatorDashboardDutiesResponse | undefined>()
 
@@ -124,6 +124,7 @@ watch([title, size], () => {
           :cursor="cursor"
           :loading="isLoading"
           :page-size="pageSize"
+          :selected-sort="tempQuery?.sort as string"
           @set-cursor="setCursor"
           @sort="onSort"
           @set-page-size="setPageSize"

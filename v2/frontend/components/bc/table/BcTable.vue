@@ -7,6 +7,7 @@ interface Props {
   dataKey?: string, // Unique identifier for a data row
   pageSize?: number,
   data?: ApiPagingResponse<any>,
+  selectedSort?: string,
   expandable?: boolean,
   isRowExpandable?: (item: any) => boolean,
   selectionMode?: 'multiple' | 'single'
@@ -76,6 +77,17 @@ watch(() => props.expandable, (expandable) => {
   }
 })
 
+const sort = computed(() => {
+  if (!props.selectedSort?.includes(':')) {
+    return
+  }
+  const split = props.selectedSort?.split(':')
+  return {
+    field: split[0],
+    order: split[1] === 'asc' ? -1 : 1
+  }
+})
+
 </script>
 
 <template>
@@ -84,6 +96,8 @@ watch(() => props.expandable, (expandable) => {
     class="bc-table"
     sort-mode="single"
     lazy
+    :sort-field="sort?.field"
+    :sort-order="sort?.order"
     :value="data?.data"
     :data-key="dataKey"
   >
@@ -124,7 +138,14 @@ watch(() => props.expandable, (expandable) => {
         :cursor="cursor"
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
-      />
+      >
+        <template #bc-table-footer-left>
+          <slot name="bc-table-footer-left" />
+        </template>
+        <template v-if="$slots['bc-table-footer-right']" #bc-table-footer-right>
+          <slot name="bc-table-footer-right" />
+        </template>
+      </BcTablePager>
     </template>
   </DataTable>
 </template>
@@ -141,6 +162,11 @@ watch(() => props.expandable, (expandable) => {
 
   :deep(.p-datatable-emptymessage) {
     height: 140px;
+    background: transparent;
+
+    >td {
+      border: none;
+    }
   }
 }
 

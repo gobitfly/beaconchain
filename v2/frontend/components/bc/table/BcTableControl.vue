@@ -9,7 +9,8 @@ import {
 interface Props {
   title?: string,
   searchPlaceholder?: string,
-  disabledFilter?: boolean
+  disabledFilter?: boolean,
+  chartDisabled?: boolean
 }
 const props = defineProps<Props>()
 
@@ -26,7 +27,7 @@ const onInput = (value: string) => {
   <slot name="bc-table-header">
     <div class="bc-table-header">
       <div class="side">
-        <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" />
+        <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" :disabled="chartDisabled" />
         <slot name="header-left" />
       </div>
 

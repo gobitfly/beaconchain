@@ -9,7 +9,7 @@ import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useVali
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { slotToEpoch } = useNetwork()
@@ -18,6 +18,7 @@ const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, is
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -65,7 +66,7 @@ const tableData = computed(() => {
 })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -135,7 +136,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   class="link"
                   :no-prefetch="true"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" />
+                  {{ slotProps.data.index }}
                 </NuxtLink>
                 <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
               </template>
