@@ -299,7 +299,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     response.data = response.data.filter(singleRes => searchableTypes.includes(singleRes.type as ResultType))
   }
   if (searchableNetworks.length) {
-    response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id))
+    response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
   }
   // adding fake numbers of identical results where it is possible
   if (countIdenticalValidators) {
