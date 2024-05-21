@@ -187,8 +187,10 @@ function oneOptionChanged (index : number) {
       position:relative;
       display: flex;
       width: 100%;
-      margin-bottom: 2px;
       white-space: nowrap;
+      &:nth-child(n+1) {
+        margin-top: var(--padding-small);
+      }
 
       .p-checkbox {
         :deep(.p-checkbox-box:not(:hover):not(.p-highlight)) {
