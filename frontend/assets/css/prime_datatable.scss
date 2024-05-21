@@ -58,12 +58,12 @@
             color: var(--text-color-disabled);
             margin-left: -9px;
           }
-          &:has(svg[sortOrder="1"]) {
+          &:has(svg[sortOrder="-1"]) {
             &:before {
               color: inherit;
             }
           }
-          &:has(svg[sortOrder="-1"]) {
+          &:has(svg[sortOrder="1"]) {
             &:after {
               color: inherit;
             }

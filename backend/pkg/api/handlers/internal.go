@@ -10,6 +10,47 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// --------------------------------------
+// Premium Plans
+
+func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetProductSummary()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetProductSummaryResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+// --------------------------------------
+// Latest State
+
+func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
+	latestSlot, err := h.dai.GetLatestSlot()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	exchangeRates, err := h.dai.GetLatestExchangeRates()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	data := types.LatestStateData{
+		LatestSlot:    latestSlot,
+		ExchangeRates: exchangeRates,
+	}
+
+	response := types.InternalGetLatestStateResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
 // All handler function names must include the HTTP method and the path they handle
 // Internal handlers may only be authenticated by an OAuth token
 
@@ -30,6 +71,27 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
+}
+
+// --------------------------------------
+// User
+
+func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
+	// TODO patrick
+	user, err := h.getUser(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetUserInfoResponse{
+		Data: *userInfo,
+	}
+	returnOk(w, response)
 }
 
 // --------------------------------------
@@ -122,8 +184,8 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		return
 	}
 	req := struct {
-		Name    string `json:"name"`
-		Network string `json:"network"`
+		Name    string  `json:"name"`
+		Network network `json:"network"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
@@ -136,7 +198,7 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboard(user.Id, name, network)
+	data, err := h.dai.CreateValidatorDashboard(user.Id, name, uint64(network))
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -226,7 +288,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 		handleErr(w, v)
 		return
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -235,7 +297,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	data, err := h.dai.UpdateValidatorDashboardGroup(dashboardId, uint64(groupId), name)
+	data, err := h.dai.UpdateValidatorDashboardGroup(dashboardId, groupId, name)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -261,7 +323,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 		returnBadRequest(w, errors.New("cannot delete default group"))
 		return
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -270,7 +332,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	err = h.dai.RemoveValidatorDashboardGroup(dashboardId, uint64(groupId))
+	err = h.dai.RemoveValidatorDashboardGroup(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -789,7 +851,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.R
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupEpochHeatmap(*dashboardId, uint64(groupId), epoch)
+	data, err := h.dai.GetValidatorDashboardGroupEpochHeatmap(*dashboardId, groupId, epoch)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -815,7 +877,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.R
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupDailyHeatmap(*dashboardId, uint64(groupId), date)
+	data, err := h.dai.GetValidatorDashboardGroupDailyHeatmap(*dashboardId, groupId, date)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -877,7 +939,7 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -896,7 +958,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {

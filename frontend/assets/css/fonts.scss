@@ -105,8 +105,16 @@
   --standard_text_font_family: var(--roboto-family);
   --standard_text_font_size: 16px;
   --standard_text_font_weight: var(--roboto-regular);
+  --standard_text_light_font_weight: var(--roboto-light);
   --standard_text_medium_font_weight: var(--roboto-medium);
   --standard_text_bold_font_weight: var(--roboto-bold);
+
+  --main_header_font_family:var(--roboto-family);
+  --main_header_font_size: 16px;
+  --main_header_font_weight: var(--roboto-regular);
+  --main_header_bold_font_weight: var(--roboto-bold);
+
+
 
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 14px;
@@ -122,6 +130,13 @@
   --tooltip_text_font_size: 12px;
   --tooltip_text_font_weight: var(--inter-light);
   --tooltip_text_bold_font_weight: var(--inter-medium);
+
+  --logo_font_family: var(--inter-family);
+  --logo_font_size: 28px;
+  --logo_font_weight: var(--inter-regular);
+  --logo_letter_spacing: 0.84px;
+  --logo_small_font_weight: var(--inter-regular);
+  --logo_small_letter_spacing: 0.537px;
 
   --button_font_family: var(--roboto-family);
   --button_font_size: 14px;

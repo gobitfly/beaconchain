@@ -9,13 +9,14 @@ import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useVali
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
 
 const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardElDepositsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -65,7 +66,7 @@ const tableData = computed(() => {
 })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -136,7 +137,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   class="link"
                   :no-prefetch="true"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" />
+                  {{ slotProps.data.index }}
                 </NuxtLink>
                 <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
               </template>
@@ -223,7 +224,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
               <template #body="slotProps">
                 <BcFormatHash
                   v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.withdrawal_credentials"
+                  :hash="slotProps.data.withdrawal_credential"
                   :no-wrap="true"
                   type="withdrawal_credentials"
                 />
@@ -274,7 +275,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credentials" type="withdrawal_credentials" :no-wrap="true" />
+                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" :no-wrap="true" />
                 </div>
                 <div class="row">
                   <div class="label">

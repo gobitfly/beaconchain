@@ -61,16 +61,6 @@ export interface ChartData<I extends number /* int */ | string, D extends number
   categories: number /* uint64 */[]; // x-axis
   series: ChartSeries<I, D>[];
 }
-export interface SearchResult {
-  type: string;
-  chain_id: number /* uint64 */;
-  hash_value?: string;
-  num_value?: number /* uint64 */;
-  str_value?: string;
-}
-export interface SearchResponse {
-  data: SearchResult[];
-}
 export interface ValidatorHistoryEvent {
   status: 'success' | 'partial' | 'failed';
   income: string /* decimal.Decimal */;
@@ -90,4 +80,24 @@ export interface ValidatorHistoryDuties {
   slashing?: ValidatorHistoryEvent;
   proposal?: ValidatorHistoryProposal;
   sync_count?: number /* uint64 */; // count of successful sync duties for the epoch
+}
+export interface ChainConfig {
+  chain_id: number /* uint64 */;
+  name: string;
+}
+export interface SearchResult {
+  type: string;
+  chain_id: number /* uint64 */;
+  hash_value?: Hash;
+  str_value?: string;
+  num_value?: number /* uint64 */;
+  validators?: number /* uint64 */[];
+}
+export type InternalPostSearchResponse = ApiDataResponse<SearchResult[]>;
+export interface VDBPublicId {
+  public_id: string;
+  name: string;
+  share_settings: {
+    group_names: boolean;
+  };
 }

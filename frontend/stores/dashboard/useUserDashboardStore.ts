@@ -74,7 +74,7 @@ export function useUserDashboardStore () {
       return cd
     }
     // Create user specific Validator dashboard
-    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: '0' } })
+    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: 1 } })
     if (res.data) {
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
