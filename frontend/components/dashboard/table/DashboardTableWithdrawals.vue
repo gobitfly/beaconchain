@@ -13,7 +13,7 @@ type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: stri
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
@@ -347,6 +347,9 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
+  >.p-datatable-wrapper {
+    min-height: 577px;
+  }
   .index .all-time-total {
     @include fonts.standard_text;
     font-weight: var(--standard_text_medium_font_weight);

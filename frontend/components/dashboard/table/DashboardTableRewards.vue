@@ -11,7 +11,7 @@ import { formatRewardValueOption } from '~/utils/dashboard/table'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -140,23 +140,14 @@ const wrappedRewards = computed(() => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
-              field="epoch"
-              :sortable="true"
-              body-class="epoch"
-              header-class="epoch"
-              :header="$t('common.epoch')"
-            >
+            <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
               <template #body="slotProps">
                 <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
                   <BcFormatNumber :value="slotProps.data.epoch" />
                 </NuxtLink>
               </template>
             </Column>
-            <Column
-              v-if="colsVisible.age"
-              field="age"
-            >
+            <Column v-if="colsVisible.age" field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -247,7 +238,10 @@ const wrappedRewards = computed(() => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails :row="slotProps.data" :group-name="groupNameLabel(slotProps.data.group_id)" />
+              <DashboardTableRewardsDetails
+                :row="slotProps.data"
+                :group-name="groupNameLabel(slotProps.data.group_id)"
+              />
             </template>
           </BcTable>
         </ClientOnly>
@@ -263,8 +257,11 @@ const wrappedRewards = computed(() => {
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.rewards-table) {
-  --col-width: 154px;
+  >.p-datatable-wrapper {
+    min-height: 577px;
+  }
 
   .epoch {
     @include utils.set-all-width(84px);
@@ -275,7 +272,7 @@ const wrappedRewards = computed(() => {
     @include utils.truncate-text;
 
     @media (max-width: 450px) {
-    @include utils.set-all-width(60px);
+      @include utils.set-all-width(60px);
     }
   }
 
@@ -290,7 +287,7 @@ const wrappedRewards = computed(() => {
   tr:not(.p-datatable-row-expansion) {
     @media (max-width: 1300px) {
       .duty {
-      @include utils.set-all-width(300px);
+        @include utils.set-all-width(300px);
       }
     }
   }
