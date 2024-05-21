@@ -6,7 +6,8 @@ type RowDuty = { validator?: number; dutySubText?: string; dutySubLink?: string,
 type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validators?: number[], duties?: RowDuty[], andMore?: number }
 interface Props {
   id: string
-  data: VDBSlotVizSlot
+  data: VDBSlotVizSlot,
+  currentSlotId?: number
 }
 const props = defineProps<Props>()
 const { t: $t } = useI18n()
@@ -15,7 +16,9 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const networkLabel = $t(`slotViz.tooltip.network.${slot.status}`, { slot: formatNumber(slot.slot) })
+  const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
+
+  const networkLabel = $t(`slotViz.tooltip.network.${status}`, { slot: formatNumber(slot.slot) })
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
