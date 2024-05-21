@@ -76,6 +76,9 @@ watch(() => props.expandable, (expandable) => {
     toggleAll(true)
   }
 })
+watch(() => props.data, () => {
+  toggleAll(true)
+})
 
 const sort = computed(() => {
   if (!props.selectedSort?.includes(':')) {
