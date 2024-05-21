@@ -1,3 +1,4 @@
+import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
 
 const probabilityOfNoResultOrError = 0.0
@@ -314,4 +315,31 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   }
 
   return response
+}
+
+let mockSlot = 10000
+
+export function mockLatestState (..._:any): InternalGetLatestStateResponse {
+  const randomize = (num: number) => {
+    return num + Math.random() * num
+  }
+  return {
+    data: {
+      current_slot: ++mockSlot,
+      exchange_rates: [
+        {
+          code: 'USD',
+          currency: 'Dollar',
+          symbol: '$',
+          rate: randomize(2996.79)
+        },
+        {
+          code: 'EUR',
+          currency: 'Euro',
+          symbol: '€',
+          rate: randomize(2758.45)
+        }
+      ]
+    }
+  }
 }

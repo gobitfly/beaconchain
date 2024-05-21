@@ -400,6 +400,10 @@
   &.table {
     background: var(--background-color);
   }
+  &.header{
+    background: transparent;
+    border: none;
+  }
 
   &:not(.p-disabled).p-focus {
     outline: 0 none;

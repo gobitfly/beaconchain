@@ -78,6 +78,12 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
 
   const api = { dashboardKey, isPublic, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
 
+  watch(isLoggedIn, (newValue, oldValue) => {
+    if (oldValue && !newValue && dashboardKeyCookie.value && !isNaN(parseInt(dashboardKeyCookie.value))) {
+      setDashboardKey('')
+    }
+  })
+
   provide<DashboardKeyData>('dashboard-key', api)
   return api
 }

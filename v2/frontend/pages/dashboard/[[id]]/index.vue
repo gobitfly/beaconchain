@@ -16,6 +16,7 @@ const { isLoggedIn } = useUserStore()
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { t: $t } = useI18n()
 
@@ -93,7 +94,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           </template>
           <DashboardTableBlocks />
         </TabPanel>
-        <TabPanel>
+        <TabPanel :disabled="!showInDevelopment">
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
           </template>
