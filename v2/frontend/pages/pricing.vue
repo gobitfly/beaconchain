@@ -98,7 +98,7 @@ const savingPercentage = computed(() => {
     align-items: center;
     user-select: none;
 
-    // not interactive for beta launch
+    // TODO: not interactive for beta launch
     .premium {
       flex: 1;
       height: 100%;
