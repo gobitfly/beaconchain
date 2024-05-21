@@ -25,7 +25,8 @@
           "custom_machine_alerts": false
         },
         "price_per_year_eur": 0,
-        "price_per_month_eur": 0
+        "price_per_month_eur": 0,
+        "is_popular": false
       },
       {
         "product_id": "1",
@@ -50,7 +51,8 @@
           "custom_machine_alerts": true
         },
         "price_per_year_eur": 10788,
-        "price_per_month_eur": 999
+        "price_per_month_eur": 999,
+        "is_popular": false
       },
       {
         "product_id": "2",
@@ -75,7 +77,8 @@
           "custom_machine_alerts": true
         },
         "price_per_year_eur": 31188,
-        "price_per_month_eur": 2999
+        "price_per_month_eur": 2999,
+        "is_popular": false
       },
       {
         "product_id": "3",
@@ -100,7 +103,8 @@
           "custom_machine_alerts": true
         },
         "price_per_year_eur": 47988,
-        "price_per_month_eur": 4999
+        "price_per_month_eur": 4999,
+        "is_popular": true
       }
     ],
     "extra_dashboard_validators_premium_addons": [{}]

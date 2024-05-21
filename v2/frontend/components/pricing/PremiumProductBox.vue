@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 // TODO: Test and most likely fix mobile
-// TODO: Orca card has to be wider and have an orange border as well as the "Popular!" text
 // TODO: Add links to Buttons (don't forget Downgrade "button")
 // TODO: Test lightmode
 
@@ -75,9 +74,14 @@ const planButton = computed(() => {
 </script>
 
 <template>
-  <div class="box-container">
+  <div class="box-container" :popular="product.is_popular || null">
     <div class="name-container">
-      {{ props.product?.product_name }}
+      <div class="name">
+        {{ props.product?.product_name }}
+      </div>
+      <div v-if="product.is_popular" class="popular">
+        {{ t('pricing.premium_product.popular') }}
+      </div>
     </div>
     <div class="features-container">
       <div class="prize">
@@ -163,16 +167,34 @@ const planButton = computed(() => {
 
 <style lang="scss" scoped>
 .box-container {
-  width: 353px;
+  width: 400px;
   height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
   text-align: center;
+  padding-bottom: 5px;
+
+  &[popular] {
+    width: 459px;
+    border-color: var(--primary-color);
+  }
 
   .name-container {
-    font-size: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 9px;
     padding: 18px 0;
     border-bottom: 2px solid var(--container-border-color);
+
+    .name {
+      font-size: 50px;
+    }
+
+    .popular {
+      font-size: 35px;
+      color: var(--primary-color);
+    }
   }
 
   .features-container {
