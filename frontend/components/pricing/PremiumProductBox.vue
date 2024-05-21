@@ -1,9 +1,8 @@
 <script lang="ts" setup>
 // TODO: Test and most likely fix mobile
-// TODO: Some text has line breaks even though the design does not
-// TODO: Downgrade button should be discreet
 // TODO: Orca card has to be wider and have an orange border as well as the "Popular!" text
-// TODO: Button should have rounder edges
+// TODO: Add links to Buttons (don't forget Downgrade "button")
+// TODO: Test lightmode
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
@@ -53,21 +52,25 @@ const barFillPercentages = computed(() => {
   }
 })
 
-const planButtonText = computed(() => {
-  const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
-  if (!subscription) {
-    return t('pricing.premium_product.button.select_plan')
+const planButton = computed(() => {
+  let isDowngrade = false
+  let text = t('pricing.premium_product.button.select_plan')
+
+  if (user.value?.subscriptions) {
+    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
+    if (!subscription) {
+      text = t('pricing.premium_product.button.select_plan')
+    } else if (subscription.product_id === props.product.product_id) {
+      text = t('pricing.premium_product.button.manage_plan')
+    } else if (subscription.product_id < props.product.product_id) {
+      text = t('pricing.premium_product.button.upgrade')
+    } else {
+      isDowngrade = true
+      text = t('pricing.premium_product.button.downgrade')
+    }
   }
 
-  if (subscription.product_id === props.product.product_id) {
-    return t('pricing.premium_product.button.manage_plan')
-  }
-
-  if (subscription.product_id < props.product.product_id) {
-    return t('pricing.premium_product.button.upgrade')
-  } else {
-    return t('pricing.premium_product.button.downgrade')
-  }
+  return { text, isDowngrade }
 })
 </script>
 
@@ -150,7 +153,10 @@ const planButtonText = computed(() => {
           :available="product?.premium_perks.manage_dashboard_via_api"
         />
       </div>
-      <Button :label="planButtonText" class="plan-button" />
+      <div v-if="planButton.isDowngrade" class="plan-button dismiss">
+        {{ planButton.text }}
+      </div>
+      <Button v-else :label="planButton.text" class="plan-button" />
     </div>
   </div>
 </template>
@@ -219,6 +225,15 @@ const planButtonText = computed(() => {
     width: 100%;
     height: 53px;
     font-size: 25px;
+    border-radius: 7px;
+
+    &.dismiss {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      color: var(--text-color-disabled);
+    }
   }
 }
 
