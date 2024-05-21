@@ -9,7 +9,7 @@ import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useVali
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
 const { slotToEpoch } = useNetwork()
@@ -318,6 +318,9 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.cl_deposits_table) {
+  >.p-datatable-wrapper {
+    min-height: 335px;
+  }
   .time-passed {
     white-space: nowrap;
   }
