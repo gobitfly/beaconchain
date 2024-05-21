@@ -12,6 +12,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
@@ -78,6 +79,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>

@@ -5,11 +5,12 @@ import { IconAccount, IconValidator } from '#components'
 const { t: $t } = useI18n()
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
 // TODO: once we have a proper user management we must check the max allowed dashboard by user type
 const typeButtons = [
-  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: !isLoggedIn.value && !!dashboards.value?.account_dashboards?.length },
+  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: !showInDevelopment || (!isLoggedIn.value && !!dashboards.value?.account_dashboards?.length) },
   { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: !isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length }
 ]
 
