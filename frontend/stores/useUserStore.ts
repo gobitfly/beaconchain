@@ -11,6 +11,7 @@ const userStore = defineStore('user-store', () => {
 export function useUserStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userStore())
+  const router = useRouter()
 
   async function doLogin (email: string, password: string) {
     await fetch<LoginResponse>(API_PATH.LOGIN, {
@@ -35,6 +36,12 @@ export function useUserStore () {
     }
   }
 
+  const doLogout = async () => {
+    await fetch(API_PATH.LOGOUT, undefined, undefined, undefined, true)
+    setUser(undefined)
+    router.replace('/')
+  }
+
   const user = computed(() => {
     return data.value
   })
@@ -43,5 +50,5 @@ export function useUserStore () {
     return !!user.value
   })
 
-  return { doLogin, user, isLoggedIn, getUser }
+  return { doLogin, doLogout, user, isLoggedIn, getUser }
 }

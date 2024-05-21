@@ -120,11 +120,11 @@ const data = computed<Series[]>(() => {
       border-radius: 50%;
       margin-bottom: 2px;
 
-      &.cl {
+      &.el {
         background-color: var(--primary-orange);
       }
 
-      &.el {
+      &.cl {
         background-color: var(--melllow-blue);
       }
     }

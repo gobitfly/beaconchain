@@ -29,6 +29,7 @@ export enum API_PATH {
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
+  LOGOUT = '/logout',
   SEARCH = '/search',
   PRODUCT_SUMMARY = '/productSummary'
 }
@@ -182,8 +183,8 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.LATEST_STATE]: {
-    path: '/latestState',
-    legacy: true,
+    path: '/latest-state',
+    mockFunction: mockLatestState,
     mock: false
   },
   [API_PATH.LOGIN]: {
@@ -191,10 +192,15 @@ export const mapping: Record<string, MappingData> = {
     method: 'POST',
     mock: false
   },
+  [API_PATH.LOGOUT]: {
+    path: '/logout',
+    method: 'POST',
+    mock: false
+  },
   [API_PATH.SEARCH]: {
     path: '/search',
     method: 'POST',
-    mock: true,
+    mock: false,
     mockFunction: simulateAPIresponseForTheSearchBar
   },
   [API_PATH.PRODUCT_SUMMARY]: {

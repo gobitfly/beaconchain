@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import type { LatestState } from '~/types/latestState'
+import type { InternalGetLatestStateResponse, LatestStateData } from '~/types/api/latest_state'
 import { API_PATH } from '~/types/customFetch'
 
 const latestStateStore = defineStore('latest_state_store', () => {
-  const data = ref<LatestState | undefined | null>()
+  const data = ref<LatestStateData | undefined | null>()
   return { data }
 })
 
@@ -14,13 +14,8 @@ export function useLatestStateStore () {
   const latestState = computed(() => data.value)
 
   async function refreshLatestState () {
-    if (process.server) {
-      const res = await fetch<LatestState>(API_PATH.LATEST_STATE)
-      data.value = res
-    } else {
-      // TODO remove this once we can load the data also from the client
-    }
-    return latestState.value
+    const res = await fetch<InternalGetLatestStateResponse>(API_PATH.LATEST_STATE)
+    data.value = res.data
   }
 
   return { latestState, refreshLatestState }
