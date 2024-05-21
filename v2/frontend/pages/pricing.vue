@@ -191,7 +191,7 @@ const savingPercentage = computed(() => {
       display: flex;
       gap: 17px;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 13px;
     }
 
     .footnote{
