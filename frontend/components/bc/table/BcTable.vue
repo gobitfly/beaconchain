@@ -122,6 +122,9 @@ const sort = computed(() => {
         <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
+    <template #empty>
+      <slot name="empty" />
+    </template>
 
     <template #expansion="slotProps">
       <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />

@@ -369,6 +369,7 @@
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
+        "add_validator": "Click here to add a Validator",
         "row": {
           "efficiency_all_time": "Efficiency",
           "attestations": "Attestations",

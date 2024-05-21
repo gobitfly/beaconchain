@@ -31,7 +31,7 @@ export function useValidatorDashboardSummaryStore () {
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
-    data.value = res
+    data.value = { paging: { total_count: 0 }, data: [] } // res
     return res
   }
 
