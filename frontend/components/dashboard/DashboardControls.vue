@@ -6,7 +6,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import { BcDialogConfirm } from '#components'
+import { BcDialogConfirm, DashboardShareModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -62,7 +62,12 @@ const shareButtonOptions = computed(() => {
 })
 
 const share = () => {
-  alert('Not implemented yet')
+  const db = dashboards.value?.validator_dashboards?.find(d => d.id === parseInt(dashboardKey.value))
+  if (isPublic.value || !db) {
+    alert('Not implemented yet')
+  } else {
+    dialog.open(DashboardShareModal)
+  }
 }
 
 const deleteButtonOptions = computed(() => {
