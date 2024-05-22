@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct } from '~/types/api/user'
 import { formatFiat } from '~/utils/format'
+import type { Feature } from '~/types/pricing'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { products } = useProductsStore()
@@ -69,6 +70,59 @@ const planButton = computed(() => {
 
   return { text, isDowngrade }
 })
+
+const mainFeatures = computed<Feature[]>(() => {
+  return [
+    {
+      name: t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
+      available: true,
+      percentage: percentages.value.validatorDashboards
+    },
+    {
+      name: t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      subtext: t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
+      available: true,
+      tooltip: t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      percentage: percentages.value.validatorsPerDashboard
+    },
+    {
+      name: t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe'),
+      subtext: t('pricing.premium_product.coming_soon'),
+      available: true,
+      percentage: percentages.value.summaryChart
+    },
+    {
+      name: t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
+      subtext: t('pricing.premium_product.coming_soon'),
+      available: true,
+      percentage: percentages.value.heatmapChart
+    }
+  ]
+})
+
+const minorFeatures = computed<Feature[]>(() => {
+  return [
+    {
+      name: t('pricing.premium_product.no_ads'),
+      available: props.product?.premium_perks.ad_free
+    },
+    {
+      name: t('pricing.premium_product.share_dashboard'),
+      available: props.product?.premium_perks.share_custom_dashboards
+    },
+    {
+      name: t('pricing.premium_product.mobile_app_widget'),
+      link: '/mobile',
+      available: props.product?.premium_perks.mobile_app_widget
+    },
+    {
+      name: t('pricing.premium_product.manage_dashboard_via_api'),
+      subtext: t('pricing.premium_product.coming_soon'),
+      available: props.product?.premium_perks.manage_dashboard_via_api
+    }
+  ]
+})
+
 </script>
 
 <template>
@@ -108,51 +162,16 @@ const planButton = computed(() => {
       </div>
       <div class="main-features-container">
         <PricingPremiumFeature
-          :name="t('pricing.premium_product.validator_dashboards', {amount: formatNumber(product?.premium_perks.validator_dashboards)}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
-          :available="true"
-          :percentage="percentages.validatorDashboards"
-        />
-        <!--TODO: Hardcoded 32 and "ETH" in language file don't work for Gnosis. Replace with real network data once available-->
-        <PricingPremiumFeature
-          :name="t('pricing.premium_product.validators_per_dashboard.text', {amount: formatNumber(product?.premium_perks.validators_per_dashboard)})"
-          :tooltip="t('pricing.premium_product.validators_per_dashboard.tooltip', {effectiveBalance: formatNumber(product?.premium_perks.validators_per_dashboard * 32)})"
-          :subtext="t('pricing.premium_product.per_validator', {amount: prices.perValidator})"
-          :available="true"
-          :percentage="percentages.validatorsPerDashboard"
-        />
-        <!--
-          TODO: For now we hide the number until the backend knows what it is capable of
-          :name="t('pricing.premium_product.timeframe_dashboard_chart', {timeframe: formatTimeDuration(product?.premium_perks.summary_chart_history_seconds, t)})"
-        -->
-        <PricingPremiumFeature
-          :name="t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe')"
-          :subtext="t('pricing.premium_product.coming_soon')"
-          :available="true"
-          :percentage="percentages.summaryChart"
-        />
-        <!--
-          TODO: For now we hide the number until the backend knows what it is capable of
-          :name="t('pricing.premium_product.timeframe_heatmap_chart', {timeframe: formatTimeDuration(product?.premium_perks.heatmap_history_seconds, t)})"
-        -->
-        <PricingPremiumFeature
-          :name="t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe')"
-          :subtext="t('pricing.premium_product.coming_soon')"
-          :available="true"
-          :percentagepercentage="percentages.heatmapChart"
+          v-for="feature in mainFeatures"
+          :key="feature.name"
+          :feature="feature"
         />
       </div>
-      <div class="small-features-container">
-        <PricingPremiumFeature :name="t('pricing.premium_product.no_ads')" :available="product?.premium_perks.ad_free" />
-        <PricingPremiumFeature :name="t('pricing.premium_product.share_dashboard')" :available="product?.premium_perks.share_custom_dashboards" />
+      <div class="minor-features-container">
         <PricingPremiumFeature
-          :name="t('pricing.premium_product.mobile_app_widget')"
-          link="/mobile"
-          :available="product?.premium_perks.mobile_app_widget"
-        />
-        <PricingPremiumFeature
-          :name="t('pricing.premium_product.manage_dashboard_via_api')"
-          :subtext="t('pricing.premium_product.coming_soon')"
-          :available="product?.premium_perks.manage_dashboard_via_api"
+          v-for="feature in minorFeatures"
+          :key="feature.name"
+          :feature="feature"
         />
       </div>
       <div v-if="planButton.isDowngrade" class="plan-button dismiss">
@@ -233,7 +252,7 @@ const planButton = computed(() => {
       margin-bottom: 35px;
     }
 
-    .small-features-container{
+    .minor-features-container{
       display: flex;
       flex-direction: column;
       gap: 9px;
