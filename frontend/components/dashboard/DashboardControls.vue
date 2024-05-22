@@ -167,7 +167,7 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   display: flex;
   justify-content: space-between;
   gap: var(--padding);
-  margin-bottom: var(--padding);
+  margin-bottom: var(--padding-large);
 
   .action-button-container{
     display: flex;
@@ -181,38 +181,21 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 
   :deep(.p-menubar .p-menubar-root-list) {
     >.p-menuitem{
-      height: 30px;
-      @include fonts.button_text;
       color: var(--text-color-inverted);
       background: var(--button-color-active);
       border-color: var(--button-color-active);
 
       >.p-menuitem-content {
-        padding: 0;
-
-        >.button-content{
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 7px 17px;
-
-          .pointer {
-            cursor: pointer;
+        margin-top: 1px;
+        .button-content{
+          .toggle {
+            margin-left: var(--padding);
           }
         }
       }
 
       >.p-submenu-list {
         font-weight: var(--standard_text_font_weight);
-
-        >.p-menuitem .button-content{
-          gap: 0;
-          padding: 0;
-
-          .text {
-            @include utils.truncate-text;
-          }
-        }
       }
 
       &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {

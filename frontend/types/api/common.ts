@@ -94,3 +94,10 @@ export interface SearchResult {
   validators?: number /* uint64 */[];
 }
 export type InternalPostSearchResponse = ApiDataResponse<SearchResult[]>;
+export interface VDBPublicId {
+  public_id: string;
+  name: string;
+  share_settings: {
+    group_names: boolean;
+  };
+}

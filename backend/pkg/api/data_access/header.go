@@ -9,6 +9,5 @@ func (d *DataAccessService) GetLatestSlot() (uint64, error) {
 
 func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	// TODO @recy21
-	// return rates to ETH Wei
 	return d.dummy.GetLatestExchangeRates()
 }

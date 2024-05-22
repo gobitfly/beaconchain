@@ -14,6 +14,8 @@ const onCurrencyChange = (event: Event) => {
   }
 }
 
+const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
+
 </script>
 <template>
   <div>
@@ -148,43 +150,43 @@ const onCurrencyChange = (event: Event) => {
   </div>
   <div>
     latest Epoch ->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" />
+    <BcFormatTimePassed :value="currentEpoch" />
   </div>
   <div>
     latest Epoch absolute ->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" format="absolute" />
+    <BcFormatTimePassed :value="currentEpoch" format="absolute" />
   </div>
   <div>
     latest Epoch relative ->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" format="relative" />
+    <BcFormatTimePassed :value="currentEpoch" format="relative" />
   </div>
   <div>
     latest Epoch - 1 ->
-    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 1) - 1" />
+    <BcFormatTimePassed :value="currentEpoch - 1" />
   </div>
   <div>
     latest Epoch - 10 ->
-    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 10) - 10" />
+    <BcFormatTimePassed :value="currentEpoch - 10" />
   </div>
   <div>
     next Epoch ->
-    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0 )+ 1" />
+    <BcFormatTimePassed :value="currentEpoch + 1" />
   </div>
   <div>
     next Epoch no tick ->
-    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0 )+ 1" :no-update="true" />
+    <BcFormatTimePassed :value="currentEpoch + 1" :no-update="true" />
   </div>
   <div>
     the Epoch after ->
-    <BcFormatTimePassed :value="(latestState?.currentEpoch ?? 0) + 2" />
+    <BcFormatTimePassed :value="currentEpoch + 2" />
   </div>
   <div>
     latest Epoch long format->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" unit-length="long" />
+    <BcFormatTimePassed :value="currentEpoch" unit-length="long" />
   </div>
   <div>
     latest Epoch short format->
-    <BcFormatTimePassed :value="latestState?.currentEpoch" unit-length="short" />
+    <BcFormatTimePassed :value="currentEpoch" unit-length="short" />
   </div>
 </template>
 
