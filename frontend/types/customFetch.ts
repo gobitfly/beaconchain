@@ -205,6 +205,6 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.PRODUCT_SUMMARY]: {
     path: '/product-summary',
-    mock: true
+    mock: false
   }
 }

@@ -18,7 +18,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const formatPremiumProductPrice = (price: number, digits?: number) => {
-  return formatFiat(price / 100, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
+  return formatFiat(price, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
 }
 
 const prices = computed(() => {
