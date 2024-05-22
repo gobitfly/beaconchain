@@ -1,16 +1,16 @@
 <script lang="ts" setup>
 interface Props {
-  barFillPercentage?: number,
+  fillPercentage?: number,
 }
 const props = defineProps<Props>()
 
 const fillPercentage = computed(() => {
-  return props.barFillPercentage ? `${props.barFillPercentage}%` : '0'
+  return props.fillPercentage ? `${props.fillPercentage}%` : '0'
 })
 </script>
 
 <template>
-  <div v-if="barFillPercentage" class="fraction-bar">
+  <div v-if="fillPercentage" class="fraction-bar">
     <div class="fill" :style="{ width: fillPercentage }" />
   </div>
 </template>

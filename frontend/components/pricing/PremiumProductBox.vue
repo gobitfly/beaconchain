@@ -37,7 +37,7 @@ const prices = computed(() => {
   }
 })
 
-const barFillPercentages = computed(() => {
+const percentages = computed(() => {
   // compare with the last product in the list
   const compareProduct = products.value?.data.premium_products[products.value.data.premium_products.length - 1]
 
@@ -110,7 +110,7 @@ const planButton = computed(() => {
         <PricingPremiumFeature
           :name="t('pricing.premium_product.validator_dashboards', {amount: formatNumber(product?.premium_perks.validator_dashboards)}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
-          :bar-fill-percentage="barFillPercentages.validatorDashboards"
+          :percentage="percentages.validatorDashboards"
         />
         <!--TODO: Hardcoded 32 and "ETH" in language file don't work for Gnosis. Replace with real network data once available-->
         <PricingPremiumFeature
@@ -118,7 +118,7 @@ const planButton = computed(() => {
           :tooltip="t('pricing.premium_product.validators_per_dashboard.tooltip', {effectiveBalance: formatNumber(product?.premium_perks.validators_per_dashboard * 32)})"
           :subtext="t('pricing.premium_product.per_validator', {amount: prices.perValidator})"
           :available="true"
-          :bar-fill-percentage="barFillPercentages.validatorsPerDashboard"
+          :percentage="percentages.validatorsPerDashboard"
         />
         <!--
           TODO: For now we hide the number until the backend knows what it is capable of
@@ -128,7 +128,7 @@ const planButton = computed(() => {
           :name="t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
-          :bar-fill-percentage="barFillPercentages.summaryChart"
+          :percentage="percentages.summaryChart"
         />
         <!--
           TODO: For now we hide the number until the backend knows what it is capable of
@@ -138,7 +138,7 @@ const planButton = computed(() => {
           :name="t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe')"
           :subtext="t('pricing.premium_product.coming_soon')"
           :available="true"
-          :bar-fill-percentage="barFillPercentages.heatmapChart"
+          :percentagepercentage="percentages.heatmapChart"
         />
       </div>
       <div class="small-features-container">
