@@ -84,7 +84,7 @@ type VDBRewardesTableDuty struct {
 type VDBRewardsTableRow struct {
 	Epoch   uint64                     `json:"epoch"`
 	Duty    VDBRewardesTableDuty       `json:"duty"`
-	GroupId uint64                     `json:"group_id"`
+	GroupId int64                      `json:"group_id"`
 	Reward  ClElValue[decimal.Decimal] `json:"reward"`
 }
 
