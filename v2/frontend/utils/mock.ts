@@ -1,15 +1,17 @@
+import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
 
 const probabilityOfNoResultOrError = 0.0
 
 export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>) : SearchAheadAPIresponse {
   const searched = body?.input as string
-  const searchable = body?.types as ResultType[]
-  const countIdenticalResults = body?.count as boolean
-  const response : SearchAheadAPIresponse = {}; response.data = []
+  const searchableTypes = body?.types as ResultType[]
+  const searchableNetworks = body?.networks as number[]
+  const countIdenticalValidators = body?.include_validators as boolean
+  const response : SearchAheadAPIresponse = {} as SearchAheadAPIresponse; response.data = []
 
   if (Math.random() < probabilityOfNoResultOrError / 2) {
-    return {}
+    return {} as SearchAheadAPIresponse
   }
   if (Math.random() < probabilityOfNoResultOrError / 2) {
     return response
@@ -77,7 +79,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       },
       {
         chain_id: 1,
-        type: 'validators_by_index',
+        type: 'validator_by_index',
         num_value: Number(searched),
         hash_value: '0xa525497ec3116c1310be8d73d2efd536dc0ce6bd4b0163dffddf94dad3d91d154c061b9a3bfd1b704a5ba67fc443974a'
       },
@@ -119,7 +121,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       },
       {
         chain_id: 1,
-        type: 'validators_by_pubkey',
+        type: 'validator_by_public_key',
         num_value: Math.floor(Math.random() * 1000000),
         hash_value: '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660'
       },
@@ -180,7 +182,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       },
       {
         chain_id: 8453,
-        type: 'validators_by_index',
+        type: 'validator_by_index',
         num_value: Number(searched),
         hash_value: '0x99f9ec412465e15243a5996205928ef1461fd4ef6b6a0c642748c6f85de72c801751facda0c96454a8c2ad3bd19f91ee'
       },
@@ -203,7 +205,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       },
       {
         chain_id: 100,
-        type: 'validators_by_index',
+        type: 'validator_by_index',
         num_value: Number(searched),
         hash_value: '0x85e5ac15a728a2bf0b0b4f22312dad780d4e27856e30997ee11f73d74d86682800046a86a01d134dbdf171326cd7cc54'
       },
@@ -292,16 +294,52 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     )
   }
 
-  // keeping only the types that the API is asked for
-  response.data = response.data.filter((singleRes) => { return searchable.includes(singleRes.type as ResultType) })
-  // if asked by the bar, making-up a number of identical results for the validators
-  if (countIdenticalResults) {
+  // keeping only the results that the API is asked for
+  if (searchableTypes.length) {
+    response.data = response.data.filter(singleRes => searchableTypes.includes(singleRes.type as ResultType))
+  }
+  if (searchableNetworks.length) {
+    response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
+  }
+  // adding fake numbers of identical results where it is possible
+  if (countIdenticalValidators) {
     for (const singleRes of response.data) {
-      if (TypeInfo[singleRes.type as ResultType].countable) {
-        singleRes.num_value = (Math.random() < 1 / 2.0) ? 2 + Math.floor(1000 * Math.random()) : 1
+      if (TypeInfo[singleRes.type as ResultType].countSource) {
+        const size = 2 + Math.floor(50 * Math.random())
+        singleRes.validators = [] as number[]
+        for (let v = 0; v < size; v++) {
+          singleRes.validators.push(Math.floor(1400000 * Math.random()))
+        }
       }
     }
   }
 
   return response
+}
+
+let mockSlot = 10000
+
+export function mockLatestState (..._:any): InternalGetLatestStateResponse {
+  const randomize = (num: number) => {
+    return num + Math.random() * num
+  }
+  return {
+    data: {
+      current_slot: ++mockSlot,
+      exchange_rates: [
+        {
+          code: 'USD',
+          currency: 'Dollar',
+          symbol: '$',
+          rate: randomize(2996.79)
+        },
+        {
+          code: 'EUR',
+          currency: 'Euro',
+          symbol: '€',
+          rate: randomize(2758.45)
+        }
+      ]
+    }
+  }
 }

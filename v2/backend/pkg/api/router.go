@@ -66,6 +66,11 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
 
+		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
+
+		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
+		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
+
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
@@ -222,8 +227,8 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/daily-heatmap/{date}", hs.PublicGetValidatorDashboardGroupDailyHeatmap, hs.InternalGetValidatorDashboardGroupDailyHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
-		{http.MethodGet, "/{dashboard_id}/total-execution-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionDeposits},
-		{http.MethodGet, "/{dashboard_id}/total-consensus-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusDeposits},
+		{http.MethodGet, "/{dashboard_id}/total-execution-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionLayerDeposits},
+		{http.MethodGet, "/{dashboard_id}/total-consensus-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
 	}

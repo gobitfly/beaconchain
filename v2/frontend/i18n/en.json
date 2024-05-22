@@ -45,6 +45,15 @@
     "copy": "Copy to clipboard",
     "copied": "Copied!"
   },
+  "cookies": {
+    "text": [
+      "By using our site you agree to our use of",
+      "cookies",
+      "to deliver a better user experience."
+    ],
+    "accept_all": "Accept All",
+    "only_necessary": "Only Necessary"
+  },
   "navigation": {
     "back": "Back",
     "continue": "Continue",
@@ -101,6 +110,23 @@
     "total": "All Time",
     "all": "All Time"
   },
+  "currency": {
+    "label": {
+      "ETH": "Ether",
+      "NAT": "Native",
+      "AUD": "Australian Dollar",
+      "CAD": "Canadian Dollar",
+      "DAI": "DAI Stablecoin",
+      "xDAI": "xDAI Stablecoin",
+      "EUR": "Euro",
+      "GBP": "Pound Sterling",
+      "GNO": "Gnosis",
+      "mGNO": "mGnosis",
+      "JPY": "Japanese Yen",
+      "RUB": "Russian Ruble",
+      "USD": "United States Dollar"
+    }
+  },
   "slotViz": {
     "head": "Head",
     "tooltip": {
@@ -153,14 +179,14 @@
       }
     }
   },
-  "block":{
+  "block": {
     "status": {
       "missed": "Missed",
       "orphaned": "Orphaned",
       "scheduled": "Scheduled",
       "success": "Proposed"
     },
-    "col":{
+    "col": {
       "proposer": "Proposer",
       "graffiti": "Graffiti",
       "tx_hash": "Tx Hash"
@@ -180,8 +206,8 @@
       "slashing_success": "You slashed a validator",
       "slashing_failed": "You got slashed",
       "slashing_partial": "You slashed a validator and got slashed"
-    }, 
-    "rewards":{
+    },
+    "rewards": {
       "total": "Total",
       "attestation_head": "Attestation Head",
       "attestation_source": "Attestation Source",
@@ -238,17 +264,16 @@
       "management": {
         "title": "Manage",
         "sub_title": "Add or remove validators from your dashboard",
-        "validators_added": "validators added",
         "remove_title": "Remove Validators",
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?"
       },
-      "cl_deposits":{
+      "cl_deposits": {
         "title": "Consensus Layer"
       },
-      "el_deposits":{
+      "el_deposits": {
         "title": "Execution Layer"
       },
-      "blocks":{
+      "blocks": {
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
@@ -296,12 +321,10 @@
         "pending_tooltip": "Estimation for next withdrawal currently unavailable",
         "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
       },
-      "group_management":  {
+      "group_management": {
         "title": "Manage Groups",
         "sub_title": "Add or remove validator groups for {dashboardName}",
-        "validators_added": "validators added",
         "search_placeholder": "Name, Id",
-        "groups_added": "groups added",
         "remove_title": "Remove Groups",
         "new_group_placeholder": "New group name",
         "remove_text": "Do you want to remove group {group} from your dashboard?",
@@ -346,6 +369,7 @@
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
+        "add_validator": "Click here to add a validator",
         "row": {
           "efficiency_all_time": "Efficiency",
           "attestations": "Attestations",
@@ -408,16 +432,22 @@
     "email": "Email address",
     "dont_have_account": "You do not have an account?",
     "signup_here": "Click here to sign up.",
-    "invalid_email" : "Please enter a valid email address.",
-    "invalid_password" : "Your password must contain at least 5 characters.",
-    "no_email" : "Please enter your email address.",
-    "no_password" : "Please enter your password.",
-    "error_toast_title" : "Error",
-    "error_toast_group" : "Cannot log in",
-    "error_toast_message" : "your email or your password is unknown."
+    "invalid_email": "Please enter a valid email address.",
+    "invalid_password": "Your password must contain at least 5 characters.",
+    "no_email": "Please enter your email address.",
+    "no_password": "Please enter your password.",
+    "error_toast_title": "Error",
+    "error_toast_group": "Cannot log in",
+    "error_toast_message": "your email or your password is unknown."
   },
   "header": {
+    "current_slot": "Current Slot",
+    "current_epoch": "Current Epoch",
+    "login": "Login",
+    "logout": "Logout",
+    "signup": "Sign up",
     "megamenu": {
+      "select_currency": "Select currency",
       "blockchain": "Blockchain",
       "overview": "Overview",
       "epochs": "Epochs",
@@ -464,7 +494,8 @@
       "knowledge_base": "Knowledge Base",
       "slot_finder": "Slot Finder",
       "community": "Community",
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "pricing": "Pricing"
     }
   },
   "footer": {
@@ -490,7 +521,8 @@
     "something_wrong": "Something went wrong",
     "try_again": "Try again in a few moments.",
     "no_result_matches": "No result matches",
-    "your_input": "your input.",
+    "your_input": "your input",
+    "or": " or ",
     "your_filters": "your filters",
     "one_result_hidden": "result hidden",
     "several_results_hidden": "results hidden",
@@ -513,5 +545,13 @@
     "validator_by_name": "Validator by name",
     "network_filter_label": "Networks:",
     "all_networks": "All"
+  },
+  "pricing": {
+    "premium": "beaconcha.in Premium",
+    "API_keys": "API Keys",
+    "subtitle": "Monitoring without limits on web and mobile.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save_up_to": "SAVE UP TO {percentage}%"
   }
 }

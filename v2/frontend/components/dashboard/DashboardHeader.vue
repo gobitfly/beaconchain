@@ -2,8 +2,7 @@
 import type Menubar from 'primevue/menubar'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import type { Dashboard } from '~/types/api/dashboard'
-import { type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
+import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
 
 const { width } = useWindowSize()
 
@@ -140,6 +139,7 @@ const title = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: var(--padding);
   margin-bottom: var(--padding-large);
 
   .dashboard-title {
@@ -154,18 +154,16 @@ const title = computed(() => {
 
     .button-content {
       display: flex;
-      align-items: center;
-      justify-content: center;
       &:has(.toggle) {
         justify-content: space-between;
       }
-
       .text {
         @include utils.truncate-text;
       }
-
       .toggle {
         flex-shrink: 0;
+        margin-top: auto;
+        margin-bottom: auto;
       }
 
       .pointer {
@@ -174,7 +172,7 @@ const title = computed(() => {
     }
 
     :deep(.p-menubar-root-list > .p-menuitem) {
-      width: 130px;
+      width: 145px;
     }
   }
 }
