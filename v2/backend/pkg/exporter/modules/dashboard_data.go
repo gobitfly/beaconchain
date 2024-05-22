@@ -47,14 +47,14 @@ const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: tr
 
 // How many epochs will be fetched in parallel from the node (relevant for backfill and rolling tail fetching). We are fetching the head epoch and
 // one epoch for each rolling table (tail), so if you want to fetch all epochs in one go (and your node can handle that) set this to at least 5.
-const epochFetchParallelism = 5
+const epochFetchParallelism = 4
 
 // Fetching one epoch consists of multiple calls. You can define how many concurrent calls each epoch fetch will do. Keep in mind that
 // the total number of concurrent requests is epochFetchParallelism * epochFetchParallelismWithinEpoch
-const epochFetchParallelismWithinEpoch = 5
+const epochFetchParallelismWithinEpoch = 6
 
 // How many epochs will be written in parallel to the database
-const epochWriteParallelism = 6
+const epochWriteParallelism = 4
 
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 4
@@ -62,6 +62,8 @@ const databaseAggregationParallelism = 4
 // How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
 // aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
 // Set to 0 to disable and write after every iteration. Recommended value for this is 1 or maybe 2.
+// Try increasing this one by one if node_fetch_time < agg_and_storage_time until it targets roughly agg_and_storage_time = node_fetch_time
+// Try 0 if agg_and_storage_time is < node_fetch_time
 const backfillMaxUnaggregatedIterations = 1
 
 type dashboardData struct {
@@ -272,6 +274,9 @@ func (d *dashboardData) exportEpochAndTails(headEpoch uint64, fetchRollingTails 
 		missingTails = append(missingTails, headEpoch)
 		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: %d", len(missingTails)-1, headEpoch)
 	} else {
+		if len(missingTails) == 0 {
+			return nil // nothing to do
+		}
 		d.log.Infof("fetch missing tail/head epochs: %v | fetch head: -", len(missingTails))
 	}
 
@@ -440,7 +445,7 @@ func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncComm
 				errGroup.Go(func() error {
 					for {
 						start := time.Now()
-						data, err := d.CL.GetSyncCommitteesAssignments(nil, utils.FirstEpochOfSyncPeriod(syncPeriod))
+						data, err := d.CL.GetSyncCommitteesAssignments(nil, utils.FirstEpochOfSyncPeriod(syncPeriod)*utils.Config.Chain.ClConfig.SlotsPerEpoch)
 						if err != nil {
 							d.log.Error(err, "cannot get sync committee assignments", 0, map[string]interface{}{"syncPeriod": syncPeriod})
 							metrics.Errors.WithLabelValues("exporter_v2dash_node_committee_fail").Inc()
