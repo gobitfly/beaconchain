@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/shopspring/decimal"
 )
 
 // everything that goes in this file is for the data access layer only
@@ -80,6 +81,13 @@ type RewardsCursor struct {
 
 	Epoch   uint64
 	GroupId int64
+}
+
+type ValidatorDutiesCursor struct {
+	GenericCursor
+
+	Index  uint64
+	Reward decimal.Decimal
 }
 
 type WithdrawalsCursor struct {

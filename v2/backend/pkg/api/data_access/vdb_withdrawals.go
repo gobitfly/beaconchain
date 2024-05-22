@@ -563,6 +563,12 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 
 	if search != "" {
 		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			// Ensure that we have a "0x" prefix for the search term
+			if !strings.HasPrefix(search, "0x") {
+				search = "0x" + search
+			}
+			search = strings.ToLower(search)
+
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
 			defer releaseLock()
 			if err != nil {
@@ -570,12 +576,6 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 			}
 
 			if utils.IsHash(search) {
-				// Ensure that we have a "0x" prefix for the search term
-				if !strings.HasPrefix(search, "0x") {
-					search = "0x" + search
-				}
-				search = strings.ToLower(search)
-
 				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 					validatorSearch = append(validatorSearch, *index)
 				} else {
