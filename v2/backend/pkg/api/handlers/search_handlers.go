@@ -88,7 +88,9 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 				if err != nil {
 					return err
 				}
-				searchResultChan <- *searchResult
+				if searchResult != nil { // if the search result is nil, the input didn't match the search type
+					searchResultChan <- *searchResult
+				}
 				return nil
 			})
 		}
