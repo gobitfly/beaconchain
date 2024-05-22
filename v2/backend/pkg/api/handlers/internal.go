@@ -11,6 +11,21 @@ import (
 )
 
 // --------------------------------------
+// Premium Plans
+
+func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetProductSummary()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetProductSummaryResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+// --------------------------------------
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +71,27 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
+}
+
+// --------------------------------------
+// User
+
+func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
+	// TODO patrick
+	user, err := h.getUser(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetUserInfoResponse{
+		Data: *userInfo,
+	}
+	returnOk(w, response)
 }
 
 // --------------------------------------
@@ -903,7 +939,7 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -922,7 +958,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusDeposits(w h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionDeposits(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {

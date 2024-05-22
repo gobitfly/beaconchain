@@ -522,6 +522,68 @@ func (bigtable *Bigtable) GetFullBlocksDescending(stream chan<- *types.Eth1Block
 	return nil
 }
 
+// same as above but for indexed blocks
+func (bigtable *Bigtable) StreamBlocksIndexedDescending(stream chan<- *types.Eth1BlockIndexed, high, low uint64) error {
+	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
+		log.WarnWithFields(log.Fields{
+			"high":     high,
+			"low":      low,
+			"func":     utils.GetCurrentFuncName(),
+			"duration": REPORT_TIMEOUT,
+		}, "call took longer than expected")
+	})
+	defer tmr.Stop()
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Minute*3))
+	defer cancel()
+
+	if high < low {
+		return fmt.Errorf("invalid block range provided (high: %v, low: %v)", high, low)
+	}
+
+	if high > 0 {
+		limitedLow := low
+		if limitedLow == 0 {
+			// block 0 cannot be included in the range as it is padded incorrectly (will be fetched last, see below)
+			limitedLow = 1
+		}
+
+		highKey := fmt.Sprintf("%s:B:%s", bigtable.chainId, reversedPaddedBlockNumber(high))
+		lowKey := fmt.Sprintf("%s:B:%s\x00", bigtable.chainId, reversedPaddedBlockNumber(limitedLow)) // add \x00 to make the range inclusive
+
+		limit := high - limitedLow + 1
+
+		rowRange := gcp_bigtable.NewRange(highKey, lowKey)
+		rowFilter := gcp_bigtable.RowFilter(gcp_bigtable.ColumnFilter("d"))
+		rowHandler := func(row gcp_bigtable.Row) bool {
+			block := types.Eth1BlockIndexed{}
+			err := proto.Unmarshal(row["f"][0].Value, &block)
+			if err != nil {
+				log.Error(err, "error could not unmarschal proto object", 0)
+				return false
+			}
+			stream <- &block
+			return true
+		}
+
+		err := bigtable.tableData.ReadRows(ctx, rowRange, rowHandler, rowFilter, gcp_bigtable.LimitRows(int64(limit)))
+		if err != nil {
+			return err
+		}
+	}
+
+	if low == 0 {
+		// special handling for block 0 which is padded incorrectly
+		b, err := BigtableClient.GetBlocksDescending(0, 1)
+		if err != nil {
+			return fmt.Errorf("could not retrieve block 0:  %v", err)
+		}
+		stream <- b[0]
+	}
+
+	return nil
+}
+
 func (bigtable *Bigtable) GetBlocksIndexedMultiple(blockNumbers []uint64, limit uint64) ([]*types.Eth1BlockIndexed, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{

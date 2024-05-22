@@ -43,8 +43,20 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
-func (d *DummyService) GetUserInfo(email string) (*t.User, error) {
+func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+	r := t.UserInfo{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetUser(email string) (*t.User, error) {
 	r := t.User{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
+	r := t.ProductSummary{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -128,14 +140,14 @@ func (d *DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPri
 	return nil
 }
 
-func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	r := t.VDBPostPublicIdData{}
+func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	r := t.VDBPostPublicIdData{}
+func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -291,13 +303,13 @@ func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, i
 	return &r, err
 }
 
-func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey string) (*t.SearchValidator, error) {
+func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
 	r := t.SearchValidator{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address string) (*t.SearchValidatorsByDepositAddress, error) {
+func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
 	r := t.SearchValidatorsByDepositAddress{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -309,14 +321,8 @@ func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, 
 	return &r, err
 }
 
-func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential string) (*t.SearchValidatorsByWithdrwalCredential, error) {
+func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
 	r := t.SearchValidatorsByWithdrwalCredential{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetSearchValidatorsByWithdrawalAddress(ctx context.Context, chainId uint64, address string) (*t.SearchValidatorsByDepositAddress, error) {
-	r := t.SearchValidatorsByDepositAddress{}
 	err := commonFakeData(&r)
 	return &r, err
 }

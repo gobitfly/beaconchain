@@ -6,6 +6,8 @@ export type ValueConvertOptions = {
   sourceUnit?: CryptoUnits // source unit - default main unit (like eth)
   targetCurrency?: Currency // target currency - overrides the selected currency
   fixedDecimalCount?: number // can override the usual settings, but can't go over 2 for fiat
+  maxDecimalCount?: number // max decimal count
+  minDecimalCount?: number // min decimal count
   minUnit?: CryptoUnits // if output should only be in higher units (for example GWEI -> then it will never go down to WEI)
   minUnitDecimalCount?: number // decimal count to check for value while unit conversion - defaults to max decimal count
   fixedUnit?: CryptoUnits // fixed output unit - overrides min unit

@@ -7,6 +7,7 @@ interface Props {
   dataKey?: string, // Unique identifier for a data row
   pageSize?: number,
   data?: ApiPagingResponse<any>,
+  selectedSort?: string,
   expandable?: boolean,
   isRowExpandable?: (item: any) => boolean,
   selectionMode?: 'multiple' | 'single'
@@ -75,6 +76,20 @@ watch(() => props.expandable, (expandable) => {
     toggleAll(true)
   }
 })
+watch(() => props.data, () => {
+  toggleAll(true)
+})
+
+const sort = computed(() => {
+  if (!props.selectedSort?.includes(':')) {
+    return
+  }
+  const split = props.selectedSort?.split(':')
+  return {
+    field: split[0],
+    order: split[1] === 'asc' ? -1 : 1
+  }
+})
 
 </script>
 
@@ -84,6 +99,8 @@ watch(() => props.expandable, (expandable) => {
     class="bc-table"
     sort-mode="single"
     lazy
+    :sort-field="sort?.field"
+    :sort-order="sort?.order"
     :value="data?.data"
     :data-key="dataKey"
   >
@@ -108,6 +125,9 @@ watch(() => props.expandable, (expandable) => {
         <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
+    <template #empty>
+      <slot name="empty" />
+    </template>
 
     <template #expansion="slotProps">
       <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />

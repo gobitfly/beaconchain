@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faCirclePlus } from '@fortawesome/pro-regular-svg-icons'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
@@ -10,11 +12,13 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
+const manageValidatorsModalVisisble = ref(false)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
@@ -29,7 +33,7 @@ const colsVisible = computed(() => {
 
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
   }
   setQuery(q, true, true)
 }
@@ -72,12 +76,17 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
+const addValidator = () => {
+  manageValidatorsModalVisisble.value = true
+}
+
 </script>
 <template>
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
@@ -91,6 +100,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -162,6 +172,12 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <template #expansion="slotProps">
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
+            <template #empty>
+              <div class="empty" @click="addValidator">
+                <span>{{ $t('dashboard.validator.summary.add_validator') }}</span>
+                <FontAwesomeIcon :icon="faCirclePlus" />
+              </div>
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
@@ -171,13 +187,19 @@ const getRowClass = (row: VDBSummaryTableRow) => {
         </div>
       </template>
     </BcTableControl>
+    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
   </div>
 </template>
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.summary_table) {
   --col-width: 216px;
+
+  >.p-datatable-wrapper {
+    min-height: 529px;
+  }
 
   .group-id {
     @include utils.truncate-text;
@@ -211,6 +233,18 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       border-bottom-color: var(--primary-color);
     }
   }
+}
+
+.empty {
+  width: 100%;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-color-disabled);
+  gap: var(--padding);
+  cursor: pointer;
 }
 
 .chart-container {

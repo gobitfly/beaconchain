@@ -266,11 +266,3 @@ type VDBPostValidatorsData struct {
 	PublicKey string `json:"public_key"`
 	GroupId   uint64 `json:"group_id"`
 }
-
-type VDBPostPublicIdData struct {
-	PublicId      string `json:"public_id"`
-	Name          string `json:"name"`
-	ShareSettings struct {
-		GroupNames bool `json:"group_names"`
-	} `json:"share_settings"`
-}
