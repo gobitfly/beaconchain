@@ -23,11 +23,8 @@ defineProps<Props>()
       <div class="text" :class="{ 'unavailable': !available }">
         <div class="name">
           {{ name }}
-          <BcTooltip v-if="tooltip" position="top" :fit-content="true">
+          <BcTooltip v-if="tooltip" position="top" :fit-content="true" :text="tooltip">
             <FontAwesomeIcon :icon="faInfoCircle" />
-            <template #tooltip>
-              {{ tooltip }}
-            </template>
           </BcTooltip>
         </div>
         <div v-if="subtext" class="subtext">
