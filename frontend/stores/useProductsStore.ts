@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import type { InternalGetProductSummaryResponse } from '~/types/api/user'
+import type { InternalGetProductSummaryResponse, ProductSummary } from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
 
 const productsStore = defineStore('products_store', () => {
-  const data = ref < InternalGetProductSummaryResponse>()
+  const data = ref <ProductSummary>()
 
   return { data }
 })
@@ -21,7 +21,7 @@ export function useProductsStore () {
 
     const res = await fetch<InternalGetProductSummaryResponse>(API_PATH.PRODUCT_SUMMARY)
 
-    data.value = res
+    data.value = res.data
     return res
   }
 
