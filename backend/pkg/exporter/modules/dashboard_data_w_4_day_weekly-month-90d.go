@@ -157,7 +157,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	}
 	latestDay := latestDayBounds.Day
 
-	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days))
+	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days-1))
 	xDayOldDay := utils.EpochToTime(tailStart).Format("2006-01-02")
 
 	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
