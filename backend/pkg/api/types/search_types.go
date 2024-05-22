@@ -4,7 +4,7 @@ package types
 
 type SearchValidator struct {
 	Index     uint64
-	PublicKey Hash
+	PublicKey []byte
 }
 
 type SearchValidatorsByDepositEnsName struct {
@@ -13,12 +13,12 @@ type SearchValidatorsByDepositEnsName struct {
 }
 
 type SearchValidatorsByDepositAddress struct {
-	Address    Hash
+	Address    []byte
 	Validators []uint64
 }
 
 type SearchValidatorsByWithdrwalCredential struct {
-	WithdrawalCredential Hash
+	WithdrawalCredential []byte
 	Validators           []uint64
 }
 

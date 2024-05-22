@@ -80,7 +80,7 @@ type RewardsCursor struct {
 	GenericCursor
 
 	Epoch   uint64
-	GroupId uint64
+	GroupId int64
 }
 
 type ValidatorDutiesCursor struct {

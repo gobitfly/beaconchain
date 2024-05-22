@@ -2,23 +2,24 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -32,7 +33,7 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value }
+    query = { limit: pageSize.value, sort: 'epoch:desc' }
   }
   setQuery(query, true, true)
 }
@@ -48,7 +49,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -119,6 +120,7 @@ const wrappedRewards = computed(() => {
     <BcTableControl
       :title="$t('dashboard.validator.rewards.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.rewards.search_placeholder_public' : 'dashboard.validator.rewards.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
@@ -133,25 +135,19 @@ const wrappedRewards = computed(() => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
+            :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
-              field="epoch"
-              :sortable="true"
-              body-class="bold epoch"
-              header-class="epoch"
-              :header="$t('common.epoch')"
-            >
+            <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
               <template #body="slotProps">
-                <BcFormatNumber :value="slotProps.data.epoch" />
+                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
+                  <BcFormatNumber :value="slotProps.data.epoch" />
+                </NuxtLink>
               </template>
             </Column>
-            <Column
-              v-if="colsVisible.age"
-              field="age"
-            >
+            <Column v-if="colsVisible.age" field="age">
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -162,7 +158,7 @@ const wrappedRewards = computed(() => {
             <Column
               v-if="colsVisible.duty"
               field="duty"
-              body-class="bold duty"
+              body-class="duty"
               header-class="duty"
               :header="$t('dashboard.validator.col.duty')"
             >
@@ -199,7 +195,7 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="totalElCl(slotProps.data.reward)"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
@@ -218,7 +214,7 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="slotProps.data.reward?.el"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
@@ -237,12 +233,15 @@ const wrappedRewards = computed(() => {
                   v-else
                   :value="slotProps.data.reward?.cl"
                   :use-colors="true"
-                  :options="{ addPlus: true }"
+                  :options="formatRewardValueOption"
                 />
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails :row="slotProps.data" :group-name="groupNameLabel(slotProps.data.group_id)" />
+              <DashboardTableRewardsDetails
+                :row="slotProps.data"
+                :group-name="groupNameLabel(slotProps.data.group_id)"
+              />
             </template>
           </BcTable>
         </ClientOnly>
@@ -258,8 +257,11 @@ const wrappedRewards = computed(() => {
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.rewards-table) {
-  --col-width: 154px;
+  >.p-datatable-wrapper {
+    min-height: 577px;
+  }
 
   .epoch {
     @include utils.set-all-width(84px);
@@ -270,7 +272,7 @@ const wrappedRewards = computed(() => {
     @include utils.truncate-text;
 
     @media (max-width: 450px) {
-    @include utils.set-all-width(60px);
+      @include utils.set-all-width(60px);
     }
   }
 
@@ -285,7 +287,7 @@ const wrappedRewards = computed(() => {
   tr:not(.p-datatable-row-expansion) {
     @media (max-width: 1300px) {
       .duty {
-      @include utils.set-all-width(300px);
+        @include utils.set-all-width(300px);
       }
     }
   }

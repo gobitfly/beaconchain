@@ -184,6 +184,8 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+
 @keyframes fadeIn {
   0% {
     opacity: 0;
@@ -227,11 +229,9 @@ onUnmounted(() => {
   text-align: center;
   padding: 9px 12px;
   border-radius: var(--border-radius);
-  color: var(--tt-color);
   background: var(--tt-bg-color);
-  font-family: var(--inter-family);
-  font-weight: var(--inter-light);
-  font-size: 10px;
+  color: var(--tt-color);
+  @include fonts.tooltip_text;
   pointer-events: none;
 
   &.dark {
@@ -293,7 +293,7 @@ onUnmounted(() => {
 
   :deep(b) {
     font-weight: bold;
-    font-weight: var(--inter-medium);
+    font-weight: var(--tooltip_text_bold_font_weight);
   }
 
   &:has(b):not(.fit-content) {
