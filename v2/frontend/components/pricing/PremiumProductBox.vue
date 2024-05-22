@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-// TODO: Test and most likely fix mobile
 // TODO: Add links to Buttons (don't forget Downgrade "button")
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -171,7 +170,7 @@ const planButton = computed(() => {
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
   text-align: center;
-  padding-bottom: 5px;
+  flex-shrink: 0;
 
   &[popular] {
     width: 459px;
@@ -247,6 +246,7 @@ const planButton = computed(() => {
     height: 53px;
     font-size: 25px;
     border-radius: 7px;
+    margin-bottom: 5px;
 
     &.dismiss {
       display: flex;
