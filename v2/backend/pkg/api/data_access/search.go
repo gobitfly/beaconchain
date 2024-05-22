@@ -19,6 +19,7 @@ type SearchRepository interface {
 }
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
+	// TODO: implement handling of chainid
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
 	defer releaseValMapLock()
 	if err != nil {
@@ -36,6 +37,7 @@ func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chain
 }
 
 func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
+	// TODO: implement handling of chainid
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
 	defer releaseValMapLock()
 	if err != nil {
@@ -54,6 +56,7 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
+	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByDepositAddress{
 		Address:    address,
 		Validators: make([]uint64, 0),
@@ -69,11 +72,13 @@ func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Cont
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
+	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
 	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
+	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByWithdrwalCredential{
 		WithdrawalCredential: credential,
 		Validators:           make([]uint64, 0),
@@ -89,11 +94,13 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 }
 
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
+	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
 	return nil, nil
 }
 
 func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
+	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByGraffiti{
 		Graffiti:   graffiti,
 		Validators: make([]uint64, 0),
