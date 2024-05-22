@@ -2,7 +2,6 @@ package dataaccess
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -108,7 +107,7 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 	}
 	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text ilike $1 limit 10;", graffiti+"%") // added a limit here to keep the query fast
 	if err != nil {
-		return nil, fmt.Errorf("error searching for validator using graffiti: %v", err)
+		return nil, err
 	}
 	if len(ret.Validators) == 0 {
 		return ret, nil
