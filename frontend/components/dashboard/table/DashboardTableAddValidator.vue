@@ -8,8 +8,8 @@ const addValidator = () => {
 }
 </script>
 <template>
-  <div class="empty" @click="addValidator">
-    <span>{{ $t('dashboard.validator.summary.add_validator') }}</span>
+  <div class="empty delayed-fadein-animation" @click="addValidator">
+    <span class="big_text">{{ $t('dashboard.validator.summary.add_validator') }}</span>
     <FontAwesomeIcon :icon="faCirclePlus" />
     <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
   </div>
@@ -26,5 +26,10 @@ const addValidator = () => {
   color: var(--text-color-disabled);
   gap: var(--padding);
   cursor: pointer;
+
+  svg {
+    width: 30px;
+    height: 30px;
+  }
 }
 </style>

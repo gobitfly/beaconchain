@@ -15,6 +15,7 @@ const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards'
 export function useValidatorDashboardRewardsStore () {
   const { fetch } = useCustomFetch()
   const { data, query: storedQuery } = storeToRefs(validatorDashboardRewardsStore())
+  const isLoading = ref(false)
 
   const { slotViz } = useValidatorSlotVizStore()
 
@@ -26,9 +27,11 @@ export function useValidatorDashboardRewardsStore () {
       data.value = undefined
       return undefined
     }
+    isLoading.value = true
     storedQuery.value = query
     const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS, undefined, { dashboardKey }, query)
 
+    isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
@@ -47,5 +50,5 @@ export function useValidatorDashboardRewardsStore () {
     return res
   }
 
-  return { rewards, query, getRewards }
+  return { rewards, query, isLoading, getRewards }
 }

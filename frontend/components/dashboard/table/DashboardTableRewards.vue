@@ -15,7 +15,7 @@ const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { rewards, query: lastQuery, getRewards } = useValidatorDashboardRewardsStore()
+const { rewards, query: lastQuery, isLoading, getRewards } = useValidatorDashboardRewardsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
@@ -136,6 +136,7 @@ const wrappedRewards = computed(() => {
             :add-spacer="true"
             :is-row-expandable="isRowExpandable"
             :selected-sort="tempQuery?.sort"
+            :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
