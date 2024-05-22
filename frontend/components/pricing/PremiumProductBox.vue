@@ -108,13 +108,13 @@ const planButton = computed(() => {
       </div>
       <div class="main-features-container">
         <PricingPremiumFeature
-          :name="t('pricing.premium_product.validator_dashboards', {amount: product?.premium_perks.validator_dashboards}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
+          :name="t('pricing.premium_product.validator_dashboards', {amount: formatNumber(product?.premium_perks.validator_dashboards)}, (product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2)"
           :available="true"
           :bar-fill-percentage="barFillPercentages.validatorDashboards"
         />
         <!--TODO: Hardcoded 32 and "ETH" in language file don't work for Gnosis. Replace with real network data once available-->
         <PricingPremiumFeature
-          :name="t('pricing.premium_product.validators_per_dashboard.text', {amount: product?.premium_perks.validators_per_dashboard})"
+          :name="t('pricing.premium_product.validators_per_dashboard.text', {amount: formatNumber(product?.premium_perks.validators_per_dashboard)})"
           :tooltip="t('pricing.premium_product.validators_per_dashboard.tooltip', {effectiveBalance: formatNumber(product?.premium_perks.validators_per_dashboard * 32)})"
           :subtext="t('pricing.premium_product.per_validator', {amount: prices.perValidator})"
           :available="true"
