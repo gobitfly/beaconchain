@@ -564,7 +564,7 @@
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
       "validators_per_dashboard": {
         "text": "{amount} Validators per Dashboard",
-        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maxEB"
+        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance"
       },
       "per_validator": "{amount} per validator",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
