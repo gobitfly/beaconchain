@@ -5,6 +5,11 @@ import type { AgeFormat } from '~/types/settings'
 
 const { epochToTs, slotToTs } = useNetwork()
 
+export const ONE_MINUTE = 60
+export const ONE_HOUR = ONE_MINUTE * 60
+export const ONE_DAY = ONE_HOUR * 24
+export const ONE_YEAR = ONE_DAY * 365
+
 export interface NumberFormatConfig {
   precision?: number
   fixed?:number
@@ -158,20 +163,20 @@ export function formatTimeDuration (seconds: number | undefined, t: ComposerTran
   }
 
   let translationId = 'time_duration.years'
-  let divider = 31536000
+  let divider = ONE_YEAR
 
-  if (seconds < 60) {
+  if (seconds < ONE_MINUTE) {
     translationId = 'time_duration.seconds'
     divider = 1
-  } else if (seconds < 3600) {
+  } else if (seconds < ONE_HOUR) {
     translationId = 'time_duration.minutes'
-    divider = 60
-  } else if (seconds < 86400) {
+    divider = ONE_MINUTE
+  } else if (seconds < ONE_DAY) {
     translationId = 'time_duration.hours'
-    divider = 3600
-  } else if (seconds < 31536000) {
+    divider = ONE_HOUR
+  } else if (seconds < ONE_YEAR) {
     translationId = 'time_duration.days'
-    divider = 86400
+    divider = ONE_DAY
   }
 
   const amount = Math.floor(seconds / divider)
