@@ -62,11 +62,11 @@ const shareButtonOptions = computed(() => {
 })
 
 const share = () => {
-  const db = dashboards.value?.validator_dashboards?.find(d => d.id === parseInt(dashboardKey.value))
-  if (isPublic.value || !db) {
+  const dashboard = dashboards.value?.validator_dashboards?.find(d => d.id === parseInt(dashboardKey.value))
+  if (isPublic.value || !dashboard) {
     alert('Not implemented yet')
   } else {
-    dialog.open(DashboardShareModal)
+    dialog.open(DashboardShareModal, { data: { dashboard } })
   }
 }
 

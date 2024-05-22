@@ -3,26 +3,55 @@ import {
   faInfoCircle
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { warn } from 'vue'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
+import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboard: ValidatorDashboard; // Currently only validator dashboards are supported
 }
 const { props, setHeader } = useBcDialog<Props>()
 const { t: $t } = useI18n()
+const { refreshDashboards } = useUserDashboardStore()
+const { fetch } = useCustomFetch()
 
 const dashboardName = ref('')
 const shareGroups = ref(true)
+const isUpdating = ref(false)
 
 watch(props, (p) => {
   if (p) {
     setHeader(p.dashboard.name)
     dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
+    shareGroups.value = !!p.dashboard.public_ids?.[0]?.share_settings.group_names
   }
 }, { immediate: true })
 
+const add = async () => {
+  if (isUpdating.value) {
+    return
+  }
+  warn('props.value?.dashboard', props.value?.dashboard)
+  isUpdating.value = true
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  await refreshDashboards()
+  isUpdating.value = false
+}
+
+const edit = async () => {
+  isUpdating.value = true
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId: `${props.value?.dashboard.public_ids?.[0]?.public_id}` })
+  await refreshDashboards()
+
+  isUpdating.value = false
+}
+
 const share = () => {
-  // TODO
+  if (props.value?.dashboard.public_ids?.[0]?.public_id) {
+    edit()
+  } else {
+    add()
+  }
 }
 
 const shareGroupTooltip = computed(() => {
@@ -45,7 +74,7 @@ const shareGroupTooltip = computed(() => {
         <BcPremiumGem /><!--TODO: only show gem for free users once we have that information-->
       </div>
     </div>
-    <Button @click="share">
+    <Button :disabled="isUpdating" @click="share">
       {{ $t('dashboard.share.share') }}
     </Button>
   </div>
