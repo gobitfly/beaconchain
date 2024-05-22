@@ -8,7 +8,7 @@ interface Props {
   name: string,
   available?: boolean,
   tooltip?: string,
-  barFillPercentage?: number,
+  percentage?: number,
   subtext?: string,
   link?: string
 }
@@ -41,7 +41,7 @@ defineProps<Props>()
         />
       </NuxtLink>
     </div>
-    <BcFractionBar v-if="barFillPercentage" :bar-fill-percentage="barFillPercentage" class="fraction-bar-container" />
+    <BcFractionBar v-if="percentage" :fill-percentage="percentage" class="fraction-bar-container" />
   </div>
 </template>
 
