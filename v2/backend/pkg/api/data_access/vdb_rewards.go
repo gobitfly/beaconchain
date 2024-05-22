@@ -47,19 +47,18 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				search = "0x" + search
 			}
 			search = strings.ToLower(search)
-			if utils.IsHash(search) {
-				// Get the current validator state to convert pubkey to index
-				validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-				defer releaseLock()
-				if err != nil {
-					return nil, nil, err
-				}
-				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					indexSearch = int64(*index)
-				} else {
-					// No validator index for pubkey found, return empty results
-					return nil, &paging, nil
-				}
+
+			// Get the current validator state to convert pubkey to index
+			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			defer releaseLock()
+			if err != nil {
+				return nil, nil, err
+			}
+			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+				indexSearch = int64(*index)
+			} else {
+				// No validator index for pubkey found, return empty results
+				return result, &paging, nil
 			}
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
