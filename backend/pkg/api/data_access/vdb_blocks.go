@@ -11,13 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
 )
 
-// TODO sorting by rewards doesn't work; CL rewards present nowhere, non-mev EL reward is in bt - depends on BIDS-3036
+// TODO sorting by rewards doesn't work; CL rewards present nowhere - depends on BIDS-3036
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	var err error
 	var currentCursor t.BlocksCursor
@@ -107,46 +108,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		params = append(params, validators)
 	}
 
-	type proposal struct {
+	type propQueryResult struct {
 		Proposer     uint64              `db:"proposer"`
 		Group        uint64              `db:"group_id"`
 		Epoch        uint64              `db:"epoch"`
 		Slot         uint64              `db:"slot"`
 		Status       uint64              `db:"status"`
-		Block        sql.NullInt64       `db:"exec_block_number"`
-		FeeRecipient []byte              `db:"exec_fee_recipient"`
-		Mev          decimal.NullDecimal `db:"mev_reward"`
-		MevRecipient []byte              `db:"proposer_fee_recipient"`
+		Block        sql.NullInt64       `db:"block"`
+		FeeRecipient []byte              `db:"fee_recipient"`
+		Reward       decimal.NullDecimal `db:"reward"`
 		GraffitiText string              `db:"graffiti_text"`
-		// TODO fill this properly, just used for cursor atm
-		Reward uint64
 	}
-	proposals := make([]proposal, 0)
-
-	// Next get scheduled blocks. They aren't written to blocks table, get from duties
-	// Will just pass scheduled proposals to query and let db do the sorting etc
-	dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseLock()
-	var props []uint64
-	var epochs []uint64
-	var slots []uint64
-	if err == nil {
-		for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
-			// only gather scheduled slots
-			if _, ok := dutiesInfo.SlotStatus[slot]; ok {
-				continue
-			}
-			// only gather slots scheduled for our validators
-			if _, ok := validatorMap[uint32(vali)]; !ok {
-				continue
-			}
-			props = append(props, dutiesInfo.PropAssignmentsForSlot[slot])
-			epochs = append(epochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
-			slots = append(slots, slot)
-		}
-	} else {
-		log.Debugf("duties info not available, skipping scheduled slots: %s", err)
-	}
+	proposals := make([]propQueryResult, 0)
 
 	// handle sorting
 	where := ``
@@ -165,9 +138,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		sortColName = `status`
 		val = currentCursor.Status
 	case enums.VDBBlockProposerReward:
-		// TODO need to sum up reward data; CL rewards missing, EL only in BT
-		sortColName = `mev_reward`
-		val = currentCursor.Reward
+		// TODO need to sum up reward data; CL rewards missing; check types (decimal/uint?)
+		sortColName = `reward`
+		val = currentCursor.Reward.Decimal.BigInt().Uint64()
 	}
 	onlyPrimarySort := sortColName == `slot`
 	if currentCursor.IsValid() {
@@ -213,9 +186,40 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		}
 		orderBy += `, slot ` + secSort
 	}
-	if len(props) > 0 {
-		// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
-		orderBy += `, exec_block_number`
+
+	// Get scheduled blocks. They aren't written to blocks table, get from duties
+	// Will just pass scheduled proposals to query and let db do the sorting etc
+	var scheduledProposals []uint64
+	var scheduledEpochs []uint64
+	var scheduledSlots []uint64
+	// don't need to query if requested slots are in the past
+	latestSlot := cache.LatestSlot.Get()
+	if !onlyPrimarySort || !currentCursor.IsValid() ||
+		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
+		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
+		dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
+		defer releaseLock()
+		if err == nil {
+			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
+				// only gather scheduled slots
+				if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+					continue
+				}
+				// only gather slots scheduled for our validators
+				if _, ok := validatorMap[uint32(vali)]; !ok {
+					continue
+				}
+				scheduledProposals = append(scheduledProposals, dutiesInfo.PropAssignmentsForSlot[slot])
+				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
+				scheduledSlots = append(scheduledSlots, slot)
+			}
+		} else {
+			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
+		}
+		if len(scheduledProposals) > 0 {
+			// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
+			orderBy += `, block`
+		}
 	}
 
 	groupIdCol := "group_id,"
@@ -228,32 +232,40 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			epoch,
 			slot,
 			status,
-			exec_block_number,
-			exec_fee_recipient,
-			mev_reward,
-			proposer_fee_recipient,
+			block,
+			fee_recipient,
+			reward,
 			graffiti_text
 		FROM (`, groupIdCol)
 	// supply scheduled proposals, if any
-	if len(props) > 0 {
+	if len(scheduledProposals) > 0 {
 		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
 		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
 		distinct := "slot"
 		if !onlyPrimarySort {
 			distinct = sortColName + ", " + distinct
 		}
-		params = append(params, props)
-		params = append(params, epochs)
-		params = append(params, slots)
-		query = fmt.Sprintf(`SELECT distinct on (%s) * FROM (WITH scheduled_proposals (
+		params = append(params, scheduledProposals)
+		params = append(params, scheduledEpochs)
+		params = append(params, scheduledSlots)
+		query = fmt.Sprintf(`SELECT distinct on (%s) 
+			u.proposer,
+			group_id,
+			u.epoch,
+			u.slot,
+			u.status,
+			block,
+			u.fee_recipient,
+			u.reward,
+			u.graffiti_text
+		FROM (WITH scheduled_proposals (
 			proposer,
 			epoch,
 			slot,
 			status,
-			exec_block_number,
-			exec_fee_recipient,
-			mev_reward,
-			proposer_fee_recipient,
+			block,
+			fee_recipient,
+			reward,
 			graffiti_text
 		) AS (SELECT 
 			*,
@@ -261,7 +273,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			null::int,
 			null::bytea,
 			null::int,
-			null::bytea,
 			''
 			FROM unnest($%d::int[], $%d::int[], $%d::int[]))
 		SELECT * FROM scheduled_proposals
@@ -272,19 +283,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	SELECT
 		proposer,
 		epoch,
-		slot,
+		blocks.slot,
 		status,
-		exec_block_number,
-		exec_fee_recipient,
-		relays_blocks.value AS mev_reward,
-		COALESCE(proposer_fee_recipient, '') AS proposer_fee_recipient,
+		exec_block_number AS block,
+		fee_recipient,
+		reward,
 		graffiti_text
 	FROM blocks
-	LEFT JOIN relays_blocks ON blocks.exec_block_hash = relays_blocks.exec_block_hash
+	LEFT JOIN cached_proposal_rewards ON cached_proposal_rewards.dashboard_id = $1 AND blocks.slot = cached_proposal_rewards.slot
 	`
 
 	// shrink selection to our filtered validators
-	if len(props) > 0 {
+	if len(scheduledProposals) > 0 {
 		query += `)`
 	}
 	query += `) as u `
@@ -319,21 +329,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		slices.Reverse(proposals)
 	}
 
-	// (non-mev) tx reward is in bt currently
-	blocksNoRelay := make([]uint64, 0, len(proposals))
 	data := make([]t.VDBBlocksTableRow, len(proposals))
-	for _, proposal := range proposals {
-		if proposal.Status == 1 && !proposal.Mev.Valid {
-			blocksNoRelay = append(blocksNoRelay, uint64(proposal.Block.Int64))
-		}
-	}
-	startTime = time.Now()
-	indexedBlocksNoRelay, err := d.bigtable.GetBlocksIndexedMultiple(blocksNoRelay, uint64(len(blocksNoRelay)))
-	log.Debugf("=== bigtable took %s", time.Since(startTime))
-	if err != nil {
-		return nil, nil, err
-	}
-	idxNoRelayBlocks := len(indexedBlocksNoRelay) - 1
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
@@ -360,22 +356,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			continue
 		}
 		data[i].Block = uint64(proposal.Block.Int64)
-		rewardRecipient := ""
-		if proposal.Mev.Valid {
-			data[i].Reward.El = proposal.Mev.Decimal
-			rewardRecipient = hexutil.Encode(proposal.MevRecipient)
-		} else {
-			// bt returns blocks sorted desc
-			for ; idxNoRelayBlocks >= 0; idxNoRelayBlocks-- {
-				if indexedBlocksNoRelay[idxNoRelayBlocks].Number == uint64(proposal.Block.Int64) {
-					data[i].Reward.El = decimal.NewFromBigInt(utils.Eth1TotalReward(indexedBlocksNoRelay[idxNoRelayBlocks]), 0)
-					break
-				}
-			}
-			rewardRecipient = hexutil.Encode(proposal.FeeRecipient)
+		if proposal.Reward.Valid {
+			data[i].RewardRecipient.Hash = t.Hash(hexutil.Encode(proposal.FeeRecipient))
+			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
+			data[i].Reward.El = proposal.Reward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
-		data[i].RewardRecipient.Hash = t.Hash(rewardRecipient)
-		ensMapping[rewardRecipient] = ""
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()

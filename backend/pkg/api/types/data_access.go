@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/shopspring/decimal"
 )
 
 // everything that goes in this file is for the data access layer only
@@ -100,5 +101,5 @@ type BlocksCursor struct {
 	Proposer uint64
 	Group    uint64
 	Status   uint64
-	Reward   uint64
+	Reward   decimal.NullDecimal
 }
