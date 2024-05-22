@@ -8,7 +8,7 @@ const isYearly = ref(true)
 
 const savingPercentage = computed(() => {
   let highestSaving = 0
-  products.value?.data.premium_products.forEach((product) => {
+  products.value?.premium_products.forEach((product) => {
     const savingPercentage = (1 - (product.price_per_year_eur / (product.price_per_month_eur * 12))) * 100
     if (savingPercentage > highestSaving) {
       highestSaving = savingPercentage
@@ -58,7 +58,7 @@ const savingPercentage = computed(() => {
       </div>
       <div class="premium-products-container">
         <div class="premium-products-row">
-          <template v-for="product in products?.data.premium_products" :key="product.product_id">
+          <template v-for="product in products?.premium_products" :key="product.product_id">
             <PricingPremiumProductBox
               v-if="product.price_per_year_eur > 0"
               :product

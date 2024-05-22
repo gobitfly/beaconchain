@@ -40,7 +40,7 @@ const prices = computed(() => {
 
 const percentages = computed(() => {
   // compare with the last product in the list
-  const compareProduct = products.value?.data.premium_products[products.value.data.premium_products.length - 1]
+  const compareProduct = products.value?.premium_products[products.value.premium_products.length - 1]
 
   return {
     validatorDashboards: props.product.premium_perks.validator_dashboards / (compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
