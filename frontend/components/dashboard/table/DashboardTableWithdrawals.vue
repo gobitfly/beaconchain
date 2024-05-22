@@ -335,6 +335,9 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
               </div>
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>

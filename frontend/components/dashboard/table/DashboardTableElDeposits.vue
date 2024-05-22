@@ -287,6 +287,9 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 </div>
               </div>
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>

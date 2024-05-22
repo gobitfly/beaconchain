@@ -243,6 +243,9 @@ const wrappedRewards = computed(() => {
                 :group-name="groupNameLabel(slotProps.data.group_id)"
               />
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
