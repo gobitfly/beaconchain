@@ -10,7 +10,7 @@ import type { Feature } from '~/types/pricing'
 
 const { products } = useProductsStore()
 const { user } = useUserStore()
-const { t } = useI18n()
+const { t: $t } = useI18n()
 
 interface Props {
   product: PremiumProduct,
@@ -19,7 +19,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const formatPremiumProductPrice = (price: number, digits?: number) => {
-  return formatFiat(price, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
+  return formatFiat(price, 'EUR', $t('locales.currency'), digits ?? 2, digits ?? 2)
 }
 
 const prices = computed(() => {
@@ -52,19 +52,19 @@ const percentages = computed(() => {
 
 const planButton = computed(() => {
   let isDowngrade = false
-  let text = t('pricing.premium_product.button.select_plan')
+  let text = $t('pricing.premium_product.button.select_plan')
 
   if (user.value?.subscriptions) {
     const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
     if (!subscription) {
-      text = t('pricing.premium_product.button.select_plan')
+      text = $t('pricing.premium_product.button.select_plan')
     } else if (subscription.product_id === props.product.product_id) {
-      text = t('pricing.premium_product.button.manage_plan')
+      text = $t('pricing.premium_product.button.manage_plan')
     } else if (subscription.product_id < props.product.product_id) {
-      text = t('pricing.premium_product.button.upgrade')
+      text = $t('pricing.premium_product.button.upgrade')
     } else {
       isDowngrade = true
-      text = t('pricing.premium_product.button.downgrade')
+      text = $t('pricing.premium_product.button.downgrade')
     }
   }
 
@@ -74,26 +74,26 @@ const planButton = computed(() => {
 const mainFeatures = computed<Feature[]>(() => {
   return [
     {
-      name: t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
+      name: $t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
       available: true,
       percentage: percentages.value.validatorDashboards
     },
     {
-      name: t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
-      subtext: t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
+      name: $t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      subtext: $t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
       available: true,
-      tooltip: t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      tooltip: $t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
       percentage: percentages.value.validatorsPerDashboard
     },
     {
-      name: t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe'),
-      subtext: t('pricing.premium_product.coming_soon'),
+      name: $t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe'),
+      subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
       percentage: percentages.value.summaryChart
     },
     {
-      name: t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
-      subtext: t('pricing.premium_product.coming_soon'),
+      name: $t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
+      subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
       percentage: percentages.value.heatmapChart
     }
@@ -103,21 +103,21 @@ const mainFeatures = computed<Feature[]>(() => {
 const minorFeatures = computed<Feature[]>(() => {
   return [
     {
-      name: t('pricing.premium_product.no_ads'),
+      name: $t('pricing.premium_product.no_ads'),
       available: props.product?.premium_perks.ad_free
     },
     {
-      name: t('pricing.premium_product.share_dashboard'),
+      name: $t('pricing.premium_product.share_dashboard'),
       available: props.product?.premium_perks.share_custom_dashboards
     },
     {
-      name: t('pricing.premium_product.mobile_app_widget'),
+      name: $t('pricing.premium_product.mobile_app_widget'),
       link: '/mobile',
       available: props.product?.premium_perks.mobile_app_widget
     },
     {
-      name: t('pricing.premium_product.manage_dashboard_via_api'),
-      subtext: t('pricing.premium_product.coming_soon'),
+      name: $t('pricing.premium_product.manage_dashboard_via_api'),
+      subtext: $t('pricing.premium_product.coming_soon'),
       available: props.product?.premium_perks.manage_dashboard_via_api
     }
   ]
@@ -132,7 +132,7 @@ const minorFeatures = computed<Feature[]>(() => {
         {{ props.product?.product_name }}
       </div>
       <div v-if="product.is_popular" class="popular">
-        {{ t('pricing.premium_product.popular') }}
+        {{ $t('pricing.premium_product.popular') }}
       </div>
     </div>
     <div class="features-container">
@@ -141,21 +141,21 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ prices.yearly }} {{ t('pricing.premium_product.yearly') }}*
+          {{ prices.yearly }} {{ $t('pricing.premium_product.yearly') }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ t('pricing.premium_product.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.premium_product.savings', {amount: prices.saving}) }}
         </div>
         <BcTooltip position="top" :fit-content="true">
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
             </div>
           </template>
         </BcTooltip>
@@ -172,6 +172,7 @@ const minorFeatures = computed<Feature[]>(() => {
           v-for="feature in minorFeatures"
           :key="feature.name"
           :feature="feature"
+          :link="feature.link"
         />
       </div>
       <div v-if="planButton.isDowngrade" class="plan-button dismiss">
