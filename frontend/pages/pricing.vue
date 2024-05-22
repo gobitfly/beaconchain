@@ -58,13 +58,13 @@ const savingPercentage = computed(() => {
       </div>
       <div class="premium-products-container">
         <div class="premium-products-row">
-          <div v-for="product in products?.data.premium_products" :key="product.product_id">
+          <template v-for="product in products?.data.premium_products" :key="product.product_id">
             <PricingPremiumProductBox
               v-if="product.price_per_year_eur > 0"
               :product
               :is-yearly="isYearly"
             />
-          </div>
+          </template>
         </div>
         <div class="footnote">
           {{ t('pricing.excluding_vat') }}
@@ -185,13 +185,14 @@ const savingPercentage = computed(() => {
   }
 
   .premium-products-container {
-    height: min-content;
+    width: 100%;
 
     .premium-products-row {
       display: flex;
       gap: 17px;
       justify-content: space-between;
-      margin-bottom: 13px;
+      overflow-x: auto;
+      padding-bottom: 7px;
     }
 
     .footnote{
