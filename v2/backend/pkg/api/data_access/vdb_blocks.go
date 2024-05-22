@@ -189,7 +189,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	// Get scheduled blocks. They aren't written to blocks table, get from duties
 	// Will just pass scheduled proposals to query and let db do the sorting etc
-	var scheduledProposals []uint64
+	var scheduledProposers []uint64
 	var scheduledEpochs []uint64
 	var scheduledSlots []uint64
 	// don't need to query if requested slots are in the past
@@ -209,26 +209,30 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 				if _, ok := validatorMap[uint32(vali)]; !ok {
 					continue
 				}
-				scheduledProposals = append(scheduledProposals, dutiesInfo.PropAssignmentsForSlot[slot])
+				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
 				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
 				scheduledSlots = append(scheduledSlots, slot)
 			}
 		} else {
 			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
 		}
-		if len(scheduledProposals) > 0 {
+		if len(scheduledProposers) > 0 {
 			// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
 			orderBy += `, block`
 		}
 	}
 
-	groupIdCol := "group_id,"
+	groupIdCol := "group_id"
+	feeRecipient := "fee_recipient"
+	reward := "reward"
 	if dashboardId.Validators != nil {
 		groupIdCol = fmt.Sprintf("%d AS %s", t.DefaultGroupId, groupIdCol)
+		feeRecipient = "coalesce(rb.proposer_fee_recipient, blocks.exec_fee_recipient) AS " + feeRecipient
+		reward = "coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS " + reward
 	}
 	query := fmt.Sprintf(`SELECT
 			proposer,
-			%s
+			%s,
 			epoch,
 			slot,
 			status,
@@ -238,26 +242,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			graffiti_text
 		FROM (`, groupIdCol)
 	// supply scheduled proposals, if any
-	if len(scheduledProposals) > 0 {
+	if len(scheduledProposers) > 0 {
 		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
 		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
 		distinct := "slot"
 		if !onlyPrimarySort {
 			distinct = sortColName + ", " + distinct
 		}
-		params = append(params, scheduledProposals)
+		params = append(params, scheduledProposers)
 		params = append(params, scheduledEpochs)
 		params = append(params, scheduledSlots)
 		query = fmt.Sprintf(`SELECT distinct on (%s) 
-			u.proposer,
-			group_id,
-			u.epoch,
-			u.slot,
-			u.status,
+			proposer,
+			%s,
+			epoch,
+			slot,
+			status,
 			block,
-			u.fee_recipient,
-			u.reward,
-			u.graffiti_text
+			fee_recipient,
+			reward,
+			graffiti_text
 		FROM (WITH scheduled_proposals (
 			proposer,
 			epoch,
@@ -277,24 +281,34 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			FROM unnest($%d::int[], $%d::int[], $%d::int[]))
 		SELECT * FROM scheduled_proposals
 		UNION
-		(`, distinct, len(params)-2, len(params)-1, len(params))
+		(`, distinct, groupIdCol, len(params)-2, len(params)-1, len(params))
 	}
-	query += `
+	query += fmt.Sprintf(`
 	SELECT
 		proposer,
 		epoch,
 		blocks.slot,
 		status,
 		exec_block_number AS block,
-		fee_recipient,
-		reward,
+		%s,
+		%s,
 		graffiti_text
 	FROM blocks
-	LEFT JOIN cached_proposal_rewards ON cached_proposal_rewards.dashboard_id = $1 AND blocks.slot = cached_proposal_rewards.slot
-	`
+	`, feeRecipient, reward)
+
+	if dashboardId.Validators == nil {
+		query += `
+		LEFT JOIN cached_proposal_rewards ON cached_proposal_rewards.dashboard_id = $1 AND blocks.slot = cached_proposal_rewards.slot
+		`
+	} else {
+		query += `
+		LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
+		LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
+		`
+	}
 
 	// shrink selection to our filtered validators
-	if len(scheduledProposals) > 0 {
+	if len(scheduledProposers) > 0 {
 		query += `)`
 	}
 	query += `) as u `
@@ -302,9 +316,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		query += fmt.Sprintf(`
 		INNER JOIN (%s) validators ON validators.validator_index = proposer
 		`, filteredValidatorsQuery)
-	}
-	if dashboardId.Validators != nil {
-		query += `WHERE proposer = ANY($1)`
+	} else {
+		query += `WHERE proposer = ANY($1) `
 	}
 
 	params = append(params, limit+1)
