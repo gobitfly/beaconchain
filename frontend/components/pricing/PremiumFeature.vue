@@ -3,14 +3,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import BcTooltip from '../bc/BcTooltip.vue'
+import type { Feature } from '~/types/pricing'
 
 interface Props {
-  name: string,
-  available?: boolean,
-  tooltip?: string,
-  percentage?: number,
-  subtext?: string,
-  link?: string
+  feature: Feature
 }
 defineProps<Props>()
 
@@ -19,26 +15,26 @@ defineProps<Props>()
 <template>
   <div class="feature-container">
     <div class="main-row">
-      <BcFeatureCheck :available="available" class="check" />
-      <div class="text" :class="{ 'unavailable': !available }">
+      <BcFeatureCheck :available="feature.available" class="check" />
+      <div class="text" :class="{ 'unavailable': !feature.available }">
         <div class="name">
-          {{ name }}
-          <BcTooltip v-if="tooltip" position="top" :fit-content="true" :text="tooltip">
+          {{ feature.name }}
+          <BcTooltip v-if="feature.tooltip" position="top" :fit-content="true" :text="feature.tooltip">
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
-        <div v-if="subtext" class="subtext">
-          {{ subtext }}
+        <div v-if="feature.subtext" class="subtext">
+          {{ feature.subtext }}
         </div>
       </div>
-      <NuxtLink v-if="link" class="link" :to="link" target="_blank">
+      <NuxtLink v-if="feature.link" class="link" :to="feature.link" target="_blank">
         <FontAwesomeIcon
           class="popout"
           :icon="faArrowUpRightFromSquare"
         />
       </NuxtLink>
     </div>
-    <BcFractionBar v-if="percentage" :fill-percentage="percentage" class="fraction-bar-container" />
+    <BcFractionBar v-if="feature.percentage" :fill-percentage="feature.percentage" class="fraction-bar-container" />
   </div>
 </template>
 
