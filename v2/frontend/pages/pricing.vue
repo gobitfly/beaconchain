@@ -2,7 +2,7 @@
 const { t } = useI18n()
 
 const { products, getProducts } = useProductsStore()
-await getProducts()
+await useAsyncData('get_products', () => getProducts())
 
 const isYearly = ref(true)
 
