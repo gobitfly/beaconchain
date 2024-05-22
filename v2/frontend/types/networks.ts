@@ -53,7 +53,6 @@ export enum ChainIDs {
   Gnosis = 100,
   Chiado = 10200
 }
-
 interface ChainInfoFields {
   name: string,
   description: string,
@@ -62,6 +61,9 @@ interface ChainInfoFields {
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
+  timeStampSlot0?: number,
+  secondsPerSlot?: number,
+  slotsPerEpoch?: number,
   path: string,
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
@@ -75,6 +77,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Any,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/undefined',
     priority: 0 // data belonging to all networks is displayed first by default
   },
@@ -87,6 +92,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1606824023,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/ethereum',
     priority: 1
   },
@@ -98,6 +106,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1695902400,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/holesky',
     priority: 2
   },
@@ -109,6 +120,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1655733600,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/sepolia',
     priority: 3
   },
@@ -201,6 +215,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
+    timeStampSlot0: 1638993340,
+    secondsPerSlot: 5,
+    slotsPerEpoch: 16,
     path: '/gnosis',
     priority: 40
   },
@@ -212,6 +229,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
+    timeStampSlot0: 1667577415, 1683709200, 1665396300,
+    secondsPerSlot: 5,
+    slotsPerEpoch: 16,
     path: '/chiado',
     priority: 41
   }
@@ -225,16 +245,7 @@ export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
 }
 
-// TODO: request it from the API
-export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
-  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
-  if (sortByPriority) {
-    sortListOfChainIDs(list)
-  }
-  return list
-}
-
-export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
+export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list : ChainIDs[] = []
 
   for (const id in ChainIDs) {
@@ -243,11 +254,11 @@ export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
     }
   }
   if (sortByPriority) {
-    sortListOfChainIDs(list)
+    sortChainIDsByPriority(list)
   }
   return list
 }
 
-function sortListOfChainIDs (list : ChainIDs[]) {
+export function sortChainIDsByPriority (list : ChainIDs[]) {
   list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
 }

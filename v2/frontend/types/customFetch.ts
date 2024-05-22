@@ -29,7 +29,8 @@ export enum API_PATH {
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   LOGOUT = '/logout',
-  SEARCH = '/search'
+  SEARCH = '/search',
+  AVAILABLE_NETWORKS = '/availableNetworks'
 }
 
 export type PathValues = Record<string, string | number>
@@ -196,5 +197,10 @@ export const mapping: Record<string, MappingData> = {
     method: 'POST',
     mock: false,
     mockFunction: simulateAPIresponseForTheSearchBar
+  },
+  [API_PATH.AVAILABLE_NETWORKS]: {
+    path: '/available-networks',
+    method: 'GET',
+    mock: true
   }
 }
