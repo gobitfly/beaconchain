@@ -29,6 +29,7 @@
 
   @media (max-width: 599.9px) { // mobile
     justify-content: flex-start;
+    padding-left: var(--padding-large);
   }
 
   .links {
