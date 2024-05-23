@@ -6,7 +6,8 @@ type RowDuty = { validator?: number; dutySubText?: string; dutySubLink?: string,
 type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validators?: number[], duties?: RowDuty[], andMore?: number }
 interface Props {
   id: string
-  data: VDBSlotVizSlot
+  data: VDBSlotVizSlot,
+  currentSlotId?: number
 }
 const props = defineProps<Props>()
 const { t: $t } = useI18n()
@@ -15,12 +16,15 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const networkLabel = $t(`slotViz.tooltip.network.${slot.status}`, { slot: formatNumber(slot.slot) })
+  const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
+
+  const networkLabel = $t(`slotViz.tooltip.network.${status}`, { slot: formatNumber(slot.slot) })
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
   let hasFailedDuties = false
   let maxCount = 0
+  let hasScheduledDuty = false
 
   if (hasDuties) {
     if (slot.proposal) {
@@ -36,6 +40,9 @@ const data = computed(() => {
         case 'orphaned':
           className = 'failed'
           hasFailedDuties = true
+          break
+        case 'scheduled':
+          hasScheduledDuty = true
           break
       }
       rows.push([{
@@ -89,6 +96,7 @@ const data = computed(() => {
       const dutyText = $t(`slotViz.tooltip.${type}`)
 
       if (duty.scheduled) {
+        hasScheduledDuty = true
         maxCount = Math.max(maxCount, duty.scheduled.total_count)
         subRows.push({
           class: 'scheduled',
@@ -126,8 +134,9 @@ const data = computed(() => {
     addDuties('sync', slot.sync)
   }
 
+  const isScheduled = slot.status === 'scheduled' || (slot.status === 'proposed' && hasScheduledDuty)
   let stateLabel = ''
-  if (slot.status === 'scheduled') {
+  if (isScheduled) {
     stateLabel = formatMultiPartSpan($t, `slotViz.tooltip.status.scheduled.${hasDuties ? 'has_duties' : 'no_duties'}`, [undefined, 'scheduled', undefined])
   } else if (hasFailedDuties && hasSuccessDuties) {
     stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [undefined, 'some', undefined])
@@ -158,7 +167,7 @@ const data = computed(() => {
             <BcFormatNumber :text="data.networkLabel" />
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
-          <div class="row" v-html="data.stateLabel" />
+          <div class="row state" v-html="data.stateLabel" />
         </div>
         <div v-for="(rows, index) in data.rows" :key="index" class="rows">
           <div v-for="row in rows" :key="row.class" class="row">
@@ -229,8 +238,12 @@ const data = computed(() => {
 
     .row {
       color: var(--light-grey);
-      display: flex;
-      align-items: center;
+        display: flex;
+        align-items: center;
+
+      &.state{
+        text-align: left;
+      }
 
       &.network {
         text-wrap: nowrap;
