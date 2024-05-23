@@ -737,6 +737,7 @@ function informationIfHiddenResults () : string {
   position: relative;
   display: flex;
   margin: auto;
+  align-items: unset !important;
 
   &.embedded {
     height: 28px;
