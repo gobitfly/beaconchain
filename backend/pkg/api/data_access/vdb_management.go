@@ -84,7 +84,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 }
 
 func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
-	// TODO @recy21: the `UserDashboardsData` changed, now need to also fetch public ids for validator dashboards
+	// WORKING spletka: the `UserDashboardsData` changed, now need to also fetch public ids for validator dashboards
 	result := &t.UserDashboardsData{}
 
 	// Get the validator dashboards

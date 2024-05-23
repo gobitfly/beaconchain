@@ -33,5 +33,7 @@ export default function ({ name, params }: RouteLocationNormalizedLoaded) {
         `${v1Domain}/validator/${params.id || params.slug?.[1]}`,
         { external: true }
       )
+    case 'mobile':
+      return navigateTo(`${v1Domain}/mobile`, { external: true })
   }
 }
