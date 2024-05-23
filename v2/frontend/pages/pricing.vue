@@ -217,13 +217,17 @@ const savingPercentage = computed(() => {
       }
     }
 
-    .header-line-container .header-line .subtitle {
-      font-size: 20px;
+    .header-line-container{
+      margin-bottom: 30px;
+
+      .header-line .subtitle {
+        font-size: 20px;
+      }
     }
 
     .toggle-container {
       font-size: 16px;
-      margin-bottom: 55px;
+      margin-bottom: 30px;
 
       .toggle {
         font-size: 16px;
