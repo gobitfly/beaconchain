@@ -238,6 +238,7 @@ const minorFeatures = computed<Feature[]>(() => {
       color: var(--text-color-discreet);
       font-size: 21px;
       font-weight: 400;
+      line-height: 1.85;
       display: flex;
       flex-direction: column;
       margin-bottom: 21px;
@@ -320,6 +321,7 @@ const minorFeatures = computed<Feature[]>(() => {
       .prize-subtext {
         font-size: 12px;
         margin-bottom: 18px;
+        line-height: 1.4;
       }
 
       .saving-info {
