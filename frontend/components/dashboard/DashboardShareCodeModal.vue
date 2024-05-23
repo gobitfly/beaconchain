@@ -78,6 +78,10 @@ const unpublish = async () => {
   flex-direction: column;
   gap: var(--padding-large);
 
+  @media screen and (max-width: 400px) {
+    width: unset;
+  }
+
   .content {
     display: flex;
     flex-direction: column;

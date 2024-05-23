@@ -105,9 +105,8 @@ const shareGroupTooltip = computed(() => {
   flex-direction: column;
   gap: var(--padding-large);
 
-  @media screen and (max-width: 500px) {
+  @media screen and (max-width: 400px) {
     width: unset;
-    height: unset;
   }
 
   .content {
