@@ -197,8 +197,9 @@ const savingPercentage = computed(() => {
 
     .footnote{
       font-family: var(--roboto-family);
-      font-size: 21px;
+      font-size: 14px;
       font-weight: 400;
+      color: var(--text-color-discreet);
       display: flex;
       justify-content: flex-end;
     }
@@ -240,7 +241,7 @@ const savingPercentage = computed(() => {
     }
 
     .premium-products-container .footnote {
-      font-size: 12px;
+      font-size: 8px;
     }
   }
 }
