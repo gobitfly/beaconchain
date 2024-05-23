@@ -3,7 +3,6 @@ import {
   faInfoCircle
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { ApiDataResponse, VDBPublicId } from '~/types/api/common'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
@@ -19,11 +18,15 @@ const dashboardName = ref('')
 const shareGroups = ref(true)
 const isUpdating = ref(false)
 const isNew = ref(true)
+const { user } = useUserStore()
+
+const isPremiumUser = computed(() => !!user.value?.premium_perks?.share_custom_dashboards)
 
 watch(props, (p) => {
   if (p) {
+    // We currently only want to use one public id
     dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
-    shareGroups.value = !!p.dashboard.public_ids?.[0]?.share_settings.group_names
+    shareGroups.value = isPremiumUser.value && !!p.dashboard.public_ids?.[0]?.share_settings.group_names
     isNew.value = !p.dashboard.public_ids?.[0]
   }
 }, { immediate: true })
@@ -33,9 +36,9 @@ const add = async () => {
     return
   }
   isUpdating.value = true
-  const respnse = await fetch<ApiDataResponse<VDBPublicId>>(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
   await refreshDashboards()
-  dialogRef?.value?.close(respnse.data.public_id)
+  dialogRef?.value?.close(true)
   isUpdating.value = false
 }
 
@@ -44,7 +47,7 @@ const edit = async () => {
   const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
   await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId })
   await refreshDashboards()
-  dialogRef?.value?.close(publicId)
+  dialogRef?.value?.close(true)
   isUpdating.value = false
 }
 
@@ -73,8 +76,8 @@ const shareGroupTooltip = computed(() => {
         class="input-field"
       />
       <div class="share-setting">
-        <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" />
-        <label for="shareGroup">{{ $t('dashboard.share_dialog.setting.group.label') }}</label>
+        <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" :disabled="!isPremiumUser" />
+        <label for="shareGroup" :class="{'text-disabled':!isPremiumUser}">{{ $t('dashboard.share_dialog.setting.group.label') }}</label>
 
         <BcTooltip
           position="top"
@@ -84,11 +87,11 @@ const shareGroupTooltip = computed(() => {
         >
           <FontAwesomeIcon :icon="faInfoCircle" />
         </BcTooltip>
-        <BcPremiumGem /><!--TODO: only show gem for free users once we have that information-->
+        <BcPremiumGem v-if="!isPremiumUser" />
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="isUpdating" @click="share">
+      <Button :disabled="isUpdating || !dashboardName" @click="share">
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>
@@ -126,7 +129,7 @@ const shareGroupTooltip = computed(() => {
 
   .footer {
     display: flex;
-    align-items: center;
+    justify-content: center;
   }
 }
 

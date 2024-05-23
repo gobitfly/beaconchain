@@ -6,7 +6,8 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import { BcDialogConfirm, DashboardShareModal } from '#components'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -61,12 +62,25 @@ const shareButtonOptions = computed(() => {
   return { label, icon }
 })
 
+const shareDashboard = computed(() => {
+  return dashboards.value?.validator_dashboards?.find((d) => {
+    return d.id === parseInt(dashboardKey.value) || d.public_ids?.find(p => p.public_id === dashboardKey.value)
+  })
+})
+
+const shareView = () => {
+  dialog.open(DashboardShareCodeModal, { data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareEdit() } })
+}
+
+const shareEdit = () => {
+  dialog.open(DashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareView() } })
+}
+
 const share = () => {
-  const dashboard = dashboards.value?.validator_dashboards?.find(d => d.id === parseInt(dashboardKey.value))
-  if (isPublic.value || !dashboard) {
-    alert('Not implemented yet')
+  if (isPrivate.value && !shareDashboard.value?.public_ids?.length) {
+    shareEdit()
   } else {
-    dialog.open(DashboardShareModal, { data: { dashboard } })
+    shareView()
   }
 }
 
@@ -145,7 +159,7 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
-      <Button class="share-button" :disabled="isPublic" @click="share()">
+      <Button class="share-button" :disabled="!dashboardKey" @click="share()">
         {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
       <Button class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
