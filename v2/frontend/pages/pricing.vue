@@ -1,10 +1,22 @@
 <script lang="ts" setup>
 const { t } = useI18n()
 
+const { products, getProducts } = useProductsStore()
+await useAsyncData('get_products', () => getProducts())
+
 const isYearly = ref(true)
 
-// TODO: Replace with calculated percentage once real values are available
-const percentage = 20
+const savingPercentage = computed(() => {
+  let highestSaving = 0
+  products.value?.premium_products.forEach((product) => {
+    const savingPercentage = (1 - (product.price_per_year_eur / (product.price_per_month_eur * 12))) * 100
+    if (savingPercentage > highestSaving) {
+      highestSaving = savingPercentage
+    }
+  })
+
+  return Math.floor(highestSaving)
+})
 
 </script>
 
@@ -40,12 +52,23 @@ const percentage = 20
           :true-option="t('pricing.yearly')"
           :false-option="t('pricing.monthly')"
         />
-        <div class="save-up-text">
-          {{ t('pricing.save_up_to', {percentage}) }}
+        <div v-if="savingPercentage > 0" class="save-up-text">
+          {{ t('pricing.save_up_to', {percentage: savingPercentage}) }}
         </div>
       </div>
-      <div>
-        [Guppy] [Dolphin] [Orca]
+      <div class="premium-products-container">
+        <div class="premium-products-row">
+          <template v-for="product in products?.premium_products" :key="product.product_id">
+            <PricingPremiumProductBox
+              v-if="product.price_per_year_eur > 0"
+              :product
+              :is-yearly="isYearly"
+            />
+          </template>
+        </div>
+        <div class="footnote">
+          {{ t('pricing.excluding_vat') }}
+        </div>
       </div>
     </div>
   </BcPageWrapper>
@@ -75,7 +98,7 @@ const percentage = 20
     align-items: center;
     user-select: none;
 
-    // not interactive for beta launch
+    // TODO: not interactive for beta launch
     .premium {
       flex: 1;
       height: 100%;
@@ -158,6 +181,66 @@ const percentage = 20
       text-align: center;
       font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
+    }
+  }
+
+  .premium-products-container {
+    width: 100%;
+
+    .premium-products-row {
+      display: flex;
+      gap: 17px;
+      justify-content: space-between;
+      overflow-x: auto;
+      padding-bottom: 7px;
+    }
+
+    .footnote{
+      font-family: var(--roboto-family);
+      font-size: 21px;
+      font-weight: 400;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .type-toggle-container {
+      .premium .text {
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .api-keys .text {
+        font-size: 11px;
+        font-weight: 700;
+      }
+    }
+
+    .header-line-container{
+      margin-bottom: 30px;
+
+      .header-line .subtitle {
+        font-size: 20px;
+      }
+    }
+
+    .toggle-container {
+      font-size: 16px;
+      margin-bottom: 30px;
+
+      .toggle {
+        font-size: 16px;
+      }
+
+      .save-up-text {
+        width: 60px;
+        font-size: 12px;
+      }
+    }
+
+    .premium-products-container .footnote {
+      font-size: 12px;
     }
   }
 }
