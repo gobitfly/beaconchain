@@ -189,6 +189,7 @@ const minorFeatures = computed<Feature[]>(() => {
   height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
+  background-color: var(--container-background);
   text-align: center;
   flex-shrink: 0;
 
