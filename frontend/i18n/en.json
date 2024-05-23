@@ -168,6 +168,7 @@
         "proposed": "Network proposed slot {slot}",
         "missed": "Network missed slot {slot}",
         "scheduled": "Slot {slot} is scheduled",
+        "scheduled-past": "Slot {slot} is being queried from our database",
         "orphaned": "Network orphaned slot {slot}"
       },
       "status": {
@@ -225,8 +226,8 @@
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
-    "public_validator_dashboard": "Public Validator Dashboard",
-    "public_account_dashboard": "Public Account Dashboard",
+    "public_validator_dashboard": "Dashboard",
+    "public_account_dashboard": "Dashboard",
     "notifications": "Notifications",
     "share": "Share",
     "shared": "Shared",
