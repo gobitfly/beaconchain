@@ -6,7 +6,7 @@ import { getCSRFHeader } from '~/utils/fetch'
   We get the csrf header from GET requests put them in this store and apply them to non GET requests.
 **/
 
-const csrfStore = defineStore('csrf-store', () => {
+const csrfStore = defineStore('csrf_store', () => {
   const header = ref<[string, string] | undefined | null>()
   return { header }
 })

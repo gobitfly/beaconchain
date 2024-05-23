@@ -2,6 +2,7 @@ import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
+  USER = '/user/me',
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
@@ -29,7 +30,8 @@ export enum API_PATH {
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   LOGOUT = '/logout',
-  SEARCH = '/search'
+  SEARCH = '/search',
+  PRODUCT_SUMMARY = '/productSummary'
 }
 
 export type PathValues = Record<string, string | number>
@@ -83,6 +85,10 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.AD_CONFIGURATIONs]: {
     path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
+    mock: true
+  },
+  [API_PATH.USER]: {
+    path: '/users/me',
     mock: true
   },
   [API_PATH.USER_DASHBOARDS]: {
@@ -196,5 +202,9 @@ export const mapping: Record<string, MappingData> = {
     method: 'POST',
     mock: false,
     mockFunction: simulateAPIresponseForTheSearchBar
+  },
+  [API_PATH.PRODUCT_SUMMARY]: {
+    path: '/product-summary',
+    mock: false
   }
 }
