@@ -4,7 +4,7 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardBlocksStore = defineStore('validator_dashboard_blocks', () => {
+const validatorDashboardBlocksStore = defineStore('validator_dashboard_blocks_store', () => {
   const data = ref < InternalGetValidatorDashboardBlocksResponse>()
   const query = ref < TableQueryParams>()
 
