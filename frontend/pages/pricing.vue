@@ -219,6 +219,7 @@ const savingPercentage = computed(() => {
     }
 
     .header-line-container{
+      padding-left: 5px;
       margin-bottom: 30px;
 
       .header-line .subtitle {
