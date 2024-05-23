@@ -31,8 +31,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
-const { isLoggedIn } = useUserStore()
+const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
+const { isLoggedIn, user } = useUserStore()
 
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
 
@@ -205,8 +205,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 
 const total = computed(() => addUpValues(overview.value?.validators))
 
-// TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validators_per_dashboard) ? 20 : user.value.premium_perks.validators_per_dashboard)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
