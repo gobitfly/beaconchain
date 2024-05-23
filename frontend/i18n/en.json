@@ -228,7 +228,6 @@
     "notifications": "Notifications",
     "share": "Share",
     "shared": "Shared",
-    "shared_tooltip": "This is a public dashboard. Login to create a private one.",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
     "group": {
