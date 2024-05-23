@@ -5,13 +5,17 @@ import { IconAccount, IconValidator } from '#components'
 const { t: $t } = useI18n()
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
+const { user } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-// TODO: once we have a proper user management we must check the max allowed dashboard by user type
+// TODO: currently there is no value for "amount of accound dashboards", using "amount of validator dashboards" instead for now
+const accountsDisabled = !showInDevelopment || (!isLoggedIn.value && !!dashboards.value?.account_dashboards?.length) || (isLoggedIn.value && (dashboards.value?.account_dashboards?.length || 0) >= (user.value?.premium_perks.validator_dashboards || 0))
+const validatorsDisabled = (!isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length) || (isLoggedIn.value && (dashboards.value?.validator_dashboards?.length || 0) >= (user.value?.premium_perks.validator_dashboards || 0))
+
 const typeButtons = [
-  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: !showInDevelopment || (!isLoggedIn.value && !!dashboards.value?.account_dashboards?.length) },
-  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: !isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length }
+  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: accountsDisabled },
+  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: validatorsDisabled }
 ]
 
 const name = defineModel<string>('name', { required: true })
