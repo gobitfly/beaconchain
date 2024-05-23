@@ -62,7 +62,9 @@
     "remove": "Remove",
     "yes": "Yes",
     "no": "No",
-    "save": "Save"
+    "save": "Save",
+    "publish": "Publish",
+    "update": "Update"
   },
   "error": {
     "multiple_times": "The error {error} happened {count} times",
@@ -229,6 +231,18 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "share_dialog": {
+      "setting": {        
+        "name": {
+          "placeholder": "Shared Dashboard name",
+          "label": "Dashboard name"
+        },
+        "group": {
+          "label": "Share groups", 
+          "tooltip": ["Checking this shows others", "your groups", "on the dashboard."]
+        }
+      }
+    },
     "group": {
       "selection": {
         "all": "All groups",

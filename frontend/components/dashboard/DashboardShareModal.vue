@@ -3,14 +3,14 @@ import {
   faInfoCircle
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { warn } from 'vue'
+import type { ApiDataResponse, VDBPublicId } from '~/types/api/common'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboard: ValidatorDashboard; // Currently only validator dashboards are supported
 }
-const { props, setHeader } = useBcDialog<Props>()
+const { props, dialogRef } = useBcDialog<Props>()
 const { t: $t } = useI18n()
 const { refreshDashboards } = useUserDashboardStore()
 const { fetch } = useCustomFetch()
@@ -18,12 +18,13 @@ const { fetch } = useCustomFetch()
 const dashboardName = ref('')
 const shareGroups = ref(true)
 const isUpdating = ref(false)
+const isNew = ref(true)
 
 watch(props, (p) => {
   if (p) {
-    setHeader(p.dashboard.name)
     dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
     shareGroups.value = !!p.dashboard.public_ids?.[0]?.share_settings.group_names
+    isNew.value = !p.dashboard.public_ids?.[0]
   }
 }, { immediate: true })
 
@@ -31,18 +32,19 @@ const add = async () => {
   if (isUpdating.value) {
     return
   }
-  warn('props.value?.dashboard', props.value?.dashboard)
   isUpdating.value = true
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  const respnse = await fetch<ApiDataResponse<VDBPublicId>>(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
   await refreshDashboards()
+  dialogRef?.value?.close(respnse.data.public_id)
   isUpdating.value = false
 }
 
 const edit = async () => {
   isUpdating.value = true
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId: `${props.value?.dashboard.public_ids?.[0]?.public_id}` })
+  const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId })
   await refreshDashboards()
-
+  dialogRef?.value?.close(publicId)
   isUpdating.value = false
 }
 
@@ -55,7 +57,7 @@ const share = () => {
 }
 
 const shareGroupTooltip = computed(() => {
-  return formatMultiPartSpan($t, 'dashboard.share.setting.group.tooltip', [undefined, 'bold', undefined])
+  return formatMultiPartSpan($t, 'dashboard.share_dialog.setting.group.tooltip', [undefined, 'bold', undefined])
 })
 
 </script>
@@ -63,29 +65,41 @@ const shareGroupTooltip = computed(() => {
 <template>
   <div class="share-dashboard-modal-container">
     <div class="content">
-      <InputText v-model="dashboardName" :placeholder="$t('dashboard.share.placeholder')" class="input-field" />
+      <label for="dashboardName" class="medium">{{ $t('dashboard.share_dialog.setting.name.label') }}</label>
+      <InputText
+        id="dashboardName"
+        v-model="dashboardName"
+        :placeholder="$t('dashboard.share_dialog.setting.name.placeholder')"
+        class="input-field"
+      />
       <div class="share-setting">
         <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" />
-        <label for="shareGroup">{{ $t('dashboard.share.setting.group.label') }}</label>
+        <label for="shareGroup">{{ $t('dashboard.share_dialog.setting.group.label') }}</label>
 
-        <BcTooltip position="top" :text="shareGroupTooltip" :render-text-as-html="true">
+        <BcTooltip
+          position="top"
+          tooltip-class="share-dialog-setting-tooltip"
+          :text="shareGroupTooltip"
+          :render-text-as-html="true"
+        >
           <FontAwesomeIcon :icon="faInfoCircle" />
         </BcTooltip>
         <BcPremiumGem /><!--TODO: only show gem for free users once we have that information-->
       </div>
     </div>
-    <Button :disabled="isUpdating" @click="share">
-      {{ $t('dashboard.share.share') }}
-    </Button>
+    <div class="footer">
+      <Button :disabled="isUpdating" @click="share">
+        {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
+      </Button>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .share-dashboard-modal-container {
-  width: 410px;
+  width: 360px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--padding-large);
 
   @media screen and (max-width: 500px) {
@@ -99,11 +113,24 @@ const shareGroupTooltip = computed(() => {
     align-items: flex-start;
     gap: var(--padding);
 
+    .medium {
+      font-weight: var(--standard_text_medium_font_weight);
+    }
+
     .share-setting {
       display: flex;
       align-items: center;
       gap: var(--padding);
     }
   }
+
+  .footer {
+    display: flex;
+    align-items: center;
+  }
+}
+
+:global(.share-dialog-setting-tooltip >div) {
+  width: 190px;
 }
 </style>
