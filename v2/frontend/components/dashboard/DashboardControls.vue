@@ -58,8 +58,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
 const shareButtonOptions = computed(() => {
   const label = isPublic.value ? $t('dashboard.shared') : $t('dashboard.share')
   const icon = isPublic.value ? faUsers : faShare
-  const tooltip = isPublic.value ? $t('dashboard.shared_tooltip') : undefined
-  return { label, icon, tooltip }
+  return { label, icon }
 })
 
 const share = () => {
@@ -141,11 +140,9 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
-      <BcTooltip v-if="shareButtonOptions.tooltip" :text="shareButtonOptions.tooltip" position="top" :fit-content="true">
-        <Button class="share-button" :disabled="isPublic" @click="share()">
-          {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
-        </Button>
-      </BcTooltip>
+      <Button class="share-button" :disabled="isPublic" @click="share()">
+        {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
+      </Button>
       <Button class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
