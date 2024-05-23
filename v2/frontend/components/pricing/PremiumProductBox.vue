@@ -236,7 +236,7 @@ const minorFeatures = computed<Feature[]>(() => {
 
     .prize-subtext {
       color: var(--text-color-discreet);
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 400;
       display: flex;
       flex-direction: column;
