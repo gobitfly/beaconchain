@@ -140,6 +140,7 @@ const savingPercentage = computed(() => {
 
   .header-line-container {
       width: 100vw;
+      box-sizing: border-box;
       display: flex;
       justify-content: center;
       padding: 21px 0;
