@@ -77,15 +77,6 @@ const data: ValidatorHistoryDuties[] = [
       status: 'failed'
     }
   },
-  {
-    proposal: {
-      cl_attestation_inclusion_income: '0',
-      cl_sync_inclusion_income: '0',
-      cl_slashing_inclusion_income: '0',
-      el_income: '0',
-      status: 'orphaned'
-    }
-  },
   {}
 ]
 
