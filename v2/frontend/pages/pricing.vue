@@ -196,10 +196,47 @@ const savingPercentage = computed(() => {
     }
 
     .footnote{
+      font-family: var(--roboto-family);
       font-size: 21px;
       font-weight: 400;
       display: flex;
       justify-content: flex-end;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .type-toggle-container {
+      .premium .text {
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .api-keys .text {
+        font-size: 11px;
+        font-weight: 700;
+      }
+    }
+
+    .header-line-container .header-line .subtitle {
+      font-size: 20px;
+    }
+
+    .toggle-container {
+      font-size: 16px;
+      margin-bottom: 55px;
+
+      .toggle {
+        font-size: 16px;
+      }
+
+      .save-up-text {
+        width: 60px;
+        font-size: 12px;
+      }
+    }
+
+    .premium-products-container .footnote {
+      font-size: 12px;
     }
   }
 }

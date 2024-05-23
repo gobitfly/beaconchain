@@ -87,6 +87,28 @@ defineProps<Props>()
     }
   }
 
+  @media (max-width: 600px) {
+    .main-row {
+      margin-bottom: 5px;
+
+      .check {
+        width: 12px;
+      }
+
+      .text {
+        gap: 0;
+
+        .name {
+          font-size: 10px;
+        }
+
+        .subtext {
+          font-size: 8px;
+        }
+      }
+    }
+  }
+
   .fraction-bar-container {
     height: 11px;
   }
