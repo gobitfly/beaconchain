@@ -7,6 +7,7 @@ import { type Currency } from '~/types/currencies'
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
   const { t: $t } = useI18n()
+  const { public: { showInDevelopment } } = useRuntimeConfig()
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
@@ -27,7 +28,7 @@ export function useCurrency () {
   })
 
   const available = computed<Currency[]>(() => {
-    const list: Currency[] = ['ETH']
+    const list: Currency[] = showInDevelopment ? ['NAT', 'ETH'] : ['ETH']
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 
