@@ -91,7 +91,7 @@ const userMenu = computed(() => {
           </NuxtLink>
         </div>
         <div v-else-if="!isSmallScreen">
-          <BcDropdown :options="userMenu" variant="header" option-label="label">
+          <BcDropdown :options="userMenu" variant="header" option-label="label" class="user-menu">
             <template #value>
               <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
             </template>
@@ -234,10 +234,13 @@ const userMenu = computed(() => {
           padding: 8px;
         }
       }
-      .user-menu-icon {
-        width: 19px;
-        height: 18px;
-        color: var(--light-grey);
+      .user-menu {
+        padding-right: 0px;
+        .user-menu-icon {
+          width: 19px;
+          height: 18px;
+          color: var(--light-grey);
+        }
       }
       .burger {
         height: 20px;
