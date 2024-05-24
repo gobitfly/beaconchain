@@ -9,9 +9,11 @@ const { user } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
-// TODO: currently there is no value for "amount of accound dashboards", using "amount of validator dashboards" instead for now
-const accountsDisabled = !showInDevelopment || (!isLoggedIn.value && !!dashboards.value?.account_dashboards?.length) || (isLoggedIn.value && (dashboards.value?.account_dashboards?.length || 0) >= (user.value?.premium_perks.validator_dashboards || 0))
-const validatorsDisabled = (!isLoggedIn.value && !!dashboards.value?.validator_dashboards?.length) || (isLoggedIn.value && (dashboards.value?.validator_dashboards?.length || 0) >= (user.value?.premium_perks.validator_dashboards || 0))
+
+// TODO: currently there is no value for "amount of account dashboards", using "amount of validator dashboards" instead for now
+const maxDashboards = user.value?.premium_perks.validator_dashboards ?? 1
+const accountsDisabled = !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards
+const validatorsDisabled = (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards
 
 const typeButtons = [
   { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: accountsDisabled },
