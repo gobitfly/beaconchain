@@ -50,8 +50,8 @@
           "machine_monitoring_history_seconds": 2592000,
           "custom_machine_alerts": true
         },
-        "price_per_year_eur": 10788,
-        "price_per_month_eur": 999,
+        "price_per_year_eur": 107.88,
+        "price_per_month_eur": 9.99,
         "is_popular": false
       },
       {
@@ -76,8 +76,8 @@
           "machine_monitoring_history_seconds": 2592000,
           "custom_machine_alerts": true
         },
-        "price_per_year_eur": 31188,
-        "price_per_month_eur": 2999,
+        "price_per_year_eur": 311.88,
+        "price_per_month_eur": 29.99,
         "is_popular": false
       },
       {
@@ -102,8 +102,8 @@
           "machine_monitoring_history_seconds": 2592000,
           "custom_machine_alerts": true
         },
-        "price_per_year_eur": 47988,
-        "price_per_month_eur": 4999,
+        "price_per_year_eur": 479.88,
+        "price_per_month_eur": 49.99,
         "is_popular": true
       }
     ],
