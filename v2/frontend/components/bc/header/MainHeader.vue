@@ -16,8 +16,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { width } = useWindowSize()
 const { t: $t } = useI18n()
 
-const isSmallScreen = computed(() => width.value <= 1023)
 const isMobile = computed(() => width.value <= 469)
+const isSmallScreen = computed(() => width.value <= 1023)
+const screenSizeClass = computed(() => isMobile.value ? 'mobile' : (isSmallScreen.value ? 'small' : 'large'))
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -52,8 +53,8 @@ const userMenu = computed(() => {
 <template>
   <div class="anchor">
     <div class="top-background" />
-    <div class="rows">
-      <div class="grid-cell blockchain-info">
+    <div class="rows" :class="screenSizeClass">
+      <div class="grid-cell blockchain-info" :class="screenSizeClass">
         <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
           <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="latestState.current_slot" />
@@ -74,17 +75,17 @@ const userMenu = computed(() => {
         </span>
       </div>
 
-      <div class="grid-cell search-bar">
-        <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="bar" :bar-style="width < 1023 ? 'gaudy' : 'discreet'" />
+      <div class="grid-cell search-bar" :class="screenSizeClass">
+        <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
       </div>
 
-      <div class="grid-cell controls">
+      <div class="grid-cell controls" :class="screenSizeClass">
         <BcCurrencySelection v-if="!isMobile" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
           <NuxtLink to="/login">
             {{ $t('header.login') }}
           </NuxtLink>
-          /
+          |
           <NuxtLink to="/signup">
             <Button class="signup" :label="$t('header.signup')" />
           </NuxtLink>
@@ -106,14 +107,14 @@ const userMenu = computed(() => {
         </div>
       </div>
 
-      <div class="grid-cell logo">
+      <div class="grid-cell logo" :class="screenSizeClass">
         <NuxtLink to="/" class="logo-component">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
           beaconcha.in
         </NuxtLink>
       </div>
 
-      <div class="grid-cell mega-menu">
+      <div class="grid-cell mega-menu" :class="screenSizeClass">
         <BcHeaderMegaMenu ref="megaMenu" />
       </div>
     </div>
@@ -141,7 +142,7 @@ const userMenu = computed(() => {
     display: grid;
     grid-template-columns: min-content min-content auto min-content;
     grid-template-rows: var(--navbar-height) min-content;
-    @media (max-width: 1023px) {
+    &.small, &.mobile {
       grid-template-columns: min-content auto min-content;
       grid-template-rows: var(--navbar-height) min-content;
     }
@@ -171,15 +172,16 @@ const userMenu = computed(() => {
     }
 
     .blockchain-info {
-      @media (min-width: 1023.1px) {
+      &.large {
         grid-row: 1;
         grid-column: 1;
         grid-column-end: span 2;
       }
-      @media (max-width: 1023px) {
+      &.small, &.mobile {
         display: none;
       }
       white-space: nowrap;
+      margin-right: var(--padding-large);
       .network-icon {
         height: 14px;
         width: auto;
@@ -190,29 +192,32 @@ const userMenu = computed(() => {
     .search-bar {
       grid-row: 1;
       grid-column: 3;
-      @media (max-width: 1023px) {
+      &.small, &.mobile {
         @include bottom-cell(3);
         grid-column: 1;
         grid-column-end: span 3;
       }
+      &.large {
+        .bar {
+          max-width: 460px;
+        }
+      }
       .bar {
         position: relative;
+        width: 100%;
         margin-top: var(--content-margin);
         margin-bottom: var(--content-margin);
-        @media (max-width: 1023px) {
-          width: 100%;
-        }
       }
     }
 
     .controls {
       grid-row: 1;
       grid-column: 4;
-      @media (max-width: 1023px) {
+      &.small, &.mobile {
         grid-column: 3;
       }
-      .currency {
-        @media (max-width: 469px) {
+      &.mobile {
+        .currency {
           display: none;
         }
       }
@@ -237,10 +242,10 @@ const userMenu = computed(() => {
 
     .logo {
       grid-column: 1;
-      @media (min-width: 1023.1px) {
+      &.large {
         @include bottom-cell(2);
       }
-      @media (max-width: 1023px) {
+      &.small, &.mobile {
         grid-row: 1;
       }
       .logo-component {
@@ -266,12 +271,12 @@ const userMenu = computed(() => {
     }
 
     .mega-menu {
-      @media (min-width: 1023.1px) {
+      &.large {
         grid-column: 2;
         grid-column-end: span 3;
         @include bottom-cell(2);
       }
-      @media (max-width: 1023px) {
+      &.small, &.mobile {
         grid-row: 2;
         grid-column: 1;
         grid-column-end: span 3;
