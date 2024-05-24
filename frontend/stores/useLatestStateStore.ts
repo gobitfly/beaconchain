@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { InternalGetLatestStateResponse, LatestStateData } from '~/types/api/latest_state'
 import { API_PATH } from '~/types/customFetch'
 
-const latestStateStore = defineStore('latest-state-store', () => {
+const latestStateStore = defineStore('latest_state_store', () => {
   const data = ref<LatestStateData | undefined | null>()
   return { data }
 })

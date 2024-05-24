@@ -1,6 +1,7 @@
 {
   "locales": {
-    "date": "en-US"
+    "date": "en-US",
+    "currency": "en-US"
   },
   "common": {
     "age": "Age",
@@ -165,6 +166,7 @@
         "proposed": "Network proposed slot {slot}",
         "missed": "Network missed slot {slot}",
         "scheduled": "Slot {slot} is scheduled",
+        "scheduled-past": "Slot {slot} is being queried from our database",
         "orphaned": "Network orphaned slot {slot}"
       },
       "status": {
@@ -222,8 +224,8 @@
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
-    "public_validator_dashboard": "Public Validator Dashboard",
-    "public_account_dashboard": "Public Account Dashboard",
+    "public_validator_dashboard": "Dashboard",
+    "public_account_dashboard": "Dashboard",
     "notifications": "Notifications",
     "share": "Share",
     "shared": "Shared",
@@ -552,6 +554,42 @@
     "subtitle": "Monitoring without limits on web and mobile.",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "save_up_to": "SAVE UP TO {percentage}%"
+    "save_up_to": "SAVE UP TO {percentage}%",
+    "excluding_vat": "* All prices are excluding VAT",
+    "premium_product": {
+      "popular": "Popular!",
+      "per_month": "per month",
+      "yearly": "yearly",
+      "savings": "You save {amount} a year",
+      "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
+      "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
+      "validators_per_dashboard": {
+        "text": "{amount} Validators per Dashboard",
+        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance"
+      },
+      "per_validator": "{amount} per validator",
+      "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
+      "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
+      "timeframe_dashboard_chart_no_timeframe": "Dashboard chart history",
+      "timeframe_heatmap_chart_no_timeframe": "Heatmap chart history",
+      "no_ads": "No Ads",
+      "share_dashboard": "Share Dashboard",
+      "mobile_app_widget": "Mobile App Widget",
+      "manage_dashboard_via_api": "Manage Dashboard via API",
+      "coming_soon": "(coming soon)",
+      "button": {
+        "select_plan": "Select Plan",
+        "manage_plan": "Manage Plan",
+        "downgrade": "Downgrade",
+        "upgrade": "Upgrade"
+      }
+    }
+  },
+  "time_duration": {
+    "seconds": "{amount} second | {amount} seconds",
+    "minutes": "{amount} minute | {amount} minutes",
+    "hours": "{amount} hour | {amount} hours",
+    "days": "{amount} day | {amount} days",
+    "years": "{amount} year | {amount} years"
   }
 }

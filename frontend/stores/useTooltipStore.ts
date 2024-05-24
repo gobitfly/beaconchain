@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const tooltipStore = defineStore('tooltip-store', () => {
+const tooltipStore = defineStore('tooltip_store', () => {
   const data = ref<HTMLElement | null>(null)
   return { data }
 })
