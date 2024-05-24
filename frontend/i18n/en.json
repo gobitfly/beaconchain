@@ -238,6 +238,7 @@
       "edit": "Edit Settings",
       "public_dashboard_url": "Public dashboard URL",
       "only_viewing_permission": "People who access this dashboard through the link will only have viewing permissions.",
+      "share_public_disclaimer": "Sharing this link will share the validator indices from your dashboard. Any modifications made by those who open the link will not affect your dashboard.",
       "upgrade": "Upgrade to beaconcha.in premium to share custom validator groups and show updates to users instantly.",
       "setting": {
         "name": {

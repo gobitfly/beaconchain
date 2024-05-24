@@ -2,6 +2,7 @@
 import { warn } from 'vue'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
+import { isSharedKey } from '~/utils/dashboard/key'
 
 interface Props {
   dashboardKey: string;
@@ -19,9 +20,12 @@ const isUpdating = ref(false)
 
 const isReadonly = computed(() => !props.value?.dashboard)
 
+const sharedKey = computed(() => props.value?.dashboard ? props.value.dashboard.public_ids?.[0]?.public_id : props.value?.dashboardKey)
+
+const isShared = computed(() => isSharedKey(sharedKey.value))
+
 const path = computed(() => {
-  const id = props.value?.dashboard ? props.value.dashboard.public_ids?.[0]?.public_id : props.value?.dashboardKey
-  const newRoute = router.resolve({ name: 'dashboard-id', params: { id } })
+  const newRoute = router.resolve({ name: 'dashboard-id', params: { id: sharedKey.value } })
   return url.origin + newRoute.fullPath
 })
 
@@ -57,7 +61,8 @@ const unpublish = async () => {
       <qrcode-vue class="qr-code" :value="path" :size="330" />
       <label class="title">{{ $t('dashboard.share_dialog.public_dashboard_url') }}</label>
       <BcCopyLabel :value="path" class="copy_label" />
-      <label class="disclaimer">{{ $t('dashboard.share_dialog.only_viewing_permission') }}</label>
+      <label v-if="isShared" class="disclaimer">{{ $t('dashboard.share_dialog.only_viewing_permission') }}</label>
+      <label v-else class="disclaimer">{{ $t('dashboard.share_dialog.share_public_disclaimer') }}</label>
       <label v-if="!user?.premium_perks?.share_custom_dashboards" class="disclaimer">{{ $t('dashboard.share_dialog.upgrade') }}<BcPremiumGem class="gem" /></label>
       <div v-if="!isReadonly" class="footer">
         <Button :disabled="isUpdating" @click="unpublish">
