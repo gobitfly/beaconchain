@@ -13,13 +13,9 @@ export function useCurrentAds () {
   }, { immediate: true })
 
   const ads = computed<AdConfiguration[]>(() => {
-    if (user.value?.premium_perks.ad_free) {
-      return []
-    }
-
-    const configs: AdConfiguration[] = adConfigs.value[pathName.value]?.filter(c => c.enabled) ?? []
+    const configs: AdConfiguration[] = adConfigs.value[pathName.value]?.filter(c => c.enabled && (!user.value?.premium_perks.ad_free || c.for_all_users)) ?? []
     adConfigs.value.global?.forEach((config) => {
-      if (config.enabled && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
+      if (config.enabled && (!user.value?.premium_perks.ad_free || config.for_all_users) && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
         configs.push(config)
       }
     })
