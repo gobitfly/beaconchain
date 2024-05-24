@@ -8,6 +8,25 @@
         "product_name": "Dolphin",
         "product_category": "premium"
       }
-    ]
+    ],
+    "premium_perks": {
+      "ad_free": true,
+      "validator_dashboards": 1,
+      "validators_per_dashboard": 300,
+      "validator_groups_per_dashboard": 10,
+      "share_custom_dashboards": true,
+      "manage_dashboard_via_api": false,
+      "heatmap_history_seconds": 2592000,
+      "summary_chart_history_seconds": 1209600,
+      "email_notifications_per_day": 20,
+      "configure_notifications_via_api": false,
+      "validator_group_notifications": 10,
+      "webhook_endpoints": 10,
+      "mobile_app_custom_themes": true,
+      "mobile_app_widget": true,
+      "monitor_machines": 10,
+      "machine_monitoring_history_seconds": 2592000,
+      "custom_machine_alerts": true
+    }
   }
 }
