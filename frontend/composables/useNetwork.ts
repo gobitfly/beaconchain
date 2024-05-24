@@ -28,5 +28,9 @@ export function useNetwork () {
     return Math.floor(slot / slotsPerEpoch)
   }
 
-  return { epochToTs, epochsPerDay, slotsPerEpoch, slotToTs, slotToEpoch }
+  function getSlotForTimestamp (ts: number): number {
+    return Math.floor((ts - tsForSlot0) / secondsPerSlot)
+  }
+
+  return { epochToTs, epochsPerDay, slotsPerEpoch, slotToTs, slotToEpoch, getSlotForTimestamp }
 }

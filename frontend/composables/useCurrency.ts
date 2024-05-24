@@ -27,7 +27,7 @@ export function useCurrency () {
   })
 
   const available = computed<Currency[]>(() => {
-    const list: Currency[] = ['NAT', 'ETH']
+    const list: Currency[] = ['ETH']
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 

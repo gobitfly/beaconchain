@@ -7,9 +7,11 @@ import { COOKIE_KEY } from '~/types/cookie'
 
 interface Props {
   data: SlotVizEpoch[]
+  timestamp?: number
 }
 const props = defineProps<Props>()
-const { latestState } = useLatestStateStore()
+
+const { getSlotForTimestamp } = useNetwork()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 
@@ -51,7 +53,8 @@ const mostRecentScheduledSlotId = computed(() => {
 })
 
 const currentSlotId = computed(() => {
-  return Math.max(mostRecentScheduledSlotId.value ?? 0, latestState.value?.current_slot ?? 0)
+  // in case of some backend issues Inan want's us to tick in the future ... so let's tick
+  return Math.max(mostRecentScheduledSlotId.value ?? 0, getSlotForTimestamp((props.timestamp ?? 0) / 1000) - 1)
 })
 
 </script>
