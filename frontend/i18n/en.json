@@ -40,7 +40,8 @@
     "ens_address": "ENS address | ENS addresses",
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "true": "True",
-    "false": "False"
+    "false": "False",
+    "coming_soon": "Coming soon"
   },
   "clipboard": {
     "copy": "Copy to clipboard",

@@ -11,7 +11,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { getSlotForTimestamp } = useNetwork()
+const { tsToSlot } = useNetwork()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 
@@ -54,7 +54,7 @@ const mostRecentScheduledSlotId = computed(() => {
 
 const currentSlotId = computed(() => {
   // in case of some backend issues Inan want's us to tick in the future ... so let's tick
-  return Math.max(mostRecentScheduledSlotId.value ?? 0, getSlotForTimestamp((props.timestamp ?? 0) / 1000) - 1)
+  return Math.max(mostRecentScheduledSlotId.value ?? 0, tsToSlot((props.timestamp ?? 0) / 1000) - 1)
 })
 
 </script>
