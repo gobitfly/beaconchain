@@ -82,7 +82,7 @@ const userMenu = computed(() => {
       <div class="grid-cell controls" :class="screenSizeClass">
         <BcCurrencySelection v-if="!isMobile" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <NuxtLink to="/login">
+          <NuxtLink to="/login" class="login">
             {{ $t('header.login') }}
           </NuxtLink>
           |
@@ -102,9 +102,7 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <div v-if="isSmallScreen" class="burger" @click.stop.prevent="toggleMegaMenu">
-          <FontAwesomeIcon :icon="faBars" />
-        </div>
+        <FontAwesomeIcon v-if="isSmallScreen" :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
 
       <div class="grid-cell logo" :class="screenSizeClass">
@@ -122,6 +120,8 @@ const userMenu = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+
 .anchor {
   position: relative;
   display: flex;
@@ -221,11 +221,15 @@ const userMenu = computed(() => {
           display: none;
         }
       }
+      user-select: none;
       .logged-out {
         white-space: nowrap;
         display: flex;
         align-items: center;
         gap: var(--padding-small);
+        .login {
+          font-weight: var(--main_header_bold_font_weight);
+        }
         .signup {
           padding: 8px;
         }
@@ -236,6 +240,7 @@ const userMenu = computed(() => {
         color: var(--light-grey);
       }
       .burger {
+        height: 20px;
         cursor: pointer;
       }
     }
@@ -275,6 +280,7 @@ const userMenu = computed(() => {
         grid-column: 2;
         grid-column-end: span 3;
         @include bottom-cell(2);
+        justify-content: flex-end;
       }
       &.small, &.mobile {
         grid-row: 2;
