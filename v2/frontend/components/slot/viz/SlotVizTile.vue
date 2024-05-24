@@ -26,6 +26,13 @@ const data = computed(() => {
     case 'proposed':
       outer = 'proposed'
       break
+    case 'scheduled':
+      if (props.currentSlotId && props.currentSlotId > slot.slot) {
+        outer = 'scheduled-past'
+      } else if (props.currentSlotId === slot.slot) {
+        outer = 'scheduled-current'
+      }
+      break
   }
   if (slot.slot === props.currentSlotId) {
     outer += ' blinking-animation'
@@ -74,7 +81,7 @@ const data = computed(() => {
 })
 </script>
 <template>
-  <SlotVizTooltip :id="data.id" :data="props.data">
+  <SlotVizTooltip :id="data.id" :data="props.data" :current-slot-id="currentSlotId">
     <div :id="data.id" class="tile" :class="data.outer">
       <div class="inner" :class="data.inner">
         <IconPlus v-show="data.icons?.length > 2" class="plus" />
@@ -136,6 +143,16 @@ const data = computed(() => {
     left: 3px;
     width: 11px;
     height: 10px;
+  }
+}
+.scheduled-current{
+  box-shadow: 0px 0px 2px var(--text-color);
+}
+.scheduled-past{
+  opacity: 0.5;
+  background-color: rgb(100,100,100);
+  .inner {
+    background-color: rgb(100,100,100);
   }
 }
 

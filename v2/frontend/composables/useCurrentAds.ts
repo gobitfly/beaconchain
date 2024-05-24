@@ -3,6 +3,7 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 
 export function useCurrentAds () {
   const { adConfigs, refreshAdConfigs } = useAdConfigurationStore()
+  const { user } = useUserStore()
   const { path, name } = useRoute()
 
   const pathName = computed(() => name?.toString?.() || path)
@@ -11,11 +12,10 @@ export function useCurrentAds () {
     refreshAdConfigs(newName)
   }, { immediate: true })
 
-  // TODO: also validate if user is premium user and config is not for all
-  const ads = computed(() => {
-    const configs: AdConfiguration[] = adConfigs.value[pathName.value]?.filter(c => c.enabled) ?? []
+  const ads = computed<AdConfiguration[]>(() => {
+    const configs: AdConfiguration[] = adConfigs.value[pathName.value]?.filter(c => c.enabled && (!user.value?.premium_perks.ad_free || c.for_all_users)) ?? []
     adConfigs.value.global?.forEach((config) => {
-      if (config.enabled && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
+      if (config.enabled && (!user.value?.premium_perks.ad_free || config.for_all_users) && !configs.find(c => c.jquery_selector === config.jquery_selector && c.insert_mode === config.insert_mode)) {
         configs.push(config)
       }
     })

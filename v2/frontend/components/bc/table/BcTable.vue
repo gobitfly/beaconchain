@@ -13,6 +13,7 @@ interface Props {
   selectionMode?: 'multiple' | 'single'
   tableClass?: string
   addSpacer?: boolean
+  loading?: boolean
 }
 const props = defineProps<Props>()
 
@@ -103,6 +104,7 @@ const sort = computed(() => {
     :sort-order="sort?.order"
     :value="data?.data"
     :data-key="dataKey"
+    :loading="loading"
   >
     <Column v-if="selectionMode" :selection-mode="selectionMode" class="selection" />
     <Column v-if="expandable" expander class="expander">
@@ -126,7 +128,7 @@ const sort = computed(() => {
       </template>
     </Column>
     <template #empty>
-      <slot name="empty" />
+      <slot v-if="!loading" name="empty" />
     </template>
 
     <template #expansion="slotProps">
