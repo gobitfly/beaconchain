@@ -752,12 +752,6 @@ function informationIfHiddenResults () : string {
   }
   &.discreet {
     height: 34px;
-    @media (min-width: 600px) { // large screen
-      width: 460px;
-    }
-    @media (max-width: 599.9px) { // mobile
-      width: 380px;
-    }
   }
   &.gaudy {
     height: 40px;

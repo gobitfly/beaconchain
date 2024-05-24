@@ -20,6 +20,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
 <style lang="scss" scoped>
 .page {
   display: flex;
+  position: relative;
   flex-direction: column;
   align-items: center;
 }
