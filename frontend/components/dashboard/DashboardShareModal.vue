@@ -25,9 +25,13 @@ const isPremiumUser = computed(() => !!user.value?.premium_perks?.share_custom_d
 watch(props, (p) => {
   if (p) {
     // We currently only want to use one public id
-    dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
     shareGroups.value = isPremiumUser.value && !!p.dashboard.public_ids?.[0]?.share_settings.group_names
     isNew.value = !p.dashboard.public_ids?.[0]
+    if (isNew.value) {
+      dashboardName.value = props.value?.dashboard?.name ?? ''
+    } else {
+      dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
+    }
   }
 }, { immediate: true })
 
@@ -91,7 +95,7 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="isUpdating || !dashboardName" @click="share">
+      <Button :disabled="isUpdating" @click="share">
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>

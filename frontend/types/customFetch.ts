@@ -44,7 +44,7 @@ interface MockFunction {
 
 type MappingData = {
   path: string,
-  getPath?: (values?: PathValues, path?: string) => string,
+  getPath?: (values?: PathValues) => string,
   mock?: boolean,
   mockFunction?: MockFunction,
   legacy?: boolean

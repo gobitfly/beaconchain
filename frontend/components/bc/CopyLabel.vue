@@ -8,7 +8,7 @@ defineProps<Props>()
 </script>
 <template>
   <div v-if="value" class="copy-label">
-    <Input :disabled="true" :value="label || value" />
+    <input :disabled="true" :value="label || value">
     <BcCopyToClipboard :value="value" class="copy-icon" />
   </div>
 </template>

@@ -34,7 +34,7 @@ const edit = () => {
     warn('cannot edit public dashboard share')
     return
   }
-  dialogRef?.value?.close(true)
+  dialogRef?.value?.close('EDIT')
 }
 
 const unpublish = async () => {
@@ -49,7 +49,7 @@ const unpublish = async () => {
   const publicId = `${props.value?.dashboard?.public_ids?.[0]?.public_id}`
   await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { method: 'DELETE' }, { dashboardKey: `${props.value?.dashboard?.id}`, publicId })
   await refreshDashboards()
-  dialogRef?.value?.close()
+  dialogRef?.value?.close('DELETE')
   isUpdating.value = false
 }
 

@@ -13,7 +13,7 @@ import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
 const { isLoggedIn } = useUserStore()
-const { dashboardKey, isPublic, isPrivate, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
 const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
@@ -56,20 +56,34 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   return buttons
 })
 
-const shareButtonOptions = computed(() => {
-  const label = isPublic.value ? $t('dashboard.shared') : $t('dashboard.share')
-  const icon = isPublic.value ? faUsers : faShare
-  return { label, icon }
-})
-
 const shareDashboard = computed(() => {
   return dashboards.value?.validator_dashboards?.find((d) => {
     return d.id === parseInt(dashboardKey.value) || d.public_ids?.find(p => p.public_id === dashboardKey.value)
   })
 })
 
+const shareButtonOptions = computed(() => {
+  const edit = isPrivate.value && !shareDashboard.value?.public_ids?.length
+
+  const label = !edit ? $t('dashboard.shared') : $t('dashboard.share')
+  const icon = !edit ? faUsers : faShare
+  return { label, icon, edit }
+})
+
 const shareView = () => {
-  dialog.open(DashboardShareCodeModal, { data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareEdit() } })
+  const dashboardId = shareDashboard.value?.id
+  dialog.open(DashboardShareCodeModal, {
+    data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value },
+    onClose: (options?: DynamicDialogCloseOptions) => {
+      if (options?.data === 'DELETE') {
+        if (isShared.value && dashboardId) {
+          setDashboardKey(`${dashboardId}`)
+        }
+      } else if (options?.data) {
+        shareEdit()
+      }
+    }
+  })
 }
 
 const shareEdit = () => {
@@ -77,7 +91,7 @@ const shareEdit = () => {
 }
 
 const share = () => {
-  if (isPrivate.value && !shareDashboard.value?.public_ids?.length) {
+  if (shareButtonOptions.value.edit) {
     shareEdit()
   } else {
     shareView()
