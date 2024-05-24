@@ -7,7 +7,7 @@ import { type Currency } from '~/types/currencies'
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
   const { t: $t } = useI18n()
-  const { public: { showInDevelopment } } = useRuntimeConfig()
+  const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   const currency = readonly(selectedCurrency)
