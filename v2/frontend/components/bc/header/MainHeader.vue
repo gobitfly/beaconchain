@@ -76,7 +76,7 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell search-bar" :class="screenSizeClass">
-        <BcSearchbarGeneral v-if="!showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
+        <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
       </div>
 
       <div class="grid-cell controls" :class="screenSizeClass">
