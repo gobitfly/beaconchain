@@ -85,7 +85,7 @@ const userMenu = computed(() => {
             {{ $t('header.login') }}
           </NuxtLink>
           /
-          <NuxtLink to="/signup">
+          <NuxtLink to="/register">
             <Button class="signup" :label="$t('header.signup')" />
           </NuxtLink>
         </div>
