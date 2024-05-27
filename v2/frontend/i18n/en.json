@@ -608,7 +608,11 @@
         "upgrade": "Upgrade"
       }
     },
-    "view_addons": "View Add-Ons"
+    "view_addons": "View Add-Ons",
+    "addons": {
+      "title": "Premium Add-Ons",
+      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons."
+    }
   },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",

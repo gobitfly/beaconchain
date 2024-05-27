@@ -84,7 +84,14 @@ const scrollToAddons = () => {
         Compare Plans (coming soon)
       </div>
       <div id="addons" class="addons-container">
-        Addons
+        <div class="text-container">
+          <div class="title">
+            {{ t('pricing.addons.title') }}
+          </div>
+          <div class="subtitle">
+            {{ t('pricing.addons.subtitle') }}
+          </div>
+        </div>
       </div>
     </div>
   </BcPageWrapper>
@@ -252,6 +259,25 @@ const scrollToAddons = () => {
     width: 100%;
     height: 500px;
     background-color: var(--container-background);
+
+    display: flex;
+    align-items: start;
+
+    .text-container {
+      display: flex;
+      flex-direction: column;
+
+      .title {
+        font-size: 32px;
+        //font-weight: 500;
+        color: var(--primary-color);
+      }
+
+      .subtitle {
+        font-size: 35px;
+        //font-weight: 500;
+      }
+    }
   }
 
   @media (max-width: 600px) {
