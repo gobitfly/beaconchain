@@ -108,8 +108,10 @@
       width: 100%;
       right: 0;
       left: auto;
-      margin-top: var(--padding);
+      //margin-top: var(--padding);
       border-bottom: 1px solid var(--primary-color);
+      border-left: 1px solid var(--primary-color);
+      border-right: 1px solid var(--primary-color);
     }
     .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
       position: static;
