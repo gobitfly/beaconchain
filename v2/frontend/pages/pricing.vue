@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
 const { t } = useI18n()
 
 const { products, getProducts } = useProductsStore()
@@ -18,6 +21,10 @@ const savingPercentage = computed(() => {
   return Math.floor(highestSaving)
 })
 
+const scrollToAddons = () => {
+  const element = document.getElementById('addons')
+  element?.scrollIntoView({ behavior: 'smooth' })
+}
 </script>
 
 <template>
@@ -69,6 +76,15 @@ const savingPercentage = computed(() => {
         <div class="footnote">
           {{ t('pricing.excluding_vat') }}
         </div>
+      </div>
+      <Button class="view-addons-button" @click="scrollToAddons()">
+        {{ t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
+      </Button>
+      <div class="compare-plans-container">
+        Compare Plans (coming soon)
+      </div>
+      <div id="addons" class="addons-container">
+        Addons
       </div>
     </div>
   </BcPageWrapper>
@@ -204,6 +220,38 @@ const savingPercentage = computed(() => {
       display: flex;
       justify-content: flex-end;
     }
+  }
+
+  // TODO
+  .compare-plans-container {
+    margin-top: 35px;
+    width: 100%;
+    height: 500px;
+
+    background-color: var(--container-background);
+    border: 2px solid var(--container-border-color);
+    border-radius: 7px;
+    font-size: 50px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .view-addons-button {
+    margin-top: 38px;
+    width: 215px;
+    height: 45px;
+    font-size: 21px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .addons-container {
+    margin-top: 43px;
+    width: 100%;
+    height: 500px;
+    background-color: var(--container-background);
   }
 
   @media (max-width: 600px) {

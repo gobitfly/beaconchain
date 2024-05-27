@@ -607,7 +607,8 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
-    }
+    },
+    "view_addons": "View Add-Ons"
   },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",
