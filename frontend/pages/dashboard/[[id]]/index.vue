@@ -14,11 +14,18 @@ import type { CookieDashboard } from '~/types/dashboard'
 
 const { isLoggedIn } = useUserStore()
 
-const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
+const { dashboardKey, isPublic, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { t: $t } = useI18n()
+
+const seoTitle = computed(() => {
+  const title = $t('dashboard.title')
+  return isPublic?.value ? title : `${title} ${dashboardKey.value}`
+})
+
+useBcSeo(seoTitle)
 
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([

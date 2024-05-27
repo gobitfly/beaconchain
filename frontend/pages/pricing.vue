@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 const { t } = useI18n()
 
+const seoTitle = computed(() => {
+  return t('pricing.seo_title')
+})
+
+useBcSeo(seoTitle)
+
 const { products, getProducts } = useProductsStore()
 await useAsyncData('get_products', () => getProducts())
 

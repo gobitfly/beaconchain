@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import type { DashboardCreationController } from '#components'
 
-const { dashboardKey } = useDashboardKeyProvider('account')
+const { dashboardKey, isPublic } = useDashboardKeyProvider('account')
+
+const { t: $t } = useI18n()
+
+const seoTitle = computed(() => {
+  const title = $t('dashboard.title')
+  return isPublic?.value ? title : `${title} ${dashboardKey.value}`
+})
+
+useBcSeo(seoTitle)
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this
