@@ -471,7 +471,7 @@
     "current_epoch": "Current Epoch",
     "login": "Login",
     "logout": "Logout",
-    "signup": "Sign up",
+    "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
       "blockchain": "Blockchain",
