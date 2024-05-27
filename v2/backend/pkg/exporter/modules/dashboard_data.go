@@ -403,6 +403,13 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 						continue
 					}
 
+					err = storeClBlockRewards(datas[i].beaconBlockRewardData)
+					if err != nil {
+						d.log.Error(err, "failed to store cl block rewards", 0, map[string]interface{}{"epoch": datas[i].epoch})
+						time.Sleep(time.Second * 10)
+						continue
+					}
+
 					processed[i] = DataEpochProcessed{
 						Epoch: datas[i].epoch,
 						Data:  result,
@@ -1506,6 +1513,31 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 	return validatorsData, nil
 }
 
+func storeClBlockRewards(data map[uint64]*constypes.StandardBlockRewardsResponse) error {
+	tx, err := db.AlloyWriter.Beginx()
+	if err != nil {
+		return errors.Wrap(err, "failed to start cl blocks transaction")
+	}
+	defer utils.Rollback(tx)
+
+	for slot, rewards := range data {
+		_, err := tx.Exec(`
+			INSERT INTO consensus_payloads (slot, cl_attestations_reward, cl_sync_aggregate_reward, cl_slashing_inclusion_reward)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (slot) DO NOTHING
+		`, slot, rewards.Data.Attestations, rewards.Data.SyncAggregate, rewards.Data.AttesterSlashings+rewards.Data.ProposerSlashings)
+		if err != nil {
+			return errors.Wrap(err, "failed to insert cl blocks data")
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return errors.Wrap(err, "failed to commit cl blocks transaction")
+	}
+
+	return nil
+}
+
 func parseEpochRange(pattern, partition string) (uint64, uint64, error) {
 	// Compile the regular expression pattern
 	regex := regexp.MustCompile(pattern)
@@ -1624,3 +1656,79 @@ func (r *ResponseCache) GetSyncCommittee(period uint64) *constypes.StandardSyncC
 func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 	return fmt.Sprintf("%s%d", RawSyncCommitteeCacheKey, period)
 }
+
+// Can be used to backfill old missing cl block rewards
+// Commented out since this is a one time operation, kept in in case we need it again
+// func (d *dashboardData) backfillCLBlockRewards() {
+// 	upTo := 1731488
+// 	startFrom := 937
+// 	batchSize := 9
+// 	parallelization := 3
+
+// 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
+
+// 	go func() {
+// 		for i := startFrom; i < upTo+batchSize; i += batchSize {
+// 			batched := map[uint64]*constypes.StandardBlockRewardsResponse{}
+// 			mutex := &sync.Mutex{}
+
+// 			errgroup := &errgroup.Group{}
+// 			errgroup.SetLimit(parallelization)
+
+// 			for slot := i; slot < i+batchSize; slot++ {
+// 				slot := slot
+// 				errgroup.Go(func() error {
+// 					_, err := d.CL.GetBlockHeader(slot)
+// 					if err != nil {
+// 						httpErr := network.SpecificError(err)
+// 						if httpErr != nil && httpErr.StatusCode == 404 {
+// 							return nil
+// 						}
+
+// 						return err
+// 					}
+
+// 					blockReward, err := d.CL.GetPropoalRewards(slot)
+// 					if err != nil {
+// 						d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+// 						return err
+// 					}
+
+// 					mutex.Lock()
+// 					batched[uint64(slot)] = blockReward
+// 					mutex.Unlock()
+
+// 					return nil
+// 				})
+// 			}
+
+// 			err := errgroup.Wait()
+// 			if err != nil {
+// 				d.log.Error(err, "failed to backfill cl block rewards", 0)
+// 				close(blocksChan)
+// 			}
+
+// 			blocksChan <- batched
+// 		}
+// 	}()
+
+// 	go func() {
+// 		for blockReward := range blocksChan {
+// 			err := storeClBlockRewards(blockReward)
+// 			if err != nil {
+// 				d.log.Error(err, "failed to store cl block rewards", 0)
+// 			}
+
+// 			highestSlot := uint64(0)
+// 			for slot := range blockReward {
+// 				if slot > highestSlot {
+// 					highestSlot = slot
+// 				}
+// 			}
+
+// 			if highestSlot%100 < uint64(batchSize) {
+// 				d.log.Infof("processed blocks, height: %d", highestSlot)
+// 			}
+// 		}
+// 	}()
+// }
