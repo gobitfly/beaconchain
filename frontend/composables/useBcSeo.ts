@@ -1,10 +1,12 @@
 export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>) {
   const { t: $t } = useI18n()
+  const route = useRoute()
 
   const year = new Date().getFullYear()
 
-  const ogUrl = 'https://beaconcha.in/'
-  const logo = `${ogUrl}/img/logo.png`
+  const url = 'https://beaconcha.in'
+  const logo = `${url}/img/logo.png`
+  const ogUrl = () => `${url}${route.fullPath}`
   const description = () => $t('seo.description')
   const keywords = () => $t('seo.description')
   const imageAlt = () => $t('seo.image_alt')
