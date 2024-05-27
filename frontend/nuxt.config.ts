@@ -31,7 +31,12 @@ export default defineNuxtConfig({
       apiClient: '',
       legacyApiClient: '',
       apiKey: '',
-      gitVersion
+      gitVersion,
+      domain: '',
+      v1Domain: '',
+      logIp: '',
+      logFile: '',
+      showInDevelopment: ''
     },
     private: {
       apiServer: '',
@@ -59,6 +64,11 @@ export default defineNuxtConfig({
   },
   i18n: {
     vueI18n: './i18n.config.ts'
+  },
+  routeRules: {
+    '/': {
+      redirect: '/dashboard'
+    }
   },
   postcss: {
     plugins: {

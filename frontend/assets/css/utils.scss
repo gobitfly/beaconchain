@@ -122,3 +122,13 @@
 .blinking-animation {
   animation: blinking 1s alternate infinite;
 }
+
+@keyframes delayed-fadein {
+  0% { opacity: 0; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.delayed-fadein-animation {
+  animation: delayed-fadein 2s;
+}

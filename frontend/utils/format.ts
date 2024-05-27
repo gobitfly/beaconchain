@@ -1,10 +1,14 @@
 import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
+import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
 
-const { epochToTs } = useNetwork()
+const { epochToTs, slotToTs } = useNetwork()
 
-const REGEXP_HAS_NUMBERS = /^(?!0+$)\d+$/
+export const ONE_MINUTE = 60
+export const ONE_HOUR = ONE_MINUTE * 60
+export const ONE_DAY = ONE_HOUR * 24
+export const ONE_YEAR = ONE_DAY * 365
 
 export interface NumberFormatConfig {
   precision?: number
@@ -91,7 +95,19 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
   return `${left}.${dec}`
 }
 
-export function formatTs (ts: number, locales: string, includeTime?: boolean): string {
+function formatTs (ts?: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  if (ts === undefined) {
+    return undefined
+  }
+
+  if (format === 'relative') {
+    return formatTsToRelative(ts * 1000, timestamp, style, locales)
+  } else {
+    return formatTsToAbsolute(ts, locales, withTime)
+  }
+}
+
+function formatTsToAbsolute (ts: number, locales: string, includeTime?: boolean): string {
   const timeOptions: Intl.DateTimeFormatOptions = includeTime
     ? {
         hour: 'numeric',
@@ -108,30 +124,73 @@ export function formatTs (ts: number, locales: string, includeTime?: boolean): s
   return includeTime ? date.toLocaleString(locales, options) : date.toLocaleDateString(locales, options)
 }
 
-export function formatToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') {
+function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') : string | null | undefined {
   if (!targetTimestamp) {
     return undefined
   }
+
   const date = baseTimestamp ? DateTime.fromMillis(baseTimestamp) : DateTime.now()
   return DateTime.fromMillis(targetTimestamp).setLocale(locales).toRelative({ base: date, style })
 }
 
-export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
-  const ts = epochToTs(epoch)
-  if (ts === undefined) {
-    return undefined
+export function formatGoTimestamp (timestamp: string | number, compareTimestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) {
+  if (typeof timestamp === 'number') {
+    timestamp *= 1000
   }
-  if (format === 'relative') {
-    return formatToRelative(ts * 1000, timestamp, style, locales)
-  } else {
-    return formatTs(ts, locales, withTime)
-  }
+  const dateTime = new Date(timestamp).getTime()
+  return formatTs(dateTime / 1000, compareTimestamp, format, style, locales, withTime)
 }
 
-export function formatEpochToDate (epoch: number, locales: string): string | null |undefined {
+export function formatEpochToDateTime (epoch: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) : string | null | undefined {
+  return formatTs(epochToTs(epoch), timestamp, format, style, locales, withTime)
+}
+
+export function formatSlotToDateTime (slot: number, timestamp?: number, format: AgeFormat = 'relative', style: StringUnitLength = 'narrow', locales: string = 'en-US', withTime = true) : string | null | undefined {
+  return formatTs(slotToTs(slot), timestamp, format, style, locales, withTime)
+}
+
+export function formatEpochToDate (epoch: number, locales: string): string | null | undefined {
   return formatEpochToDateTime(epoch, undefined, 'absolute', undefined, locales, false)
 }
 
 export function formattedNumberToHtml (value?:string):string | undefined {
   return value?.split(',').join("<span class='comma' />")
+}
+
+export function formatTimeDuration (seconds: number | undefined, t: ComposerTranslation) : string | undefined {
+  if (seconds === undefined) {
+    return undefined
+  }
+
+  let translationId = 'time_duration.years'
+  let divider = ONE_YEAR
+
+  if (seconds < ONE_MINUTE) {
+    translationId = 'time_duration.seconds'
+    divider = 1
+  } else if (seconds < ONE_HOUR) {
+    translationId = 'time_duration.minutes'
+    divider = ONE_MINUTE
+  } else if (seconds < ONE_DAY) {
+    translationId = 'time_duration.hours'
+    divider = ONE_HOUR
+  } else if (seconds < ONE_YEAR) {
+    translationId = 'time_duration.days'
+    divider = ONE_DAY
+  }
+
+  const amount = Math.floor(seconds / divider)
+
+  return t(translationId, { amount }, amount === 1 ? 1 : 2)
+}
+
+export function formatFiat (value:number, currency: string, locales: string, minimumFractionDigits?: number, maximumFractionDigits?: number) {
+  const formatter = new Intl.NumberFormat(locales, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits,
+    maximumFractionDigits
+  })
+
+  return formatter.format(value)
 }

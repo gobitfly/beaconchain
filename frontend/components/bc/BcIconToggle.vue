@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   trueIcon?: IconDefinition,
   falseIcon?: IconDefinition,
+  disabled?: boolean
 }
 
 const props = defineProps<Props>()
@@ -12,6 +13,9 @@ const props = defineProps<Props>()
 const selected = defineModel<boolean>({ required: true })
 
 const toggle = () => {
+  if (props.disabled) {
+    return
+  }
   if (selected.value === undefined) {
     return
   }
@@ -21,7 +25,7 @@ const toggle = () => {
 </script>
 
 <template>
-  <div class="bc-toggle" :class="{ selected }" @click="toggle">
+  <div class="bc-toggle" :class="{ selected }" :disabled="disabled || null" @click="toggle">
     <div class="icon true-icon">
       <slot name="trueIcon">
         <FontAwesomeIcon v-if="props.trueIcon" :icon="props.trueIcon" />
@@ -43,6 +47,12 @@ const toggle = () => {
   width: 54px;
   height: 23px;
   cursor: pointer;
+
+  &[disabled='true']{
+    cursor: unset;
+    pointer-events: none;
+    opacity: 0.5;
+  }
 
   .bg {
     position: absolute;

@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/shopspring/decimal"
 )
 
 // everything that goes in this file is for the data access layer only
@@ -75,6 +76,20 @@ type ValidatorsCursor struct {
 	Index uint64 `json:"vi"`
 }
 
+type RewardsCursor struct {
+	GenericCursor
+
+	Epoch   uint64
+	GroupId int64
+}
+
+type ValidatorDutiesCursor struct {
+	GenericCursor
+
+	Index  uint64
+	Reward decimal.Decimal
+}
+
 type WithdrawalsCursor struct {
 	GenericCursor
 
@@ -101,4 +116,9 @@ type BlocksCursor struct {
 	Group    int64
 	Status   int64
 	Reward   int64
+}
+
+type NetworkInfo struct {
+	ChainId uint64
+	Name    string
 }

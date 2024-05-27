@@ -31,8 +31,8 @@ const columns: Row[] = [
     title: $t('footer.resources'),
     links: [
       [$t('footer.api_docs'), faLaptopCode, '/api/v2/docs/index.html', Target.Internal],
-      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
-      [$t('footer.premium'), faUserAstronaut, '/premium', Target.Internal],
+      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal], // TODO: Requires pricing page to set the toggle at the top to "API Pricing"
+      [$t('footer.premium'), faUserAstronaut, '/pricing', Target.Internal],
       [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal],
       [$t('footer.shop'), faShoppingCart, 'https://shop.beaconcha.in', Target.External],
       [$t('footer.status'), faCheckCircle, 'https://status.beaconcha.in/', Target.External]
@@ -66,10 +66,12 @@ const columns: Row[] = [
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+
 .title {
+  @include fonts.big_text_label;
+  font-weight: var(--standard_text_medium_font_weight);
   color: var(--Light-Grey);
-  font-size: 20px;
-  font-weight: bold;
   line-height: 33px;
 
   @media (min-width: 600px) {
@@ -82,8 +84,8 @@ const columns: Row[] = [
 }
 
 .link-line {
+  @include fonts.standard_text;
   line-height: 27px;
-  font-size: 16px;
 }
 
 .icon {

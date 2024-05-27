@@ -22,4 +22,10 @@
 .color4 {
   fill: #F0F0F0;
 }
+
+.pastel {
+  .color1 {
+    fill: #2A262C;
+  }
+}
 </style>

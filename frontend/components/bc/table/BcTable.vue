@@ -7,11 +7,13 @@ interface Props {
   dataKey?: string, // Unique identifier for a data row
   pageSize?: number,
   data?: ApiPagingResponse<any>,
+  selectedSort?: string,
   expandable?: boolean,
   isRowExpandable?: (item: any) => boolean,
   selectionMode?: 'multiple' | 'single'
   tableClass?: string
   addSpacer?: boolean
+  loading?: boolean
 }
 const props = defineProps<Props>()
 
@@ -24,6 +26,9 @@ const allExpanded = computed(() => {
     return false
   }
   return !!props.data?.data?.every((item) => {
+    if (props.isRowExpandable && !props.isRowExpandable(item)) {
+      return true // ignore rows that can't be expanded
+    }
     return !!expandedRows.value[item[props.dataKey!]]
   })
 })
@@ -72,6 +77,20 @@ watch(() => props.expandable, (expandable) => {
     toggleAll(true)
   }
 })
+watch(() => props.data, () => {
+  toggleAll(true)
+})
+
+const sort = computed(() => {
+  if (!props.selectedSort?.includes(':')) {
+    return
+  }
+  const split = props.selectedSort?.split(':')
+  return {
+    field: split[0],
+    order: split[1] === 'asc' ? -1 : 1
+  }
+})
 
 </script>
 
@@ -81,8 +100,11 @@ watch(() => props.expandable, (expandable) => {
     class="bc-table"
     sort-mode="single"
     lazy
+    :sort-field="sort?.field"
+    :sort-order="sort?.order"
     :value="data?.data"
     :data-key="dataKey"
+    :loading="loading"
   >
     <Column v-if="selectionMode" :selection-mode="selectionMode" class="selection" />
     <Column v-if="expandable" expander class="expander">
@@ -105,6 +127,9 @@ watch(() => props.expandable, (expandable) => {
         <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
+    <template #empty>
+      <slot v-if="!loading" name="empty" />
+    </template>
 
     <template #expansion="slotProps">
       <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />
@@ -121,7 +146,14 @@ watch(() => props.expandable, (expandable) => {
         :cursor="cursor"
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
-      />
+      >
+        <template #bc-table-footer-left>
+          <slot name="bc-table-footer-left" />
+        </template>
+        <template v-if="$slots['bc-table-footer-right']" #bc-table-footer-right>
+          <slot name="bc-table-footer-right" />
+        </template>
+      </BcTablePager>
     </template>
   </DataTable>
 </template>
@@ -134,6 +166,15 @@ watch(() => props.expandable, (expandable) => {
 
   :deep(.selection) {
     width: 20px;
+  }
+
+  :deep(.p-datatable-emptymessage) {
+    height: 140px;
+    background: transparent;
+
+    >td {
+      border: none;
+    }
   }
 }
 

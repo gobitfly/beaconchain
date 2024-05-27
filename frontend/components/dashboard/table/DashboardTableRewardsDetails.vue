@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardValidatorEpochDutiesModal, IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
+import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 interface Props {
   row: VDBRewardsTableRow
@@ -169,6 +170,7 @@ const openDuties = () => {
                 v-else-if="!item.hasNoReward"
                 :success="item.value?.status_count?.success!"
                 :failed="item.value?.status_count?.failed!"
+                :hide-percentage="true"
               />
               <div v-else class="text-disabled">
                 0 / 0
@@ -182,7 +184,7 @@ const openDuties = () => {
               :value="item.value.income"
               :use-colors="item.value.income !== '0'"
               :class="item.className"
-              :options="{ addPlus: true, fixedDecimalCount: 5 }"
+              :options="formatRewardValueOption"
             />
           </div>
         </div>
@@ -191,7 +193,7 @@ const openDuties = () => {
             <div class="label">
               {{ item.label }}
             </div>
-            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="{ addPlus: true, fixedDecimalCount: 5 }" />
+            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="formatRewardValueOption" />
           </div>
         </div>
       </div>
@@ -213,6 +215,7 @@ const openDuties = () => {
 }
 
 .details-container {
+  font-size: var(--small_text_font_size);
   padding: 14px 28px;
 
   .small-screen-value {
@@ -244,17 +247,16 @@ const openDuties = () => {
   }
 
   .rewards-container {
-
     display: flex;
     flex-wrap: wrap;
     gap: var(--padding-xl);
+    font-size: var(--small_text_font_size);
 
     .rewards-group {
       display: flex;
       width: 360px;
 
       .col {
-
         >div,
         >span {
           height: 32px;
@@ -263,7 +265,7 @@ const openDuties = () => {
 
           &:last-child {
             border-top: solid 1px var(--container-border-color);
-            font-weight: var(--standard_text_medium_font_weight);
+            font-weight: var(--small_text_bold_font_weight);
           }
         }
 
@@ -305,7 +307,7 @@ const openDuties = () => {
 
         &:last-child {
           border-top: solid 1px var(--container-border-color);
-          font-weight: var(--standard_text_medium_font_weight);
+          font-weight: var(--small_text_bold_font_weight);
         }
       }
     }
@@ -313,7 +315,6 @@ const openDuties = () => {
 }
 
 @media screen and (max-width: 1180px) {
-
   .details-container {
     .small-screen-value {
       display: flex;
@@ -322,7 +323,6 @@ const openDuties = () => {
 }
 
 @media screen and (max-width: 900px) {
-
   .details-container {
     width: 400px;
     padding: var(--padding) var(--padding-large);

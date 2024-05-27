@@ -46,6 +46,10 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
   initialCheck()
 
   const isPublic = computed(() => {
+    if (!dashboardKey.value) {
+      return true
+    }
+
     const id = parseInt(dashboardKey.value)
     return !!dashboardKey.value && isNaN(id)
   })
@@ -73,6 +77,12 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
   }
 
   const api = { dashboardKey, isPublic, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
+
+  watch(isLoggedIn, (newValue, oldValue) => {
+    if (oldValue && !newValue && dashboardKeyCookie.value && !isNaN(parseInt(dashboardKeyCookie.value))) {
+      setDashboardKey('')
+    }
+  })
 
   provide<DashboardKeyData>('dashboard-key', api)
   return api
