@@ -1,4 +1,4 @@
-export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>) {
+export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>, removeDynamicUrlValue = false) {
   const { t: $t } = useI18n()
   const route = useRoute()
 
@@ -6,9 +6,14 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
 
   const url = 'https://beaconcha.in'
   const logo = `${url}/img/logo.png`
-  const ogUrl = () => `${url}${route.fullPath}`
+  const ogUrl = () => {
+    const value = removeDynamicUrlValue && Object.values(route.params).find(v => !!v && typeof v === 'string' && route.fullPath.endsWith(v))
+    const path = value ? route.fullPath.substring(0, route.fullPath.lastIndexOf(value as string) - 1) : route.fullPath
+    return `${url}${path}`
+  }
+  // Maybe we want to have page specific description and keywords in the future, but for now we keep it simple
   const description = () => $t('seo.description')
-  const keywords = () => $t('seo.description')
+  const keywords = () => $t('seo.keywords')
   const imageAlt = () => $t('seo.image_alt')
 
   const dynamicTitle = () => {
