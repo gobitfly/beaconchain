@@ -863,13 +863,13 @@ type DayBounds struct {
 
 func GetLastExportedTotalEpoch() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s", RollingTotalWriterTableName))
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedHour() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s", HourWriterTableName))
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
 	return &epoch, err
 }
 

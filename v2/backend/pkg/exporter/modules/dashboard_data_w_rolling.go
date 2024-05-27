@@ -351,6 +351,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 	// Use NULLIF(x,0) to save storage space
 	tmpl := `
+		-- Agg Add, From: {{ .TableFrom }}, To: {{ .TableTo }}
 		WITH
 			{{ .Agg.HEAD_BALANCE_QUERY }}
 			{{ .TailBalancesQuery }} -- balance start query
