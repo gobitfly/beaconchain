@@ -92,6 +92,11 @@ const scrollToAddons = () => {
             {{ t('pricing.addons.subtitle') }}
           </div>
         </div>
+        <div class="addons-row">
+          <template v-for="addon in products?.extra_dashboard_validators_premium_addons" :key="addon.product_id">
+            <PricingPremiumAddonBox :addon="addon" :is-yearly="isYearly" />
+          </template>
+        </div>
       </div>
     </div>
   </BcPageWrapper>
@@ -258,10 +263,9 @@ const scrollToAddons = () => {
     margin-top: 43px;
     width: 100%;
     height: 500px;
-    background-color: var(--container-background);
-
     display: flex;
-    align-items: start;
+    align-items: flex-start;
+    gap: 70px;
 
     .text-container {
       display: flex;
@@ -277,6 +281,11 @@ const scrollToAddons = () => {
         font-size: 35px;
         //font-weight: 500;
       }
+    }
+
+    .addons-row {
+      display: flex;
+      gap: 7px;
     }
   }
 
