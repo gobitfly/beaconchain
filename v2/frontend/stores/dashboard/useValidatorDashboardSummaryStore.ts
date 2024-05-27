@@ -15,6 +15,7 @@ export function useValidatorDashboardSummaryStore () {
   const { fetch } = useCustomFetch()
 
   const { data, query: storedQuery } = storeToRefs(validatorDashboardSummaryStore())
+  const isLoading = ref(false)
 
   const summary = computed(() => data.value)
   const query = computed(() => storedQuery.value)
@@ -24,10 +25,11 @@ export function useValidatorDashboardSummaryStore () {
       data.value = undefined
       return undefined
     }
+    isLoading.value = true
     storedQuery.value = query
 
     const res = await fetch<InternalGetValidatorDashboardSummaryResponse>(API_PATH.DASHBOARD_SUMMARY, undefined, { dashboardKey }, query)
-
+    isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
@@ -35,5 +37,5 @@ export function useValidatorDashboardSummaryStore () {
     return res
   }
 
-  return { summary, query, getSummary }
+  return { summary, query, isLoading, getSummary }
 }

@@ -3,7 +3,7 @@ import type { VDBGroupRewardsData, InternalGetValidatorDashboardGroupRewardsResp
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardRewardsDetailsStore = defineStore('validator_dashboard_rewards_details', () => {
+const validatorDashboardRewardsDetailsStore = defineStore('validator_dashboard_rewards_details_store', () => {
   const data = ref < Record<string, VDBGroupRewardsData >>({})
   return { data }
 })

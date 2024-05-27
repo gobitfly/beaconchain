@@ -66,7 +66,7 @@ func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.Stand
 		return err
 	}
 
-	log.Debugf("updating execution payloads cached view took %v", time.Since(start))
+	log.Infof("updating execution payloads cached view took %v", time.Since(start))
 	return nil
 }
 
@@ -139,22 +139,22 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	}
 	resData := make([]Result, 0, maxBlock-minBlock+1)
 
-	ctx, finish := context.WithCancel(context.Background())
-	defer finish()
+	ctx, abortProcessing := context.WithCancel(context.Background())
+	defer abortProcessing() // to kill the errgroup if something goes wrong
 	group, _ := errgroup.WithContext(ctx)
 
 	// coroutine to process the blocks
 	group.Go(func() error {
 		var block *types.Eth1BlockIndexed
-		for i := minBlock; i <= maxBlock; i++ {
+		for {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case b, ok := <-blockChan:
-				block = b
 				if !ok {
 					return nil
 				}
+				block = b
 			}
 			// read txn reward
 			raw := block.GetTxReward()
@@ -175,16 +175,16 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 			}
 			resData = append(resData, Result{BlockHash: hash, FeeRecipientReward: dec})
 		}
-		return nil
 	})
 
 	err = db.BigtableClient.StreamBlocksIndexedDescending(blockChan, maxBlock, minBlock)
 
 	if err != nil {
-		finish()
+		abortProcessing()
 		return fmt.Errorf("error streaming blocks: %w", err)
 	}
 
+	close(blockChan) // possible deadlock if not closed
 	err = group.Wait()
 
 	if err != nil {

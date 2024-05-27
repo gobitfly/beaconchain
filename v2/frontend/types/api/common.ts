@@ -66,7 +66,7 @@ export interface ValidatorHistoryEvent {
   income: string /* decimal.Decimal */;
 }
 export interface ValidatorHistoryProposal {
-  status: 'success' | 'partial' | 'failed' | 'orphaned';
+  status: 'success' | 'partial' | 'failed';
   el_income: string /* decimal.Decimal */;
   cl_attestation_inclusion_income: string /* decimal.Decimal */;
   cl_sync_inclusion_income: string /* decimal.Decimal */;

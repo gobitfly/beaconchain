@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 interface Props {
-  variant?: 'default' | 'table'
+  variant?: 'default' | 'table' | 'header'
 }
 
 defineProps<Props>()

@@ -10,10 +10,11 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
+const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -78,6 +79,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
@@ -92,6 +94,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :row-class="getRowClass"
             :add-spacer="true"
             :selected-sort="tempQuery?.sort"
+            :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -163,6 +166,9 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <template #expansion="slotProps">
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
@@ -177,8 +183,13 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.summary_table) {
   --col-width: 216px;
+
+  >.p-datatable-wrapper {
+    min-height: 529px;
+  }
 
   .group-id {
     @include utils.truncate-text;

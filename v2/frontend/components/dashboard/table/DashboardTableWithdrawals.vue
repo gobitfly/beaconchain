@@ -13,10 +13,11 @@ type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: stri
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
+const { slotToEpoch } = useNetwork()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
@@ -116,7 +117,7 @@ const isRowExpandable = (row: ExtendedVDBWithdrawalsTableRow) => {
 
 const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   if (latestState?.value) {
-    return row.epoch > latestState.value.currentEpoch
+    return row.epoch > slotToEpoch(latestState.value.current_slot)
   }
 
   return false
@@ -334,6 +335,9 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
               </div>
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
@@ -346,6 +350,9 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
+  >.p-datatable-wrapper {
+    min-height: 577px;
+  }
   .index .all-time-total {
     @include fonts.standard_text;
     font-weight: var(--standard_text_medium_font_weight);
