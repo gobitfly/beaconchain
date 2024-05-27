@@ -121,6 +121,7 @@ defineProps<Props>()
 
     .quantity-container {
       display: flex;
+      align-items: center;
       gap: 9px;
       font-size: 20px;
       margin-bottom: 32px;
