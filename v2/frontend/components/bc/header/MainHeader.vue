@@ -140,15 +140,13 @@ const userMenu = computed(() => {
   .rows {
     position: relative;
     display: grid;
-    grid-template-columns: min-content min-content auto min-content;
+    grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
     grid-template-rows: var(--navbar-height) min-content;
     &.small, &.mobile {
-      grid-template-columns: min-content auto min-content;
+      grid-template-columns: 0px min-content auto min-content 0px;
       grid-template-rows: var(--navbar-height) min-content;
     }
     width: var(--content-width);
-    margin-left: var(--content-margin);
-    margin-right: var(--content-margin);
     color: var(--light-grey);
     @mixin bottom-cell($row) {
       color: var(--container-color);
@@ -176,7 +174,7 @@ const userMenu = computed(() => {
     .blockchain-info {
       &.large {
         grid-row: 1;
-        grid-column: 1;
+        grid-column: 2;
         grid-column-end: span 2;
       }
       &.small, &.mobile {
@@ -192,10 +190,10 @@ const userMenu = computed(() => {
 
     .search-bar {
       grid-row: 1;
-      grid-column: 3;
+      grid-column: 4;
       &.small, &.mobile {
         @include bottom-cell(3);
-        grid-column: 1;
+        grid-column: 2;
         grid-column-end: span 3;
       }
       &.large {
@@ -213,9 +211,9 @@ const userMenu = computed(() => {
 
     .controls {
       grid-row: 1;
-      grid-column: 4;
+      grid-column: 5;
       &.small, &.mobile {
-        grid-column: 3;
+        grid-column: 4;
       }
       &.mobile {
         .currency {
@@ -250,7 +248,7 @@ const userMenu = computed(() => {
     }
 
     .logo {
-      grid-column: 1;
+      grid-column: 2;
       &.large {
         @include bottom-cell(2);
       }
@@ -281,7 +279,7 @@ const userMenu = computed(() => {
 
     .mega-menu {
       &.large {
-        grid-column: 2;
+        grid-column: 3;
         grid-column-end: span 3;
         @include bottom-cell(2);
         justify-content: flex-end;
@@ -289,7 +287,7 @@ const userMenu = computed(() => {
       &.small, &.mobile {
         grid-row: 2;
         grid-column: 1;
-        grid-column-end: span 3;
+        grid-column-end: span 5;
       }
     }
   }
