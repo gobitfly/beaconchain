@@ -53,6 +53,7 @@
     "luxon": "^3.4.4",
     "pinia": "^2.1.7",
     "primevue": "^3.46.0",
+    "qrcode.vue": "^3.4.1",
     "vee-validate": "^4.12.4",
     "vue-echarts": "^6.6.9"
   },

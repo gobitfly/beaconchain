@@ -18,6 +18,7 @@ export type DashboardKeyData = {
   dashboardType:globalThis.Ref<DashboardType>,
   dashboardKey:globalThis.Ref<string>,
   isPublic:globalThis.Ref<boolean>,
+  isShared:globalThis.Ref<boolean>,
   publicEntities:globalThis.Ref<string[]>,
   addEntities:(list:string[]) =>void,
   removeEntities:(list:string[]) =>void,
