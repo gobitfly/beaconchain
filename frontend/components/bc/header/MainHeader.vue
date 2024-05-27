@@ -86,7 +86,7 @@ const userMenu = computed(() => {
           </NuxtLink>
           /
           <NuxtLink to="/register">
-            <Button class="signup" :label="$t('header.signup')" />
+            <Button class="register" :label="$t('header.register')" />
           </NuxtLink>
         </div>
         <div v-else-if="!isSmallScreen">
@@ -233,7 +233,7 @@ const userMenu = computed(() => {
         align-items: center;
         gap: var(--padding-small);
 
-        .signup {
+        .register {
           padding: 8px;
         }
       }
