@@ -291,6 +291,7 @@ onUnmounted(() => {
     }
   }
 
+  :deep(.bold),
   :deep(b) {
     font-weight: bold;
     font-weight: var(--tooltip_text_bold_font_weight);
