@@ -28,7 +28,7 @@ const data = computed(() => {
       next_cursor: props.paging.next_cursor
     }
   }
-  const page = 1 + Math.floor(currentOffset.value / props.pageSize)
+  const page = props.paging.total_count > 0 ? 1 + Math.floor(currentOffset.value / props.pageSize) : 0
   const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
   const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
@@ -73,8 +73,8 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
 </script>
 <template>
   <div class="bc-pageinator">
-    <template v-if="data.mode === 'offset'">
-      <div class="pager">
+    <div class="pager">
+      <template v-if="data.mode === 'offset'">
         <div class="item button" :disabled="!currentOffset" @click="first">
           {{ $t('table.first') }}
         </div>
@@ -90,33 +90,41 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         <div class="item button" :disabled="data.page! >= data.lastPage!" @click="last">
           {{ $t('table.last') }}
         </div>
-        <Dropdown
-          :model-value="props.pageSize"
-          :options="pageSizes"
-          class="table small"
-          @change="(event) => setPageSize(event.value)"
-        />
-      </div>
-      <div class="left-info">
-        {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
-      </div>
-    </template>
-    <div v-else-if="data.mode === 'cursor'" class="pager">
-      <div class="item button" :disabled="!data.prev_cursor" @click="first">
-        {{ $t('table.first') }}
-      </div>
-      <div class="item button" :disabled="!data.prev_cursor" @click="emit('setCursor', data.prev_cursor)">
-        <IconChevron class="toggle" direction="left" />
-      </div>
-      <div class="item button" :disabled="data.next_cursor" @click="emit('setCursor', data.next_cursor)">
-        <IconChevron class="toggle" direction="right" />
-      </div>
+      </template>
+      <template v-else-if="data.mode === 'cursor'">
+        <div
+          class="
+          item
+          button"
+          :disabled="!data.prev_cursor"
+          @click="first"
+        >
+          {{ $t('table.first') }}
+        </div>
+        <div class="item button" :disabled="!data.prev_cursor" @click="emit('setCursor', data.prev_cursor)">
+          <IconChevron class="toggle" direction="left" />
+        </div>
+        <div class="item button" :disabled="!data.next_cursor" @click="emit('setCursor', data.next_cursor)">
+          <IconChevron class="toggle" direction="right" />
+        </div>
+      </template>
       <Dropdown
+        v-if="props.pageSize"
         :model-value="props.pageSize"
         :options="pageSizes"
         class="table small"
         @change="(event) => setPageSize(event.value)"
       />
+    </div>
+    <div class="left-info">
+      <slot name="bc-table-footer-left">
+        <span v-if="props.paging?.total_count">
+          {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
+        </span>
+      </slot>
+    </div>
+    <div v-if="$slots['bc-table-footer-right']" class="right-info">
+      <slot name="bc-table-footer-right" />
     </div>
   </div>
 </template>
@@ -126,17 +134,25 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
 
 .bc-pageinator {
   position: relative;
-  width: 100%;
   height: 78px;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: var(--standard_text_medium_font_weight);
-  padding: var(--padding);
+  margin: var(--padding) var(--padding-large);
 
   .left-info {
     position: absolute;
     left: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .right-info {
+    position: absolute;
+    right: 0;
     top: 0;
     height: 100%;
     display: flex;
@@ -152,6 +168,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       @include main.container;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
+      height: 30px;
 
       &.p-overlay-open {
         border-bottom-right-radius: 0;
@@ -206,10 +223,13 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   @media screen and (max-width: 1399px) {
     flex-direction: column;
     gap: var(--padding);
+    height: unset;
 
+    .right-info,
     .left-info {
       position: relative;
       height: unset;
+      padding-left: unset;
     }
   }
 }

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { DashboardGroupSelectionDialog, DashboardValidatorEpochDutiesModal } from '#components'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 
@@ -20,7 +19,7 @@ const openGroupSelection = (withPreselection: boolean) => {
   dialog.open(DashboardGroupSelectionDialog, {
     onClose: response => onClose(response?.data),
     data: {
-      groupId: withPreselection ? overview.value?.groups?.[0]?.id : undefined,
+      groupId: withPreselection ? groups.value?.[0]?.id : undefined,
       selectedValidators: withPreselection ? 1 : 10,
       totalValidators: 123
     }
@@ -44,9 +43,6 @@ const openEpochDuties = () => {
   <div class="icon-holder">
     <div class="premium-row">
       Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" />
-    </div>
-    <div class="premium-row">
-      This one has custom texts<BcPremiumGem style="margin-left: 10px;" description="This is a totally random reason why you should get a premium account" dismiss-label="Please don't dismiss me" />
     </div>
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
     <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" :include-all="true" />

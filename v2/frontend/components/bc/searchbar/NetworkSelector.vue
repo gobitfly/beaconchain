@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
 import { SearchbarStyle, type NetworkFilter } from '~/types/searchbar'
 import { ChainInfo, ChainIDs } from '~/types/networks'
 
@@ -102,7 +104,7 @@ function oneOptionChanged (index : number) {
         <span class="label">
           {{ t('search_bar.network_filter_label') + ' ' + headState.network }}
         </span>
-        ▾
+        <fontAwesomeIcon class="arrow" :icon="faCaretDown" />
       </div>
     </BcSearchbarFilterButton>
     <div
@@ -117,7 +119,13 @@ function oneOptionChanged (index : number) {
         <label :for="String(line.chainId)" class="label">
           {{ line.label }}
         </label>
-        <IconNetwork :chain-id="line.chainId" :colored="true" :harmonize-perceived-size="true" class="icon" />
+        <IconNetwork
+          :chain-id="line.chainId"
+          :colored="true"
+          :harmonize-perceived-size="true"
+          :do-not-adapt-to-color-theme="barStyle==='discreet'"
+          class="icon"
+        />
       </div>
     </div>
   </div>
@@ -136,10 +144,15 @@ function oneOptionChanged (index : number) {
     .content {
       position: relative;
       display: inline-flex;
-      width: 85px;
+      width: 98px;
       .label {
         display: inline-flex;
         flex-grow: 1;
+      }
+      .arrow {
+        position: relative;
+        margin-top: auto;
+        margin-bottom: auto;
       }
     }
   }
@@ -151,7 +164,10 @@ function oneOptionChanged (index : number) {
     z-index: 1024;
     border-radius: var(--padding);
     left: 0px;
-    top: 21px;
+    top: 24px;
+    @media (pointer: coarse) {
+      top: 32px;
+    }
     padding: var(--padding);
     @include fonts.small_text_bold;
 
@@ -171,8 +187,10 @@ function oneOptionChanged (index : number) {
       position:relative;
       display: flex;
       width: 100%;
-      margin-bottom: 2px;
       white-space: nowrap;
+      &:nth-child(n+1) {
+        margin-top: var(--padding-small);
+      }
 
       .p-checkbox {
         :deep(.p-checkbox-box:not(:hover):not(.p-highlight)) {
@@ -185,10 +203,10 @@ function oneOptionChanged (index : number) {
         display: inline-flex;
         flex-grow: 1;
         margin-left: 5px;
-        margin-top: auto;
-        margin-bottom: auto;
         cursor: pointer;
         user-select: none;
+        margin-top: auto;
+        margin-bottom: auto;
       }
 
       .icon {

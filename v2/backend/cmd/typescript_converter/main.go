@@ -20,7 +20,7 @@ const (
 )
 
 // Files that should not be converted to TypeScript
-var ignoredFiles = []string{"data_access.go"}
+var ignoredFiles = []string{"data_access", "search_types"}
 
 var typeMappings = map[string]string{
 	"decimal.Decimal": "string /* decimal.Decimal */",
@@ -66,7 +66,10 @@ func main() {
 	tygos := []*tygo.Tygo{tygo.New(getTygoConfig(out, commonFileName, ""))}
 	// Generate Tygo for each file
 	for file, typesUsed := range usage {
-		importStr := "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
+		importStr := ""
+		if len(typesUsed) > 0 {
+			importStr = "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
+		}
 		tygos = append(tygos, tygo.New(getTygoConfig(out, file, importStr)))
 	}
 
@@ -126,6 +129,9 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 			if filepath.Base(filename) == commonFileName || slices.Contains(ignoredFiles, filename) {
 				continue
 			}
+			if _, exists := usage[filename]; !exists {
+				usage[filename] = make([]string, 0)
+			}
 			ast.Inspect(file, func(n ast.Node) bool {
 				ident, ok := n.(*ast.Ident)
 				if !ok {
@@ -133,9 +139,6 @@ func getCommonUsages(pkgs []*packages.Package, commonTypes map[string]bool) map[
 				}
 				if !commonTypes[ident.Name] {
 					return true
-				}
-				if _, exists := usage[filename]; !exists {
-					usage[filename] = make([]string, 0)
 				}
 				if !slices.Contains(usage[filename], ident.Name) {
 					usage[filename] = append(usage[filename], ident.Name)

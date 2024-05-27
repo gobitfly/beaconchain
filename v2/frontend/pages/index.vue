@@ -1,8 +1,12 @@
+<script setup lang="ts">
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+</script>
+
 <template>
   <BcPageWrapper :is-home-page="true">
     <h1>Index page</h1>
     <div class="searchbar">
-      <BcSearchbarGeneral bar-style="gaudy" />
+      <BcSearchbarGeneral v-if="showInDevelopment" bar-style="gaudy" />
     </div>
     <br><br><br>
   </BcPageWrapper>

@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -77,16 +75,16 @@ type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uin
 // ------------------------------------------------------------
 // Rewards Tab
 type VDBRewardesTableDuty struct {
-	Attestation *float64 `json:"attestation"`
-	Proposal    *float64 `json:"proposal"`
-	Sync        *float64 `json:"sync"`
-	Slashing    *uint64  `json:"slashing"`
+	Attestation *float64 `json:"attestation,omitempty"`
+	Proposal    *float64 `json:"proposal,omitempty"`
+	Sync        *float64 `json:"sync,omitempty"`
+	Slashing    *uint64  `json:"slashing,omitempty"`
 }
 
 type VDBRewardsTableRow struct {
 	Epoch   uint64                     `json:"epoch"`
 	Duty    VDBRewardesTableDuty       `json:"duty"`
-	GroupId uint64                     `json:"group_id"`
+	GroupId int64                      `json:"group_id"`
 	Reward  ClElValue[decimal.Decimal] `json:"reward"`
 }
 
@@ -139,38 +137,33 @@ type InternalGetValidatorDashboardBlocksResponse ApiPagingResponse[VDBBlocksTabl
 
 // ------------------------------------------------------------
 // Heatmap Tab
-type VDBHeatmapCell struct {
-	X uint64 `json:"x"` // Epoch
-	Y uint64 `json:"y"` // Group ID
 
-	Value float64 `json:"value"` // Attestaton Rewards
-}
-type VDBHeatmapEvent struct {
-	X uint64 `json:"x"` // Epoch
-	Y uint64 `json:"y"` // Group ID
-
+type VDBHeatmapEvents struct {
 	Proposal bool `json:"proposal"`
 	Slash    bool `json:"slash"`
 	Sync     bool `json:"sync"`
 }
+type VDBHeatmapCell struct {
+	X int64  `json:"x"` // Timestamp
+	Y uint64 `json:"y"` // Group ID
+
+	Value  float64           `json:"value"` // Attestaton Rewards
+	Events *VDBHeatmapEvents `json:"events,omitempty"`
+}
 type VDBHeatmap struct {
-	Epochs   []uint64          `json:"epochs"`    // X-Axis Categories
-	GroupIds []uint64          `json:"group_ids"` // Y-Axis Categories
-	Data     []VDBHeatmapCell  `json:"data"`
-	Events   []VDBHeatmapEvent `json:"events"`
+	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
+	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
+	Data        []VDBHeatmapCell `json:"data"`
+	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'day'" faker:"oneof: epoch, day"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
-type VDBHeatmapTooltipDuty struct {
-	Validator uint64 `json:"validator"`
-	Status    string `json:"status" tstype:"'success' | 'failed' | 'orphaned'"`
-}
 type VDBHeatmapTooltipData struct {
-	Epoch uint64 `json:"epoch"`
+	Timestamp int64 `json:"timestamp"` // epoch or day
 
-	Proposers []VDBHeatmapTooltipDuty `json:"proposers"`
-	Syncs     []uint64                `json:"syncs"`
-	Slashings []VDBHeatmapTooltipDuty `json:"slashings"`
+	Proposers StatusCount `json:"proposers"`
+	Syncs     uint64      `json:"syncs"`
+	Slashings StatusCount `json:"slashings"`
 
 	AttestationsHead      StatusCount     `json:"attestations_head"`
 	AttestationsSource    StatusCount     `json:"attestations_source"`
@@ -183,17 +176,17 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // ------------------------------------------------------------
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
-	PublicKey             PubKey          `json:"public_key"`
-	Index                 *uint64         `json:"index,omitempty"`
-	GroupId               uint64          `json:"group_id"`
-	Block                 uint64          `json:"block"`
-	Timestamp             time.Time       `json:"timestamp"`
-	From                  Address         `json:"from"`
-	Depositor             Address         `json:"depositor"`
-	TxHash                Hash            `json:"tx_hash"`
-	WithdrawalCredentials Hash            `json:"withdrawal_credentials"`
-	Amount                decimal.Decimal `json:"amount"`
-	Valid                 bool            `json:"valid"`
+	PublicKey            PubKey          `json:"public_key"`
+	Index                *uint64         `json:"index,omitempty"`
+	GroupId              uint64          `json:"group_id"`
+	Block                uint64          `json:"block"`
+	Timestamp            int64           `json:"timestamp"`
+	From                 Address         `json:"from"`
+	Depositor            Address         `json:"depositor"`
+	TxHash               Hash            `json:"tx_hash"`
+	WithdrawalCredential Hash            `json:"withdrawal_credential"`
+	Amount               decimal.Decimal `json:"amount"`
+	Valid                bool            `json:"valid"`
 }
 type InternalGetValidatorDashboardExecutionLayerDepositsResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
@@ -224,12 +217,13 @@ type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse
 // ------------------------------------------------------------
 // Withdrawals Tab
 type VDBWithdrawalsTableRow struct {
-	Epoch     uint64          `json:"epoch"`
-	Slot      uint64          `json:"slot"`
-	Index     uint64          `json:"index"`
-	GroupId   uint64          `json:"group_id"`
-	Recipient Address         `json:"recipient"`
-	Amount    decimal.Decimal `json:"amount"`
+	Epoch             uint64          `json:"epoch"`
+	Slot              uint64          `json:"slot"`
+	Index             uint64          `json:"index"`
+	GroupId           uint64          `json:"group_id"`
+	Recipient         Address         `json:"recipient"`
+	Amount            decimal.Decimal `json:"amount"`
+	IsMissingEstimate bool            `json:"is_missing_estimate"`
 }
 type InternalGetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
 
@@ -256,11 +250,11 @@ type InternalGetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManage
 // ------------------------------------------------------------
 // Misc.
 type VDBPostReturnData struct {
-	Id        uint64    `db:"id" json:"id"`
-	UserID    uint64    `db:"user_id" json:"user_id"`
-	Name      string    `db:"name" json:"name"`
-	Network   uint64    `db:"network" json:"network"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Id        uint64 `db:"id" json:"id"`
+	UserID    uint64 `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	Network   uint64 `db:"network" json:"network"`
+	CreatedAt int64  `db:"created_at" json:"created_at"`
 }
 
 type VDBPostCreateGroupData struct {
@@ -271,12 +265,4 @@ type VDBPostCreateGroupData struct {
 type VDBPostValidatorsData struct {
 	PublicKey string `json:"public_key"`
 	GroupId   uint64 `json:"group_id"`
-}
-
-type VDBPostPublicIdData struct {
-	PublicId      string `json:"public_id"`
-	Name          string `json:"name"`
-	ShareSettings struct {
-		GroupNames bool `json:"group_names"`
-	} `json:"share_settings"`
 }

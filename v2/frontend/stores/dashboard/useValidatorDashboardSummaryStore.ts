@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { InternalGetValidatorDashboardSummaryResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
+import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardSummaryStore = defineStore('validator_dashboard_sumary_store', () => {
   const data = ref < InternalGetValidatorDashboardSummaryResponse>()
@@ -14,18 +15,21 @@ export function useValidatorDashboardSummaryStore () {
   const { fetch } = useCustomFetch()
 
   const { data, query: storedQuery } = storeToRefs(validatorDashboardSummaryStore())
+  const isLoading = ref(false)
 
   const summary = computed(() => data.value)
   const query = computed(() => storedQuery.value)
 
   async function getSummary (dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
-      return
+      data.value = undefined
+      return undefined
     }
+    isLoading.value = true
     storedQuery.value = query
 
     const res = await fetch<InternalGetValidatorDashboardSummaryResponse>(API_PATH.DASHBOARD_SUMMARY, undefined, { dashboardKey }, query)
-
+    isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
@@ -33,5 +37,5 @@ export function useValidatorDashboardSummaryStore () {
     return res
   }
 
-  return { summary, query, getSummary }
+  return { summary, query, isLoading, getSummary }
 }

@@ -3,8 +3,9 @@ import type { InternalGetValidatorDashboardRewardsResponse } from '~/types/api/v
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
+import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards', () => {
+const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards_store', () => {
   const data = ref < InternalGetValidatorDashboardRewardsResponse>()
   const query = ref < TableQueryParams>()
 
@@ -14,6 +15,7 @@ const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards'
 export function useValidatorDashboardRewardsStore () {
   const { fetch } = useCustomFetch()
   const { data, query: storedQuery } = storeToRefs(validatorDashboardRewardsStore())
+  const isLoading = ref(false)
 
   const { slotViz } = useValidatorSlotVizStore()
 
@@ -21,12 +23,15 @@ export function useValidatorDashboardRewardsStore () {
   const query = computed(() => storedQuery.value)
 
   async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
-    if (dashboardKey === undefined) {
+    if (!dashboardKey) {
+      data.value = undefined
       return undefined
     }
+    isLoading.value = true
     storedQuery.value = query
     const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS, undefined, { dashboardKey }, query)
 
+    isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
       return // in case some query params change while loading
     }
@@ -45,5 +50,5 @@ export function useValidatorDashboardRewardsStore () {
     return res
   }
 
-  return { rewards, query, getRewards }
+  return { rewards, query, isLoading, getRewards }
 }

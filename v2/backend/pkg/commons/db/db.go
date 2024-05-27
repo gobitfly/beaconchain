@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"encoding/hex"
@@ -25,7 +26,10 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/go-redis/redis/v8"
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 //go:embed migrations/*.sql
@@ -97,13 +101,13 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		sslMode = "require"
 	}
 
-	log.Infof("initializing writer db connection to %v:%v with %v/%v conn limit", writer.Host, writer.Port, writer.MaxIdleConns, writer.MaxOpenConns)
+	log.Infof("initializing writer db connection to %v:%v/%v with %v/%v conn limit", writer.Host, writer.Port, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslMode))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
 
-	dbTestConnection(dbConnWriter, "database")
+	dbTestConnection(dbConnWriter, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
 	dbConnWriter.SetConnMaxIdleTime(time.Second * 30)
 	dbConnWriter.SetConnMaxLifetime(time.Minute)
 	dbConnWriter.SetMaxOpenConns(writer.MaxOpenConns)
@@ -124,7 +128,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
-	dbTestConnection(dbConnReader, "read replica database")
+	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
 	dbConnReader.SetConnMaxIdleTime(time.Second * 30)
 	dbConnReader.SetConnMaxLifetime(time.Minute)
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
@@ -1519,12 +1523,12 @@ func GetTotalWithdrawalsCount(validators []uint64) (uint64, error) {
 func GetLastWithdrawalEpoch(validators []uint64) (map[uint64]uint64, error) {
 	var dbResponse []struct {
 		ValidatorIndex     uint64 `db:"validatorindex"`
-		LastWithdrawalSlot uint64 `db:"last_withdawal_slot"`
+		LastWithdrawalSlot uint64 `db:"last_withdrawal_slot"`
 	}
 
 	res := make(map[uint64]uint64)
 	err := ReaderDb.Select(&dbResponse, `
-		SELECT w.validatorindex as validatorindex, COALESCE(max(block_slot), 0) as last_withdawal_slot
+		SELECT w.validatorindex as validatorindex, COALESCE(max(block_slot), 0) as last_withdrawal_slot
 		FROM blocks_withdrawals w
 		INNER JOIN blocks b ON b.blockroot = w.block_root AND b.status = '1'
 		WHERE w.validatorindex = ANY($1)
@@ -2345,6 +2349,7 @@ func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	if err != nil {
 		return fmt.Errorf("error granting all on %s materialized view: %w", tmpViewName, err)
 	}
+
 	// swap views
 	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW if exists %s RENAME TO %s;`, viewName, trashViewName))
 	if err != nil {
@@ -2370,6 +2375,49 @@ func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing tx: %w", err)
+	}
+	return nil
+}
+
+// copy from utils func
+func CopyToTable[T []any](tableName string, columns []string, data []T) error {
+	conn, err := WriterDb.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
+	}
+	defer conn.Close()
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+
+		pgxdecimal.Register(conn.TypeMap())
+		tx, err := conn.Begin(context.Background())
+
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{tableName}, columns,
+			pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
+				return data[i], nil
+			}))
+
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(context.Background())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error copying data to %s: %w", tableName, err)
 	}
 	return nil
 }

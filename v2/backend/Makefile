@@ -58,5 +58,8 @@ node-jobs-processor:
 signatures:
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/signatures cmd/signatures/main.go
 
+frontend-types:
+	go run cmd/typescript_converter/main.go --out ../frontend/types/api
+
 addhooks:
 	git config core.hooksPath hooks

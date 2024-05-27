@@ -135,14 +135,14 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 	responseData := make([]t.VDBExecutionDepositsTableRow, len(data))
 	for i, row := range data {
 		responseData[i] = t.VDBExecutionDepositsTableRow{
-			PublicKey:             t.PubKey(pubkeys[i]),
-			Block:                 uint64(row.BlockNumber),
-			Timestamp:             row.Timestamp,
-			From:                  t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
-			TxHash:                t.Hash(hexutil.Encode(row.TxHash)),
-			WithdrawalCredentials: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
-			Amount:                utils.GWeiToWei(big.NewInt(row.Amount)),
-			Valid:                 row.Valid,
+			PublicKey:            t.PubKey(pubkeys[i]),
+			Block:                uint64(row.BlockNumber),
+			Timestamp:            row.Timestamp.Unix(),
+			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
+			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
+			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
+			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
+			Valid:                row.Valid,
 		}
 		if row.GroupId.Valid {
 			responseData[i].GroupId = uint64(row.GroupId.Int64)
