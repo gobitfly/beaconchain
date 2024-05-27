@@ -74,7 +74,7 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
-    compressPublicAssets: true,
+    compressPublicAssets: true
   },
   vite: {
     build: {
