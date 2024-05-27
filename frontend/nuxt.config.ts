@@ -1,6 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // import path from 'path'
 
+import nodeResolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
+import { babel } from '@rollup/plugin-babel'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
 let gitVersion = ''
@@ -68,6 +71,34 @@ export default defineNuxtConfig({
   routeRules: {
     '/': {
       redirect: '/dashboard'
+    }
+  },
+  nitro: {
+    compressPublicAssets: true,
+  },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks (id) {
+            if (id.includes('node_modules')) {
+              // Group all node_modules into a single chunk
+              // but split out primevue because its very large
+              if (id.includes('primevue')) {
+                return 'primevue'
+              }
+              return 'vendor'
+            }
+          },
+          format: 'es'
+        },
+        plugins: [
+          nodeResolve(),
+          commonjs(),
+          babel({ babelHelpers: 'bundled' })
+        ]
+      },
+      minify: true
     }
   },
   postcss: {
