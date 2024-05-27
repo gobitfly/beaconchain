@@ -3,7 +3,6 @@
 
 import nodeResolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
-import { babel } from '@rollup/plugin-babel'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
 let gitVersion = ''
@@ -82,11 +81,6 @@ export default defineNuxtConfig({
         output: {
           manualChunks (id) {
             if (id.includes('node_modules')) {
-              // Group all node_modules into a single chunk
-              // but split out primevue because its very large
-              if (id.includes('primevue')) {
-                return 'primevue'
-              }
               return 'vendor'
             }
           },
@@ -94,8 +88,7 @@ export default defineNuxtConfig({
         },
         plugins: [
           nodeResolve(),
-          commonjs(),
-          babel({ babelHelpers: 'bundled' })
+          commonjs()
         ]
       },
       minify: true
