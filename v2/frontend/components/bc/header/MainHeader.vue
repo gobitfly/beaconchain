@@ -76,7 +76,7 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell search-bar" :class="screenSizeClass">
-        <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
+        <BcSearchbarGeneral v-if="!showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
       </div>
 
       <div class="grid-cell controls" :class="screenSizeClass">
@@ -168,6 +168,8 @@ const userMenu = computed(() => {
       align-items: center;
       vertical-align: middle;
       height: 100%;
+      flex-wrap: nowrap;
+      white-space: nowrap;
       gap: var(--padding);
     }
 
@@ -180,7 +182,6 @@ const userMenu = computed(() => {
       &.small, &.mobile {
         display: none;
       }
-      white-space: nowrap;
       margin-right: var(--padding-large);
       .network-icon {
         height: 14px;
