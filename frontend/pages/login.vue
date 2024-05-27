@@ -8,11 +8,7 @@ const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
 
-const seoTitle = computed(() => {
-  return $t('login.title')
-})
-
-useBcSeo(seoTitle)
+useBcSeo('login.title')
 
 const { handleSubmit, errors } = useForm()
 const { value: email } = useField<string>('email', validateAddress)

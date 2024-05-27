@@ -1,4 +1,4 @@
-export function useBcSeo (pageTitle?: Ref<string | number | undefined> | ComputedRef<string | number | undefined>) {
+export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>) {
   const { t: $t } = useI18n()
 
   const year = new Date().getFullYear()
@@ -11,7 +11,9 @@ export function useBcSeo (pageTitle?: Ref<string | number | undefined> | Compute
 
   const dynamicTitle = () => {
     const parts: string[] = [$t('seo.title'), 'beaconcha.in', year.toString()]
-    if (pageTitle?.value) {
+    if (typeof pageTitle === 'string') {
+      parts.splice(0, 0, $t(pageTitle))
+    } else if (pageTitle?.value) {
       parts.splice(0, 0, `${pageTitle.value}`)
     }
     return parts.join(' - ')
