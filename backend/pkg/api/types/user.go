@@ -17,6 +17,8 @@ type UserSubscription struct {
 	End             int64           `json:"end" faker:"unix_time"`
 }
 
+type InternalGetUserInfoResponse ApiDataResponse[UserInfo]
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"
@@ -29,12 +31,15 @@ type ProductSummary struct {
 	ExtraDashboardValidatorsPremiumAddon []ExtraDashboardValidatorsPremiumAddon `json:"extra_dashboard_validators_premium_addons"`
 }
 
+type InternalGetProductSummaryResponse ApiDataResponse[ProductSummary]
+
 type ApiProduct struct {
 	ProductId        string   `json:"product_id"`
 	ProductName      string   `json:"product_name"`
 	ApiPerks         ApiPerks `json:"api_perks"`
 	PricePerYearEur  float64  `json:"price_per_year_eur"`
 	PricePerMonthEur float64  `json:"price_per_month_eur"`
+	IsPopular        bool     `json:"is_popular"`
 }
 
 type ApiPerks struct {
@@ -54,6 +59,7 @@ type PremiumProduct struct {
 	PremiumPerks     PremiumPerks `json:"premium_perks"`
 	PricePerYearEur  float64      `json:"price_per_year_eur"`
 	PricePerMonthEur float64      `json:"price_per_month_eur"`
+	IsPopular        bool         `json:"is_popular"`
 }
 
 type ExtraDashboardValidatorsPremiumAddon struct {

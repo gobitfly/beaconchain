@@ -12,7 +12,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
 import { API_PATH, type PathValues } from '~/types/customFetch'
 
@@ -31,8 +31,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
-const { isLoggedIn } = useUserStore()
+const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
+const { isLoggedIn, user } = useUserStore()
 
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
 
@@ -63,11 +63,11 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): NumberOrString[] => {
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] => {
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
-const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
+const changeGroup = async (validators?: string[], groupId?: number) => {
   if (!validators?.length) {
     warn('no validators selected to change group')
     return
@@ -97,39 +97,25 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = (result: ResultSuggestion) => {
-  if (premiumLimit.value) {
+  if (total.value + result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
   }
-
-  // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
+  let list: string[]
   switch (result.type) {
-    case ResultType.ValidatorsByIndex: // for example, here, `result.queryParam` contains the `Index` (of the validator)
+    case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
-      selectedValidator.value = String(result.rawResult.num_value!)
-      break
-    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
-    case ResultType.ValidatorsByDepositAddress:
-    case ResultType.ValidatorsByDepositEnsName:
-    case ResultType.ValidatorsByWithdrawalCredential:
-    case ResultType.ValidatorsByWithdrawalAddress:
-    case ResultType.ValidatorsByWithdrawalEnsName:
-    case ResultType.ValidatorsByGraffiti:
-      // TODO: add a batch of validators
-      // If you need it: `result.count` is the size of the batch.
-      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
-      selectedValidator.value = ''
+      list = [String(result.rawResult.num_value!)]
+      selectedValidator.value = String(list[0])
       break
     default:
-      return
-  }
-  if (!selectedValidator.value) {
-    return
+      list = result.rawResult.validators!.map(index => String(index))
+      selectedValidator.value = ''
   }
   if (isPublic.value || !isLoggedIn.value) {
-    addEntities([selectedValidator.value])
+    addEntities(list)
   } else {
-    changeGroup([selectedValidator.value], selectedGroup.value)
+    changeGroup(list, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
@@ -219,8 +205,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 
 const total = computed(() => addUpValues(overview.value?.validators))
 
-// TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validators_per_dashboard) ? 20 : user.value.premium_perks.validators_per_dashboard)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 

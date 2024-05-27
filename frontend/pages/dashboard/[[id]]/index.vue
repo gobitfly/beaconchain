@@ -16,6 +16,7 @@ const { isLoggedIn } = useUserStore()
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { t: $t } = useI18n()
 
@@ -74,7 +75,7 @@ watch(dashboardKey, (newKey, oldKey) => {
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView lazy>
+      <TabView lazy class="dashboard-tab-view">
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
@@ -93,7 +94,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           </template>
           <DashboardTableBlocks />
         </TabPanel>
-        <TabPanel>
+        <TabPanel :disabled="!showInDevelopment">
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
           </template>
@@ -127,6 +128,10 @@ watch(dashboardKey, (newKey, oldKey) => {
   margin-top: 136px;
   margin-bottom: 307px;
   overflow: hidden;
+}
+
+:global(.dashboard-tab-view >.p-tabview-panels) {
+  min-height: 699px;
 }
 
 :global(.modal-controller) {

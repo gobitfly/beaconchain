@@ -13,6 +13,7 @@ interface Props {
   selectionMode?: 'multiple' | 'single'
   tableClass?: string
   addSpacer?: boolean
+  loading?: boolean
 }
 const props = defineProps<Props>()
 
@@ -76,6 +77,9 @@ watch(() => props.expandable, (expandable) => {
     toggleAll(true)
   }
 })
+watch(() => props.data, () => {
+  toggleAll(true)
+})
 
 const sort = computed(() => {
   if (!props.selectedSort?.includes(':')) {
@@ -100,6 +104,7 @@ const sort = computed(() => {
     :sort-order="sort?.order"
     :value="data?.data"
     :data-key="dataKey"
+    :loading="loading"
   >
     <Column v-if="selectionMode" :selection-mode="selectionMode" class="selection" />
     <Column v-if="expandable" expander class="expander">
@@ -122,6 +127,9 @@ const sort = computed(() => {
         <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
+    <template #empty>
+      <slot v-if="!loading" name="empty" />
+    </template>
 
     <template #expansion="slotProps">
       <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />

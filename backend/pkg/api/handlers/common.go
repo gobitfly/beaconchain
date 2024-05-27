@@ -514,7 +514,7 @@ func returnNotFound(w http.ResponseWriter, err error) {
 } */
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
-	log.Error(err, "internal server error", 0, nil)
+	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
 	returnError(w, http.StatusInternalServerError, err)
 }
