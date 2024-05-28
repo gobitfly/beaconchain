@@ -2,7 +2,7 @@
 import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-const { t } = useI18n()
+const { t: $t } = useI18n()
 
 const { products, getProducts } = useProductsStore()
 await useAsyncData('get_products', () => getProducts())
@@ -33,22 +33,22 @@ const scrollToAddons = () => {
       <div class="type-toggle-container">
         <div class="premium">
           <div class="text">
-            {{ t('pricing.premium') }}
+            {{ $t('pricing.premium') }}
           </div>
         </div>
         <div class="api-keys" disabled>
           <div class="text">
-            {{ t('pricing.API_keys') }}
+            {{ $t('pricing.API_keys') }}
           </div>
         </div>
       </div>
       <div class="header-line-container">
         <div class="header-line">
           <div class="title">
-            {{ t('pricing.premium') }}
+            {{ $t('pricing.premium') }}
           </div>
           <div class="subtitle">
-            {{ t('pricing.subtitle') }}
+            {{ $t('pricing.subtitle') }}
           </div>
         </div>
       </div>
@@ -56,11 +56,11 @@ const scrollToAddons = () => {
         <BcToggle
           v-model="isYearly"
           class="toggle"
-          :true-option="t('pricing.yearly')"
-          :false-option="t('pricing.monthly')"
+          :true-option="$t('pricing.yearly')"
+          :false-option="$t('pricing.monthly')"
         />
         <div v-if="savingPercentage > 0" class="save-up-text">
-          {{ t('pricing.save_up_to', {percentage: savingPercentage}) }}
+          {{ $t('pricing.save_up_to', {percentage: savingPercentage}) }}
         </div>
       </div>
       <div class="premium-products-container">
@@ -74,30 +74,16 @@ const scrollToAddons = () => {
           </template>
         </div>
         <div class="footnote">
-          {{ t('pricing.excluding_vat') }}
+          {{ $t('pricing.excluding_vat') }}
         </div>
       </div>
       <Button class="view-addons-button" @click="scrollToAddons()">
-        {{ t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
+        {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
       </Button>
       <div class="compare-plans-container">
         Compare Plans (coming soon)
       </div>
-      <div id="addons" class="addons-container">
-        <div class="text-container">
-          <div class="title">
-            {{ t('pricing.addons.title') }}
-          </div>
-          <div class="subtitle">
-            {{ t('pricing.addons.subtitle') }}
-          </div>
-        </div>
-        <div class="addons-row">
-          <template v-for="addon in products?.extra_dashboard_validators_premium_addons" :key="addon.product_id">
-            <PricingPremiumAddonBox :addon="addon" :is-yearly="isYearly" />
-          </template>
-        </div>
-      </div>
+      <PricingPremiumAddons id="addons" :is-yearly="isYearly" />
     </div>
   </BcPageWrapper>
 </template>
@@ -257,36 +243,6 @@ const scrollToAddons = () => {
     font-size: 21px;
     display: flex;
     gap: 12px;
-  }
-
-  .addons-container {
-    margin-top: 43px;
-    width: 100%;
-    height: 500px;
-    display: flex;
-    align-items: flex-start;
-    gap: 70px;
-
-    .text-container {
-      display: flex;
-      flex-direction: column;
-
-      .title {
-        font-size: 32px;
-        //font-weight: 500;
-        color: var(--primary-color);
-      }
-
-      .subtitle {
-        font-size: 35px;
-        //font-weight: 500;
-      }
-    }
-
-    .addons-row {
-      display: flex;
-      gap: 7px;
-    }
   }
 
   @media (max-width: 600px) {
