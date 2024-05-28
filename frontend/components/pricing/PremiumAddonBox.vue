@@ -2,6 +2,7 @@
 // TODOs
 // - Implement mobile
 // - Update logic for button (disable when user does not have orca, for example)
+// - Refactor premium products by extracting it from pricing page (like done for addons)
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
@@ -222,6 +223,10 @@ const text = computed(() => {
       font-weight: 400;
       color: var(--text-color-discreet);
     }
+  }
+
+  @media (max-width: 600px) {
+    // TODO
   }
 }
 
