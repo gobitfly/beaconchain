@@ -105,7 +105,7 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 		Graffiti:   graffiti,
 		Validators: make([]uint64, 0),
 	}
-	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text ilike $1 limit 10;", graffiti+"%") // added a limit here to keep the query fast
+	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text = $1 limit 10;", graffiti) // added a limit here to keep the query fast
 	if err != nil {
 		return nil, err
 	}
