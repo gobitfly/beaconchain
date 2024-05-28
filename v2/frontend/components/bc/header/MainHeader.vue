@@ -259,7 +259,7 @@ const userMenu = computed(() => {
         }
       }
       .burger {
-        height: 20px;
+        height: 24px;
         cursor: pointer;
       }
     }

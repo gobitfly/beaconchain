@@ -112,8 +112,9 @@
     }
     .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
       position: static;
-      border-radius: var(--border-radius);
+      border-radius: 8px;
       padding: 0 var(--padding);
+      margin: var(--padding-small);
     }
     .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
       .p-menuitem-text,
