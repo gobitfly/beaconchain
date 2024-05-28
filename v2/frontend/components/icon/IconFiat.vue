@@ -7,5 +7,5 @@ interface Props {
 defineProps<Props>()
 </script>
 <template>
-  <img :src="`../images/flags/${currency}.svg`">
+  <img :src="`../img/flags/${currency}.svg`">
 </template>
