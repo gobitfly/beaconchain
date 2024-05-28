@@ -25,9 +25,9 @@ onMounted(() => {
     <div class="dismiss" @click="hide()">
       {{ props?.dismissLabel || $t('navigation.dismiss') }}
     </div>
-    <NuxtLink to="/premium/subscription" target="_blank" @click="hide()">
+    <BcLink to="/premium/subscription" target="_blank" @click="hide()">
       <Button :label="$t('premium.unlock')" />
-    </NuxtLink>
+    </BcLink>
   </div>
 </template>
 

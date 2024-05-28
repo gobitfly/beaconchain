@@ -54,19 +54,19 @@ const userMenu = computed(() => {
   <div class="header top">
     <div class="content">
       <div class="left-content">
-        <NuxtLink to="/" class="logo">
+        <BcLink to="/" class="logo">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
           beaconcha.in
-        </NuxtLink>
+        </BcLink>
         <span v-if="latestState?.current_slot" class="info"><span>{{ $t('header.current_slot') }}</span>:
-          <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+          <BcLink :to="`/slot/${latestState.current_slot}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="latestState.current_slot" />
-          </NuxtLink>
+          </BcLink>
         </span>
         <span v-if="currentEpoch !== undefined" class="info"><span>{{ $t('header.current_epoch') }}</span>:
-          <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+          <BcLink :to="`/epoch/${currentEpoch}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="currentEpoch" />
-          </NuxtLink>
+          </BcLink>
         </span>
         <span v-if="rate" class="info">
           <span>
@@ -81,13 +81,13 @@ const userMenu = computed(() => {
       <div class="right-content">
         <BcCurrencySelection v-if="!isMobile" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <NuxtLink to="/login">
+          <BcLink to="/login">
             {{ $t('header.login') }}
-          </NuxtLink>
+          </BcLink>
           /
-          <NuxtLink to="/register">
+          <BcLink to="/register">
             <Button class="register" :label="$t('header.register')" />
-          </NuxtLink>
+          </BcLink>
         </div>
         <div v-else-if="!isSmallScreen">
           <BcDropdown :options="userMenu" variant="header" option-label="label">
@@ -109,10 +109,10 @@ const userMenu = computed(() => {
   </div>
   <div class="header bottom">
     <div class="content">
-      <NuxtLink to="/dashboard" class="logo">
+      <BcLink to="/dashboard" class="logo">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
         beaconcha.in
-      </NuxtLink>
+      </BcLink>
       <BcHeaderMegaMenu ref="megaMenu" />
       <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="search" bar-style="discreet" />
     </div>

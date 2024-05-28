@@ -113,12 +113,12 @@ const title = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <NuxtLink v-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+          <BcLink v-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
-          </NuxtLink>
+          </BcLink>
           <span v-else class="button-content pointer" :class="{ 'p-active': item.active }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />

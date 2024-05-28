@@ -7,7 +7,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
+import { LazyBcDialogConfirm, LazyDashboardShareCodeModal, LazyDashboardShareModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -72,7 +72,7 @@ const shareButtonOptions = computed(() => {
 
 const shareView = () => {
   const dashboardId = shareDashboard.value?.id
-  dialog.open(DashboardShareCodeModal, {
+  dialog.open(LazyDashboardShareCodeModal, {
     data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value },
     onClose: (options?: DynamicDialogCloseOptions) => {
       if (options?.data === 'DELETE') {
@@ -87,7 +87,7 @@ const shareView = () => {
 }
 
 const shareEdit = () => {
-  dialog.open(DashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareView() } })
+  dialog.open(LazyDashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareView() } })
 }
 
 const share = () => {
@@ -114,7 +114,7 @@ const deleteButtonOptions = computed(() => {
 const onDelete = () => {
   const languageKey = deleteButtonOptions.value.deleteDashboard ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
 
-  dialog.open(BcDialogConfirm, {
+  dialog.open(LazyBcDialogConfirm, {
     props: {
       header: $t('dashboard.deletion.title')
     },
@@ -169,8 +169,8 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 </script>
 
 <template>
-  <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
+  <LazyDashboardGroupManagementModal v-if="manageGroupsModalVisisble" v-model="manageGroupsModalVisisble" />
+  <LazyDashboardValidatorManagementModal v-if="dashboardType=='validator' && manageValidatorsModalVisisble" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
       <Button class="share-button" :disabled="!dashboardKey" @click="share()">

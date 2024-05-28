@@ -143,9 +143,9 @@ const wrappedRewards = computed(() => {
           >
             <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
               <template #body="slotProps">
-                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
+                <BcLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank">
                   <BcFormatNumber :value="slotProps.data.epoch" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age">
@@ -252,7 +252,7 @@ const wrappedRewards = computed(() => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartRewardsChart />
+          <LazyDashboardChartRewardsChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>

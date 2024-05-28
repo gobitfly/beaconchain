@@ -82,11 +82,11 @@ const data = computed(() => {
           {{ part.value }}
         </span>
       </span>
-      <NuxtLink v-else :to="data.link" target="_blank" class="link" :class="data.className">
+      <BcLink v-else :to="data.link" target="_blank" class="link" :class="data.className">
         <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
           {{ part.value }}
         </span>
-      </NuxtLink>
+      </BcLink>
     </BcTooltip>
     <BcCopyToClipboard v-if="!props.noCopy" :value="props.hash" class="copy" />
   </div>

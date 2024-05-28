@@ -17,6 +17,7 @@ const { isLoggedIn } = useUserStore()
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards, getDashboardLabel } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const activeIndex = ref(0)
 
 const seoTitle = computed(() => {
   return getDashboardLabel(dashboardKey.value, 'validator')
@@ -79,7 +80,7 @@ watch(dashboardKey, (newKey, oldKey) => {
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView lazy class="dashboard-tab-view">
+      <TabView lazy class="dashboard-tab-view" :active-index="activeIndex">
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
@@ -90,13 +91,13 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
           </template>
-          <DashboardTableRewards />
+          <LazyDashboardTableRewards v-if="activeIndex === 1" />
         </TabPanel>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
           </template>
-          <DashboardTableBlocks />
+          <LazyDashboardTableBlocks v-if="activeIndex === 2" />
         </TabPanel>
         <TabPanel :disabled="!showInDevelopment">
           <template #header>
@@ -108,17 +109,17 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
           </template>
-          <div class="deposits">
-            <DashboardTableElDeposits />
+          <div v-if="activeIndex === 4" class="deposits">
+            <LazyDashboardTableElDeposits />
             <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
-            <DashboardTableClDeposits />
+            <LazyDashboardTableClDeposits />
           </div>
         </TabPanel>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
           </template>
-          <DashboardTableWithdrawals />
+          <LazyDashboardTableWithdrawals v-if="activeIndex === 5" />
         </TabPanel>
       </TabView>
     </BcPageWrapper>
