@@ -77,7 +77,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 // User
 
 func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
-	// TODO patrick
+	// TODO @patrick
 	user, err := h.getUser(r)
 	if err != nil {
 		handleErr(w, err)

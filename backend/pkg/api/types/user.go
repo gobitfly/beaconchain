@@ -26,6 +26,7 @@ const ProductCategoryPremium ProductCategory = "premium"
 const ProductCategoryPremiumAddon ProductCategory = "premium_addon"
 
 type ProductSummary struct {
+	StripePublicKey                      string                                 `json:"stripe_public_key"`
 	ApiProducts                          []ApiProduct                           `json:"api_products"`
 	PremiumProducts                      []PremiumProduct                       `json:"premium_products"`
 	ExtraDashboardValidatorsPremiumAddon []ExtraDashboardValidatorsPremiumAddon `json:"extra_dashboard_validators_premium_addons"`
@@ -50,24 +51,30 @@ type ApiPerks struct {
 	ExecutionLayerAPI bool   `json:"execution_layer_api"`
 	Layer2API         bool   `json:"layer2_api"`
 	NoAds             bool   `json:"no_ads"` // note that this is somhow redunant, since there is already PremiumPerks.AdFree
-	DiscordSuport     bool   `json:"discord_support"`
+	DiscordSupport    bool   `json:"discord_support"`
 }
 
 type PremiumProduct struct {
-	ProductId        string       `json:"product_id"`
-	ProductName      string       `json:"product_name"`
-	PremiumPerks     PremiumPerks `json:"premium_perks"`
-	PricePerYearEur  float64      `json:"price_per_year_eur"`
-	PricePerMonthEur float64      `json:"price_per_month_eur"`
-	IsPopular        bool         `json:"is_popular"`
+	ProductName          string       `json:"product_name"`
+	PremiumPerks         PremiumPerks `json:"premium_perks"`
+	PricePerYearEur      float64      `json:"price_per_year_eur"`
+	PricePerMonthEur     float64      `json:"price_per_month_eur"`
+	IsPopular            bool         `json:"is_popular"`
+	ProductIdMonthly     string       `json:"product_id_monthly"`
+	ProductIdYearly      string       `json:"product_id_yearly"`
+	StripePriceIdMonthly string       `json:"stripe_price_id_monthly"`
+	StripePriceIdYearly  string       `json:"stripe_price_id_yearly"`
 }
 
 type ExtraDashboardValidatorsPremiumAddon struct {
-	ProductId                string  `json:"product_id"`
 	ProductName              string  `json:"product_name"`
 	ExtraDashboardValidators uint64  `json:"extra_dashboard_validators"`
 	PricePerYearEur          float64 `json:"price_per_year_eur"`
 	PricePerMonthEur         float64 `json:"price_per_month_eur"`
+	ProductIdMonthly         string  `json:"product_id_monthly"`
+	ProductIdYearly          string  `json:"product_id_yearly"`
+	StripePriceIdMonthly     string  `json:"stripe_price_id_monthly"`
+	StripePriceIdYearly      string  `json:"stripe_price_id_yearly"`
 }
 
 type PremiumPerks struct {

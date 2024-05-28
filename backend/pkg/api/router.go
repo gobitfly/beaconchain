@@ -1,12 +1,14 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -19,9 +21,10 @@ type endpoint struct {
 }
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
-	router := mux.NewRouter().PathPrefix("/api").Subrouter()
-	publicRouter := router.PathPrefix("/v2").Subrouter()
-	internalRouter := router.PathPrefix("/i").Subrouter()
+	router := mux.NewRouter()
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
+	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
@@ -31,9 +34,67 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
+	// TODO:patrick - remove this test route
+	router.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
+
 	addRoutes(handlerService, publicRouter, internalRouter, debug)
 
 	return router
+}
+
+// TODO:patrick - remove this test route
+func TestStripe(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(fmt.Sprintf(`
+<div>hello</div>
+<pre>
+Stripe.PublicKey         %[2]s
+Stripe.Guppy             %[3]s
+Stripe.Dolphin           %[4]s
+Stripe.Orca              %[5]s
+Stripe.VdbAddon1k        %[6]s
+Stripe.VdbAddon10k       %[7]s
+Stripe.GuppyYearly       %[8]s
+Stripe.DolphinYearly     %[9]s
+Stripe.OrcaYearly        %[10]s
+Stripe.VdbAddon1kYearly  %[11]s
+Stripe.VdbAddon10kYearly %[12]s
+</pre>
+
+<form class="manage-billing-form">
+<input type="hidden" name="x" value="y">
+<button class="btn btn-lg btn-block btn-outline-primary">Manage Billing</button>
+</form>
+
+<button id="guppy"          class="purchase">purchase guppy</button>
+<button id="guppy.yearly"   class="purchase">purchase guppy.yearly</button>
+<button id="dolphin"        class="purchase">purchase dolphin</button>
+<button id="dolphin.yearly" class="purchase">purchase dolphin.yearly</button>
+<button id="orca"           class="purchase">purchase orca</button>
+<button id="orca.yearly"    class="purchase">purchase orca.yearly</button>
+
+
+<h3>/api/i/users/me</h3>
+<pre id="users-me-res"></pre>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer %[1]s'}}).then((r)=>r.json()).then((d)=>document.getElementById('users-me-res').innerText=JSON.stringify(d, null, 2))
+</script>
+`,
+		utils.Config.ApiKeySecret,
+		utils.Config.Frontend.Stripe.PublicKey,
+		utils.Config.Frontend.Stripe.Guppy,
+		utils.Config.Frontend.Stripe.Dolphin,
+		utils.Config.Frontend.Stripe.Orca,
+		utils.Config.Frontend.Stripe.VdbAddon1k,
+		utils.Config.Frontend.Stripe.VdbAddon10k,
+		utils.Config.Frontend.Stripe.GuppyYearly,
+		utils.Config.Frontend.Stripe.DolphinYearly,
+		utils.Config.Frontend.Stripe.OrcaYearly,
+		utils.Config.Frontend.Stripe.VdbAddon1kYearly,
+		utils.Config.Frontend.Stripe.VdbAddon10kYearly,
+	)))
 }
 
 func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
