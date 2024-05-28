@@ -75,10 +75,10 @@ const mainFeatures = computed<Feature[]>(() => {
       percentage: percentages.value.validatorDashboards
     },
     {
-      name: $t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      name: $t('pricing.premium_product.validators_per_dashboard', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
       subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
-      tooltip: $t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
       percentage: percentages.value.validatorsPerDashboard
     },
     {

@@ -47,7 +47,15 @@ const text = computed(() => {
       <div class="validator-count">
         {{ text.validatorCount }}
         <div class="subtext">
-          {{ $t('pricing.addons.per_dashboard') }} i
+          {{ $t('pricing.addons.per_dashboard') }}
+          <BcTooltip position="top" :fit-content="true">
+            <FontAwesomeIcon :icon="faInfoCircle" class="tooltip-icon" />
+            <template #tooltip>
+              <div class="saving-tooltip-container">
+                {{ $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.addon?.extra_dashboard_validators * 32) }) }}
+              </div>
+            </template>
+          </BcTooltip>
         </div>
         <div class="per-validator">
           {{ text.perValidator }}
@@ -129,6 +137,10 @@ const text = computed(() => {
       .subtext {
         font-weight: 400;
         margin-bottom: 16px;
+
+        .tooltip-icon {
+          width: 15px;
+        }
       }
 
       .per-validator {
@@ -211,5 +223,10 @@ const text = computed(() => {
       color: var(--text-color-discreet);
     }
   }
+}
+
+.saving-tooltip-container {
+  width: 150px;
+  text-align: left;
 }
 </style>
