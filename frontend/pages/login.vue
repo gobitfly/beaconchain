@@ -86,7 +86,7 @@ const passwordError = ref<string|undefined>(undefined)
         <div class="last-row">
           <div class="account-invitation">
             {{ $t('login.dont_have_account') }}<br>
-            <NuxtLink to="/signup" :target="Target.Internal" class="link">
+            <NuxtLink to="/register" :target="Target.Internal" class="link">
               {{ $t('login.signup_here') }}
             </NuxtLink>
           </div>
