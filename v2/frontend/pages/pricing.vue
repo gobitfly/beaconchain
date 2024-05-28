@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import TypeToggle from '~/components/pricing/TypeToggle.vue'
 
 const { t: $t } = useI18n()
 
@@ -30,18 +31,7 @@ const scrollToAddons = () => {
 <template>
   <BcPageWrapper>
     <div class="page-container">
-      <div class="type-toggle-container">
-        <div class="premium">
-          <div class="text">
-            {{ $t('pricing.premium') }}
-          </div>
-        </div>
-        <div class="api-keys" disabled>
-          <div class="text">
-            {{ $t('pricing.API_keys') }}
-          </div>
-        </div>
-      </div>
+      <TypeToggle />
       <div class="header-line-container">
         <div class="header-line">
           <div class="title">
@@ -90,54 +80,6 @@ const scrollToAddons = () => {
   align-items: center;
   justify-content: center;
   padding-top: 25px;
-
-  .type-toggle-container {
-    width: 237px;
-    height: 41px;
-    margin-bottom: 37px;
-    display: flex;
-    align-items: center;
-    user-select: none;
-
-    // TODO: not interactive for beta launch
-    .premium {
-      flex: 1;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      border-top-left-radius: 3px;
-      border-bottom-left-radius: 3px;
-      background: var(--button-color-active);
-
-      .text {
-        color: var(--primary-contrast-color);
-        font-size: 13px;
-        font-weight: var(--montserrat-semi-bold);
-        padding-left: 16px;
-      }
-    }
-
-    .api-keys {
-      flex: 1;
-      height: 100%;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--container-background);
-      border-width: 1px 1px 1px 0;
-      border-style: solid;
-      border-color: var(--container-border-color);
-      border-top-right-radius: 3px;
-      border-bottom-right-radius: 3px;
-
-      .text {
-        color: var(--grey);
-        font-size: 14px;
-        font-weight: var(--montserrat-semi-bold);
-      }
-    }
-  }
 
   .header-line-container {
       width: 100vw;
@@ -212,18 +154,6 @@ const scrollToAddons = () => {
   }
 
   @media (max-width: 600px) {
-    .type-toggle-container {
-      .premium .text {
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .api-keys .text {
-        font-size: 11px;
-        font-weight: 700;
-      }
-    }
-
     .header-line-container{
       padding-left: 5px;
       margin-bottom: 30px;

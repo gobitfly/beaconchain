@@ -26,36 +26,36 @@ defineProps<Props>()
 </template>
 
 <style lang="scss" scoped>
-  .premium-products-container {
-    width: 100%;
+.premium-products-container {
+  width: 100%;
 
-    .premium-products-row {
-      display: flex;
-      gap: 17px;
-      justify-content: space-between;
-      overflow-x: auto;
-      padding-bottom: 7px;
-    }
+  .premium-products-row {
+    display: flex;
+    gap: 17px;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding-bottom: 7px;
+  }
 
-    .footnote {
-      font-family: var(--roboto-family);
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text-color-discreet);
-      display: flex;
-      justify-content: flex-end;
-    }
+  .footnote {
+    font-family: var(--roboto-family);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-color-discreet);
+    display: flex;
+    justify-content: flex-end;
+  }
 
-    margin-bottom: 38px;
+  margin-bottom: 38px;
 
-    @media (max-width: 600px) {
-      .premium-products-container{
-        margin-bottom: 36px;
+  @media (max-width: 600px) {
+    .premium-products-container{
+      margin-bottom: 36px;
 
-        .footnote {
-          font-size: 8px;
-        }
+      .footnote {
+        font-size: 8px;
       }
     }
   }
+}
 </style>

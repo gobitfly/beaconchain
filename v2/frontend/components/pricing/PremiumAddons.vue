@@ -27,48 +27,48 @@ defineProps<Props>()
 </template>
 
 <style lang="scss" scoped>
-  .addons-container {
+.addons-container {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 70px;
+
+  .text-container {
+    display: flex;
+    flex-direction: column;
+
+    .title {
+      font-size: 32px;
+      color: var(--primary-color);
+    }
+
+    .subtitle {
+      font-size: 35px;
+    }
+  }
+
+  .addons-row {
     width: 100%;
     display: flex;
-    align-items: flex-start;
-    gap: 70px;
+    gap: 7px;
+    overflow-x: auto;
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 15px;
 
     .text-container {
-      display: flex;
-      flex-direction: column;
+      gap: 8px;
 
-      .title {
-        font-size: 32px;
-        color: var(--primary-color);
+      .title{
+        font-size: 16px;
       }
 
-      .subtitle {
-        font-size: 35px;
-      }
-    }
-
-    .addons-row {
-      width: 100%;
-      display: flex;
-      gap: 7px;
-      overflow-x: auto;
-    }
-
-    @media (max-width: 600px) {
-      flex-direction: column;
-      gap: 15px;
-
-      .text-container {
-        gap: 8px;
-
-        .title{
-          font-size: 16px;
-        }
-
-        .subtitle{
-          font-size: 18px;
-        }
+      .subtitle{
+        font-size: 18px;
       }
     }
   }
+}
 </style>
