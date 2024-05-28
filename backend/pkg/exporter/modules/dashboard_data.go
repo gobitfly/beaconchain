@@ -1661,9 +1661,9 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 // Commented out since this is a one time operation, kept in in case we need it again
 // func (d *dashboardData) backfillCLBlockRewards() {
 // 	upTo := 1731488
-// 	startFrom := 937
-// 	batchSize := 9
-// 	parallelization := 3
+// 	startFrom := 63805
+// 	batchSize := 8
+// 	parallelization := 8
 
 // 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
 
@@ -1678,18 +1678,13 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 // 			for slot := i; slot < i+batchSize; slot++ {
 // 				slot := slot
 // 				errgroup.Go(func() error {
-// 					_, err := d.CL.GetBlockHeader(slot)
+// 					blockReward, err := d.CL.GetPropoalRewards(slot)
 // 					if err != nil {
 // 						httpErr := network.SpecificError(err)
 // 						if httpErr != nil && httpErr.StatusCode == 404 {
 // 							return nil
 // 						}
 
-// 						return err
-// 					}
-
-// 					blockReward, err := d.CL.GetPropoalRewards(slot)
-// 					if err != nil {
 // 						d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
 // 						return err
 // 					}
