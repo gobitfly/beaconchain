@@ -48,7 +48,7 @@ defineProps<{
     color: var(--input-placeholder-text-color);
     background-color: transparent;
   }
-
+  /*
   &:hover {
     &.default {
       background-color: var(--dropdown-background-hover);
@@ -68,6 +68,6 @@ defineProps<{
     &.lightblue {
       background-color: var(--button-color-pressed);
     }
-  }
+  } */
 }
 </style>

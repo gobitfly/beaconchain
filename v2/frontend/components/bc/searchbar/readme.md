@@ -32,7 +32,7 @@ There are more props that you can give to configure the search bar:
 
 The list of possible values for `:bar-shape`, `:color-theme` and `:bar-purpose` are respectively in enums `SearchbarShape`, `SearchbarColors` and `SearchbarPurpose` in file _searchbar.ts_.
 
-If the width of the search bar can change suddenly while the user is redimensionning the window (for example due to a media query in the CSS or some JS code), the threshold at which you trigger the change must be passed in prop `:screen-width-causing-sudden-change`. This prevents visual bugs in the list of results (to understand why, see section "Sudden changes of width" in the documentation of _MiddleEllipsis.vue_).
+If the width of the search bar can change suddenly while the user is redimensionning the window (for example due to a media query in the CSS or some JS code), the width threshold (in pixels) at which you trigger the change must be passed in prop `:screen-width-causing-sudden-change`. This prevents visual bugs in the list of results (to understand why, see section "Sudden changes of width" in the documentation of _MiddleEllipsis.vue_).
 
 You can write your own function for `:pick-by-default`, or give the example function written in _searchbar.ts_ if it suits your needs:
 ```TS
@@ -197,16 +197,16 @@ If you change the font independently of the width of the component, then perform
 
 ### Sudden changes of width
 
-When the user resizes the window, thus changing the width of a MiddleEllipsis component, the component adjusts its clipping automatically.
+When the user resizes her/his window, thus changing the width of a MiddleEllipsis component, the component adjusts its clipping automatically.
 
-But websites happen to switch between layouts (for example desktop/mobile modes) when the width of the window reaches a certain threshold. This reorganizes the components and change their sizes suddenly. This is typically performed in CSS by some `@media (min-width: ...)` or `@media (max-width: ...)` query, or in JS.
+But your website might switch between layouts (for example between desktop and mobile modes) when the width of the window reaches a certain threshold. This reorganizes the components and changes their sizes suddenly. This is typically performed in CSS by some `@media (min-width: ...)` or `@media (max-width: ...)` query, or in JS.
 
-You must inform MiddleEllipsis that its width jumps unexpectedly. Othewise, it might not detect it (the text will overflow or leave a blanck space).
+You must inform MiddleEllipsis that its width jumps unexpectedly. Othewise, it might not detect it (the text will overflow or waste blank space).
 
 There are two ways to pass this information. Either
 
 - You give the threshold at which you perform the change to its `width-mediaquery-threshold` prop.
 For example, `:width-mediaquery-threshold="600"` makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen passes through 600px.
-- Or you remove/add/swap a class in the class-list of the component at the very moment the change of width happens.
+- Or you remove/add/swap a class in the class-list of the component at the very moment the component has its width modified. The fact that the list of classes changes makes the component reclip.
 
 Children do not need this information, only parents and stand-alone components.

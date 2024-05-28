@@ -17,7 +17,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 </script>
 
 <template>
-  <label class="frame" :class="[barShape, colorTheme, dropdownLayout, look]">
+  <label class="frame" :class="[barShape,colorTheme,dropdownLayout,look]">
     <input
       type="checkbox"
       class="hidden-checkbox"
