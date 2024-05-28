@@ -4,22 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const { t: $t } = useI18n()
 
-const { products, getProducts } = useProductsStore()
+const { getProducts } = useProductsStore()
 await useAsyncData('get_products', () => getProducts())
 
 const isYearly = ref(true)
-
-const savingPercentage = computed(() => {
-  let highestSaving = 0
-  products.value?.premium_products.forEach((product) => {
-    const savingPercentage = (1 - (product.price_per_year_eur / (product.price_per_month_eur * 12))) * 100
-    if (savingPercentage > highestSaving) {
-      highestSaving = savingPercentage
-    }
-  })
-
-  return Math.floor(highestSaving)
-})
 
 const scrollToAddons = () => {
   const element = document.getElementById('addons')
@@ -32,17 +20,7 @@ const scrollToAddons = () => {
     <div class="page-container">
       <PricingTypeToggle />
       <PricingHeaderLine />
-      <div class="toggle-container">
-        <BcToggle
-          v-model="isYearly"
-          class="toggle"
-          :true-option="$t('pricing.yearly')"
-          :false-option="$t('pricing.monthly')"
-        />
-        <div v-if="savingPercentage > 0" class="save-up-text">
-          {{ $t('pricing.save_up_to', {percentage: savingPercentage}) }}
-        </div>
-      </div>
+      <PricingPeriodToggle v-model="isYearly" />
       <PricingPremiumProducts :is-yearly="isYearly" />
       <Button class="view-addons-button" @click="scrollToAddons()">
         {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
@@ -71,26 +49,6 @@ const scrollToAddons = () => {
   justify-content: center;
   padding-top: 25px;
 
-  .toggle-container {
-    display: flex;
-    align-items: center;
-    gap: var(--padding);
-    margin-bottom: 55px;
-
-    .toggle{
-      font-size: 20px;
-      margin-bottom: 0;
-    }
-
-    .save-up-text {
-      width: 75px;
-      color: var(--primary-color);
-      text-align: center;
-      font-size: 15px;
-      font-weight: var(--montserrat-semi-bold);
-    }
-  }
-
   .view-addons-button {
     width: 215px;
     height: 45px;
@@ -117,20 +75,6 @@ const scrollToAddons = () => {
   }
 
   @media (max-width: 600px) {
-    .toggle-container {
-      font-size: 16px;
-      margin-bottom: 30px;
-
-      .toggle {
-        font-size: 16px;
-      }
-
-      .save-up-text {
-        width: 60px;
-        font-size: 12px;
-      }
-    }
-
     .view-addons-button {
       padding: 7px 17px;
       width: 150px;
