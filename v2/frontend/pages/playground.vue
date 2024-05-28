@@ -5,6 +5,8 @@ import { formatNumber } from '~/utils/format'
 
 const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
+useBcSeo()
+
 const { latestState, refreshLatestState } = useLatestStateStore()
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
 const { refreshOverview } = useValidatorDashboardOverviewStore()

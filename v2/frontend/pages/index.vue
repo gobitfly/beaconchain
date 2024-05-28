@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useBcSeo()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 </script>
 
