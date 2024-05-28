@@ -503,7 +503,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) internal_getClAPR(validators []uint64, days int) (income decimal.Decimal, apr float64, err error) {
-
 	var reward int64
 	table := ""
 
