@@ -3,7 +3,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct } from '~/types/api/user'
+import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
@@ -51,16 +51,21 @@ const planButton = computed(() => {
   let text = $t('pricing.premium_product.button.select_plan')
 
   if (user.value?.subscriptions) {
-    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
+    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
     if (!subscription) {
       text = $t('pricing.premium_product.button.select_plan')
     } else if (subscription.product_id === props.product.product_id) {
       text = $t('pricing.premium_product.button.manage_plan')
-    } else if (subscription.product_id < props.product.product_id) {
-      text = $t('pricing.premium_product.button.upgrade')
     } else {
-      isDowngrade = true
-      text = $t('pricing.premium_product.button.downgrade')
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id === subscription.product_id)
+      if (subscribedProduct !== undefined) {
+        if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+          text = $t('pricing.premium_product.button.upgrade')
+        } else {
+          isDowngrade = true
+          text = $t('pricing.premium_product.button.downgrade')
+        }
+      }
     }
   }
 

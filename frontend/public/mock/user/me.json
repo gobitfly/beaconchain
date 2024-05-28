@@ -4,7 +4,7 @@
     "email": "test@mail.com",
     "subscriptions": [
       {
-        "product_id": "2",
+        "product_id": "dolphin",
         "product_name": "Dolphin",
         "product_category": "premium"
       }
