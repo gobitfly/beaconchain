@@ -42,10 +42,10 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 	return result, err
 }
 
-func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
-	// TODO:patrick
+func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+	// TODO:patrick improve and unmock
 	userInfo := &t.UserInfo{
-		Id: id,
+		Id: userId,
 		ApiPerks: t.ApiPerks{ // TODO @patrick this is hardcoded for now, but should be fetched from db
 			UnitsPerSecond:    10,
 			UnitsPerMonth:     10,
@@ -64,14 +64,14 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 	}
 
 	var userEmail string
-	err = d.userReader.Get(&userEmail, `SELECT email FROM users WHERE id = $1`, id)
+	err = d.userReader.Get(&userEmail, `SELECT email FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 	userInfo.Email = userEmail
 
 	var userApiKeys []string
-	err = d.userReader.Select(&userApiKeys, `SELECT api_key FROM users_api_keys WHERE user_id = $1`, id)
+	err = d.userReader.Select(&userApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
@@ -96,13 +96,22 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 			WHEN 'goldfish'       THEN  8
 			WHEN 'plankton'       THEN  9
 			ELSE                       10  -- For any other product_id values
-		END, id DESC`)
+		END, id DESC`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting premiumProduct: %w", err)
 	}
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
-		if p.ProductIdMonthly == premiumProduct.ProductId {
+		effectiveProductId := premiumProduct.ProductId
+		switch premiumProduct.ProductId {
+		case "whale":
+			effectiveProductId = "orca"
+		case "goldfish":
+			effectiveProductId = "dolphin"
+		case "plankton":
+			effectiveProductId = "guppy"
+		}
+		if p.ProductIdMonthly == effectiveProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
 			userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
@@ -126,7 +135,7 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 		SELECT price_id
 		FROM users_stripe_subscriptions uss
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
-		WHERE u.user_id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`)
+		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting premiumAddons: %w", err)
 	}
