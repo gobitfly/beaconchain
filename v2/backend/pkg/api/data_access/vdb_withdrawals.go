@@ -123,7 +123,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			w.amount
 		FROM
 		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		`
 
 	// Limit the query to relevant validators
@@ -545,7 +545,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 			COALESCE(SUM(w.amount), 0)
 		FROM
 		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
 		`, lastSlot, validators)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {

@@ -2,6 +2,8 @@
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+useBcSeo()
 </script>
 
 <template>

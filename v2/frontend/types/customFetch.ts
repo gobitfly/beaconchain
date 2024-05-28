@@ -10,6 +10,8 @@ export enum API_PATH {
   DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidator',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
+  DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID = '/validator-dashboards/publicIds',
+  DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID = '/validator-dashboards/editPublicIds',
   DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group-modify',
   DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
   DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
@@ -116,6 +118,18 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
     mock: false,
     method: 'DELETE'
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
+    path: '/validator-dashboards/{dashboardKey}/public-ids',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/public-ids`,
+    mock: false,
+    method: 'POST'
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID]: {
+    path: '/validator-dashboards/{dashboardKey}/public-ids/{publicId}',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/public-ids/${values?.publicId}`,
+    mock: false,
+    method: 'PUT'
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',

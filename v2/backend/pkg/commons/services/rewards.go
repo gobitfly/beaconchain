@@ -37,7 +37,7 @@ func GetValidatorHist(validatorArr []uint64, currency string, start uint64, end 
 		end = uint64(time.Now().Unix())
 	}
 	err = db.WriterDb.Select(&pricesDb,
-		`select ts, eur, usd, gbp, cad, jpy, cny, rub, aud from price where ts >= TO_TIMESTAMP($1) and ts <= TO_TIMESTAMP($2) order by ts desc`, start-oneDay, end+oneDay)
+		`select ts, eur, usd, gbp, cad, jpy, cny, aud from price where ts >= TO_TIMESTAMP($1) and ts <= TO_TIMESTAMP($2) order by ts desc`, start-oneDay, end+oneDay)
 	if err != nil {
 		log.Error(err, "error getting prices", 0, map[string]interface{}{"start": start, "end": end})
 	}
@@ -73,8 +73,6 @@ func GetValidatorHist(validatorArr []uint64, currency string, start uint64, end 
 			prices[date] = item.CNY
 		case "jpy":
 			prices[date] = item.JPY
-		case "rub":
-			prices[date] = item.RUB
 		case "aud":
 			prices[date] = item.AUD
 		default:
