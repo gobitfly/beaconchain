@@ -961,7 +961,7 @@ defineExpose({
 
 <template>
   <ClientOnly>
-    <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint" class="megamenu">
+    <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
       <template #item="{item, hasSubmenu}">
         <span class="p-menuitem-link">
           <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
