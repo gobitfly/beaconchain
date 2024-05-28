@@ -7,7 +7,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareCodeModal, DashboardShareModal } from '#components'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -169,8 +169,8 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 </script>
 
 <template>
-  <DashboardGroupManagementModal v-if="manageGroupsModalVisisble && false" v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="dashboardType=='validator' && manageValidatorsModalVisisble && false" v-model="manageValidatorsModalVisisble" />
+  <DashboardGroupManagementModal v-if="manageGroupsModalVisisble" v-model="manageGroupsModalVisisble" />
+  <DashboardValidatorManagementModal v-if="dashboardType=='validator' && manageValidatorsModalVisisble" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
       <Button class="share-button" :disabled="!dashboardKey" @click="share()">
