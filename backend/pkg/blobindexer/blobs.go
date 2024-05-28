@@ -202,7 +202,7 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 
 	blobSidecar, err := bi.cl.GetBlobSidecars(slot)
 	if err != nil {
-		httpErr, _ := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no sidecar for this slot
 			return nil
