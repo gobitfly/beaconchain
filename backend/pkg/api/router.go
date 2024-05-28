@@ -45,7 +45,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 // TODO:patrick - remove this test route
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(fmt.Sprintf(`
+	_, err := w.Write([]byte(fmt.Sprintf(`
 <div>hello</div>
 <pre>
 Stripe.PublicKey         %[2]s
@@ -95,6 +95,10 @@ fetch('/api/i/users/me',{headers:{'Authorization':'Bearer %[1]s'}}).then((r)=>r.
 		utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 		utils.Config.Frontend.Stripe.VdbAddon10kYearly,
 	)))
+	if err != nil {
+		log.Error(err, "error writing response", 0)
+		http.Error(w, "error writing response", http.StatusInternalServerError)
+	}
 }
 
 func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
