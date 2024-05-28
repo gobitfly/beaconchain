@@ -163,7 +163,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <LazyDashboardTableSummaryDetails :row="slotProps.data" />
+              <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
             <template #empty>
               <DashboardTableAddValidator />
@@ -173,7 +173,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <LazySummaryChart v-if="showInDevelopment" />
+          <SummaryChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>

@@ -239,7 +239,7 @@ const wrappedRewards = computed(() => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <LazyDashboardTableRewardsDetails
+              <DashboardTableRewardsDetails
                 :row="slotProps.data"
                 :group-name="groupNameLabel(slotProps.data.group_id)"
               />
@@ -252,7 +252,7 @@ const wrappedRewards = computed(() => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <LazyDashboardChartRewardsChart v-if="showInDevelopment" />
+          <DashboardChartRewardsChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>
