@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 // TODOs
-// - Check latest design changes (per month versus /month, asterisk, ...)
-// - Implement changes for yearly/monthly view
 // - Implement mobile
+// - Update logic for button (disable when user does not have orca, for example)
 
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type ExtraDashboardValidatorsPremiumAddon } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 
@@ -35,7 +36,7 @@ const prices = computed(() => {
 const text = computed(() => {
   return {
     validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
-    perValidator: $t('pricing.addons.per_validator', { amount: prices.value.perValidator })
+    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
   }
 })
 </script>
@@ -55,18 +56,38 @@ const text = computed(() => {
     </div>
     <div class="price-container">
       <div class="price">
-        <span>{{ prices.monthly }}</span><span class="month"> {{ $t('pricing.addons.per_month') }}</span>
-        <div class="year">
-          {{ $t('pricing.addons.amount_per_year', {amount: prices.yearly}) }}
-        </div>
+        <template v-if="isYearly">
+          <div>
+            {{ prices.monthly_based_on_yearly }}
+          </div>
+          <div class="month" yearly>
+            {{ $t('pricing.per_month') }}
+          </div>
+          <div class="year">
+            {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
+          </div>
+        </template>
+        <template v-else>
+          <div>
+            {{ prices.monthly }}
+          </div>
+          <div class="month">
+            {{ $t('pricing.per_month') }}*
+          </div>
+        </template>
       </div>
-      <div class="saving-info">
+      <div v-if="isYearly" class="saving-info">
         <div>
-          {{ $t('pricing.addons.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', {amount: prices.saving}) }}
         </div>
-        <div>
-          i
-        </div>
+        <BcTooltip position="top" :fit-content="true">
+          <FontAwesomeIcon :icon="faInfoCircle" />
+          <template #tooltip>
+            <div class="saving-tooltip-container">
+              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+            </div>
+          </template>
+        </BcTooltip>
       </div>
       <div class="quantity-container">
         <div>
@@ -131,8 +152,13 @@ const text = computed(() => {
 
       .month {
         color: var(--text-color-discreet);
-        font-size: 17px;
-        font-weight: 500;
+        font-size: 20px;
+        font-weight: 600;
+
+        &[isYearly] {
+          font-size: 17px;
+          font-weight: 500;
+        }
       }
 
       .year {

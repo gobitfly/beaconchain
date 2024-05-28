@@ -76,7 +76,7 @@ const mainFeatures = computed<Feature[]>(() => {
     },
     {
       name: $t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
-      subtext: $t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
+      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
       tooltip: $t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
       percentage: percentages.value.validatorsPerDashboard
@@ -137,21 +137,21 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ prices.yearly }} {{ $t('pricing.premium_product.yearly') }}*
+          {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ $t('pricing.premium_product.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', {amount: prices.saving}) }}
         </div>
         <BcTooltip position="top" :fit-content="true">
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
             </div>
           </template>
         </BcTooltip>
