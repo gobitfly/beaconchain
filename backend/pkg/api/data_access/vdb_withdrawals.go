@@ -123,7 +123,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			w.amount
 		FROM
 		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		`
 
 	// Limit the query to relevant validators
