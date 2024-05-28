@@ -23,7 +23,9 @@ import {
   type ResultSuggestionInternal,
   type OrganizedResults,
   Indirect,
-  SearchbarStyle,
+  SearchbarShape,
+  type SearchbarColors,
+  type SearchbarDropdownLayout,
   SearchbarPurpose,
   SearchbarPurposeInfo,
   type Matching,
@@ -36,13 +38,18 @@ import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/netwo
 import { API_PATH } from '~/types/customFetch'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
+const layoutThreshold = 500 // px  (tells when the bar will switch between its narrow and large layouts)
+
+const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
 const { t } = useI18n()
 
 const { fetch } = useCustomFetch()
 const props = defineProps<{
-  barStyle: SearchbarStyle, // look of the bar
+  barShape: SearchbarShape, // shape of the bar
+  colorTheme: SearchbarColors, // colors of the bar and its dropdown
   barPurpose: SearchbarPurpose, // what the bar will be used for
+  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
   pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
   keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
@@ -66,7 +73,7 @@ interface GlobalState {
 }
 
 let differentialRequests : boolean
-let searchableTypes: ResultType[] = []
+let searchableTypes: ResultType[]
 let allTypesBelongToAllNetworks = false
 
 const globalState = ref<GlobalState>({
@@ -75,6 +82,7 @@ const globalState = ref<GlobalState>({
   showDropdown: false
 })
 
+const wholeComponent = ref<HTMLDivElement>()
 const dropdown = ref<HTMLDivElement>()
 const textFieldAndButton = ref<HTMLDivElement>()
 const textField = ref<HTMLInputElement>()
@@ -203,12 +211,24 @@ function reconfigureSearchbar () {
 
 watch(() => props, reconfigureSearchbar, { immediate: true })
 
+let resizingObserver: ResizeObserver
+if (process.client) {
+  resizingObserver = new ResizeObserver((entries) => {
+    const newLayout : SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < layoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
+    if (newLayout !== dropdownLayout.value) { // reassigning 'narrow-dropdown' to 'narrow-dropdown' (for ex) is not guaranteed to preserve the pointer, so this trick makes sure that we do not trigger Vue watchers for nothing (draining the battery and slowing down the UI)
+      dropdownLayout.value = newLayout
+    }
+  })
+}
+
 onMounted(() => {
+  resizingObserver.observe(wholeComponent.value!)
   // listens to clicks outside the component
   document.addEventListener('click', listenToClicks)
 })
 
 onUnmounted(() => {
+  resizingObserver.unobserve(wholeComponent.value!)
   document.removeEventListener('click', listenToClicks)
   empty()
 })
@@ -651,14 +671,14 @@ function informationIfHiddenResults () : string {
 </script>
 
 <template>
-  <div class="anchor" :class="[barStyle, classForDropdownOpenedOrClosed]">
-    <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
-      <div ref="textFieldAndButton" class="text-and-button" :class="barStyle">
+  <div class="anchor" :class="[barShape, classForDropdownOpenedOrClosed]">
+    <div ref="wholeComponent" class="whole-component" :class="[barShape,colorTheme,classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
+      <div ref="textFieldAndButton" class="text-and-button" :class="barShape">
         <input
           ref="textField"
           v-model="userInputText"
           class="p-inputtext text-field"
-          :class="barStyle"
+          :class="[barShape,colorTheme]"
           type="text"
           :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
           @keyup="(e) => handleKeyPressInTextField(e.key)"
@@ -666,39 +686,47 @@ function informationIfHiddenResults () : string {
         >
         <BcSearchbarButton
           class="search-button"
-          :class="[barStyle, classForDropdownOpenedOrClosed]"
-          :bar-style="barStyle"
+          :class="[barShape,classForDropdownOpenedOrClosed]"
+          :bar-shape="barShape"
+          :color-theme="colorTheme"
           :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="barStyle">
-        <div v-if="dropdownContainsSomething" class="separation" :class="barStyle" />
+      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="barShape">
+        <div v-if="dropdownContainsSomething" class="separation" :class="[barShape,colorTheme]" />
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
             v-model="userInputNetworks"
             class="filter-networks"
-            :bar-style="barStyle"
+            :bar-shape="barShape"
+            :color-theme="colorTheme"
+            :dropdown-layout="dropdownLayout"
             @change="userFiltersChanged"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
             v-model="userInputCategories"
             class="filter-categories"
-            :bar-style="barStyle"
+            :bar-shape="barShape"
+            :color-theme="colorTheme"
+            :dropdown-layout="dropdownLayout"
             @change="userFiltersChanged"
           />
         </div>
-        <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
-          <div v-for="(network, k) of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barStyle">
-            <div v-for="(typ, j) of network.types" :key="typ.type" class="type-container" :class="barStyle">
-              <div v-for="(suggestion, i) of typ.suggestions" :key="suggestion.queryParam" class="suggestionrow-container" :class="barStyle">
-                <div v-if="i+j+k > 0" class="separation-between-suggestions" :class="barStyle" />
+        <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="[barShape,colorTheme]">
+          <div v-for="(network, k) of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barShape">
+            <div v-for="(typ, j) of network.types" :key="typ.type" class="type-container" :class="barShape">
+              <div v-for="(suggestion, i) of typ.suggestions" :key="suggestion.queryParam" class="suggestionrow-container" :class="barShape">
+                <div v-if="i+j+k > 0" class="separation-between-suggestions" :class="[barShape, dropdownLayout]" />
                 <BcSearchbarSuggestionRow
                   :suggestion="suggestion"
-                  :bar-style="barStyle"
+                  :bar-shape="barShape"
+                  :color-theme="colorTheme"
+                  :dropdown-layout="dropdownLayout"
                   :bar-purpose="barPurpose"
+                  :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
                   @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
                 />
               </div>
@@ -711,7 +739,7 @@ function informationIfHiddenResults () : string {
             {{ informationIfHiddenResults() }}
           </div>
         </div>
-        <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="barStyle">
+        <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="[barShape,colorTheme]">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
             {{ t('search_bar.searching') }}
             <BcLoadingSpinner :loading="true" size="small" alignment="center" />
@@ -738,8 +766,12 @@ function informationIfHiddenResults () : string {
   display: flex;
   margin: auto;
   align-items: unset !important;
+  flex-wrap: wrap !important;
+  white-space: normal !important;
+  background-color: transparent !important;
+  border: none !important;
 
-  &.embedded {
+  &.small {
     height: 28px;
     &.dropdown-is-opened {
       @media (max-width: 510px) { // narrow window/screen
@@ -750,17 +782,11 @@ function informationIfHiddenResults () : string {
       }
     }
   }
-  &.discreet {
+  &.medium {
     height: 34px;
   }
-  &.gaudy {
+  &.big {
     height: 40px;
-    @media (min-width: 600px) { // large screen
-      width: 735px;
-    }
-    @media (max-width: 599.9px) { // mobile
-      width: 380px;
-    }
   }
 }
 
@@ -774,16 +800,22 @@ function informationIfHiddenResults () : string {
   right: 0px;
   left: 0px;
 
-  &.gaudy,
-  &.embedded {
-    background-color: var(--searchbar-background-gaudy);
+  &.default {
+    background-color: var(--searchbar-background-default);
     border: 1px solid var(--input-border-color);
   }
-  &.discreet {
-    background-color: var(--searchbar-background-discreet);
+  &.darkblue {
+    background-color: var(--searchbar-background-darkblue);
     border: 1px solid transparent;
     &.dropdown-is-opened {
-      border: 1px solid var(--searchbar-background-hover-discreet);
+      border: 1px solid var(--searchbar-background-hover-darkblue);
+    }
+  }
+  &.lightblue {
+    background-color: var(--searchbar-background-lightblue);
+    border: 1px solid transparent;
+    &.dropdown-is-opened {
+      border: 1px solid var(--searchbar-background-hover-lightblue);
     }
   }
 
@@ -803,21 +835,29 @@ function informationIfHiddenResults () : string {
       padding-top: 0px;
       padding-bottom: 0px;
 
-      &.gaudy {
+      &.big {
         height: 40px;
         padding-right: 41px;
       }
-      &.discreet {
+      &.medium {
         height: 34px;
         padding-right: 35px;
-        color: var(--searchbar-text-discreet);
-        ::placeholder {
-          color: var(--light-grey-4);
-        }
       }
-      &.embedded {
+      &.small {
         height: 28px;
         padding-right: 31px;
+      }
+      &.darkblue {
+        color: var(--searchbar-text-blue);
+        &::placeholder {
+          color: var(--light-grey);
+        }
+      }
+      &.lightblue {
+        color: var(--searchbar-text-blue);
+        &::placeholder {
+          color: var(--grey-4);
+        }
       }
 
       &:placeholder-shown {
@@ -827,19 +867,19 @@ function informationIfHiddenResults () : string {
 
     .search-button {
       position: absolute;
-      &.gaudy {
+      &.big {
         right: -1px;
         top: -1px;
         width: 42px;
         height: 42px;
       }
-      &.discreet {
+      &.medium {
         right: 0px;
         top: 0px;
         width: 34px;
         height: 34px;
       }
-      &.embedded {
+      &.small {
         right: -1px;
         top: -1px;
         border-top-left-radius: 0;
@@ -859,14 +899,14 @@ function informationIfHiddenResults () : string {
       margin-right: 8px;
       height: 1px;
       margin-bottom: 10px;
-      &.gaudy {
+      &.default {
         background-color: var(--input-border-color);
       }
-      &.discreet {
-        background-color: var(--searchbar-background-hover-discreet);
+      &.darkblue {
+        background-color: var(--searchbar-background-hover-darkblue);
       }
-      &.embedded {
-        background-color: var(--input-border-color);
+      &.lightblue {
+        background-color: var(--searchbar-background-hover-lightblue);
       }
     }
 
@@ -894,8 +934,9 @@ function informationIfHiddenResults () : string {
       overflow: auto;
       padding-bottom: 4px;
 
-      &.discreet {
-        color: var(--searchbar-text-discreet);
+      &.darkblue,
+      &.lightblue {
+        color: var(--searchbar-text-blue);
       }
 
       .network-container {
@@ -916,8 +957,8 @@ function informationIfHiddenResults () : string {
               margin-right: 8px;
               height: 1px;
               display: none;
-              &.embedded {
-                @media (max-width: 599.9px) { // mobile
+              &.small {
+                &.narrow-dropdown {
                   display: block;
                 }
                 background-color: var(--input-border-color);

@@ -53,6 +53,7 @@ import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
 import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 
 import { Target } from '~/types/links'
+import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
@@ -62,10 +63,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const megaMenu = ref<{toggle:(evt:Event)=>void} | null>(null)
 
-const smallScreenWidth = 1023
-const breakpoint = `${smallScreenWidth}px`
-const isSmallScreen = computed(() => width.value <= smallScreenWidth)
-const isMobile = computed(() => width.value <= 469)
+const breakpoint = `${smallHeaderThreshold}px`
+const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
+const isMobile = computed(() => width.value < mobileHeaderThreshold)
 
 const items = computed(() => {
   let list: MenuItem[] = []
@@ -961,7 +961,7 @@ defineExpose({
 
 <template>
   <ClientOnly>
-    <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
+    <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint" class="megamenu">
       <template #item="{item, hasSubmenu}">
         <span class="p-menuitem-link">
           <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
@@ -974,7 +974,7 @@ defineExpose({
               <span>{{ item.label }}</span>
             </span>
           </NuxtLink>
-          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="()=>item.command?.()">
+          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.()">
             {{ item.label }}
           </span>
           <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
@@ -984,7 +984,7 @@ defineExpose({
   </ClientOnly>
 </template>
 
-<style lang="scss"  scoped>
+<style lang="scss" scoped>
 .iconSpacing {
   width: 25px;
   position: relative;

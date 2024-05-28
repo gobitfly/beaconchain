@@ -6,19 +6,24 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
+import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
+const colorMode = useColorMode()
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetwork()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { width } = useWindowSize()
 const { t: $t } = useI18n()
 
-const isMobile = computed(() => width.value <= 469)
-const isSmallScreen = computed(() => width.value <= 1023)
+const isMobile = computed(() => width.value < mobileHeaderThreshold)
+const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const screenSizeClass = computed(() => isMobile.value ? 'mobile' : (isSmallScreen.value ? 'small' : 'large'))
+
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished'
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -51,7 +56,7 @@ const userMenu = computed(() => {
 </script>
 
 <template>
-  <div class="anchor">
+  <div class="anchor" :class="hideInDevelopmentClass">
     <div class="top-background" />
     <div class="rows" :class="screenSizeClass">
       <div class="grid-cell blockchain-info" :class="screenSizeClass">
@@ -76,7 +81,13 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell search-bar" :class="screenSizeClass">
-        <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="bar" :bar-style="isSmallScreen ? 'gaudy' : 'discreet'" />
+        <BcSearchbarGeneral
+          v-if="showInDevelopment && !props.isHomePage"
+          class="bar"
+          :bar-shape="SearchbarShape.Medium"
+          :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
+          :screen-width-causing-sudden-change="smallHeaderThreshold"
+        />
       </div>
 
       <div class="grid-cell controls" :class="screenSizeClass">
@@ -128,8 +139,10 @@ const userMenu = computed(() => {
   width: 100%;
   justify-content: center;
   border-bottom: 1px solid var(--container-border-color);
+  &.hide-because-it-is-unfinished {
+    border-bottom: none;
+  }
   background-color: var(--container-background);
-  color: var(--container-color);
   .top-background {
     position: absolute;
     width: 100%;
@@ -143,11 +156,11 @@ const userMenu = computed(() => {
     grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
     grid-template-rows: var(--navbar-height) min-content;
     &.small, &.mobile {
-      grid-template-columns: 0px min-content auto min-content 0px;
+      grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
     width: var(--content-width);
-    color: var(--light-grey);
+    color: var(--header-top-font-color);
     @mixin bottom-cell($row) {
       color: var(--container-color);
       grid-row: $row;
@@ -210,6 +223,7 @@ const userMenu = computed(() => {
     }
 
     .controls {
+      user-select: none;
       grid-row: 1;
       grid-column: 5;
       &.small, &.mobile {
@@ -220,7 +234,9 @@ const userMenu = computed(() => {
           display: none;
         }
       }
-      user-select: none;
+      .currency {
+        color: var(--header-top-font-color);
+      }
       .logged-out {
         white-space: nowrap;
         display: flex;
@@ -235,10 +251,11 @@ const userMenu = computed(() => {
       }
       .user-menu {
         padding-right: 0px;
+        color: var(--header-top-font-color);
         .user-menu-icon {
+          color: var(--header-top-font-color);
           width: 19px;
           height: 18px;
-          color: var(--light-grey);
         }
       }
       .burger {
