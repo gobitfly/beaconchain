@@ -243,12 +243,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
 			COALESCE(slashed, false) as slashed,
-			COALESCE(balance_start, 0) as balance_start,
-			COALESCE(balance_end, 0) as balance_end,
 			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from users_val_dashboards_validators
@@ -284,12 +280,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
 			COALESCE(slashed, false) as slashed,
-			COALESCE(balance_start, 0) as balance_start,
-			COALESCE(balance_end, 0) as balance_end,
 			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from %[1]s
