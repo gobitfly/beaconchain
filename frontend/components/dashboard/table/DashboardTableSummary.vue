@@ -5,7 +5,6 @@ import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
-import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -14,11 +13,10 @@ const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
+const { summary, query: lastQuery, isLoading, getSummary, groupNameLabel } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
-const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -44,10 +42,6 @@ watch(query, (q) => {
     getSummary(dashboardKey.value, q)
   }
 }, { immediate: true })
-
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
-}
 
 const onSort = (sort: DataTableSortEvent) => {
   loadData(setQuerySort(sort, lastQuery?.value))
@@ -152,7 +146,6 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               v-if="colsVisible.validator"
               class="validator_column"
-              :sortable="true"
               :header="$t('dashboard.validator.col.validators')"
             >
               <template #body="slotProps">
