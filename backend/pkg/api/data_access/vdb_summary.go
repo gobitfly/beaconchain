@@ -511,7 +511,7 @@ func (d *DataAccessService) internal_getClAPR(validators []uint64, days int) (in
 		table = "validator_dashboard_data_rolling_daily"
 	case 7:
 		table = "validator_dashboard_data_rolling_weekly"
-	case 31:
+	case 30:
 		table = "validator_dashboard_data_rolling_monthly"
 	case -1:
 		table = "validator_dashboard_data_rolling_90d"
