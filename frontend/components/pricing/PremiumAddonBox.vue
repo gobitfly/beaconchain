@@ -226,7 +226,70 @@ const text = computed(() => {
   }
 
   @media (max-width: 600px) {
-    // TODO
+    width: 200px;
+
+    .summary-container {
+      padding: 20px 0 18px 0;
+
+      .validator-count {
+        font-size: 14px;
+
+        .subtext {
+          margin-bottom: 10px;
+
+          .tooltip-icon {
+            width: 13px;
+          }
+        }
+
+        .per-validator {
+          font-size: 12px;
+        }
+      }
+    }
+
+    .price-container {
+      padding: 10px 25px 4px 25px;
+
+      .price {
+        font-size: 18px;
+        margin-bottom: 11px;
+
+        .month {
+          font-size: 12px;
+
+          &[isYearly] {
+            font-size: 10px;
+          }
+        }
+
+        .year {
+          font-size: 10px;
+        }
+      }
+
+      .saving-info {
+        height: 21px;
+        gap: 4px;
+        font-size: 12px;
+        margin-bottom: 17px;
+      }
+
+      .quantity-container {
+        font-size: 12px;
+        margin-bottom: 18px;
+      }
+
+      .select-button {
+        height: 30px;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .footer {
+        font-size: 10px;
+      }
+    }
   }
 }
 
