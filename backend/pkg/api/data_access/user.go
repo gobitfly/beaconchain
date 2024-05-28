@@ -34,6 +34,11 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 	return result, err
 }
 
+func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+	// TODO @recy21
+	return d.dummy.GetUserIdByApiKey(apiKey)
+}
+
 func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 	// TODO patrick
 	// return d.dummy.GetUserInfo(id)

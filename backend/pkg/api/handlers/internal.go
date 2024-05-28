@@ -78,7 +78,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 
 func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// TODO patrick
-	user, err := h.getUser(r)
+	user, err := h.getUserBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -98,12 +98,12 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUser(r)
+	userId, err := h.GetUserIdBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetUserDashboards(user.Id)
+	data, err := h.dai.GetUserDashboards(userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -178,7 +178,7 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	user, err := h.getUser(r)
+	user, err := h.getUserBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
