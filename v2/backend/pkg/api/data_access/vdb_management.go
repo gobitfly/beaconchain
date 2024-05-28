@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"strconv"
@@ -333,11 +334,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency,
 
-					SUM(balance_start) AS balance_start,
-					SUM(balance_end) AS balance_end,
-					SUM(deposits_amount) AS deposits_amount,
-					SUM(withdrawals_amount) AS withdrawals_amount,
-					SUM(blocks_el_reward) AS blocks_el_reward
+					(SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) AS cl_reward,
+					SUM(blocks_el_reward) AS el_reward
 				FROM %[1]s v
 				INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
 				WHERE uvdv.dashboard_id = $1`
@@ -349,11 +347,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency,
 
-					SUM(balance_start) AS balance_start,
-					SUM(balance_end) AS balance_end,
-					SUM(deposits_amount) AS deposits_amount,
-					SUM(withdrawals_amount) AS withdrawals_amount,
-					SUM(blocks_el_reward) AS blocks_el_reward
+					(SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) AS cl_reward,
+					SUM(blocks_el_reward) AS el_reward
 				FROM %[1]s
 				WHERE validator_index = ANY($1)`
 				params = append(params, validators)
@@ -364,12 +359,9 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 				ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
 				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 
-				BalanceStart      sql.NullInt64 `db:"balance_start"`
-				BalanceEnd        sql.NullInt64 `db:"balance_end"`
-				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
-				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
+				ClReward int64 `db:"cl_reward"`
 				// TODO EL reward data not present yet, will be added later
-				BlocksElReward sql.NullInt64 `db:"blocks_el_reward"`
+				ElReward sql.NullInt64 `db:"el_reward"`
 			}
 			err := d.alloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), params...)
 			if err != nil {
@@ -402,8 +394,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 				// use 90d data for total apr for now, see below
 				days = 90 // uint64(time.Since(utils.EpochToTime(0)).Hours() / 24)
 			}
-			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64).Mul(decimal.NewFromInt(1e9))
-			(*rewardsField).El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
+			(*rewardsField).Cl = decimal.NewFromInt(queryResult.ClReward).Mul(decimal.NewFromInt(1e9))
+			(*rewardsField).El = decimal.NewFromInt(queryResult.ElReward.Int64)
 			*efficiencyField = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
 			// TODO use activation time for apr calc
 			if tableName == "validator_dashboard_data_rolling_total" {
@@ -411,11 +403,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 				if dashboardId.Validators == nil {
 					query = `SELECT	
 						COUNT(v.validator_index) as validator_count,
-						SUM(balance_start) AS balance_start,
-						SUM(balance_end) AS balance_end,
-						SUM(deposits_amount) AS deposits_amount,
-						SUM(withdrawals_amount) AS withdrawals_amount,
-						SUM(blocks_el_reward) AS blocks_el_reward
+						(SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) AS cl_reward,
+						SUM(blocks_el_reward) AS el_reward
 					FROM validator_dashboard_data_rolling_90d v
 					INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
 					WHERE uvdv.dashboard_id = $1`
@@ -423,11 +412,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 				} else {
 					query = `SELECT
 						COUNT(validator_index) as validator_count,
-						SUM(balance_start) AS balance_start,
-						SUM(balance_end) AS balance_end,
-						SUM(deposits_amount) AS deposits_amount,
-						SUM(withdrawals_amount) AS withdrawals_amount,
-						SUM(blocks_el_reward) AS blocks_el_reward
+						(SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) AS cl_reward,
+						SUM(blocks_el_reward) AS el_reward
 					FROM validator_dashboard_data_rolling_90d
 					WHERE validator_index = ANY($1)`
 					params = append(params, validators)
@@ -437,8 +423,14 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 					return fmt.Errorf("error retrieving data from table validator_dashboard_data_rolling_90d: %v", err)
 				}
 			}
-			(*aprField).Cl = (float64(queryResult.BalanceEnd.Int64+queryResult.WithdrawalsAmount.Int64-queryResult.BalanceStart.Int64-queryResult.DepositsAmount.Int64) / float64(days)) / (float64(utils.Config.Chain.ClConfig.MaxEffectiveBalance) * float64(queryResult.ValidatorCount)) * 365.0 * 100.0
-			(*aprField).El = (float64(queryResult.BlocksElReward.Int64) / float64(days)) / (float64(utils.Config.Chain.ClConfig.MaxEffectiveBalance) * float64(queryResult.ValidatorCount)) * 365.0 * 100.0
+			(*aprField).Cl = (float64(queryResult.ClReward) / float64(days)) / (float64(utils.Config.Chain.ClConfig.MaxEffectiveBalance) * float64(queryResult.ValidatorCount)) * 365.0 * 100.0
+			if math.IsNaN((*aprField).Cl) {
+				(*aprField).Cl = 0
+			}
+			(*aprField).El = (float64(queryResult.ElReward.Int64) / float64(days)) / (float64(utils.Config.Chain.ClConfig.MaxEffectiveBalance) * float64(queryResult.ValidatorCount)) * 365.0 * 100.0
+			if math.IsNaN((*aprField).El) {
+				(*aprField).El = 0
+			}
 			return nil
 		})
 	}
