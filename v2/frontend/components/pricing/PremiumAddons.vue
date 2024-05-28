@@ -28,9 +28,7 @@ defineProps<Props>()
 
 <style lang="scss" scoped>
   .addons-container {
-    margin-top: 43px;
     width: 100%;
-    height: 500px;
     display: flex;
     align-items: flex-start;
     gap: 70px;
@@ -50,12 +48,27 @@ defineProps<Props>()
     }
 
     .addons-row {
+      width: 100%;
       display: flex;
       gap: 7px;
+      overflow-x: auto;
     }
 
     @media (max-width: 600px) {
-      // TODO
+      flex-direction: column;
+      gap: 15px;
+
+      .text-container {
+        gap: 8px;
+
+        .title{
+          font-size: 16px;
+        }
+
+        .subtitle{
+          font-size: 18px;
+        }
+      }
     }
   }
 </style>

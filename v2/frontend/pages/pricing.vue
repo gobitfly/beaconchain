@@ -102,11 +102,11 @@ const scrollToAddons = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding-top: 25px;
 
   .type-toggle-container {
     width: 237px;
     height: 41px;
-    margin-top: 25px;
     margin-bottom: 37px;
     display: flex;
     align-items: center;
@@ -218,11 +218,20 @@ const scrollToAddons = () => {
       display: flex;
       justify-content: flex-end;
     }
+
+    margin-bottom: 38px;
   }
 
-  // TODO
-  .compare-plans-container {
-    margin-top: 35px;
+  .view-addons-button {
+    width: 215px;
+    height: 45px;
+    font-size: 21px;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 35px;
+  }
+
+  .compare-plans-container { // TODO
     width: 100%;
     height: 500px;
 
@@ -234,15 +243,8 @@ const scrollToAddons = () => {
     display: flex;
     justify-content: center;
     align-items: center;
-  }
 
-  .view-addons-button {
-    margin-top: 38px;
-    width: 215px;
-    height: 45px;
-    font-size: 21px;
-    display: flex;
-    gap: 12px;
+    margin-bottom: 43px;
   }
 
   @media (max-width: 600px) {
@@ -281,12 +283,15 @@ const scrollToAddons = () => {
       }
     }
 
-    .premium-products-container .footnote {
-      font-size: 8px;
+    .premium-products-container{
+      margin-bottom: 36px;
+
+      .footnote {
+        font-size: 8px;
+      }
     }
 
     .view-addons-button {
-      margin-top: 36px;
       padding: 7px 17px;
       width: 150px;
       height: 30px;
