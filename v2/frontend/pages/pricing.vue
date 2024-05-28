@@ -284,6 +284,15 @@ const scrollToAddons = () => {
     .premium-products-container .footnote {
       font-size: 8px;
     }
+
+    .view-addons-button {
+      margin-top: 36px;
+      padding: 7px 17px;
+      width: 150px;
+      height: 30px;
+      font-size: 15px;
+      gap: 8px;
+    }
   }
 }
 </style>
