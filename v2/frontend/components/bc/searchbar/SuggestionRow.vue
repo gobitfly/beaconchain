@@ -11,7 +11,9 @@ import {
   ResultType,
   wasOutputDataGivenByTheAPI,
   type ResultSuggestionInternal,
-  SearchbarStyle,
+  SearchbarShape,
+  type SearchbarColors,
+  type SearchbarDropdownLayout,
   SearchbarPurpose,
   SearchbarPurposeInfo,
   SuggestionrowCells,
@@ -19,9 +21,12 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-    suggestion: ResultSuggestionInternal,
-    barStyle: SearchbarStyle,
-    barPurpose: SearchbarPurpose
+  suggestion: ResultSuggestionInternal,
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout : SearchbarDropdownLayout,
+  screenWidthCausingSuddenChange: number,
+  barPurpose: SearchbarPurpose
 }>()
 
 const { t } = useI18n()
@@ -61,39 +66,45 @@ function formatDescriptionCell () : string {
   <div
     v-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory"
     class="rowstyle_name-description-low-level-category"
-    :class="barStyle"
+    :class="[barShape,colorTheme,dropdownLayout]"
   >
-    <!-- In this mode, all possible cells are shown (as originally designed on Figma) -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+    <!-- In this mode, all possible cells are shown (this was the very first design on Figma) -->
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,dropdownLayout]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
-      <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+      <IconNetwork
+        :chain-id="props.suggestion.chainId"
+        :colored="true"
+        :harmonize-perceived-size="true"
+        :do-not-adapt-to-color-theme="colorTheme !== 'default'"
+        class="network-icon"
+      />
     </div>
-    <div v-else class="cell-icons" :class="barStyle">
+    <div v-else class="cell-icons" :class="[barShape,dropdownLayout]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_name"
-      :class="barStyle"
+      :class="[barShape,dropdownLayout]"
       :text="suggestion.output.name"
-      :width-mediaquery-threshold="600"
+      :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="barStyle" :width-mediaquery-threshold="600">
+    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="[barShape,dropdownLayout]" :width-mediaquery-threshold="screenWidthCausingSuddenChange">
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
         :initial-flex-grow="1"
         class="cell_bi_description"
-        :class="barStyle"
+        :class="[barShape,colorTheme,dropdownLayout]"
       />
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.lowLevelData !== ''"
         :text="suggestion.output.lowLevelData"
         class="cell_bi_low-level-data"
-        :class="[barStyle,(suggestion.output.description !== '')?'greyish':'']"
+        :class="[barShape, colorTheme, dropdownLayout, suggestion.output.description?'greyish':'']"
       />
     </BcSearchbarMiddleEllipsis>
-    <div class="cell-category" :class="barStyle">
-      <span class="category-label" :class="barStyle">
+    <div class="cell-category" :class="[barShape,dropdownLayout]">
+      <span class="category-label" :class="[barShape,colorTheme,dropdownLayout]">
         {{ t(...CategoryInfo[TypeInfo[props.suggestion.type].category].title) }}
       </span>
     </div>
@@ -102,26 +113,32 @@ function formatDescriptionCell () : string {
   <div
     v-else-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription"
     class="rowstyle_subcategory-identification-description"
-    :class="barStyle"
+    :class="[barShape,colorTheme,dropdownLayout]"
   >
     <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barStyle">
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barShape">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
-      <IconNetwork :chain-id="props.suggestion.chainId" :colored="true" :harmonize-perceived-size="true" class="network-icon" />
+      <IconNetwork
+        :chain-id="props.suggestion.chainId"
+        :colored="true"
+        :harmonize-perceived-size="true"
+        :do-not-adapt-to-color-theme="colorTheme !== 'default'"
+        class="network-icon"
+      />
     </div>
-    <div v-else class="cell-icons" :class="barStyle">
+    <div v-else class="cell-icons" :class="barShape">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
-    <div class="cell-subcategory" :class="barStyle">
+    <div class="cell-subcategory" :class="[barShape,dropdownLayout]">
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_bi_identification"
-      :class="barStyle"
+      :class="[barShape,dropdownLayout]"
       :text="formatIdentificationCell()"
-      :width-mediaquery-threshold="600"
+      :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="barStyle">
+    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout]">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -150,21 +167,23 @@ function formatDescriptionCell () : string {
   @include fonts.standard_text;
 
   &:hover {
-    &.gaudy,
-    &.embedded {
+    &.default {
       background-color: var(--dropdown-background-hover);
     }
-    &.discreet {
-      background-color: var(--searchbar-background-hover-discreet);
+    &.darkblue {
+      background-color: var(--searchbar-background-hover-darkblue);
+    }
+    &.lightblue {
+      background-color: var(--searchbar-background-hover-lightblue);
     }
   }
   &:active {
-    &.gaudy,
-    &.embedded {
+    &.default {
       background-color: var(--button-color-pressed);
     }
-    &.discreet {
-      background-color: var(--searchbar-background-pressed-discreet);
+    &.darkblue,
+    &.lightblue {
+      background-color: var(--searchbar-background-pressed-blue);
     }
   }
 
@@ -172,10 +191,7 @@ function formatDescriptionCell () : string {
     position: relative;
     grid-column: 1;
     grid-row: 1;
-    @media (max-width: 599.9px) { // mobile
-      grid-row-end: span 2;
-    }
-    &.discreet {
+    &.narrow-dropdown {
       grid-row-end: span 2;
     }
     display: flex;
@@ -222,16 +238,10 @@ function formatDescriptionCell () : string {
 .rowstyle_name-description-low-level-category {
   @include common-to-all-rowstyles;
 
-  @media (min-width: 600px) { // large screen
-    &.gaudy,
-    &.embedded {
-      grid-template-columns: 40px 130px auto 130px;
-    }
-    &.discreet {
-      grid-template-columns: 40px 130px auto;
-    }
+  &.large-dropdown {
+    grid-template-columns: 40px 130px auto 130px;
   }
-  @media (max-width: 599.9px) { // mobile
+  &.narrow-dropdown {
     grid-template-columns: 40px 130px auto;
   }
 
@@ -244,11 +254,7 @@ function formatDescriptionCell () : string {
     grid-column: 3;
     grid-row: 1;
     display: flex;
-    @media (max-width: 599.9px) { // mobile
-      grid-row-end: span 2;
-      flex-direction: column;
-    }
-    &.discreet {
+    &.narrow-dropdown {
       grid-row-end: span 2;
       flex-direction: column;
     }
@@ -260,11 +266,8 @@ function formatDescriptionCell () : string {
 
     .cell_bi_description {
       position: relative;
-      @media (min-width: 600px) { // large screen
-        &.gaudy,
-        &.embedded {
-          margin-right: 0.5em;
-        }
+      &.large-dropdown {
+        margin-right: 0.5em;
       }
     }
 
@@ -272,13 +275,15 @@ function formatDescriptionCell () : string {
       position: relative;
       flex-grow: 1;
       &.greyish {
-        &.gaudy,
-        &.embedded {
-          color: var(--searchbar-text-detail-gaudy);
+        &.default {
+          color: var(--searchbar-text-detail-default);
         }
       }
-      &.greyish.discreet {
-        color: var(--searchbar-text-detail-discreet);
+      &.greyish.darkblue {
+        color: var(--searchbar-text-detail-darkblue);
+      }
+      &.greyish.lightblue {
+        color: var(--searchbar-text-detail-lightblue);
       }
     }
   }
@@ -286,36 +291,31 @@ function formatDescriptionCell () : string {
   .cell-category {
     display: flex;
     position: relative;
-    @media (min-width: 600px) { // large screen
-      &.gaudy,
-      &.embedded {
-        grid-column: 4;
-        grid-row: 1;
-        margin-top: auto;
-        margin-bottom: auto;
-        margin-left: 16px;
-      }
-      &.discreet {
-        grid-column: 2;
-        grid-row: 2;
-      }
+    &.large-dropdown {
+      grid-column: 4;
+      grid-row: 1;
+      margin-top: auto;
+      margin-bottom: auto;
+      margin-left: 16px;
     }
-    @media (max-width: 599.9px) { // mobile
+    &.narrow-dropdown {
       grid-column: 2;
       grid-row: 2;
     }
     .category-label {
       display: inline-flex;
       position: relative;
-      &.gaudy,
-      &.embedded {
-        color: var(--searchbar-text-detail-gaudy);
-        @media (min-width: 600px) { // large screen
-          margin-left: auto;
-        }
+      &.large-dropdown {
+        margin-left: auto;
       }
-      &.discreet {
-        color: var(--searchbar-text-detail-discreet);
+      &.default {
+        color: var(--searchbar-text-detail-default);
+      }
+      &.darkblue {
+        color: var(--searchbar-text-detail-darkblue);
+      }
+      &.lightblue {
+        color: var(--searchbar-text-detail-lightblue);
       }
     }
   }
@@ -326,19 +326,19 @@ function formatDescriptionCell () : string {
 .rowstyle_subcategory-identification-description {
   @include common-to-all-rowstyles;
 
-  @media (min-width: 600px) { // large screen
+  &.large-dropdown {
     grid-template-columns: 40px 126px auto min-content;
   }
-  @media (max-width: 599.9px) { // mobile
+  &.narrow-dropdown {
     grid-template-columns: 40px auto min-content;
   }
 
   .cell-subcategory {
-    @media (min-width: 600px) { // large screen
+    &.large-dropdown {
       font-weight: var(--standard_text_medium_font_weight);
       padding-right: 16px;
     }
-    @media (max-width: 599.9px) { // mobile
+    &.narrow-dropdown {
       font-weight: var(--standard_text_font_weight);
     }
     box-sizing: border-box;
@@ -355,13 +355,13 @@ function formatDescriptionCell () : string {
 
   .cell_bi_identification {
     @include cells_blockchain-info_common;
-
-    @media (min-width: 600px) { // large screen
+    &.large-dropdown {
       grid-column: 3;
       font-weight: var(--standard_text_medium_font_weight);
     }
-    @media (max-width: 599.9px) { // mobile
+    &.narrow-dropdown {
       grid-row: 2;
+      grid-column: 2;
       grid-column-end: span 2;
       font-weight: var(--standard_text_font_weight);
     }
@@ -370,15 +370,15 @@ function formatDescriptionCell () : string {
   .cell_bi_description {
     @include cells_blockchain-info_common;
 
-    @media (min-width: 600px) { // large screen
+    &.large-dropdown {
       grid-column: 4;
       width: 128px;
       padding-left: 16px;
     }
-    @media (max-width: 599.9px) { // mobile
+    &.narrow-dropdown {
       grid-row: 1;
       grid-column: 3;
-      color: var(--searchbar-text-detail-gaudy);
+      color: var(--searchbar-text-detail-default);
     }
     box-sizing: border-box;
     margin-left: auto;

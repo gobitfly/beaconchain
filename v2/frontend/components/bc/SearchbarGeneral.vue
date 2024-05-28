@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainInfo } from '~/types/networks'
 
-defineProps<{ barStyle: 'gaudy' | 'discreet' }>()
+defineProps<{
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
+}>()
 
 async function redirectToRelevantPage (result : ResultSuggestion) {
   let path : string
@@ -75,9 +79,11 @@ async function redirectToRelevantPage (result : ResultSuggestion) {
 
 <template>
   <BcSearchbarMain
-    :bar-style="barStyle as SearchbarStyle"
+    :bar-shape="barShape"
+    :color-theme="colorTheme"
     :bar-purpose="SearchbarPurpose.GlobalSearch"
     :pick-by-default="pickHighestPriorityAmongBestMatchings"
+    :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
     @go="redirectToRelevantPage"
   />
 </template>
