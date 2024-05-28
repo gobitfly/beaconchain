@@ -4,7 +4,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct } from '~/types/api/user'
-import { formatFiat } from '~/utils/format'
+import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
@@ -18,10 +18,6 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const formatPremiumProductPrice = (price: number, digits?: number) => {
-  return formatFiat(price, 'EUR', $t('locales.currency'), digits ?? 2, digits ?? 2)
-}
-
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.product.price_per_year_eur / 12 : props.product.price_per_month_eur
 
@@ -29,12 +25,12 @@ const prices = computed(() => {
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
-    main: formatPremiumProductPrice(mainPrice),
-    monthly: formatPremiumProductPrice(props.product.price_per_month_eur),
-    monthly_based_on_yearly: formatPremiumProductPrice(props.product.price_per_year_eur / 12),
-    yearly: formatPremiumProductPrice(props.product.price_per_year_eur),
-    saving: formatPremiumProductPrice(savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice(mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+    main: formatPremiumProductPrice($t, mainPrice),
+    monthly: formatPremiumProductPrice($t, props.product.price_per_month_eur),
+    monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
+    yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
   }
 })
 
