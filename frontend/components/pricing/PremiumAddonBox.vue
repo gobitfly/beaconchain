@@ -1,39 +1,76 @@
 <script lang="ts" setup>
+// TODOs
+// - Check latest design changes (per month versus /month, asterisk, ...)
+// - Implement changes for yearly/monthly view
+// - Implement mobile
+
 import { type ExtraDashboardValidatorsPremiumAddon } from '~/types/api/user'
+import { formatPremiumProductPrice } from '~/utils/format'
+
+const { t: $t } = useI18n()
+const { products } = useProductsStore()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
   isYearly: boolean
 }
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const prices = computed(() => {
+  const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
+
+  const savingAmount = props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur
+  const savingDigits = savingAmount % 100 === 0 ? 0 : 2
+
+  return {
+    main: formatPremiumProductPrice($t, mainPrice),
+    monthly: formatPremiumProductPrice($t, props.addon.price_per_month_eur),
+    monthly_based_on_yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur / 12),
+    yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators, 5)
+  }
+})
+
+const text = computed(() => {
+  return {
+    validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
+    perValidator: $t('pricing.addons.per_validator', { amount: prices.value.perValidator })
+  }
+})
 </script>
 
 <template>
   <div class="box-container">
     <div class="summary-container">
       <div class="validator-count">
-        +1000 Validators
+        {{ text.validatorCount }}
         <div class="subtext">
-          per Dashboard i
+          {{ $t('pricing.addons.per_dashboard') }} i
         </div>
         <div class="per-validator">
-          €0.0599 per Validator
+          {{ text.perValidator }}
         </div>
       </div>
     </div>
     <div class="price-container">
       <div class="price">
-        <span>€59.99</span><span class="month">/month</span>
+        <span>{{ prices.monthly }}</span><span class="month"> {{ $t('pricing.addons.per_month') }}</span>
         <div class="year">
-          719.88/year
+          {{ $t('pricing.addons.amount_per_year', {amount: prices.yearly}) }}
         </div>
       </div>
       <div class="saving-info">
-        You save €180 a year i
+        <div>
+          {{ $t('pricing.addons.savings', {amount: prices.saving}) }}
+        </div>
+        <div>
+          i
+        </div>
       </div>
       <div class="quantity-container">
         <div>
-          Quanitity
+          {{ $t('pricing.addons.quantity') }}
         </div>
         <InputText class="input">
           1
@@ -41,7 +78,7 @@ defineProps<Props>()
       </div>
       <Button label="Select Add-On" class="select-button" />
       <div class="footer">
-        requires Orca plan
+        {{ $t('pricing.addons.requires_plan', {name: products?.premium_products[products?.premium_products.length - 1].product_name}) }}
       </div>
     </div>
   </div>

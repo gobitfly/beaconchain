@@ -611,7 +611,16 @@
     "view_addons": "View Add-Ons",
     "addons": {
       "title": "Premium Add-Ons",
-      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons."
+      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
+      "validator_amount": "+{amount} Validators",
+      "per_dashboard": "per Dashboard",
+      "per_validator": "{amount} per validator",
+      "per_month":"per month",
+      "amount_per_year": "{amount} yearly",
+      "savings": "You save {amount} a year",
+      "quantity": "Quantity",
+      "select-add-on": "Select Add-On",
+      "requires_plan": "Requires {name} plan"
     }
   },
   "time_duration": {
