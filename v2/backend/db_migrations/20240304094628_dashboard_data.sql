@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS validator_dashboard_data_daily (
 
 CREATE TABLE IF NOT EXISTS validator_dashboard_data_rolling_daily (
     validator_index int NOT NULL,
-    epoch_start int NOT NULL, -- incl
+    epoch_start int NOT NULL, -- incl. Do not rely on the epoch_start to be true in every case. Validators that join on current day but get activated later may have an out of bounds epoch_start but this is intended.
     epoch_end int NOT NULL, -- excl
     attestations_source_reward int ,
     attestations_target_reward int,
