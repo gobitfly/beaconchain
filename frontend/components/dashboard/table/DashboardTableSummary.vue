@@ -163,7 +163,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" />
+              <LazyDashboardTableSummaryDetails :row="slotProps.data" />
             </template>
             <template #empty>
               <DashboardTableAddValidator />

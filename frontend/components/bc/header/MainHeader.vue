@@ -13,11 +13,7 @@ const { slotToEpoch } = useNetwork()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const { width } = useWindowSize()
 const { t: $t } = useI18n()
-
-const isSmallScreen = computed(() => width.value <= 1023)
-const isMobile = computed(() => width.value <= 469)
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -79,7 +75,7 @@ const userMenu = computed(() => {
       </div>
       <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="search" bar-style="discreet" />
       <div class="right-content">
-        <BcCurrencySelection v-if="!isMobile" class="currency" />
+        <BcCurrencySelection class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
           <BcLink to="/login">
             {{ $t('header.login') }}
@@ -89,7 +85,7 @@ const userMenu = computed(() => {
             <Button class="register" :label="$t('header.register')" />
           </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen">
+        <div v-else class="user-menu">
           <BcDropdown :options="userMenu" variant="header" option-label="label">
             <template #value>
               <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
@@ -101,7 +97,7 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <div v-if="isSmallScreen" class="burger" @click.stop.prevent="toggleMegaMenu">
+        <div class="burger" @click.stop.prevent="toggleMegaMenu">
           <FontAwesomeIcon :icon="faBars" />
         </div>
       </div>
@@ -141,8 +137,15 @@ const userMenu = computed(() => {
       display: none;
     }
 
+    @media (min-width: 102px) {
+      .burger {
+        display: none;
+      }
+    }
+
     @media (max-width: 1023px) {
 
+      .user-menu,
       .search,
       .info {
         display: none;

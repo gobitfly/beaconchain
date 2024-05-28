@@ -239,7 +239,7 @@ const wrappedRewards = computed(() => {
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableRewardsDetails
+              <LazyDashboardTableRewardsDetails
                 :row="slotProps.data"
                 :group-name="groupNameLabel(slotProps.data.group_id)"
               />
