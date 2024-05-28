@@ -44,8 +44,6 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 
 func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 	// TODO:patrick
-	var err error
-
 	userInfo := &t.UserInfo{
 		Id: id,
 		ApiPerks: t.ApiPerks{ // TODO @patrick this is hardcoded for now, but should be fetched from db
@@ -60,17 +58,22 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 		},
 	}
 
+	productSummary, err := d.GetProductSummary()
+	if err != nil {
+		return nil, fmt.Errorf("error getting productSummary: %w", err)
+	}
+
 	var userEmail string
 	err = d.userReader.Get(&userEmail, `SELECT email FROM users WHERE id = $1`, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 	userInfo.Email = userEmail
 
 	var userApiKeys []string
 	err = d.userReader.Select(&userApiKeys, `SELECT api_key FROM users_api_keys WHERE user_id = $1`, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
 	userInfo.ApiKeys = userApiKeys
 
@@ -95,10 +98,10 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 			ELSE                       10  -- For any other product_id values
 		END, id DESC`)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting premiumProduct: %w", err)
 	}
 	foundProduct := false
-	for _, p := range ProductSummary.PremiumProducts {
+	for _, p := range productSummary.PremiumProducts {
 		if p.ProductIdMonthly == premiumProduct.ProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
@@ -125,11 +128,11 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.user_id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting premiumAddons: %w", err)
 	}
 	for _, addon := range premiumAddons {
 		foundAddon := false
-		for _, p := range ProductSummary.ExtraDashboardValidatorsPremiumAddon {
+		for _, p := range productSummary.ExtraDashboardValidatorsPremiumAddon {
 			if p.ProductIdMonthly == addon.PriceId || p.ProductIdYearly == addon.PriceId {
 				userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
 				foundAddon = true
@@ -150,211 +153,208 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 	return userInfo, nil
 }
 
-// TODO:patrick move this somewhere else or put it into db
-var ProductSummary = &t.ProductSummary{
-	StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-	ApiProducts: []t.ApiProduct{
-		{
-			ProductId:        "api_free",
-			ProductName:      "Free",
-			PricePerMonthEur: 0,
-			PricePerYearEur:  0 * 12,
-			ApiPerks: t.ApiPerks{
-				UnitsPerSecond:    10,
-				UnitsPerMonth:     10_000_000,
-				ApiKeys:           2,
-				ConsensusLayerAPI: true,
-				ExecutionLayerAPI: true,
-				Layer2API:         true,
-				NoAds:             true,
-				DiscordSupport:    false,
-			},
-		},
-		{
-			ProductId:        "iron",
-			ProductName:      "Iron",
-			PricePerMonthEur: 1.99,
-			PricePerYearEur:  math.Floor(1.99*12*0.9*100) / 100, // TODO @patrick
-			ApiPerks: t.ApiPerks{
-				UnitsPerSecond:    20,
-				UnitsPerMonth:     20_000_000,
-				ApiKeys:           10,
-				ConsensusLayerAPI: true,
-				ExecutionLayerAPI: true,
-				Layer2API:         true,
-				NoAds:             true,
-				DiscordSupport:    false,
-			},
-		},
-		{
-			ProductId:        "silver",
-			ProductName:      "Silver",
-			PricePerMonthEur: 2.99,
-			PricePerYearEur:  math.Floor(2.99*12*0.9*100) / 100, // TODO @patrick
-			ApiPerks: t.ApiPerks{
-				UnitsPerSecond:    30,
-				UnitsPerMonth:     100_000_000,
-				ApiKeys:           20,
-				ConsensusLayerAPI: true,
-				ExecutionLayerAPI: true,
-				Layer2API:         true,
-				NoAds:             true,
-				DiscordSupport:    false,
-			},
-		},
-		{
-			ProductId:        "gold",
-			ProductName:      "Gold",
-			PricePerMonthEur: 3.99,
-			PricePerYearEur:  math.Floor(3.99*12*0.9*100) / 100, // TODO @patrick
-			ApiPerks: t.ApiPerks{
-				UnitsPerSecond:    40,
-				UnitsPerMonth:     200_000_000,
-				ApiKeys:           40,
-				ConsensusLayerAPI: true,
-				ExecutionLayerAPI: true,
-				Layer2API:         true,
-				NoAds:             true,
-				DiscordSupport:    false,
-			},
-		},
-	},
-	PremiumProducts: []t.PremiumProduct{
-		{
-			ProductName: "Free",
-			PremiumPerks: t.PremiumPerks{
-				AdFree:                          false,
-				ValidatorDasboards:              1,
-				ValidatorsPerDashboard:          20,
-				ValidatorGroupsPerDashboard:     1,
-				ShareCustomDashboards:           false,
-				ManageDashboardViaApi:           false,
-				HeatmapHistorySeconds:           0,
-				SummaryChartHistorySeconds:      3600 * 12,
-				EmailNotificationsPerDay:        5,
-				ConfigureNotificationsViaApi:    false,
-				ValidatorGroupNotifications:     1,
-				WebhookEndpoints:                1,
-				MobileAppCustomThemes:           false,
-				MobileAppWidget:                 false,
-				MonitorMachines:                 1,
-				MachineMonitoringHistorySeconds: 3600 * 3,
-				CustomMachineAlerts:             false,
-			},
-			PricePerMonthEur:     0,
-			PricePerYearEur:      0,
-			StripePriceIdMonthly: "premium_free",
-			StripePriceIdYearly:  "premium_free.yearly",
-		},
-		{
-			ProductName: "Guppy",
-			PremiumPerks: t.PremiumPerks{
-				AdFree:                          true,
-				ValidatorDasboards:              1,
-				ValidatorsPerDashboard:          100,
-				ValidatorGroupsPerDashboard:     3,
-				ShareCustomDashboards:           true,
-				ManageDashboardViaApi:           false,
-				HeatmapHistorySeconds:           3600 * 24 * 7,
-				SummaryChartHistorySeconds:      3600 * 24 * 7,
-				EmailNotificationsPerDay:        15,
-				ConfigureNotificationsViaApi:    false,
-				ValidatorGroupNotifications:     3,
-				WebhookEndpoints:                3,
-				MobileAppCustomThemes:           true,
-				MobileAppWidget:                 true,
-				MonitorMachines:                 2,
-				MachineMonitoringHistorySeconds: 3600 * 30,
-				CustomMachineAlerts:             true,
-			},
-			PricePerMonthEur:     9.99,
-			PricePerYearEur:      107.88,
-			StripePriceIdMonthly: "guppy",
-			StripePriceIdYearly:  "guppy.yearly",
-		},
-		{
-			ProductName: "Dolphin",
-			PremiumPerks: t.PremiumPerks{
-				AdFree:                          true,
-				ValidatorDasboards:              1,
-				ValidatorsPerDashboard:          300,
-				ValidatorGroupsPerDashboard:     10,
-				ShareCustomDashboards:           true,
-				ManageDashboardViaApi:           false,
-				HeatmapHistorySeconds:           3600 * 24 * 30,
-				SummaryChartHistorySeconds:      3600 * 24 * 14,
-				EmailNotificationsPerDay:        20,
-				ConfigureNotificationsViaApi:    false,
-				ValidatorGroupNotifications:     10,
-				WebhookEndpoints:                10,
-				MobileAppCustomThemes:           false,
-				MobileAppWidget:                 false,
-				MonitorMachines:                 10,
-				MachineMonitoringHistorySeconds: 3600 * 24 * 30,
-				CustomMachineAlerts:             true,
-			},
-			PricePerMonthEur:     29.99,
-			PricePerYearEur:      311.88,
-			ProductIdMonthly:     "dolphin",
-			ProductIdYearly:      "dolphin.yearly",
-			StripePriceIdMonthly: utils.Config.Frontend.Stripe.Dolphin,
-			StripePriceIdYearly:  utils.Config.Frontend.Stripe.DolphinYearly,
-		},
-		{
-			ProductName: "Orca",
-			PremiumPerks: t.PremiumPerks{
-				AdFree:                          true,
-				ValidatorDasboards:              2,
-				ValidatorsPerDashboard:          1000,
-				ValidatorGroupsPerDashboard:     30,
-				ShareCustomDashboards:           true,
-				ManageDashboardViaApi:           true,
-				HeatmapHistorySeconds:           3600 * 24 * 365,
-				SummaryChartHistorySeconds:      3600 * 24 * 365,
-				EmailNotificationsPerDay:        50,
-				ConfigureNotificationsViaApi:    true,
-				ValidatorGroupNotifications:     60,
-				WebhookEndpoints:                30,
-				MobileAppCustomThemes:           true,
-				MobileAppWidget:                 true,
-				MonitorMachines:                 10,
-				MachineMonitoringHistorySeconds: 3600 * 24 * 30,
-				CustomMachineAlerts:             true,
-			},
-			PricePerMonthEur:     49.99,
-			PricePerYearEur:      479.88,
-			ProductIdMonthly:     "orca",
-			ProductIdYearly:      "orca.yearly",
-			StripePriceIdMonthly: utils.Config.Frontend.Stripe.Orca,
-			StripePriceIdYearly:  utils.Config.Frontend.Stripe.OrcaYearly,
-			IsPopular:            true,
-		},
-	},
-	ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
-		{
-			ProductName:              "1k extra valis per dashboard",
-			ExtraDashboardValidators: 1000,
-			PricePerMonthEur:         74.99,
-			PricePerYearEur:          719.88,
-			ProductIdMonthly:         "vdb_addon_1k",
-			ProductIdYearly:          "vdb_addon_1k.yearly",
-			StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
-			StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
-		},
-		{
-			ProductName:              "10k extra valis per dashboard",
-			ExtraDashboardValidators: 10000,
-			PricePerMonthEur:         449.99,
-			PricePerYearEur:          4319.88,
-			ProductIdMonthly:         "vdb_addon_10k",
-			ProductIdYearly:          "vdb_addon_10k.yearly",
-			StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon10k,
-			StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon10kYearly,
-		},
-	},
-}
-
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO @patrick: put into db instead of hardcoding here and make it configurable
-	return ProductSummary, nil
+	// TODO:patrick put into db instead of hardcoding here and make it configurable
+	return &t.ProductSummary{
+		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
+		ApiProducts: []t.ApiProduct{
+			{
+				ProductId:        "api_free",
+				ProductName:      "Free",
+				PricePerMonthEur: 0,
+				PricePerYearEur:  0 * 12,
+				ApiPerks: t.ApiPerks{
+					UnitsPerSecond:    10,
+					UnitsPerMonth:     10_000_000,
+					ApiKeys:           2,
+					ConsensusLayerAPI: true,
+					ExecutionLayerAPI: true,
+					Layer2API:         true,
+					NoAds:             true,
+					DiscordSupport:    false,
+				},
+			},
+			{
+				ProductId:        "iron",
+				ProductName:      "Iron",
+				PricePerMonthEur: 1.99,
+				PricePerYearEur:  math.Floor(1.99*12*0.9*100) / 100, // TODO @patrick
+				ApiPerks: t.ApiPerks{
+					UnitsPerSecond:    20,
+					UnitsPerMonth:     20_000_000,
+					ApiKeys:           10,
+					ConsensusLayerAPI: true,
+					ExecutionLayerAPI: true,
+					Layer2API:         true,
+					NoAds:             true,
+					DiscordSupport:    false,
+				},
+			},
+			{
+				ProductId:        "silver",
+				ProductName:      "Silver",
+				PricePerMonthEur: 2.99,
+				PricePerYearEur:  math.Floor(2.99*12*0.9*100) / 100, // TODO @patrick
+				ApiPerks: t.ApiPerks{
+					UnitsPerSecond:    30,
+					UnitsPerMonth:     100_000_000,
+					ApiKeys:           20,
+					ConsensusLayerAPI: true,
+					ExecutionLayerAPI: true,
+					Layer2API:         true,
+					NoAds:             true,
+					DiscordSupport:    false,
+				},
+			},
+			{
+				ProductId:        "gold",
+				ProductName:      "Gold",
+				PricePerMonthEur: 3.99,
+				PricePerYearEur:  math.Floor(3.99*12*0.9*100) / 100, // TODO @patrick
+				ApiPerks: t.ApiPerks{
+					UnitsPerSecond:    40,
+					UnitsPerMonth:     200_000_000,
+					ApiKeys:           40,
+					ConsensusLayerAPI: true,
+					ExecutionLayerAPI: true,
+					Layer2API:         true,
+					NoAds:             true,
+					DiscordSupport:    false,
+				},
+			},
+		},
+		PremiumProducts: []t.PremiumProduct{
+			{
+				ProductName: "Free",
+				PremiumPerks: t.PremiumPerks{
+					AdFree:                          false,
+					ValidatorDasboards:              1,
+					ValidatorsPerDashboard:          20,
+					ValidatorGroupsPerDashboard:     1,
+					ShareCustomDashboards:           false,
+					ManageDashboardViaApi:           false,
+					HeatmapHistorySeconds:           0,
+					SummaryChartHistorySeconds:      3600 * 12,
+					EmailNotificationsPerDay:        5,
+					ConfigureNotificationsViaApi:    false,
+					ValidatorGroupNotifications:     1,
+					WebhookEndpoints:                1,
+					MobileAppCustomThemes:           false,
+					MobileAppWidget:                 false,
+					MonitorMachines:                 1,
+					MachineMonitoringHistorySeconds: 3600 * 3,
+					CustomMachineAlerts:             false,
+				},
+				PricePerMonthEur:     0,
+				PricePerYearEur:      0,
+				StripePriceIdMonthly: "premium_free",
+				StripePriceIdYearly:  "premium_free.yearly",
+			},
+			{
+				ProductName: "Guppy",
+				PremiumPerks: t.PremiumPerks{
+					AdFree:                          true,
+					ValidatorDasboards:              1,
+					ValidatorsPerDashboard:          100,
+					ValidatorGroupsPerDashboard:     3,
+					ShareCustomDashboards:           true,
+					ManageDashboardViaApi:           false,
+					HeatmapHistorySeconds:           3600 * 24 * 7,
+					SummaryChartHistorySeconds:      3600 * 24 * 7,
+					EmailNotificationsPerDay:        15,
+					ConfigureNotificationsViaApi:    false,
+					ValidatorGroupNotifications:     3,
+					WebhookEndpoints:                3,
+					MobileAppCustomThemes:           true,
+					MobileAppWidget:                 true,
+					MonitorMachines:                 2,
+					MachineMonitoringHistorySeconds: 3600 * 30,
+					CustomMachineAlerts:             true,
+				},
+				PricePerMonthEur:     9.99,
+				PricePerYearEur:      107.88,
+				StripePriceIdMonthly: "guppy",
+				StripePriceIdYearly:  "guppy.yearly",
+			},
+			{
+				ProductName: "Dolphin",
+				PremiumPerks: t.PremiumPerks{
+					AdFree:                          true,
+					ValidatorDasboards:              1,
+					ValidatorsPerDashboard:          300,
+					ValidatorGroupsPerDashboard:     10,
+					ShareCustomDashboards:           true,
+					ManageDashboardViaApi:           false,
+					HeatmapHistorySeconds:           3600 * 24 * 30,
+					SummaryChartHistorySeconds:      3600 * 24 * 14,
+					EmailNotificationsPerDay:        20,
+					ConfigureNotificationsViaApi:    false,
+					ValidatorGroupNotifications:     10,
+					WebhookEndpoints:                10,
+					MobileAppCustomThemes:           false,
+					MobileAppWidget:                 false,
+					MonitorMachines:                 10,
+					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
+					CustomMachineAlerts:             true,
+				},
+				PricePerMonthEur:     29.99,
+				PricePerYearEur:      311.88,
+				ProductIdMonthly:     "dolphin",
+				ProductIdYearly:      "dolphin.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Dolphin,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.DolphinYearly,
+			},
+			{
+				ProductName: "Orca",
+				PremiumPerks: t.PremiumPerks{
+					AdFree:                          true,
+					ValidatorDasboards:              2,
+					ValidatorsPerDashboard:          1000,
+					ValidatorGroupsPerDashboard:     30,
+					ShareCustomDashboards:           true,
+					ManageDashboardViaApi:           true,
+					HeatmapHistorySeconds:           3600 * 24 * 365,
+					SummaryChartHistorySeconds:      3600 * 24 * 365,
+					EmailNotificationsPerDay:        50,
+					ConfigureNotificationsViaApi:    true,
+					ValidatorGroupNotifications:     60,
+					WebhookEndpoints:                30,
+					MobileAppCustomThemes:           true,
+					MobileAppWidget:                 true,
+					MonitorMachines:                 10,
+					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
+					CustomMachineAlerts:             true,
+				},
+				PricePerMonthEur:     49.99,
+				PricePerYearEur:      479.88,
+				ProductIdMonthly:     "orca",
+				ProductIdYearly:      "orca.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Orca,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.OrcaYearly,
+				IsPopular:            true,
+			},
+		},
+		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
+			{
+				ProductName:              "1k extra valis per dashboard",
+				ExtraDashboardValidators: 1000,
+				PricePerMonthEur:         74.99,
+				PricePerYearEur:          719.88,
+				ProductIdMonthly:         "vdb_addon_1k",
+				ProductIdYearly:          "vdb_addon_1k.yearly",
+				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
+				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
+			},
+			{
+				ProductName:              "10k extra valis per dashboard",
+				ExtraDashboardValidators: 10000,
+				PricePerMonthEur:         449.99,
+				PricePerYearEur:          4319.88,
+				ProductIdMonthly:         "vdb_addon_10k",
+				ProductIdYearly:          "vdb_addon_10k.yearly",
+				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon10k,
+				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon10kYearly,
+			},
+		},
+	}, nil
 }
