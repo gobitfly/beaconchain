@@ -5,8 +5,19 @@
     "subscriptions": [
       {
         "product_id": "dolphin",
-        "product_name": "Dolphin",
         "product_category": "premium"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
       }
     ],
     "premium_perks": {

@@ -1,20 +1,31 @@
 <script lang="ts" setup>
-// TODOs
-// - Update logic for button (disable when user does not have orca, for example)
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type ExtraDashboardValidatorsPremiumAddon } from '~/types/api/user'
+import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
+const { user } = useUserStore()
 const { products } = useProductsStore()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
+  addonsAvailable: boolean,
   isYearly: boolean
 }
 const props = defineProps<Props>()
+
+const quantity = computed(() => {
+  let q = 0
+  user.value?.subscriptions?.forEach((subscription) => {
+    if (subscription.product_id === props.addon.product_id) {
+      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id === subscription.product_id) !== undefined ? 1 : 0
+    }
+  })
+
+  return q
+})
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
@@ -38,6 +49,16 @@ const text = computed(() => {
     perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
   }
 })
+
+const addonButton = computed(() => {
+  let text = $t('pricing.addons.button.select_addon')
+  if (user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon) !== undefined) {
+    text = $t('pricing.addons.button.manage_addon')
+  }
+
+  return { text, disabled: !props.addonsAvailable }
+})
+
 </script>
 
 <template>
@@ -98,13 +119,10 @@ const text = computed(() => {
       </div>
       <div class="quantity-container">
         <div>
-          {{ $t('pricing.addons.quantity') }}
+          {{ $t('pricing.addons.quantity', { quantity }) }}
         </div>
-        <InputText class="input">
-          1
-        </InputText>
       </div>
-      <Button label="Select Add-On" class="select-button" />
+      <Button :label="addonButton.text" class="select-button" :disabled="addonButton.disabled" />
       <div class="footer">
         {{ $t('pricing.addons.requires_plan', {name: products?.premium_products[products?.premium_products.length - 1].product_name}) }}
       </div>
@@ -200,9 +218,10 @@ const text = computed(() => {
       font-size: 20px;
       margin-bottom: 32px;
 
-      .input {
+      :deep(.p-inputtext.p-component.p-inputnumber-input) {
         width: 52px;
         border-radius: 9px;
+        text-align: center;
       }
     }
 

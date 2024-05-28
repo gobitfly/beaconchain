@@ -612,8 +612,11 @@
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
-      "quantity": "Quantity",
-      "select-add-on": "Select Add-On",
+      "quantity": "Quantity: {quantity}",
+      "button": {
+        "select_addon": "Select Add-On",
+        "manage_addon": "Manage Add-On"
+      },
       "requires_plan": "Requires {name} plan"
     }
   },
