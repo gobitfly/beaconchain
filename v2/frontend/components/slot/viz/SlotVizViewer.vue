@@ -106,11 +106,6 @@ const currentSlotId = computed(() => {
       gap: var(--padding);
       &:first-child{
         height: 46px;
-
-        :deep(.bc-togglebar .p-button.p-togglebutton.p-component.p-highlight.bc-toggle) {
-          background-color: var(--container-border-color);
-          color: var(--container-color)
-        }
       }
     }
   }

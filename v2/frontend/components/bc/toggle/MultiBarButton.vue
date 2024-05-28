@@ -30,15 +30,15 @@ const icon = computed(() => {
 .bc-toggle {
   &.p-button {
     &.p-togglebutton {
-
       width: 30px;
       height: 30px;
       padding: 2px;
       border-style: none;
+      color: var(--container-color);
+      background-color: var(--container-border-color);
 
       &:not(.p-highlight) {
         background-color: var(--container-background);
-        color: var(--container-color);
       }
 
       // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
@@ -46,7 +46,6 @@ const icon = computed(() => {
         display: none;
       }
     }
-
   }
 }
 </style>
