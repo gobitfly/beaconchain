@@ -25,9 +25,7 @@ const scrollToAddons = () => {
       <Button class="view-addons-button" @click="scrollToAddons()">
         {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
       </Button>
-      <div class="compare-plans-container">
-        Compare Plans (coming soon)
-      </div>
+      <PricingPremiumCompare />
       <PricingPremiumAddons id="addons" :is-yearly="isYearly" />
     </div>
   </BcPageWrapper>
@@ -56,22 +54,6 @@ const scrollToAddons = () => {
     display: flex;
     gap: 12px;
     margin-bottom: 35px;
-  }
-
-  .compare-plans-container { // TODO
-    width: 100%;
-    height: 500px;
-
-    background-color: var(--container-background);
-    border: 2px solid var(--container-border-color);
-    border-radius: 7px;
-    font-size: 50px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    margin-bottom: 43px;
   }
 
   @media (max-width: 600px) {
