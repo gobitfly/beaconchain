@@ -34,53 +34,57 @@ func newDayUpAggregator(d *dashboardData) *dayUpAggregator {
 }
 
 func (d *dayUpAggregator) rolling7dAggregate(currentEpochHead uint64) error {
-	return d.aggregateRollingXDays(7, "validator_dashboard_data_rolling_weekly", currentEpochHead)
+	return d.aggregateRollingXDays(7, edb.RollingWeeklyWriterTable, currentEpochHead)
 }
 
 func (d *dayUpAggregator) rolling30dAggregate(currentEpochHead uint64) error {
-	return d.aggregateRollingXDays(30, "validator_dashboard_data_rolling_monthly", currentEpochHead)
+	return d.aggregateRollingXDays(30, edb.RollingMonthlyWriterTable, currentEpochHead)
 }
 
 func (d *dayUpAggregator) rolling90dAggregate(currentEpochHead uint64) error {
-	return d.aggregateRollingXDays(90, "validator_dashboard_data_rolling_90d", currentEpochHead)
+	return d.aggregateRollingXDays(90, edb.RollingNinetyDaysWriterTable, currentEpochHead)
 }
 
 // for a given epoch intendedHeadEpoch, what epochs are needed for removal from the rolling tables
 func (d *dayUpAggregator) getMissingRollingDayTailEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
-	week, err := d.getMissingRollingXDaysTailEpochs(7, intendedHeadEpoch, "validator_dashboard_data_rolling_weekly")
+	week, err := d.getMissingRollingXDaysTailEpochs(7, intendedHeadEpoch, edb.RollingWeeklyWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 7d tail epochs")
 	}
-	month, err := d.getMissingRollingXDaysTailEpochs(30, intendedHeadEpoch, "validator_dashboard_data_rolling_monthly")
+	month, err := d.getMissingRollingXDaysTailEpochs(30, intendedHeadEpoch, edb.RollingMonthlyWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 30d tail epochs")
 	}
-	ninety, err := d.getMissingRollingXDaysTailEpochs(90, intendedHeadEpoch, "validator_dashboard_data_rolling_90d")
+	ninety, err := d.getMissingRollingXDaysTailEpochs(90, intendedHeadEpoch, edb.RollingNinetyDaysWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 90d tail epochs")
 	}
 
-	d.log.Infof("missing tail 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+	d.log.Infof("missing tail 7d: %v", week)
+	d.log.Infof("missing tail 30d: %v", month)
+	d.log.Infof("missing tail 90d: %v", ninety)
 
 	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
 
 // for a given epoch intendedHeadEpoch, what epochs are needed to add to the rolling table (excluding the current epoch)
 func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint64) ([]uint64, error) {
-	week, err := d.getMissingRollingXDaysHeadEpochs(7, intendedHeadEpoch-1, "validator_dashboard_data_rolling_weekly")
+	week, err := d.getMissingRollingXDaysHeadEpochs(7, intendedHeadEpoch-1, edb.RollingWeeklyWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 7d head epochs")
 	}
-	month, err := d.getMissingRollingXDaysHeadEpochs(30, intendedHeadEpoch-1, "validator_dashboard_data_rolling_monthly")
+	month, err := d.getMissingRollingXDaysHeadEpochs(30, intendedHeadEpoch-1, edb.RollingMonthlyWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 30d head epochs")
 	}
-	ninety, err := d.getMissingRollingXDaysHeadEpochs(90, intendedHeadEpoch-1, "validator_dashboard_data_rolling_90d")
+	ninety, err := d.getMissingRollingXDaysHeadEpochs(90, intendedHeadEpoch-1, edb.RollingNinetyDaysWriterTable)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get missing 90d head epochs")
 	}
 
-	d.log.Infof("missing head 7d: %v, 30d: %v, 90d: %v", week, month, ninety)
+	d.log.Infof("missing head 7d: %v", week)
+	d.log.Infof("missing head 30d: %v", month)
+	d.log.Infof("missing head 90d: %v", ninety)
 
 	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
 }
@@ -100,7 +104,7 @@ func (d *dayUpAggregator) getMissingRollingXDaysHeadEpochs(days int, intendedHea
 	if bounds.EpochEnd <= 0 || intendedHeadEpoch-bounds.EpochEnd < d.epochWriter.getRetentionEpochDuration() {
 		return nil, nil
 	}
-	return getMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch)+1)
+	return edb.GetMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch)+1)
 }
 
 func (d *dayUpAggregator) aggregateRollingXDays(days int, tableName string, currentEpochHead uint64) error {
@@ -153,10 +157,8 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	}
 	latestDay := latestDayBounds.Day
 
-	xDayOldDay, err := edb.GetXDayOldDay(days)
-	if err != nil {
-		return errors.Wrap(err, "failed to get old day")
-	}
+	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days-1))
+	xDayOldDay := utils.EpochToTime(tailStart).Format("2006-01-02")
 
 	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
 
@@ -168,16 +170,16 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	_, err = tx.Exec(fmt.Sprintf(`
 		WITH
 			epoch_starts as (
-				SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_daily WHERE day = $1 LIMIT 1
+				SELECT min(epoch_start) as epoch_start FROM %[2]s WHERE day = $1 LIMIT 1
 			),
 			epoch_ends as (
-				SELECT max(epoch_end) as epoch_end FROM validator_dashboard_data_daily WHERE day = $2 LIMIT 1
+				SELECT max(epoch_end) as epoch_end FROM %[2]s WHERE day = $2 LIMIT 1
 			),
 			balance_starts as (
-				SELECT validator_index, balance_start, epoch_start FROM validator_dashboard_data_daily WHERE day = $1
+				SELECT validator_index, balance_start, epoch_start FROM %[2]s WHERE day = $1
 			),
 			balance_ends as (
-				SELECT validator_index, balance_end, epoch_end FROM validator_dashboard_data_daily WHERE day = $2
+				SELECT validator_index, balance_end, epoch_end FROM %[2]s WHERE day = $2
 			),
 			aggregate as (
 				SELECT 
@@ -197,6 +199,8 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
+					SUM(blocks_cl_attestations_reward) as blocks_cl_attestations_reward,
+					SUM(blocks_cl_sync_aggregate_reward) as blocks_cl_sync_aggregate_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -207,6 +211,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
 					SUM(block_chance) as block_chance,
+					SUM(sync_chance) as sync_chance,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
 					SUM(attestation_head_executed) as attestation_head_executed,
@@ -217,11 +222,11 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 					MAX(slashed_by) as slashed_by,
 					MAX(slashed_violation) as slashed_violation,
 					MAX(last_executed_duty_epoch) as last_executed_duty_epoch		
-				FROM validator_dashboard_data_daily
+				FROM %[2]s
 				WHERE day >= $1 AND day <= $2
 				GROUP BY validator_index
 			)
-			INSERT INTO %s (
+			INSERT INTO %[1]s (
 				validator_index,
 				epoch_start,
 				epoch_end,
@@ -240,6 +245,8 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
+				blocks_cl_attestations_reward,
+				blocks_cl_sync_aggregate_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -252,6 +259,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				withdrawals_amount,
 				inclusion_delay_sum,
 				block_chance,
+				sync_chance,
 				attestations_scheduled,
 				attestations_executed,
 				attestation_head_executed,
@@ -282,6 +290,8 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
+				blocks_cl_attestations_reward,
+				blocks_cl_sync_aggregate_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -294,6 +304,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 				withdrawals_amount,
 				inclusion_delay_sum,
 				block_chance,
+				sync_chance,
 				attestations_scheduled,
 				attestations_executed,
 				attestation_head_executed,
@@ -307,7 +318,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 			FROM aggregate
 			LEFT JOIN balance_starts ON aggregate.validator_index = balance_starts.validator_index
 			LEFT JOIN balance_ends ON aggregate.validator_index = balance_ends.validator_index
-	`, tableName), xDayOldDay, latestDay)
+	`, tableName, edb.DayWriterTableName), xDayOldDay, latestDay)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to insert rolling aggregate")
