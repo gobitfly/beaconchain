@@ -45,7 +45,6 @@ var currencies = map[string]struct {
 	"GNO":  {"GNO", "Gnosis"},
 	"mGNO": {"mGNO", "mGnosis"},
 	"JPY":  {"¥", "Japanese Yen"},
-	"RUB":  {"₽", "Russian Ruble"},
 	"USD":  {"$", "United States Dollar"},
 }
 
