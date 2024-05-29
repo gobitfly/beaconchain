@@ -41,7 +41,12 @@ function show () {
   visible.value = true
 
   state.value = 'type'
-  type.value = !validatorsDisabled.value ? 'validator' : ''
+  type.value = ''
+  if (!validatorsDisabled.value) {
+    type.value = 'validator'
+  } else if (!accountsDisabled.value) {
+    type.value = 'account'
+  }
   name.value = isLoggedIn.value ? '' : 'cookie'
   network.value = undefined
 }
