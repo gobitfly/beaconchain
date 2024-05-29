@@ -1,10 +1,9 @@
-version: '3'
 x-service: &default-service
-  image: golang:1.20
-  working_dir: /app
+  image: golang:1.21
+  working_dir: /app/backend
   network_mode: "host"
   volumes:
-    - ../.:/app
+    - ../../.:/app
     - /tmp/go-cache:/go
     - /tmp/go-build-cache:/root/.cache/go-build
 services:
@@ -15,23 +14,33 @@ services:
     command: /bin/bash -c "git config --global --add safe.directory '*' && make -B all"
   indexer:
     <<: *default-service
-    command: go run ./cmd/exporter -config /app/local_deployment/config.yml
+    command: go run ./cmd/exporter -config /app/backend/local_deployment/config.yml
     environment:
       - INDEXER_ENABLED=true
   eth1indexer:
     <<: *default-service
-    command: go run ./cmd/eth1indexer -config /app/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
+    command: go run ./cmd/eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
   rewards-exporter:
     <<: *default-service
-    command: go run ./cmd/rewards_exporter -config /app/local_deployment/config.yml
+    command: go run ./cmd/rewards_exporter -config /app/backend/local_deployment/config.yml
   statistics:
     <<: *default-service
-    command: go run ./cmd/statistics -config /app/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
+    command: go run ./cmd/statistics -config /app/backend/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
   # frontend-data-updater:
   #   <<: *default-service
   #   command: go run ./cmd/frontend-data-updater -config /app/local_deployment/config.yml
-  # frontend:
-  #   <<: *default-service
-  #   command: go run ./cmd/explorer -config /app/local_deployment/config.yml
-  #   environment:
-  #     - FRONTEND_ENABLED=true
+  api:
+    <<: *default-service
+    command: go run ./cmd/api -config /app/backend/local_deployment/config.yml
+  frontend:
+    image: ghcr.io/gobitfly/beaconchain_frontend:main
+    network_mode: "host"
+    environment:
+      - NUXT_PUBLIC_API_CLIENT="http://local.beaconcha.in:8080/api/i/"
+      - NUXT_PUBLIC_LEGACY_API_CLIENT="http://local.beaconcha.in:8080/"
+      - NUXT_PRIVATE_API_SERVER="http://local.beaconcha.in:8080/api/i/"
+      - NUXT_PRIVATE_LEGACY_API_SERVER="http://local.beaconcha.in:8080/"
+      - NUXT_PUBLIC_API_KEY="xxx"
+      - NUXT_PUBLIC_X_USER_ID=1
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - NUXT_HOST=local.beaconcha.in

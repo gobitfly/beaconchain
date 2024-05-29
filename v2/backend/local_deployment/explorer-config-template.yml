@@ -1,3 +1,4 @@
+justV2: false
 chain:
   clConfigPath: 'node'
   elConfigPath: '' # Works for well known public networks like mainnet, prater, holesky, sepolia. Specify a file for custom chains
@@ -13,6 +14,18 @@ writerDatabase:
   port: {{.DBPort}}
   user: postgres
   password: "pass"
+alloyReader:
+  name: alloy
+  host: {{.DBHost}}
+  port: {{.DBPort}}
+  user: postgres
+  password: "pass"
+alloyWriter:
+  name: alloy
+  host: {{.DBHost}}
+  port: {{.DBPort}}
+  user: postgres
+  password: "pass"
 bigtable:
   project: explorer
   instance: explorer
@@ -24,6 +37,7 @@ eth1GethEndpoint: '{{.ELNodeEndpoint}}'
 redisCacheEndpoint: '{{.RedisEndpoint}}'
 tieredCacheProvider: 'redis'
 frontend:
+  debug: true
   siteDomain: "localhost:8080"
   siteName: 'Open Source Ethereum (ETH) Testnet Explorer' # Name of the site, displayed in the title tag
   siteSubtitle: "Showing a local testnet."
@@ -61,3 +75,5 @@ indexer:
     port: '{{.CLNodePort}}'
     type: lighthouse
   eth1DepositContractFirstBlock: 0
+
+corsAllowedHosts: ["http://local.beaconcha.in:3000"]
