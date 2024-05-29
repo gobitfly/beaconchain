@@ -2,6 +2,13 @@
 import type { DashboardCreationController } from '#components'
 
 const { dashboardKey } = useDashboardKeyProvider('account')
+const { getDashboardLabel } = useUserDashboardStore()
+
+const seoTitle = computed(() => {
+  return getDashboardLabel(dashboardKey.value, 'account')
+})
+
+useBcSeo(seoTitle, true)
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this

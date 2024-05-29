@@ -328,11 +328,11 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalElDeposits(dashboardId)
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalClDeposits(dashboardId)
 }

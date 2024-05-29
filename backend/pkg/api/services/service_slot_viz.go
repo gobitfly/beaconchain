@@ -72,7 +72,10 @@ func (s *Services) updateSlotVizData() error {
 		// Get min/max slot/epoch
 		headEpoch := cache.LatestEpoch.Get()
 
-		minEpoch := headEpoch - 2
+		minEpoch := uint64(0)
+		if headEpoch > 1 {
+			minEpoch = headEpoch - 2
+		}
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
@@ -300,7 +303,10 @@ func (s *Services) initDutiesInfo() *SyncData {
 func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	// deep copy & clean
 	headSlot := cache.LatestEpoch.Get() * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	dropBelowSlot := headSlot - 2*utils.Config.Chain.ClConfig.SlotsPerEpoch
+	dropBelowSlot := uint64(0)
+	if headSlot > 2*utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		dropBelowSlot = headSlot - 2*utils.Config.Chain.ClConfig.SlotsPerEpoch
+	}
 
 	dutiesInfo := &SyncData{
 		LatestSlot:                   currentDutiesInfo.LatestSlot,
@@ -413,7 +419,10 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 	headEpoch := cache.LatestEpoch.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
-	minEpoch := headEpoch - 2
+	minEpoch := uint64(0)
+	if headEpoch > 1 {
+		minEpoch = headEpoch - 2
+	}
 
 	/*
 		Why reduce minEpoch to headEpoch - 1 after first iteration?
@@ -422,7 +431,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 		- Other fields used by slotviz do not change as well (sync bits, exec block). If we at some point include changing fields for headEpoch -2
 		  we should consider making this a separate call to avoid loading all attestation data again
 	*/
-	if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 { // if we have fetched epoch assignments before
+	if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 && headEpoch > 0 { // if we have fetched epoch assignments before
 		minEpoch = headEpoch - 1
 	}
 
