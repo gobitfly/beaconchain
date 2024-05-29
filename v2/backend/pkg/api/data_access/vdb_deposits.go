@@ -189,7 +189,6 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.CLDepositsCursor
@@ -255,7 +254,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 			, cbdl.group_id
 			FROM
 				cached_blocks_deposits_lookup cbdl
-				LEFT JOIN blocks_deposits bd ON bd.block_slot = cbdl.block_slot
+				INNER JOIN blocks_deposits bd ON bd.block_slot = cbdl.block_slot
 					AND bd.block_index = cbdl.block_index
 			WHERE
 				cbdl.dashboard_id = $1`
@@ -271,11 +270,6 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 
 	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
-	}
-
-	// TODO: A pointless replace if we use INNER JOIN instead?
-	if dashboardId.Validators == nil {
-		filterFragment = strings.Replace(filterFragment, "bd.", "cbdl.", -1)
 	}
 
 	params = append(params, limit+1)
@@ -337,14 +331,10 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
 
-	fmt.Println("GetValidatorDashboardClDeposits took: ", time.Since(totalTime))
-
 	return responseData, p, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
-	totalTime := time.Now()
-
 	responseData := t.VDBTotalExecutionDepositsData{
 		TotalAmount: decimal.Zero,
 	}
@@ -400,14 +390,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 
 	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
 
-	fmt.Println("GetValidatorDashboardTotalElDeposits took: ", time.Since(totalTime))
-
 	return &responseData, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
-	totalTime := time.Now()
-
 	responseData := t.VDBTotalConsensusDepositsData{
 		TotalAmount: decimal.Zero,
 	}
@@ -434,7 +420,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 
 	query := `
 			SELECT
-				bd.amount
+				COALESCE(SUM(bd.amount), 0)
 		`
 
 	var filter interface{}
@@ -463,8 +449,6 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 	}
 
 	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
-
-	fmt.Println("GetValidatorDashboardTotalClDeposits took: ", time.Since(totalTime))
 
 	return &responseData, nil
 }
