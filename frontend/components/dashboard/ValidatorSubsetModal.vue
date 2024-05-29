@@ -12,8 +12,6 @@ import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/ty
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-const router = useRouter()
-const url = useRequestURL()
 
 interface Props {
   context: DashboardValidatorContext;
@@ -30,6 +28,7 @@ const visible = defineModel<boolean>()
 const isLoading = ref(false)
 const shownValidators = ref<number[]>([])
 const validators = ref<number[]>([])
+const MAX_VALIDATORS = 1000
 
 watch(props, async (p) => {
   if (p) {
@@ -58,7 +57,7 @@ watch(props, async (p) => {
 
       const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
       validators.value = res.data.sort((a, b) => a - b)
-      shownValidators.value = validators.value
+      shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
       isLoading.value = false
     }
   }
@@ -99,80 +98,36 @@ const caption = computed(() => {
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
-    shownValidators.value = validators.value
+    shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
     return
   }
 
   shownValidators.value = []
 
   const index = parseInt(filter)
-  if (validators.value?.includes(index)) {
+  if (!isNaN(index) && validators.value?.includes(index)) {
     shownValidators.value = [index]
   }
 }
 
 watch(visible, (value) => {
   if (!value) {
-    shownValidators.value = validators.value
+    shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
   }
 })
 
 function copyValidatorsToClipboard (): void {
-  if (shownValidators.value.length === 0) {
+  if (validators.value?.length === 0) {
     return
   }
-
-  let text = ''
-  shownValidators.value.forEach((v, i) => {
-    text += v
-    if (i !== shownValidators.value.length - 1) {
-      text += ','
-    }
-  })
-  navigator.clipboard.writeText(text)
+  navigator.clipboard.writeText(validators.value.join(','))
     .catch((error) => {
       warn('Error copying text to clipboard:', error)
     })
 }
-const shownValidatorsString = computed(() => shownValidators.value.join(', '))
 
-const openValidator = (id: string) => {
-  if (!id) {
-    return
-  }
-  const newRoute = router.resolve({ name: 'validator-id', params: { id } })
-  const path = url.origin + newRoute.fullPath
-  window.open(path, '_blank')
-}
+const hasMore = computed(() => shownValidators.value.length === MAX_VALIDATORS && validators.value.length > MAX_VALIDATORS)
 
-const validatorsClicked = () => {
-  const s = window.getSelection()
-  if (!s) {
-    return
-  }
-  const range = s.getRangeAt(0)
-  const node = s.anchorNode
-  const value = node?.nodeValue?.trim()
-  if (!node || !value) {
-    return
-  }
-
-  // Find starting point
-  while (range.toString().indexOf(' ') !== 0 && range.startOffset > 0) {
-    range.setStart(node, (range.startOffset - 1))
-  }
-  if (range.startOffset > 0) {
-    range.setStart(node, range.startOffset + 1)
-  }
-
-  // Find ending point
-  do {
-    range.setEnd(node, range.endOffset + 1)
-  } while (!(range.toString().includes(' ') || range.toString().includes(',')) && range.toString().trim() !== '' && range.endOffset < value.length)
-
-  const str = range.toString().trim().replace(',', '')
-  openValidator(str)
-}
 </script>
 
 <template>
@@ -183,8 +138,16 @@ const validatorsClicked = () => {
       </span>
       <BcContentFilter class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="handleEvent" />
     </div>
-    <div class="link_container">
-      <span class="link" @click="validatorsClicked">{{ shownValidatorsString }}</span>
+    <div class="link_container" :class="{'has_more': hasMore}">
+      <template v-for="v in shownValidators" :key="v">
+        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
+          {{ v }}
+        </NuxtLink>
+        <span>, </span>
+      </template>
+      <template v-if="hasMore">
+        <span>...</span>
+      </template>
     </div>
     <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
@@ -238,6 +201,10 @@ const validatorsClicked = () => {
     overflow-y: auto;
     overflow-x: hidden;
     word-break: break-all;
+
+    &:not(.has_more) span:last-child {
+      display: none;
+    }
   }
 }
 </style>
