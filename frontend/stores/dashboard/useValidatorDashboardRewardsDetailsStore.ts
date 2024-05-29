@@ -17,7 +17,7 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   }
 
   async function getDetails () {
-    // Rewards of an epoch will not change, so we only need to load the data once
+    // Rewards of an epoch will only change when validators changed (see useValidatorDashboardOverviewStore), so we can cache data
     if (data.value[getKey()]) {
       return data.value[getKey()]
     }
@@ -34,4 +34,14 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   })
 
   return { details }
+}
+
+export const useAllValidatorDashboardRewardsDetailsStore = () => {
+  const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
+
+  function clearCache () {
+    data.value = {}
+  }
+
+  return { clearCache }
 }
