@@ -9,6 +9,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
@@ -66,6 +67,9 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		}
 	}
 
+	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
+	const epochLookBack = 10
+
 	queryResult := []struct {
 		Epoch                 uint64          `db:"epoch"`
 		GroupId               int64           `db:"group_id"`
@@ -100,8 +104,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		`
 
 	if dashboardId.Validators == nil {
-		queryParams = append(queryParams, dashboardId.Id)
-		whereQuery := fmt.Sprintf("WHERE v.dashboard_id = $%d", len(queryParams))
+		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
+		whereQuery := fmt.Sprintf("WHERE v.dashboard_id = $%d AND e.epoch > $%d", len(queryParams)-1, len(queryParams))
 		if currentCursor.IsValid() {
 			if currentCursor.IsReverse() {
 				if currentCursor.GroupId == t.AllGroups {
@@ -188,8 +192,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			validators = append(validators, validator.Index)
 		}
 
-		queryParams = append(queryParams, pq.Array(validators))
-		whereQuery := fmt.Sprintf("WHERE e.validator_index = ANY($%d)", len(queryParams))
+		queryParams = append(queryParams, pq.Array(validators), latestFinalizedEpoch-epochLookBack)
+		whereQuery := fmt.Sprintf("WHERE e.validator_index = ANY($%d) AND e.epoch > $%d", len(queryParams)-1, len(queryParams))
 		if currentCursor.IsValid() {
 			queryParams = append(queryParams, currentCursor.Epoch)
 			whereQuery += fmt.Sprintf(" AND e.epoch%s$%d", sortSearchDirection, len(queryParams))
@@ -518,6 +522,9 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
 	// series id is group id, series property is 'cl' or 'el'
 
+	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
+	const epochLookBack = 10
+
 	queryResult := []struct {
 		Epoch     uint64          `db:"epoch"`
 		GroupId   uint64          `db:"group_id"`
@@ -536,7 +543,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		`
 
 	if dashboardId.Validators == nil {
-		queryParams = append(queryParams, dashboardId.Id)
+		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
@@ -544,9 +551,9 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
-			WHERE v.dashboard_id = $%d
+			WHERE v.dashboard_id = $%d AND e.epoch > $%d
 			GROUP BY e.epoch, v.group_id
-			ORDER BY e.epoch, v.group_id`, rewardsDataQuery, len(queryParams))
+			ORDER BY e.epoch, v.group_id`, rewardsDataQuery, len(queryParams)-1, len(queryParams))
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		validators := make([]uint64, 0)
@@ -554,16 +561,16 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 			validators = append(validators, validator.Index)
 		}
 
-		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(validators))
+		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(validators), latestFinalizedEpoch-epochLookBack)
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
 				$%d::smallint AS group_id,
 				%s
 			FROM validator_dashboard_data_epoch e
-			WHERE e.validator_index = ANY($%d)
+			WHERE e.validator_index = ANY($%d) AND e.epoch > $%d
 			GROUP BY e.epoch
-			ORDER BY e.epoch`, len(queryParams)-1, rewardsDataQuery, len(queryParams))
+			ORDER BY e.epoch`, len(queryParams)-2, rewardsDataQuery, len(queryParams)-1, len(queryParams))
 	}
 
 	err := d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
