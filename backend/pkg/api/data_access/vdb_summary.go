@@ -10,10 +10,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -218,6 +216,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 	query := `select
 			users_val_dashboards_validators.validator_index,
+			epoch_start,
 			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
 			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
 			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
@@ -245,8 +244,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(slashed, false) as slashed,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(block_chance, 0) as block_chance,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+			COALESCE(blocks_expected, 0) as blocks_expected,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
+			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
@@ -255,6 +255,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if dashboardId.Validators != nil {
 		query = `select
 			validator_index,
+			epoch_start,
 			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
 			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
 			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
@@ -282,8 +283,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(slashed, false) as slashed,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(block_chance, 0) as block_chance,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+			COALESCE(blocks_expected, 0) as blocks_expected,
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
+			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s
 		where %[1]s.validator_index = ANY($1)
 	`
@@ -298,6 +300,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 	type queryResult struct {
 		ValidatorIndex                    uint32 `db:"validator_index"`
+		EpochStart                        int    `db:"epoch_start"`
 		AttestationSourceReward           int64  `db:"attestations_source_reward"`
 		AttestationTargetReward           int64  `db:"attestations_target_reward"`
 		AttestationHeadReward             int64  `db:"attestations_head_reward"`
@@ -332,7 +335,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 		WithdrawalsCount uint32 `db:"withdrawals_count"`
 
-		BlockChance float64 `db:"block_chance"`
+		BlockChance            float64 `db:"blocks_expected"`
+		SyncCommitteesExpected float64 `db:"sync_committees_expected"`
 
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
@@ -357,9 +361,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		totalBlockChance := float64(0)
 		totalInclusionDelaySum := int64(0)
 		totalInclusionDelayDivisor := int64(0)
+		totalSyncExpected := float64(0)
 
 		validatorArr := make([]uint64, 0)
+		startEpoch := math.MaxUint32
 		for _, row := range rows {
+			if row.EpochStart < startEpoch { // set the start epoch for querying the EL APR
+				startEpoch = row.EpochStart
+			}
 			validatorArr = append(validatorArr, uint64(row.ValidatorIndex))
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
@@ -410,18 +419,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			}
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
+			totalSyncExpected += row.SyncCommitteesExpected
 
 			if row.InclusionDelaySum > 0 {
 				totalInclusionDelayDivisor += row.AttestationsScheduled
 			}
 		}
 
-		data.Income.Cl, data.Apr.Cl, err = d.internal_getClAPR(validatorArr, days)
+		data.Income.El, data.Apr.El, data.Income.Cl, data.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
 		if err != nil {
 			return nil, err
 		}
-
-		data.Apr.El = 0
 
 		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
 		if data.AttestationEfficiency < 0 || math.IsNaN(data.AttestationEfficiency) {
@@ -434,23 +442,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			data.Luck.Proposal.Percent = 0
 		}
 
-		endSyncLuckEpoch := cache.LatestFinalizedEpoch.Get()
-		startSyncLuckEpoch := endSyncLuckEpoch - utils.EpochsPerDay()*uint64(days)
-		if days == -1 {
-			startSyncLuckEpoch = utils.Config.Chain.ClConfig.AltairForkEpoch
-		}
-		if startSyncLuckEpoch > endSyncLuckEpoch {
-			startSyncLuckEpoch = 0
-		}
-
-		expectedSync, err := d.internal_getExpectedSyncCommitteeSlots(validatorArr, startSyncLuckEpoch, endSyncLuckEpoch)
-		if err != nil {
-			return nil, err
-		}
-		if expectedSync == 0 {
+		if totalSyncExpected == 0 {
 			data.Luck.Sync.Percent = 0
 		} else {
-			data.Luck.Sync.Percent = (float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)) / float64(expectedSync) * 100
+			totalSyncSlotDuties := float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)
+			slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
+			syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
+			data.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
 		}
 
 		if totalInclusionDelayDivisor > 0 {
@@ -479,7 +477,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 31, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 30, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -502,7 +500,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getClAPR(validators []uint64, days int) (income decimal.Decimal, apr float64, err error) {
+func (d *DataAccessService) internal_getElClAPR(validators []uint64, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	var reward int64
 	table := ""
 
@@ -511,147 +509,47 @@ func (d *DataAccessService) internal_getClAPR(validators []uint64, days int) (in
 		table = "validator_dashboard_data_rolling_daily"
 	case 7:
 		table = "validator_dashboard_data_rolling_weekly"
-	case 31:
+	case 30:
 		table = "validator_dashboard_data_rolling_monthly"
 	case -1:
 		table = "validator_dashboard_data_rolling_90d"
 	default:
-		return decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
 	}
 
 	query := fmt.Sprintf(`select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`, table)
 
 	err = db.AlloyReader.Get(&reward, query, validators)
-
 	if err != nil {
-		return decimal.Zero, 0, err
+		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
 	aprDivisor := days
 	if days == -1 { // for all time APR
 		aprDivisor = 90
 	}
-	apr = ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
-	if math.IsNaN(apr) {
-		apr = 0
+	clAPR = ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
+	if math.IsNaN(clAPR) {
+		clAPR = 0
 	}
-	income = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
-	return income, apr, nil
-}
+	clIncome = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
 
-func (d *DataAccessService) internal_getExpectedSyncCommitteeSlots(validators []uint64, startEpoch, endEpoch uint64) (expectedSlots uint64, err error) {
-	if endEpoch < utils.Config.Chain.ClConfig.AltairForkEpoch {
-		// no sync committee duties before altair fork
-		return 0, nil
-	}
-
-	// retrieve activation and exit epochs from database per validator
-	type ValidatorInfo struct {
-		Id                         int64  `db:"validatorindex"`
-		ActivationEpoch            uint64 `db:"activationepoch"`
-		ExitEpoch                  uint64 `db:"exitepoch"`
-		FirstPossibleSyncCommittee uint64 // calculated
-		LastPossibleSyncCommittee  uint64 // calculated
-	}
-
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	query = fmt.Sprintf(`
+	SELECT 
+		COALESCE(SUM(fee_recipient_reward), 0) 
+	FROM blocks 
+	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
+	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`, table)
+	err = db.AlloyReader.Get(&elIncome, query, validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
-		return 0, err
+		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
+	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
+	elIncomeFloat, _ := elIncome.Float64()
 
-	// only check validators that are/have been active and that did not exit before altair
-	noEpoch := uint64(math.MaxUint64)
-	var validatorsInfo = make([]ValidatorInfo, 0, len(validators))
-	for _, v := range validators {
-		activationEpoch := noEpoch
-		exitEpoch := noEpoch
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
 
-		if validatorMapping.ValidatorMetadata[v].ActivationEpoch.Valid {
-			activationEpoch = uint64(validatorMapping.ValidatorMetadata[v].ActivationEpoch.Int64)
-		}
-		if validatorMapping.ValidatorMetadata[v].ExitEpoch.Valid {
-			activationEpoch = uint64(validatorMapping.ValidatorMetadata[v].ExitEpoch.Int64)
-		}
-
-		if activationEpoch != noEpoch && activationEpoch < endEpoch && (exitEpoch == noEpoch || exitEpoch >= utils.Config.Chain.ClConfig.AltairForkEpoch) {
-			validatorsInfo = append(validatorsInfo, ValidatorInfo{
-				Id:              int64(v),
-				ActivationEpoch: activationEpoch,
-				ExitEpoch:       exitEpoch,
-			})
-		}
-	}
-
-	if len(validatorsInfo) == 0 {
-		// no validators relevant for sync duties
-		return 0, nil
-	}
-
-	// we need all related and unique timeframes (activation and exit sync period) for all validators
-	uniquePeriods := make(map[uint64]bool)
-	for i := range validatorsInfo {
-		// first epoch (activation epoch or Altair if Altair was later as there were no sync committees pre Altair)
-		firstSyncEpoch := validatorsInfo[i].ActivationEpoch
-		if validatorsInfo[i].ActivationEpoch < utils.Config.Chain.ClConfig.AltairForkEpoch {
-			firstSyncEpoch = utils.Config.Chain.ClConfig.AltairForkEpoch
-		}
-		if firstSyncEpoch < startEpoch {
-			firstSyncEpoch = startEpoch
-		}
-
-		validatorsInfo[i].FirstPossibleSyncCommittee = utils.SyncPeriodOfEpoch(firstSyncEpoch)
-		uniquePeriods[validatorsInfo[i].FirstPossibleSyncCommittee] = true
-
-		// last epoch (exit epoch or current epoch if not exited yet)
-		lastSyncEpoch := endEpoch
-		if validatorsInfo[i].ExitEpoch != noEpoch && validatorsInfo[i].ExitEpoch <= endEpoch {
-			lastSyncEpoch = validatorsInfo[i].ExitEpoch
-		}
-		validatorsInfo[i].LastPossibleSyncCommittee = utils.SyncPeriodOfEpoch(lastSyncEpoch)
-		uniquePeriods[validatorsInfo[i].LastPossibleSyncCommittee] = true
-	}
-
-	// transform map to slice; this will be used to query sync_committees_count_per_validator
-	periodSlice := make([]uint64, 0, len(uniquePeriods))
-	for period := range uniquePeriods {
-		periodSlice = append(periodSlice, period)
-	}
-
-	// get aggregated count for all relevant committees from sync_committees_count_per_validator
-	var countStatistics []struct {
-		Period     uint64  `db:"period"`
-		CountSoFar float64 `db:"count_so_far"`
-	}
-
-	query, args, errs := sqlx.In(`SELECT period, count_so_far FROM sync_committees_count_per_validator WHERE period IN (?) ORDER BY period ASC`, periodSlice)
-	if errs != nil {
-		return 0, errs
-	}
-	err = db.ReaderDb.Select(&countStatistics, db.ReaderDb.Rebind(query), args...)
-	if err != nil {
-		return 0, err
-	}
-	if len(countStatistics) != len(periodSlice) {
-		return 0, fmt.Errorf("unable to retrieve all sync committee count statistics, required %v entries but got %v entries (startEpoch: %v, endEpoch: %v)", len(periodSlice), len(countStatistics), startEpoch, endEpoch)
-	}
-
-	// transform query result to map for easy access
-	periodInfoMap := make(map[uint64]float64)
-	for _, pl := range countStatistics {
-		periodInfoMap[pl.Period] = pl.CountSoFar
-	}
-
-	// calculate expected committies for every single validator and aggregate them
-	expectedCommitties := 0.0
-	for _, vi := range validatorsInfo {
-		expectedCommitties += periodInfoMap[vi.LastPossibleSyncCommittee] - periodInfoMap[vi.FirstPossibleSyncCommittee]
-	}
-
-	// transform committees to slots
-	expectedSlots = uint64(expectedCommitties * float64(utils.SlotsPerSyncCommittee()))
-
-	return expectedSlots, nil
+	return elIncome, elAPR, clIncome, clAPR, nil
 }
 
 // for summary charts: series id is group id, no stack

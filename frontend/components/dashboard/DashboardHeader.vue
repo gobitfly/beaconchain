@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type Menubar from 'primevue/menubar'
+import BcTooltip from '../bc/BcTooltip.vue'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
@@ -10,6 +11,7 @@ const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const isValidatorDashboard = route.name === 'dashboard-id'
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
 const { dashboards, getDashboardLabel } = useUserDashboardStore()
@@ -82,7 +84,8 @@ const items = computed<MenuBarEntry[]>(() => {
     const cd = db as CookieDashboard
     return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
-  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
+  const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
+  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications', disabledTooltip }])
 
   return sortedItems.map((items) => {
     // if we are in a public dashboard and change the validators then the route does not get updated
@@ -92,6 +95,7 @@ const items = computed<MenuBarEntry[]>(() => {
       active: !!active,
       label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
+      disabledTooltip: items.length === 1 ? items[0].disabledTooltip : undefined,
       route: items.length === 1 ? items[0].route : active?.route,
       command: items.length === 1 ? items[0].command : active?.command,
       items: items.length > 1 ? items : undefined
@@ -113,7 +117,10 @@ const title = computed(() => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <BcLink v-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+          <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" @click.stop.prevent="()=>undefined">
+            <span class="text-disabled">{{ item.label }}</span>
+          </BcTooltip>
+          <BcLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
@@ -173,6 +180,9 @@ const title = computed(() => {
 
     :deep(.p-menubar-root-list > .p-menuitem) {
       width: 145px;
+      &:has(.text-disabled){
+        opacity: 0.5;
+      }
     }
   }
 }
