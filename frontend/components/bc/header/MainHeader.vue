@@ -20,7 +20,6 @@ const { t: $t } = useI18n()
 
 const isMobile = computed(() => width.value < mobileHeaderThreshold)
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
-const screenSizeClass = computed(() => isMobile.value ? 'mobile' : (isSmallScreen.value ? 'small' : 'large'))
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished'
@@ -58,8 +57,8 @@ const userMenu = computed(() => {
 <template>
   <div class="anchor" :class="hideInDevelopmentClass">
     <div class="top-background" />
-    <div class="rows" :class="screenSizeClass">
-      <div class="grid-cell blockchain-info" :class="screenSizeClass">
+    <div class="rows">
+      <div class="grid-cell blockchain-info">
         <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
           <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="latestState.current_slot" />
@@ -80,7 +79,7 @@ const userMenu = computed(() => {
         </span>
       </div>
 
-      <div class="grid-cell search-bar" :class="screenSizeClass">
+      <div class="grid-cell search-bar">
         <BcSearchbarGeneral
           v-if="showInDevelopment && !props.isHomePage"
           class="bar"
@@ -90,7 +89,7 @@ const userMenu = computed(() => {
         />
       </div>
 
-      <div class="grid-cell controls" :class="screenSizeClass">
+      <div class="grid-cell controls">
         <BcCurrencySelection v-if="!isMobile" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
           <NuxtLink to="/login" class="login">
@@ -116,14 +115,14 @@ const userMenu = computed(() => {
         <FontAwesomeIcon v-if="isSmallScreen" :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
 
-      <div class="grid-cell logo" :class="screenSizeClass">
+      <div class="grid-cell logo">
         <NuxtLink to="/" class="logo-component">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
           beaconcha.in
         </NuxtLink>
       </div>
 
-      <div class="grid-cell mega-menu" :class="screenSizeClass">
+      <div class="grid-cell mega-menu">
         <BcHeaderMegaMenu ref="megaMenu" />
       </div>
     </div>
@@ -132,6 +131,9 @@ const userMenu = computed(() => {
 
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
+
+$mobileHeaderThreshold: 470px;
+$smallHeaderThreshold: 1024px;
 
 .anchor {
   position: relative;
@@ -155,7 +157,7 @@ const userMenu = computed(() => {
     display: grid;
     grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
     grid-template-rows: var(--navbar-height) min-content;
-    &.small, &.mobile {
+    @media (max-width: $smallHeaderThreshold) {
       grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
@@ -185,12 +187,12 @@ const userMenu = computed(() => {
     }
 
     .blockchain-info {
-      &.large {
+      @media (min-width: $smallHeaderThreshold) {
         grid-row: 1;
         grid-column: 2;
         grid-column-end: span 2;
       }
-      &.small, &.mobile {
+      @media (max-width: $smallHeaderThreshold) {
         display: none;
       }
       margin-right: var(--padding-large);
@@ -204,12 +206,12 @@ const userMenu = computed(() => {
     .search-bar {
       grid-row: 1;
       grid-column: 4;
-      &.small, &.mobile {
+      @media (max-width: $smallHeaderThreshold) {
         @include bottom-cell(3);
         grid-column: 2;
         grid-column-end: span 3;
       }
-      &.large {
+      @media (min-width: $smallHeaderThreshold) {
         .bar {
           max-width: 460px;
         }
@@ -226,10 +228,10 @@ const userMenu = computed(() => {
       user-select: none;
       grid-row: 1;
       grid-column: 5;
-      &.small, &.mobile {
+      @media (max-width: $smallHeaderThreshold) {
         grid-column: 4;
       }
-      &.mobile {
+      @media (max-width: $mobileHeaderThreshold) {
         .currency {
           display: none;
         }
@@ -266,10 +268,10 @@ const userMenu = computed(() => {
 
     .logo {
       grid-column: 2;
-      &.large {
+      @media (min-width: $smallHeaderThreshold) {
         @include bottom-cell(2);
       }
-      &.small, &.mobile {
+      @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
       .logo-component {
@@ -295,13 +297,13 @@ const userMenu = computed(() => {
     }
 
     .mega-menu {
-      &.large {
+      @media (min-width: $smallHeaderThreshold) {
         grid-column: 3;
         grid-column-end: span 3;
         @include bottom-cell(2);
         justify-content: flex-end;
       }
-      &.small, &.mobile {
+      @media (max-width: $smallHeaderThreshold) {
         grid-row: 2;
         grid-column: 1;
         grid-column-end: span 5;
