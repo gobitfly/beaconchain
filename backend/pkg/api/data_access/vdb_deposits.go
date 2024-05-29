@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 )
 
 func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
@@ -107,6 +109,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
+	// TODO: A pointless replace?
 	if dashboardId.Validators == nil {
 		filterFragment = strings.Replace(filterFragment, "ed.", "cedl.", -1)
 	}
@@ -186,6 +189,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.CLDepositsCursor
@@ -269,6 +273,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
+	// TODO: A pointless replace if we use INNER JOIN instead?
 	if dashboardId.Validators == nil {
 		filterFragment = strings.Replace(filterFragment, "bd.", "cbdl.", -1)
 	}
@@ -332,15 +337,134 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
 
+	fmt.Println("GetValidatorDashboardClDeposits took: ", time.Since(totalTime))
+
 	return responseData, p, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardTotalElDeposits(dashboardId)
+	totalTime := time.Now()
+
+	responseData := t.VDBTotalExecutionDepositsData{
+		TotalAmount: decimal.Zero,
+	}
+
+	var byteaArray pq.ByteaArray
+
+	// Resolve validator indices to pubkeys
+	if dashboardId.Validators != nil {
+		validatorsArray := make([]uint64, len(dashboardId.Validators))
+		for i, v := range dashboardId.Validators {
+			validatorsArray[i] = v.Index
+		}
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
+		}
+
+		// Convert pubkeys to bytes for PostgreSQL
+		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
+		for i, p := range validatorPubkeys {
+			byteaArray[i], _ = hexutil.Decode(p)
+		}
+	}
+
+	query := `
+			SELECT
+				COALESCE(SUM(ed.amount), 0)
+		`
+
+	var filter interface{}
+	if dashboardId.Validators != nil {
+		query += `
+			FROM
+				eth1_deposits ed
+			WHERE
+				ed.publickey = ANY ($1)`
+		filter = byteaArray
+	} else {
+		query += `
+			FROM
+				cached_eth1_deposits_lookup cedl
+			INNER JOIN eth1_deposits ed ON ed.block_number = cedl.block_number AND ed.log_index = cedl.log_index
+			WHERE
+				cedl.dashboard_id = $1`
+		filter = dashboardId.Id
+	}
+
+	var data int64
+	err := db.AlloyReader.Get(&data, query, filter)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
+
+	fmt.Println("GetValidatorDashboardTotalElDeposits took: ", time.Since(totalTime))
+
+	return &responseData, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
-	// WORKING spletka
-	return d.dummy.GetValidatorDashboardTotalClDeposits(dashboardId)
+	totalTime := time.Now()
+
+	responseData := t.VDBTotalConsensusDepositsData{
+		TotalAmount: decimal.Zero,
+	}
+
+	var byteaArray pq.ByteaArray
+
+	// Resolve validator indices to pubkeys
+	if dashboardId.Validators != nil {
+		validatorsArray := make([]uint64, len(dashboardId.Validators))
+		for i, v := range dashboardId.Validators {
+			validatorsArray[i] = v.Index
+		}
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
+		}
+
+		// Convert pubkeys to bytes for PostgreSQL
+		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
+		for i, p := range validatorPubkeys {
+			byteaArray[i], _ = hexutil.Decode(p)
+		}
+	}
+
+	query := `
+			SELECT
+				bd.amount
+		`
+
+	var filter interface{}
+	if dashboardId.Validators != nil {
+		query += `
+			FROM
+				blocks_deposits bd
+			WHERE
+				bd.publickey = ANY ($1)`
+		filter = byteaArray
+	} else {
+		query += `
+			FROM
+				cached_blocks_deposits_lookup cbdl
+				INNER JOIN blocks_deposits bd ON bd.block_slot = cbdl.block_slot
+					AND bd.block_index = cbdl.block_index
+			WHERE
+				cbdl.dashboard_id = $1`
+		filter = dashboardId.Id
+	}
+
+	var data int64
+	err := db.AlloyReader.Get(&data, query, filter)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
+
+	fmt.Println("GetValidatorDashboardTotalClDeposits took: ", time.Since(totalTime))
+
+	return &responseData, nil
 }
