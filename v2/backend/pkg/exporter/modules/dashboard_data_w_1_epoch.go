@@ -143,7 +143,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"withdrawals_count",
 			"withdrawals_amount",
 			"inclusion_delay_sum",
-			"block_chance",
+			"blocks_expected",
 			"attestations_scheduled",
 			"attestations_executed",
 			"attestation_head_executed",
@@ -156,7 +156,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"last_executed_duty_epoch",
 			"blocks_cl_attestations_reward",
 			"blocks_cl_sync_aggregate_reward",
-			"sync_chance",
+			"sync_committees_expected",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
 				i,
