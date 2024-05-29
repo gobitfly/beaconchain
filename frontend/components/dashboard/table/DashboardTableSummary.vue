@@ -159,6 +159,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
                 <DashboardTableValidators
                   :validators="slotProps.data.validators"
                   :group-id="slotProps.data.group_id"
+                  :dashboard-key="dashboardKey"
                   context="group"
                 />
               </template>

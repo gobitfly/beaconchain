@@ -6,29 +6,61 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import type { TimeFrame } from '~/types/value'
+import type { DashboardKey } from '~/types/dashboard'
+import { API_PATH } from '~/types/customFetch'
+import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
+const router = useRouter()
+const url = useRequestURL()
 
 interface Props {
   context: DashboardValidatorContext;
   timeFrame?: TimeFrame;
   dashboardName?: string,
+  dashboardKey?: DashboardKey,
   groupName?: string, // overruled by dashboardName
+  groupId?: number,
   validators: number[],
 }
 const { props, setHeader } = useBcDialog<Props>()
 
 const visible = defineModel<boolean>()
+const isLoading = ref(false)
 const shownValidators = ref<number[]>([])
+const validators = ref<number[]>([])
 
-watch(props, (p) => {
+watch(props, async (p) => {
   if (p) {
     shownValidators.value = p.validators
+    validators.value = p.validators
     setHeader(
       p?.groupName
         ? $t('dashboard.validator.col.group') + ` "${p.groupName}"`
         : $t('dashboard.title') + (p.dashboardName ? ` "${p.dashboardName}"` : '')
     )
+    // we get a maximum of 10 validators in the table, so if it's 10 we try to get more
+    if (p.validators.length === 10) {
+      isLoading.value = true
+      let duty = ''
+      switch (p.context) {
+        case 'sync':
+          duty = 'sync'
+          break
+        case 'proposal':
+          duty = 'proposal'
+          break
+        case 'slashings':
+          duty = 'slashed'
+          break
+      }
+
+      const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
+      validators.value = res.data.sort((a, b) => a - b)
+      shownValidators.value = validators.value
+      isLoading.value = false
+    }
   }
 }, { immediate: true })
 
@@ -67,21 +99,21 @@ const caption = computed(() => {
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
-    shownValidators.value = props.value?.validators ?? []
+    shownValidators.value = validators.value
     return
   }
 
   shownValidators.value = []
 
   const index = parseInt(filter)
-  if (props.value?.validators?.includes(index)) {
+  if (validators.value?.includes(index)) {
     shownValidators.value = [index]
   }
 }
 
 watch(visible, (value) => {
   if (!value) {
-    shownValidators.value = props.value?.validators ?? []
+    shownValidators.value = validators.value
   }
 })
 
@@ -102,6 +134,45 @@ function copyValidatorsToClipboard (): void {
       warn('Error copying text to clipboard:', error)
     })
 }
+const shownValidatorsString = computed(() => shownValidators.value.join(', '))
+
+const openValidator = (id: string) => {
+  if (!id) {
+    return
+  }
+  const newRoute = router.resolve({ name: 'validator-id', params: { id } })
+  const path = url.origin + newRoute.fullPath
+  window.open(path, '_blank')
+}
+
+const validatorsClicked = () => {
+  const s = window.getSelection()
+  if (!s) {
+    return
+  }
+  const range = s.getRangeAt(0)
+  const node = s.anchorNode
+  const value = node?.nodeValue?.trim()
+  if (!node || !value) {
+    return
+  }
+
+  // Find starting point
+  while (range.toString().indexOf(' ') !== 0 && range.startOffset > 0) {
+    range.setStart(node, (range.startOffset - 1))
+  }
+  if (range.startOffset > 0) {
+    range.setStart(node, range.startOffset + 1)
+  }
+
+  // Find ending point
+  do {
+    range.setEnd(node, range.endOffset + 1)
+  } while (!(range.toString().includes(' ') || range.toString().includes(',')) && range.toString().trim() !== '' && range.endOffset < value.length)
+
+  const str = range.toString().trim().replace(',', '')
+  openValidator(str)
+}
 </script>
 
 <template>
@@ -113,13 +184,9 @@ function copyValidatorsToClipboard (): void {
       <BcContentFilter class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="handleEvent" />
     </div>
     <div class="link_container">
-      <template v-for="v in shownValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
-          {{ v }}
-        </NuxtLink>
-        <span>, </span>
-      </template>
+      <span class="link" @click="validatorsClicked">{{ shownValidatorsString }}</span>
     </div>
+    <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
     <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
       <FontAwesomeIcon :icon="faCopy" />
     </Button>
@@ -156,6 +223,10 @@ function copyValidatorsToClipboard (): void {
     width: 169px;
   }
 
+  .spinner {
+    position: absolute;
+  }
+
   .link_container {
     position: relative;
     flex-grow: 1;
@@ -165,11 +236,8 @@ function copyValidatorsToClipboard (): void {
     border-radius: var(--border-radius);
     height: 453px;
     overflow-y: auto;
+    overflow-x: hidden;
     word-break: break-all;
-
-    span:last-child {
-      display: none;
-    }
   }
 }
 </style>
