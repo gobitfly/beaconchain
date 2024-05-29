@@ -149,10 +149,6 @@ func (d *dashboardData) Init() error {
 		d.processHeadQueue()
 	}()
 
-	go func() {
-		d.backfillCLBlockRewards()
-	}()
-
 	return nil
 }
 
@@ -1663,71 +1659,71 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 
 // Can be used to backfill old missing cl block rewards
 // Commented out since this is a one time operation, kept in in case we need it again
-func (d *dashboardData) backfillCLBlockRewards() {
-	upTo := 1731488
-	startFrom := 260107
-	batchSize := 8
-	parallelization := 8
+// func (d *dashboardData) backfillCLBlockRewards() {
+// 	upTo := 1731488
+// 	startFrom := 260107
+// 	batchSize := 8
+// 	parallelization := 8
 
-	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
+// 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
 
-	go func() {
-		for i := startFrom; i < upTo+batchSize; i += batchSize {
-			batched := map[uint64]*constypes.StandardBlockRewardsResponse{}
-			mutex := &sync.Mutex{}
+// 	go func() {
+// 		for i := startFrom; i < upTo+batchSize; i += batchSize {
+// 			batched := map[uint64]*constypes.StandardBlockRewardsResponse{}
+// 			mutex := &sync.Mutex{}
 
-			errgroup := &errgroup.Group{}
-			errgroup.SetLimit(parallelization)
+// 			errgroup := &errgroup.Group{}
+// 			errgroup.SetLimit(parallelization)
 
-			for slot := i; slot < i+batchSize; slot++ {
-				slot := slot
-				errgroup.Go(func() error {
-					blockReward, err := d.CL.GetPropoalRewards(slot)
-					if err != nil {
-						httpErr := network.SpecificError(err)
-						if httpErr != nil && httpErr.StatusCode == 404 {
-							return nil
-						}
+// 			for slot := i; slot < i+batchSize; slot++ {
+// 				slot := slot
+// 				errgroup.Go(func() error {
+// 					blockReward, err := d.CL.GetPropoalRewards(slot)
+// 					if err != nil {
+// 						httpErr := network.SpecificError(err)
+// 						if httpErr != nil && httpErr.StatusCode == 404 {
+// 							return nil
+// 						}
 
-						d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
-						return err
-					}
+// 						d.log.Error(err, "can not get block reward data", 0, map[string]interface{}{"slot": slot})
+// 						return err
+// 					}
 
-					mutex.Lock()
-					batched[uint64(slot)] = blockReward
-					mutex.Unlock()
+// 					mutex.Lock()
+// 					batched[uint64(slot)] = blockReward
+// 					mutex.Unlock()
 
-					return nil
-				})
-			}
+// 					return nil
+// 				})
+// 			}
 
-			err := errgroup.Wait()
-			if err != nil {
-				d.log.Error(err, "failed to backfill cl block rewards", 0)
-				close(blocksChan)
-			}
+// 			err := errgroup.Wait()
+// 			if err != nil {
+// 				d.log.Error(err, "failed to backfill cl block rewards", 0)
+// 				close(blocksChan)
+// 			}
 
-			blocksChan <- batched
-		}
-	}()
+// 			blocksChan <- batched
+// 		}
+// 	}()
 
-	go func() {
-		for blockReward := range blocksChan {
-			err := storeClBlockRewards(blockReward)
-			if err != nil {
-				d.log.Error(err, "failed to store cl block rewards", 0)
-			}
+// 	go func() {
+// 		for blockReward := range blocksChan {
+// 			err := storeClBlockRewards(blockReward)
+// 			if err != nil {
+// 				d.log.Error(err, "failed to store cl block rewards", 0)
+// 			}
 
-			highestSlot := uint64(0)
-			for slot := range blockReward {
-				if slot > highestSlot {
-					highestSlot = slot
-				}
-			}
+// 			highestSlot := uint64(0)
+// 			for slot := range blockReward {
+// 				if slot > highestSlot {
+// 					highestSlot = slot
+// 				}
+// 			}
 
-			if highestSlot%100 < uint64(batchSize) {
-				d.log.Infof("processed blocks, height: %d", highestSlot)
-			}
-		}
-	}()
-}
+// 			if highestSlot%100 < uint64(batchSize) {
+// 				d.log.Infof("processed blocks, height: %d", highestSlot)
+// 			}
+// 		}
+// 	}()
+// }
