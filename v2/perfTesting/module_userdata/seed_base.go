@@ -194,22 +194,11 @@ func insertValidatorsTable(start, count, maxValidatorIndex, pendingAfter int64) 
 		}
 		index := k % maxValidatorIndex
 
-		pending := false
-		if index > pendingAfter {
-			pending = true
-		}
-
-		version := 1
-		if pending {
-			version = 0
-		}
-
 		_, ok := multipleMap[index]
 		if !ok {
 			_, err = stmt.Exec(
 				k%maxValidatorIndex,
 				randomBytes,
-				version,
 			)
 			multipleMap[index] = true
 		}
@@ -255,21 +244,11 @@ func insertValidatorsDashboard(dashboard, group, start, count, maxValidatorIndex
 
 	for k := start; k < start+count; k++ {
 		index := k % maxValidatorIndex
-		pending := false
-		if index > pendingAfter {
-			pending = true
-		}
-
-		version := 1
-		if pending {
-			version = 0
-		}
 
 		_, err = stmt.Exec(
 			index,
 			dashboard,
 			group,
-			version,
 		)
 		if err != nil {
 			return err
