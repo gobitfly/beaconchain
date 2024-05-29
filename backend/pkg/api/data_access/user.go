@@ -9,7 +9,7 @@ import (
 )
 
 func (d *DataAccessService) GetUser(email string) (*t.User, error) {
-	// WORKING spletka
+	// TODO patrick
 	result := &t.User{}
 	err := d.userReader.Get(result, `
 		WITH
