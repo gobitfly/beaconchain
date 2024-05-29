@@ -13,11 +13,11 @@ import {
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { formatEpochToDate } from '~/utils/format'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { API_PATH } from '~/types/customFetch'
 
 use([
   CanvasRenderer,
@@ -46,7 +46,7 @@ await useAsyncData('validator_dashboard_summary_chart', async () => {
   data.value = res.data
 }, { watch: [dashboardKey], server: false })
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
@@ -80,7 +80,7 @@ const option = computed(() => {
   if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
-      const name = getGroupLabel($t, element.id, overview.value?.groups, allGroups)
+      const name = getGroupLabel($t, element.id, groups.value, allGroups)
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',

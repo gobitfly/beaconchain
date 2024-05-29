@@ -2,6 +2,7 @@ import { pullAll, union } from 'lodash-es'
 import { provide, warn } from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
+import { isPublicKey, isSharedKey } from '~/utils/dashboard/key'
 export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
@@ -46,8 +47,11 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
   initialCheck()
 
   const isPublic = computed(() => {
-    const id = parseInt(dashboardKey.value)
-    return !!dashboardKey.value && isNaN(id)
+    return isPublicKey(dashboardKey.value)
+  })
+
+  const isShared = computed(() => {
+    return isSharedKey(dashboardKey.value)
   })
 
   // validator id / publicKey for validator dashboard or account id or ens name for account dashboard
@@ -72,7 +76,13 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     updateEntities(pullAll(publicEntities.value, list))
   }
 
-  const api = { dashboardKey, isPublic, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
+  const api = { dashboardKey, isPublic, isShared, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
+
+  watch(isLoggedIn, (newValue, oldValue) => {
+    if (oldValue && !newValue && dashboardKeyCookie.value && !isNaN(parseInt(dashboardKeyCookie.value))) {
+      setDashboardKey('')
+    }
+  })
 
   provide<DashboardKeyData>('dashboard-key', api)
   return api

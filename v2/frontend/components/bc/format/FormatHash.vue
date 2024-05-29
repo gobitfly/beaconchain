@@ -7,15 +7,16 @@ interface Props {
   full?: boolean, // if true the hash will not be truncated
   noLink?: boolean, // most of the time we want to render it as a link (if possible), but there might be cases where we don't
   noCopy?: boolean, // same as for the link
+  noWrap?: boolean // don't wrap elements
 }
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  if (!props.hash) {
+  if (!props.hash || props.hash === '0x') {
     return
   }
   const hash = props.hash
-  const className = props.full ? 'full' : props.ens ? 'truncate-text' : ''
+  const className = props.full ? 'full' : props.ens ? 'truncate-text' : props.noWrap ? 'no-wrap' : ''
   let parts: { value: string, className?: string }[] = []
   let link: string = ''
   if (props.ens) {
@@ -51,6 +52,9 @@ const data = computed(() => {
       case 'public_key':
         link = `/validator/${props.hash}`
         break
+      case 'tx':
+        link = `/tx/${props.hash}`
+        break
     }
   }
 
@@ -63,7 +67,7 @@ const data = computed(() => {
 
 </script>
 <template>
-  <div v-if="data" class="format-hash">
+  <div v-if="data" class="format-hash" :class="{ 'no-wrap': noWrap }">
     <BcTooltip class="tt-container">
       <template v-if="!full || ens" #tooltip>
         <div v-if="ens" class="tt ens-name full">
@@ -78,7 +82,7 @@ const data = computed(() => {
           {{ part.value }}
         </span>
       </span>
-      <NuxtLink v-else :to="data.link" class="link" :class="data.className">
+      <NuxtLink v-else :to="data.link" target="_blank" class="link" :class="data.className">
         <span v-for="(part, index) in data.parts" :key="index" :class="part.className">
           {{ part.value }}
         </span>
@@ -89,15 +93,30 @@ const data = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+.no-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
 .format-hash {
   &:has(.truncate-text) {
     display: flex;
+  }
+
+  &:has(.no-wrap) {
+    display: flex;
+    flex-wrap: nowrap;
   }
 
   .tt-container {
     &:has(.truncate-text) {
       display: flex;
       overflow: hidden;
+    }
+
+    &:has(.no-wrap) {
+      display: flex;
+      flex-wrap: nowrap;
     }
   }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChainFamily, ChainIDs, ChainInfo } from '~/types/networks'
+const colorMode = useColorMode()
 
 // Usage :
 // Both properties width and height must be set by the parent component. The icon will fill this frame as much as possible without deformation.
@@ -7,11 +8,12 @@ import { ChainFamily, ChainIDs, ChainInfo } from '~/types/networks'
 const props = defineProps({
   chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
   colored: { type: Boolean, default: false }, // tells whether the icon must be in its official color or in the color of the font
+  doNotAdaptToColorTheme: { type: Boolean, default: false }, // some icons in their original colors are hard to see on a dark background, so they are adapted automatically, but you can deactivate this behavior if your background is always light
   harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
 })
 
 const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
-const coloring = computed(() => !props.colored ? 'monochromatic' : '')
+const coloring = computed(() => !props.colored ? 'monochromatic' : (colorMode.value !== 'dark' || props.doNotAdaptToColorTheme ? '' : 'pastel'))
 const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 </script>
 

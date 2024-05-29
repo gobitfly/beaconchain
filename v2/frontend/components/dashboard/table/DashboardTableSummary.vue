@@ -10,13 +10,15 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -28,7 +30,7 @@ const colsVisible = computed(() => {
 
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
   }
   setQuery(q, true, true)
 }
@@ -44,7 +46,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, overview.value?.groups)
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -77,6 +79,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
       :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
@@ -90,6 +93,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             :page-size="pageSize"
             :row-class="getRowClass"
             :add-spacer="true"
+            :selected-sort="tempQuery?.sort"
+            :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -97,7 +102,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               field="group_id"
               :sortable="true"
-              body-class="bold"
+              body-class="group-id bold"
+              header-class="group-id"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -160,6 +166,9 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <template #expansion="slotProps">
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
+            <template #empty>
+              <DashboardTableAddValidator />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
@@ -174,8 +183,17 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
 :deep(.summary_table) {
   --col-width: 216px;
+
+  >.p-datatable-wrapper {
+    min-height: 529px;
+  }
+
+  .group-id {
+    @include utils.truncate-text;
+  }
 
   td:has(.validator_column) {
     @include utils.set-all-width(var(--col-width));

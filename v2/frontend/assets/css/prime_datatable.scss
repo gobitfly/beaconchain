@@ -46,30 +46,31 @@
           font-family: var(--inter-family);
           font-weight: var(--inter-medium);
           font-size: 18px;
+          transform: scaleX(0.8);
           white-space: nowrap;
           &:before {
             content: "\2191";
             color: var(--text-color-disabled);
-            margin-left: var(--padding);
+            margin-left: var(--padding-small);
           }
           &:after {
             content: "\2193";
             color: var(--text-color-disabled);
             margin-left: -9px;
           }
-          &:has(svg[sortOrder="1"]) {
+          &:has(svg[sortOrder="-1"]) {
             &:before {
               color: inherit;
             }
           }
-          &:has(svg[sortOrder="-1"]) {
+          &:has(svg[sortOrder="1"]) {
             &:after {
               color: inherit;
             }
           }
           .p-sortable-column-icon {
             opacity: 0;
-            width: 0;
+            width: 0.25em;
           }
         }
         .p-sortable-column-badge {

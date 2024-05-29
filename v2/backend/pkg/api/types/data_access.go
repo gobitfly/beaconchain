@@ -76,6 +76,20 @@ type ValidatorsCursor struct {
 	Index uint64 `json:"vi"`
 }
 
+type RewardsCursor struct {
+	GenericCursor
+
+	Epoch   uint64
+	GroupId int64
+}
+
+type ValidatorDutiesCursor struct {
+	GenericCursor
+
+	Index  uint64
+	Reward decimal.Decimal
+}
+
 type WithdrawalsCursor struct {
 	GenericCursor
 
@@ -102,4 +116,9 @@ type BlocksCursor struct {
 	Group    uint64
 	Status   uint64
 	Reward   decimal.NullDecimal
+}
+
+type NetworkInfo struct {
+	ChainId uint64
+	Name    string
 }

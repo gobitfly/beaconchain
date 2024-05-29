@@ -1,90 +1,151 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
+import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
+import { Target } from '~/types/links'
 
+const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
+const toast = useBcToast()
 
-const { handleSubmit, errors, values } = useForm()
-const { value: email } = useField('email', validateField)
-const { value: password } = useField('password', validateField)
+useBcSeo('login.title')
 
-function validateField (value?: string) {
+const { handleSubmit, errors } = useForm()
+const { value: email } = useField<string>('email', validateAddress)
+const { value: password } = useField<string>('password', validatePassword)
+
+function validateAddress (value: string) : true|string {
   if (!value) {
-    return 'Input required.'
+    return $t('login.no_email')
   }
-
+  if (!REGEXP_VALID_EMAIL.test(value)) {
+    return $t('login.invalid_email')
+  }
   return true
 }
 
-const hasErrors = computed(() => {
-  return !!errors.value && !!Object.values(errors.value).filter(val => !!val).length
-})
-
-const inputValid = computed(() => {
-  return !!values.email?.length && !!values.password?.length && !hasErrors.value
-})
+function validatePassword (value: string) : true|string {
+  if (!value) {
+    return $t('login.no_password')
+  }
+  if (value.length < 5) {
+    return $t('login.invalid_password')
+  }
+  return true
+}
 
 const onSubmit = handleSubmit(async (values) => {
-  if (inputValid.value) {
+  try {
     await doLogin(values.email, values.password)
     await navigateTo('/')
+  } catch (error) {
+    password.value = ''
+    toast.showError({ summary: $t('login.error_toast_title'), group: $t('login.error_toast_group'), detail: $t('login.error_toast_message') })
   }
 })
 
+const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
+const addressError = ref<string|undefined>(undefined)
+const passwordError = ref<string|undefined>(undefined)
 </script>
 
 <template>
   <BcPageWrapper>
     <div class="container">
       <form @submit="onSubmit">
-        <div class="input_row">
-          <label for="email">{{ $t('login.email') }}</label>
+        <div class="input-row">
+          <label for="email" class="label">{{ $t('login.email') }}</label>
           <InputText
             id="email"
             v-model="email"
             type="text"
             :class="{ 'p-invalid': errors?.email }"
             aria-describedby="text-error"
+            @focus="addressError = undefined"
+            @blur="addressError = errors?.email"
           />
-          <small id="text-error" class="p-error">{{ errors?.email || '&nbsp;' }}</small>
+          <div class="p-error">
+            {{ addressError || '&nbsp;' }}
+          </div>
         </div>
-        <div class="input_row">
-          <label for="password">{{ $t('login.password') }}</label>
+        <div class="input-row">
+          <label for="password" class="label">{{ $t('login.password') }}</label>
           <InputText
             id="password"
             v-model="password"
             type="password"
             :class="{ 'p-invalid': errors?.password }"
             aria-describedby="text-error"
+            @focus="passwordError = undefined"
+            @blur="passwordError = errors?.password"
           />
-          <small id="text-error" class="p-error">{{ errors?.password || '&nbsp;' }}</small>
+          <div class="p-error">
+            {{ passwordError || '&nbsp;' }}
+          </div>
         </div>
-        <div class="botton_row">
-          <Button type="submit" :label="$t('login.submit')" :disabled="!inputValid" />
+        <div class="last-row">
+          <div class="account-invitation">
+            {{ $t('login.dont_have_account') }}<br>
+            <NuxtLink to="/register" :target="Target.Internal" class="link">
+              {{ $t('login.signup_here') }}
+            </NuxtLink>
+          </div>
+          <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
         </div>
       </form>
-      <Toast />
     </div>
   </BcPageWrapper>
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+
 .container {
-  display: flex;
-  justify-content: center;
-  align-content: center;
+  position: relative;
+  width: 300px;
+  height: 230px;
+  margin: auto;
+  margin-top: 60px;
+  margin-bottom: 50px;
+  padding: var(--padding);
 
   form {
-    max-width: 50%;
+    @include fonts.standard_text;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 
-    .input_row {
+    .input-row {
+      position: relative;
       display: flex;
       flex-direction: column;
+      margin: var(--padding) auto 0px auto;
+      width: 80%;
+
+      &:first-child {
+        padding-top: var(--padding-small)
+      }
+      .label {
+        margin-bottom: var(--padding-small);
+      }
     }
 
-    .botton_row {
+    .last-row {
+      position: relative;
       display: flex;
-      justify-content: flex-end;
+      margin-top: auto;
+
+      .account-invitation {
+        position: relative;
+        @include fonts.small_text;
+        margin-right: auto;
+      }
+    }
+
+    .p-error {
+      @include fonts.small_text;
     }
   }
 }

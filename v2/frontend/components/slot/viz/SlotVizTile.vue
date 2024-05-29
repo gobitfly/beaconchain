@@ -4,17 +4,17 @@ import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slo
 interface Props {
   data: VDBSlotVizSlot,
   currentSlotId?: number,
-  selectedCategoris: SlotVizCategories[]
+  selectedCategories: SlotVizCategories[]
 }
 const props = defineProps<Props>()
 
 const data = computed(() => {
   const slot:VDBSlotVizSlot = {
     ...props.data,
-    attestations: props.selectedCategoris.includes('attestation') ? props.data.attestations : undefined,
-    proposal: props.selectedCategoris.includes('proposal') ? props.data.proposal : undefined,
-    slashing: props.selectedCategoris.includes('slashing') ? props.data.slashing : undefined,
-    sync: props.selectedCategoris.includes('sync') ? props.data.sync : undefined
+    attestations: props.selectedCategories.includes('attestation') ? props.data.attestations : undefined,
+    proposal: props.selectedCategories.includes('proposal') ? props.data.proposal : undefined,
+    slashing: props.selectedCategories.includes('slashing') ? props.data.slashing : undefined,
+    sync: props.selectedCategories.includes('sync') ? props.data.sync : undefined
   }
   let outer = ''
   const icons: SlotVizIcons[] = []
@@ -25,6 +25,13 @@ const data = computed(() => {
       break
     case 'proposed':
       outer = 'proposed'
+      break
+    case 'scheduled':
+      if (props.currentSlotId && props.currentSlotId > slot.slot) {
+        outer = 'scheduled-past'
+      } else if (props.currentSlotId === slot.slot) {
+        outer = 'scheduled-current'
+      }
       break
   }
   if (slot.slot === props.currentSlotId) {
@@ -74,7 +81,7 @@ const data = computed(() => {
 })
 </script>
 <template>
-  <SlotVizTooltip :id="data.id" :data="props.data">
+  <SlotVizTooltip :id="data.id" :data="props.data" :current-slot-id="currentSlotId">
     <div :id="data.id" class="tile" :class="data.outer">
       <div class="inner" :class="data.inner">
         <IconPlus v-show="data.icons?.length > 2" class="plus" />
@@ -136,6 +143,16 @@ const data = computed(() => {
     left: 3px;
     width: 11px;
     height: 10px;
+  }
+}
+.scheduled-current{
+  box-shadow: 0px 0px 2px var(--text-color);
+}
+.scheduled-past{
+  opacity: 0.5;
+  background-color: rgb(100,100,100);
+  .inner {
+    background-color: rgb(100,100,100);
   }
 }
 

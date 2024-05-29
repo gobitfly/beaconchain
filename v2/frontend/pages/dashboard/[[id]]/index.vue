@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  faArrowDown,
   faChartLineUp,
   faCube,
   faCubes,
@@ -7,15 +8,21 @@ import {
   faWallet,
   faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
 
 const { isLoggedIn } = useUserStore()
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
-const { refreshDashboards, updateHash, dashboards } = useUserDashboardStore()
+const { refreshDashboards, updateHash, dashboards, getDashboardLabel } = useUserDashboardStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { t: $t } = useI18n()
+const seoTitle = computed(() => {
+  return getDashboardLabel(dashboardKey.value, 'validator')
+})
+
+useBcSeo(seoTitle, true)
 
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
@@ -43,7 +50,7 @@ watch(dashboardKey, (newKey, oldKey) => {
   if (!isLoggedIn.value) {
     // We update the key for our public dashboard
     const cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-    // If the old key does not match the dashboards key then it probabbly means we opened a different pub. dashboard as a link
+    // If the old key does not match the dashboards key then it probabbly means we opened a different public dashboard as a link
     if (cd && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
     }
@@ -54,11 +61,7 @@ watch(dashboardKey, (newKey, oldKey) => {
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController
-        class="panel-controller"
-        :display-type="'panel'"
-        :initially-visislbe="true"
-      />
+      <DashboardCreationController class="panel-controller" :display-type="'panel'" :initially-visislbe="true" />
     </BcPageWrapper>
   </div>
   <div v-else>
@@ -76,7 +79,7 @@ watch(dashboardKey, (newKey, oldKey) => {
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView lazy>
+      <TabView lazy class="dashboard-tab-view">
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
@@ -95,7 +98,7 @@ watch(dashboardKey, (newKey, oldKey) => {
           </template>
           <DashboardTableBlocks />
         </TabPanel>
-        <TabPanel>
+        <TabPanel :disabled="!showInDevelopment">
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
           </template>
@@ -105,13 +108,17 @@ watch(dashboardKey, (newKey, oldKey) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
           </template>
-          Deposits coming soon!
+          <div class="deposits">
+            <DashboardTableElDeposits />
+            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
+            <DashboardTableClDeposits />
+          </div>
         </TabPanel>
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
           </template>
-          Withdrawals coming soon!
+          <DashboardTableWithdrawals />
         </TabPanel>
       </TabView>
     </BcPageWrapper>
@@ -122,9 +129,13 @@ watch(dashboardKey, (newKey, oldKey) => {
 .panel-controller {
   display: flex;
   justify-content: center;
-  margin-top: 60px;
-  margin-bottom: 60px;
+  margin-top: 136px;
+  margin-bottom: 307px;
   overflow: hidden;
+}
+
+:global(.dashboard-tab-view >.p-tabview-panels) {
+  min-height: 699px;
 }
 
 :global(.modal-controller) {
@@ -138,5 +149,10 @@ watch(dashboardKey, (newKey, oldKey) => {
 
 .p-tabview {
   margin-top: var(--padding-large);
+}
+
+.down_icon {
+  width: 100%;
+  height: 28px;
 }
 </style>

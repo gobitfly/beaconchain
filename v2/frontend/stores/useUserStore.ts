@@ -1,16 +1,17 @@
 import { defineStore } from 'pinia'
-import { warn } from 'vue'
-import type { GetUserDashboardsResponse } from '~/types/api/dashboard'
 import type { LoginResponse } from '~/types/user'
+import type { InternalGetUserInfoResponse, UserInfo } from '~/types/api/user'
+import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
-  const data = ref<{user_id: number, user_name: string} | undefined | null>()
+  const data = ref<UserInfo | undefined | null>()
   return { data }
 })
 
 export function useUserStore () {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(userStore())
+  const router = useRouter()
 
   async function doLogin (email: string, password: string) {
     await fetch<LoginResponse>(API_PATH.LOGIN, {
@@ -22,36 +23,23 @@ export function useUserStore () {
     await getUser()
   }
 
-  const setUser = (id?: number, name: string = '') => {
-    if (!id) {
-      data.value = null
-    } else {
-      data.value = {
-        user_id: id,
-        user_name: name
-      }
-    }
+  const setUser = (user?: UserInfo) => {
+    data.value = user
   }
 
   const getUser = async () => {
     try {
-      // TODO: replace once we have an endpoint to get a real user
-      const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS, undefined, undefined, undefined, true)
-
-      if (res.data) {
-        setUser(1, 'My temp solution')
-      }
+      const res = await fetch<InternalGetUserInfoResponse>(API_PATH.USER, undefined, undefined, undefined, true)
+      setUser(res.data)
     } catch (e) {
-      // TODO: replace hacky sollution once we have a currentState request in the v2 api
-      // We need to call at least once GET request wen we load the page to get the csrf header
-      try {
-        await fetch(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: 'MQ' })
-      } catch (e) {
-        warn('we could not load the db to get the csrf token')
-      }
-      // We are not logged in
       setUser(undefined)
     }
+  }
+
+  const doLogout = async () => {
+    await fetch(API_PATH.LOGOUT, undefined, undefined, undefined, true)
+    setUser(undefined)
+    router.replace('/')
   }
 
   const user = computed(() => {
@@ -62,5 +50,5 @@ export function useUserStore () {
     return !!user.value
   })
 
-  return { doLogin, user, isLoggedIn, getUser }
+  return { doLogin, doLogout, user, isLoggedIn, getUser }
 }

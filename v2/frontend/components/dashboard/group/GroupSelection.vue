@@ -9,14 +9,13 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const list = computed<VDBOverviewGroup[]>(() => {
-  const groups = overview.value?.groups ?? []
   if (props.includeAll) {
-    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(groups)
+    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(groups.value)
   }
-  return groups
+  return groups.value
 })
 
 const selected = defineModel<number | undefined>({ required: true })

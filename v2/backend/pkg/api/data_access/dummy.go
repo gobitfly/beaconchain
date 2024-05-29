@@ -1,6 +1,9 @@
 package dataaccess
 
 import (
+	"context"
+	"time"
+
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -24,12 +27,36 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
-func (d *DummyService) CloseDataAccessService() {
+func (d *DummyService) Close() {
 	// nothing to close
 }
 
-func (d *DummyService) GetUserInfo(email string) (*t.User, error) {
+func (d *DummyService) GetLatestSlot() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
+	r := []t.EthConversionRate{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+	r := t.UserInfo{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetUser(email string) (*t.User, error) {
 	r := t.User{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
+	r := t.ProductSummary{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -113,14 +140,14 @@ func (d *DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPri
 	return nil
 }
 
-func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	r := t.VDBPostPublicIdData{}
+func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
-	r := t.VDBPostPublicIdData{}
+func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -198,13 +225,25 @@ func (d *DummyService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor s
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardEpochHeatmap(dashboardId t.VDBId) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardGroupHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardDailyHeatmap(dashboardId t.VDBId, period enums.TimePeriod) (*t.VDBHeatmap, error) {
+	r := t.VDBHeatmap{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error) {
+	r := t.VDBHeatmapTooltipData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(dashboardId t.VDBId, groupId uint64, day time.Time) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -246,8 +285,56 @@ func (d *DummyService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cur
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DummyService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
 	r := t.VDBTotalWithdrawalsData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
+	r := []t.NetworkInfo{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
+	r := t.SearchValidator{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
+	r := t.SearchValidator{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
+	r := t.SearchValidatorsByDepositAddress{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
+	r := t.SearchValidatorsByDepositEnsName{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
+	r := t.SearchValidatorsByWithdrwalCredential{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
+	r := t.SearchValidatorsByWithrawalEnsName{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
+	r := t.SearchValidatorsByGraffiti{}
 	err := commonFakeData(&r)
 	return &r, err
 }
