@@ -123,7 +123,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 			w.amount
 		FROM
 		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		`
 
 	// Limit the query to relevant validators
@@ -545,7 +545,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 			COALESCE(SUM(w.amount), 0)
 		FROM
 		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
+		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
 		`, lastSlot, validators)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -563,6 +563,12 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 
 	if search != "" {
 		if utils.IsHash(search) || utils.IsEth1Address(search) {
+			// Ensure that we have a "0x" prefix for the search term
+			if !strings.HasPrefix(search, "0x") {
+				search = "0x" + search
+			}
+			search = strings.ToLower(search)
+
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
 			defer releaseLock()
 			if err != nil {
@@ -570,12 +576,6 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 			}
 
 			if utils.IsHash(search) {
-				// Ensure that we have a "0x" prefix for the search term
-				if !strings.HasPrefix(search, "0x") {
-					search = "0x" + search
-				}
-				search = strings.ToLower(search)
-
 				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 					validatorSearch = append(validatorSearch, *index)
 				} else {

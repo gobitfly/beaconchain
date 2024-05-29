@@ -1,8 +1,14 @@
 import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
+import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
 
 const { epochToTs, slotToTs } = useNetwork()
+
+export const ONE_MINUTE = 60
+export const ONE_HOUR = ONE_MINUTE * 60
+export const ONE_DAY = ONE_HOUR * 24
+export const ONE_YEAR = ONE_DAY * 365
 
 export interface NumberFormatConfig {
   precision?: number
@@ -149,4 +155,42 @@ export function formatEpochToDate (epoch: number, locales: string): string | nul
 
 export function formattedNumberToHtml (value?:string):string | undefined {
   return value?.split(',').join("<span class='comma' />")
+}
+
+export function formatTimeDuration (seconds: number | undefined, t: ComposerTranslation) : string | undefined {
+  if (seconds === undefined) {
+    return undefined
+  }
+
+  let translationId = 'time_duration.years'
+  let divider = ONE_YEAR
+
+  if (seconds < ONE_MINUTE) {
+    translationId = 'time_duration.seconds'
+    divider = 1
+  } else if (seconds < ONE_HOUR) {
+    translationId = 'time_duration.minutes'
+    divider = ONE_MINUTE
+  } else if (seconds < ONE_DAY) {
+    translationId = 'time_duration.hours'
+    divider = ONE_HOUR
+  } else if (seconds < ONE_YEAR) {
+    translationId = 'time_duration.days'
+    divider = ONE_DAY
+  }
+
+  const amount = Math.floor(seconds / divider)
+
+  return t(translationId, { amount }, amount === 1 ? 1 : 2)
+}
+
+export function formatFiat (value:number, currency: string, locales: string, minimumFractionDigits?: number, maximumFractionDigits?: number) {
+  const formatter = new Intl.NumberFormat(locales, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits,
+    maximumFractionDigits
+  })
+
+  return formatter.format(value)
 }
