@@ -33,7 +33,7 @@ func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chain
 		}, nil
 	}
 
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
@@ -52,7 +52,7 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 		}, nil
 	}
 
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
@@ -66,7 +66,7 @@ func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Cont
 		return nil, err
 	}
 	if len(ret.Validators) == 0 {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 	return ret, nil
 }
@@ -74,7 +74,7 @@ func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Cont
 func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
 	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
@@ -88,7 +88,7 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 		return nil, err
 	}
 	if len(ret.Validators) == 0 {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 	return ret, nil
 }
@@ -96,7 +96,7 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
 	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
@@ -105,12 +105,12 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 		Graffiti:   graffiti,
 		Validators: make([]uint64, 0),
 	}
-	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text ilike $1 limit 10;", graffiti+"%") // added a limit here to keep the query fast
+	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text = $1 limit 10;", graffiti) // added a limit here to keep the query fast
 	if err != nil {
 		return nil, err
 	}
 	if len(ret.Validators) == 0 {
-		return ret, nil
+		return nil, ErrNotFound
 	}
 	return ret, nil
 }

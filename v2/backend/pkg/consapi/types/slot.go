@@ -106,7 +106,7 @@ func (a *AttesterSlashing) GetSlashedIndices() []uint64 {
 	commonIndices := make([]uint64, 0)
 	indexMap := make(map[int32]bool)
 
-	for _, index := range a.Attestation2.AttestingIndices {
+	for _, index := range a.Attestation1.AttestingIndices {
 		indexMap[int32(index)] = true
 	}
 
