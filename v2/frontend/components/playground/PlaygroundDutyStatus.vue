@@ -83,7 +83,7 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '0',
       cl_slashing_inclusion_income: '0',
       el_income: '0',
-      status: 'orphaned'
+      status: 'failed'
     }
   },
   {}

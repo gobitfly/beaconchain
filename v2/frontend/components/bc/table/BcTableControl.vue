@@ -58,10 +58,12 @@ const onInput = (value: string) => {
   padding: 0 var(--padding-large);
   width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--padding);
 
   .side {
+    flex-grow: 1;
+    flex-basis: 0;
     &+h1 {
       width: 180px;
     }

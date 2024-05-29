@@ -9,6 +9,7 @@ interface Props {
   data: SlotVizEpoch[]
 }
 const props = defineProps<Props>()
+const { latestState } = useLatestStateStore()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 
@@ -28,7 +29,7 @@ const icons:{ component: Component, value: SlotVizCategories }[] = [
   }
 ]
 
-const currentSlotId = computed(() => {
+const mostRecentScheduledSlotId = computed(() => {
   if (!props.data?.length) {
     return
   }
@@ -47,6 +48,10 @@ const currentSlotId = computed(() => {
       }
     }
   }
+})
+
+const currentSlotId = computed(() => {
+  return Math.max(mostRecentScheduledSlotId.value ?? 0, latestState.value?.current_slot ?? 0)
 })
 
 </script>

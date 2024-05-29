@@ -1340,7 +1340,6 @@ type Price struct {
 	CAD float64   `db:"cad"`
 	JPY float64   `db:"jpy"`
 	CNY float64   `db:"cny"`
-	RUB float64   `db:"rub"`
 	AUD float64   `db:"aud"`
 }
 

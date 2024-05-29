@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -86,9 +87,14 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 			g.Go(func() error {
 				searchResult, err := h.handleSearch(ctx, req.Input, searchType, uint64(network))
 				if err != nil {
+					if errors.Is(err, dataaccess.ErrNotFound) {
+						return nil
+					}
 					return err
 				}
-				searchResultChan <- *searchResult
+				if searchResult != nil { // if the search result is nil, the input didn't match the search type
+					searchResultChan <- *searchResult
+				}
 				return nil
 			})
 		}

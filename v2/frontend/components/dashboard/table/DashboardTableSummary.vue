@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCirclePlus } from '@fortawesome/pro-regular-svg-icons'
 import SummaryChart from '../chart/SummaryChart.vue'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
@@ -13,11 +11,10 @@ const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const manageValidatorsModalVisisble = ref(false)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { summary, query: lastQuery, getSummary } = useValidatorDashboardSummaryStore()
+const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { overview } = useValidatorDashboardOverviewStore()
@@ -76,10 +73,6 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
-const addValidator = () => {
-  manageValidatorsModalVisisble.value = true
-}
-
 </script>
 <template>
   <div>
@@ -101,6 +94,7 @@ const addValidator = () => {
             :row-class="getRowClass"
             :add-spacer="true"
             :selected-sort="tempQuery?.sort"
+            :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -173,10 +167,7 @@ const addValidator = () => {
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
             <template #empty>
-              <div class="empty" @click="addValidator">
-                <span>{{ $t('dashboard.validator.summary.add_validator') }}</span>
-                <FontAwesomeIcon :icon="faCirclePlus" />
-              </div>
+              <DashboardTableAddValidator />
             </template>
           </BcTable>
         </ClientOnly>
@@ -187,7 +178,6 @@ const addValidator = () => {
         </div>
       </template>
     </BcTableControl>
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
   </div>
 </template>
 
@@ -233,18 +223,6 @@ const addValidator = () => {
       border-bottom-color: var(--primary-color);
     }
   }
-}
-
-.empty {
-  width: 100%;
-  height: 400px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: var(--text-color-disabled);
-  gap: var(--padding);
-  cursor: pointer;
 }
 
 .chart-container {

@@ -79,7 +79,7 @@ export interface VDBRewardesTableDuty {
 export interface VDBRewardsTableRow {
   epoch: number /* uint64 */;
   duty: VDBRewardesTableDuty;
-  group_id: number /* uint64 */;
+  group_id: number /* int64 */;
   reward: ClElValue<string /* decimal.Decimal */>;
 }
 export type InternalGetValidatorDashboardRewardsResponse = ApiPagingResponse<VDBRewardsTableRow>;

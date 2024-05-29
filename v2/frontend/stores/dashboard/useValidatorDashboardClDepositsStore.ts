@@ -8,7 +8,7 @@ import type { TableQueryParams } from '~/types/datatable'
 import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardClDepositsStore = defineStore(
-  'validator_dashboard_cl_deposits',
+  'validator_dashboard_cl_deposits_store',
   () => {
     const data = ref<InternalGetValidatorDashboardConsensusLayerDepositsResponse>()
     const total = ref<string>()

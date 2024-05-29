@@ -27,6 +27,7 @@ const visible = defineModel<boolean>()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { dashboards } = useUserDashboardStore()
+const { user } = useUserStore()
 
 const cursor = ref<Cursor>(0)
 const pageSize = ref<number>(25)
@@ -137,8 +138,7 @@ const dashboardName = computed(() => {
   return dashboards.value?.validator_dashboards?.find(d => `${d.id}` === dashboardKey.value)?.name || dashboardKey.value
 })
 
-// TODO: once we have a user management we need to check how to get the real premium limit
-const maxGroupsPerDashboard = computed(() => (isPublic.value ? 1 : 40))
+const maxGroupsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validator_groups_per_dashboard) ? 1 : user.value.premium_perks.validator_groups_per_dashboard)
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
 
 const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getSortOrder(sortOrder.value)}` : undefined)
