@@ -229,7 +229,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
-    timeStampSlot0: 1667577415, 1683709200, 1665396300,
+    timeStampSlot0: 1665396300,
     secondsPerSlot: 5,
     slotsPerEpoch: 16,
     path: '/chiado',
