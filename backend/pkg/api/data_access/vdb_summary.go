@@ -244,7 +244,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
+			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from users_val_dashboards_validators
 		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
@@ -281,7 +282,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
+			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
+			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s
 		where %[1]s.validator_index = ANY($1)
 	`
@@ -439,7 +441,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			data.Luck.Sync.Percent = 0
 		} else {
 			totalSyncSlotDuties := float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)
-			slotDutiesPerSyncCommittee := float64(utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod) * float64(utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
 			syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
 			data.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
 		}
