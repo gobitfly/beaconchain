@@ -40,8 +40,15 @@
     "ens_address": "ENS address | ENS addresses",
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "true": "True",
-    "false": "False"
+    "false": "False",
+    "coming_soon": "Coming soon"
   },
+  "seo": {
+    "title": "Open Source Ethereum Blockchain Explorer",
+    "description": "beaconcha.in makes Ethereum accessible to non-technical end users",
+    "keywords": "open source ethereum block explorer, ethereum block explorer, beacon chain explorer, ethereum blockchain explorer",
+    "image_alt": "The beaconcha.in logo is a satellite dish expanding its signal."
+  }, 
   "clipboard": {
     "copy": "Copy to clipboard",
     "copied": "Copied!"
@@ -471,7 +478,7 @@
     "current_epoch": "Current Epoch",
     "login": "Login",
     "logout": "Logout",
-    "signup": "Sign up",
+    "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
       "blockchain": "Blockchain",
@@ -573,6 +580,7 @@
     "all_networks": "All"
   },
   "pricing": {
+    "seo_title": "Premium Pricing", 
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",

@@ -149,7 +149,7 @@ func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventC
 func (d *executionDepositsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	// important: have to fetch the actual finalized epoch because even tho its called on finalized checkpoint it actually emits for each justified epoch
 	// so we have to do an extra request to get the actual latest finalized epoch
-	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	res, err := d.CL.GetFinalityCheckpoints("head")
 	if err != nil {
 		return err
 	}

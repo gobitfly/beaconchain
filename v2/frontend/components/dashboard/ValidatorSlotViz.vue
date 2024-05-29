@@ -18,7 +18,7 @@ watch(() => [dashboardKey.value, tick.value], (newValue, oldValue) => {
 
 </script>
 <template>
-  <SlotVizViewer v-if="slotViz" :data="slotViz" />
+  <SlotVizViewer v-if="slotViz" :data="slotViz" :timestamp="tick" />
 </template>
 
 <style lang="scss" scoped>

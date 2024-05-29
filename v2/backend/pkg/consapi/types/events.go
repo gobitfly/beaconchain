@@ -32,7 +32,7 @@ func (e EventResponse) Head() (*StandardEventHeadResponse, error) {
 	if e.Event != EventHead {
 		return nil, nil
 	}
-	return utils.Unmarshal[StandardEventHeadResponse](e.Data, e.Error)
+	return utils.UnmarshalOld[StandardEventHeadResponse](e.Data, e.Error)
 }
 
 // Helper to get Block response type, returns nil if it is not a block event
@@ -40,7 +40,7 @@ func (e EventResponse) Block() (*StandardEventBlockResponse, error) {
 	if e.Event != EventBlock {
 		return nil, nil
 	}
-	return utils.Unmarshal[StandardEventBlockResponse](e.Data, e.Error)
+	return utils.UnmarshalOld[StandardEventBlockResponse](e.Data, e.Error)
 }
 
 // Helper to get ChainReorg response type, returns nil if it is not a chain reorg event
@@ -48,7 +48,7 @@ func (e EventResponse) ChainReorg() (*StandardEventChainReorg, error) {
 	if e.Event != EventChainReorg {
 		return nil, nil
 	}
-	return utils.Unmarshal[StandardEventChainReorg](e.Data, e.Error)
+	return utils.UnmarshalOld[StandardEventChainReorg](e.Data, e.Error)
 }
 
 // Helper to get FinalizedCheckpoint response type, returns nil if it is not a finalized checkpoint event
@@ -56,7 +56,7 @@ func (e EventResponse) FinalizedCheckpoint() (*StandardFinalizedCheckpointRespon
 	if e.Event != EventFinalizedCheckpoint {
 		return nil, nil
 	}
-	return utils.Unmarshal[StandardFinalizedCheckpointResponse](e.Data, e.Error)
+	return utils.UnmarshalOld[StandardFinalizedCheckpointResponse](e.Data, e.Error)
 }
 
 type StandardEventHeadResponse struct {

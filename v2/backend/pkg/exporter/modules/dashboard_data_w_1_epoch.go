@@ -49,13 +49,13 @@ func (d *epochWriter) clearOldEpochs(removeBelowEpoch int64) error {
 		return nil
 	}
 
-	partitions, err := edb.GetPartitionNamesOfTable("validator_dashboard_data_epoch")
+	partitions, err := edb.GetPartitionNamesOfTable(edb.EpochWriterTableName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get partitions")
 	}
 
 	for _, partition := range partitions {
-		epochFrom, epochTo, err := parseEpochRange(`validator_dashboard_data_epoch_(\d+)_(\d+)`, partition)
+		epochFrom, epochTo, err := parseEpochRange(fmt.Sprintf(`%s_(\d+)_(\d+)`, edb.EpochWriterTableName), partition)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse epoch range")
 		}
@@ -81,7 +81,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 	d.mutex.Lock()
 	err := d.createEpochPartition(startOfPartition, endOfPartition)
 	if epoch == startOfPartition && debugAddToColumnEngine {
-		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("validator_dashboard_data_epoch_%d_%d", startOfPartition, endOfPartition))
+		err = edb.AddToColumnEngineAllColumns(fmt.Sprintf("%s_%d_%d", edb.EpochWriterTableName, startOfPartition, endOfPartition))
 		if err != nil {
 			d.log.Warnf("Failed to add epoch to column engine: %v", err)
 		}
@@ -114,7 +114,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			}
 		}()
 
-		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"validator_dashboard_data_epoch"}, []string{
+		_, err = tx.CopyFrom(context.Background(), pgx.Identifier{edb.EpochWriterTableName}, []string{
 			"validator_index",
 			"epoch",
 			"attestations_source_reward",
@@ -143,7 +143,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"withdrawals_count",
 			"withdrawals_amount",
 			"inclusion_delay_sum",
-			"block_chance",
+			"blocks_expected",
 			"attestations_scheduled",
 			"attestations_executed",
 			"attestation_head_executed",
@@ -154,6 +154,9 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"slashed_violation",
 			"slasher_reward",
 			"last_executed_duty_epoch",
+			"blocks_cl_attestations_reward",
+			"blocks_cl_sync_aggregate_reward",
+			"sync_committees_expected",
 		}, pgx.CopyFromSlice(len(data), func(i int) ([]interface{}, error) {
 			return []interface{}{
 				i,
@@ -184,7 +187,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].WithdrawalsCount,
 				data[i].WithdrawalsAmount,
 				data[i].InclusionDelaySum,
-				data[i].BlockChance,
+				data[i].BlocksExpectedThisEpoch,
 				data[i].AttestationsScheduled,
 				data[i].AttestationsExecuted,
 				data[i].AttestationHeadExecuted,
@@ -195,6 +198,9 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 				data[i].SlashedViolation,
 				data[i].SlasherRewards,
 				data[i].LastSubmittedDutyEpoch,
+				data[i].BlocksClAttestestationsReward,
+				data[i].BlocksClSyncAggregateReward,
+				data[i].SyncCommitteesExpectedThisPeriod,
 			}, nil
 		}))
 
@@ -220,20 +226,20 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 
 func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS validator_dashboard_data_epoch_%d_%d 
-		PARTITION OF validator_dashboard_data_epoch
-			FOR VALUES FROM (%[1]d) TO (%[2]d)
+		CREATE TABLE IF NOT EXISTS %[1]s_%d_%d 
+		PARTITION OF %[1]s
+			FOR VALUES FROM (%[2]d) TO (%[3]d)
 		`,
-		epochFrom, epochTo,
+		edb.EpochWriterTableName, epochFrom, epochTo,
 	))
 	return err
 }
 
 func (d *epochWriter) deleteEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		DROP TABLE IF EXISTS validator_dashboard_data_epoch_%d_%d
+		DROP TABLE IF EXISTS %s_%d_%d
 		`,
-		epochFrom, epochTo,
+		edb.EpochWriterTableName, epochFrom, epochTo,
 	))
 
 	return err

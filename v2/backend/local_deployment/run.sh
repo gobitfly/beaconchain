@@ -34,9 +34,14 @@ fn_sql() {
 
 fn_start() {
     fn_stop
-    kurtosis run --enclave my-testnet . "$(cat network-params.json)"
+    # make user to pull latest images
+    docker pull ethereum/client-go:latest
+    docker pull sigp/lighthouse:latest
+    # build once before starting all services to prevent multiple parallel builds
+    docker compose --profile=build-once run build-once &
+    kurtosis run --enclave my-testnet . "$(cat network-params.json)" &
+    wait
     bash provision-explorer-config.sh
-    docker compose --profile=build-once run build-once # build once before starting all services to prevent multiple parallel builds
     docker compose up -d
     echo "Waiting for explorer to start, then browse http://localhost:8080"
 }

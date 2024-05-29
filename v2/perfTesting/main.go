@@ -29,6 +29,7 @@ func main() {
 
 	flag.StringVar(&tableName, "table.name", "test_ss", "name of table to create")
 	flag.StringVar(&cmd, "cmd", "seed", "bench or seed")
+	flag.IntVar(&CONF.SeederValidatorsInDB, "seeder.validators", 1000000, "amount of validators in the network")
 	flag.StringVar(&dsn, "db.dsn", "postgres://user:pass@host:port/dbnames", "data-source-name of db, if it starts with projects/ it will use gcp-secretmanager")
 	flag.Parse()
 
