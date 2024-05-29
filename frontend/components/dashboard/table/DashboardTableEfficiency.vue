@@ -3,6 +3,7 @@
 interface Props {
   success: number,
   failed: number,
+  hidePercentage?: boolean
 }
 const props = defineProps<Props>()
 
@@ -18,7 +19,9 @@ const data = computed(() => {
   <span class="efficiency">
     <BcFormatNumber class="positive" :value="props.success " />
     <span class="slash"> / </span>
-    <BcFormatNumber :class="data.failedClass" :value="props.failed " /> <BcFormatPercent
+    <BcFormatNumber :class="data.failedClass" :value="props.failed " />
+    <BcFormatPercent
+      v-if="!hidePercentage"
       class="percent"
       :base="data.sum"
       :value="props.success"
@@ -36,7 +39,7 @@ const data = computed(() => {
 
   .percent {
     &::before {
-      content: "(";
+      content: " (";
     }
 
     &::after {

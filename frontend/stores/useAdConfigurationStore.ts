@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import type { AdConfiguration } from '~/types/adConfiguration'
+import { API_PATH } from '~/types/customFetch'
 
-const adConfigurationStore = defineStore('ad-configuration', () => {
+const adConfigurationStore = defineStore('ad_configuration_store', () => {
   const data = ref< Record<string, AdConfiguration[]>>({})
   return { data }
 })

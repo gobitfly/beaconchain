@@ -16,13 +16,13 @@ import VChart from 'vue-echarts'
 import type { ECBasicOption } from 'echarts/types/dist/shared'
 import { BigNumber } from '@ethersproject/bignumber'
 import { formatEpochToDate } from '~/utils/format'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getChartTextColor, getChartTooltipBackgroundColor, getRewardChartColors, getRewardsChartLineColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
+import { API_PATH } from '~/types/customFetch'
 
 const { currency } = useCurrency()
 // TODO: once we have different chains we migh need to change the default from 'ETH' to the dashboard currency
@@ -58,7 +58,7 @@ await useAsyncData('validator_dashboard_rewards_chart', async () => {
   data.value = res.data
 }, { watch: [dashboardKey], server: false, immediate: true })
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { groups } = useValidatorDashboardGroups()
 
 const { t: $t } = useI18n()
 const colorMode = useColorMode()
@@ -138,7 +138,7 @@ const series = computed<RewardChartSeries[]>(() => {
     if (!groupsEnabled) {
       name = $t('dashboard.validator.rewards.chart.rewards')
     } else {
-      name = getGroupLabel($t, group.id, overview.value?.groups)
+      name = getGroupLabel($t, group.id, groups.value)
     }
     const newData: RewardChartGroupData = {
       id: group.id,

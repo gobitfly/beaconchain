@@ -1,4 +1,4 @@
-const FiatCurrencies = ['AUD', 'CAD', 'CNY', 'EUR', 'GBP', 'JPY', 'USD'] as const
+const FiatCurrencies = ['AUD', 'CAD', 'CNY', 'EUR', 'GBP', 'JPY', 'USD', 'RUB'] as const
 type FiatCurrency = typeof FiatCurrencies[number]
 const CryptoCurrencies = ['ETH', 'GNO', 'DAI', 'xDAI'] as const
 type CryptoCurrency = typeof CryptoCurrencies[number]

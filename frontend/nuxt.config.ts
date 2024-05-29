@@ -1,6 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // import path from 'path'
 
+import { nodeResolve } from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
 let gitVersion = ''
@@ -31,7 +33,12 @@ export default defineNuxtConfig({
       apiClient: '',
       legacyApiClient: '',
       apiKey: '',
-      gitVersion
+      gitVersion,
+      domain: '',
+      v1Domain: '',
+      logIp: '',
+      logFile: '',
+      showInDevelopment: ''
     },
     private: {
       apiServer: '',
@@ -59,6 +66,33 @@ export default defineNuxtConfig({
   },
   i18n: {
     vueI18n: './i18n.config.ts'
+  },
+  routeRules: {
+    '/': {
+      redirect: '/dashboard'
+    }
+  },
+  nitro: {
+    compressPublicAssets: true
+  },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks (id) {
+            if (id.includes('node_modules')) {
+              return 'vendor'
+            }
+          },
+          format: 'es'
+        },
+        plugins: [
+          nodeResolve(),
+          commonjs()
+        ]
+      },
+      minify: true
+    }
   },
   postcss: {
     plugins: {

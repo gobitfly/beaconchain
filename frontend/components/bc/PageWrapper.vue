@@ -1,9 +1,9 @@
 <script setup lang="ts">
 const props = defineProps({ isHomePage: { type: Boolean } })
-
 </script>
 
 <template>
+  <BcCookieModal />
   <div class="page">
     <BcHeaderMainHeader :is-home-page="props.isHomePage" />
     <div class="content">
@@ -22,6 +22,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow-x: hidden;
 }
 
 .content {

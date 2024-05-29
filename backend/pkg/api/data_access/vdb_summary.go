@@ -12,7 +12,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -244,12 +243,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
 			COALESCE(slashed, false) as slashed,
-			COALESCE(balance_start, 0) as balance_start,
-			COALESCE(balance_end, 0) as balance_end,
 			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from users_val_dashboards_validators
@@ -285,12 +280,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
 			COALESCE(slashed, false) as slashed,
-			COALESCE(balance_start, 0) as balance_start,
-			COALESCE(balance_end, 0) as balance_end,
 			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(deposits_amount, 0) as deposits_amount,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
-			COALESCE(withdrawals_amount, 0) as withdrawals_amount,
 			COALESCE(block_chance, 0) as block_chance,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum
 		from %[1]s
@@ -337,14 +328,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 		Slashed bool `db:"slashed"`
 
-		BalanceStart int64 `db:"balance_start"`
-		BalanceEnd   int64 `db:"balance_end"`
+		DepositsCount uint32 `db:"deposits_count"`
 
-		DepositsCount  uint32 `db:"deposits_count"`
-		DepositsAmount int64  `db:"deposits_amount"`
-
-		WithdrawalsCount  uint32 `db:"withdrawals_count"`
-		WithdrawalsAmount int64  `db:"withdrawals_amount"`
+		WithdrawalsCount uint32 `db:"withdrawals_count"`
 
 		BlockChance float64 `db:"block_chance"`
 
@@ -368,17 +354,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 		totalAttestationRewards := int64(0)
 		totalIdealAttestationRewards := int64(0)
-		totalStartBalance := int64(0)
-		totalEndBalance := int64(0)
-		totalDeposits := int64(0)
-		totalWithdrawals := int64(0)
 		totalBlockChance := float64(0)
 		totalInclusionDelaySum := int64(0)
 		totalInclusionDelayDivisor := int64(0)
 
-		syncValidators := make([]uint64, 0)
+		validatorArr := make([]uint64, 0)
 		for _, row := range rows {
-			syncValidators = append(syncValidators, uint64(row.ValidatorIndex))
+			validatorArr = append(validatorArr, uint64(row.ValidatorIndex))
 			totalAttestationRewards += row.AttestationReward
 			totalIdealAttestationRewards += row.AttestationIdealReward
 
@@ -426,11 +408,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			} else {
 				data.Slashed.StatusCount.Success++
 			}
-
-			totalStartBalance += row.BalanceStart
-			totalEndBalance += row.BalanceEnd
-			totalDeposits += row.DepositsAmount
-			totalWithdrawals += row.WithdrawalsAmount
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
 
@@ -439,19 +416,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			}
 		}
 
-		reward := totalEndBalance + totalWithdrawals - totalStartBalance - totalDeposits
-		log.Infof("rows: %d, totalEndBalance: %d, totalWithdrawals: %d, totalStartBalance: %d, totalDeposits: %d", len(rows), totalEndBalance, totalWithdrawals, totalStartBalance, totalDeposits)
-		aprDivisor := days
-		if days == -1 { // for all time APR
-			aprDivisor = 1
+		data.Income.Cl, data.Apr.Cl, err = d.internal_getClAPR(validatorArr, days)
+		if err != nil {
+			return nil, err
 		}
-		apr := ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(rows)))) * 365.0 * 100.0
-		if math.IsNaN(apr) {
-			apr = 0
-		}
-
-		data.Apr.Cl = apr
-		data.Income.Cl = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
 
 		data.Apr.El = 0
 
@@ -475,7 +443,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			startSyncLuckEpoch = 0
 		}
 
-		expectedSync, err := d.internal_getExpectedSyncCommitteeSlots(syncValidators, startSyncLuckEpoch, endSyncLuckEpoch)
+		expectedSync, err := d.internal_getExpectedSyncCommitteeSlots(validatorArr, startSyncLuckEpoch, endSyncLuckEpoch)
 		if err != nil {
 			return nil, err
 		}
@@ -532,6 +500,43 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
 	return ret, nil
+}
+
+func (d *DataAccessService) internal_getClAPR(validators []uint64, days int) (income decimal.Decimal, apr float64, err error) {
+	var reward int64
+	table := ""
+
+	switch days {
+	case 1:
+		table = "validator_dashboard_data_rolling_daily"
+	case 7:
+		table = "validator_dashboard_data_rolling_weekly"
+	case 31:
+		table = "validator_dashboard_data_rolling_monthly"
+	case -1:
+		table = "validator_dashboard_data_rolling_90d"
+	default:
+		return decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
+	}
+
+	query := fmt.Sprintf(`select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`, table)
+
+	err = db.AlloyReader.Get(&reward, query, validators)
+
+	if err != nil {
+		return decimal.Zero, 0, err
+	}
+
+	aprDivisor := days
+	if days == -1 { // for all time APR
+		aprDivisor = 90
+	}
+	apr = ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
+	if math.IsNaN(apr) {
+		apr = 0
+	}
+	income = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
+	return income, apr, nil
 }
 
 func (d *DataAccessService) internal_getExpectedSyncCommitteeSlots(validators []uint64, startEpoch, endEpoch uint64) (expectedSlots uint64, err error) {
@@ -680,6 +685,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 				from  validator_dashboard_data_daily
 			WHERE day > $1 AND validator_index = ANY($2)
+			group by 1
 		) as a ORDER BY epoch_start, group_id;`
 		err := d.alloyReader.Select(&queryResults, query, cutOffDate, validatorList)
 		if err != nil {
@@ -763,6 +769,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	return ret, nil
 }
 
+// allowed periods are: all_time, last_24h, last_7d, last_30d
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
 	var validators []uint64
 	if dashboardId.Validators == nil {
@@ -792,7 +799,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 
 	if len(validators) == 0 {
 		// Return if there are no validators
-		return nil, nil
+		return []uint64{}, nil
 	}
 
 	if duty == enums.ValidatorDuties.None {

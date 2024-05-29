@@ -4,6 +4,7 @@ import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import { type DashboardKey, type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
+import { API_PATH } from '~/types/customFetch'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -50,6 +51,11 @@ export function useUserDashboardStore () {
 
   // Public dashboards are saved in a cookie (so that it's accessable during SSR)
   function saveToCookie () {
+    if (isLoggedIn.value) {
+      warn('saveToCookie should only be called when not logged in')
+      return
+    }
+
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
 
@@ -68,7 +74,7 @@ export function useUserDashboardStore () {
       return cd
     }
     // Create user specific Validator dashboard
-    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: '0' } })
+    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: 1 } })
     if (res.data) {
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
@@ -136,11 +142,6 @@ export function useUserDashboardStore () {
 
       // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
       return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
-    }
-
-    const cookieDb = (list as CookieDashboard[])?.find(db => db.hash === key)
-    if (cookieDb || (isLoggedIn.value && !key)) {
-      return isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')
     }
 
     return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')

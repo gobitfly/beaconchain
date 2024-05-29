@@ -5,6 +5,8 @@ import { formatNumber } from '~/utils/format'
 
 const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
+useBcSeo()
+
 const { latestState, refreshLatestState } = useLatestStateStore()
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
 const { refreshOverview } = useValidatorDashboardOverviewStore()
@@ -34,7 +36,7 @@ onMounted(async () => {
       </Button>
     </NuxtLink>
     <div class="row">
-      Latest Epoch: {{ formatNumber(latestState?.currentEpoch) }}
+      Latest Slot: {{ formatNumber(latestState?.current_slot) }}
     </div>
 
     <TabView :lazy="true">

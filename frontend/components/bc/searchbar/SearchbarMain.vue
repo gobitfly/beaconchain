@@ -15,10 +15,12 @@ import {
   SubCategoryInfo,
   TypeInfo,
   getListOfResultTypes,
+  getListOfResultTypesInCategory,
   wasOutputDataGivenByTheAPI,
   type SingleAPIresult,
   type SearchAheadAPIresponse,
   type ResultSuggestion,
+  type ResultSuggestionInternal,
   type OrganizedResults,
   Indirect,
   SearchbarStyle,
@@ -31,6 +33,7 @@ import {
   type NetworkFilter
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { API_PATH } from '~/types/customFetch'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
 
@@ -49,7 +52,7 @@ const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
 defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
 enum States {
-  InputIsEmpty,
+  NoText,
   WaitingForResults,
   ApiHasResponded,
   Error,
@@ -62,29 +65,41 @@ interface GlobalState {
   showDropdown: boolean
 }
 
+let differentialRequests : boolean
 let searchableTypes: ResultType[] = []
 let allTypesBelongToAllNetworks = false
 
-const debouncer = useDebounceValue<string>('', MinimumTimeBetweenAPIcalls)
-watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
-
-const inputted = ref('')
-let lastKnownInput = ''
 const globalState = ref<GlobalState>({
-  state: States.InputIsEmpty,
+  state: States.NoText,
   functionToCallAfterResultsGetOrganized: null,
   showDropdown: false
 })
 
 const dropdown = ref<HTMLDivElement>()
-const inputFieldAndButton = ref<HTMLDivElement>()
-const inputField = ref<HTMLInputElement>()
+const textFieldAndButton = ref<HTMLDivElement>()
+const textField = ref<HTMLInputElement>()
 
-const networkFilter = ref<NetworkFilter>(new Map<ChainIDs, boolean>()) // each entry will have a chain ID as key and the state of the option as value
-const categoryFilter = ref<CategoryFilter>(new Map<Category, boolean>()) // each entry will have a Category as key and the state of the button as value
+let userInputNonce = 0
+const userInputNetworks = ref<NetworkFilter>(new Map<ChainIDs, boolean>()) // each entry will have a chain ID as key and the state of the option as value
+const userInputCategories = ref<CategoryFilter>(new Map<Category, boolean>()) // each entry will have a Category as key and the state of the button as value
+let userInputNoNetworkIsSelected = true
+let userInputNoCategoryIsSelected = true
+const userInputText = ref<string>('')
+let lastKnownText = ''
+
+const nextSearchScope = {
+  networks: new Set<ChainIDs>(),
+  categories: new Set<Category>()
+}
+
+const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
+watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
 
 const results = {
-  raw: { data: [] } as SearchAheadAPIresponse, // response of the API, without structure nor order
+  raw: {
+    stringifyiedList: new Set<string>(), // List of results returned by the API, without structure nor order. The list can be built in serveral steps (for a same text input, if the user selects new filters, the list can augment).
+    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>> // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
+  },
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered-in results, organized
     howManyResultsIn: 0,
@@ -94,27 +109,34 @@ const results = {
 }
 
 function hideResult (whichOne : ResultSuggestion) {
-  if (!results.raw.data) {
-    return
-  }
-  const toBeRemoved = results.raw.data.indexOf(whichOne.rawResult)
-  if (toBeRemoved >= 0) {
-    results.raw.data.splice(toBeRemoved, 1)
-    refreshOutputArea()
-  }
+  results.raw.stringifyiedList.delete((whichOne as ResultSuggestionInternal).stringifyiedRawResult)
+  // now we update the list of result suggestions
+  refreshOutputArea()
 }
 
 function closeDropdown () {
   globalState.value.showDropdown = false
-  inputField.value?.blur()
+  textField.value?.blur()
 }
 
 function empty () {
-  lastKnownInput = ''
-  inputted.value = ''
-  resetGlobalState(States.InputIsEmpty)
-  results.raw = {}
+  lastKnownText = ''
+  userInputNonce++
+  userInputText.value = ''
+  resetGlobalState(States.NoText)
+  clearRawResults()
   clearOrganizedResults()
+}
+
+function clearRawResults () {
+  results.raw.stringifyiedList.clear()
+  for (const nw in results.raw.scopeMatrix) {
+    const network = nw as unknown as ChainIDs
+    for (const cat in results.raw.scopeMatrix[network]) {
+      const category = cat as unknown as Category
+      results.raw.scopeMatrix[network][category] = false
+    }
+  }
 }
 
 function clearOrganizedResults () {
@@ -125,7 +147,6 @@ function clearOrganizedResults () {
 }
 
 /**
- *
  * @param state the new state that the search-bar enters
  * @returns old state, so you can read it after the call if you need
  */
@@ -149,27 +170,34 @@ function updateGlobalState (state : States) {
 }
 
 function reconfigureSearchbar () {
+  differentialRequests = SearchbarPurposeInfo[props.barPurpose].differentialRequests
   closeDropdown()
   empty()
-  searchableTypes = []
-  allTypesBelongToAllNetworks = true
   // builds the list of all search types that the bar will consider, from the list of searchable categories (obtained through props.barPurpose)
-  for (const t of getListOfResultTypes(false)) {
-    if (SearchbarPurposeInfo[props.barPurpose].searchable.includes(TypeInfo[t].category) && !SearchbarPurposeInfo[props.barPurpose].unsearchable.includes(t)) {
-      searchableTypes.push(t)
-      allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
-    }
-  }
-  // creates the entries storing the state of the category filter, and deselect all categories
-  categoryFilter.value.clear()
-  for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
-    categoryFilter.value.set(s, false)
+  searchableTypes = generateTypesFromCategories(SearchbarPurposeInfo[props.barPurpose].searchable)
+  allTypesBelongToAllNetworks = true
+  for (const t of searchableTypes) {
+    allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
   }
   // creates the entries storing the state of the network filter, and deselect all networks
   const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
-  networkFilter.value.clear()
+  userInputNetworks.value.clear()
   for (const nw of networks) {
-    networkFilter.value.set(nw, false)
+    userInputNetworks.value.set(nw, false)
+  }
+  userInputNoNetworkIsSelected = true
+  // creates the entries storing the state of the category filter, and deselect all categories
+  userInputCategories.value.clear()
+  for (const s of SearchbarPurposeInfo[props.barPurpose].searchable) {
+    userInputCategories.value.set(s, false)
+  }
+  userInputNoCategoryIsSelected = true
+  // creates the matrix of filters
+  for (const nw of userInputNetworks.value) {
+    results.raw.scopeMatrix[nw[0]] = {} as Record<Category, boolean>
+    for (const cat of userInputCategories.value) {
+      results.raw.scopeMatrix[nw[0]][cat[0]] = false
+    }
   }
 }
 
@@ -187,28 +215,31 @@ onUnmounted(() => {
 
 // closes the drop-down if the user interacts with another part of the page
 function listenToClicks (event : Event) {
-  if (!globalState.value.showDropdown || !dropdown.value || !inputFieldAndButton.value ||
-      dropdown.value.contains(event.target as Node) || inputFieldAndButton.value.contains(event.target as Node)) {
+  if (!globalState.value.showDropdown || !dropdown.value || !textFieldAndButton.value ||
+      dropdown.value.contains(event.target as Node) || textFieldAndButton.value.contains(event.target as Node)) {
     return
   }
   closeDropdown()
 }
 
-function inputMightHaveChanged () {
-  if (inputted.value === lastKnownInput) {
+function textMightHaveChanged () {
+  if (userInputText.value === lastKnownText) {
     return
   }
-  if (inputted.value.length === 0) {
+  userInputNonce++
+  if (userInputText.value.length === 0) {
     empty()
   } else {
     resetGlobalState(States.WaitingForResults)
-    debouncer.bounce(inputted.value, false, true)
+    clearRawResults()
+    calculateNextSearchScope()
+    debouncer.bounce(userInputNonce, false, true)
     // the debouncer will run callAPIthenOrganizeResultsThenCallBack()
   }
-  lastKnownInput = inputted.value
+  lastKnownText = userInputText.value
 }
 
-function handleKeyPressInInputField (key : string) {
+function handleKeyPressInTextField (key : string) {
   switch (key) {
     case 'Enter' :
       userPressedSearchButtonOrEnter()
@@ -217,19 +248,46 @@ function handleKeyPressInInputField (key : string) {
       closeDropdown()
       break
     default:
-      inputMightHaveChanged()
+      textMightHaveChanged()
       break
+  }
+}
+
+function userFiltersChanged () {
+  userInputNonce++
+  // determining whether no filter is selected
+  userInputNoNetworkIsSelected = true
+  for (const nw of userInputNetworks.value) {
+    userInputNoNetworkIsSelected &&= !nw[1]
+  }
+  userInputNoCategoryIsSelected = true
+  for (const cat of userInputCategories.value) {
+    userInputNoCategoryIsSelected &&= !cat[1]
+  }
+  // if the text input is empty, our work is done
+  if (userInputText.value.length === 0) {
+    return
+  }
+  // determining which networks and categories need to be searched in
+  calculateNextSearchScope()
+  // if the scope did not widen, we simply update the list of result suggestions shown to the user
+  if ((!differentialRequests || nextSearchScope.networks.size + nextSearchScope.categories.size === 0) && globalState.value.state !== States.Error) {
+    refreshOutputArea()
+  } else {
+    // the scope is larger so a new request will be sent to the API
+    resetGlobalState(States.WaitingForResults)
+    debouncer.bounce(userInputNonce, false, true)
   }
 }
 
 function userPressedSearchButtonOrEnter () {
   globalState.value.functionToCallAfterResultsGetOrganized = null
   switch (globalState.value.state) {
-    case States.InputIsEmpty : // the user enjoys the sound of clicks
+    case States.NoText : // the user enjoys the sound of clicks
       return
     case States.Error : // the previous API call failed and the user tries again with Enter or with the search button
       resetGlobalState(States.WaitingForResults)
-      callAPIthenOrganizeResultsThenCallBack(inputted.value) // we start a new search
+      callAPIthenOrganizeResultsThenCallBack(userInputNonce) // we start a new search
       return
     case States.WaitingForResults : // the user pressed Enter or clicked the search button, but the results are not here yet
       globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
@@ -259,22 +317,22 @@ function userPressedSearchButtonOrEnter () {
     }
   }
   // calling back parent's function in charge of making a choice
-  const picked = props.pickByDefault(possibilities)
-  if (picked) {
+  const pickedMatching = props.pickByDefault(possibilities)
+  if (pickedMatching) {
     if (!props.keepDropdownOpen) {
       closeDropdown()
     }
     // calling back parent's function taking action with the result
-    emit('go', (picked as any).s as ResultSuggestion)
+    emit('go', (pickedMatching as any).s as ResultSuggestion)
   }
 }
 
-function userClickedSuggestion (suggestion : ResultSuggestion) {
+function userClickedSuggestion (suggestion : ResultSuggestionInternal) {
   // calls back parent's function taking action with the result
   if (!props.keepDropdownOpen) {
     closeDropdown()
   }
-  emit('go', suggestion)
+  emit('go', suggestion as ResultSuggestion)
 }
 
 function refreshOutputArea () {
@@ -284,23 +342,70 @@ function refreshOutputArea () {
   updateGlobalState(globalState.value.state)
 }
 
-async function callAPIthenOrganizeResultsThenCallBack (inputWhenIgotCalled : string) {
+/**
+ * Calculate two lists (`nextSearchScope.networks` and `nextSearchScope.categories`) telling where we need new results from.
+ * For each filter that the user deselects, the scope is not shrinked because we can simply hide the corresponding results in the drop down.
+ * For each filter added, the scope is augmented properly ("properly": for example, if a new category is selected, it is not sufficient to add it to the set of categories,
+ *  all networks currently selected are also needed and those are not necessarily all the networks in the scope due to the path followed by the user
+ *  while clicking the filters).
+ */
+function calculateNextSearchScope () {
+  nextSearchScope.networks.clear()
+  nextSearchScope.categories.clear()
+  if (differentialRequests) {
+    for (const nw of userInputNetworks.value) {
+      if (!nw[1] && !userInputNoNetworkIsSelected) { continue }
+      for (const cat of userInputCategories.value) {
+        if (!cat[1] && !userInputNoCategoryIsSelected) { continue }
+        if (results.raw.scopeMatrix[nw[0]][cat[0]]) { continue }
+        // The previous lines ensure that this network × category combination is not in the scope already.
+        // The next two lines inventor the network and the category and the Set object ensures that they are inventored only once.
+        nextSearchScope.networks.add(nw[0])
+        nextSearchScope.categories.add(cat[0])
+      }
+    }
+  } else {
+    for (const nw of userInputNetworks.value) {
+      nextSearchScope.networks.add(nw[0])
+    }
+    for (const cat of userInputCategories.value) {
+      nextSearchScope.categories.add(cat[0])
+    }
+  }
+}
+
+/**
+ * Once new results are received and added to `results.raw.stringifyiedList`,
+ * this function is called to add the newly selected filters to `results.raw.scopeMatrix`.
+ */
+function saveNewSearchScope () {
+  for (const nw of nextSearchScope.networks) {
+    for (const cat of nextSearchScope.categories) {
+      results.raw.scopeMatrix[nw][cat] = true
+    }
+  }
+}
+
+async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) {
   let received : SearchAheadAPIresponse | undefined
 
   try {
+    const networks = Array.from(nextSearchScope.networks)
+    const types = generateTypesFromCategories(nextSearchScope.categories)
     received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: {
-        input: inputWhenIgotCalled,
-        types: searchableTypes,
-        count: isResultCountable(undefined)
+        input: userInputText.value,
+        networks,
+        types,
+        include_validators: areResultsCountable(types, true)
       }
     })
   } catch (error) {
     received = undefined
   }
-  if (inputted.value !== inputWhenIgotCalled) { // result/error outdated. If there is an error, we ignore it because it is based on an outdated input.
+  if (userInputNonce !== nonceWhenCalled) { // Result outdated so we ignore it. If there is an error, we ignore it too because it is based on an outdated input.
     return
   }
   if (!received || received.error !== undefined || received.data === undefined) {
@@ -308,7 +413,11 @@ async function callAPIthenOrganizeResultsThenCallBack (inputWhenIgotCalled : str
     return
   }
 
-  results.raw = received
+  for (const res of received.data) {
+    results.raw.stringifyiedList.add(JSON.stringify(res)) // the Set object ensures that we do not add duplicate results (which can happen when the new scope has some overlap with the previous one)
+  }
+  saveNewSearchScope()
+
   filterAndOrganizeResults()
   const previousState = resetGlobalState(States.ApiHasResponded)
 
@@ -319,36 +428,22 @@ async function callAPIthenOrganizeResultsThenCallBack (inputWhenIgotCalled : str
 function filterAndOrganizeResults () {
   clearOrganizedResults()
 
-  if (results.raw.data === undefined) {
-    return
-  }
-
-  // determining whether filters are used
-  let noNetworkIsSelected = true
-  for (const nw of networkFilter.value) {
-    noNetworkIsSelected &&= !nw[1]
-  }
-  let noCategoryIsSelected = true
-  for (const cat of categoryFilter.value) {
-    noCategoryIsSelected &&= !cat[1]
-  }
-
-  const resultsIn : ResultSuggestion[] = []
-  const resultsOut : ResultSuggestion[] = []
+  const resultsIn : ResultSuggestionInternal[] = []
+  const resultsOut : ResultSuggestionInternal[] = []
   // filling those two lists
-  for (const finding of results.raw.data) {
+  for (const finding of results.raw.stringifyiedList) {
     const toBeAdded = convertSingleAPIresultIntoResultSuggestion(finding)
     if (!toBeAdded) {
       continue
     }
     // discarding findings that our configuration (given in the props) forbids
     const category = TypeInfo[toBeAdded.type].category
-    if ((toBeAdded.chainId !== ChainIDs.Any && !networkFilter.value.has(toBeAdded.chainId)) || !categoryFilter.value.has(category)) {
+    if ((toBeAdded.chainId !== ChainIDs.Any && !userInputNetworks.value.has(toBeAdded.chainId)) || !userInputCategories.value.has(category)) {
       continue
     }
     // determining whether the finding is filtered in or out, sending it to the corresponding list
-    const acceptTheChainID = networkFilter.value.get(toBeAdded.chainId) || noNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
-    const acceptTheCategory = categoryFilter.value.get(category) || noCategoryIsSelected
+    const acceptTheChainID = userInputNetworks.value.get(toBeAdded.chainId) || userInputNoNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
+    const acceptTheCategory = userInputCategories.value.get(category) || userInputNoCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       resultsIn.push(toBeAdded)
     } else {
@@ -365,11 +460,11 @@ function filterAndOrganizeResults () {
 
   // This sorting orders the list of results in the drop down and is fundamental for userPressedSearchButtonOrEnter() as well as props.pickByDefault().
   // Do not alter this sorting without considering the needs of those functions and updating the comments guiding the developpers using the search-bar.
-  function sortResults (list : ResultSuggestion[]) {
+  function sortResults (list : ResultSuggestionInternal[]) {
     list.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority || TypeInfo[a.type].priority - TypeInfo[b.type].priority || a.closeness - b.closeness)
   }
 
-  function fillOrganizedResults (linearSource : ResultSuggestion[], organizedDestination : OrganizedResults) {
+  function fillOrganizedResults (linearSource : ResultSuggestionInternal[], organizedDestination : OrganizedResults) {
     for (const toBeAdded of linearSource) {
       // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
       let existingNetwork = organizedDestination.networks.findIndex(nwElem => nwElem.chainId === toBeAdded.chainId)
@@ -396,9 +491,10 @@ function filterAndOrganizeResults () {
 // This function takes a single result element returned by the API and organizes it into an element simpler to handle by the
 // code of the search bar (because it is more... organized).
 // If the result JSON from the API is somehow unexpected, the function returns `undefined`.
-// The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestion.output
+// The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestionInternal.output
 // object are given by the filling information in TypeInfo[<result type>].howToFillresultSuggestionOutput in types/searchbar.ts
-function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : SingleAPIresult) : ResultSuggestion | undefined {
+function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : string) : ResultSuggestionInternal | undefined {
+  const apiResponseElement = JSON.parse(stringifyiedRawResult) as SingleAPIresult
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
     return undefined
@@ -439,24 +535,33 @@ function convertSingleAPIresultIntoResultSuggestion (apiResponseElement : Single
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
-  if (isResultCountable(type)) {
-    count = (apiResponseElement.num_value === undefined) ? NaN : apiResponseElement.num_value
+  if (areResultsCountable([type], false)) {
+    const countSource = apiResponseElement[TypeInfo[type].countSource!]
+    if (!countSource) {
+      count = NaN
+    } else {
+      count = (Array.isArray(countSource)) ? countSource.length : Number(countSource)
+    }
+    if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults && (isNaN(count) || count <= 0)) {
+      warn('The API returned a search-ahead result of type ', type, ' but the batch or count data is missing or wrong.')
+      return undefined
+    }
   }
 
-  // We calculate how far the user input is from the result suggestion of the API (the API completes/approximates inputs, for example for graffiti and token names).
+  // We calculate how far the user text is from the result suggestion of the API (the API completes/approximates terms, for example for graffiti and token names).
   // It will be needed later to pick the best result suggestion when the user hits Enter, and also in the drop-down to order the suggestions by relevance when several results exist in a type group
   let closeness = Number.MAX_SAFE_INTEGER
   for (const k in output) {
     const key = k as keyof HowToFillresultSuggestionOutput
     if (wasOutputDataGivenByTheAPI(type, key)) {
-      const cl = levenshteinDistance(inputted.value, output[key])
+      const cl = levenshteinDistance(userInputText.value, output[key])
       if (cl < closeness) {
         closeness = cl
       }
     }
   }
 
-  return { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement, nameWasUnknown }
+  return { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement, stringifyiedRawResult, nameWasUnknown }
 }
 
 function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFrom) : string | undefined {
@@ -481,14 +586,10 @@ function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFro
   return undefined
 }
 
-function isResultCountable (type : ResultType | undefined) : boolean {
-  if (type !== undefined) {
-    return TypeInfo[type].countable
-  }
-  // from here, there is uncertainty but we must simply tell whether counting is possible for some results
-  if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults) {
-    for (const type of searchableTypes) {
-      if (TypeInfo[type].countable) {
+function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : boolean {
+  if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults || !toTellTheAPI) {
+    for (const type of types) {
+      if (TypeInfo[type].countSource) {
         return true
       }
     }
@@ -496,31 +597,41 @@ function isResultCountable (type : ResultType | undefined) : boolean {
   return false
 }
 
+function generateTypesFromCategories (categories : Set<Category> | Category[]) : ResultType[] {
+  let list : ResultType[] = []
+
+  for (const cat of categories) {
+    list = list.concat(getListOfResultTypesInCategory(cat))
+  }
+  return list.filter(type => !SearchbarPurposeInfo[props.barPurpose].unsearchable.includes(type))
+}
+
 function mustNetworkFilterBeShown () : boolean {
-  return networkFilter.value.size >= 2 && !allTypesBelongToAllNetworks
+  return userInputNetworks.value.size >= 2 && !allTypesBelongToAllNetworks
 }
 
 function mustCategoryFiltersBeShown () : boolean {
-  return categoryFilter.value.size >= 2
+  return userInputCategories.value.size >= 2
 }
 
 const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDropdown ? 'dropdown-is-opened' : 'dropdown-is-closed')
 
-const dropdownContainsSomething = computed(() => mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.InputIsEmpty)
+const dropdownContainsSomething = computed(() => mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.NoText)
 
 function areThereResultsHiddenByUser () : boolean {
-  return results.organized.howManyResultsOut > 0
+  return !differentialRequests && results.organized.howManyResultsOut > 0
 }
 
 function informationIfNoResult () : string {
   let info = t('search_bar.no_result_matches') + ' '
 
-  if (areThereResultsHiddenByUser()) {
+  if (differentialRequests) {
+    info += t('search_bar.your_filters') + t('search_bar.or') + t('search_bar.your_input')
+  } else if (areThereResultsHiddenByUser()) {
     info += t('search_bar.your_filters')
   } else {
     info += t('search_bar.your_input')
   }
-
   return info
 }
 
@@ -542,15 +653,15 @@ function informationIfHiddenResults () : string {
 <template>
   <div class="anchor" :class="[barStyle, classForDropdownOpenedOrClosed]">
     <div class="whole-component" :class="[barStyle, classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
-      <div ref="inputFieldAndButton" class="input-and-button" :class="barStyle">
+      <div ref="textFieldAndButton" class="text-and-button" :class="barStyle">
         <input
-          ref="inputField"
-          v-model="inputted"
-          class="p-inputtext inputfield"
+          ref="textField"
+          v-model="userInputText"
+          class="p-inputtext text-field"
           :class="barStyle"
           type="text"
           :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
-          @keyup="(e) => handleKeyPressInInputField(e.key)"
+          @keyup="(e) => handleKeyPressInTextField(e.key)"
           @focus="globalState.showDropdown = true"
         >
         <BcSearchbarButton
@@ -566,17 +677,17 @@ function informationIfHiddenResults () : string {
         <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
-            v-model="networkFilter"
+            v-model="userInputNetworks"
             class="filter-networks"
             :bar-style="barStyle"
-            @change="refreshOutputArea"
+            @change="userFiltersChanged"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
-            v-model="categoryFilter"
+            v-model="userInputCategories"
             class="filter-categories"
             :bar-style="barStyle"
-            @change="refreshOutputArea"
+            @change="userFiltersChanged"
           />
         </div>
         <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="barStyle">
@@ -602,15 +713,14 @@ function informationIfHiddenResults () : string {
         </div>
         <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="barStyle">
           <div v-if="globalState.state === States.WaitingForResults" class="info center">
-            <div>
-              {{ t('search_bar.searching') }}
-              <BcLoadingSpinner :loading="true" size="small" alignment="center" />
-            </div>
+            {{ t('search_bar.searching') }}
+            <BcLoadingSpinner :loading="true" size="small" alignment="center" />
           </div>
           <div v-else-if="globalState.state === States.Error" class="info center">
-            {{ t('search_bar.something_wrong') }}
-            <IconErrorFace :inline="true" />
-            <br>
+            <span>
+              {{ t('search_bar.something_wrong') }}
+              <IconErrorFace :inline="true" />
+            </span>
             {{ t('search_bar.try_again') }}
           </div>
         </div>
@@ -629,9 +739,9 @@ function informationIfHiddenResults () : string {
   margin: auto;
 
   &.embedded {
-    height: 30px;
+    height: 28px;
     &.dropdown-is-opened {
-      @media (max-width: 470px) { // narrow window/screen
+      @media (max-width: 510px) { // narrow window/screen
         position: absolute;
         left: 0px;
         right: 0px;
@@ -682,12 +792,12 @@ function informationIfHiddenResults () : string {
     }
   }
 
-  .input-and-button {
+  .text-and-button {
     position: relative;
     left: 0px;
     right: 0px;
 
-    .inputfield {
+    .text-field {
       display:inline-block;
       position: relative;
       box-sizing: border-box;
@@ -711,7 +821,7 @@ function informationIfHiddenResults () : string {
         }
       }
       &.embedded {
-        height: 30px;
+        height: 28px;
         padding-right: 31px;
       }
 
@@ -737,8 +847,8 @@ function informationIfHiddenResults () : string {
       &.embedded {
         right: -1px;
         top: -1px;
-        width: 32px;
-        height: 32px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
       }
     }
   }
@@ -788,7 +898,7 @@ function informationIfHiddenResults () : string {
       max-height: 270px;
       overflow: auto;
       padding-bottom: 4px;
-      @include fonts.standard_text;
+
       &.discreet {
         color: var(--searchbar-text-discreet);
       }
@@ -805,14 +915,12 @@ function informationIfHiddenResults () : string {
 
           .suggestionrow-container {
             position: relative;
-
             .separation-between-suggestions {
               position: relative;
-              display: none;
               margin-left: 8px;
               margin-right: 8px;
               height: 1px;
-
+              display: none;
               &.embedded {
                 @media (max-width: 599.9px) { // mobile
                   display: block;
@@ -827,6 +935,7 @@ function informationIfHiddenResults () : string {
       .info {
         position: relative;
         display: flex;
+        flex-direction: column;
         @include fonts.standard_text;
         color: var(--text-color-disabled);
         justify-content: center;
@@ -839,7 +948,7 @@ function informationIfHiddenResults () : string {
         &.center {
           margin-bottom: auto;
           margin-top: auto;
-          height: 50px;
+          height: 60px;
         }
         padding-left: 6px;
         padding-right: 6px;

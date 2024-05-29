@@ -93,9 +93,4 @@ const dataList = computed(() => {
   padding-left: var(--padding-xl);
   padding-right: var(--padding-xl);
 }
-
-.content {
-  width: var(--content-width);
-  margin: var(--padding) var(--content-margin) var(--padding) var(--content-margin);
-}
 </style>

@@ -12,8 +12,9 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarStyle, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchBar, SearchbarStyle, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { ChainIDs } from '~/types/networks'
+import { API_PATH, type PathValues } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -27,13 +28,13 @@ const visible = defineModel<boolean>()
 const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 
 const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, isPrivate } = useDashboardKey()
-const { isLoggedIn } = useUserStore()
+const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
+const { isLoggedIn, user } = useUserStore()
 
-const { value: query, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value }, 500)
+const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -42,10 +43,11 @@ const hasNoOpenDialogs = ref(true)
 
 const size = computed(() => {
   return {
-    expandable: width.value < 960,
-    showBalance: width.value >= 960,
-    showGroup: width.value >= 760,
-    showWithdrawalCredentials: width.value >= 560
+    expandable: width.value < 1060,
+    showBalance: width.value >= 1060,
+    showGroup: width.value >= 925,
+    showWithdrawalCredentials: width.value >= 750,
+    showPublicKey: width.value >= 570
   }
 })
 
@@ -61,18 +63,18 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]):NumberOrString[] => {
+const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] => {
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
-const changeGroup = async (validators?: NumberOrString[], groupId?: number) => {
+const changeGroup = async (validators?: string[], groupId?: number) => {
   if (!validators?.length) {
     warn('no validators selected to change group')
     return
   }
   const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch< VDBPostValidatorsData >(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
+  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -94,40 +96,26 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const addValidator = (result : ResultSuggestion) => {
-  if (premiumLimit.value) {
+const addValidator = (result: ResultSuggestion) => {
+  if (total.value + result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
   }
-
-  // In every case, `result.queryParam` contains the data indicated by the words after `By` in the constant:
+  let list: string[]
   switch (result.type) {
-    case ResultType.ValidatorsByIndex : // for example, here, `result.queryParam` contains the `Index` (of the validator)
-    case ResultType.ValidatorsByPubkey :
-      selectedValidator.value = String(result.rawResult.num_value!)
+    case ResultType.ValidatorsByIndex:
+    case ResultType.ValidatorsByPubkey:
+      list = [String(result.rawResult.num_value!)]
+      selectedValidator.value = String(list[0])
       break
-    // Below, several validators can correspond to the result. The search bar doesn't know the list of indices and pubkeys.
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
-    case ResultType.ValidatorsByGraffiti :
-      // TODO: add a batch of validators
-      // If you need it: `result.count` is the size of the batch.
-      warn('The result suggestion that you chose might correspond to several validators. The data to tackle this case is not available currently.')
+    default:
+      list = result.rawResult.validators!.map(index => String(index))
       selectedValidator.value = ''
-      break
-    default :
-      return
-  }
-  if (!selectedValidator.value) {
-    return
   }
   if (isPublic.value || !isLoggedIn.value) {
-    addEntities([selectedValidator.value])
+    addEntities(list)
   } else {
-    changeGroup([selectedValidator.value], selectedGroup.value)
+    changeGroup(list, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
@@ -217,8 +205,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 
 const total = computed(() => addUpValues(overview.value?.validators))
 
-// TODO: get this value from the backend based on the logged in user
-const maxValidatorsPerDashboard = computed(() => isPrivate.value ? 1000 : 20)
+const maxValidatorsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validators_per_dashboard) ? 20 : user.value.premium_perks.validators_per_dashboard)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
 
@@ -230,12 +217,15 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     :header="$t('dashboard.validator.management.title')"
     :close-on-escape="hasNoOpenDialogs"
     class="validator-managment-modal-container"
-    @update:visible="(visible: boolean)=>!visible && resetData()"
+    @update:visible="(visible: boolean) => !visible && resetData()"
   >
     <template v-if="!size.showWithdrawalCredentials" #header>
       <span />
     </template>
-    <BcTableControl :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')" @set-search="setSearch">
+    <BcTableControl
+      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      @set-search="setSearch"
+    >
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
         <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
@@ -266,13 +256,19 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             class="management-table"
             :cursor="cursor"
             :page-size="pageSize"
+            :selected-sort="tempQuery?.sort as string"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
           >
             <Column field="index" :sortable="true" :header="$t('dashboard.validator.col.index')" />
 
-            <Column field="public_key" :sortable="!size.expandable" :header="$t('dashboard.validator.col.public_key')">
+            <Column
+              v-if="size.showPublicKey"
+              field="public_key"
+              :sortable="!size.expandable"
+              :header="$t('dashboard.validator.col.public_key')"
+            >
               <template #body="slotProps">
                 <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
               </template>
@@ -298,7 +294,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.balance')"
             >
               <template #body="slotProps">
-                <BcFormatValue :value="slotProps.data.balance" />
+                <div class="balance-col">
+                  <BcFormatValue :value="slotProps.data.balance" />
+                </div>
               </template>
             </Column>
             <Column
@@ -322,7 +320,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.withdrawal_credential')"
             >
               <template #body="slotProps">
-                <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                <div class="withdrawal-col">
+                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                </div>
               </template>
             </Column>
             <Column field="action">
@@ -340,6 +340,12 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             </Column>
             <template #expansion="slotProps">
               <div class="expansion">
+                <div class="info">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.public_key') }}
+                  </div>
+                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                </div>
                 <div class="info">
                   <div class="label">
                     {{ $t('dashboard.validator.col.balance') }}
@@ -364,22 +370,26 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                 </div>
               </div>
             </template>
+
+            <template #bc-table-footer-left>
+              <div v-if="maxValidatorsPerDashboard" class="left">
+                <div class="labels" :class="{ premiumLimit }">
+                  <span>
+                    <BcFormatNumber :value="total" default="0" /> /
+                    <BcFormatNumber :value="maxValidatorsPerDashboard" default="0" />
+                  </span>
+                </div>
+                <BcPremiumGem />
+              </div>
+            </template>
+
+            <template #bc-table-footer-right>
+              <Button :label="$t('navigation.done')" @click="onClose" />
+            </template>
           </BcTable>
         </ClientOnly>
       </template>
     </BcTableControl>
-    <template #footer>
-      <div class="footer">
-        <div v-if="maxValidatorsPerDashboard" class="left">
-          <div class="labels" :class="{premiumLimit}">
-            <span><BcFormatNumber :value="total" default="0" />/<BcFormatNumber :value="maxValidatorsPerDashboard" default="0" /></span>
-            <span>{{ $t('dashboard.validator.management.validators_added') }}</span>
-          </div>
-          <BcPremiumGem />
-        </div>
-        <Button :label="$t('navigation.done')" @click="onClose" />
-      </div>
-    </template>
   </BcDialog>
 </template>
 
@@ -389,7 +399,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 @use '~/assets/css/fonts.scss';
 
 :global(.validator-managment-modal-container) {
-  width: 960px;
+  width: 1060px;
   height: 800px;
 
 }
@@ -401,17 +411,13 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 :global(.validator-managment-modal-container .bc-table-header) {
-  height: unset;
-  padding: var(--padding) 0;
+  height: unset !important;
+  padding: var(--padding) 0 !important;
   @include fonts.subtitle_text;
 }
 
 :global(.validator-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
-}
-
-:global(.validator-managment-modal-container .bc-pageinator .left-info) {
-  padding-left: var(--padding-large);
 }
 
 .small-title {
@@ -436,7 +442,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 .add-row {
-  position:relative;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -449,33 +455,26 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   }
 }
 
-.footer {
+.left {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: var(--padding-large);
-  gap: var(--padding);
+  gap: var(--padding-small);
 
-  .left {
+  .labels {
     display: flex;
-    align-items: center;
     gap: var(--padding-small);
 
-    .labels {
-      display: flex;
-      gap: var(--padding-small);
-      &.premiumLimit{
-        color: var(--negative-color);
-      }
-
-      @media (max-width: 959px) {
-        flex-direction: column;
-      }
+    &.premiumLimit {
+      color: var(--negative-color);
     }
 
-    .gem {
-      color: var(--primary-color);
+    @media (max-width: 450px) {
+      flex-direction: column;
     }
+  }
+
+  .gem {
+    color: var(--primary-color);
   }
 }
 
@@ -487,10 +486,16 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   margin-left: var(--padding-small);
 }
 
+.balance-col {
+  width: 110px;
+}
+
+.withdrawal-col {
+  width: 200px
+}
+
 .action-col {
-  width: 94px;
-  display: flex;
-  justify-content: flex-end;
+  width: 10px;
 }
 
 @media (max-width: 959px) {
@@ -506,18 +511,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     width: unset;
   }
 
-  .action-col {
-    width: 33px;
-  }
-
   :deep(.status-col) {
     .p-column-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 20px;
+      width: 35px;
     }
-
   }
 }
 
@@ -527,6 +524,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   display: flex;
   flex-direction: column;
   gap: var(--padding);
+  font-size: var(--small_text_font_size);
 
   .info {
     display: flex;

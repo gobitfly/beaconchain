@@ -46,7 +46,7 @@ func main() {
 	} else {
 		dataAccessor = dataaccess.NewDataAccessService(cfg)
 	}
-	defer dataAccessor.CloseDataAccessService()
+	defer dataAccessor.Close()
 
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts), api.GetAuthMiddleware(cfg.ApiKeySecret))

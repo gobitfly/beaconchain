@@ -4,6 +4,10 @@
 @import "~/assets/css/prime_megamenu.scss";
 @import "~/assets/css/prime_menubar.scss";
 
+.p-error {
+  color: #e24c4c;
+}
+
 // Button
 // https://primevue.org/button/
 .p-button {
@@ -39,6 +43,7 @@
 
   &.p-button-icon-only {
     padding: 8px;
+    width: var(--default-button-height);
   }
 }
 
@@ -70,7 +75,7 @@
   }
 }
 
-.p-dialog-mask {
+.p-dialog-mask.p-component-overlay {
   background: var(--black-transparent-3);
 }
 
@@ -107,7 +112,7 @@
         border: solid transparent 1px;
         border-top-right-radius: var(--border-radius);
         border-top-left-radius: var(--border-radius);
-        padding: 10px 15px;
+        padding: 10px 25px;
         color: var(--link-color);
       }
       &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
@@ -156,6 +161,45 @@
         height: 14px;
       }
     }
+  }
+}
+
+// Input Switch
+// https://primevue.org/inputswitch/
+.p-inputswitch {
+  width: 43px;
+  height: 22px;
+
+  .p-inputswitch-slider {
+    background: var(--button-color-active);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    border-radius: 30px;
+  }
+
+  .p-inputswitch-slider:before {
+    background: var(--toggle-button-slider-color);
+    width: 20px;
+    height: 20px;
+    left: 0.3px;
+    margin-top: -10px;
+    border-radius: 50%;
+    transition-duration: 0.2s;
+  }
+
+  &.p-inputswitch-checked .p-inputswitch-slider:before {
+    transform: translateX(20.6px);
+  }
+
+  &:not(.p-disabled):hover .p-inputswitch-slider {
+    background: var(--button-color-hover);
+  }
+
+  &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
+    background: var(--primary-color);
+  }
+
+  &.p-disabled .p-inputswitch-slider {
+    background: var(--button-color-disabled);
   }
 }
 
@@ -350,10 +394,15 @@
 
   &.small {
     padding: var(--padding-small) var(--padding);
+    height: 30px;
   }
 
   &.table {
     background: var(--background-color);
+  }
+  &.header{
+    background: transparent;
+    border: none;
   }
 
   &:not(.p-disabled).p-focus {

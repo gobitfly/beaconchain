@@ -21,32 +21,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetUserInfo(email string) (*t.User, error) {
-	// TODO @recy21
-	result := &t.User{}
-	err := d.userReader.Get(result, `
-		WITH
-			latest_and_greatest_sub AS (
-				SELECT user_id, product_id FROM users_app_subscriptions 
-				left join users on users.id = user_id 
-				WHERE users.email = $1 AND active = true
-				ORDER BY CASE product_id
-					WHEN 'whale' THEN 1
-					WHEN 'goldfish' THEN 2
-					WHEN 'plankton' THEN 3
-					ELSE 4  -- For any other product_id values
-				END, users_app_subscriptions.created_at DESC LIMIT 1
-			)
-		SELECT users.id as id, password, COALESCE(product_id, '') as product_id, COALESCE(user_group, '') AS user_group 
-		FROM users
-		left join latest_and_greatest_sub on latest_and_greatest_sub.user_id = users.id  
-		WHERE email = $1`, email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
-	}
-	return result, err
-}
-
 func (d *DataAccessService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
@@ -75,7 +49,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 		WHERE uvds.public_id = $1
 	`, publicDashboardId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: dashboard with public id %v not found", ErrNotFound, publicDashboardId)
+		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
 	return result, err
 }
@@ -83,7 +57,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 // param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
-		return nil, nil
+		return []t.VDBValidator{}, nil
 	}
 
 	mapping, release, err := d.services.GetCurrentValidatorMapping()
@@ -112,16 +86,51 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys
 func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
 	result := &t.UserDashboardsData{}
 
-	// Get the validator dashboards
-	err := d.alloyReader.Select(&result.ValidatorDashboards, `
+	dbReturn := []struct {
+		Id           uint64         `db:"id"`
+		Name         string         `db:"name"`
+		PublicId     sql.NullString `db:"public_id"`
+		PublicName   sql.NullString `db:"public_name"`
+		SharedGroups sql.NullBool   `db:"shared_groups"`
+	}{}
+
+	// Get the validator dashboards including the public ones
+	err := d.alloyReader.Select(&dbReturn, `
 		SELECT 
-			id,
-			name
-		FROM users_val_dashboards
-		WHERE user_id = $1
+			uvd.id,
+			uvd.name,
+			uvds.public_id,
+			uvds.name AS public_name,
+			uvds.shared_groups
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
+		WHERE uvd.user_id = $1
 	`, userId)
 	if err != nil {
 		return nil, err
+	}
+
+	// Fill the result
+	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
+	for _, row := range dbReturn {
+		if _, ok := validatorDashboardMap[row.Id]; !ok {
+			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
+				Id:        row.Id,
+				Name:      row.Name,
+				PublicIds: []t.VDBPublicId{},
+			}
+		}
+		if row.PublicId.Valid {
+			result := t.VDBPublicId{}
+			result.PublicId = row.PublicId.String
+			result.Name = row.PublicName.String
+			result.ShareSettings.GroupNames = row.SharedGroups.Bool
+
+			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
+		}
+	}
+	for _, validatorDashboard := range validatorDashboardMap {
+		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}
 
 	// Get the account dashboards
@@ -152,7 +161,7 @@ func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string,
 	err = tx.Get(result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
-		RETURNING id, user_id, name, network, created_at
+		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
 	`, userId, network, name)
 	if err != nil {
 		return nil, err
@@ -478,7 +487,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			v.group_id,
 			g.name AS group_name
 		FROM users_val_dashboards_validators v
-		LEFT JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
+		INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
 		WHERE v.dashboard_id = $1
 		`
 		validatorsParams := []interface{}{dashboardId.Id}
@@ -810,7 +819,7 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 	return err
 }
 
-func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
@@ -827,7 +836,7 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 		return nil, err
 	}
 
-	result := &t.VDBPostPublicIdData{}
+	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
 	result.Name = dbReturn.Name
 	result.ShareSettings.GroupNames = dbReturn.SharedGroups
@@ -835,7 +844,7 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 	return result, nil
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPostPublicIdData, error) {
+func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
@@ -857,7 +866,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t
 		return nil, err
 	}
 
-	result := &t.VDBPostPublicIdData{}
+	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
 	result.Name = dbReturn.Name
 	result.ShareSettings.GroupNames = dbReturn.SharedGroups
