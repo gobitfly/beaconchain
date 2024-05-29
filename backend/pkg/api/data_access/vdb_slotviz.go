@@ -18,7 +18,10 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
-	minEpoch := headEpoch - 2
+	minEpoch := uint64(0)
+	if headEpoch > 2 {
+		minEpoch = headEpoch - 2
+	}
 	maxEpoch := headEpoch + 1
 
 	maxValidatorsInResponse := 6
