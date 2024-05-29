@@ -7,6 +7,7 @@ import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -20,6 +21,7 @@ const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<Tab
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -38,7 +40,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch(() => [dashboardKey.value, overview.value], () => {
   loadData()
 }, { immediate: true })
 
