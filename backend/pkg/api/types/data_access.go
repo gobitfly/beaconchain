@@ -109,13 +109,13 @@ type User struct {
 
 type BlocksCursor struct {
 	GenericCursor
-	Slot int64 // basically the same as Block, Epoch, Age; mandatory, used to index
+	Slot uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
 
 	// optional, max one of those (for now)
-	Proposer int64
-	Group    int64
-	Status   int64
-	Reward   int64
+	Proposer uint64
+	Group    uint64
+	Status   uint64
+	Reward   decimal.NullDecimal
 }
 
 type NetworkInfo struct {
