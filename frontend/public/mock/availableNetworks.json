@@ -1,10 +1,6 @@
 [
   {
-    "chain_id": 1,
-    "name":    "ethereum"
-  },
-  {
-    "chain_id": 100,
-    "name":    "gnosis"
+    "chain_id": 17000,
+    "name":    "holesky"
   }
 ]
