@@ -147,9 +147,9 @@ const cappedValidators = computed(() => {
     </div>
     <div class="link_container" :class="{'has_more': !!cappedValidators.count}">
       <template v-for="v in cappedValidators.list" :key="v">
-        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
+        <BcLink :to="`/validator/${v}`" target="_blank" class="link">
           {{ v }}
-        </NuxtLink>
+        </BcLink>
         <span>, </span>
       </template>
       <template v-if="cappedValidators.count">

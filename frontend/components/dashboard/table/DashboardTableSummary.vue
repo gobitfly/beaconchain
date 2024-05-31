@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import SummaryChart from '../chart/SummaryChart.vue'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
@@ -175,7 +174,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart />
+          <SummaryChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>

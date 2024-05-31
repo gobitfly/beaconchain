@@ -47,9 +47,9 @@ const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
   <div class="validator_column">
     <div class="validators">
       <template v-for="v in cappedValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link validator_link" :no-prefetch="true">
+        <BcLink :to="`/validator/${v}`" target="_blank" class="link validator_link">
           {{ v }}
-        </NuxtLink>
+        </BcLink>
         <span>, </span>
       </template>
     </div>
