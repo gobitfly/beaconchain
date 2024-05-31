@@ -7,12 +7,14 @@ import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import type { TimeFrame } from '~/types/value'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import type { DashboardKey } from '~/types/dashboard'
 
 interface Props {
   validators: number[],
   groupId?: number,
   timeFrame?: TimeFrame
-  context: DashboardValidatorContext
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
 }
 const props = defineProps<Props>()
 
@@ -27,7 +29,9 @@ const openValidatorModal = () => {
       context: props.context,
       timeFrame: props.timeFrame,
       groupName: groupName.value,
-      validators: props.validators
+      validators: props.validators,
+      groupId: props.groupId,
+      dashboardKey: props.dashboardKey
     }
   })
 }
