@@ -60,14 +60,14 @@ const userMenu = computed(() => {
     <div class="rows">
       <div class="grid-cell blockchain-info">
         <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
-          <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+          <BcLink :to="`/slot/${latestState.current_slot}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="latestState.current_slot" />
-          </NuxtLink>
+          </BcLink>
         </span>
         <span v-if="currentEpoch !== undefined"><span>{{ $t('header.current_epoch') }}</span>:
-          <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+          <BcLink :to="`/epoch/${currentEpoch}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="currentEpoch" />
-          </NuxtLink>
+          </BcLink>
         </span>
         <span v-if="rate">
           <span>
@@ -92,13 +92,13 @@ const userMenu = computed(() => {
       <div class="grid-cell controls">
         <BcCurrencySelection v-if="!isMobile" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <NuxtLink to="/login" class="login">
+          <BcLink to="/login" class="login">
             {{ $t('header.login') }}
-          </NuxtLink>
+          </BcLink>
           |
-          <NuxtLink to="/register">
+          <BcLink to="/register">
             <Button class="register" :label="$t('header.register')" />
-          </NuxtLink>
+          </BcLink>
         </div>
         <div v-else-if="!isSmallScreen">
           <BcDropdown :options="userMenu" variant="header" option-label="label" class="user-menu">
@@ -116,10 +116,10 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell logo">
-        <NuxtLink to="/" class="logo-component">
+        <BcLink to="/" class="logo-component">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
           beaconcha.in
-        </NuxtLink>
+        </BcLink>
       </div>
 
       <div class="grid-cell mega-menu">
