@@ -234,7 +234,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	data := t.VDBOverviewData{}
 	wg := errgroup.Group{}
 	var err error
-	var validators []uint64
 	// Groups
 	if dashboardId.Validators == nil {
 		// should have valid primary id
@@ -262,13 +261,9 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 			return nil
 		})
 	}
-	valis, err := d.getDashboardValidators(dashboardId)
+	validators, err := d.getDashboardValidators(dashboardId)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
-	// not needed after #310 is merged
-	for _, v := range valis {
-		validators = append(validators, uint64(v))
 	}
 
 	// Validator Status
