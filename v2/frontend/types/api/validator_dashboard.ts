@@ -116,11 +116,11 @@ export interface VDBBlocksTableRow {
   group_id: number /* uint64 */;
   epoch: number /* uint64 */;
   slot: number /* uint64 */;
-  block: number /* uint64 */;
   status: 'success' | 'missed' | 'orphaned' | 'scheduled';
-  reward_recipient: Address;
-  reward: ClElValue<string /* decimal.Decimal */>;
-  graffiti: string;
+  block?: number /* uint64 */;
+  reward_recipient?: Address;
+  reward?: ClElValue<string /* decimal.Decimal */>;
+  graffiti?: string;
 }
 export type InternalGetValidatorDashboardBlocksResponse = ApiPagingResponse<VDBBlocksTableRow>;
 export interface VDBHeatmapEvents {
