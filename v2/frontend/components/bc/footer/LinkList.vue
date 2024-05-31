@@ -57,10 +57,10 @@ const columns: Row[] = [
       {{ column.title }}
     </div>
     <div v-for="line of column.links" :key="line[0]" class="link-line">
-      <NuxtLink :to="line[2]" :target="line[3]" class="link">
+      <BcLink :to="line[2]" :target="line[3]" class="link">
         <FontAwesomeIcon class="icon" :icon="line[1]" />
         {{ line[0] }}
-      </NuxtLink>
+      </BcLink>
     </div>
   </div>
 </template>

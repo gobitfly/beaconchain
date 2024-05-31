@@ -2,12 +2,10 @@ package network
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/consapi/utils"
@@ -33,7 +31,7 @@ func Post[T any](r *http.Client, url string) (*T, error) {
 	return utils.Unmarshal[T](result, err)
 }
 
-func HTTPReq(method string, requestURL string, httpClient *http.Client) ([]byte, error) {
+func HTTPReq(method string, requestURL string, httpClient *http.Client) (io.ReadCloser, error) {
 	data := []byte{}
 	if method == "POST" {
 		data = []byte("[]")
@@ -63,28 +61,7 @@ func HTTPReq(method string, requestURL string, httpClient *http.Client) ([]byte,
 		}
 	}
 
-	defer res.Body.Close()
-
-	resString, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading request body: %v", err)
-	}
-
-	if strings.Contains(string(resString), `"code"`) {
-		var errMsg RPCErrorMessage
-		unmarshalErr := json.Unmarshal(resString, &errMsg)
-		if unmarshalErr != nil {
-			return nil, err
-		}
-
-		return nil, &RPCError{
-			Code:    errMsg.Code,
-			Url:     requestURL,
-			Message: errMsg.Message,
-		}
-	}
-
-	return resString, nil
+	return res.Body, nil
 }
 
 type RPCErrorMessage struct {
@@ -112,13 +89,10 @@ func (err *RPCError) Error() string {
 	return fmt.Sprintf("error rpc: url: %s, code: %d, message: %s", err.Url, err.Code, err.Message)
 }
 
-func SpecificError(err error) (*HttpReqHttpError, *RPCError) {
+func SpecificError(err error) *HttpReqHttpError {
 	var apiErr *HttpReqHttpError
-	var rpcErr *RPCError
 	if errors.As(err, &apiErr) {
-		return apiErr, nil
-	} else if errors.As(err, &rpcErr) {
-		return nil, rpcErr
+		return apiErr
 	}
-	return nil, nil
+	return nil
 }

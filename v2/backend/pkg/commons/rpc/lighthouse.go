@@ -527,7 +527,7 @@ func (lc *LighthouseClient) GetBalancesForEpoch(epoch int64) (map[uint64]uint64,
 func (lc *LighthouseClient) GetBlockByBlockroot(blockroot []byte) (*types.Block, error) {
 	parsedHeaders, err := lc.cl.GetBlockHeader(fmt.Sprintf("0x%x", blockroot))
 	if err != nil {
-		httpErr, _ := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no block found
 			return &types.Block{}, nil
@@ -564,7 +564,7 @@ func (lc *LighthouseClient) GetBlockHeader(slot uint64) (*constypes.StandardBeac
 			Data: parsedHeader.Data[len(parsedHeader.Data)-1],
 		}
 	} else if err != nil {
-		httpErr, _ := network.SpecificError(err)
+		httpErr := network.SpecificError(err)
 		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 			// no block found
 			return nil, nil
@@ -1072,7 +1072,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 }
 
 func (lc *LighthouseClient) GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error) {
-	parsedSyncCommittees, err := lc.cl.GetSyncCommitteesAssignments(epoch, stateID)
+	parsedSyncCommittees, err := lc.cl.GetSyncCommitteesAssignments(&epoch, stateID)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving sync_committees for epoch %v (state: %v): %w", epoch, stateID, err)
 	}

@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"regexp"
@@ -19,6 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -855,19 +857,19 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 func GetLatestDashboardEpoch() (uint64, error) {
 	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, "SELECT COALESCE(max(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
 	return lastEpoch, err
 }
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT COALESCE(min(epoch), 0) FROM validator_dashboard_data_epoch")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
 	return epoch, err
 }
 
 func GetMinOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT min(epoch_start) as epoch_start FROM validator_dashboard_data_hourly")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
 	return epoch, err
 }
 
@@ -884,31 +886,25 @@ type DayBounds struct {
 
 func GetLastExportedTotalEpoch() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_rolling_total ORDER BY epoch_start DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedHour() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch_start, epoch_end FROM validator_dashboard_data_hourly ORDER BY epoch_start DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedDay() (*DayBounds, error) {
 	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, "SELECT day, epoch_start, epoch_end FROM validator_dashboard_data_daily ORDER BY day DESC LIMIT 1")
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %s ORDER BY day DESC LIMIT 1", DayWriterTableName))
 	return &epoch, err
-}
-
-func GetXDayOldDay(dayOffset int) (time.Time, error) {
-	var day time.Time
-	err := db.AlloyWriter.Get(&day, fmt.Sprintf("SELECT GREATEST(max(day) - interval '%d days', min(day)) as day FROM validator_dashboard_data_daily", dayOffset-1))
-	return day, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, "SELECT epoch FROM validator_dashboard_data_epoch WHERE epoch = $1 LIMIT 1", targetEpoch)
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -918,27 +914,72 @@ func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	return true, nil
 }
 
-func GetDashboardEpochGapsBetween(targetEpoch uint64, minEpoch int64) ([]uint64, error) {
-	if minEpoch < 0 {
-		minEpoch = 0
+// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
+func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
+	if start < 0 {
+		start = 0
 	}
-	var epochs []uint64
-	err := db.AlloyWriter.Select(&epochs, `
-		WITH
-		epoch_range AS (
-			SELECT generate_series($1::bigint, $2::bigint) AS epoch
-		),
-		distinct_present_epochs AS (
-			SELECT DISTINCT epoch
-			FROM validator_dashboard_data_epoch
-		)
-		SELECT epoch_range.epoch
-		FROM epoch_range
-		LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
-		WHERE distinct_present_epochs.epoch IS NULL
-		ORDER BY epoch_range.epoch
-	`, minEpoch, targetEpoch)
-	return epochs, err
+	if end <= start {
+		return nil, nil
+	}
+
+	if end-start > 100 {
+		// for large ranges we use a different approach to avoid making tons of selects
+		// this performs better for large ranges but is slow for short ranges
+		var epochs []uint64
+		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
+			WITH
+			epoch_range AS (
+				SELECT generate_series($1::bigint, $2::bigint) AS epoch
+			),
+			distinct_present_epochs AS (
+				SELECT DISTINCT epoch
+				FROM %s
+				WHERE epoch >= $1 AND epoch <= $2
+			)
+			SELECT epoch_range.epoch
+			FROM epoch_range
+			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
+			WHERE distinct_present_epochs.epoch IS NULL
+			ORDER BY epoch_range.epoch
+		`, EpochWriterTableName), start, end-1)
+		return epochs, err
+	}
+
+	query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
+
+	for epoch := start; epoch < end; epoch++ {
+		if epoch != start {
+			query += " UNION "
+		}
+		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
+	}
+
+	query += `) AS result_array;`
+
+	var jsonArray sql.NullString
+
+	err := db.AlloyReader.Get(&jsonArray, query)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query")
+	}
+
+	if !jsonArray.Valid {
+		return nil, nil
+	}
+
+	missingEpochs := make([]uint64, 0)
+	err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal")
+	}
+
+	// sort asc
+	sort.Slice(missingEpochs, func(i, j int) bool {
+		return missingEpochs[i] < missingEpochs[j]
+	})
+
+	return missingEpochs, nil
 }
 
 func GetPartitionNamesOfTable(tableName string) ([]string, error) {
@@ -969,3 +1010,13 @@ func AddToColumnEngineAllColumns(table string) error {
 		`, table))
 	return err
 }
+
+const EpochWriterTableName = "validator_dashboard_data_epoch"
+const DayWriterTableName = "validator_dashboard_data_daily"
+const HourWriterTableName = "validator_dashboard_data_hourly"
+
+const RollingTotalWriterTableName = "validator_dashboard_data_rolling_total"
+const RollingDailyWriterTable = "validator_dashboard_data_rolling_daily"
+const RollingWeeklyWriterTable = "validator_dashboard_data_rolling_weekly"
+const RollingMonthlyWriterTable = "validator_dashboard_data_rolling_monthly"
+const RollingNinetyDaysWriterTable = "validator_dashboard_data_rolling_90d"
