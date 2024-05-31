@@ -327,10 +327,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		LIMIT $%d
 	`, len(params))
 	rewardsStr := `) r
-	left join consensus_payloads cp on r.slot = cp.slot`
+	LEFT JOIN consensus_payloads cp on r.slot = cp.slot
+	`
 
 	startTime := time.Now()
-	err = d.alloyReader.Select(&proposals, query+where+orderBy+limitStr+rewardsStr, params...)
+	err = d.alloyReader.Select(&proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
