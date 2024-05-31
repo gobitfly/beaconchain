@@ -86,6 +86,26 @@ type Config struct {
 	RedisSessionStoreEndpoint string `yaml:"redisSessionStoreEndpoint" envconfig:"REDIS_SESSION_STORE_ENDPOINT"`
 	TieredCacheProvider       string `yaml:"tieredCacheProvider" envconfig:"CACHE_PROVIDER"`
 	ReportServiceStatus       bool   `yaml:"reportServiceStatus" envconfig:"REPORT_SERVICE_STATUS"`
+	ClickHouse 			  struct {
+		ReaderDatabase struct {
+			Username     string `yaml:"user" envconfig:"CLICKHOUSE_READER_DB_USERNAME"`
+			Password     string `yaml:"password" envconfig:"CLICKHOUSE_READER_DB_PASSWORD"`
+			Name         string `yaml:"name" envconfig:"CLICKHOUSE_READER_DB_NAME"`
+			Host         string `yaml:"host" envconfig:"CLICKHOUSE_READER_DB_HOST"`
+			Port         string `yaml:"port" envconfig:"CLICKHOUSE_READER_DB_PORT"`
+			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_READER_DB_MAX_OPEN_CONNS"`
+			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_READER_DB_MAX_IDLE_CONNS"`
+		} `yaml:"readerDatabase"`
+		WriterDatabase struct {
+			Username     string `yaml:"user" envconfig:"CLICKHOUSE_WRITER_DB_USERNAME"`
+			Password     string `yaml:"password" envconfig:"CLICKHOUSE_WRITER_DB_PASSWORD"`
+			Name         string `yaml:"name" envconfig:"CLICKHOUSE_WRITER_DB_NAME"`
+			Host         string `yaml:"host" envconfig:"CLICKHOUSE_WRITER_DB_HOST"`
+			Port         string `yaml:"port" envconfig:"CLICKHOUSE_WRITER_DB_PORT"`
+			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_OPEN_CONNS"`
+			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_IDLE_CONNS"`
+		} `yaml:"writerDatabase"`
+	} `yaml:"clickhouse"`
 	Indexer                   struct {
 		Enabled bool `yaml:"enabled" envconfig:"INDEXER_ENABLED"`
 		Node    struct {
