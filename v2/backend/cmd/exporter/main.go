@@ -62,7 +62,7 @@ func main() {
 				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
 				SSL:          cfg.ReaderDatabase.SSL,
-			})
+			}, "pgx", "postgres")
 		}()
 	} else {
 		log.Warnf("------- EXPORTER RUNNING IN V2 ONLY MODE ------")
@@ -89,7 +89,7 @@ func main() {
 			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
 			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 			SSL:          cfg.AlloyReader.SSL,
-		})
+			}, "pgx", "postgres")
 	}()
 
 	wg.Add(1)

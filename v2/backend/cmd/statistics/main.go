@@ -86,7 +86,7 @@ func main() {
 		Port:         cfg.ReaderDatabase.Port,
 		MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 		MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-	})
+	}, "pgx", "postgres")
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
 
@@ -106,7 +106,7 @@ func main() {
 		Port:         cfg.Frontend.ReaderDatabase.Port,
 		MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 		MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-	})
+	}, "pgx", "postgres")
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
 

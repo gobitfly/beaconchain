@@ -80,7 +80,7 @@ func main() {
 			Port:         cfg.Frontend.ReaderDatabase.Port,
 			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-		})
+		}, "pgx", "postgres")
 	}()
 
 	// if needed, init the database, cache or bigtable
