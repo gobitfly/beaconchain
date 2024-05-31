@@ -55,6 +55,10 @@ const edit = async () => {
   isUpdating.value = false
 }
 
+const publishDisabled = computed(() => {
+  return isUpdating.value || !REGEXP_VALID_NAME.test(dashboardName.value)
+})
+
 const share = () => {
   if (props.value?.dashboard.public_ids?.[0]?.public_id) {
     edit()
@@ -95,7 +99,7 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="isUpdating" @click="share">
+      <Button :disabled="publishDisabled" @click="share">
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>

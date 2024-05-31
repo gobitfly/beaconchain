@@ -25,7 +25,7 @@ const name = defineModel<string>('name', { required: true })
 const emit = defineEmits<{(e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
-  return type.value === '' || name.value === '' || name.value.length > 32
+  return type.value === '' || name.value === '' || name.value.length > 32 || !REGEXP_VALID_NAME.test(name.value)
 })
 </script>
 
