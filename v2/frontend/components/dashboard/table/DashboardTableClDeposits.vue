@@ -129,15 +129,14 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             </Column>
             <Column field="index" :header="$t('common.index')">
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.index !== undefined"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   {{ slotProps.data.index }}
-                </NuxtLink>
+                </BcLink>
                 <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
               </template>
             </Column>
@@ -160,15 +159,14 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               :header="$t('common.epoch')"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.index !== undefined"
                   :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column
@@ -177,15 +175,14 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               :header="$t('common.slot')"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.index !== undefined"
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.slot" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column field="age">
@@ -261,29 +258,27 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}
                   </div>
-                  <NuxtLink
+                  <BcLink
                     v-if="slotProps.data.index !== undefined"
                     :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
                     target="_blank"
                     class="link"
-                    :no-prefetch="true"
                   >
                     <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.slot') }}
                   </div>
-                  <NuxtLink
+                  <BcLink
                     v-if="slotProps.data.index !== undefined"
                     :to="`/slot/${slotProps.data.slot}`"
                     target="_blank"
                     class="link"
-                    :no-prefetch="true"
                   >
                     <BcFormatNumber :value="slotProps.data.slot" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">

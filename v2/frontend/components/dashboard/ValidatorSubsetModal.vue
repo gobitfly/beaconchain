@@ -114,9 +114,9 @@ function copyValidatorsToClipboard (): void {
     </div>
     <div class="link_container">
       <template v-for="v in shownValidators" :key="v">
-        <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
+        <BcLink :to="`/validator/${v}`" target="_blank" class="link">
           {{ v }}
-        </NuxtLink>
+        </BcLink>
         <span>, </span>
       </template>
     </div>
