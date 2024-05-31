@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -25,9 +26,8 @@ type VDBId struct {
 	Id         VDBIdPrimary
 }
 
-type VDBValidator struct {
-	Index uint64 `db:"validatorindex"`
-}
+// could replace if we want the import in all files
+type VDBValidator = types.ValidatorIndex
 
 type DashboardInfo struct {
 	Id     VDBIdPrimary `db:"id"` // this must be the bigint id

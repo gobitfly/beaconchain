@@ -47,7 +47,7 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 	b := hexutil.Encode(publicKey)
 	if index, found := validatorMapping.ValidatorIndices[b]; found {
 		return &t.SearchValidator{
-			Index:     *index,
+			Index:     index,
 			PublicKey: publicKey,
 		}, nil
 	}

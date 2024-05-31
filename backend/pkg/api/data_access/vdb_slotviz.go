@@ -75,7 +75,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 			// Get the proposals for the slot
 			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
 				// Only add results for validators we care about
-				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
+				if _, ok := validatorsMap[proposerIndex]; ok {
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal = &t.VDBSlotVizTuple{}
 
 					slotVizEpochs[epochIdx].Slots[slotIdx].Proposal.Validator = dutiesInfo.PropAssignmentsForSlot[slot]
@@ -93,7 +93,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 			if len(dutiesInfo.SyncAssignmentsForEpoch[epoch]) > 0 {
 				for validator := range dutiesInfo.SyncAssignmentsForEpoch[epoch] {
 					// only validators we care about
-					if _, ok := validatorsMap[uint32(validator)]; !ok {
+					if _, ok := validatorsMap[validator]; !ok {
 						continue
 					}
 
@@ -133,7 +133,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 
 			if proposerIndex, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
 				// only add if we care about this validator
-				if _, ok := validatorsMap[uint32(proposerIndex)]; ok {
+				if _, ok := validatorsMap[proposerIndex]; ok {
 					// One of the dashboard validators slashed
 					for _, validator := range slashedValidators {
 						if slotVizEpochs[epochIdx].Slots[slotIdx].Slashings == nil {
@@ -158,7 +158,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 				}
 			}
 			for _, validator := range slashedValidators {
-				if _, ok := validatorsMap[uint32(validator)]; !ok {
+				if _, ok := validatorsMap[validator]; !ok {
 					continue
 				}
 				// One of the dashboard validators got slashed
@@ -208,7 +208,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 				}
 				attestationsRef.Scheduled.TotalCount++
 				if len(attestationsRef.Scheduled.Validators) < maxValidatorsInResponse {
-					attestationsRef.Scheduled.Validators = append(attestationsRef.Scheduled.Validators, uint64(validator))
+					attestationsRef.Scheduled.Validators = append(attestationsRef.Scheduled.Validators, validator)
 				}
 			} else if duty {
 				if attestationsRef.Success == nil {
@@ -221,7 +221,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 				}
 				attestationsRef.Failed.TotalCount++
 				if len(attestationsRef.Failed.Validators) < maxValidatorsInResponse {
-					attestationsRef.Failed.Validators = append(attestationsRef.Failed.Validators, uint64(validator))
+					attestationsRef.Failed.Validators = append(attestationsRef.Failed.Validators, validator)
 				}
 			}
 		}
