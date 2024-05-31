@@ -969,11 +969,11 @@ defineExpose({
             <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
             <IconCurrency v-else-if="item.currency" :currency="item.currency" />
           </span>
-          <NuxtLink v-if="item.url" :to="item.url">
+          <BcLink v-if="item.url" :to="item.url">
             <span :class="[item.class]" class="p-menuitem-text">
               <span>{{ item.label }}</span>
             </span>
-          </NuxtLink>
+          </BcLink>
           <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.()">
             {{ item.label }}
           </span>

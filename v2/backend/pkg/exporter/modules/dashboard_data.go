@@ -1661,7 +1661,7 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 // Commented out since this is a one time operation, kept in in case we need it again
 // func (d *dashboardData) backfillCLBlockRewards() {
 // 	upTo := 1731488
-// 	startFrom := 63805
+// 	startFrom := 260107
 // 	batchSize := 8
 // 	parallelization := 8
 

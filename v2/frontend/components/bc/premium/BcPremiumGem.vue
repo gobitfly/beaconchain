@@ -7,11 +7,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 <template>
   <BcTooltip :text="$t('premium.subscribe')">
-    <NuxtLink :to="`/pricing`" target="_blank" :no-prefetch="true">
+    <BcLink :to="`/pricing`" target="_blank">
       <div>
         <FontAwesomeIcon :icon="faGem" class="gem" />
       </div>
-    </NuxtLink>
+    </BcLink>
   </BcTooltip>
 </template>
 
