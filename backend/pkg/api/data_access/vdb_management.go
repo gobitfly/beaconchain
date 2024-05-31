@@ -344,7 +344,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		wg.Go(func() error {
-			(*rewards).Cl, (*apr).Cl, err = d.internal_getClAPR(validators, days)
+			(*rewards).Cl, (*apr).Cl, (*rewards).El, (*apr).El, err = d.internal_getElClAPR(validators, days)
 			if err != nil {
 				return err
 			}
