@@ -37,6 +37,8 @@
     min-width: fit-content;
     right: 0;
     left: auto;
+    top: var(--navbar2-height);
+    border-radius: var(--border-radius);
   }
   .p-submenu-header {
     margin: 0;
@@ -105,10 +107,8 @@
     .p-megamenu-root-list {
       position: static;
       background: var(--container-background);
-      width: 100%;
-      right: 0;
-      left: auto;
-      border-bottom: 1px solid var(--primary-color);
+      border-bottom-left-radius: var(--border-radius);
+      border-bottom-right-radius: var(--border-radius);
     }
     .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
       position: static;
@@ -117,6 +117,7 @@
       margin: var(--padding-small);
     }
     .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
+      left: -10px;
       .p-menuitem-text,
       .p-submenu-icon {
         color: var(--text-color);

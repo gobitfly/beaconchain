@@ -7,8 +7,7 @@ import {
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
-import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
-const colorMode = useColorMode()
+import { smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
@@ -18,7 +17,7 @@ const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useI18n()
 
-const isMobile = computed(() => width.value < mobileHeaderThreshold)
+const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
@@ -43,6 +42,8 @@ const currentEpoch = computed(() => latestState.value?.current_slot !== undefine
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggleMegaMenu(evt)
 }
+
+const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 
 const userMenu = computed(() => {
   return [
@@ -90,7 +91,7 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection v-if="!isMobile" class="currency" />
+        <BcCurrencySelection class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
           <BcLink to="/login" class="login">
             {{ $t('header.login') }}
@@ -100,10 +101,10 @@ const userMenu = computed(() => {
             <Button class="register" :label="$t('header.register')" />
           </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen">
-          <BcDropdown :options="userMenu" variant="header" option-label="label" class="user-menu">
+        <div v-else-if="!isSmallScreen" class="user-menu">
+          <BcDropdown :options="userMenu" variant="header" option-label="label" class="menu-component">
             <template #value>
-              <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
+              <FontAwesomeIcon class="menu-icon" :icon="faCircleUser" />
             </template>
             <template #option="slotProps">
               <span @click="slotProps.command?.()">
@@ -112,7 +113,7 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <FontAwesomeIcon v-if="isSmallScreen" :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
+        <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
 
       <div class="grid-cell logo">
@@ -124,6 +125,7 @@ const userMenu = computed(() => {
 
       <div class="grid-cell mega-menu">
         <BcHeaderMegaMenu ref="megaMenu" />
+        <div v-if="isMobileMegaMenuOpen" class="decoration" />
       </div>
     </div>
   </div>
@@ -132,6 +134,7 @@ const userMenu = computed(() => {
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
 
+// do not change these two values without changing the values in types/header.ts accordingly
 $mobileHeaderThreshold: 470px;
 $smallHeaderThreshold: 1024px;
 
@@ -211,14 +214,12 @@ $smallHeaderThreshold: 1024px;
         grid-column: 2;
         grid-column-end: span 3;
       }
-      @media (min-width: $smallHeaderThreshold) {
-        .bar {
-          max-width: 460px;
-        }
-      }
       .bar {
         position: relative;
         width: 100%;
+        @media (min-width: $smallHeaderThreshold) {
+          max-width: 460px;
+        }
         margin-top: var(--content-margin);
         margin-bottom: var(--content-margin);
       }
@@ -231,12 +232,12 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         grid-column: 4;
       }
-      @media (max-width: $mobileHeaderThreshold) {
-        .currency {
+      justify-content: right;
+
+      .currency {
+        @media (max-width: $mobileHeaderThreshold) {
           display: none;
         }
-      }
-      .currency {
         color: var(--header-top-font-color);
       }
       .logged-out {
@@ -252,15 +253,23 @@ $smallHeaderThreshold: 1024px;
         }
       }
       .user-menu {
-        padding-right: 0px;
-        color: var(--header-top-font-color);
-        .user-menu-icon {
+        @media (max-width: $smallHeaderThreshold) {
+          display: none;
+        }
+        .menu-component {
+          padding-right: 0px;
           color: var(--header-top-font-color);
-          width: 19px;
-          height: 18px;
+          .menu-icon {
+            color: var(--header-top-font-color);
+            width: 19px;
+            height: 18px;
+          }
         }
       }
       .burger {
+        @media (min-width: $smallHeaderThreshold) {
+          display: none;
+        }
         height: 24px;
         cursor: pointer;
       }
@@ -297,16 +306,31 @@ $smallHeaderThreshold: 1024px;
     }
 
     .mega-menu {
+      position: relative;
       @media (min-width: $smallHeaderThreshold) {
         grid-column: 3;
         grid-column-end: span 3;
         @include bottom-cell(2);
         justify-content: flex-end;
+        .decoration {
+          display: none;
+        }
       }
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 2;
         grid-column: 1;
         grid-column-end: span 5;
+        .decoration {
+          position: absolute;
+          top: 0px;
+          bottom: -1px;
+          left: calc(1px - var(--content-margin));
+          right: calc(1px - var(--content-margin));
+          border-bottom-left-radius: var(--border-radius);
+          border-bottom-right-radius: var(--border-radius);
+          border: 1px solid var(--primary-color);
+          border-top: none;
+        }
       }
     }
   }

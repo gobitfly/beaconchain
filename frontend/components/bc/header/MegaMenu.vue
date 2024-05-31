@@ -42,6 +42,7 @@ import {
 } from '@fortawesome/sharp-solid-svg-icons'
 
 import type { MenuItem } from 'primevue/menuitem'
+import MegaMenu from 'primevue/megamenu'
 import NetworkEthereum from '~/components/icon/network/NetworkEthereum.vue'
 import NetworkGnosis from '~/components/icon/network/NetworkGnosis.vue'
 import NetworkArbitrum from '~/components/icon/network/NetworkArbitrum.vue'
@@ -61,7 +62,7 @@ const { doLogout, isLoggedIn } = useUserStore()
 const { withLabel, currency, setCurrency } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const megaMenu = ref<{toggle:(evt:Event)=>void} | null>(null)
+const megaMenu = ref<{toggle:(evt:Event)=>void | null, mobileActive: boolean} | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -950,12 +951,17 @@ const items = computed(() => {
   }
   return list
 })
+
+const isMobileMenuOpen = computed(() => megaMenu.value?.mobileActive)
+
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggle(evt)
   document.body.focus()
 }
+
 defineExpose({
-  toggleMegaMenu
+  toggleMegaMenu,
+  isMobileMenuOpen
 })
 </script>
 
@@ -974,7 +980,7 @@ defineExpose({
               <span>{{ item.label }}</span>
             </span>
           </BcLink>
-          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.()">
+          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
             {{ item.label }}
           </span>
           <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
