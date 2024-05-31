@@ -227,7 +227,7 @@ onMounted(() => {
   document.addEventListener('click', listenToClicks)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   resizingObserver.unobserve(wholeComponent.value!)
   document.removeEventListener('click', listenToClicks)
   empty()
@@ -646,7 +646,10 @@ function informationIfNoResult () : string {
   let info = t('search_bar.no_result_matches') + ' '
 
   if (differentialRequests) {
-    info += t('search_bar.your_filters') + t('search_bar.or') + t('search_bar.your_input')
+    info += t('search_bar.your_input')
+    if (!userInputNoNetworkIsSelected || !userInputNoCategoryIsSelected) {
+      info += t('search_bar.or') + t('search_bar.your_filters')
+    }
   } else if (areThereResultsHiddenByUser()) {
     info += t('search_bar.your_filters')
   } else {

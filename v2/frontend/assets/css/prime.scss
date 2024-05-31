@@ -404,6 +404,7 @@
   &.header{
     background: transparent;
     border: none;
+
   }
 
   &:not(.p-disabled).p-focus {
@@ -440,6 +441,9 @@
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
+  &.header {
+    border-radius: var(--border-radius);
+  }
   transform: translateY(-1px);
   &.table {
     background: var(--background-color);
