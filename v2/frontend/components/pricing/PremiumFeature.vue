@@ -27,12 +27,12 @@ defineProps<Props>()
           {{ feature.subtext }}
         </div>
       </div>
-      <NuxtLink v-if="feature.link" class="link" :to="feature.link" target="_blank">
+      <BcLink v-if="feature.link" class="link" :to="feature.link" target="_blank">
         <FontAwesomeIcon
           class="popout"
           :icon="faArrowUpRightFromSquare"
         />
-      </NuxtLink>
+      </BcLink>
     </div>
     <BcFractionBar v-if="feature.percentage" :fill-percentage="feature.percentage" class="fraction-bar-container" />
   </div>

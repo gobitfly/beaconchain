@@ -166,15 +166,14 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                     </template>
                   </BcTooltip>
                 </div>
-                <NuxtLink
+                <BcLink
                   v-else-if="slotProps.data.identifier !== totalIdentifier"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.index" default="-" />
-                </NuxtLink>
+                </BcLink>
                 <div v-else class="all-time-total">
                   {{ $t('dashboard.validator.withdrawals.all_time_total') }}
                 </div>
@@ -200,15 +199,14 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('common.epoch')"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.epoch" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column
@@ -218,15 +216,14 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('common.slot')"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column field="age">
@@ -301,17 +298,17 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
+                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)" :no-prefetch="true">
+                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
