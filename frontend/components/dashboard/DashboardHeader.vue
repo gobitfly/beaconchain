@@ -120,12 +120,12 @@ const title = computed(() => {
           <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" @click.stop.prevent="()=>undefined">
             <span class="text-disabled">{{ item.label }}</span>
           </BcTooltip>
-          <NuxtLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+          <BcLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
-          </NuxtLink>
+          </BcLink>
           <span v-else class="button-content pointer" :class="{ 'p-active': item.active }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
