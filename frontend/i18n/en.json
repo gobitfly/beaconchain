@@ -40,7 +40,8 @@
     "ens_address": "ENS address | ENS addresses",
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "true": "True",
-    "false": "False"
+    "false": "False",
+    "and_more": "and {count} more"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -142,7 +143,6 @@
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
-      "and_more": "and {count} more",
       "proposal": {
         "proposed": {
           "main": "Block",

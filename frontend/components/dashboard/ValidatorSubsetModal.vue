@@ -32,7 +32,7 @@ const MAX_VALIDATORS = 1000
 
 watch(props, async (p) => {
   if (p) {
-    shownValidators.value = p.validators
+    shownValidators.value = p.validators?.sort((a, b) => a - b)
     validators.value = p.validators
     setHeader(
       p?.groupName
@@ -57,7 +57,7 @@ watch(props, async (p) => {
 
       const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
       validators.value = res.data.sort((a, b) => a - b)
-      shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
+      shownValidators.value = validators.value
       isLoading.value = false
     }
   }
@@ -98,7 +98,7 @@ const caption = computed(() => {
 
 const handleEvent = (filter: string) => {
   if (filter === '') {
-    shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
+    shownValidators.value = validators.value
     return
   }
 
@@ -112,7 +112,7 @@ const handleEvent = (filter: string) => {
 
 watch(visible, (value) => {
   if (!value) {
-    shownValidators.value = validators.value.slice(0, MAX_VALIDATORS)
+    shownValidators.value = validators.value
   }
 })
 
@@ -126,7 +126,14 @@ function copyValidatorsToClipboard (): void {
     })
 }
 
-const hasMore = computed(() => shownValidators.value.length === MAX_VALIDATORS && validators.value.length > MAX_VALIDATORS)
+const cappedValidators = computed(() => {
+  const list = shownValidators.value.length <= MAX_VALIDATORS ? shownValidators.value : shownValidators.value.slice(0, MAX_VALIDATORS)
+
+  return {
+    count: shownValidators.value.length - list.length,
+    list
+  }
+})
 
 </script>
 
@@ -138,15 +145,15 @@ const hasMore = computed(() => shownValidators.value.length === MAX_VALIDATORS &
       </span>
       <BcContentFilter class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="handleEvent" />
     </div>
-    <div class="link_container" :class="{'has_more': hasMore}">
-      <template v-for="v in shownValidators" :key="v">
+    <div class="link_container" :class="{'has_more': !!cappedValidators.count}">
+      <template v-for="v in cappedValidators.list" :key="v">
         <NuxtLink :to="`/validator/${v}`" target="_blank" class="link" :no-prefetch="true">
           {{ v }}
         </NuxtLink>
         <span>, </span>
       </template>
-      <template v-if="hasMore">
-        <span>...</span>
+      <template v-if="cappedValidators.count">
+        <span>... {{ $t('common.and_more', {count: trim(cappedValidators.count, 0, 0)}) }}</span>
       </template>
     </div>
     <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
