@@ -83,7 +83,7 @@ const userMenu = computed(() => {
           <BcLink to="/login">
             {{ $t('header.login') }}
           </BcLink>
-          /
+          |
           <BcLink to="/register">
             <Button class="register" :label="$t('header.register')" />
           </BcLink>
