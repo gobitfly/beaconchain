@@ -93,9 +93,13 @@ const unpublish = async () => {
     align-items: flex-start;
     gap: var(--padding);
 
+    .disclaimer {
+      font-size: var(--small_text_font_size);
+      font-weight: var(--standard_text_light_font_weight);
+    }
+
     .gem {
       display: inline-block;
-      margin-left: var(--padding);
     }
 
     .qr-code {
@@ -107,7 +111,8 @@ const unpublish = async () => {
     }
 
     .title {
-      font-weight: var(--standard_text_bold_font_weight);
+      font-size: var(--small_text_font_size);
+      font-weight: var(--small_text_bold_font_weight);
     }
   }
 
