@@ -139,6 +139,7 @@ $mobileHeaderThreshold: 470px;
 $smallHeaderThreshold: 1024px;
 
 .anchor {
+  top: -1px;
   position: relative;
   display: flex;
   width: 100%;

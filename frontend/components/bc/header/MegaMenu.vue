@@ -62,7 +62,7 @@ const { doLogout, isLoggedIn } = useUserStore()
 const { withLabel, currency, setCurrency } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const megaMenu = ref<{toggle:(evt:Event)=>void | null, mobileActive: boolean} | null>(null)
+const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
