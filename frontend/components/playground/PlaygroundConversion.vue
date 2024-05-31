@@ -53,6 +53,9 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
     <div>
       less than 1Eth in ETH :<BcFormatValue value="0000000010002000001" :options="{minUnit:'MAIN'}" />
     </div>
+    <div>
+      less than 1Wei in ETH, min 0 decimals, max: 6:<BcFormatValue value="0000000000000000001" :options="{minUnit:'MAIN', addPlus: true, maxDecimalCount: 6, minDecimalCount: 0}" />
+    </div>
 
     <div>
       1 GNO :<BcFormatValue value="1000000000000000000" :options="{sourceCurrency: 'GNO'}" />

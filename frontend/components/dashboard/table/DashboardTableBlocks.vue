@@ -113,14 +113,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               header-class="proposer"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   :to="`/validator/${slotProps.data.proposer}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.proposer" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column
@@ -138,16 +137,16 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             </Column>
             <Column v-if="colsVisible.slot" field="slot" :sortable="true" :header="$t('common.slot')">
               <template #body="slotProps">
-                <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
                   <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column field="block" :sortable="true" :header="$t('common.block')">
               <template #body="slotProps">
-                <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
+                <BcLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
                   <BcFormatNumber :value="slotProps.data.block" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age">
@@ -205,17 +204,17 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
