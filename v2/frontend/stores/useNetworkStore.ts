@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { API_PATH } from '~/types/customFetch'
-import { ChainIDs, ChainInfo } from '~/types/networks'
+import { ChainIDs, ChainInfo, sortChainIDsByPriority } from '~/types/networks'
 
 const { fetch } = useCustomFetch()
 
@@ -11,61 +11,80 @@ interface ApiChainInfo {
 
 const networkStore = defineStore('network-store', () => {
   const data = ref<{
-    available: ApiChainInfo[]
-    current: ChainIDs
-  } | undefined | null>()
+    availableNetworks: ApiChainInfo[]
+    currentNetwork: ChainIDs
+  }>()
   return { data }
 })
 
-networkStore().data!.available = await fetch<ApiChainInfo[]>(API_PATH.AVAILABLE_NETWORKS)
+const { data: dataInternal } = storeToRefs(networkStore())
+
+dataInternal.value!.availableNetworks = await fetch<ApiChainInfo[]>(API_PATH.AVAILABLE_NETWORKS)
+dataInternal.value!.currentNetwork = getAvailableNetworks()[0] // the network by default is the preferred one in the list ("preferred" in the sense that it has the best priority in file networks.ts)
+
+function getAvailableNetworks () : ChainIDs[] {
+  return sortChainIDsByPriority(dataInternal.value!.availableNetworks.map(apiInfo => apiInfo.chain_id))
+}
 
 export function useNetworkStore () {
   const { data } = storeToRefs(networkStore())
 
+  function setCurrentNetwork (network: ChainIDs) {
+    data.value!.currentNetwork = network
+  }
+
+  const currentNetwork = computed(() => data.value!.currentNetwork)
+
+  function epochsPerDay (): number {
+    const info = ChainInfo[data.value!.currentNetwork]
+    if (info.timeStampSlot0 === undefined) {
+      return 0
+    }
+    return 24 * 60 * 60 / (info.slotsPerEpoch! * info.secondsPerSlot!)
+  }
+
   function epochToTs (epoch: number): number | undefined {
-    if (epoch < 0) {
+    const info = ChainInfo[data.value!.currentNetwork]
+    if (info.timeStampSlot0 === undefined || epoch < 0) {
       return undefined
     }
 
-    return tsForSlot0 + ((epoch * slotsPerEpoch) * secondsPerSlot)
+    return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch!) * info.secondsPerSlot!)
   }
 
   function slotToTs (slot: number): number | undefined {
-    if (slot < 0) {
+    const info = ChainInfo[data.value!.currentNetwork]
+    if (info.timeStampSlot0 === undefined || slot < 0) {
       return undefined
     }
 
-    return tsForSlot0 + (slot * secondsPerSlot)
+    return info.timeStampSlot0 + (slot * info.secondsPerSlot!)
   }
 
-  function epochsPerDay (): number {
-    return 24 * 60 * 60 / (slotsPerEpoch * secondsPerSlot)
+  function tsToSlot (ts: number): number {
+    const info = ChainInfo[data.value!.currentNetwork]
+    if (info.timeStampSlot0 === undefined) {
+      return -1
+    }
+    return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot!)
   }
 
   function slotToEpoch (slot: number): number {
-    return Math.floor(slot / slotsPerEpoch)
+    const info = ChainInfo[data.value!.currentNetwork]
+    if (info.timeStampSlot0 === undefined) {
+      return -1
+    }
+    return Math.floor(slot / info.slotsPerEpoch!)
   }
 
-  return { epochToTs, epochsPerDay, slotsPerEpoch, slotToTs, slotToEpoch }
-}
-
-export function isMainNet (network: ChainIDs) : boolean {
-  return (ChainInfo[network].mainNet === network)
-}
-
-export function isL1 (network: ChainIDs) : boolean {
-  return (ChainInfo[network].L1 === network)
-}
-
-export function sortChainIDsByPriority (list : ChainIDs[]) {
-  list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
-}
-
-// TODO: request it from the API
-export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
-  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
-  if (sortByPriority) {
-    sortChainIDsByPriority(list)
+  return {
+    getAvailableNetworks,
+    currentNetwork,
+    setCurrentNetwork,
+    epochsPerDay,
+    epochToTs,
+    slotToTs,
+    tsToSlot,
+    slotToEpoch
   }
-  return list
 }

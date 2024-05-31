@@ -259,6 +259,10 @@ export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
   return list
 }
 
-export function sortChainIDsByPriority (list : ChainIDs[]) {
-  list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+/**
+ * @param list List to sort. Its order will be modified because the function sorts in place.
+ * @returns List sorted in place, so the same as parameter `list`.
+ */
+export function sortChainIDsByPriority (list : ChainIDs[]) : ChainIDs[] {
+  return list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
 }
