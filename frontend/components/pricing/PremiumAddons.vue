@@ -62,6 +62,7 @@ const addonsAvailable = computed(() => {
 
   .addons-row {
     width: 100%;
+    min-width: min-content;
     display: flex;
     gap: 7px;
     overflow-x: auto;
