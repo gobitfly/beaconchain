@@ -210,16 +210,33 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 }
 
 func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
+	dashboardIdParam := mux.Vars(r)["dashboard_id"]
+	dashboardId, err := h.handleDashboardId(dashboardIdParam)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+	// set variables depending on public id being used
+	var name string
+	if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
+		var publicIdInfo *types.VDBPublicId
+		publicIdInfo, err = h.dai.GetValidatorDashboardPublicId(types.VDBIdPublic(dashboardIdParam))
+		name = publicIdInfo.Name
+	} else {
+		name, err = h.dai.GetValidatorDashboardName(dashboardId.Id)
+	}
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	data, err := h.dai.GetValidatorDashboardOverview(*dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+	data.Name = name
+
 	response := types.InternalGetValidatorDashboardResponse{
 		Data: *data,
 	}
@@ -456,7 +473,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 		handleErr(w, err)
 		return
 	}
-	name := v.checkNameNotEmpty(req.Name)
+	name := v.checkName(req.Name, 0)
 	if v.hasErrors() {
 		handleErr(w, v)
 		return

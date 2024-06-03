@@ -88,7 +88,7 @@ export interface ChainConfig {
 export interface SearchResult {
   type: string;
   chain_id: number /* uint64 */;
-  hash_value?: Hash;
+  hash_value?: string;
   str_value?: string;
   num_value?: number /* uint64 */;
   validators?: number /* uint64 */[];
@@ -96,8 +96,9 @@ export interface SearchResult {
 export type InternalPostSearchResponse = ApiDataResponse<SearchResult[]>;
 export interface VDBPublicId {
   public_id: string;
+  dashboard_id: number /* int */;
   name: string;
   share_settings: {
-    group_names: boolean;
+    share_groups: boolean;
   };
 }

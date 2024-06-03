@@ -12,6 +12,7 @@ import (
 type ValidatorDashboardRepository interface {
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
+	GetValidatorDashboardName(dashboardId t.VDBIdPrimary) (string, error)
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error)
 	RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error
 
@@ -27,6 +28,7 @@ type ValidatorDashboardRepository interface {
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
 
 	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error)
+	GetValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error)
 	UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error)
 	RemoveValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) error
 

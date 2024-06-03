@@ -54,6 +54,19 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(publicDashboardI
 	return result, err
 }
 
+func (d *DataAccessService) GetValidatorDashboardName(dashboardId t.VDBIdPrimary) (string, error) {
+	var name string
+	err := d.alloyReader.Get(&name, `
+		SELECT name
+		FROM users_val_dashboards
+		WHERE id = $1
+	`, dashboardId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("%w: dashboard with id %v not found", ErrNotFound, dashboardId)
+	}
+	return name, err
+}
+
 // param validators: slice of validator public keys or indices
 func (d *DataAccessService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
@@ -124,7 +137,7 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 			result := t.VDBPublicId{}
 			result.PublicId = row.PublicId.String
 			result.Name = row.PublicName.String
-			result.ShareSettings.GroupNames = row.SharedGroups.Bool
+			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
 
 			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
 		}
@@ -239,7 +252,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	data := t.VDBOverviewData{}
 
 	// Groups
-	if len(dashboardId.Validators) == 0 {
+	if len(dashboardId.Validators) == 0 && !dashboardId.AggregateGroups {
 		// should have valid primary id
 		wg.Go(func() error {
 			var queryResult []struct {
@@ -839,7 +852,34 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
 	result.Name = dbReturn.Name
-	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+	result.ShareSettings.ShareGroups = dbReturn.SharedGroups
+
+	return result, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error) {
+	dbReturn := struct {
+		PublicId     string `db:"public_id"`
+		DashboardId  int    `db:"dashboard_id"`
+		Name         string `db:"name"`
+		SharedGroups bool   `db:"shared_groups"`
+	}{}
+
+	// Get the public validator dashboard
+	err := d.alloyReader.Get(&dbReturn, `
+		SELECT public_id, dashboard_id, name, shared_groups
+		FROM users_val_dashboards_sharing
+		WHERE public_id = $1
+	`, publicDashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &t.VDBPublicId{}
+	result.DashboardId = dbReturn.DashboardId
+	result.PublicId = dbReturn.PublicId
+	result.Name = dbReturn.Name
+	result.ShareSettings.ShareGroups = dbReturn.SharedGroups
 
 	return result, nil
 }
@@ -869,7 +909,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t
 	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
 	result.Name = dbReturn.Name
-	result.ShareSettings.GroupNames = dbReturn.SharedGroups
+	result.ShareSettings.ShareGroups = dbReturn.SharedGroups
 
 	return result, nil
 }

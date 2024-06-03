@@ -18,11 +18,12 @@ export interface VDBOverviewValidators {
 }
 export interface VDBOverviewGroup {
   id: number /* uint64 */;
-  name: string;
+  name?: string;
   count: number /* uint64 */;
 }
 export interface VDBOverviewData {
-  groups: VDBOverviewGroup[];
+  name: string;
+  groups?: VDBOverviewGroup[];
   validators: VDBOverviewValidators;
   efficiency: PeriodicValues<number /* float64 */>;
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;

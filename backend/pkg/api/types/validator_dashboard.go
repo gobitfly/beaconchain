@@ -16,12 +16,13 @@ type VDBOverviewValidators struct {
 
 type VDBOverviewGroup struct {
 	Id    uint64 `json:"id"`
-	Name  string `json:"name"`
+	Name  string `json:"name,omitempty"`
 	Count uint64 `json:"count"`
 }
 
 type VDBOverviewData struct {
-	Groups     []VDBOverviewGroup                         `json:"groups"`
+	Name       string                                     `json:"name"`
+	Groups     []VDBOverviewGroup                         `json:"groups,omitempty"`
 	Validators VDBOverviewValidators                      `json:"validators"`
 	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
 	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
