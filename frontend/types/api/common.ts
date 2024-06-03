@@ -97,7 +97,7 @@ export type InternalPostSearchResponse = ApiDataResponse<SearchResult[]>;
 export interface VDBPublicId {
   public_id: string;
   dashboard_id: number /* int */;
-  name: string;
+  name?: string;
   share_settings: {
     share_groups: boolean;
   };

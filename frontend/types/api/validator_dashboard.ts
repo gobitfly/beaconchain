@@ -23,7 +23,7 @@ export interface VDBOverviewGroup {
 }
 export interface VDBOverviewData {
   name: string;
-  groups?: VDBOverviewGroup[];
+  groups: VDBOverviewGroup[];
   validators: VDBOverviewValidators;
   efficiency: PeriodicValues<number /* float64 */>;
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;

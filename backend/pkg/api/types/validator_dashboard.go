@@ -22,7 +22,7 @@ type VDBOverviewGroup struct {
 
 type VDBOverviewData struct {
 	Name       string                                     `json:"name"`
-	Groups     []VDBOverviewGroup                         `json:"groups,omitempty"`
+	Groups     []VDBOverviewGroup                         `json:"groups"`
 	Validators VDBOverviewValidators                      `json:"validators"`
 	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
 	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`

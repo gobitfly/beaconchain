@@ -120,7 +120,7 @@ type InternalPostSearchResponse ApiDataResponse[[]SearchResult]
 type VDBPublicId struct {
 	PublicId      string `json:"public_id"`
 	DashboardId   int    `json:"dashboard_id"`
-	Name          string `json:"name"`
+	Name          string `json:"name,omitempty"`
 	ShareSettings struct {
 		ShareGroups bool `json:"share_groups"`
 	} `json:"share_settings"`
