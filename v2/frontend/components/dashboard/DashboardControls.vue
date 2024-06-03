@@ -128,9 +128,9 @@ const onDelete = () => {
 const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
   if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
-      await fetch(API_PATH.DASHBOARD_EDIT_VALIDATOR, { body: { key }, method: 'DELETE' }, { dashboardKey: key })
+      await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
     } else {
-      await fetch(API_PATH.DASHBOARD_EDIT_ACCOUNT, { body: { key }, method: 'DELETE' }, { dashboardKey: key })
+      await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
     }
 
     await refreshDashboards()

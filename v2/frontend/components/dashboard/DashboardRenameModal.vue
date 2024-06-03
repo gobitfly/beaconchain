@@ -27,9 +27,8 @@ const rename = async () => {
     return
   }
   isLoading.value = true
-  const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_EDIT_VALIDATOR : API_PATH.DASHBOARD_EDIT_ACCOUNT
-  // TODO: validate params once backend is done.
-  await fetch(path, { body: { id: props.value?.dashboard.id, name: name.value } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_RENAME_VALIDATOR : API_PATH.DASHBOARD_RENAME_ACCOUNT
+  await fetch(path, { body: { name: name.value } }, { dashboardKey: `${props.value?.dashboard.id}` })
 
   isLoading.value = false
   dialogRef?.value.close(true)
