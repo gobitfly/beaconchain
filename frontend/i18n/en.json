@@ -41,7 +41,8 @@
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "true": "True",
     "false": "False",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "and_more": "and {count} more"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -143,7 +144,6 @@
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
-      "and_more": "and {count} more",
       "proposal": {
         "proposed": {
           "main": "Block",
@@ -241,6 +241,9 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename": {
+      "title": "Rename Dashboard"
+    },
     "share_dialog": {
       "edit": "Edit Settings",
       "public_dashboard_url": "Public dashboard URL",
@@ -476,8 +479,8 @@
   "header": {
     "current_slot": "Current Slot",
     "current_epoch": "Current Epoch",
-    "login": "Login",
-    "logout": "Logout",
+    "login": "Log in",
+    "logout": "Log out",
     "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
@@ -588,18 +591,16 @@
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
     "excluding_vat": "* All prices are excluding VAT",
+    "per_month": "per month",
+    "amount_per_year": "{amount} yearly",
+    "savings": "You save {amount} a year",
+    "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
+    "per_validator": "{amount} per validator",
+    "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "premium_product": {
       "popular": "Popular!",
-      "per_month": "per month",
-      "yearly": "yearly",
-      "savings": "You save {amount} a year",
-      "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
-      "validators_per_dashboard": {
-        "text": "{amount} Validators per Dashboard",
-        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance"
-      },
-      "per_validator": "{amount} per validator",
+      "validators_per_dashboard": "{amount} Validators per Dashboard",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
       "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
       "timeframe_dashboard_chart_no_timeframe": "Dashboard chart history",
@@ -615,6 +616,19 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
+    },
+    "view_addons": "View Add-Ons",
+    "addons": {
+      "title": "Premium Add-Ons",
+      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
+      "validator_amount": "+{amount} Validators",
+      "per_dashboard": "per Dashboard",
+      "quantity": "Quantity: {quantity}",
+      "button": {
+        "select_addon": "Select Add-On",
+        "manage_addon": "Manage Add-On"
+      },
+      "requires_plan": "requires {name} plan"
     }
   },
   "time_duration": {

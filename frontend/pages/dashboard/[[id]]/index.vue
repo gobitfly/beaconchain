@@ -24,7 +24,7 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-const { refreshOverview } = useValidatorDashboardOverviewStore()
+const { refreshOverview, overview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] }),
   useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
@@ -72,7 +72,7 @@ watch(dashboardKey, (newKey, oldKey) => {
     />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreationDialog()" />
+        <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
       <DashboardControls />

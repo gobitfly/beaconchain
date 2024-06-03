@@ -2,23 +2,24 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
-  SearchbarStyle,
+  SearchbarShape,
+  type SearchbarColors,
   SearchbarPurpose,
   SearchbarPurposeInfo
 } from '~/types/searchbar'
 
 defineProps<{
-    barStyle: SearchbarStyle,
-    barPurpose: SearchbarPurpose
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  barPurpose: SearchbarPurpose
 }>()
-
 </script>
 
 <template>
   <Button v-if="SearchbarPurposeInfo[barPurpose].button === 'add'" class="p-button-icon-only plus">
     <FontAwesomeIcon :icon="faPlus" />
   </Button>
-  <span v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'" class="magnifier-button" :class="barStyle">
+  <span v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'" class="magnifier-button" :class="[barShape,colorTheme]">
     <FontAwesomeIcon :icon="faMagnifyingGlass" />
   </span>
 </template>
@@ -37,27 +38,36 @@ defineProps<{
   border-radius: var(--border-radius);
   cursor: pointer;
 
-  &.gaudy {
+  &.big {
     font-size: 18px;
     color: var(--text-color);
     background-color: transparent;
-    /*&:hover {
-      background-color: var(--dropdown-background-hover);
-    }
-    &:active {
-      background-color: var(--button-color-pressed);
-    }*/
   }
-  &.discreet {
+  &.medium {
     font-size: 15px;
     color: var(--input-placeholder-text-color);
     background-color: transparent;
-    /*&:hover {
-      background-color: var(--searchbar-background-hover-discreet);
-    }
-    &:active {
-      background-color: var(--button-color-pressed);
-    }*/
   }
+  /*
+  &:hover {
+    &.default {
+      background-color: var(--dropdown-background-hover);
+    }
+    &.darkblue {
+      background-color: var(--searchbar-background-hover-darkblue);
+    }
+    &.lightblue {
+      background-color: var(--searchbar-background-hover-lightblue);
+    }
+  }
+  &:active {
+    &.default {
+      background-color: var(--button-color-pressed);
+    }
+    &.darkblue,
+    &.lightblue {
+      background-color: var(--button-color-pressed);
+    }
+  } */
 }
 </style>

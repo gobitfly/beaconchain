@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
-import { SearchbarStyle, type NetworkFilter } from '~/types/searchbar'
+import { SearchbarShape, type SearchbarColors, type SearchbarDropdownLayout, type NetworkFilter } from '~/types/searchbar'
 import { ChainInfo, ChainIDs } from '~/types/networks'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
-  barStyle: SearchbarStyle
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout : SearchbarDropdownLayout
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
@@ -95,7 +97,9 @@ function oneOptionChanged (index : number) {
   <div class="anchor">
     <BcSearchbarFilterButton
       class="head"
-      :bar-style="barStyle"
+      :bar-shape="barShape"
+      :color-theme="colorTheme"
+      :dropdown-layout="dropdownLayout"
       :look="headState.look"
       :state="dropdownIsOpen"
       @change="(open : boolean) => dropdownIsOpen = open"
@@ -111,7 +115,7 @@ function oneOptionChanged (index : number) {
       v-if="dropdownIsOpen"
       ref="dropdown"
       class="dropdown"
-      :class="barStyle"
+      :class="[barShape,colorTheme]"
       @keydown="(e) => {if (e.key === 'Escape') dropdownIsOpen = false}"
     >
       <div v-for="(line, i) of listInDropdown" :key="line.chainId" class="line" @click="oneOptionChanged(i)">
@@ -123,7 +127,7 @@ function oneOptionChanged (index : number) {
           :chain-id="line.chainId"
           :colored="true"
           :harmonize-perceived-size="true"
-          :do-not-adapt-to-color-theme="barStyle==='discreet'"
+          :do-not-adapt-to-color-theme="colorTheme !== 'default'"
           class="icon"
         />
       </div>
@@ -171,15 +175,15 @@ function oneOptionChanged (index : number) {
     padding: var(--padding);
     @include fonts.small_text_bold;
 
-    &.gaudy,
-    &.embedded {
+    &.default {
       background-color: var(--list-background);
       border: 1px solid var(--container-border-color);
       color: var(--text-color);
     }
-    &.discreet {
-      background-color: var(--searchbar-networkdropdown-bgroung-discreet);
-      border: 1px solid var(--searchbar-networkdropdown-border-discreet);
+    &.darkblue,
+    &.lightblue {
+      background-color: var(--searchbar-networkdropdown-bground-blue);
+      border: 1px solid var(--searchbar-networkdropdown-border-blue);
       color: var(--light-black);
     }
 

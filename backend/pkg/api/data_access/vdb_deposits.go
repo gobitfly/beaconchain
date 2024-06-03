@@ -144,7 +144,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 			responseData[i].Depositor = responseData[i].From
 		}
 		if v, ok := mapping.ValidatorIndices[pubkeys[i]]; ok {
-			responseData[i].Index = v
+			responseData[i].Index = &v
 		}
 	}
 	var paging t.Paging
