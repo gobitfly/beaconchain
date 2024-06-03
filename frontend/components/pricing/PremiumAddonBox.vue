@@ -7,7 +7,7 @@ import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
 const { user } = useUserStore()
-const { products } = useProductsStore()
+const { products, bestPremiumProduct } = useProductsStore()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
@@ -123,8 +123,8 @@ const addonButton = computed(() => {
         </div>
       </div>
       <Button :label="addonButton.text" class="select-button" :disabled="addonButton.disabled" />
-      <div class="footer">
-        {{ $t('pricing.addons.requires_plan', {name: products?.premium_products[products?.premium_products.length - 1].product_name}) }}
+      <div v-if="bestPremiumProduct" class="footer">
+        {{ $t('pricing.addons.requires_plan', {name: bestPremiumProduct.product_name}) }}
       </div>
     </div>
   </div>
