@@ -6,18 +6,22 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
+import { smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetwork()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { width } = useWindowSize()
 const { t: $t } = useI18n()
 
-const isSmallScreen = computed(() => width.value <= 1023)
-const isMobile = computed(() => width.value <= 469)
+const colorMode = useColorMode()
+const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
+
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished'
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -39,6 +43,8 @@ const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggleMegaMenu(evt)
 }
 
+const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
+
 const userMenu = computed(() => {
   return [
     {
@@ -47,52 +53,58 @@ const userMenu = computed(() => {
     }
   ]
 })
-
 </script>
 
 <template>
-  <div class="header top">
-    <div class="content">
-      <div class="left-content">
-        <NuxtLink to="/" class="logo">
-          <IconBeaconchainLogo alt="Beaconcha.in logo" />
-          beaconcha.in
-        </NuxtLink>
-        <span v-if="latestState?.current_slot" class="info"><span>{{ $t('header.current_slot') }}</span>:
-          <NuxtLink :to="`/slot/${latestState.current_slot}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+  <div class="anchor" :class="hideInDevelopmentClass">
+    <div class="top-background" />
+    <div class="rows">
+      <div class="grid-cell blockchain-info">
+        <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
+          <BcLink :to="`/slot/${latestState.current_slot}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="latestState.current_slot" />
-          </NuxtLink>
+          </BcLink>
         </span>
-        <span v-if="currentEpoch !== undefined" class="info"><span>{{ $t('header.current_epoch') }}</span>:
-          <NuxtLink :to="`/epoch/${currentEpoch}`" :no-prefetch="true" :disabled="!showInDevelopment || null">
+        <span v-if="currentEpoch !== undefined"><span>{{ $t('header.current_epoch') }}</span>:
+          <BcLink :to="`/epoch/${currentEpoch}`" :disabled="!showInDevelopment || null">
             <BcFormatNumber class="bold" :value="currentEpoch" />
-          </NuxtLink>
+          </BcLink>
         </span>
-        <span v-if="rate" class="info">
+        <span v-if="rate">
           <span>
-            <IconNetworkEthereum class="icon monochromatic" />ETH
+            <IconNetworkEthereum class="network-icon monochromatic" />ETH
           </span>:
           <span> {{ rate.symbol }}
             <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
           </span>
         </span>
       </div>
-      <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="search" bar-style="discreet" />
-      <div class="right-content">
-        <BcCurrencySelection v-if="!isMobile" class="currency" />
+
+      <div class="grid-cell search-bar">
+        <BcSearchbarGeneral
+          v-if="showInDevelopment && !props.isHomePage"
+          class="bar"
+          :bar-shape="SearchbarShape.Medium"
+          :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
+          :screen-width-causing-sudden-change="smallHeaderThreshold"
+        />
+      </div>
+
+      <div class="grid-cell controls">
+        <BcCurrencySelection class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <NuxtLink to="/login">
+          <BcLink to="/login" class="login">
             {{ $t('header.login') }}
-          </NuxtLink>
-          /
-          <NuxtLink to="/register">
+          </BcLink>
+          |
+          <BcLink to="/register">
             <Button class="register" :label="$t('header.register')" />
-          </NuxtLink>
+          </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen">
-          <BcDropdown :options="userMenu" variant="header" option-label="label">
+        <div v-else-if="!isSmallScreen" class="user-menu">
+          <BcDropdown :options="userMenu" variant="header" option-label="label" class="menu-component">
             <template #value>
-              <FontAwesomeIcon class="user-menu-icon" :icon="faCircleUser" />
+              <FontAwesomeIcon class="menu-icon" :icon="faCircleUser" />
             </template>
             <template #option="slotProps">
               <span @click="slotProps.command?.()">
@@ -101,177 +113,227 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <div v-if="isSmallScreen" class="burger" @click.stop.prevent="toggleMegaMenu">
-          <FontAwesomeIcon :icon="faBars" />
-        </div>
+        <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
-    </div>
-  </div>
-  <div class="header bottom">
-    <div class="content">
-      <NuxtLink to="/dashboard" class="logo">
-        <IconBeaconchainLogo alt="Beaconcha.in logo" />
-        beaconcha.in
-      </NuxtLink>
-      <BcHeaderMegaMenu ref="megaMenu" />
-      <BcSearchbarGeneral v-if="showInDevelopment && !props.isHomePage" class="search" bar-style="discreet" />
+
+      <div class="grid-cell logo">
+        <BcLink to="/" class="logo-component">
+          <IconBeaconchainLogo alt="Beaconcha.in logo" />
+          beaconcha.in
+        </BcLink>
+      </div>
+
+      <div class="grid-cell mega-menu">
+        <BcHeaderMegaMenu ref="megaMenu" />
+        <div v-if="isMobileMegaMenuOpen" class="decoration" />
+      </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.header {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--light-grey);
+@use "~/assets/css/fonts.scss";
 
-  &.top {
+// do not change these two values without changing the values in types/header.ts accordingly
+$mobileHeaderThreshold: 470px;
+$smallHeaderThreshold: 1024px;
+
+.anchor {
+  top: -1px;
+  position: relative;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  border-bottom: 1px solid var(--container-border-color);
+  &.hide-because-it-is-unfinished {
+    border-bottom: none;
+  }
+  background-color: var(--container-background);
+  .top-background {
+    position: absolute;
+    width: 100%;
     height: var(--navbar-height);
     background-color: var(--dark-blue);
-
-    .user-menu-icon {
-      width: 19px;
-      height: 18px;
-      color: var(--light-grey);
-    }
-
-    .logo {
-      display: none;
-    }
-
-    @media (max-width: 1023px) {
-
-      .search,
-      .info {
-        display: none;
-      }
-
-      .logo {
-        display: flex;
-      }
-    }
-
-    @media (max-width: 469px) {
-      .currency {
-        display: none;
-      }
-    }
   }
 
-  &.bottom {
-    min-height: var(--navbar2-height);
-    background-color: var(--container-background);
-    color: var(--container-color);
-    border-bottom: 1px solid var(--container-border-color);
-
-    .search {
-      display: none;
+  .rows {
+    position: relative;
+    display: grid;
+    grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
+    grid-template-rows: var(--navbar-height) min-content;
+    @media (max-width: $smallHeaderThreshold) {
+      grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
+      grid-template-rows: var(--navbar-height) min-content;
     }
-
-    @media (max-width: 1023px) {
-      min-height: unset;
-
-      .content {
-        flex-direction: column;
-      }
-
-      .logo {
-        display: none;
-      }
-
-      .search {
-        display: flex;
-        width: 100%;
-        margin-top: var(--content-margin);
-        margin-bottom: var(--content-margin);
-      }
-    }
-  }
-
-  .content {
     width: var(--content-width);
-    margin-left: var(--content-margin);
-    margin-right: var(--content-margin);
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-    margin-top: auto;
-    margin-bottom: auto;
-    vertical-align: middle;
-    align-items: center;
+    color: var(--header-top-font-color);
+    @mixin bottom-cell($row) {
+      color: var(--container-color);
+      grid-row: $row;
+    }
     font-family: var(--main_header_font_family);
     font-size: var(--main_header_font_size);
     font-weight: var(--main_header_font_weight);
-
     .bold {
       font-weight: var(--main_header_bold_font_weight);
     }
-
-    .left-content {
+    .grid-cell {
+      position: relative;
       display: flex;
+      margin-top: auto;
+      margin-bottom: auto;
       align-items: center;
-      gap: var(--padding-large);
+      vertical-align: middle;
+      height: 100%;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      gap: var(--padding);
+    }
 
-      .icon {
+    .blockchain-info {
+      @media (min-width: $smallHeaderThreshold) {
+        grid-row: 1;
+        grid-column: 2;
+        grid-column-end: span 2;
+      }
+      @media (max-width: $smallHeaderThreshold) {
+        display: none;
+      }
+      margin-right: var(--padding-large);
+      .network-icon {
         height: 14px;
         width: auto;
         margin-right: var(--padding-small);
       }
-
     }
 
-    .right-content {
-      display: flex;
-      align-items: center;
-      gap: var(--padding);
+    .search-bar {
+      grid-row: 1;
+      grid-column: 4;
+      @media (max-width: $smallHeaderThreshold) {
+        @include bottom-cell(3);
+        grid-column: 2;
+        grid-column-end: span 3;
+      }
+      .bar {
+        position: relative;
+        width: 100%;
+        @media (min-width: $smallHeaderThreshold) {
+          max-width: 460px;
+        }
+        margin-top: var(--content-margin);
+        margin-bottom: var(--content-margin);
+      }
+    }
 
+    .controls {
+      user-select: none;
+      grid-row: 1;
+      grid-column: 5;
+      @media (max-width: $smallHeaderThreshold) {
+        grid-column: 4;
+      }
+      justify-content: right;
+
+      .currency {
+        @media (max-width: $mobileHeaderThreshold) {
+          display: none;
+        }
+        color: var(--header-top-font-color);
+      }
       .logged-out {
         white-space: nowrap;
         display: flex;
         align-items: center;
         gap: var(--padding-small);
-
+        .login {
+          font-weight: var(--main_header_bold_font_weight);
+        }
         .register {
           padding: 8px;
         }
       }
-    }
-  }
-
-  .logo {
-    display: flex;
-    align-items: flex-end;
-    gap: var(--padding);
-    font-family: var(--logo_font_family);
-    font-size: var(--logo_font_size);
-    font-weight: var(--logo_font_weight);
-    letter-spacing: var(--logo_letter_spacing);
-    line-height: 20px;
-
-    @media (max-width: 1359px) {
-      font-size: var(--logo_small_font_size);
-      letter-spacing: var(--logo_small_letter_spacing);
-      gap: 6px;
-      align-items: center;
-
-      svg {
-        height: 18px;
-        margin-bottom: 7px;
+      .user-menu {
+        @media (max-width: $smallHeaderThreshold) {
+          display: none;
+        }
+        .menu-component {
+          padding-right: 0px;
+          color: var(--header-top-font-color);
+          .menu-icon {
+            color: var(--header-top-font-color);
+            width: 19px;
+            height: 18px;
+          }
+        }
+      }
+      .burger {
+        @media (min-width: $smallHeaderThreshold) {
+          display: none;
+        }
+        height: 24px;
+        cursor: pointer;
       }
     }
 
-  }
+    .logo {
+      grid-column: 2;
+      @media (min-width: $smallHeaderThreshold) {
+        @include bottom-cell(2);
+      }
+      @media (max-width: $smallHeaderThreshold) {
+        grid-row: 1;
+      }
+      .logo-component {
+        display: flex;
+        align-items: flex-end;
+        gap: var(--padding);
+        font-family: var(--logo_font_family);
+        font-size: var(--logo_font_size);
+        font-weight: var(--logo_font_weight);
+        letter-spacing: var(--logo_letter_spacing);
+        line-height: 20px;
+        @media (max-width: 1359px) {
+          font-size: var(--logo_small_font_size);
+          letter-spacing: var(--logo_small_letter_spacing);
+          gap: 6px;
+          align-items: center;
+          svg {
+            height: 18px;
+            margin-bottom: 7px;
+          }
+        }
+      }
+    }
 
-  .burger {
-    cursor: pointer;
+    .mega-menu {
+      position: relative;
+      @media (min-width: $smallHeaderThreshold) {
+        grid-column: 3;
+        grid-column-end: span 3;
+        @include bottom-cell(2);
+        justify-content: flex-end;
+        .decoration {
+          display: none;
+        }
+      }
+      @media (max-width: $smallHeaderThreshold) {
+        grid-row: 2;
+        grid-column: 1;
+        grid-column-end: span 5;
+        .decoration {
+          position: absolute;
+          top: 0px;
+          bottom: -1px;
+          left: calc(1px - var(--content-margin));
+          right: calc(1px - var(--content-margin));
+          border-bottom-left-radius: var(--border-radius);
+          border-bottom-right-radius: var(--border-radius);
+          border: 1px solid var(--primary-color);
+          border-top: none;
+        }
+      }
+    }
   }
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 </style>

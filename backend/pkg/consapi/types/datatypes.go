@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+type ValidatorIndex = uint64
 type ValidatorStatus string
 
 func (s ValidatorStatus) IsActive() bool {
