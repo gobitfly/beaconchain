@@ -184,7 +184,7 @@ const addonButton = computed(() => {
         font-size: 20px;
         font-weight: 600;
 
-        &[isYearly] {
+        &[yearly] {
           font-size: 17px;
           font-weight: 500;
         }
@@ -275,7 +275,7 @@ const addonButton = computed(() => {
         .month {
           font-size: 12px;
 
-          &[isYearly] {
+          &[yearly] {
             font-size: 10px;
           }
         }
@@ -288,7 +288,7 @@ const addonButton = computed(() => {
       .saving-info {
         height: 21px;
         gap: 4px;
-        font-size: 12px;
+        font-size: 10px;
         margin-bottom: 17px;
       }
 
@@ -301,6 +301,8 @@ const addonButton = computed(() => {
         height: 30px;
         font-size: 14px;
         margin-bottom: 10px;
+        padding-left: 10px;
+        padding-right: 10px;
       }
 
       .footer {
