@@ -174,7 +174,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart v-if="showInDevelopment" />
+          <DashboardChartSummaryChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>
