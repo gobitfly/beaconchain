@@ -230,6 +230,20 @@ func (d *DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary)
 	return nil
 }
 
+func (d *DataAccessService) UpdateValidatorDashboardName(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
+	result := &t.VDBPostReturnData{}
+
+	err := d.alloyWriter.Get(result, `
+		UPDATE users_val_dashboards SET name = $1 WHERE id = $2
+		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
+	`, name, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
 	validators, err := d.getDashboardValidators(dashboardId)
 	if err != nil {
