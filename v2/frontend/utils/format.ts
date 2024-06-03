@@ -194,3 +194,7 @@ export function formatFiat (value:number, currency: string, locales: string, min
 
   return formatter.format(value)
 }
+
+export const formatPremiumProductPrice = (t: ComposerTranslation, price: number, digits?: number) => {
+  return formatFiat(price, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
+}
