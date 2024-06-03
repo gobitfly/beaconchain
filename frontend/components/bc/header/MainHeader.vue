@@ -6,12 +6,13 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetwork()
+const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()
@@ -72,7 +73,7 @@ const userMenu = computed(() => {
         </span>
         <span v-if="rate">
           <span>
-            <IconNetworkEthereum class="network-icon monochromatic" />ETH
+            <IconNetwork :chain-id="currentNetwork" :colored="false" />{{ networkInfo.elCurrency }}
           </span>:
           <span> {{ rate.symbol }}
             <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />

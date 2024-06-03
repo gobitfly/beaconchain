@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { API_PATH } from '~/types/customFetch'
+import type { ApiDataResponse } from '~/types/api/common'
 import { ChainIDs, ChainInfo, sortChainIDsByPriority } from '~/types/networks'
 
 const { fetch } = useCustomFetch()
@@ -19,8 +20,8 @@ const networkStore = defineStore('network-store', () => {
 
 const { data: dataInternal } = storeToRefs(networkStore())
 
-dataInternal.value!.availableNetworks = await fetch<ApiChainInfo[]>(API_PATH.AVAILABLE_NETWORKS)
-dataInternal.value!.currentNetwork = getAvailableNetworks()[0] // the network by default is the preferred one in the list ("preferred" in the sense that it has the best priority in file networks.ts)
+dataInternal.value!.availableNetworks = (await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)).data
+dataInternal.value!.currentNetwork = getAvailableNetworks()[0] // the network with the best priority in file `networks.ts` is chosen by default from the list
 
 function getAvailableNetworks () : ChainIDs[] {
   return sortChainIDsByPriority(dataInternal.value!.availableNetworks.map(apiInfo => apiInfo.chain_id))
@@ -29,11 +30,12 @@ function getAvailableNetworks () : ChainIDs[] {
 export function useNetworkStore () {
   const { data } = storeToRefs(networkStore())
 
+  const currentNetwork = computed(() => data.value!.currentNetwork)
+  const networkInfo = computed(() => ChainInfo[currentNetwork.value])
+
   function setCurrentNetwork (network: ChainIDs) {
     data.value!.currentNetwork = network
   }
-
-  const currentNetwork = computed(() => data.value!.currentNetwork)
 
   function epochsPerDay (): number {
     const info = ChainInfo[data.value!.currentNetwork]
@@ -80,6 +82,7 @@ export function useNetworkStore () {
   return {
     getAvailableNetworks,
     currentNetwork,
+    networkInfo,
     setCurrentNetwork,
     epochsPerDay,
     epochToTs,
