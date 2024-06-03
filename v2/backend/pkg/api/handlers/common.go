@@ -51,7 +51,7 @@ var allNetworks []types.NetworkInfo
 
 var (
 	// Subject to change, just examples
-	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
+	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
 	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
@@ -259,11 +259,11 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
 		if err != nil {
 			return nil, err
 		}
-		return &types.VDBId{Id: dashboardInfo.Id, Validators: nil}, nil
+		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
 		validators, err := h.dai.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
