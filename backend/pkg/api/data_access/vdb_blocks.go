@@ -369,19 +369,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		if proposal.Status == 0 || proposal.Status == 2 {
 			continue
 		}
-		data[i].Graffiti = proposal.GraffitiText
+		graffiti := proposal.GraffitiText
+		data[i].Graffiti = &graffiti
 		if proposal.Status == 3 {
 			continue
 		}
-		data[i].Block = uint64(proposal.Block.Int64)
+		block := uint64(proposal.Block.Int64)
+		data[i].Block = &block
+		var reward t.ClElValue[decimal.Decimal]
 		if proposal.Reward.Valid {
-			data[i].RewardRecipient.Hash = t.Hash(hexutil.Encode(proposal.FeeRecipient))
+			rewardRecp := t.Address{
+				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
+			}
+			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
-			data[i].Reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
+			reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
 		}
 		if proposal.ClReward.Valid {
-			data[i].Reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
+		data[i].Reward = &reward
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()
@@ -390,7 +397,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 	log.Debugf("=== getting ens names took %s", time.Since(startTime))
 	for i := range data {
-		data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
+		if data[i].RewardRecipient != nil {
+			data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
+		}
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required

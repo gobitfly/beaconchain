@@ -22,8 +22,9 @@ type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
 type VDBId struct {
-	Validators VDBIdValidatorSet // if this is nil, then use the id
-	Id         VDBIdPrimary
+	Validators      VDBIdValidatorSet // if this is nil, then use the id
+	Id              VDBIdPrimary
+	AggregateGroups bool
 }
 
 // could replace if we want the import in all files

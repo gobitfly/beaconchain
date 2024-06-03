@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import {
-  SearchbarStyle
+  SearchbarShape,
+  type SearchbarColors,
+  type SearchbarDropdownLayout
 } from '~/types/searchbar'
 
 defineProps<{
-  barStyle : SearchbarStyle,
-  state? : boolean,
-  look? : 'on'|'off' // forces the look of the button statically instead of having the color changing with its state
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
+  state?: boolean,
+  look?: 'on'|'off' // forces the look of the button statically instead of having the color changing with its state
 }>()
 
 const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
 </script>
 
 <template>
-  <label class="frame" :class="[barStyle, look]">
+  <label class="frame" :class="[barShape,colorTheme,dropdownLayout,look]">
     <input
       type="checkbox"
       class="hidden-checkbox"
@@ -48,13 +52,12 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   text-align: center;
   transition: 0.2s;
   @include fonts.small_text_bold;
-  @media (max-width: 599.9px) { // mobile
+  &.narrow-dropdown {
     letter-spacing: -0.02em;
   }
   white-space: nowrap;
   overflow: clip;
-  &.gaudy,
-  &.embedded {
+  &.default {
     border: 1px solid var(--container-border-color);
   }
 
@@ -67,8 +70,7 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   &:not(.off) {
     &.on,
     &:has(.hidden-checkbox:checked) {
-      &.gaudy,
-      &.embedded {
+      &.default {
         border: 1px solid var(--button-color-active);
       }
       background-color: var(--button-color-active);
@@ -84,16 +86,17 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   }
 
   &:not(.on) {
-    &.discreet {
+    &.darkblue,
+    &.lightblue {
       background-color: var(--light-grey);
     }
     @media (hover: hover) {
       &:hover {
-        &.gaudy,
-        &.embedded {
+        &.default {
           background-color: var(--container-border-color);
         }
-        &.discreet {
+        &.darkblue,
+        &.lightblue {
           background-color: var(--light-grey-3);
         }
       }
@@ -103,11 +106,11 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
     }
   }
 
-  &.gaudy,
-  &.embedded {
+  &.default {
     color: var(--text-color);
   }
-  &.discreet {
+  &.darkblue,
+  &.lightblue {
     color: var(--light-black);
   }
 }
