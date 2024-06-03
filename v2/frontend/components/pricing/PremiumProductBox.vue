@@ -6,6 +6,7 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
+const { bestPremiumProduct } = useProductsStore()
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { products } = useProductsStore()
@@ -35,14 +36,22 @@ const prices = computed(() => {
 })
 
 const percentages = computed(() => {
-  // compare with the last product in the list
-  const compareProduct = products.value?.premium_products[products.value.premium_products.length - 1]
+  if (bestPremiumProduct?.value === undefined) {
+    return {
+      validatorDashboards: 100,
+      validatorsPerDashboard: 100,
+      summaryChart: 100,
+      heatmapChart: 100
+    }
+  }
+
+  const bestProduct = bestPremiumProduct.value
 
   return {
-    validatorDashboards: props.product.premium_perks.validator_dashboards / (compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
-    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
-    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
-    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+    validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
+    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
+    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (bestProduct.premium_perks.summary_chart_history_seconds) * 100,
+    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (bestProduct.premium_perks.heatmap_history_seconds) * 100
   }
 })
 

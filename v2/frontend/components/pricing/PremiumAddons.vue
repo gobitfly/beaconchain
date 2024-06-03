@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 const { t: $t } = useI18n()
-const { products } = useProductsStore()
+const { products, bestPremiumProduct } = useProductsStore()
 const { user } = useUserStore()
 
 interface Props {
@@ -9,7 +9,11 @@ interface Props {
 defineProps<Props>()
 
 const addonsAvailable = computed(() => {
-  return user.value?.subscriptions.find(sub => sub.product_id === products?.value?.premium_products[products?.value.premium_products.length - 1].product_id) !== undefined
+  if (!products?.value?.premium_products || !bestPremiumProduct?.value) {
+    return false
+  }
+
+  return user.value?.subscriptions.find(sub => sub.product_id === bestPremiumProduct.value?.product_id) !== undefined
 })
 </script>
 
