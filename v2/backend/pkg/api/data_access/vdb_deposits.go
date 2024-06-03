@@ -322,24 +322,23 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 
 	query := `
 			SELECT
-				COALESCE(SUM(ed.amount), 0)
+				COALESCE(SUM(amount), 0)
 		`
 
 	var filter interface{}
 	if dashboardId.Validators != nil {
 		query += `
 			FROM
-				eth1_deposits ed
+				eth1_deposits
 			WHERE
-				ed.publickey = ANY ($1)`
+				publickey = ANY ($1)`
 		filter = byteaArray
 	} else {
 		query += `
 			FROM
-				cached_eth1_deposits_lookup cedl
-			INNER JOIN eth1_deposits ed ON ed.block_number = cedl.block_number AND ed.log_index = cedl.log_index
+				cached_eth1_deposits_lookup
 			WHERE
-				cedl.dashboard_id = $1`
+				dashboard_id = $1`
 		filter = dashboardId.Id
 	}
 
@@ -367,25 +366,23 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 
 	query := `
 			SELECT
-				COALESCE(SUM(bd.amount), 0)
+				COALESCE(SUM(amount), 0)
 		`
 
 	var filter interface{}
 	if dashboardId.Validators != nil {
 		query += `
 			FROM
-				blocks_deposits bd
+				blocks_deposits
 			WHERE
-				bd.publickey = ANY ($1)`
+				publickey = ANY ($1)`
 		filter = byteaArray
 	} else {
 		query += `
 			FROM
-				cached_blocks_deposits_lookup cbdl
-				INNER JOIN blocks_deposits bd ON bd.block_slot = cbdl.block_slot
-					AND bd.block_index = cbdl.block_index
+				cached_blocks_deposits_lookup
 			WHERE
-				cbdl.dashboard_id = $1`
+				dashboard_id = $1`
 		filter = dashboardId.Id
 	}
 
