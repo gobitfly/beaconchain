@@ -26,6 +26,7 @@ const isValidatorDashboard = route.name === 'dashboard-id'
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
 const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
 
@@ -130,7 +131,12 @@ const editDashboard = () => {
       dashboard,
       dashboardType: dashboardType.value
     },
-    onClose: (value?: DynamicDialogCloseOptions | undefined) => !!value && refreshDashboards()
+    onClose: (value?: DynamicDialogCloseOptions | undefined) => {
+      if (value?.data === true) {
+        refreshDashboards()
+        refreshOverview(dashboardKey.value)
+      }
+    }
   })
 }
 
