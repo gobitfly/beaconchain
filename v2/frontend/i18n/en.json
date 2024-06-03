@@ -479,8 +479,8 @@
   "header": {
     "current_slot": "Current Slot",
     "current_epoch": "Current Epoch",
-    "login": "Login",
-    "logout": "Logout",
+    "login": "Log in",
+    "logout": "Log out",
     "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
