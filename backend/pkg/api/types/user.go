@@ -35,12 +35,14 @@ type ProductSummary struct {
 type InternalGetProductSummaryResponse ApiDataResponse[ProductSummary]
 
 type ApiProduct struct {
-	ProductId        string   `json:"product_id"`
-	ProductName      string   `json:"product_name"`
-	ApiPerks         ApiPerks `json:"api_perks"`
-	PricePerYearEur  float64  `json:"price_per_year_eur"`
-	PricePerMonthEur float64  `json:"price_per_month_eur"`
-	IsPopular        bool     `json:"is_popular"`
+	ProductId            string   `json:"product_id"`
+	ProductName          string   `json:"product_name"`
+	ApiPerks             ApiPerks `json:"api_perks"`
+	PricePerYearEur      float64  `json:"price_per_year_eur"`
+	PricePerMonthEur     float64  `json:"price_per_month_eur"`
+	IsPopular            bool     `json:"is_popular"`
+	StripePriceIdMonthly string   `json:"stripe_price_id_monthly"`
+	StripePriceIdYearly  string   `json:"stripe_price_id_yearly"`
 }
 
 type ApiPerks struct {

@@ -36,6 +36,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 
 	// TODO:patrick - remove this test route
 	router.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 
 	addRoutes(handlerService, publicRouter, internalRouter, debug)
 
@@ -46,20 +47,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	_, err := w.Write([]byte(fmt.Sprintf(`
-<div>hello</div>
-<pre>
-Stripe.PublicKey         %[2]s
-Stripe.Guppy             %[3]s
-Stripe.Dolphin           %[4]s
-Stripe.Orca              %[5]s
-Stripe.VdbAddon1k        %[6]s
-Stripe.VdbAddon10k       %[7]s
-Stripe.GuppyYearly       %[8]s
-Stripe.DolphinYearly     %[9]s
-Stripe.OrcaYearly        %[10]s
-Stripe.VdbAddon1kYearly  %[11]s
-Stripe.VdbAddon10kYearly %[12]s
-</pre>
+<pre id="userInfo"></pre>
 
 <form class="manage-billing-form">
 <input type="hidden" name="x" value="y">
@@ -73,13 +61,71 @@ Stripe.VdbAddon10kYearly %[12]s
 <button id="orca"           class="purchase">purchase orca</button>
 <button id="orca.yearly"    class="purchase">purchase orca.yearly</button>
 
-
-<h3>/api/i/users/me</h3>
-<pre id="users-me-res"></pre>
-
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-fetch('/api/i/users/me',{headers:{'Authorization':'Bearer %[1]s'}}).then((r)=>r.json()).then((d)=>document.getElementById('users-me-res').innerText=JSON.stringify(d, null, 2))
+var config = {
+	betaKey  	     : "%[1]s",
+	publicKey        : "%[2]s"
+	guppy            : "%[3]s"
+	dolphin          : "%[4]s"
+	orca             : "%[5]s"
+	vdbAddon1k       : "%[6]s"
+	vdbAddon10k      : "%[7]s"
+	guppyYearly      : "%[8]s"
+	dolphinYearly    : "%[9]s"
+	orcaYearly       : "%[10]s"
+	vdbAddon1kYearly : "%[11]s"
+	vdbAddon10kYearly: "%[12]s"
+}
+
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
+	console.log('userInfo',d)
+	document.getElementById('userInfo').innerText = JSON.stringify(d, null, 2)
+}).catch(err => {
+	console.error("error getting api user me", err)
+})
+
+function handleFetchResult(result) {
+	if (!result.ok) {
+		return result.json().then(function (json) {
+			if (json.error && json.error.message) {
+				throw new Error(result.url + ' ' + result.status + ' ' + json.error.message)
+			}
+		})
+	}
+	return result.json()
+}
+
+function createCheckoutSession(priceId) {
+	var csrfToken = ""
+	if (document.getElementsByName("CsrfField").length) {
+		csrfToken = document.getElementsByName("CsrfField")[0].value
+	}
+	return fetch("/user/stripe/create-checkout-session", {
+		method: "POST",
+		headers: { 
+			"Content-Type": "application/json",
+			// "X-CSRF-Token": csrfToken
+		},
+		credentials: 'include',
+		body: JSON.stringify({ priceId: priceId })
+	})
+	.then(handleFetchResult)
+	.catch(err => {
+		console.error("error posting to create checkout session endpoint", err)
+	})
+}
+
+function setupStripe() {
+	var stripe = Stripe(config.publicKey)
+	document.getElementById('guppy').addEventListener('click', function() {
+		createCheckoutSession(config.guppy).then((d) => {
+			stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
+				console.error("error redirecting to stripe checkout", err)
+			})
+		})
+	})
+}
 </script>
 `,
 		utils.Config.ApiKeySecret,
