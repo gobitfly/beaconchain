@@ -68,9 +68,9 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         <Button label="Header Prop Modal" @click="headerPropModalVisibility = true" />
         <Button label="Slots Modal" @click="slotModalVisibility = true" />
         <Button>
-          <NuxtLink to="/dashboard">
+          <BcLink to="/dashboard">
             Dashboard Link
-          </NuxtLink>
+          </BcLink>
         </Button>
         <Button disabled>
           Disabled

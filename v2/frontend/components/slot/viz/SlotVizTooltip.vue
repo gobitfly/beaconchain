@@ -179,25 +179,25 @@ const data = computed(() => {
               <span :class="row.class">{{ row.dutyText }}</span>
               <div v-if="row.validators?.length" class="validators">
                 <span v-for="(validator, vIndex) in row.validators" :key="validator">
-                  <NuxtLink :to="`/validator/${validator}`" target="_blank" class="link">
+                  <BcLink :to="`/validator/${validator}`" target="_blank" class="link">
                     {{ validator }}
-                  </NuxtLink>
+                  </BcLink>
                   <span v-if="vIndex < row.validators.length -1 || row.andMore">, </span>
                 </span>
-                <span v-if="row.andMore"> ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }} </span>
+                <span v-if="row.andMore"> ...{{ $t('common.and_more', { count: row.andMore }) }} </span>
               </div>
               <div v-if="row.duties" class="duties">
                 <div v-for="(duty, d_index) in row.duties" :key="d_index">
-                  <NuxtLink :to="`/validator/${duty.validator}`" target="_blank" class="link">
+                  <BcLink :to="`/validator/${duty.validator}`" target="_blank" class="link">
                     {{ duty.validator }}
-                  </NuxtLink>
+                  </BcLink>
                   <span class="sub-text"> {{ duty.dutySubText }} </span>
-                  <NuxtLink v-if="duty.dutySubLink" :to="duty.dutySubLink" target="_blank" class="link">
+                  <BcLink v-if="duty.dutySubLink" :to="duty.dutySubLink" target="_blank" class="link">
                     {{ duty.duty_object }}
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div v-if="row.andMore">
-                  ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }}
+                  ...{{ $t('common.and_more', { count: row.andMore }) }}
                 </div>
               </div>
             </div>

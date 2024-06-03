@@ -86,7 +86,7 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
     if (maxDecimalCount === 0) {
       return '<1'
     }
-    return `<0.${nZeros(minDecimalCount - 1)}1`
+    return `<0.${nZeros(maxDecimalCount - 1)}1`
   }
   const left = commmifyLeft(split[0])
   if (!dec?.length) {
