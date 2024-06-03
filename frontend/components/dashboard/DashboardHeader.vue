@@ -14,6 +14,11 @@ import { DashboardRenameModal } from '#components'
 const { width } = useWindowSize()
 const dialog = useDialog()
 
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
+
 const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -21,9 +26,9 @@ const isValidatorDashboard = route.name === 'dashboard-id'
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
-const { dashboardKey, dashboardType, setDashboardKey, isPrivate, isPublic, isShared } = useDashboardKey()
-const { overview } = useValidatorDashboardOverviewStore()
+const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -112,7 +117,7 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  return (isShared.value && isPublic.value) ? overview.value?.name : getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
 
 const editDashboard = () => {
@@ -126,7 +131,12 @@ const editDashboard = () => {
       dashboard,
       dashboardType: dashboardType.value
     },
-    onClose: (value?: DynamicDialogCloseOptions | undefined) => !!value && refreshDashboards()
+    onClose: (value?: DynamicDialogCloseOptions | undefined) => {
+      if (value?.data === true) {
+        refreshDashboards()
+        refreshOverview(dashboardKey.value)
+      }
+    }
   })
 }
 
