@@ -57,7 +57,7 @@ const publishDisabled = computed(() => {
 })
 
 const share = () => {
-  dashboardName.value = removeLeadingAndTrailingWhitespace(dashboardName.value)
+  dashboardName.value = dashboardName.value.trim()
   if (publishDisabled.value) {
     return
   }

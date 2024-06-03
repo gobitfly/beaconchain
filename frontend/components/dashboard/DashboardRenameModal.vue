@@ -27,7 +27,7 @@ const renameDisabled = computed(() => {
 })
 
 const rename = async () => {
-  name.value = removeLeadingAndTrailingWhitespace(name.value)
+  name.value = name.value.trim()
 
   if (renameDisabled.value) {
     return
