@@ -95,11 +95,6 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
-	// TODO: A pointless replace?
-	if dashboardId.Validators == nil {
-		filterFragment = strings.Replace(filterFragment, "ed.", "cedl.", -1)
-	}
-
 	params = append(params, limit+1)
 	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
 
@@ -401,11 +396,7 @@ func (d *DataAccessService) getValidatorPubkeys(dashboardId t.VDBId) (pq.ByteaAr
 	var byteaArray pq.ByteaArray
 
 	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
