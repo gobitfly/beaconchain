@@ -29,7 +29,7 @@ const continueDisabled = computed(() => {
 })
 
 const next = () => {
-  name.value = removeLeadingAndTrailingWhitespace(name.value)
+  name.value = name.value.trim()
   if (continueDisabled.value) {
     return
   }
