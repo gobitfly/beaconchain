@@ -18,7 +18,7 @@ export interface VDBOverviewValidators {
 }
 export interface VDBOverviewGroup {
   id: number /* uint64 */;
-  name?: string;
+  name: string;
   count: number /* uint64 */;
 }
 export interface VDBOverviewData {

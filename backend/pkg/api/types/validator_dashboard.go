@@ -16,7 +16,7 @@ type VDBOverviewValidators struct {
 
 type VDBOverviewGroup struct {
 	Id    uint64 `json:"id"`
-	Name  string `json:"name,omitempty"`
+	Name  string `json:"name"`
 	Count uint64 `json:"count"`
 }
 
