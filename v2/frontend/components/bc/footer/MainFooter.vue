@@ -15,8 +15,10 @@
 
 <style lang="scss" scoped>
 .main-footer {
-  width: 100%;
   display: flex;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
   flex-direction: column;
   gap: var(--padding-large);
   padding-top: var(--padding-large);
@@ -34,6 +36,7 @@
 
   .links {
     display: flex;
+    position: relative;
 
     @media (min-width: 600px) { // large screen
       justify-content: center;
@@ -50,6 +53,7 @@
 
   .very-last-line {
     display: flex;
+    position: relative;
     flex-direction: row;
     padding-bottom: 13px;
 
