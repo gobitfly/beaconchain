@@ -832,9 +832,10 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 	return err
 }
 
-func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
+		DashboardId  int    `db:"dashboard_id"`
 		Name         string `db:"name"`
 		SharedGroups bool   `db:"shared_groups"`
 	}{}
@@ -843,14 +844,15 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 	err := d.alloyWriter.Get(&dbReturn, `
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
 			VALUES ($1, $2, $3)
-		RETURNING public_id, name, shared_groups
-	`, dashboardId, name, showGroupNames)
+		RETURNING public_id, dashboard_id, name, shared_groups
+	`, dashboardId, name, shareGroups)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
+	result.DashboardId = dbReturn.DashboardId
 	result.Name = dbReturn.Name
 	result.ShareSettings.ShareGroups = dbReturn.SharedGroups
 
@@ -884,7 +886,7 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(publicDashboardId t.VD
 	return result, nil
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
 		Name         string `db:"name"`
@@ -898,7 +900,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(publicDashboardId t
 			shared_groups = $2
 		WHERE public_id = $3
 		RETURNING public_id, name, shared_groups
-	`, name, showGroupNames, publicDashboardId)
+	`, name, shareGroups, publicDashboardId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%w: public dashboard id %v not found", ErrNotFound, publicDashboardId)

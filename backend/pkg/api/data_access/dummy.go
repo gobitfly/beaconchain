@@ -145,7 +145,7 @@ func (d *DummyService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPri
 	return nil
 }
 
-func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+func (d *DummyService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -157,7 +157,7 @@ func (d *DummyService) GetValidatorDashboardPublicId(publicDashboardId t.VDBIdPu
 	return &r, err
 }
 
-func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error) {
+func (d *DummyService) UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	r := t.VDBPublicId{}
 	err := commonFakeData(&r)
 	return &r, err

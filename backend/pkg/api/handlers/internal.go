@@ -464,9 +464,9 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		Name          string `json:"name"`
+		Name          string `json:"name,omitempty"`
 		ShareSettings struct {
-			GroupNames bool `json:"group_names"`
+			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
@@ -478,7 +478,7 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 		handleErr(w, v)
 		return
 	}
-	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardId, name, req.ShareSettings.GroupNames)
+	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
 		handleErr(w, err)
 		return
