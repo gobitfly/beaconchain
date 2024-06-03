@@ -10,8 +10,8 @@ defineProps<Props>()
 </script>
 <template>
   <BcTooltip v-if="status === 'success' && reward" class="combine-rewards">
-    <BcFormatValue :value="reward?.el" />
-    <BcFormatValue :value="reward?.cl" />
+    <BcFormatValue :value="reward?.el" :no-tooltip="true" />
+    <BcFormatValue :value="reward?.cl" :no-tooltip="true" />
     <template #tooltip>
       <div>
         <div class="tt-row">

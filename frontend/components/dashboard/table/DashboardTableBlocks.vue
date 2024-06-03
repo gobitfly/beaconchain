@@ -250,7 +250,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.proposer_rewards') }}:
                   </div>
-                  <BlockTableRewardItem :reward="slotProps.data.reward" :statu="slotProps.data.status" />
+                  <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
                 </div>
                 <div class="row">
                   <div class="label">

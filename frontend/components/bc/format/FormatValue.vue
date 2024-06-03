@@ -7,7 +7,8 @@ interface Props {
   options?: ValueConvertOptions
   useColors?: boolean
   positiveClass?: string
-  negativeClass?: string
+  negativeClass?: string,
+  noTooltip?: boolean
 }
 const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive', negativeClass: 'negative' })
 
@@ -33,7 +34,7 @@ const data = computed(() => {
   return {
     labelClass,
     label,
-    tooltip: res.fullLabel
+    tooltip: props.noTooltip ? '' : res.fullLabel
   }
 })
 
