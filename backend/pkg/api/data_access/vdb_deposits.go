@@ -30,24 +30,10 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		}
 	}
 
-	var byteaArray pq.ByteaArray
-
 	// Resolve validator indices to pubkeys
-	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
-		}
-
-		// Convert pubkeys to bytes for PostgreSQL
-		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
-		for i, p := range validatorPubkeys {
-			byteaArray[i], _ = hexutil.Decode(p)
-		}
+	byteaArray, err := d.getValidatorPubkeys(dashboardId)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Custom type for log_index
@@ -200,24 +186,10 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		}
 	}
 
-	var byteaArray pq.ByteaArray
-
 	// Resolve validator indices to pubkeys
-	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
-		}
-
-		// Convert pubkeys to bytes for PostgreSQL
-		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
-		for i, p := range validatorPubkeys {
-			byteaArray[i], _ = hexutil.Decode(p)
-		}
+	byteaArray, err := d.getValidatorPubkeys(dashboardId)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Custom type for block_index
@@ -339,24 +311,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 		TotalAmount: decimal.Zero,
 	}
 
-	var byteaArray pq.ByteaArray
-
 	// Resolve validator indices to pubkeys
-	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
-		}
-
-		// Convert pubkeys to bytes for PostgreSQL
-		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
-		for i, p := range validatorPubkeys {
-			byteaArray[i], _ = hexutil.Decode(p)
-		}
+	byteaArray, err := d.getValidatorPubkeys(dashboardId)
+	if err != nil {
+		return nil, err
 	}
 
 	query := `
@@ -383,7 +341,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 	}
 
 	var data int64
-	err := db.AlloyReader.Get(&data, query, filter)
+	err = db.AlloyReader.Get(&data, query, filter)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -398,24 +356,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 		TotalAmount: decimal.Zero,
 	}
 
-	var byteaArray pq.ByteaArray
-
 	// Resolve validator indices to pubkeys
-	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
-		}
-
-		// Convert pubkeys to bytes for PostgreSQL
-		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
-		for i, p := range validatorPubkeys {
-			byteaArray[i], _ = hexutil.Decode(p)
-		}
+	byteaArray, err := d.getValidatorPubkeys(dashboardId)
+	if err != nil {
+		return nil, err
 	}
 
 	query := `
@@ -443,7 +387,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 	}
 
 	var data int64
-	err := db.AlloyReader.Get(&data, query, filter)
+	err = db.AlloyReader.Get(&data, query, filter)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -451,4 +395,26 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
 
 	return &responseData, nil
+}
+
+func (d *DataAccessService) getValidatorPubkeys(dashboardId t.VDBId) (pq.ByteaArray, error) {
+	var byteaArray pq.ByteaArray
+
+	if dashboardId.Validators != nil {
+		validatorsArray := make([]uint64, len(dashboardId.Validators))
+		for i, v := range dashboardId.Validators {
+			validatorsArray[i] = v.Index
+		}
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
+		}
+
+		// Convert pubkeys to bytes for PostgreSQL
+		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
+		for i, p := range validatorPubkeys {
+			byteaArray[i], _ = hexutil.Decode(p)
+		}
+	}
+	return byteaArray, nil
 }
