@@ -12,8 +12,11 @@ import (
 type ValidatorDashboardRepository interface {
 	GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error)
 	GetValidatorDashboardInfoByPublicId(publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error)
+	GetValidatorDashboardName(dashboardId t.VDBIdPrimary) (string, error)
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error)
 	RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error
+
+	UpdateValidatorDashboardName(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error)
 
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
 
@@ -26,8 +29,9 @@ type ValidatorDashboardRepository interface {
 	RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
 	GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
 
-	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, showGroupNames bool) (*t.VDBPublicId, error)
-	UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, showGroupNames bool) (*t.VDBPublicId, error)
+	CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error)
+	GetValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error)
+	UpdateValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error)
 	RemoveValidatorDashboardPublicId(publicDashboardId t.VDBIdPublic) error
 
 	GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error)
@@ -61,20 +65,13 @@ type ValidatorDashboardRepository interface {
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
 
-func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
-	var validatorsArray []uint32
+func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]t.VDBValidator, error) {
 	if len(dashboardId.Validators) == 0 {
+		var validatorsArray []t.VDBValidator
 		err := d.alloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
-		for _, validator := range dashboardId.Validators {
-			validatorsArray = append(validatorsArray, uint32(validator.Index))
-		}
+		return validatorsArray, err
 	}
-	return validatorsArray, nil
+	return dashboardId.Validators, nil
 }
 
 func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {

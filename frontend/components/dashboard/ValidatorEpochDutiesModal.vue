@@ -134,14 +134,13 @@ watch([title, size], () => {
         >
           <Column field="validator" :sortable="true" :header="$t('dashboard.validator.duties.col.validator')">
             <template #body="slotProps">
-              <NuxtLink
+              <BcLink
                 :to="`/validator/${slotProps.data.validator}`"
                 target="_blank"
                 class="link validator_link"
-                :no-prefetch="true"
               >
                 {{ slotProps.data.validator }}
-              </NuxtLink>
+              </BcLink>
             </template>
           </Column>
           <Column field="duties" :header="$t('dashboard.validator.duties.col.duties')">

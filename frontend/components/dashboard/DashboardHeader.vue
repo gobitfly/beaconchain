@@ -1,19 +1,34 @@
 <script lang="ts" setup>
+import {
+  faEdit
+} from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type Menubar from 'primevue/menubar'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
+import BcTooltip from '../bc/BcTooltip.vue'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
+import { DashboardRenameModal } from '#components'
 
 const { width } = useWindowSize()
+const dialog = useDialog()
+
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const isValidatorDashboard = route.name === 'dashboard-id'
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
-const { dashboards, getDashboardLabel } = useUserDashboardStore()
-const { dashboardKey, dashboardType, setDashboardKey } = useDashboardKey()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
+const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
+const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -32,7 +47,7 @@ watch(width, () => {
   }
 }, { immediate: true })
 
-const getDashboardName = (db: Dashboard):string => {
+const getDashboardName = (db: Dashboard): string => {
   if (isLoggedIn.value) {
     return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
   } else {
@@ -82,7 +97,8 @@ const items = computed<MenuBarEntry[]>(() => {
     const cd = db as CookieDashboard
     return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
-  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications' }])
+  const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
+  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications', disabledTooltip }])
 
   return sortedItems.map((items) => {
     // if we are in a public dashboard and change the validators then the route does not get updated
@@ -92,6 +108,7 @@ const items = computed<MenuBarEntry[]>(() => {
       active: !!active,
       label: active?.label ?? items[0].label,
       dropdown: items.length > 1,
+      disabledTooltip: items.length === 1 ? items[0].disabledTooltip : undefined,
       route: items.length === 1 ? items[0].route : active?.route,
       command: items.length === 1 ? items[0].command : active?.command,
       items: items.length > 1 ? items : undefined
@@ -100,8 +117,28 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  return getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
+
+const editDashboard = () => {
+  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+  const dashboard = list?.find(d => `${d.id}` === dashboardKey.value)
+  if (!dashboard) {
+    return
+  }
+  dialog.open(DashboardRenameModal, {
+    data: {
+      dashboard,
+      dashboardType: dashboardType.value
+    },
+    onClose: (value?: DynamicDialogCloseOptions | undefined) => {
+      if (value?.data === true) {
+        refreshDashboards()
+        refreshOverview(dashboardKey.value)
+      }
+    }
+  })
+}
 
 </script>
 
@@ -110,15 +147,21 @@ const title = computed(() => {
     <div class="h1 dashboard-title">
       {{ title }}
     </div>
+    <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
+      <FontAwesomeIcon :icon="faEdit" />
+    </Button>
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <NuxtLink v-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+          <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" @click.stop.prevent="() => undefined">
+            <span class="text-disabled">{{ item.label }}</span>
+          </BcTooltip>
+          <BcLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
             </span>
-          </NuxtLink>
+          </BcLink>
           <span v-else class="button-content pointer" :class="{ 'p-active': item.active }">
             <span class="text">{{ item.label }}</span>
             <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
@@ -141,25 +184,35 @@ const title = computed(() => {
   justify-content: space-between;
   margin-top: var(--padding);
   margin-bottom: var(--padding-large);
+  gap: var(--padding);
 
   .dashboard-title {
     @include utils.truncate-text;
+  }
+
+  .edit_button {
+    flex-shrink: 0;
   }
 
   .dashboard-buttons {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    flex-grow: 1;
     gap: var(--padding);
+    justify-content: flex-end;
 
     .button-content {
       display: flex;
+
       &:has(.toggle) {
         justify-content: space-between;
       }
+
       .text {
         @include utils.truncate-text;
       }
+
       .toggle {
         flex-shrink: 0;
         margin-top: auto;
@@ -173,6 +226,10 @@ const title = computed(() => {
 
     :deep(.p-menubar-root-list > .p-menuitem) {
       width: 145px;
+
+      &:has(.text-disabled) {
+        opacity: 0.5;
+      }
     }
   }
 }

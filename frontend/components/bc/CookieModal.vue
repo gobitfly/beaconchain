@@ -23,9 +23,9 @@ const visible = computed(() => cookiePreference.value === undefined)
     <div class="dialog-container">
       <div class="text-container">
         {{ tOf($t, 'cookies.text', 0) }}
-        <NuxtLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
+        <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
           {{ tOf($t, 'cookies.text', 1) }}
-        </NuxtLink>
+        </BcLink>
         {{ tOf($t, 'cookies.text', 2) }}
       </div>
       <div class="button-container">
