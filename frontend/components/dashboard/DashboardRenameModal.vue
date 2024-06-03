@@ -23,6 +23,9 @@ watch(props, (p) => {
 }, { immediate: true })
 
 const rename = async () => {
+  if (!name.value) {
+    return
+  }
   isLoading.value = true
   const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_EDIT_VALIDATOR : API_PATH.DASHBOARD_EDIT_ACCOUNT
   // TODO: validate params once backend is done.
@@ -36,7 +39,7 @@ const rename = async () => {
 
 <template>
   <div class="dashboard_rename_modal_container">
-    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
+    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="rename" />
     <div class="footer">
       <Button :disabled="!name?.length || isLoading" @click="rename">
         {{ $t('navigation.save') }}
