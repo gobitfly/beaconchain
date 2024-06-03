@@ -241,6 +241,9 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename": {
+      "title": "Rename Dashboard"
+    },
     "share_dialog": {
       "edit": "Edit Settings",
       "public_dashboard_url": "Public dashboard URL",

@@ -204,7 +204,7 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                 <BcInputLabel
                   class="edit-group truncate-text"
                   :value="slotProps.data.name"
-                  :default="slotProps.data.id === 0 ? $t('common.default') : ''"
+                  :default="slotProps.data.id === 0 ? $t('dashboard.group.selection.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isPublic"
                   :pattern="REGEXP_VALID_NAME"

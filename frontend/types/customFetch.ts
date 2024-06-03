@@ -6,8 +6,8 @@ export enum API_PATH {
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
-  DASHBOARD_DELETE_ACCOUNT = '/dashboard/accountValidator',
-  DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidator',
+  DASHBOARD_EDIT_ACCOUNT = '/dashboard/accountValidator',
+  DASHBOARD_EDIT_VALIDATOR = '/dashboard/deleteValidator',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID = '/validator-dashboards/publicIds',
@@ -108,17 +108,17 @@ export const mapping: Record<string, MappingData> = {
     mock: false,
     method: 'POST'
   },
-  [API_PATH.DASHBOARD_DELETE_ACCOUNT]: {
+  [API_PATH.DASHBOARD_EDIT_ACCOUNT]: {
     path: '/account-dashboards/{dashboardKey}',
     getPath: values => `/account-dashboards/${values?.dashboardKey}`,
     mock: true,
-    method: 'DELETE'
+    method: 'PUT'
   },
-  [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
+  [API_PATH.DASHBOARD_EDIT_VALIDATOR]: {
     path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
     mock: false,
-    method: 'DELETE'
+    method: 'PUT'
   },
   [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
     path: '/validator-dashboards/{dashboardKey}/public-ids',
