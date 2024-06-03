@@ -49,9 +49,7 @@ const data = computed(() => {
       </slot>
     </template>
     <span>
-      <slot name="label" :data="data">
-        <BcFormatNumber :class="data.labelClass" :text="data.label" />
-      </slot>
+      <BcFormatNumber :class="data.labelClass" :text="data.label" />
     </span>
   </BcTooltip>
 </template>
