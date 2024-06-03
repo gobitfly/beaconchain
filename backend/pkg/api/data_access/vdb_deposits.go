@@ -95,6 +95,10 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
+	if dashboardId.Validators == nil {
+		filterFragment = strings.Replace(filterFragment, "ed.", "cedl.", -1)
+	}
+
 	params = append(params, limit+1)
 	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
 
@@ -237,6 +241,10 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 
 	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
+	}
+
+	if dashboardId.Validators == nil {
+		filterFragment = strings.Replace(filterFragment, "bd.", "cbdl.", -1)
 	}
 
 	params = append(params, limit+1)
