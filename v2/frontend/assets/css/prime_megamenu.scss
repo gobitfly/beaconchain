@@ -1,6 +1,8 @@
 .p-megamenu {
   padding: 8px 0 8px 8px;
   background: var(--container-background);
+  user-select: none;
+  z-index: 1;  // without this, the menu keeps a very high z-index when it is open in mobile mode and then the window is enlarged (the change of mode closes the menu but does not reset its z-index, so the menu bar floats above the search bar)
 
   .p-megamenu-root-list:focus {
     outline: none;
@@ -13,7 +15,7 @@
   }
 
   .p-menuitem > .p-menuitem-content .p-menuitem-link {
-    padding: 12px 20px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     .p-menuitem-text {
@@ -35,6 +37,8 @@
     min-width: fit-content;
     right: 0;
     left: auto;
+    top: var(--navbar2-height);
+    border-radius: var(--border-radius);
   }
   .p-submenu-header {
     margin: 0;
@@ -103,20 +107,20 @@
     .p-megamenu-root-list {
       position: static;
       background: var(--container-background);
-      width: 100%;
-      right: 0;
-      left: auto;
+      border-bottom-left-radius: var(--border-radius);
+      border-bottom-right-radius: var(--border-radius);
     }
     .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
       position: static;
-      border-radius: var(--border-radius);
+      border-radius: 8px;
       padding: 0 var(--padding);
+      margin: var(--padding-small);
     }
     .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
+      left: -10px;
       .p-menuitem-text,
       .p-submenu-icon {
         color: var(--text-color);
-        font-size: var(--big_text_label_font_size);
       }
     }
   }

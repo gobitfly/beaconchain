@@ -122,7 +122,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		sslMode = "require"
 	}
 
-	log.Infof("initializing reader db connection to %v with %v/%v conn limit", writer.Host, reader.MaxIdleConns, reader.MaxOpenConns)
+	log.Infof("initializing reader db connection to %v:%v with %v/%v conn limit", reader.Host, reader.Port, reader.MaxIdleConns, reader.MaxOpenConns)
 	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslMode))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)

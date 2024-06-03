@@ -32,6 +32,7 @@ const { currency, withLabel, setCurrency } = useCurrency()
     </template>
   </BcDropdown>
 </template>
+
 <style lang="scss" scoped>
 .item {
   display: flex;

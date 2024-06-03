@@ -12,14 +12,15 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/klauspost/pgzip"
 	"github.com/pkg/errors"
 )
 
 type ValidatorMapping struct {
 	ValidatorPubkeys  []string
-	ValidatorIndices  map[string]*uint64       // note: why pointers?
-	ValidatorMetadata []*types.CachedValidator // note: why pointers?
+	ValidatorIndices  map[string]constypes.ValidatorIndex // note: why pointers?
+	ValidatorMetadata []*types.CachedValidator            // note: why pointers?
 }
 
 var currentValidatorMapping *ValidatorMapping
@@ -33,11 +34,14 @@ func (s *Services) startIndexMappingService() {
 	for {
 		startTime := time.Now()
 		err := s.updateValidatorMapping() // TODO: only update data if something has changed (new head epoch)
+		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		if err != nil {
 			log.Error(err, "error updating validator mapping", 0)
+			delay = 10 * time.Second
+		} else {
+			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
 		}
-		log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-		utils.ConstantTimeDelay(startTime, time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot)*time.Second)
+		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
 
@@ -46,7 +50,7 @@ func (s *Services) initValidatorMapping() {
 	lenMapping := len(_cachedValidatorMapping.Mapping)
 
 	c := ValidatorMapping{}
-	c.ValidatorIndices = make(map[string]*uint64, lenMapping)
+	c.ValidatorIndices = make(map[string]constypes.ValidatorIndex, lenMapping)
 	c.ValidatorPubkeys = make([]string, lenMapping)
 	c.ValidatorMetadata = _cachedValidatorMapping.Mapping
 
@@ -56,10 +60,10 @@ func (s *Services) initValidatorMapping() {
 		}
 
 		b := hexutil.Encode(v.PublicKey)
-		j := uint64(i)
+		j := constypes.ValidatorIndex(i)
 
 		c.ValidatorPubkeys[i] = b
-		c.ValidatorIndices[b] = &j
+		c.ValidatorIndices[b] = j
 	}
 	currentValidatorMapping = &c
 }
@@ -80,10 +84,10 @@ func (s *Services) quickUpdateValidatorMapping() {
 	for i := oldLastValidatorIndex + 1; i <= newLastValidatorIndex; i++ {
 		v := _cachedValidatorMapping.Mapping[i]
 		b := hexutil.Encode(v.PublicKey)
-		j := uint64(i)
+		j := constypes.ValidatorIndex(i)
 
 		currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
-		currentValidatorMapping.ValidatorIndices[b] = &j
+		currentValidatorMapping.ValidatorIndices[b] = j
 	}
 }
 
@@ -152,14 +156,14 @@ func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), erro
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil
 }
 
-func (s *Services) GetPubkeySliceFromIndexSlice(indices []uint64) ([]string, error) {
+func (s *Services) GetPubkeySliceFromIndexSlice(indices []constypes.ValidatorIndex) ([]string, error) {
 	res := make([]string, len(indices))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
 	if err != nil {
 		return nil, err
 	}
-	lastValidatorIndex := uint64(len(mapping.ValidatorPubkeys) - 1)
+	lastValidatorIndex := constypes.ValidatorIndex(len(mapping.ValidatorPubkeys) - 1)
 	for i, index := range indices {
 		if index > lastValidatorIndex {
 			return nil, fmt.Errorf("validator index outside of mapped range (%d is not within 0-%d)", index, lastValidatorIndex)
@@ -169,8 +173,8 @@ func (s *Services) GetPubkeySliceFromIndexSlice(indices []uint64) ([]string, err
 	return res, nil
 }
 
-func (s *Services) GetIndexSliceFromPubkeySlice(pubkeys []string) ([]uint64, error) {
-	res := make([]uint64, len(pubkeys))
+func (s *Services) GetIndexSliceFromPubkeySlice(pubkeys []string) ([]constypes.ValidatorIndex, error) {
+	res := make([]constypes.ValidatorIndex, len(pubkeys))
 	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
 	defer releaseLock()
 	if err != nil {
@@ -181,7 +185,7 @@ func (s *Services) GetIndexSliceFromPubkeySlice(pubkeys []string) ([]uint64, err
 		if !ok {
 			return nil, fmt.Errorf("pubkey %s not found in mapping", pubkey)
 		}
-		res[i] = *p
+		res[i] = p
 	}
 	return res, nil
 }

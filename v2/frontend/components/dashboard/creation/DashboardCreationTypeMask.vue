@@ -23,8 +23,17 @@ const name = defineModel<string>('name', { required: true })
 const emit = defineEmits<{(e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
-  return type.value === '' || name.value === '' || name.value.length > 32
+  return type.value === '' || name.value === '' || name.value.length > 32 || !REGEXP_VALID_NAME.test(name.value)
 })
+
+const next = () => {
+  name.value = name.value.trim()
+  if (continueDisabled.value) {
+    return
+  }
+
+  emit('next')
+}
 </script>
 
 <template>
@@ -38,8 +47,8 @@ const continueDisabled = computed(() => {
       </div>
       <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
       <div class="row-container">
-        <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" />
-        <Button class="button" :disabled="continueDisabled" @click="emit('next')">
+        <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="next" />
+        <Button class="button" :disabled="continueDisabled" @click="next">
           {{ $t('navigation.continue') }}
         </Button>
       </div>

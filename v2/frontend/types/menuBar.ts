@@ -5,6 +5,7 @@ export interface MenuBarButton {
   class?: string;
   component?: Component;
   active?: boolean;
+  disabledTooltip?: string;
 }
 
 export interface MenuBarEntry extends MenuBarButton {

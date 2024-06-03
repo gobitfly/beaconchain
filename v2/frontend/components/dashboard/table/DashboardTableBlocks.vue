@@ -113,14 +113,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               header-class="proposer"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   :to="`/validator/${slotProps.data.proposer}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.proposer" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column
@@ -138,16 +137,17 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             </Column>
             <Column v-if="colsVisible.slot" field="slot" :sortable="true" :header="$t('common.slot')">
               <template #body="slotProps">
-                <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
                   <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column field="block" :sortable="true" :header="$t('common.block')">
               <template #body="slotProps">
-                <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
-                  <BcFormatNumber :value="slotProps.data.block" default="-" />
-                </NuxtLink>
+                <BcLink v-if="slotProps.data.block || slotProps.data.slot === 0" :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
+                  <BcFormatNumber :value="slotProps.data.block" default="0" />
+                </BcLink>
+                <span v-else>-</span>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age">
@@ -181,6 +181,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   v-if="slotProps.data.reward_recipient?.hash"
                   type="address"
                   class="reward_recipient"
+                  :no-wrap="true"
                   :hash="slotProps.data.reward_recipient?.hash"
                   :ens="slotProps.data.reward_recipient?.ens"
                 />
@@ -196,7 +197,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :header="$t('dashboard.validator.col.proposer_rewards')"
             >
               <template #body="slotProps">
-                <BlockTableRewardItem :reward="slotProps.data.reward" />
+                <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -205,17 +206,17 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <NuxtLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
                     <BcFormatNumber :value="slotProps.data.slot" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link">
                     <BcFormatNumber :value="slotProps.data.epoch" default="-" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
@@ -239,6 +240,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     v-if="slotProps.data.reward_recipient?.hash"
                     type="address"
                     class="reward_recipient"
+                    :no-wrap="true"
                     :hash="slotProps.data.reward_recipient?.hash"
                     :ens="slotProps.data.reward_recipient?.ens"
                   />
@@ -248,7 +250,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.proposer_rewards') }}:
                   </div>
-                  <BlockTableRewardItem :reward="slotProps.data.reward" />
+                  <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
                 </div>
                 <div class="row">
                   <div class="label">
