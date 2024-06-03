@@ -22,7 +22,7 @@ export interface VDBOverviewGroup {
   count: number /* uint64 */;
 }
 export interface VDBOverviewData {
-  name: string;
+  name?: string;
   groups: VDBOverviewGroup[];
   validators: VDBOverviewValidators;
   efficiency: PeriodicValues<number /* float64 */>;
