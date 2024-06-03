@@ -7,6 +7,11 @@ import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type Dashboa
 
 const { width } = useWindowSize()
 
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
+
 const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -104,7 +109,7 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  return getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
 
 </script>

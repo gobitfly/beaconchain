@@ -497,7 +497,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
-			GroupNames bool `json:"group_names"`
+			GroupNames bool `json:"share_groups"`
 		} `json:"share_settings"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
