@@ -144,8 +144,8 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             </Column>
             <Column field="block" :sortable="true" :header="$t('common.block')">
               <template #body="slotProps">
-                <BcLink v-if="slotProps.data.block" :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
-                  <BcFormatNumber :value="slotProps.data.block" default="-" />
+                <BcLink v-if="slotProps.data.block || slotProps.data.slot === 0" :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
+                  <BcFormatNumber :value="slotProps.data.block" default="0" />
                 </BcLink>
                 <span v-else>-</span>
               </template>
