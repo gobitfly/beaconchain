@@ -15,8 +15,10 @@ In your template, write
 ```HTML
 <BcSearchbarMain
   ref="mySearchbar"
-  :bar-style="SearchbarStyle.<what you want to see>"
+  :bar-shape="SearchbarShape.<what you want to see>"
+  :color-theme="SearchbarColors.<theme determining the colors of the bar and in the dropdown>"
   :bar-purpose="SearchbarPurpose.<what you want the bar to do>"
+  :screen-width-causing-sudden-change="<number>"
   :pick-by-default="<function that picks a result on behalf of the user when they press Enter or the search-button>"
   @go="<your function doing something when a result is selected>"
 />
@@ -24,18 +26,20 @@ In your template, write
 
 There are more props that you can give to configure the search bar:
 ```TS
-:only-networks="[<list of chain IDs that the bar is authorized to search over>]" // Without this props, the bar searches over all networks.
+:only-networks="[<list of chain IDs that the bar is authorized to search over>]" // Without this prop, the bar searches over all networks.
 :keep-dropdown-open="true" // When the user selects a result, the drop-down does not close.
 ```
 
-The list of possible values for `:bar-style` is in enum `SearchbarStyle` in file _searchbar.ts_.
-The list of possible values for `:bar-purpose` is in enum `SearchbarPurpose` in file _searchbar.ts_.
+The list of possible values for `:bar-shape`, `:color-theme` and `:bar-purpose` are respectively in enums `SearchbarShape`, `SearchbarColors` and `SearchbarPurpose` in file _searchbar.ts_.
+
+If the width of the search bar can change suddenly while the user is redimensionning the window (for example due to a media query in the CSS or some JS code), the width threshold (in pixels) at which you trigger the change must be passed in prop `:screen-width-causing-sudden-change`. This prevents visual bugs in the list of results (to understand why, see section "Sudden changes of width" in the documentation of _MiddleEllipsis.vue_).
+
 You can write your own function for `:pick-by-default`, or give the example function written in _searchbar.ts_ if it suits your needs:
 ```TS
 :pick-by-default="pickHighestPriorityAmongBestMatchings"
 ```
 
-The handler that you give to props `@go` receives one parameter:
+The handler that you give to prop `@go` receives one parameter:
 ```TS
 function myHandler (result : ResultSuggestion)
 ```
@@ -76,7 +80,7 @@ not be necessary to modify the code of the search-bar (its behavior and look are
 **You can create a new purpose if needed:**
   1. Add a purpose name into the `SearchbarPurpose` enum of _searchbar.ts_.
   2. Define the behavior of the bar when it has this purpose, by adding an entry in the `SearchbarPurposeInfo` record.
-  3. Now you can give this purpose to the `:bar-purpose` props.
+  3. Now you can give this purpose to the `:bar-purpose` prop.
 
 **If you want to add or remove a filter button:**
   - Either you simply need create or modify a purpose to see more/less filters (see above).
@@ -159,7 +163,7 @@ Take a parent of defined width. Inside, sit your MiddleEllipsis of undefined wid
 </MiddleEllipsis>
 ```
 Note
-- the use of props `initial-flex-grow`, which is mandatory for children of undefined width. It tells the component how much room it can give to its text with respect to the `flex-grow` properties of its neighbors.
+- the use of prop `initial-flex-grow`, which is mandatory for children of undefined width. It tells the component how much room it can give to its text with respect to the `flex-grow` properties of its neighbors.
 _initial_ means that the value defines the room during the computation only, the real `flex-grow` of the component remains `0` so the component collapses around its content, there is no empty space between it and its neighbors.
 - You can of course put other things in the parent, for example other MiddleEllipses of defined or undefined widths.
 
@@ -187,15 +191,22 @@ Never set a padding on the left or right side of a MiddleEllipsis component (mar
 
 Never give a width to its left or right border.
 
-If, somewhere in your CSS, some `@media (min-width: AAApx)` or `@media (max-width: AAApx)` queries have an (indirect) effect on the size of a MiddleEllipsis component,
-you must inform the component that its width can jump unexpectedly. You do so by giving AAA to its `width-mediaquery-threshold` props.
-For example
-```HTML
-  :width-mediaquery-threshold="600"
-```
-makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen passes through 600px.
-Children do not need this props, only parents and stand-alone components.
-
 MiddleEllipsis cannot detect and react when the font of the text changes. It does not forbid you to change the font, but it restricts the way you can do it:
 If you change the font while the component is being resized, it is fine because the component checks the font before each reclipping.
 If you change the font independently of the width of the component, then perform the change by swapping a class of the component because it detects changes in its list of classes and reclips.
+
+### Sudden changes of width
+
+When the user resizes her/his window, thus changing the width of a MiddleEllipsis component, the component adjusts its clipping automatically.
+
+But your website might switch between layouts (for example between desktop and mobile modes) when the width of the window reaches a certain threshold. This reorganizes the components and changes their sizes suddenly. This is typically performed in CSS by some `@media (min-width: ...)` or `@media (max-width: ...)` query, or in JS.
+
+You must inform MiddleEllipsis that its width jumps unexpectedly. Othewise, it might not detect it (the text will overflow or waste blank space).
+
+There are two ways to pass this information. Either
+
+- You give the threshold at which you perform the change to its `width-mediaquery-threshold` prop.
+For example, `:width-mediaquery-threshold="600"` makes MiddleEllipsis aware that changes in the layout of the page happen when the width of the window/screen passes through 600px.
+- Or you remove/add/swap a class in the class-list of the component at the very moment the component has its width modified. The fact that the list of classes changes makes the component reclip.
+
+Children do not need this information, only parents and stand-alone components.

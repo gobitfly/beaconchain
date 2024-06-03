@@ -14,6 +14,11 @@ import { DashboardRenameModal } from '#components'
 const { width } = useWindowSize()
 const dialog = useDialog()
 
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
+
 const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -111,7 +116,7 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  return getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
 
 const editDashboard = () => {
