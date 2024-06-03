@@ -20,7 +20,7 @@ defineProps<Props>()
         </div>
         <div class="tt-row">
           <span>{{ $t('dashboard.validator.blocks.cl_rewards') }}: </span>
-          <BcFormatValue :value="reward?.cl" :no-tooltip="true" :full-valuep="true" />
+          <BcFormatValue :value="reward?.cl" :no-tooltip="true" :full-value="true" />
         </div>
       </div>
     </template>
