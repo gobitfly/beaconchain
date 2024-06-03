@@ -1,4 +1,5 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
+import type { ApiDataResponse } from '~/types/api/common'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
 
 const probabilityOfNoResultOrError = 0.0
@@ -343,4 +344,26 @@ export function mockLatestState (..._:any): InternalGetLatestStateResponse {
       ]
     }
   }
+}
+
+interface ApiChainInfo {
+  chain_id: number,
+  name: string
+}
+
+export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChainInfo[]> {
+  const restriction = useRuntimeConfig().public.onlyChainId
+  const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
+
+  if (restriction) {
+    result.data.push({ chain_id: Number(restriction), name: '' })
+  } else {
+    result.data.push(
+      { chain_id: 1, name: 'ethereum' },
+      { chain_id: 17000, name: 'holesky' },
+      { chain_id: 100, name: 'gnosis' }
+    )
+  }
+
+  return result
 }

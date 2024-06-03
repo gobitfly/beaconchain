@@ -10,6 +10,7 @@ interface Props {
     value: string,
     disabled?: boolean
   }[],
+  areButtonsNetworks?: boolean,
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
 const props = defineProps<Props>()
@@ -49,7 +50,8 @@ function onButtonClicked (value: string) {
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" :class="button.componentClass" />
+          <component :is="button.component" v-if="button.component" :class="button.componentClass" />
+          <IconNetwork v-else-if="areButtonsNetworks" :chain-id="Number(button.value)" :class="button.componentClass" :colored="false" />
         </slot>
       </template>
     </BcToggleSingleBarButton>

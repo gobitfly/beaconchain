@@ -8,9 +8,6 @@ export enum COOKIE_DASHBOARD_ID{
   ACCOUNT = -3,
 }
 
-// TODO: once the search PR is finished check if we can get these from somewhere else
-export type ValidatorDashboardNetwork = 'ethereum' | 'gnosis'
-
 export const DAHSHBOARDS_ALL_GROUPS_ID = -1
 export const DAHSHBOARDS_NEXT_EPOCH_ID = -2
 

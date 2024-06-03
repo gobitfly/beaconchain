@@ -1,19 +1,31 @@
 <script lang="ts" setup>
-import { IconNetworkEthereum, IconNetworkGnosis } from '#components'
-import type { ValidatorDashboardNetwork } from '~/types/dashboard'
+import { ChainInfo, ChainIDs } from '~/types/networks'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const network = defineModel<ValidatorDashboardNetwork>('network')
-const allNetworks = [
-  { text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum, componentClass: 'monochromatic' },
-  { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis, componentClass: 'monochromatic', disabled: true }
-]
+// TODO: Get this list from the API
+const ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Holesky, ChainIDs.Gnosis]
+
+const availableNetworks = useNetworkStore().getAvailableNetworks()
+
+const network = defineModel<ChainIDs>('network')
+const selection = ref<string>('')
+
+watch(selection, (value) => { network.value = Number(value) as ChainIDs })
+
+const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
+  return {
+    value: String(chainId),
+    text: ChainInfo[chainId].name,
+    disabled: !(chainId in availableNetworks)
+  }
+})
 
 const { t: $t } = useI18n()
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
 const continueDisabled = computed(() => {
-  return !network.value
+  return !selection.value
 })
 </script>
 
@@ -26,7 +38,13 @@ const continueDisabled = computed(() => {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.network.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="network" class="single-bar" :buttons="allNetworks" :initial="network" />
+      <BcToggleSingleBar
+        v-model="selection"
+        class="single-bar"
+        :buttons="buttonList"
+        :initial="network ? String(network) : ''"
+        :are-buttons-networks="true"
+      />
       <div class="row-container">
         <Button @click="emit('back')">
           {{ $t('navigation.back') }}
