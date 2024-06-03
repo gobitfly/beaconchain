@@ -42,6 +42,7 @@ import {
 } from '@fortawesome/sharp-solid-svg-icons'
 
 import type { MenuItem } from 'primevue/menuitem'
+import MegaMenu from 'primevue/megamenu'
 import NetworkEthereum from '~/components/icon/network/NetworkEthereum.vue'
 import NetworkGnosis from '~/components/icon/network/NetworkGnosis.vue'
 import NetworkArbitrum from '~/components/icon/network/NetworkArbitrum.vue'
@@ -53,6 +54,7 @@ import IconEversteel from '~/components/icon/megaMenu/EverSteel.vue'
 import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 
 import { Target } from '~/types/links'
+import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
@@ -60,12 +62,11 @@ const { doLogout, isLoggedIn } = useUserStore()
 const { withLabel, currency, setCurrency } = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const megaMenu = ref<{toggle:(evt:Event)=>void} | null>(null)
+const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
 
-const smallScreenWidth = 1023
-const breakpoint = `${smallScreenWidth}px`
-const isSmallScreen = computed(() => width.value <= smallScreenWidth)
-const isMobile = computed(() => width.value <= 469)
+const breakpoint = `${smallHeaderThreshold}px`
+const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
+const isMobile = computed(() => width.value < mobileHeaderThreshold)
 
 const items = computed(() => {
   let list: MenuItem[] = []
@@ -950,12 +951,17 @@ const items = computed(() => {
   }
   return list
 })
+
+const isMobileMenuOpen = computed(() => megaMenu.value?.mobileActive)
+
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggle(evt)
   document.body.focus()
 }
+
 defineExpose({
-  toggleMegaMenu
+  toggleMegaMenu,
+  isMobileMenuOpen
 })
 </script>
 
@@ -969,12 +975,12 @@ defineExpose({
             <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
             <IconCurrency v-else-if="item.currency" :currency="item.currency" />
           </span>
-          <NuxtLink v-if="item.url" :to="item.url">
+          <BcLink v-if="item.url" :to="item.url">
             <span :class="[item.class]" class="p-menuitem-text">
               <span>{{ item.label }}</span>
             </span>
-          </NuxtLink>
-          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="()=>item.command?.()">
+          </BcLink>
+          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
             {{ item.label }}
           </span>
           <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
@@ -984,7 +990,7 @@ defineExpose({
   </ClientOnly>
 </template>
 
-<style lang="scss"  scoped>
+<style lang="scss" scoped>
 .iconSpacing {
   width: 25px;
   position: relative;

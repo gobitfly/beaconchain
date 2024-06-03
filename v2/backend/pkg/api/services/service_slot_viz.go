@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/juliangruber/go-intersect"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -146,11 +147,11 @@ func (s *Services) updateSlotVizData() error {
 
 					muxAttAssignmentsForSlot.Lock()
 
-					if dutiesInfo.EpochAttestationDuties[uint32(attValidator)] == nil {
-						dutiesInfo.EpochAttestationDuties[uint32(attValidator)] = make(map[uint32]bool, 5)
+					if dutiesInfo.EpochAttestationDuties[attValidator] == nil {
+						dutiesInfo.EpochAttestationDuties[attValidator] = make(map[uint32]bool, 5)
 					}
 
-					dutiesInfo.EpochAttestationDuties[uint32(attValidator)][uint32(slot)] = false // validator has an attestation scheduled for that slot
+					dutiesInfo.EpochAttestationDuties[attValidator][uint32(slot)] = false // validator has an attestation scheduled for that slot
 
 					muxAttAssignmentsForSlot.Unlock()
 				}
@@ -161,7 +162,7 @@ func (s *Services) updateSlotVizData() error {
 				muxTotalSyncAssignmentsForEpoch.Unlock()
 				muxSyncAssignmentsForEpoch.Lock()
 				if dutiesInfo.SyncAssignmentsForEpoch[epoch] == nil {
-					dutiesInfo.SyncAssignmentsForEpoch[epoch] = make(map[uint64]bool, 0)
+					dutiesInfo.SyncAssignmentsForEpoch[epoch] = make(map[constypes.ValidatorIndex]bool, 0)
 				}
 				for _, validator := range decodedRedisCachedEpochAssignments.Assignments.SyncAssignments {
 					dutiesInfo.SyncAssignmentsForEpoch[epoch][validator] = true
@@ -201,15 +202,15 @@ func (s *Services) updateSlotVizData() error {
 			if duty.AttestedSlot.Valid {
 				attestedSlot := uint64(duty.AttestedSlot.Int64)
 				for _, validator := range duty.Validators {
-					if dutiesInfo.EpochAttestationDuties[uint32(validator)] == nil {
-						dutiesInfo.EpochAttestationDuties[uint32(validator)] = make(map[uint32]bool, 5)
+					if dutiesInfo.EpochAttestationDuties[constypes.ValidatorIndex(validator)] == nil {
+						dutiesInfo.EpochAttestationDuties[constypes.ValidatorIndex(validator)] = make(map[uint32]bool, 5)
 					}
-					dutiesInfo.EpochAttestationDuties[uint32(validator)][uint32(attestedSlot)] = true // validator has attested for that slot
+					dutiesInfo.EpochAttestationDuties[constypes.ValidatorIndex(validator)][uint32(attestedSlot)] = true // validator has attested for that slot
 				}
 			}
 			// Syncs
 			if dutiesInfo.SlotSyncParticipated[duty.Slot] == nil {
-				dutiesInfo.SlotSyncParticipated[duty.Slot] = make(map[uint64]bool, 0)
+				dutiesInfo.SlotSyncParticipated[duty.Slot] = make(map[constypes.ValidatorIndex]bool, 0)
 
 				partValidators := utils.GetParticipatingSyncCommitteeValidators(duty.SyncAggregateBits, dutiesInfo.TotalSyncAssignmentsForEpoch[utils.EpochOfSlot(duty.Slot)])
 				for _, validator := range partValidators {
@@ -218,7 +219,7 @@ func (s *Services) updateSlotVizData() error {
 			}
 			// Slashings
 			if duty.ProposerSlashingsCount > 0 {
-				slashedPropValidators := []uint64{}
+				slashedPropValidators := []constypes.ValidatorIndex{}
 				err := s.readerDb.Select(&slashedPropValidators, `
 					SELECT
 						proposerindex
@@ -234,7 +235,7 @@ func (s *Services) updateSlotVizData() error {
 					Attestestation1Indices pq.Int64Array `db:"attestation1_indices"`
 					Attestestation2Indices pq.Int64Array `db:"attestation2_indices"`
 				}{}
-				slashedValidators := []uint64{}
+				slashedValidators := []constypes.ValidatorIndex{}
 
 				err := s.readerDb.Select(&attSlashings, `
 				SELECT
@@ -252,7 +253,7 @@ func (s *Services) updateSlotVizData() error {
 						log.WarnWithStackTrace(nil, "No intersection found for attestation violation", 0, map[string]interface{}{"slot": duty.Slot})
 					}
 					for _, v := range inter {
-						slashedValidators = append(slashedValidators, uint64(v.(int64)))
+						slashedValidators = append(slashedValidators, constypes.ValidatorIndex(v.(int64)))
 					}
 				}
 				dutiesInfo.SlotValiAttSlashed[duty.Slot] = slashedValidators
@@ -289,13 +290,13 @@ func (s *Services) initDutiesInfo() *SyncData {
 	dutiesInfo.LatestSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
 	dutiesInfo.SlotBlock = make(map[uint64]uint64)
-	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[uint64]bool)
-	dutiesInfo.SlotValiPropSlashed = make(map[uint64][]uint64)
-	dutiesInfo.SlotValiAttSlashed = make(map[uint64][]uint64)
-	dutiesInfo.PropAssignmentsForSlot = make(map[uint64]uint64)
-	dutiesInfo.SyncAssignmentsForEpoch = make(map[uint64]map[uint64]bool)
+	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[constypes.ValidatorIndex]bool)
+	dutiesInfo.SlotValiPropSlashed = make(map[uint64][]constypes.ValidatorIndex)
+	dutiesInfo.SlotValiAttSlashed = make(map[uint64][]constypes.ValidatorIndex)
+	dutiesInfo.PropAssignmentsForSlot = make(map[uint64]constypes.ValidatorIndex)
+	dutiesInfo.SyncAssignmentsForEpoch = make(map[uint64]map[constypes.ValidatorIndex]bool)
 	dutiesInfo.TotalSyncAssignmentsForEpoch = make(map[uint64][]uint64)
-	dutiesInfo.EpochAttestationDuties = make(map[uint32]map[uint32]bool)
+	dutiesInfo.EpochAttestationDuties = make(map[constypes.ValidatorIndex]map[uint32]bool)
 	return &dutiesInfo
 }
 
@@ -311,13 +312,13 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		LatestSlot:                   currentDutiesInfo.LatestSlot,
 		SlotStatus:                   make(map[uint64]int8, len(currentDutiesInfo.SlotStatus)),
 		SlotBlock:                    make(map[uint64]uint64, len(currentDutiesInfo.SlotBlock)),
-		SlotSyncParticipated:         make(map[uint64]map[uint64]bool, len(currentDutiesInfo.SlotSyncParticipated)),
-		SlotValiPropSlashed:          make(map[uint64][]uint64, len(currentDutiesInfo.SlotValiPropSlashed)),
-		SlotValiAttSlashed:           make(map[uint64][]uint64, len(currentDutiesInfo.SlotValiAttSlashed)),
-		PropAssignmentsForSlot:       make(map[uint64]uint64, len(currentDutiesInfo.PropAssignmentsForSlot)),
-		SyncAssignmentsForEpoch:      make(map[uint64]map[uint64]bool, len(currentDutiesInfo.SyncAssignmentsForEpoch)),
+		SlotSyncParticipated:         make(map[uint64]map[constypes.ValidatorIndex]bool, len(currentDutiesInfo.SlotSyncParticipated)),
+		SlotValiPropSlashed:          make(map[uint64][]constypes.ValidatorIndex, len(currentDutiesInfo.SlotValiPropSlashed)),
+		SlotValiAttSlashed:           make(map[uint64][]constypes.ValidatorIndex, len(currentDutiesInfo.SlotValiAttSlashed)),
+		PropAssignmentsForSlot:       make(map[uint64]constypes.ValidatorIndex, len(currentDutiesInfo.PropAssignmentsForSlot)),
+		SyncAssignmentsForEpoch:      make(map[uint64]map[constypes.ValidatorIndex]bool, len(currentDutiesInfo.SyncAssignmentsForEpoch)),
 		TotalSyncAssignmentsForEpoch: make(map[uint64][]uint64, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch)),
-		EpochAttestationDuties:       make(map[uint32]map[uint32]bool, len(currentDutiesInfo.EpochAttestationDuties)),
+		EpochAttestationDuties:       make(map[constypes.ValidatorIndex]map[uint32]bool, len(currentDutiesInfo.EpochAttestationDuties)),
 		AssignmentsFetchedForEpoch:   currentDutiesInfo.AssignmentsFetchedForEpoch,
 	}
 
@@ -342,7 +343,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		if slot < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SlotSyncParticipated[slot] = make(map[uint64]bool, len(v))
+		dutiesInfo.SlotSyncParticipated[slot] = make(map[constypes.ValidatorIndex]bool, len(v))
 
 		for k2, v2 := range v {
 			dutiesInfo.SlotSyncParticipated[slot][k2] = v2
@@ -354,7 +355,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		if slot < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SlotValiPropSlashed[slot] = make([]uint64, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiPropSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
 		dutiesInfo.SlotValiPropSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
 	}
 
@@ -363,7 +364,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		if slot < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SlotValiAttSlashed[slot] = make([]uint64, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiAttSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
 		dutiesInfo.SlotValiAttSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
 	}
 
@@ -380,7 +381,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SyncAssignmentsForEpoch[epoch] = make(map[uint64]bool, len(v))
+		dutiesInfo.SyncAssignmentsForEpoch[epoch] = make(map[constypes.ValidatorIndex]bool, len(v))
 
 		for k2, v2 := range v {
 			dutiesInfo.SyncAssignmentsForEpoch[epoch][k2] = v2
@@ -392,7 +393,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = make([]uint64, 0, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch[epoch]))
+		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch[epoch]))
 		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = append(dutiesInfo.TotalSyncAssignmentsForEpoch[epoch], v...)
 	}
 
@@ -449,6 +450,6 @@ type SyncData struct {
 	PropAssignmentsForSlot       map[uint64]uint64          // slot -> validatorindex
 	SyncAssignmentsForEpoch      map[uint64]map[uint64]bool // epoch -> validatorindex -> assigned
 	TotalSyncAssignmentsForEpoch map[uint64][]uint64        // epoch -> list of assigned indexes
-	EpochAttestationDuties       map[uint32]map[uint32]bool // validatorindex -> slot -> attested
+	EpochAttestationDuties       map[uint64]map[uint32]bool // validatorindex -> slot -> attested
 	AssignmentsFetchedForEpoch   uint64
 }

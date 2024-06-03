@@ -4,9 +4,20 @@
     "email": "test@mail.com",
     "subscriptions": [
       {
-        "product_id": "2",
-        "product_name": "Dolphin",
+        "product_id": "dolphin",
         "product_category": "premium"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
+      },
+      {
+        "product_id": "1k_extra_valis_per_dasboard",
+        "product_category": "premium_addon"
       }
     ],
     "premium_perks": {
