@@ -81,6 +81,7 @@ const onClose = () => {
 }
 
 const addGroup = async () => {
+  newGroupName.value = removeLeadingAndTrailingWhitespace(newGroupName.value)
   if (newGroupDisabled.value) {
     return
   }
@@ -208,6 +209,7 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isPublic"
                   :pattern="REGEXP_VALID_NAME"
+                  :remove-leading-and-trailing-whitespace="true"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />

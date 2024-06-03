@@ -194,3 +194,15 @@ export function formatFiat (value:number, currency: string, locales: string, min
 
   return formatter.format(value)
 }
+
+export function removeLeadingWhitespace (value: string): string {
+  return value.replace(/^\s+/, '')
+}
+
+export function removeTrailinWhitespace (value: string): string {
+  return value.replace(/\s+$/, '')
+}
+
+export function removeLeadingAndTrailingWhitespace (value: string): string {
+  return removeTrailinWhitespace(removeLeadingWhitespace(value))
+}

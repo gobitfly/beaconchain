@@ -12,6 +12,7 @@ interface Props {
   canBeEmpty?: boolean,
   maxlength?: number,
   pattern?: RegExp,
+  removeLeadingAndTrailingWhitespace?: boolean,
 }
 
 const props = defineProps<Props>()
@@ -23,6 +24,9 @@ const isEditing = ref(false)
 const editValue = ref<string>(props.value ?? '')
 
 const iconClick = () => {
+  if (props.removeLeadingAndTrailingWhitespace) {
+    editValue.value = removeLeadingAndTrailingWhitespace(editValue.value)
+  }
   if (icon.value.disabled) {
     return
   }
