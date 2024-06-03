@@ -1,10 +1,15 @@
 import { ChainIDs } from '~/types/networks'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
-export enum SearchbarStyle {
-  Gaudy = 'gaudy',
-  Discreet = 'discreet',
-  Embedded = 'embedded'
+export enum SearchbarShape { // do not change the litterals, they are used as class names
+  Small = 'small',
+  Medium = 'medium',
+  Big = 'big'
+}
+export enum SearchbarColors { // do not change the litterals, they are used as class names
+  Default = 'default',
+  DarkBlue = 'darkblue',
+  LightBlue = 'lightblue'
 }
 export enum SearchbarPurpose {
   GlobalSearch,
@@ -473,8 +478,9 @@ export interface ExposedSearchbarMethods { // for internal use
 export interface SearchBar // your ref to the search-bar component must be of this type
        extends ComponentPublicInstance, ExposedSearchbarMethods {}
 
-export type CategoryFilter = Map<Category, boolean>
-export type NetworkFilter = Map<ChainIDs, boolean>
+export type CategoryFilter = Map<Category, boolean> // for internal use
+export type NetworkFilter = Map<ChainIDs, boolean> // for internal use
+export type SearchbarDropdownLayout = 'narrow-dropdown' | 'large-dropdown' // for internal use (do not change the litterals, they are used as class names)
 
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
