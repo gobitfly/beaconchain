@@ -24,9 +24,13 @@ const addonsAvailable = computed(() => {
       </div>
     </div>
     <div class="addons-row">
-      <template v-for="addon in products?.extra_dashboard_validators_premium_addons" :key="addon.product_id">
-        <PricingPremiumAddonBox :addon="addon" :addons-available="addonsAvailable" :is-yearly="isYearly" />
-      </template>
+      <PricingPremiumAddonBox
+        v-for="addon in products?.extra_dashboard_validators_premium_addons"
+        :key="addon.product_id"
+        :addon="addon"
+        :addons-available="addonsAvailable"
+        :is-yearly="isYearly"
+      />
     </div>
   </div>
 </template>
