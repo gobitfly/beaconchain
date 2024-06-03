@@ -8,7 +8,8 @@ interface Props {
   useColors?: boolean
   positiveClass?: string
   negativeClass?: string,
-  noTooltip?: boolean
+  noTooltip?: boolean,
+  fullValue?: boolean,
 }
 const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive', negativeClass: 'negative' })
 
@@ -23,7 +24,7 @@ const data = computed(() => {
   }
   const res = converter.value.weiToValue(props.value, props.options)
   let labelClass = ''
-  const label = `${res.label}`
+  const label = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
   if (props.useColors) {
     if (label.startsWith('-')) {
       labelClass = props.negativeClass
@@ -34,6 +35,7 @@ const data = computed(() => {
   return {
     labelClass,
     label,
+    fullLabel: res.fullLabel,
     tooltip: props.noTooltip ? '' : res.fullLabel
   }
 })
@@ -47,7 +49,9 @@ const data = computed(() => {
       </slot>
     </template>
     <span>
-      <BcFormatNumber :class="data.labelClass" :text="data.label" />
+      <slot name="label" :data="data">
+        <BcFormatNumber :class="data.labelClass" :text="data.label" />
+      </slot>
     </span>
   </BcTooltip>
 </template>
