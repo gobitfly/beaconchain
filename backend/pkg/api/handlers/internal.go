@@ -497,7 +497,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	req := struct {
 		Name          string `json:"name"`
 		ShareSettings struct {
-			GroupNames bool `json:"share_groups"`
+			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
@@ -519,7 +519,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.GroupNames)
+	data, err := h.dai.UpdateValidatorDashboardPublicId(publicDashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
 		handleErr(w, err)
 		return
