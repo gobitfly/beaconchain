@@ -41,7 +41,8 @@
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "true": "True",
     "false": "False",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "and_more": "and {count} more"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -143,7 +144,6 @@
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
-      "and_more": "and {count} more",
       "proposal": {
         "proposed": {
           "main": "Block",
@@ -241,6 +241,9 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename": {
+      "title": "Rename Dashboard"
+    },
     "share_dialog": {
       "edit": "Edit Settings",
       "public_dashboard_url": "Public dashboard URL",
@@ -476,8 +479,8 @@
   "header": {
     "current_slot": "Current Slot",
     "current_epoch": "Current Epoch",
-    "login": "Login",
-    "logout": "Logout",
+    "login": "Log in",
+    "logout": "Log out",
     "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",

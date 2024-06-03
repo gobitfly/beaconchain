@@ -184,7 +184,7 @@ const data = computed(() => {
                   </BcLink>
                   <span v-if="vIndex < row.validators.length -1 || row.andMore">, </span>
                 </span>
-                <span v-if="row.andMore"> ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }} </span>
+                <span v-if="row.andMore"> ...{{ $t('common.and_more', { count: row.andMore }) }} </span>
               </div>
               <div v-if="row.duties" class="duties">
                 <div v-for="(duty, d_index) in row.duties" :key="d_index">
@@ -197,7 +197,7 @@ const data = computed(() => {
                   </BcLink>
                 </div>
                 <div v-if="row.andMore">
-                  ...{{ $t('slotViz.tooltip.and_more', { count: row.andMore }) }}
+                  ...{{ $t('common.and_more', { count: row.andMore }) }}
                 </div>
               </div>
             </div>

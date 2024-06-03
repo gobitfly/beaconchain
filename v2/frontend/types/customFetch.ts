@@ -6,8 +6,10 @@ export enum API_PATH {
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
-  DASHBOARD_DELETE_ACCOUNT = '/dashboard/accountValidator',
-  DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidator',
+  DASHBOARD_DELETE_ACCOUNT = '/dashboard/deleteAccountDashbaoard',
+  DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidatorDashboard',
+  DASHBOARD_RENAME_ACCOUNT = '/dashboard/renameAccountDashbaoard',
+  DASHBOARD_RENAME_VALIDATOR = '/dashboard/renameValidatorDashboard',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID = '/validator-dashboards/publicIds',
@@ -18,6 +20,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_WITHDRAWALS = '/validator-dashboards/withdrawals',
   DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS = '/validator-dashboards/total-withdrawals',
   DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
+  DASHBOARD_VALIDATOR_INDICES = '/validator-dashboards/indices',
   DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
   DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
   DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
@@ -120,6 +123,18 @@ export const mapping: Record<string, MappingData> = {
     mock: false,
     method: 'DELETE'
   },
+  [API_PATH.DASHBOARD_RENAME_ACCOUNT]: {
+    path: '/account-dashboards/{dashboardKey}/name',
+    getPath: values => `/account-dashboards/${values?.dashboardKey}/name`,
+    mock: true,
+    method: 'PUT'
+  },
+  [API_PATH.DASHBOARD_RENAME_VALIDATOR]: {
+    path: '/validator-dashboards/{dashboardKey}/name',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/name`,
+    mock: false,
+    method: 'PUT'
+  },
   [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
     path: '/validator-dashboards/{dashboardKey}/public-ids',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/public-ids`,
@@ -195,6 +210,11 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
+    path: '/validator-dashboards/{dashboard_id}/validator-indices',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validator-indices`,
     mock: false
   },
   [API_PATH.LATEST_STATE]: {
