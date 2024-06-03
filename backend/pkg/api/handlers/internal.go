@@ -203,8 +203,8 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	response := types.ApiResponse{
-		Data: data,
+	response := types.ApiDataResponse[types.VDBPostReturnData]{
+		Data: *data,
 	}
 	returnCreated(w, response)
 }
@@ -240,6 +240,32 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 		return
 	}
 	returnNoContent(w)
+}
+
+func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	req := struct {
+		Name string `json:"name"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.UpdateValidatorDashboardName(dashboardId, name)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.VDBPostReturnData]{
+		Data: *data,
+	}
+	returnOk(w, response)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
