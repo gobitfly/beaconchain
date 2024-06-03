@@ -835,7 +835,6 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
-		DashboardId  int    `db:"dashboard_id"`
 		Name         string `db:"name"`
 		SharedGroups bool   `db:"shared_groups"`
 	}{}
@@ -844,7 +843,7 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 	err := d.alloyWriter.Get(&dbReturn, `
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
 			VALUES ($1, $2, $3)
-		RETURNING public_id, dashboard_id, name, shared_groups
+		RETURNING public_id, name, shared_groups
 	`, dashboardId, name, shareGroups)
 	if err != nil {
 		return nil, err
@@ -852,7 +851,6 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBId
 
 	result := &t.VDBPublicId{}
 	result.PublicId = dbReturn.PublicId
-	result.DashboardId = dbReturn.DashboardId
 	result.Name = dbReturn.Name
 	result.ShareSettings.ShareGroups = dbReturn.SharedGroups
 
