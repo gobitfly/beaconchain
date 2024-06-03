@@ -94,7 +94,7 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.USER]: {
     path: '/users/me',
-    mock: true
+    mock: false
   },
   [API_PATH.USER_DASHBOARDS]: {
     path: '/users/me/dashboards',

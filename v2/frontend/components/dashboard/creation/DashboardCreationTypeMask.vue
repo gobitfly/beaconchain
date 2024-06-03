@@ -4,20 +4,18 @@ import { IconAccount, IconValidator } from '#components'
 
 const { t: $t } = useI18n()
 const { isLoggedIn } = useUserStore()
-const { dashboards } = useUserDashboardStore()
-const { user } = useUserStore()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+interface Props {
+  accountsDisabled: boolean,
+  validatorsDisabled: boolean
+}
+const props = defineProps<Props>()
 
 const type = defineModel<DashboardType | ''>('type', { required: true })
 
-// TODO: currently there is no value for "amount of account dashboards", using "amount of validator dashboards" instead for now
-const maxDashboards = user.value?.premium_perks.validator_dashboards ?? 1
-const accountsDisabled = !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards
-const validatorsDisabled = (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards
-
 const typeButtons = [
-  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: accountsDisabled },
-  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: validatorsDisabled }
+  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: props.accountsDisabled },
+  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: props.validatorsDisabled }
 ]
 
 const name = defineModel<string>('name', { required: true })
