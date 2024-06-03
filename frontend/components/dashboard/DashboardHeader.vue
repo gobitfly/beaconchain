@@ -14,11 +14,6 @@ import { DashboardRenameModal } from '#components'
 const { width } = useWindowSize()
 const dialog = useDialog()
 
-interface Props {
-  dashboardTitle?: string,
-}
-const props = defineProps<Props>()
-
 const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -27,7 +22,8 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
 const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
-const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
+const { dashboardKey, dashboardType, setDashboardKey, isPrivate, isPublic, isShared } = useDashboardKey()
+const { overview } = useValidatorDashboardOverviewStore()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -116,7 +112,7 @@ const items = computed<MenuBarEntry[]>(() => {
 })
 
 const title = computed(() => {
-  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return (isShared.value && isPublic.value) ? overview.value?.name : getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
 })
 
 const editDashboard = () => {
