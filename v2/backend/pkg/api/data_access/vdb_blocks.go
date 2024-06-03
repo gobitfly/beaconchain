@@ -35,7 +35,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validatorMap := make(map[uint32]bool)
+	validatorMap := make(map[t.VDBValidator]bool)
 	params := []interface{}{}
 	filteredValidatorsQuery := ""
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
@@ -90,14 +90,14 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 		filteredValidatorsQuery = selectStr + from + where
 	} else {
-		validators := make([]uint64, 0, len(dashboardId.Validators))
+		validators := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
-			if searchIndex && fmt.Sprint(validator.Index) != search ||
-				searchPubkey && (validatorMapping.ValidatorIndices[search] == nil || validator.Index != *validatorMapping.ValidatorIndices[search]) {
+			if searchIndex && fmt.Sprint(validator) != search ||
+				searchPubkey && validator != validatorMapping.ValidatorIndices[search] {
 				continue
 			}
-			validatorMap[uint32(validator.Index)] = true
-			validators = append(validators, validator.Index)
+			validatorMap[validator] = true
+			validators = append(validators, validator)
 			if searchIndex || searchPubkey {
 				break
 			}
@@ -109,7 +109,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 
 	var proposals []struct {
-		Proposer     uint64              `db:"proposer"`
+		Proposer     t.VDBValidator      `db:"proposer"`
 		Group        uint64              `db:"group_id"`
 		Epoch        uint64              `db:"epoch"`
 		Slot         uint64              `db:"slot"`
@@ -128,7 +128,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	if colSort.Desc {
 		sortOrder = ` DESC`
 	}
-	val := uint64(0)
+	val := t.VDBValidator(0)
 	sortColName := `slot`
 	switch colSort.Column {
 	case enums.VDBBlockProposer:
@@ -189,7 +189,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	// Get scheduled blocks. They aren't written to blocks table, get from duties
 	// Will just pass scheduled proposals to query and let db do the sorting etc
-	var scheduledProposers []uint64
+	var scheduledProposers []t.VDBValidator
 	var scheduledEpochs []uint64
 	var scheduledSlots []uint64
 	// don't need to query if requested slots are in the past
@@ -206,7 +206,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 					continue
 				}
 				// only gather slots scheduled for our validators
-				if _, ok := validatorMap[uint32(vali)]; !ok {
+				if _, ok := validatorMap[vali]; !ok {
 					continue
 				}
 				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
