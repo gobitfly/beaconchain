@@ -12,7 +12,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useI18n()
 
-const { slotToEpoch } = useNetwork()
+const { slotToEpoch } = useNetworkStore()
 
 const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardClDepositsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)

@@ -3,7 +3,7 @@ import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
 
-const { epochToTs, slotToTs } = useNetwork()
+const { epochToTs, slotToTs } = useNetworkStore()
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60

@@ -1,8 +1,11 @@
 import { reduce } from 'lodash-es'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
+
+const { networkInfo } = useNetworkStore()
 
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
@@ -28,7 +31,13 @@ export function useCurrency () {
   })
 
   const available = computed<Currency[]>(() => {
-    const list: Currency[] = showInDevelopment ? ['NAT', 'ETH'] : ['ETH']
+    const list: Currency[] = [networkInfo.value.elCurrency]
+    if (networkInfo.value.clCurrency !== networkInfo.value.elCurrency) {
+      list.push(networkInfo.value.clCurrency)
+    }
+    if (showInDevelopment) {
+      list.push('NAT')
+    }
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 
