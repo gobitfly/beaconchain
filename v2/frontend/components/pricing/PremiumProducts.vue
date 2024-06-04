@@ -53,8 +53,6 @@ defineProps<Props>()
 
 @media (max-width: 1360px) {
   .premium-products-container{
-    max-width: fit-content;
-
     .premium-products-row {
       gap: 10px;
     }
