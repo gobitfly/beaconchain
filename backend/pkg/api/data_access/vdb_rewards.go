@@ -423,7 +423,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		SyncRewards   decimal.Decimal `db:"sync_rewards"`
 
 		SlashedInEpoch bool            `db:"slashed_in_epoch"`
-		SlashedAmount  uint64          `db:"slashed_amount"`
+		SlashedAmount  uint32          `db:"slashed_amount"`
 		SlasherRewards decimal.Decimal `db:"slasher_reward"`
 
 		BlocksClAttestationsReward decimal.Decimal `db:"blocks_cl_attestations_reward"`
