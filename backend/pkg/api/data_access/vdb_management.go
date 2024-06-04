@@ -731,7 +731,23 @@ func (d *DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBId
 	return groupExists, err
 }
 
-func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+// return how many of the passed validators are already in the dashboard
+func (d *DataAccessService) GetValidatorDashboardExistingValidatorCount(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
+	if len(validators) == 0 {
+		return 0, nil
+	}
+
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND validator_index = ANY($2)
+	`, dashboardId, pq.Array(validators))
+	return count, err
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil
@@ -813,6 +829,27 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	}
 
 	return result, nil
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// TODO
+	// for all validators already in the dashboard that are associated with the deposit address, update the group
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	return d.dummy.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, address, limit)
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// TODO
+	// for all validators already in the dashboard that are associated with the withdrawal address, update the group
+	// then add no more than `limit` validators associated with the withdrawal address to the dashboard
+	return d.dummy.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, address, limit)
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// TODO
+	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
+	// then add no more than `limit` validators associated with the graffiti to the dashboard
+	return d.dummy.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {

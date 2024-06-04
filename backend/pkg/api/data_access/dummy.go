@@ -133,7 +133,32 @@ func (d *DummyService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrima
 	return true, nil
 }
 
-func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+// return how many of the passed validators are already in the dashboard
+func (d *DummyService) GetValidatorDashboardExistingValidatorCount(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err

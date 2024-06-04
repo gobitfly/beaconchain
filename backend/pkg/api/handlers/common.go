@@ -309,6 +309,13 @@ func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 	return v.checkInt(param, "group_id")
 }
 
+func (v *validationError) checkGroupIdBody(param *uint64) uint64 {
+	if param == nil {
+		return types.DefaultGroupId
+	}
+	return *param
+}
+
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
 func (v *validationError) checkExistingGroupId(param string) uint64 {
 	id := v.checkGroupId(param, forbidEmpty)
@@ -509,9 +516,9 @@ func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-/* func returnConflict(w http.ResponseWriter, err error) {
+func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
-} */
+}
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)

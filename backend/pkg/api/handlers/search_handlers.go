@@ -169,11 +169,10 @@ func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorByIndex),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.PublicKey),
-			NumValue:   &result.Index,
-			Validators: []uint64{result.Index},
+			Type:      string(validatorByIndex),
+			ChainId:   chainId,
+			HashValue: hex.EncodeToString(result.PublicKey),
+			NumValue:  &result.Index,
 		}, nil
 	}
 }
@@ -194,11 +193,10 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorByPublicKey),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.PublicKey),
-			NumValue:   &result.Index,
-			Validators: []uint64{result.Index},
+			Type:      string(validatorByPublicKey),
+			ChainId:   chainId,
+			HashValue: hex.EncodeToString(result.PublicKey),
+			NumValue:  &result.Index,
 		}, nil
 	}
 }
@@ -218,10 +216,10 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByDepositAddress),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.Address),
-			Validators: result.Validators,
+			Type:      string(validatorsByDepositAddress),
+			ChainId:   chainId,
+			HashValue: hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -237,10 +235,10 @@ func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Cont
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByDepositEnsName),
-			ChainId:    chainId,
-			StrValue:   result.EnsName,
-			Validators: result.Validators,
+			Type:     string(validatorsByDepositEnsName),
+			ChainId:  chainId,
+			StrValue: result.EnsName,
+			NumValue: &result.Count,
 		}, nil
 	}
 }
@@ -260,10 +258,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalCredential),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
-			Validators: result.Validators,
+			Type:      string(validatorsByWithdrawalCredential),
+			ChainId:   chainId,
+			HashValue: hex.EncodeToString(result.WithdrawalCredential),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -284,10 +282,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalAddress),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
-			Validators: result.Validators,
+			Type:      string(validatorsByWithdrawalAddress),
+			ChainId:   chainId,
+			HashValue: hex.EncodeToString(result.WithdrawalCredential),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -303,10 +301,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalEns),
-			ChainId:    chainId,
-			StrValue:   result.EnsName,
-			Validators: result.Validators,
+			Type:     string(validatorsByWithdrawalEns),
+			ChainId:  chainId,
+			StrValue: result.EnsName,
+			NumValue: &result.Count,
 		}, nil
 	}
 }
@@ -322,10 +320,10 @@ func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, i
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByGraffiti),
-			ChainId:    chainId,
-			StrValue:   result.Graffiti,
-			Validators: result.Validators,
+			Type:     string(validatorsByGraffiti),
+			ChainId:  chainId,
+			StrValue: result.Graffiti,
+			NumValue: &result.Count,
 		}, nil
 	}
 }

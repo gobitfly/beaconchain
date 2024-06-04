@@ -160,7 +160,7 @@ export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<
  */
 export interface VDBExecutionDepositsTableRow {
   public_key: PubKey;
-  index?: number /* uint64 */;
+  index?: VDBValidator;
   group_id: number /* uint64 */;
   block: number /* uint64 */;
   timestamp: number /* int64 */;
@@ -174,7 +174,7 @@ export interface VDBExecutionDepositsTableRow {
 export type InternalGetValidatorDashboardExecutionLayerDepositsResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
 export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
-  index: number /* uint64 */;
+  index: VDBValidator;
   group_id: number /* uint64 */;
   epoch: number /* uint64 */;
   slot: number /* uint64 */;
@@ -198,7 +198,7 @@ export type InternalGetValidatorDashboardTotalConsensusDepositsResponse = ApiDat
 export interface VDBWithdrawalsTableRow {
   epoch: number /* uint64 */;
   slot: number /* uint64 */;
-  index: number /* uint64 */;
+  index: VDBValidator;
   group_id: number /* uint64 */;
   recipient: Address;
   amount: string /* decimal.Decimal */;
@@ -214,7 +214,7 @@ export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataRespo
  * Manage Modal
  */
 export interface VDBManageValidatorsTableRow {
-  index: number /* uint64 */;
+  index: VDBValidator;
   public_key: PubKey;
   group_id: number /* uint64 */;
   balance: string /* decimal.Decimal */;
