@@ -53,6 +53,7 @@ export enum ChainIDs {
   Gnosis = 100,
   Chiado = 10200
 }
+
 interface ChainInfoFields {
   name: string,
   description: string,

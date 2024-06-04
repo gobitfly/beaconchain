@@ -233,13 +233,13 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
       <template #bc-table-sub-header>
         <div class="add-row">
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
+          <!-- TODO: below, replace "[]" with a variable containing the array of chain id(s) that the validators should belong to -->
           <BcSearchbarMain
             ref="searchBar"
             :bar-shape="SearchbarShape.Small"
             :color-theme="SearchbarColors.Default"
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
-            :only-networks="[ChainIDs.Ethereum]"
+            :only-networks="[]"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :screen-width-causing-sudden-change="0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here to avoid visual bugs in the list of results */"
             class="search-bar"
