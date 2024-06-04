@@ -236,7 +236,7 @@ const addonButton = computed(() => {
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     width: 200px;
 
     .summary-container {

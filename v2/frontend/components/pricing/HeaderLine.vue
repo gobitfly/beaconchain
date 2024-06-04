@@ -44,7 +44,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1360px) {
   .header-line-container{
       padding-left: 5px;
       margin-bottom: 30px;

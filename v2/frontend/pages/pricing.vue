@@ -43,14 +43,12 @@ const scrollToAddons = () => {
   font-family: var(--montserrat-family);
   font-weight: var(--montserrat-medium);
 
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding-top: 25px;
-
-  width: var(--pricing-content-width);
-  margin-left: calc((var(--content-width) - var(--pricing-content-width)) / 2);
 
   .view-addons-button {
     width: 215px;
@@ -61,7 +59,7 @@ const scrollToAddons = () => {
     margin-bottom: 35px;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     .view-addons-button {
       padding: 7px 17px;
       width: 150px;

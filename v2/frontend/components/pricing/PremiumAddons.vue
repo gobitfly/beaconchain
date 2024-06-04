@@ -62,13 +62,16 @@ const addonsAvailable = computed(() => {
 
   .addons-row {
     width: 100%;
-    min-width: min-content;
+    max-width: fit-content;
+    flex-shrink: 0;
     display: flex;
-    gap: 7px;
+    justify-content: space-between;
     overflow-x: auto;
+    gap: 7px;
+    padding-bottom: 4px;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     flex-direction: column;
     gap: 15px;
 

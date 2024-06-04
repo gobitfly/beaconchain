@@ -28,12 +28,13 @@ defineProps<Props>()
 <style lang="scss" scoped>
 .premium-products-container {
   width: 100%;
+  max-width: fit-content;
 
   .premium-products-row {
     display: flex;
-    gap: 14px;
     justify-content: space-between;
     overflow-x: auto;
+    gap: 14px;
     padding-bottom: 4px;
   }
 
@@ -47,15 +48,21 @@ defineProps<Props>()
   }
 
   margin-bottom: 38px;
+}
 
-  @media (max-width: 600px) {
-    .premium-products-container{
-      margin-bottom: 36px;
+@media (max-width: 1360px) {
+  .premium-products-container{
+    max-width: fit-content;
 
-      .footnote {
-        font-size: 8px;
-      }
+    .premium-products-row {
+      gap: 10px;
     }
+
+    .footnote {
+      font-size: 8px;
+    }
+
+    margin-bottom: 36px;
   }
 }
 </style>
