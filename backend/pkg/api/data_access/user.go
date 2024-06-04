@@ -143,7 +143,9 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	}
 
 	premiumAddons := []struct {
-		PriceId string `db:"price_id"`
+		PriceId string    `db:"price_id"`
+		Start   time.Time `db:"start"`
+		End     time.Time `db:"end"`
 	}{}
 	err = d.userReader.Select(&premiumAddons, `
 		SELECT 
@@ -152,7 +154,6 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
 		FROM users_stripe_subscriptions uss		
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
-		LEFT JOIN users_stripe_subscriptions uss ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting premiumAddons: %w", err)
@@ -167,8 +168,8 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 					ProductId:       addon.PriceId,
 					ProductName:     p.ProductName,
 					ProductCategory: t.ProductCategoryPremiumAddon,
-					Start:           1715768109, // TODO:patrick
-					End:             1718446509, // TODO:patrick
+					Start:           addon.Start.Unix(), // TODO:patrick
+					End:             addon.End.Unix(),   // TODO:patrick
 				})
 			}
 		}

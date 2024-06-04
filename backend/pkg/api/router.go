@@ -88,24 +88,11 @@ var config = {
 	vdbAddon1kYearly : "%[14]s",
 	vdbAddon10kYearly: "%[15]s",
 }
+console.log('config',config)
 
 fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
 	console.log('userInfo',d)
 	document.getElementById('userInfo').innerText = JSON.stringify(d, null, 2)
-	if (d.subscriptions.length) {
-		for (let i = 0; i < d.subscriptions.length; i++) {
-			let s = d.subscriptions[i]
-			switch (s.product_id) {
-			case 'plankton':
-			case 'goldfish':
-			case 'whale':
-			case 'guppy':
-			case 'dolphin':
-			case 'orca':
-				document.querySelectorAll('.purchase[data-producd-id="'+s.product_id+'"]').forEach(e => {e.style.display = 'none'})
-			}
-		}
-	}
 }).catch(err => {
 	console.error("error getting api user me", err)
 })
@@ -144,13 +131,6 @@ function createCheckoutSession(priceId) {
 function setupStripe() {
 	try {
 		var stripe = Stripe(config.publicKey)
-		document.getElementById('guppy').addEventListener('click', function() {
-			createCheckoutSession(config.guppy).then((d) => {
-				stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
-					console.error("error redirecting to stripe checkout", err)
-				})
-			})
-		})
 		var purchaseButtons = document.querySelectorAll(".purchase")
 		for (let i = 0; i < purchaseButtons.length; i++) {
 			purchaseButtons[i].addEventListener('click', function(e) {
