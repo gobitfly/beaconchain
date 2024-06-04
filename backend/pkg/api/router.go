@@ -47,8 +47,6 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	_, err := w.Write([]byte(fmt.Sprintf(`
-<pre id="userInfo"></pre>
-
 <form class="manage-billing-form">
 <input type="hidden" name="x" value="y">
 <button class="btn btn-lg btn-block btn-outline-primary">Manage Billing</button>
@@ -61,21 +59,24 @@ func TestStripe(w http.ResponseWriter, r *http.Request) {
 <button id="orca"           class="purchase">purchase orca</button>
 <button id="orca.yearly"    class="purchase">purchase orca.yearly</button>
 
+<h2>user info</h2>
+<pre id="userInfo"></pre>
+
 <script src="https://js.stripe.com/v3/"></script>
 <script>
 var config = {
 	betaKey  	     : "%[1]s",
-	publicKey        : "%[2]s"
-	guppy            : "%[3]s"
-	dolphin          : "%[4]s"
-	orca             : "%[5]s"
-	vdbAddon1k       : "%[6]s"
-	vdbAddon10k      : "%[7]s"
-	guppyYearly      : "%[8]s"
-	dolphinYearly    : "%[9]s"
-	orcaYearly       : "%[10]s"
-	vdbAddon1kYearly : "%[11]s"
-	vdbAddon10kYearly: "%[12]s"
+	publicKey        : "%[2]s",
+	guppy            : "%[3]s",
+	dolphin          : "%[4]s",
+	orca             : "%[5]s",
+	vdbAddon1k       : "%[6]s",
+	vdbAddon10k      : "%[7]s",
+	guppyYearly      : "%[8]s",
+	dolphinYearly    : "%[9]s",
+	orcaYearly       : "%[10]s",
+	vdbAddon1kYearly : "%[11]s",
+	vdbAddon10kYearly: "%[12]s",
 }
 
 fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
@@ -117,15 +118,50 @@ function createCheckoutSession(priceId) {
 }
 
 function setupStripe() {
-	var stripe = Stripe(config.publicKey)
-	document.getElementById('guppy').addEventListener('click', function() {
-		createCheckoutSession(config.guppy).then((d) => {
-			stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
-				console.error("error redirecting to stripe checkout", err)
+	try {
+		var stripe = Stripe(config.publicKey)
+		document.getElementById('guppy').addEventListener('click', function() {
+			createCheckoutSession(config.guppy).then((d) => {
+				stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
+					console.error("error redirecting to stripe checkout", err)
+				})
 			})
 		})
-	})
+	} catch (err) {
+		console.error("error creating stripe object", err)
+	}
 }
+
+var manageBillingForm = document.querySelectorAll(".manage-billing-form")
+for (let i = 0; i < manageBillingForm.length; i++) {
+  manageBillingForm[i].addEventListener("submit", function (e) {
+    e.preventDefault()
+    var token = ""
+    if (document.getElementsByName("CsrfField").length) {
+      token = document.getElementsByName("CsrfField")[0].value
+    }
+    fetch("/user/stripe/customer-portal", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // "X-CSRF-Token": token,
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        returnURL: window.location.href,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        window.location.href = data.url
+      })
+      .catch((error) => {
+        console.error("Error:", error)
+      })
+  })
+}
+
+setupStripe()
 </script>
 `,
 		utils.Config.ApiKeySecret,

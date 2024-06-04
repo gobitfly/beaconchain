@@ -17,7 +17,7 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions 
-				left join users on users.id = user_id 
+				LEFT JOIN users ON users.id = user_id 
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
 					WHEN 'orca.yearly'    THEN  1
@@ -32,9 +32,9 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id as id, password, COALESCE(product_id, '') as product_id, COALESCE(user_group, '') AS user_group 
+		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group 
 		FROM users
-		left join latest_and_greatest_sub on latest_and_greatest_sub.user_id = users.id  
+		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id  
 		WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
@@ -45,7 +45,8 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	// TODO:patrick improve and unmock
 	userInfo := &t.UserInfo{
-		Id: userId,
+		Id:      userId,
+		ApiKeys: []string{},
 		ApiPerks: t.ApiPerks{ // TODO @patrick this is hardcoded for now, but should be fetched from db
 			UnitsPerSecond:    10,
 			UnitsPerMonth:     10,
@@ -56,6 +57,7 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			NoAds:             true,
 			DiscordSupport:    false,
 		},
+		Subscriptions: []t.UserSubscription{},
 	}
 
 	productSummary, err := d.GetProductSummary()
@@ -63,19 +65,15 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	var userEmail string
-	err = d.userReader.Get(&userEmail, `SELECT email FROM users WHERE id = $1`, userId)
+	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
-	userInfo.Email = userEmail
 
-	var userApiKeys []string
-	err = d.userReader.Select(&userApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
-	if err != nil {
+	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
-	userInfo.ApiKeys = userApiKeys
 
 	premiumProduct := struct {
 		ProductId string `db:"product_id"`
@@ -98,8 +96,13 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			ELSE                       10  -- For any other product_id values
 		END, id DESC`, userId)
 	if err != nil {
-		return nil, fmt.Errorf("error getting premiumProduct: %w", err)
+		if err != sql.ErrNoRows {
+			return nil, fmt.Errorf("error getting premiumProduct: %w", err)
+		}
+		premiumProduct.ProductId = "premium_free"
+		premiumProduct.Store = ""
 	}
+
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
 		effectiveProductId := premiumProduct.ProductId
@@ -111,16 +114,18 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		case "plankton":
 			effectiveProductId = "guppy"
 		}
-		if p.ProductIdMonthly == effectiveProductId {
+		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
-			userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
-				ProductId:       p.ProductIdMonthly,
-				ProductName:     p.ProductName,
-				ProductCategory: t.ProductCategoryPremium,
-				Start:           1715768109, // TODO:patrick
-				End:             1718446509, // TODO:patrick
-			})
+			if effectiveProductId != "premium_free" {
+				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
+					ProductId:       effectiveProductId,
+					ProductName:     p.ProductName,
+					ProductCategory: t.ProductCategoryPremium,
+					Start:           1715768109, // TODO:patrick
+					End:             1718446509, // TODO:patrick
+				})
+			}
 			break
 		}
 	}
@@ -254,10 +259,10 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					MachineMonitoringHistorySeconds: 3600 * 3,
 					CustomMachineAlerts:             false,
 				},
-				PricePerMonthEur:     0,
-				PricePerYearEur:      0,
-				StripePriceIdMonthly: "premium_free",
-				StripePriceIdYearly:  "premium_free.yearly",
+				PricePerMonthEur: 0,
+				PricePerYearEur:  0,
+				ProductIdMonthly: "premium_free",
+				ProductIdYearly:  "premium_free.yearly",
 			},
 			{
 				ProductName: "Guppy",
@@ -282,8 +287,10 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				},
 				PricePerMonthEur:     9.99,
 				PricePerYearEur:      107.88,
-				StripePriceIdMonthly: "guppy",
-				StripePriceIdYearly:  "guppy.yearly",
+				ProductIdMonthly:     "guppy",
+				ProductIdYearly:      "guppy.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Guppy,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.GuppyYearly,
 			},
 			{
 				ProductName: "Dolphin",
