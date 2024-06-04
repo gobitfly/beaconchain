@@ -747,7 +747,6 @@ func (d *DataAccessService) GetValidatorDashboardExistingValidatorCount(dashboar
 }
 
 func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil

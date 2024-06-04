@@ -416,7 +416,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	}
 
 	groupId := v.checkGroupIdBody(req.GroupId) // sets groupId to default if nil
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
