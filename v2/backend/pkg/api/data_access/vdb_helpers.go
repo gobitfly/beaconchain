@@ -65,20 +65,13 @@ type ValidatorDashboardRepository interface {
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
 
-func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]uint32, error) {
-	var validatorsArray []uint32
+func (d DataAccessService) getDashboardValidators(dashboardId t.VDBId) ([]t.VDBValidator, error) {
 	if len(dashboardId.Validators) == 0 {
+		var validatorsArray []t.VDBValidator
 		err := d.alloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		validatorsArray = make([]uint32, 0, len(dashboardId.Validators))
-		for _, validator := range dashboardId.Validators {
-			validatorsArray = append(validatorsArray, uint32(validator.Index))
-		}
+		return validatorsArray, err
 	}
-	return validatorsArray, nil
+	return dashboardId.Validators, nil
 }
 
 func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff, syncEff sql.NullFloat64) float64 {

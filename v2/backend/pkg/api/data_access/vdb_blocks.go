@@ -35,7 +35,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validatorMap := make(map[uint32]bool)
+	validatorMap := make(map[t.VDBValidator]bool)
 	params := []interface{}{}
 	filteredValidatorsQuery := ""
 	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
@@ -90,14 +90,14 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 		filteredValidatorsQuery = selectStr + from + where
 	} else {
-		validators := make([]uint64, 0, len(dashboardId.Validators))
+		validators := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
-			if searchIndex && fmt.Sprint(validator.Index) != search ||
-				searchPubkey && (validatorMapping.ValidatorIndices[search] == nil || validator.Index != *validatorMapping.ValidatorIndices[search]) {
+			if searchIndex && fmt.Sprint(validator) != search ||
+				searchPubkey && validator != validatorMapping.ValidatorIndices[search] {
 				continue
 			}
-			validatorMap[uint32(validator.Index)] = true
-			validators = append(validators, validator.Index)
+			validatorMap[validator] = true
+			validators = append(validators, validator)
 			if searchIndex || searchPubkey {
 				break
 			}
@@ -109,7 +109,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 
 	var proposals []struct {
-		Proposer     uint64              `db:"proposer"`
+		Proposer     t.VDBValidator      `db:"proposer"`
 		Group        uint64              `db:"group_id"`
 		Epoch        uint64              `db:"epoch"`
 		Slot         uint64              `db:"slot"`
@@ -128,7 +128,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	if colSort.Desc {
 		sortOrder = ` DESC`
 	}
-	val := uint64(0)
+	val := t.VDBValidator(0)
 	sortColName := `slot`
 	switch colSort.Column {
 	case enums.VDBBlockProposer:
@@ -189,7 +189,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 
 	// Get scheduled blocks. They aren't written to blocks table, get from duties
 	// Will just pass scheduled proposals to query and let db do the sorting etc
-	var scheduledProposers []uint64
+	var scheduledProposers []t.VDBValidator
 	var scheduledEpochs []uint64
 	var scheduledSlots []uint64
 	// don't need to query if requested slots are in the past
@@ -206,7 +206,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 					continue
 				}
 				// only gather slots scheduled for our validators
-				if _, ok := validatorMap[uint32(vali)]; !ok {
+				if _, ok := validatorMap[vali]; !ok {
 					continue
 				}
 				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
@@ -369,19 +369,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		if proposal.Status == 0 || proposal.Status == 2 {
 			continue
 		}
-		data[i].Graffiti = proposal.GraffitiText
+		graffiti := proposal.GraffitiText
+		data[i].Graffiti = &graffiti
 		if proposal.Status == 3 {
 			continue
 		}
-		data[i].Block = uint64(proposal.Block.Int64)
+		block := uint64(proposal.Block.Int64)
+		data[i].Block = &block
+		var reward t.ClElValue[decimal.Decimal]
 		if proposal.Reward.Valid {
-			data[i].RewardRecipient.Hash = t.Hash(hexutil.Encode(proposal.FeeRecipient))
+			rewardRecp := t.Address{
+				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
+			}
+			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
-			data[i].Reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
+			reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
 		}
 		if proposal.ClReward.Valid {
-			data[i].Reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
+		data[i].Reward = &reward
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()
@@ -390,7 +397,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 	log.Debugf("=== getting ens names took %s", time.Since(startTime))
 	for i := range data {
-		data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
+		if data[i].RewardRecipient != nil {
+			data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
+		}
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required
