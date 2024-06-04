@@ -33,5 +33,12 @@ export function useValidatorDashboardOverviewStore () {
     clearRewardDetails()
   }
 
-  return { overview, refreshOverview }
+  const hasValidators = computed<boolean>(() => {
+    if (!overview.value?.validators) {
+      return false
+    }
+    return !!overview.value.validators.online || !!overview.value.validators.exited || !!overview.value.validators.offline || !!overview.value.validators.pending || !!overview.value.validators.slashed
+  })
+
+  return { overview, refreshOverview, hasValidators }
 }

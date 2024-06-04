@@ -22,6 +22,7 @@ const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmou
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
+const { hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -333,7 +334,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
