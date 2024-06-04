@@ -192,13 +192,13 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
-	network := v.checkNetwork(req.Network)
+	chainId := v.checkNetwork(req.Network)
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboard(user.Id, name, uint64(network))
+	data, err := h.dai.CreateValidatorDashboard(user.Id, name, chainId)
 	if err != nil {
 		handleErr(w, err)
 		return

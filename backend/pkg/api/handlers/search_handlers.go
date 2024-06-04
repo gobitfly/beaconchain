@@ -56,7 +56,7 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// if the input slices are empty, the sets will contain all possible values
-	networkSet := v.checkNetworkSlice(req.Networks)
+	chainIdSet := v.checkNetworkSlice(req.Networks)
 	searchTypeSet := v.checkSearchTypes(req.Types)
 	if v.hasErrors() {
 		handleErr(w, v)
@@ -65,8 +65,8 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 
 	// for beta launch check if the include_validators flag is set and only Ethereum is queried
 	// TODO: Remove this check once the feature is fully implemented
-	_, containsEthereum := networkSet[1]
-	if !req.IncludeValidators || !containsEthereum || len(networkSet) > 1 {
+	_, containsEthereum := chainIdSet[1]
+	if !req.IncludeValidators || !containsEthereum || len(chainIdSet) > 1 {
 		returnError(w, http.StatusServiceUnavailable, errors.New("feature not available, please set `include_validators` to true and only query the Ethereum network"))
 		return
 	}
@@ -81,11 +81,11 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		if !searchTypeToRegex[searchType].MatchString(req.Input) {
 			continue
 		}
-		for network := range networkSet {
-			network := network
+		for chainId := range chainIdSet {
+			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
-				searchResult, err := h.handleSearch(ctx, req.Input, searchType, uint64(network))
+				searchResult, err := h.handleSearch(ctx, req.Input, searchType, chainId)
 				if err != nil {
 					if errors.Is(err, dataaccess.ErrNotFound) {
 						return nil
