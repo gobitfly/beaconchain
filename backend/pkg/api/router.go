@@ -65,6 +65,10 @@ func TestStripe(w http.ResponseWriter, r *http.Request) {
 <button class="purchase" data-producd-id="dolphinYearly">purchase dolphin.yearly</button>
 <button class="purchase" data-producd-id="orca">purchase orca</button>
 <button class="purchase" data-producd-id="orcaYearly">purchase orca.yearly</button>
+<button class="purchase" data-producd-id="vdbAddon1k">purchase vdbAddon1k</button>
+<button class="purchase" data-producd-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
+<button class="purchase" data-producd-id="vdbAddon1k">purchase vdbAddon1k</button>
+<button class="purchase" data-producd-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
 
 <h2>user info</h2>
 <pre id="userInfo"></pre>
