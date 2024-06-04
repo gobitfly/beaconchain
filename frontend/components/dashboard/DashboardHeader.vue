@@ -153,7 +153,7 @@ const editDashboard = () => {
     <div class="dashboard-buttons">
       <Menubar :class="menuBarClass" :model="items" breakpoint="0px">
         <template #item="{ item }">
-          <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" @click.stop.prevent="() => undefined">
+          <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" class="button-content" @click.stop.prevent="() => undefined">
             <span class="text-disabled">{{ item.label }}</span>
           </BcTooltip>
           <BcLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">

@@ -16,6 +16,7 @@ const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboard
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
+const { hasValidators } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -263,7 +264,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
