@@ -13,6 +13,8 @@ import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/ty
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
+const content = ref<HTMLElement>()
+
 interface Props {
   context: DashboardValidatorContext;
   timeFrame?: TimeFrame;
@@ -22,7 +24,7 @@ interface Props {
   groupId?: number,
   validators: number[],
 }
-const { props, setHeader } = useBcDialog<Props>()
+const { props, setHeader } = useBcDialog<Props>(undefined, content)
 
 const visible = defineModel<boolean>()
 const isLoading = ref(false)
@@ -138,7 +140,7 @@ const cappedValidators = computed(() => {
 </script>
 
 <template>
-  <div class="validator_subset_modal_container">
+  <div ref="content" class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
         {{ caption }}
