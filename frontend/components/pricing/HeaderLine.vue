@@ -28,7 +28,7 @@
   margin-bottom: 55px;
 
   .header-line {
-    width: var(--pricing-content-width);
+    width: var(--pricing-content-width-desktop);
     display: flex;
     flex-direction: column;
 
@@ -46,12 +46,16 @@
 
 @media (max-width: 1360px) {
   .header-line-container{
-      padding-left: 5px;
-      margin-bottom: 30px;
+    padding-left: 5px;
+    margin-bottom: 30px;
 
-      .header-line .subtitle {
+    .header-line {
+      width: var(--pricing-content-width-mobile);
+
+      .subtitle {
         font-size: 20px;
       }
     }
+  }
 }
 </style>
