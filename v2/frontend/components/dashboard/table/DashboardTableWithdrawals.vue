@@ -176,7 +176,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   <BcFormatNumber :value="slotProps.data.index" default="-" />
                 </BcLink>
                 <div v-else class="all-time-total">
-                  {{ $t('dashboard.validator.withdrawals.all_time_total') }}
+                  Σ
                 </div>
               </template>
             </Column>

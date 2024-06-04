@@ -51,7 +51,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -135,7 +135,7 @@ const wrappedRewards = computed(() => {
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
-            :add-spacer="true"
+            :add-spacer="colsVisible.age"
             :is-row-expandable="isRowExpandable"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
@@ -278,7 +278,7 @@ const wrappedRewards = computed(() => {
     @include utils.truncate-text;
 
     @media (max-width: 450px) {
-      @include utils.set-all-width(60px);
+      @include utils.set-all-width(80px);
     }
   }
 
