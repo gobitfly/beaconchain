@@ -817,6 +817,11 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 			metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_fail").Inc()
 			return errors.Wrap(err, "failed to aggregate rolling windows")
 		}
+
+		err = refreshMaterializedSlashedByCounts()
+		if err != nil {
+			return errors.Wrap(err, "failed to refresh slashed by counts")
+		}
 	}
 
 	if !preventClearOldEpochs {
@@ -1655,6 +1660,62 @@ func (r *ResponseCache) GetSyncCommittee(period uint64) *constypes.StandardSyncC
 
 func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 	return fmt.Sprintf("%s%d", RawSyncCommitteeCacheKey, period)
+}
+
+func refreshMaterializedSlashedByCounts() error {
+	tx, err := db.AlloyWriter.Beginx()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_rolling_total_slashedby_count AS
+		SELECT slashed_by, COUNT(*) as slashed_amount
+		FROM validator_dashboard_data_rolling_total
+		WHERE slashed = true AND slashed_by IS NOT NULL
+		GROUP BY slashed_by;
+		CREATE INDEX IF NOT EXISTS idx_validator_dashboard_data_rolling_total_slashedby_count_slashed_by ON validator_dashboard_data_rolling_total_slashedby_count(slashed_by);
+
+		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_rolling_daily_slashedby_count AS
+		SELECT slashed_by, COUNT(*) as slashed_amount
+		FROM validator_dashboard_data_rolling_daily
+		WHERE slashed = true AND slashed_by IS NOT NULL
+		GROUP BY slashed_by;
+		CREATE INDEX IF NOT EXISTS idx_validator_dashboard_data_rolling_daily_slashedby_count_slashed_by ON validator_dashboard_data_rolling_daily_slashedby_count(slashed_by);
+
+		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_rolling_weekly_slashedby_count AS
+		SELECT slashed_by, COUNT(*) as slashed_amount
+		FROM validator_dashboard_data_rolling_weekly
+		WHERE slashed = true AND slashed_by IS NOT NULL
+		GROUP BY slashed_by;
+		CREATE INDEX IF NOT EXISTS idx_validator_dashboard_data_rolling_weekly_slashedby_count_slashed_by ON validator_dashboard_data_rolling_weekly_slashedby_count(slashed_by);
+
+		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_rolling_monthly_slashedby_count AS
+		SELECT slashed_by, COUNT(*) as slashed_amount
+		FROM validator_dashboard_data_rolling_monthly
+		WHERE slashed = true AND slashed_by IS NOT NULL
+		GROUP BY slashed_by;
+		CREATE INDEX IF NOT EXISTS idx_validator_dashboard_data_rolling_monthly_slashedby_count_slashed_by ON validator_dashboard_data_rolling_monthly_slashedby_count(slashed_by);
+
+		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_epoch_slashedby_count AS
+		SELECT epoch, slashed_by, COUNT(*) as slashed_amount
+		FROM validator_dashboard_data_epoch
+		WHERE slashed = true AND slashed_by IS NOT NULL
+		GROUP BY epoch, slashed_by;
+		CREATE INDEX IF NOT EXISTS idx_validator_dashboard_data_epoch_slashedby_count_epoch_slashed_by ON validator_dashboard_data_epoch_slashedby_count(epoch, slashed_by);
+
+		REFRESH MATERIALIZED VIEW validator_dashboard_data_rolling_total_slashedby_count;
+		REFRESH MATERIALIZED VIEW validator_dashboard_data_rolling_daily_slashedby_count;
+		REFRESH MATERIALIZED VIEW validator_dashboard_data_rolling_weekly_slashedby_count;
+		REFRESH MATERIALIZED VIEW validator_dashboard_data_rolling_monthly_slashedby_count;
+		REFRESH MATERIALIZED VIEW validator_dashboard_data_epoch_slashedby_count;
+	`)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to refresh materialized views")
+	}
+	return tx.Commit()
 }
 
 // Can be used to backfill old missing cl block rewards

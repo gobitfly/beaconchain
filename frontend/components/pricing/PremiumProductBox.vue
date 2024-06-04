@@ -3,9 +3,10 @@
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct } from '~/types/api/user'
-import { formatFiat } from '~/utils/format'
+import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
+import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
+const { bestPremiumProduct } = useProductsStore()
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { products } = useProductsStore()
@@ -18,10 +19,6 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const formatPremiumProductPrice = (price: number, digits?: number) => {
-  return formatFiat(price, 'EUR', $t('locales.currency'), digits ?? 2, digits ?? 2)
-}
-
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.product.price_per_year_eur / 12 : props.product.price_per_month_eur
 
@@ -29,24 +26,32 @@ const prices = computed(() => {
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
-    main: formatPremiumProductPrice(mainPrice),
-    monthly: formatPremiumProductPrice(props.product.price_per_month_eur),
-    monthly_based_on_yearly: formatPremiumProductPrice(props.product.price_per_year_eur / 12),
-    yearly: formatPremiumProductPrice(props.product.price_per_year_eur),
-    saving: formatPremiumProductPrice(savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice(mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+    main: formatPremiumProductPrice($t, mainPrice),
+    monthly: formatPremiumProductPrice($t, props.product.price_per_month_eur),
+    monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
+    yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
   }
 })
 
 const percentages = computed(() => {
-  // compare with the last product in the list
-  const compareProduct = products.value?.premium_products[products.value.premium_products.length - 1]
+  if (bestPremiumProduct?.value === undefined) {
+    return {
+      validatorDashboards: 100,
+      validatorsPerDashboard: 100,
+      summaryChart: 100,
+      heatmapChart: 100
+    }
+  }
+
+  const bestProduct = bestPremiumProduct.value
 
   return {
-    validatorDashboards: props.product.premium_perks.validator_dashboards / (compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
-    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
-    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
-    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+    validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
+    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
+    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (bestProduct.premium_perks.summary_chart_history_seconds) * 100,
+    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (bestProduct.premium_perks.heatmap_history_seconds) * 100
   }
 })
 
@@ -55,16 +60,21 @@ const planButton = computed(() => {
   let text = $t('pricing.premium_product.button.select_plan')
 
   if (user.value?.subscriptions) {
-    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
+    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
     if (!subscription) {
       text = $t('pricing.premium_product.button.select_plan')
     } else if (subscription.product_id === props.product.product_id) {
       text = $t('pricing.premium_product.button.manage_plan')
-    } else if (subscription.product_id < props.product.product_id) {
-      text = $t('pricing.premium_product.button.upgrade')
     } else {
-      isDowngrade = true
-      text = $t('pricing.premium_product.button.downgrade')
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id === subscription.product_id)
+      if (subscribedProduct !== undefined) {
+        if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+          text = $t('pricing.premium_product.button.upgrade')
+        } else {
+          isDowngrade = true
+          text = $t('pricing.premium_product.button.downgrade')
+        }
+      }
     }
   }
 
@@ -79,10 +89,10 @@ const mainFeatures = computed<Feature[]>(() => {
       percentage: percentages.value.validatorDashboards
     },
     {
-      name: $t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
-      subtext: $t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
+      name: $t('pricing.premium_product.validators_per_dashboard', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
-      tooltip: $t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
       percentage: percentages.value.validatorsPerDashboard
     },
     {
@@ -141,21 +151,21 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ prices.yearly }} {{ $t('pricing.premium_product.yearly') }}*
+          {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ $t('pricing.premium_product.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', {amount: prices.saving}) }}
         </div>
         <BcTooltip position="top" :fit-content="true">
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
             </div>
           </template>
         </BcTooltip>

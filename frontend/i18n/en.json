@@ -88,8 +88,7 @@
     "age": "Age",
     "from": "From",
     "amount": "Amount",
-    "valid": "Valid",
-    "all_time_total": "All time total"
+    "valid": "Valid"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -352,7 +351,6 @@
       "withdrawals": {
         "title": "Withdrawals",
         "search_placeholder": "Index, Public Key, Address",
-        "all_time_total": "All time total",
         "pending": "Pending",
         "pending_tooltip": "Estimation for next withdrawal currently unavailable",
         "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
@@ -591,18 +589,16 @@
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
     "excluding_vat": "* All prices are excluding VAT",
+    "per_month": "per month",
+    "amount_per_year": "{amount} yearly",
+    "savings": "You save {amount} a year",
+    "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
+    "per_validator": "{amount} per validator",
+    "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "premium_product": {
       "popular": "Popular!",
-      "per_month": "per month",
-      "yearly": "yearly",
-      "savings": "You save {amount} a year",
-      "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
-      "validators_per_dashboard": {
-        "text": "{amount} Validators per Dashboard",
-        "tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance"
-      },
-      "per_validator": "{amount} per validator",
+      "validators_per_dashboard": "{amount} Validators per Dashboard",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
       "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
       "timeframe_dashboard_chart_no_timeframe": "Dashboard chart history",
@@ -618,6 +614,19 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
+    },
+    "view_addons": "View Add-Ons",
+    "addons": {
+      "title": "Premium Add-Ons",
+      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
+      "validator_amount": "+{amount} Validators",
+      "per_dashboard": "per Dashboard",
+      "quantity": "Quantity: {quantity}",
+      "button": {
+        "select_addon": "Select Add-On",
+        "manage_addon": "Manage Add-On"
+      },
+      "requires_plan": "requires {name} plan"
     }
   },
   "time_duration": {
