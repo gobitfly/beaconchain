@@ -19,7 +19,7 @@
 
 <style lang="scss" scoped>
 .type-toggle-container {
-  width: 237px;
+  width: 280px;
   height: 41px;
   margin-bottom: 37px;
   display: flex;
@@ -38,9 +38,9 @@
 
     .text {
       color: var(--primary-contrast-color);
-      font-size: 13px;
+      font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
-      padding-left: 16px;
+      padding-left: 18px;
     }
   }
 
@@ -60,7 +60,7 @@
 
     .text {
       color: var(--grey);
-      font-size: 14px;
+      font-size: 16px;
       font-weight: var(--montserrat-semi-bold);
     }
   }

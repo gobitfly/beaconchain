@@ -49,10 +49,13 @@ const scrollToAddons = () => {
   justify-content: center;
   padding-top: 25px;
 
+  width: var(--pricing-content-width);
+  margin-left: calc((var(--content-width) - var(--pricing-content-width)) / 2);
+
   .view-addons-button {
     width: 215px;
     height: 45px;
-    font-size: 21px;
+    font-size: 18px;
     display: flex;
     gap: 12px;
     margin-bottom: 35px;

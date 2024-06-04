@@ -195,7 +195,8 @@ const minorFeatures = computed<Feature[]>(() => {
 
 <style lang="scss" scoped>
 .box-container {
-  width: 400px;
+  box-sizing: border-box;
+  width: 293px;
   height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
@@ -204,7 +205,7 @@ const minorFeatures = computed<Feature[]>(() => {
   flex-shrink: 0;
 
   &[popular] {
-    width: 460px;
+    width: 381px;
     border-color: var(--primary-color);
   }
 
@@ -218,21 +219,21 @@ const minorFeatures = computed<Feature[]>(() => {
     font-family: var(--montserrat-family);
 
     .name {
-      font-size: 50px;
+      font-size: 41px;
     }
 
     .popular {
-      font-size: 35px;
+      font-size: 29px;
       color: var(--primary-color);
     }
   }
 
   &[popular] .features-container {
-    padding: 18px 65px;
+    padding: 18px 64px;
   }
 
   &:not([popular]) .features-container {
-    padding: 18px 35px;
+    padding: 18px 25px;
   }
 
   .features-container {
@@ -241,18 +242,18 @@ const minorFeatures = computed<Feature[]>(() => {
     font-family: var(--roboto-family);
 
     .prize {
-      font-size: 70px;
+      font-size: 59px;
       font-family: var(--montserrat-family);
     }
 
     .prize-subtext {
       color: var(--text-color-discreet);
-      font-size: 21px;
+      font-size: 18px;
       font-weight: 400;
       line-height: 1.85;
       display: flex;
       flex-direction: column;
-      margin-bottom: 21px;
+      margin-bottom: 18px;
     }
 
     .saving-info {
@@ -261,10 +262,10 @@ const minorFeatures = computed<Feature[]>(() => {
       justify-content: center;
       align-items: center;
       gap: 13px;
-      height: 37px;
+      height: 30px;
       border-radius: 18px;
       background: var(--subcontainer-background);
-      font-size: 17px;
+      font-size: 15px;
       margin-bottom: 28px;
     }
 
@@ -285,8 +286,8 @@ const minorFeatures = computed<Feature[]>(() => {
 
   .plan-button {
     width: 100%;
-    height: 53px;
-    font-size: 25px;
+    height: 44px;
+    font-size: 18px;
     border-radius: 7px;
     margin-bottom: 5px;
 

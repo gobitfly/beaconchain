@@ -31,15 +31,15 @@ defineProps<Props>()
 
   .premium-products-row {
     display: flex;
-    gap: 17px;
+    gap: 14px;
     justify-content: space-between;
     overflow-x: auto;
-    padding-bottom: 7px;
+    padding-bottom: 4px;
   }
 
   .footnote {
     font-family: var(--roboto-family);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--text-color-discreet);
     display: flex;
