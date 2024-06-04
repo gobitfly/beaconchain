@@ -21,7 +21,7 @@ const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<Tab
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const { overview } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -247,7 +247,7 @@ const wrappedRewards = computed(() => {
               />
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
