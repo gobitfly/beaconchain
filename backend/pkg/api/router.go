@@ -172,7 +172,8 @@ for (let i = 0; i < manageBillingForm.length; i++) {
     })
       .then((response) => response.json())
       .then((data) => {
-        window.location.href = data.url
+        // window.location.href = data.url
+		window.open(data.url, '_blank').focus();
       })
       .catch((error) => {
         console.error("Error:", error)
