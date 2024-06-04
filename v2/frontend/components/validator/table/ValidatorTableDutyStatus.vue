@@ -8,7 +8,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { slotsPerEpoch } = useNetwork()
+const { networkInfo } = useNetworkStore()
 
 const mapped = computed(() => {
   const mapSuccess = (status?: 'success' | 'partial' | 'failed' | 'orphaned') => {
@@ -50,7 +50,7 @@ const mapped = computed(() => {
   const sync = mapSuccess(props?.data?.sync?.status)
   if (sync.status && props?.data?.sync_count !== undefined) {
     const success = props.data.sync_count
-    const failed = slotsPerEpoch - success
+    const failed = networkInfo.value.slotsPerEpoch! - success
     sync.tooltip = `${success} / ${failed}`
   }
   const totalClassName = !(head.status && source.status && target.status) ? '' : (head.success || source.success || target.success) ? 'positive' : 'negative'

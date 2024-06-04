@@ -23,10 +23,12 @@ import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashb
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
+const { networkInfo } = useNetworkStore()
+const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
-// TODO: once we have different chains we migh need to change the default from 'ETH' to the dashboard currency
-const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? 'ETH' : currency.value)
+const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? networkNativeELcurrency.value : currency.value)
 
 use([
   GridComponent,

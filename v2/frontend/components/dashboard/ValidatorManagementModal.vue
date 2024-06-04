@@ -13,7 +13,6 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import { type SearchBar, SearchbarShape, SearchbarColors, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { ChainIDs } from '~/types/networks'
 import { API_PATH, type PathValues } from '~/types/customFetch'
 
 const { t: $t } = useI18n()

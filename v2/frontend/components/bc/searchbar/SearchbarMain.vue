@@ -34,8 +34,9 @@ import {
   type CategoryFilter,
   type NetworkFilter
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { ChainIDs, ChainInfo } from '~/types/networks'
 import { API_PATH } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
 const layoutThreshold = 500 // px  (tells when the bar will switch between its narrow and large layouts)
@@ -43,8 +44,9 @@ const layoutThreshold = 500 // px  (tells when the bar will switch between its n
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
 const { t } = useI18n()
-
 const { fetch } = useCustomFetch()
+const { getAvailableNetworks } = useNetworkStore()
+
 const props = defineProps<{
   barShape: SearchbarShape, // shape of the bar
   colorTheme: SearchbarColors, // colors of the bar and its dropdown
@@ -188,7 +190,7 @@ function reconfigureSearchbar () {
     allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
   }
   // creates the entries storing the state of the network filter, and deselect all networks
-  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
+  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getAvailableNetworks()
   userInputNetworks.value.clear()
   for (const nw of networks) {
     userInputNetworks.value.set(nw, false)

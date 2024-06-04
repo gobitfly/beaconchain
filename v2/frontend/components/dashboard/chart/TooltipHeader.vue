@@ -9,7 +9,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { epochsPerDay } = useNetwork()
+const { epochsPerDay } = useNetworkStore()
 
 const dateText = computed(() => {
   const date = formatEpochToDate(props.startEpoch, props.t('locales.date'))
