@@ -50,9 +50,9 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
 	} else {
-		err = tx.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
 	}
 	return bounds, err
 }
