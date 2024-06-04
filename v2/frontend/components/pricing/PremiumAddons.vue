@@ -44,19 +44,19 @@ const addonsAvailable = computed(() => {
   width: 100%;
   display: flex;
   align-items: flex-start;
-  gap: 70px;
+  gap: 10px;
 
   .text-container {
     display: flex;
     flex-direction: column;
 
     .title {
-      font-size: 32px;
+      font-size: 26px;
       color: var(--primary-color);
     }
 
     .subtitle {
-      font-size: 35px;
+      font-size: 29px;
     }
   }
 
