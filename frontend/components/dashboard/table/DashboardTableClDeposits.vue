@@ -124,7 +124,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   :no-wrap="true"
                   type="public_key"
                 />
-                <span v-else>{{ $t('table.all_time_total') }}</span>
+                <span v-else>Σ</span>
               </template>
             </Column>
             <Column field="index" :header="$t('common.index')">
@@ -137,7 +137,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 >
                   {{ slotProps.data.index }}
                 </BcLink>
-                <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
+                <span v-else-if="!colsVisible.publicKey">Σ</span>
               </template>
             </Column>
             <Column
