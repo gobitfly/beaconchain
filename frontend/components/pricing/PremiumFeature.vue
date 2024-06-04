@@ -90,7 +90,7 @@ defineProps<Props>()
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     .main-row {
       margin-bottom: 5px;
 

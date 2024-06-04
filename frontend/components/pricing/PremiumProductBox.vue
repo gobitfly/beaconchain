@@ -300,11 +300,11 @@ const minorFeatures = computed<Feature[]>(() => {
     }
   }
 
-  @media (max-width: 600px) {
-    width: 240px;
+  @media (max-width: 1360px) {
+    width: 210px;
 
     &[popular] {
-      width: 320px;
+      width: 275px;
     }
 
     .name-container {
@@ -318,11 +318,11 @@ const minorFeatures = computed<Feature[]>(() => {
     }
 
     &[popular] .features-container {
-      padding: 10px 60px;
+      padding: 10px 45px;
     }
 
     &:not([popular]) .features-container {
-      padding: 10px 20px;
+      padding: 10px 18px;
     }
 
     .features-container {

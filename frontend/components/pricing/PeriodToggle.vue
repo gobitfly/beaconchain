@@ -52,7 +52,7 @@ const savingPercentage = computed(() => {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1360px) {
   .toggle-container {
     font-size: 16px;
     margin-bottom: 30px;
