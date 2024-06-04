@@ -38,7 +38,8 @@ const savingPercentage = computed(() => {
   margin-bottom: 55px;
 
   .toggle{
-    font-size: 20px;
+    font-size: 18px;
+    font-weight: var(--montserrat-light);
     margin-bottom: 0;
   }
 
@@ -46,7 +47,7 @@ const savingPercentage = computed(() => {
     width: 75px;
     color: var(--primary-color);
     text-align: center;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: var(--montserrat-semi-bold);
   }
 }
