@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"time"
 
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -76,14 +77,21 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	}
 
 	premiumProduct := struct {
-		ProductId string `db:"product_id"`
-		Store     string `db:"store"`
+		ProductId string    `db:"product_id"`
+		Store     string    `db:"store"`
+		Start     time.Time `db:"start"`
+		End       time.Time `db:"end"`
 	}{}
 	err = d.userReader.Get(&premiumProduct, `
-		SELECT COALESCE(product_id, '') AS product_id, COALESCE(store, '') AS store 
-		FROM users_app_subscriptions 
-		WHERE user_id = $1 AND active = true
-		ORDER BY CASE product_id
+		SELECT 
+			COALESCE(uas.product_id, '') AS product_id, 
+			COALESCE(uas.store, '') AS store,
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+		FROM users_app_subscriptions uas
+		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
+		WHERE uas.user_id = $1 AND uas.active = true
+		ORDER BY CASE uas.product_id
 			WHEN 'orca.yearly'    THEN  1
 			WHEN 'dolphin.yearly' THEN  2
 			WHEN 'guppy.yearly'   THEN  3
@@ -94,7 +102,8 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			WHEN 'goldfish'       THEN  8
 			WHEN 'plankton'       THEN  9
 			ELSE                       10  -- For any other product_id values
-		END, id DESC`, userId)
+		END, uas.id DESC
+		LIMIT 1`, userId)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, fmt.Errorf("error getting premiumProduct: %w", err)
@@ -122,8 +131,8 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 					ProductId:       effectiveProductId,
 					ProductName:     p.ProductName,
 					ProductCategory: t.ProductCategoryPremium,
-					Start:           1715768109, // TODO:patrick
-					End:             1718446509, // TODO:patrick
+					Start:           premiumProduct.Start.Unix(), // TODO:patrick
+					End:             premiumProduct.End.Unix(),   // TODO:patrick
 				})
 			}
 			break
@@ -137,9 +146,13 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		PriceId string `db:"price_id"`
 	}{}
 	err = d.userReader.Select(&premiumAddons, `
-		SELECT price_id
-		FROM users_stripe_subscriptions uss
+		SELECT 
+			price_id,
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+		FROM users_stripe_subscriptions uss		
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
+		LEFT JOIN users_stripe_subscriptions uss ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting premiumAddons: %w", err)

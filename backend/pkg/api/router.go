@@ -47,17 +47,24 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	_, err := w.Write([]byte(fmt.Sprintf(`
+<style>
+.userOptions {display:none;}
+</style>
+
 <form class="manage-billing-form">
 <input type="hidden" name="x" value="y">
 <button class="btn btn-lg btn-block btn-outline-primary">Manage Billing</button>
 </form>
 
-<button id="guppy"          class="purchase">purchase guppy</button>
-<button id="guppy.yearly"   class="purchase">purchase guppy.yearly</button>
-<button id="dolphin"        class="purchase">purchase dolphin</button>
-<button id="dolphin.yearly" class="purchase">purchase dolphin.yearly</button>
-<button id="orca"           class="purchase">purchase orca</button>
-<button id="orca.yearly"    class="purchase">purchase orca.yearly</button>
+<button class="purchase" data-producd-id="plankton">purchase plankton</button>
+<button class="purchase" data-producd-id="goldfish">purchase goldfish</button>
+<button class="purchase" data-producd-id="whale">purchase whale</button>
+<button class="purchase" data-producd-id="guppy">purchase guppy</button>
+<button class="purchase" data-producd-id="guppyYearly">purchase guppy.yearly</button>
+<button class="purchase" data-producd-id="dolphin">purchase dolphin</button>
+<button class="purchase" data-producd-id="dolphinYearly">purchase dolphin.yearly</button>
+<button class="purchase" data-producd-id="orca">purchase orca</button>
+<button class="purchase" data-producd-id="orcaYearly">purchase orca.yearly</button>
 
 <h2>user info</h2>
 <pre id="userInfo"></pre>
@@ -67,21 +74,38 @@ func TestStripe(w http.ResponseWriter, r *http.Request) {
 var config = {
 	betaKey  	     : "%[1]s",
 	publicKey        : "%[2]s",
-	guppy            : "%[3]s",
-	dolphin          : "%[4]s",
-	orca             : "%[5]s",
-	vdbAddon1k       : "%[6]s",
-	vdbAddon10k      : "%[7]s",
-	guppyYearly      : "%[8]s",
-	dolphinYearly    : "%[9]s",
-	orcaYearly       : "%[10]s",
-	vdbAddon1kYearly : "%[11]s",
-	vdbAddon10kYearly: "%[12]s",
+	plankton         : "%[3]s",
+	goldfish         : "%[4]s",
+	whale            : "%[5]s",
+	guppy            : "%[6]s",
+	dolphin          : "%[7]s",
+	orca             : "%[8]s",
+	vdbAddon1k       : "%[9]s",
+	vdbAddon10k      : "%[10]s",
+	guppyYearly      : "%[11]s",
+	dolphinYearly    : "%[12]s",
+	orcaYearly       : "%[13]s",
+	vdbAddon1kYearly : "%[14]s",
+	vdbAddon10kYearly: "%[15]s",
 }
 
 fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
 	console.log('userInfo',d)
 	document.getElementById('userInfo').innerText = JSON.stringify(d, null, 2)
+	if (d.subscriptions.length) {
+		for (let i = 0; i < d.subscriptions.length; i++) {
+			let s = d.subscriptions[i]
+			switch (s.product_id) {
+			case 'plankton':
+			case 'goldfish':
+			case 'whale':
+			case 'guppy':
+			case 'dolphin':
+			case 'orca':
+				document.querySelectorAll('.purchase[data-producd-id="'+s.product_id+'"]').forEach(e => {e.style.display = 'none'})
+			}
+		}
+	}
 }).catch(err => {
 	console.error("error getting api user me", err)
 })
@@ -127,6 +151,17 @@ function setupStripe() {
 				})
 			})
 		})
+		var purchaseButtons = document.querySelectorAll(".purchase")
+		for (let i = 0; i < purchaseButtons.length; i++) {
+			purchaseButtons[i].addEventListener('click', function(e) {
+				let priceId = config[e.target.getAttribute('data-producd-id')]
+				createCheckoutSession(priceId).then((d) => {
+					stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
+						console.error("error redirecting to stripe checkout", err)
+					})
+				})
+			})
+		}
 	} catch (err) {
 		console.error("error creating stripe object", err)
 	}
@@ -166,6 +201,9 @@ setupStripe()
 `,
 		utils.Config.ApiKeySecret,
 		utils.Config.Frontend.Stripe.PublicKey,
+		utils.Config.Frontend.Stripe.Plankton,
+		utils.Config.Frontend.Stripe.Goldfish,
+		utils.Config.Frontend.Stripe.Whale,
 		utils.Config.Frontend.Stripe.Guppy,
 		utils.Config.Frontend.Stripe.Dolphin,
 		utils.Config.Frontend.Stripe.Orca,
