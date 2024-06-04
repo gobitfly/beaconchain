@@ -133,7 +133,6 @@ func (d *DummyService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrima
 	return true, nil
 }
 
-// return how many of the passed validators are already in the dashboard
 func (d *DummyService) GetValidatorDashboardExistingValidatorCount(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)

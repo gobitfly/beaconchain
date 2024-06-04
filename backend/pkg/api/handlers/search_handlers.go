@@ -46,10 +46,9 @@ var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		Input             string          `json:"input"`
-		Networks          []network       `json:"networks,omitempty"`
-		Types             []searchTypeKey `json:"types,omitempty"`
-		IncludeValidators bool            `json:"include_validators,omitempty"`
+		Input    string          `json:"input"`
+		Networks []network       `json:"networks,omitempty"`
+		Types    []searchTypeKey `json:"types,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
@@ -60,14 +59,6 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	searchTypeSet := v.checkSearchTypes(req.Types)
 	if v.hasErrors() {
 		handleErr(w, v)
-		return
-	}
-
-	// for beta launch check if the include_validators flag is set and only Ethereum is queried
-	// TODO: Remove this check once the feature is fully implemented
-	_, containsEthereum := networkSet[1]
-	if !req.IncludeValidators || !containsEthereum || len(networkSet) > 1 {
-		returnError(w, http.StatusServiceUnavailable, errors.New("feature not available, please set `include_validators` to true and only query the Ethereum network"))
 		return
 	}
 
@@ -235,10 +226,11 @@ func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Cont
 		}
 
 		return &types.SearchResult{
-			Type:     string(validatorsByDepositEnsName),
-			ChainId:  chainId,
-			StrValue: result.EnsName,
-			NumValue: &result.Count,
+			Type:      string(validatorsByDepositEnsName),
+			ChainId:   chainId,
+			StrValue:  result.EnsName,
+			HashValue: hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -301,10 +293,11 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 		}
 
 		return &types.SearchResult{
-			Type:     string(validatorsByWithdrawalEns),
-			ChainId:  chainId,
-			StrValue: result.EnsName,
-			NumValue: &result.Count,
+			Type:      string(validatorsByWithdrawalEns),
+			ChainId:   chainId,
+			StrValue:  result.EnsName,
+			HashValue: hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
