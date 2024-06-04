@@ -45,6 +45,7 @@ defineProps<Props>()
     color: var(--text-color-discreet);
     display: flex;
     justify-content: flex-end;
+    margin-top: 4px;
   }
 
   margin-bottom: 38px;
