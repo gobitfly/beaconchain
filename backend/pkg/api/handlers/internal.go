@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -389,11 +390,11 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		GroupId           *uint64  `json:"group_id,omitempty"`
+		GroupId           uint64   `json:"group_id,omitempty"`
 		Validators        []string `json:"validators,omitempty"`
-		DepositAddress    *string  `json:"deposit_address,omitempty"`
-		WithdrawalAddress *string  `json:"withdrawal_address,omitempty"`
-		Graffiti          *string  `json:"graffiti,omitempty"`
+		DepositAddress    string   `json:"deposit_address,omitempty"`
+		WithdrawalAddress string   `json:"withdrawal_address,omitempty"`
+		Graffiti          string   `json:"graffiti,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
@@ -403,7 +404,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	fields := []interface{}{req.Validators, req.DepositAddress, req.WithdrawalAddress, req.Graffiti}
 	var count int
 	for _, set := range fields {
-		if set != nil {
+		if !reflect.ValueOf(set).IsZero() {
 			count++
 		}
 	}
@@ -415,7 +416,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		return
 	}
 
-	groupId := v.checkGroupIdBody(req.GroupId) // sets groupId to default if nil
+	groupId := req.GroupId
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
@@ -453,24 +454,24 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 
-	case req.DepositAddress != nil:
-		depositAddress := v.checkRegex(reEthereumAddress, *req.DepositAddress, "deposit_address")
+	case req.DepositAddress != "":
+		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, depositAddress, limit)
 
-	case req.WithdrawalAddress != nil:
-		withdrawalAddress := v.checkRegex(reEthereumAddress, *req.WithdrawalAddress, "withdrawal_address")
+	case req.WithdrawalAddress != "":
+		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, withdrawalAddress, limit)
 
-	case req.Graffiti != nil:
-		graffiti := v.checkRegex(reNonEmpty, *req.Graffiti, "graffiti")
+	case req.Graffiti != "":
+		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
@@ -479,7 +480,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	}
 
 	if dataErr != nil {
-		handleErr(w, err)
+		handleErr(w, dataErr)
 		return
 	}
 	response := types.ApiResponse{
