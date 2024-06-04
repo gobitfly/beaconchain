@@ -679,7 +679,8 @@ func (d *executionDepositsExporter) updateCachedView() error {
 		    uvdv.dashboard_id,
 		    uvdv.group_id,
 		    ed.block_number,
-		    ed.log_index
+		    ed.log_index,
+			ed.amount
 		FROM
 		    eth1_deposits ed
 		    INNER JOIN validators v ON ed.publickey = v.pubkey
@@ -688,6 +689,8 @@ func (d *executionDepositsExporter) updateCachedView() error {
 		    uvdv.dashboard_id DESC,
 		    ed.block_number DESC,
 		    ed.log_index DESC;
-		`, "cached_eth1_deposits_lookup", []string{"dashboard_id, block_number", "log_index"})
+		`, "cached_eth1_deposits_lookup",
+		[]string{"dashboard_id", "block_number", "log_index"},
+		[]string{"dashboard_id", "amount"})
 	return err
 }
