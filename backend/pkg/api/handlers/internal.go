@@ -184,8 +184,8 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		return
 	}
 	req := struct {
-		Name    string  `json:"name"`
-		Network network `json:"network"`
+		Name    string      `json:"name"`
+		Network intOrString `json:"network"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)

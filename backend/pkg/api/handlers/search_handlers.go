@@ -47,7 +47,7 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	var v validationError
 	req := struct {
 		Input             string          `json:"input"`
-		Networks          []network       `json:"networks,omitempty"`
+		Networks          []intOrString   `json:"networks,omitempty"`
 		Types             []searchTypeKey `json:"types,omitempty"`
 		IncludeValidators bool            `json:"include_validators,omitempty"`
 	}{}
@@ -333,24 +333,24 @@ func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, i
 // --------------------------------------
 //   Input Validation
 
-// if the passed slice is empty, return a set with all networks; otherwise check if the passed networks are valid
-func (v *validationError) checkNetworkSlice(networksSlice []network) map[network]struct{} {
-	networkSet := map[network]struct{}{}
+// if the passed slice is empty, return a set with all chain IDs; otherwise check if the passed networks are valid
+func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]struct{} {
+	networkSet := map[uint64]struct{}{}
 	// if the list is empty, query all networks
-	if len(networksSlice) == 0 {
+	if len(networks) == 0 {
 		for _, n := range allNetworks {
-			networkSet[network(n.ChainId)] = struct{}{}
+			networkSet[n.ChainId] = struct{}{}
 		}
 		return networkSet
 	}
 	// list not empty, check if networks are valid
-	for _, n := range networksSlice {
-		// chain id was already checked in the unmarshal step, if it's invalid it will be -1
-		if n == -1 {
+	for _, network := range networks {
+		chainId, ok := isValidNetwork(network)
+		if !ok {
 			v.add("networks", "list contains invalid network, please check the API documentation")
 			break
 		}
-		networkSet[n] = struct{}{}
+		networkSet[chainId] = struct{}{}
 	}
 	return networkSet
 }

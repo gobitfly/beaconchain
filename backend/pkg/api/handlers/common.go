@@ -447,6 +447,25 @@ func (v *validationError) checkDate(dateString string) time.Time {
 	return date
 }
 
+func (v *validationError) checkNetwork(network intOrString) uint64 {
+	chainId, ok := isValidNetwork(network)
+	if !ok {
+		v.add("network", fmt.Sprintf("given value '%s' is not a valid network", network))
+	}
+	return chainId
+}
+
+// isValidNetwork checks if the given network is a valid network.
+// It returns the chain id of the network and true if it is valid, otherwise 0 and false.
+func isValidNetwork(network intOrString) (uint64, bool) {
+	for _, realNetwork := range allNetworks {
+		if (network.intValue != nil && realNetwork.ChainId == *network.intValue) || (network.strValue != nil && realNetwork.Name == *network.strValue) {
+			return realNetwork.ChainId, true
+		}
+	}
+	return 0, false
+}
+
 // --------------------------------------
 //   Response handling
 
@@ -553,53 +572,47 @@ func newNotFoundErr(format string, args ...interface{}) error {
 }
 
 // --------------------------------------
-// network helpers
+// intOrString is a custom type that can be unmarshalled from either an int or a string (strings will also be parsed to int if possible).
+// if unmarshaling throws no errors one of the two fields will be set, the other will be nil.
+type intOrString struct {
+	intValue *uint64
+	strValue *string
+}
 
-// network is a custom type for network chain IDs.
-// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
-type network int64
-
-func (v *validationError) checkNetwork(network network) network {
-	if network == -1 {
-		v.add("network", "given value is not a valid network")
+func (v *intOrString) UnmarshalJSON(data []byte) error {
+	// Attempt to unmarshal as uint64 first
+	var intValue uint64
+	if err := json.Unmarshal(data, &intValue); err == nil {
+		v.intValue = &intValue
+		return nil
 	}
-	return network
-}
 
-var _ json.Unmarshaler = (*network)(nil)
-
-func (n network) MarshalJSON() ([]byte, error) {
-	return json.Marshal(n)
-}
-
-// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
-// if the inputted network is not found, it is set to -1.
-func (n *network) UnmarshalJSON(data []byte) error {
-	var chainId int64 = -1
-	var networkName string
-
-	// Try to unmarshal as either chain ID or network name
-	if err := json.Unmarshal(data, &chainId); err != nil {
-		// If unmarshalling as chain ID fails, try unmarshalling as network name
-		if err := json.Unmarshal(data, &networkName); err != nil {
-			return fmt.Errorf("failed to unmarshal network from json: %s", err)
+	// If unmarshalling as uint64 fails, try to unmarshal as string
+	var strValue string
+	if err := json.Unmarshal(data, &strValue); err == nil {
+		if parsedInt, err := strconv.ParseUint(strValue, 10, 64); err == nil {
+			v.intValue = &parsedInt
+		} else {
+			v.strValue = &strValue
 		}
+		return nil
 	}
 
-	// Search for the network in the networks slice
-	for _, realNetwork := range allNetworks {
-		if realNetwork.ChainId == uint64(chainId) || realNetwork.Name == networkName {
-			*n = network(realNetwork.ChainId)
-			return nil
-		}
-	}
-
-	// network is semantically invalid, set to -1
-	*n = network(-1)
-	return nil
+	// If both unmarshalling attempts fail, return an error
+	return fmt.Errorf("failed to unmarshal intOrString from json: %s", string(data))
 }
 
-func (network) JSONSchema() *jsonschema.Schema {
+func (v intOrString) String() string {
+	if v.intValue != nil {
+		return strconv.FormatUint(*v.intValue, 10)
+	}
+	if v.strValue != nil {
+		return *v.strValue
+	}
+	return ""
+}
+
+func (intOrString) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		OneOf: []*jsonschema.Schema{
 			{Type: "string"}, {Type: "integer"},
