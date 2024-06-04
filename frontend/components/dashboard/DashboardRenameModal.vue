@@ -22,15 +22,23 @@ watch(props, (p) => {
   }
 }, { immediate: true })
 
+const renameDisabled = computed(() => {
+  return !name.value?.length || isLoading.value || !REGEXP_VALID_NAME.test(name.value)
+})
+
 const rename = async () => {
-  if (!name.value) {
+  name.value = name.value.trim()
+
+  if (renameDisabled.value) {
     return
   }
+
   isLoading.value = true
   const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_RENAME_VALIDATOR : API_PATH.DASHBOARD_RENAME_ACCOUNT
   await fetch(path, { body: { name: name.value } }, { dashboardKey: `${props.value?.dashboard.id}` })
 
   isLoading.value = false
+
   dialogRef?.value.close(true)
 }
 
@@ -40,7 +48,7 @@ const rename = async () => {
   <div class="dashboard_rename_modal_container">
     <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="rename" />
     <div class="footer">
-      <Button :disabled="!name?.length || isLoading" @click="rename">
+      <Button :disabled="renameDisabled" @click="rename">
         {{ $t('navigation.save') }}
       </Button>
     </div>

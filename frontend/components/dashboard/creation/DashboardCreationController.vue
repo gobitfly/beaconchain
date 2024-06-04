@@ -5,6 +5,9 @@ import { ChainIDs } from '~/types/networks'
 import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { dashboards } = useUserDashboardStore()
+const { user } = useUserStore()
 
 interface Props {
   displayType: DashboardCreationDisplayType,
@@ -23,11 +26,27 @@ const { isLoggedIn } = useUserStore()
 const { fetch } = useCustomFetch()
 const route = useRoute()
 
+const maxDashboards = computed(() => {
+  // TODO: currently there is no value for "amount of account dashboards", using "amount of validator dashboards" instead for now
+  return user.value?.premium_perks.validator_dashboards ?? 1
+})
+const accountsDisabled = computed(() => {
+  return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value
+})
+const validatorsDisabled = computed(() => {
+  return (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards.value
+})
+
 function show () {
   visible.value = true
 
   state.value = 'type'
   type.value = ''
+  if (!validatorsDisabled.value) {
+    type.value = 'validator'
+  } else if (!accountsDisabled.value) {
+    type.value = 'account'
+  }
   name.value = isLoggedIn.value ? '' : 'cookie'
   network.value = undefined
 }
@@ -90,6 +109,8 @@ async function createDashboard () {
       v-model:state="state"
       v-model:type="type"
       v-model:name="name"
+      :accounts-disabled="accountsDisabled"
+      :validators-disabled="validatorsDisabled"
       @next="onNext()"
     />
     <DashboardCreationNetworkMask
@@ -107,6 +128,8 @@ async function createDashboard () {
         v-model:state="state"
         v-model:type="type"
         v-model:name="name"
+        :accounts-disabled="accountsDisabled"
+        :validators-disabled="validatorsDisabled"
         @next="onNext()"
       />
       <DashboardCreationNetworkMask

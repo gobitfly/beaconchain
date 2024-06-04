@@ -144,9 +144,10 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             </Column>
             <Column field="block" :sortable="true" :header="$t('common.block')">
               <template #body="slotProps">
-                <BcLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
-                  <BcFormatNumber :value="slotProps.data.block" default="-" />
+                <BcLink v-if="slotProps.data.block || slotProps.data.slot === 0" :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
+                  <BcFormatNumber :value="slotProps.data.block" default="0" />
                 </BcLink>
+                <span v-else>-</span>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age">
@@ -180,6 +181,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   v-if="slotProps.data.reward_recipient?.hash"
                   type="address"
                   class="reward_recipient"
+                  :no-wrap="true"
                   :hash="slotProps.data.reward_recipient?.hash"
                   :ens="slotProps.data.reward_recipient?.ens"
                 />
@@ -195,7 +197,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :header="$t('dashboard.validator.col.proposer_rewards')"
             >
               <template #body="slotProps">
-                <BlockTableRewardItem :reward="slotProps.data.reward" />
+                <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -238,6 +240,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     v-if="slotProps.data.reward_recipient?.hash"
                     type="address"
                     class="reward_recipient"
+                    :no-wrap="true"
                     :hash="slotProps.data.reward_recipient?.hash"
                     :ens="slotProps.data.reward_recipient?.ens"
                   />
@@ -247,7 +250,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.proposer_rewards') }}:
                   </div>
-                  <BlockTableRewardItem :reward="slotProps.data.reward" />
+                  <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
                 </div>
                 <div class="row">
                   <div class="label">

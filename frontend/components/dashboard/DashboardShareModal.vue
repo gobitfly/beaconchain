@@ -36,9 +36,6 @@ watch(props, (p) => {
 }, { immediate: true })
 
 const add = async () => {
-  if (isUpdating.value) {
-    return
-  }
   isUpdating.value = true
   await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { share_groups: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
   await refreshDashboards()
@@ -55,7 +52,16 @@ const edit = async () => {
   isUpdating.value = false
 }
 
+const publishDisabled = computed(() => {
+  return isUpdating.value || !REGEXP_VALID_NAME.test(dashboardName.value)
+})
+
 const share = () => {
+  dashboardName.value = dashboardName.value.trim()
+  if (publishDisabled.value) {
+    return
+  }
+
   if (props.value?.dashboard.public_ids?.[0]?.public_id) {
     edit()
   } else {
@@ -78,6 +84,7 @@ const shareGroupTooltip = computed(() => {
         v-model="dashboardName"
         :placeholder="$t('dashboard.share_dialog.setting.name.placeholder')"
         class="input-field"
+        @keypress.enter="share"
       />
       <div class="share-setting">
         <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" :disabled="!isPremiumUser" />
@@ -95,7 +102,7 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="isUpdating" @click="share">
+      <Button :disabled="publishDisabled" @click="share">
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>

@@ -55,13 +55,13 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		return result, &paging, nil
 	}
 
-	validatorGroupMap := make(map[uint64]uint64)
-	var validators []uint64
+	validatorGroupMap := make(map[t.VDBValidator]uint64)
+	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
 		queryResult := []struct {
-			ValidatorIndex uint64 `db:"validator_index"`
-			GroupId        uint64 `db:"group_id"`
+			ValidatorIndex t.VDBValidator `db:"validator_index"`
+			GroupId        uint64         `db:"group_id"`
 		}{}
 
 		queryArgs := []interface{}{dashboardId.Id}
@@ -92,9 +92,9 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		validatorSearchMap := utils.SliceToMap(validatorSearch)
 
 		for _, validator := range dashboardId.Validators {
-			if _, ok := validatorSearchMap[validator.Index]; len(validatorSearchMap) == 0 || ok {
-				validatorGroupMap[validator.Index] = t.DefaultGroupId
-				validators = append(validators, validator.Index)
+			if _, ok := validatorSearchMap[validator]; len(validatorSearchMap) == 0 || ok {
+				validatorGroupMap[validator] = t.DefaultGroupId
+				validators = append(validators, validator)
 			}
 		}
 	}
@@ -284,7 +284,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 	return result, p, nil
 }
 
-func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.VDBWithdrawalsTableRow, error) {
+func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidator) (*t.VDBWithdrawalsTableRow, error) {
 	if len(queryValidators) == 0 {
 		return nil, nil
 	}
@@ -311,7 +311,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 
 	latestFinalized := cache.LatestFinalizedEpoch.Get()
 
-	var nextValidator *uint64
+	var nextValidator *t.VDBValidator
 	for _, validator := range queryValidators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 
@@ -360,7 +360,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 
 	nextValidatorData := validatorMapping.ValidatorMetadata[*nextValidator]
 
-	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]uint64{*nextValidator})
+	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]t.VDBValidator{*nextValidator})
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []uint64) (*t.V
 	return nextData, nil
 }
 
-func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex uint64, cursor uint64) (uint64, error) {
+func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {
 	// the validators' balance will not be checked here as this is only a rough estimation
 	// checking the balance for hundreds of thousands of validators is too expensive
 
@@ -413,7 +413,7 @@ func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex uint64
 		return 0, errors.New("stats not available")
 	}
 
-	var maxValidatorIndex uint64
+	var maxValidatorIndex t.VDBValidator
 	if *stats.TotalValidatorCount > 0 {
 		maxValidatorIndex = *stats.TotalValidatorCount - 1
 	}
@@ -467,9 +467,9 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 	}
 
 	queryResult := []struct {
-		ValidatorIndex uint64 `db:"validator_index"`
-		Epoch          uint64 `db:"epoch_end"`
-		Amount         int64  `db:"acc_withdrawals_amount"`
+		ValidatorIndex t.VDBValidator `db:"validator_index"`
+		Epoch          uint64         `db:"epoch_end"`
+		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
 	queryArgs := []interface{}{}
@@ -498,10 +498,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 	} else {
 		validatorSearchMap := utils.SliceToMap(validatorSearch)
 
-		var validators []uint64
+		var validators []t.VDBValidator
 		for _, validator := range dashboardId.Validators {
-			if _, ok := validatorSearchMap[validator.Index]; len(validatorSearchMap) == 0 || ok {
-				validators = append(validators, validator.Index)
+			if _, ok := validatorSearchMap[validator]; len(validatorSearchMap) == 0 || ok {
+				validators = append(validators, validator)
 			}
 		}
 		if len(validators) == 0 {
@@ -527,7 +527,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 	}
 
 	var totalAmount int64
-	var validators []uint64
+	var validators []t.VDBValidator
 	lastEpoch := queryResult[0].Epoch
 	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
 
@@ -558,8 +558,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 	return result, nil
 }
 
-func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) {
-	validatorSearch := make([]uint64, 0)
+func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator, error) {
+	validatorSearch := make([]t.VDBValidator, 0)
 
 	if search != "" {
 		if utils.IsHash(search) || utils.IsEth1Address(search) {
@@ -577,7 +577,7 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 
 			if utils.IsHash(search) {
 				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					validatorSearch = append(validatorSearch, *index)
+					validatorSearch = append(validatorSearch, index)
 				} else {
 					// No validator index for pubkey found, return empty results
 					return nil, nil
@@ -592,7 +592,7 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]uint64, error) 
 
 				for index, metadata := range validatorMapping.ValidatorMetadata {
 					if bytes.Equal(withdrawalCredentials, metadata.WithdrawalCredentials) {
-						validatorSearch = append(validatorSearch, uint64(index))
+						validatorSearch = append(validatorSearch, t.VDBValidator(index))
 					}
 				}
 
