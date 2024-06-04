@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faCaretRight
+} from '@fortawesome/pro-solid-svg-icons'
 interface Props {
   translationPath?: string
 }
@@ -31,20 +35,49 @@ const questions = computed(() => {
 </script>
 
 <template>
-  <div v-if="questions.length">
+  <div v-if="questions.length" class="faq-container">
     <h1>FAQ</h1>
-    <Accordion>
+    <Accordion class="accordion">
       <AccordionTab v-for="quest in questions" :key="quest.path" :header="quest.question">
+        <template #headericon>
+          <FontAwesomeIcon :icon="faCaretRight" />
+        </template>
         <p v-for="(anser, index) in quest.answers" :key="index">
           {{ anser }}
         </p>
-        <BcLink v-if="quest.linkPath" :path="quest.linkPath" class="link">
-          {{ quest.linkLabel }}
-        </BcLink>
+        <div class="footer">
+          <BcLink v-if="quest.linkPath" :path="quest.linkPath" class="link">
+            {{ quest.linkLabel }}
+          </BcLink>
+        </div>
       </AccordionTab>
     </Accordion>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.faq-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  h1 {
+    margin-top: 0;
+    margin-bottom: 22px;
+  }
+
+  p {
+    margin-top: var(--padding);
+    margin-bottom: var(--padding);
+  }
+
+  .accordion {
+    width: 100%;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
 </style>
