@@ -16,7 +16,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -45,7 +45,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -167,14 +167,14 @@ const getRowClass = (row: VDBSummaryTableRow) => {
               <DashboardTableSummaryDetails :row="slotProps.data" />
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
       </template>
       <template #chart>
         <div class="chart-container">
-          <SummaryChart v-if="showInDevelopment" />
+          <DashboardChartSummaryChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>

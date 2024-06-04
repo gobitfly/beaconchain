@@ -558,7 +558,8 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 					    uvdv.dashboard_id,
 					    uvdv.group_id,
 					    bd.block_slot,
-					    bd.block_index
+					    bd.block_index,
+						bd.amount
 					FROM
 					    blocks_deposits bd
 					    INNER JOIN validators v ON bd.publickey = v.pubkey
@@ -568,7 +569,9 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 					    bd.block_slot DESC,
 					    bd.block_index DESC;
 					
-					`, "cached_blocks_deposits_lookup", []string{"dashboard_id, block_slot, block_index"})
+					`, "cached_blocks_deposits_lookup",
+					[]string{"dashboard_id", "block_slot", "block_index"},
+					[]string{"dashboard_id", "amount"})
 				if err != nil {
 					return fmt.Errorf("error updating cached view of consensus deposits: %w", err)
 				}

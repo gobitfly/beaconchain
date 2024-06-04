@@ -14,6 +14,10 @@ export function useProductsStore () {
 
   const products = computed(() => data.value)
 
+  const bestPremiumProduct = computed(() => {
+    return data.value?.premium_products.reduce((max, product) => (product.price_per_year_eur > max.price_per_year_eur ? product : max), data.value.premium_products[0])
+  })
+
   async function getProducts () {
     if (data.value) {
       return data.value
@@ -25,5 +29,5 @@ export function useProductsStore () {
     return res
   }
 
-  return { products, getProducts }
+  return { products, getProducts, bestPremiumProduct }
 }
