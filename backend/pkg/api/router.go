@@ -47,34 +47,35 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	_, err := w.Write([]byte(fmt.Sprintf(`
-<style>
-.userOptions {display:none;}
-</style>
+<h2>manage</h2>
+<div>
+<button class="manage-billing">Manage Billing</button>
+</div>
+<div>
+<button class="purchase" data-product-id="plankton">purchase plankton</button>
+<button class="purchase" data-product-id="goldfish">purchase goldfish</button>
+<button class="purchase" data-product-id="whale">purchase whale</button>
+<button class="purchase" data-product-id="guppy">purchase guppy</button>
+<button class="purchase" data-product-id="guppyYearly">purchase guppy.yearly</button>
+<button class="purchase" data-product-id="dolphin">purchase dolphin</button>
+<button class="purchase" data-product-id="dolphinYearly">purchase dolphin.yearly</button>
+<button class="purchase" data-product-id="orca">purchase orca</button>
+<button class="purchase" data-product-id="orcaYearly">purchase orca.yearly</button>
+</div>
+<div>
+<input type="number" id="addon-quantity" value="1">
+<button class="purchase" data-product-id="vdbAddon1k">purchase vdbAddon1k</button>
+<button class="purchase" data-product-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
+<button class="purchase" data-product-id="vdbAddon10k">purchase vdbAddon10k</button>
+<button class="purchase" data-product-id="vdbAddon10kYearly">purchase vdbAddon10kYearly</button>
+</div>
 
-<form class="manage-billing-form">
-<input type="hidden" name="x" value="y">
-<button class="btn btn-lg btn-block btn-outline-primary">Manage Billing</button>
-</form>
-
-<button class="purchase" data-producd-id="plankton">purchase plankton</button>
-<button class="purchase" data-producd-id="goldfish">purchase goldfish</button>
-<button class="purchase" data-producd-id="whale">purchase whale</button>
-<button class="purchase" data-producd-id="guppy">purchase guppy</button>
-<button class="purchase" data-producd-id="guppyYearly">purchase guppy.yearly</button>
-<button class="purchase" data-producd-id="dolphin">purchase dolphin</button>
-<button class="purchase" data-producd-id="dolphinYearly">purchase dolphin.yearly</button>
-<button class="purchase" data-producd-id="orca">purchase orca</button>
-<button class="purchase" data-producd-id="orcaYearly">purchase orca.yearly</button>
-<button class="purchase" data-producd-id="vdbAddon1k">purchase vdbAddon1k</button>
-<button class="purchase" data-producd-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
-<button class="purchase" data-producd-id="vdbAddon1k">purchase vdbAddon1k</button>
-<button class="purchase" data-producd-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
-
-<h2>user info</h2>
-<pre id="userInfo"></pre>
+<h2>info</h2>
+<pre id="userInfoRaw"></pre>
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
+
 var config = {
 	betaKey  	     : "%[1]s",
 	publicKey        : "%[2]s",
@@ -96,7 +97,7 @@ console.log('config',config)
 
 fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
 	console.log('userInfo',d)
-	document.getElementById('userInfo').innerText = JSON.stringify(d, null, 2)
+	document.getElementById('userInfoRaw').innerText = JSON.stringify(d, null, 2)
 }).catch(err => {
 	console.error("error getting api user me", err)
 })
@@ -113,18 +114,13 @@ function handleFetchResult(result) {
 }
 
 function createCheckoutSession(priceId) {
-	var csrfToken = ""
-	if (document.getElementsByName("CsrfField").length) {
-		csrfToken = document.getElementsByName("CsrfField")[0].value
-	}
+	let addonQuantity = parseInt(document.getElementById("addon-quantity").value)
+	if (isNaN(addonQuantity)) addonQuantity = 1
 	return fetch("/user/stripe/create-checkout-session", {
 		method: "POST",
-		headers: { 
-			"Content-Type": "application/json",
-			// "X-CSRF-Token": csrfToken
-		},
+		headers: { "Content-Type": "application/json" },
 		credentials: 'include',
-		body: JSON.stringify({ priceId: priceId })
+		body: JSON.stringify({ priceId: priceId, addonQuantity: addonQuantity })
 	})
 	.then(handleFetchResult)
 	.catch(err => {
@@ -138,7 +134,7 @@ function setupStripe() {
 		var purchaseButtons = document.querySelectorAll(".purchase")
 		for (let i = 0; i < purchaseButtons.length; i++) {
 			purchaseButtons[i].addEventListener('click', function(e) {
-				let priceId = config[e.target.getAttribute('data-producd-id')]
+				let priceId = config[e.target.getAttribute('data-product-id')]
 				createCheckoutSession(priceId).then((d) => {
 					stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
 						console.error("error redirecting to stripe checkout", err)
@@ -151,24 +147,14 @@ function setupStripe() {
 	}
 }
 
-var manageBillingForm = document.querySelectorAll(".manage-billing-form")
-for (let i = 0; i < manageBillingForm.length; i++) {
-  manageBillingForm[i].addEventListener("submit", function (e) {
-    e.preventDefault()
-    var token = ""
-    if (document.getElementsByName("CsrfField").length) {
-      token = document.getElementsByName("CsrfField")[0].value
-    }
+var manageBillingButtons = document.querySelectorAll(".manage-billing")
+for (let i = 0; i < manageBillingButtons.length; i++) {
+	manageBillingButtons[i].addEventListener("click", function (e) {
     fetch("/user/stripe/customer-portal", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // "X-CSRF-Token": token,
-      },
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({
-        returnURL: window.location.href,
-      }),
+      body: JSON.stringify({returnURL: window.location.href}),
     })
       .then((response) => response.json())
       .then((data) => {

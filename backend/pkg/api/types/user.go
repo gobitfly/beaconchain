@@ -13,6 +13,7 @@ type UserSubscription struct {
 	ProductId       string          `json:"product_id"`
 	ProductName     string          `json:"product_name"`
 	ProductCategory ProductCategory `json:"product_category"`
+	ProductStore    ProductStore    `json:"product_store"`
 	Start           int64           `json:"start" faker:"unix_time"`
 	End             int64           `json:"end" faker:"unix_time"`
 }
@@ -24,6 +25,14 @@ type ProductCategory string
 const ProductCategoryApi ProductCategory = "api"
 const ProductCategoryPremium ProductCategory = "premium"
 const ProductCategoryPremiumAddon ProductCategory = "premium_addon"
+
+type ProductStore string
+
+const ProductStoreStripe ProductStore = "stripe"
+const ProductStoreIosAppstore ProductStore = "ios-appstore"
+const ProductStoreAndroidPlaystore ProductStore = "android-playstore"
+const ProductStoreEthpool ProductStore = "ethpool"
+const ProductStoreManual ProductStore = "manual"
 
 type ProductSummary struct {
 	StripePublicKey                      string                                 `json:"stripe_public_key"`

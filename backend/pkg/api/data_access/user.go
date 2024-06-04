@@ -12,7 +12,7 @@ import (
 )
 
 func (d *DataAccessService) GetUser(email string) (*t.User, error) {
-	// TODO patrick
+	// TODO:patrick
 	result := &t.User{}
 	err := d.userReader.Get(result, `
 		WITH
@@ -112,6 +112,7 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		premiumProduct.Store = ""
 	}
 
+	userIsEligibleForAddons := false
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
 		effectiveProductId := premiumProduct.ProductId
@@ -124,6 +125,9 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			effectiveProductId = "guppy"
 		}
 		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
+			if utils.ProductIsEligibleForAddons(effectiveProductId) {
+				userIsEligibleForAddons = true
+			}
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
 			if effectiveProductId != "premium_free" {
@@ -131,8 +135,9 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 					ProductId:       effectiveProductId,
 					ProductName:     p.ProductName,
 					ProductCategory: t.ProductCategoryPremium,
-					Start:           premiumProduct.Start.Unix(), // TODO:patrick
-					End:             premiumProduct.End.Unix(),   // TODO:patrick
+					ProductStore:    t.ProductStoreStripe,
+					Start:           premiumProduct.Start.Unix(),
+					End:             premiumProduct.End.Unix(),
 				})
 			}
 			break
@@ -143,15 +148,17 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	}
 
 	premiumAddons := []struct {
-		PriceId string    `db:"price_id"`
-		Start   time.Time `db:"start"`
-		End     time.Time `db:"end"`
+		PriceId  string    `db:"price_id"`
+		Start    time.Time `db:"start"`
+		End      time.Time `db:"end"`
+		Quantity int       `db:"quantity"`
 	}{}
 	err = d.userReader.Select(&premiumAddons, `
 		SELECT 
 			price_id,
 			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
-			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
+			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
 		FROM users_stripe_subscriptions uss		
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
@@ -161,20 +168,25 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	for _, addon := range premiumAddons {
 		foundAddon := false
 		for _, p := range productSummary.ExtraDashboardValidatorsPremiumAddon {
-			if p.ProductIdMonthly == addon.PriceId || p.ProductIdYearly == addon.PriceId {
-				userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
+			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
 				foundAddon = true
-				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
-					ProductId:       addon.PriceId,
-					ProductName:     p.ProductName,
-					ProductCategory: t.ProductCategoryPremiumAddon,
-					Start:           addon.Start.Unix(), // TODO:patrick
-					End:             addon.End.Unix(),   // TODO:patrick
-				})
+				for i := 0; i < addon.Quantity; i++ {
+					if userIsEligibleForAddons {
+						userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
+					}
+					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
+						ProductId:       utils.PriceIdToProductId(addon.PriceId),
+						ProductName:     p.ProductName,
+						ProductCategory: t.ProductCategoryPremiumAddon,
+						ProductStore:    t.ProductStoreStripe,
+						Start:           addon.Start.Unix(),
+						End:             addon.End.Unix(),
+					})
+				}
 			}
 		}
 		if !foundAddon {
-			return nil, fmt.Errorf("addon %s not found", addon.PriceId)
+			return nil, fmt.Errorf("addon not found: %v", addon.PriceId)
 		}
 	}
 
@@ -185,7 +197,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	// TODO:patrick put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
 		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-		ApiProducts: []t.ApiProduct{
+		ApiProducts: []t.ApiProduct{ // TODO:patrick this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",
@@ -206,7 +218,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				ProductId:        "iron",
 				ProductName:      "Iron",
 				PricePerMonthEur: 1.99,
-				PricePerYearEur:  math.Floor(1.99*12*0.9*100) / 100, // TODO @patrick
+				PricePerYearEur:  math.Floor(1.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    20,
 					UnitsPerMonth:     20_000_000,
@@ -222,7 +234,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				ProductId:        "silver",
 				ProductName:      "Silver",
 				PricePerMonthEur: 2.99,
-				PricePerYearEur:  math.Floor(2.99*12*0.9*100) / 100, // TODO @patrick
+				PricePerYearEur:  math.Floor(2.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    30,
 					UnitsPerMonth:     100_000_000,
@@ -238,7 +250,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				ProductId:        "gold",
 				ProductName:      "Gold",
 				PricePerMonthEur: 3.99,
-				PricePerYearEur:  math.Floor(3.99*12*0.9*100) / 100, // TODO @patrick
+				PricePerYearEur:  math.Floor(3.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    40,
 					UnitsPerMonth:     200_000_000,
