@@ -18,8 +18,9 @@ import (
 )
 
 type executionPayloadsExporter struct {
-	ModuleContext ModuleContext
-	ExportMutex   *sync.Mutex
+	ModuleContext   ModuleContext
+	ExportMutex     *sync.Mutex
+	CachedViewMutex *sync.Mutex
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
@@ -58,11 +59,11 @@ func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventC
 // can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	// if mutex is locked, return early
-	if !d.ExportMutex.TryLock() {
+	if !d.CachedViewMutex.TryLock() {
 		log.Infof("execution payloads exporter is already running")
 		return nil
 	}
-	defer d.ExportMutex.Unlock()
+	defer d.CachedViewMutex.Unlock()
 
 	start := time.Now()
 	// update cached view
