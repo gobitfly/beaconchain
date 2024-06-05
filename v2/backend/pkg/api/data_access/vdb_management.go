@@ -258,15 +258,11 @@ func (d *DataAccessService) UpdateValidatorDashboardName(dashboardId t.VDBIdPrim
 }
 
 func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
-	validators, err := d.getDashboardValidators(dashboardId)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
-	wg := errgroup.Group{}
 	data := t.VDBOverviewData{}
-
+	wg := errgroup.Group{}
+	var err error
 	// Groups
-	if len(dashboardId.Validators) == 0 && !dashboardId.AggregateGroups {
+	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
 		wg.Go(func() error {
 			var queryResult []struct {
@@ -292,18 +288,34 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 			return nil
 		})
 	}
+	validators, err := d.getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
 
 	// Validator Status
 	wg.Go(func() error {
-		query := `SELECT status AS statename, COUNT(*) AS statecount
-		FROM validators
-		WHERE validatorindex = ANY($1)
-		GROUP BY status`
+		var query string
 		var queryResult []struct {
 			Name  string `db:"statename"`
 			Count uint64 `db:"statecount"`
 		}
-		err = d.readerDb.Select(&queryResult, query, validators)
+		params := []interface{}{}
+		if dashboardId.Validators == nil {
+			query = `SELECT status AS statename, COUNT(*) AS statecount
+			FROM validators v
+			INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validatorindex
+			WHERE uvdv.dashboard_id = $1
+			GROUP BY status`
+			params = append(params, dashboardId.Id)
+		} else {
+			query = `SELECT status AS statename, COUNT(*) AS statecount
+			FROM validators
+			WHERE validatorindex = ANY($1)
+			GROUP BY status`
+			params = append(params, validators)
+		}
+		err := d.alloyReader.Select(&queryResult, query, params...)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
@@ -334,70 +346,63 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 		return nil
 	})
 
-	// Rewards + Efficiency
-	retrieveData := func(tableName string) {
-		wg.Go(func() error {
-			query := `select
-				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency,
+	query := `SELECT
+		SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+		SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+		SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+	FROM %[1]s v
+	INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
+	WHERE uvdv.dashboard_id = $1`
 
-				SUM(balance_start) AS balance_start,
-				SUM(balance_end) AS balance_end,
-				SUM(deposits_amount) AS deposits_amount,
-				SUM(withdrawals_amount) AS withdrawals_amount,
-				SUM(blocks_el_reward) AS blocks_el_reward
-			from %[1]s
-			where validator_index = ANY($1)
-			`
+	if dashboardId.Validators != nil {
+		query = `SELECT
+			SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+		FROM %[1]s
+		WHERE validator_index = ANY($1)`
+	}
+
+	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+		// Rewards + APR
+		wg.Go(func() error {
+			(*rewards).Cl, (*apr).Cl, (*rewards).El, (*apr).El, err = d.internal_getElClAPR(validators, days)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+		// Efficiency
+		wg.Go(func() error {
+			var params interface{}
+			if dashboardId.Validators == nil {
+				params = dashboardId.Id
+			} else {
+				params = validators
+			}
 			var queryResult struct {
 				AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
 				ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
 				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+			}
 
-				BalanceStart      sql.NullInt64 `db:"balance_start"`
-				BalanceEnd        sql.NullInt64 `db:"balance_end"`
-				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
-				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
-				BlocksElReward    sql.NullInt64 `db:"blocks_el_reward"`
-			}
-			err = d.alloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), validators)
+			err := d.alloyReader.Get(&queryResult, fmt.Sprintf(query, table), params)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return err
 			}
-			var rewardsField *t.ClElValue[decimal.Decimal]
-			var efficiencyField *float64
-			switch tableName {
-			case "validator_dashboard_data_rolling_daily":
-				rewardsField = &data.Rewards.Last24h
-				efficiencyField = &data.Efficiency.Last24h
-			case "validator_dashboard_data_rolling_weekly":
-				rewardsField = &data.Rewards.Last7d
-				efficiencyField = &data.Efficiency.Last7d
-			case "validator_dashboard_data_rolling_monthly":
-				rewardsField = &data.Rewards.Last30d
-				efficiencyField = &data.Efficiency.Last30d
-			case "validator_dashboard_data_rolling_total":
-				rewardsField = &data.Rewards.AllTime
-				efficiencyField = &data.Efficiency.AllTime
-			}
-			(*rewardsField).El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
-			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64).Mul(decimal.NewFromInt(1e9))
-			*efficiencyField = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+			*efficiency = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
 			return nil
 		})
 	}
 
-	retrieveData("validator_dashboard_data_rolling_daily")
-	retrieveData("validator_dashboard_data_rolling_weekly")
-	retrieveData("validator_dashboard_data_rolling_monthly")
-	retrieveData("validator_dashboard_data_rolling_total")
-
-	// Apr
-	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
-	// But waiting for Peter implementation of apr calc
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_daily", 1, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_weekly", 7, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_monthly", 30, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = wg.Wait()
+
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
 	}
