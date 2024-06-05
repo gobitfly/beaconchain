@@ -1719,14 +1719,16 @@ func refreshMaterializedSlashedByCounts() error {
 }
 
 // Can be used to backfill old missing cl block rewards
-// Commented out since this is a one time operation, kept in in case we need it again
+// // Commented out since this is a one time operation, kept in in case we need it again
 // func (d *dashboardData) backfillCLBlockRewards() {
 // 	upTo := 1731488
-// 	startFrom := 307506
+// 	startFrom := 1061800
 // 	batchSize := 8
 // 	parallelization := 8
 
 // 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
+
+// 	// re export 317201 +- 20000
 
 // 	go func() {
 // 		for i := startFrom; i < upTo+batchSize; i += batchSize {
@@ -1770,11 +1772,14 @@ func refreshMaterializedSlashedByCounts() error {
 
 // 	go func() {
 // 		for blockReward := range blocksChan {
-// 			err := storeClBlockRewards(blockReward)
-// 			if err != nil {
-// 				d.log.Error(err, "failed to store cl block rewards", 0)
+// 			for {
+// 				err := storeClBlockRewards(blockReward)
+// 				if err != nil {
+// 					d.log.Error(err, "failed to store cl block rewards", 0)
+// 					continue
+// 				}
+// 				break
 // 			}
-
 // 			highestSlot := uint64(0)
 // 			for slot := range blockReward {
 // 				if slot > highestSlot {

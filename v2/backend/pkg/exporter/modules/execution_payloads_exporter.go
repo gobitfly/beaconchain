@@ -76,7 +76,7 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			uvdv.dashboard_id,
 			uvdv.group_id,
 			b.slot,
-			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward)) as reward,
+			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward) as reward,
 			coalesce(rb.proposer_fee_recipient, b.exec_fee_recipient) as fee_recipient, 
 			rb.value IS NOT NULL AS is_mev
 		FROM
