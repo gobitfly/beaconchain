@@ -318,7 +318,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	`, len(params))
 	rewardsStr := `) r
 	LEFT JOIN consensus_payloads cp on r.slot = cp.slot
-	INNER JOIN blocks on r.slot = blocks.slot
+	LEFT JOIN blocks on r.slot = blocks.slot
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
 	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
 	`
