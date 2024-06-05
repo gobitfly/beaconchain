@@ -413,10 +413,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 			if row.SlashedInPeriod {
 				data.Slashed.StatusCount.Failed++
-				if data.Slashed.Validators == nil {
-					data.Slashed.Validators = make([]t.VDBValidator, 0, 10)
-					data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
-				}
+				data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
 			data.Slashed.StatusCount.Success += uint64(row.SlashedAmount)
 
