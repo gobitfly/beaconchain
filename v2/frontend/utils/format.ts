@@ -86,7 +86,7 @@ export function trim (value:string | number, maxDecimalCount: number, minDecimal
     if (maxDecimalCount === 0) {
       return '<1'
     }
-    return `<0.${nZeros(minDecimalCount - 1)}1`
+    return `<0.${nZeros(maxDecimalCount - 1)}1`
   }
   const left = commmifyLeft(split[0])
   if (!dec?.length) {
@@ -193,4 +193,8 @@ export function formatFiat (value:number, currency: string, locales: string, min
   })
 
   return formatter.format(value)
+}
+
+export const formatPremiumProductPrice = (t: ComposerTranslation, price: number, digits?: number) => {
+  return formatFiat(price, 'EUR', t('locales.currency'), digits ?? 2, digits ?? 2)
 }

@@ -15,24 +15,26 @@ defineProps<Props>()
 <template>
   <div class="feature-container">
     <div class="main-row">
-      <BcFeatureCheck :available="feature.available" class="check" />
-      <div class="text" :class="{ 'unavailable': !feature.available }">
+      <BcFeatureCheck :available="feature.available" />
+      <div class="description" :class="{ 'unavailable': !feature.available }">
         <div class="name">
           {{ feature.name }}
-          <BcTooltip v-if="feature.tooltip" position="top" :fit-content="true" :text="feature.tooltip">
+        </div>
+        <div v-if="feature.subtext || feature.tooltip" class="additional-info-row">
+          <div v-if="feature.subtext">
+            {{ feature.subtext }}
+          </div>
+          <BcTooltip v-if="feature.tooltip" position="top" :fit-content="true" :text="feature.tooltip" class="tooltip-icon">
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
-        <div v-if="feature.subtext" class="subtext">
-          {{ feature.subtext }}
-        </div>
       </div>
-      <NuxtLink v-if="feature.link" class="link" :to="feature.link" target="_blank">
+      <BcLink v-if="feature.link" class="link" :to="feature.link" target="_blank">
         <FontAwesomeIcon
           class="popout"
           :icon="faArrowUpRightFromSquare"
         />
-      </NuxtLink>
+      </BcLink>
     </div>
     <BcFractionBar v-if="feature.percentage" :fill-percentage="feature.percentage" class="fraction-bar-container" />
   </div>
@@ -46,16 +48,11 @@ defineProps<Props>()
   .main-row {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding-left: 14px;
-    margin-bottom: 14px;
+    gap: 8px;
+    padding-left: 10px;
+    margin-bottom: 10px;
 
-    .check {
-      width: 22px;
-      height: auto;
-    }
-
-    .text {
+    .description {
       display: flex;
       flex-direction: column;
       gap: 5px;
@@ -66,17 +63,23 @@ defineProps<Props>()
       }
 
       .name {
-        font-size: 17px;
+        font-size: 15px;
 
         .slot_container {
           margin-left: 8px;
         }
       }
 
-      .subtext {
+      .additional-info-row {
+        display: flex;
+        justify-content: space-between;
         color: var(--text-color-discreet);
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 400;
+
+        .tooltip-icon {
+          color: var(--text-color);
+        }
       }
     }
 
@@ -87,7 +90,7 @@ defineProps<Props>()
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     .main-row {
       margin-bottom: 5px;
 
@@ -95,14 +98,14 @@ defineProps<Props>()
         width: 12px;
       }
 
-      .text {
+      .description {
         gap: 0;
 
         .name {
           font-size: 10px;
         }
 
-        .subtext {
+        .additional-info-row {
           font-size: 8px;
         }
       }

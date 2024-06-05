@@ -32,11 +32,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 
 	// Resolve validator indices to pubkeys
 	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(dashboardId.Validators)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -155,7 +151,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 			responseData[i].Depositor = responseData[i].From
 		}
 		if v, ok := mapping.ValidatorIndices[pubkeys[i]]; ok {
-			responseData[i].Index = v
+			responseData[i].Index = &v
 		}
 	}
 	var paging t.Paging
@@ -201,11 +197,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 
 	// Resolve validator indices to pubkeys
 	if dashboardId.Validators != nil {
-		validatorsArray := make([]uint64, len(dashboardId.Validators))
-		for i, v := range dashboardId.Validators {
-			validatorsArray[i] = v.Index
-		}
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validatorsArray)
+		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(dashboardId.Validators)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
 		}
@@ -336,11 +328,11 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalElDeposits(dashboardId)
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
-	// TODO @ data access team
+	// WORKING spletka
 	return d.dummy.GetValidatorDashboardTotalClDeposits(dashboardId)
 }
