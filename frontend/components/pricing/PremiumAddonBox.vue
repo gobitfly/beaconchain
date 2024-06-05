@@ -7,11 +7,10 @@ import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
 const { user } = useUserStore()
-const { products, bestPremiumProduct } = useProductsStore()
+const { products } = useProductsStore()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
-  addonsAvailable: boolean,
   isYearly: boolean
 }
 const props = defineProps<Props>()
@@ -56,7 +55,7 @@ const addonButton = computed(() => {
     text = $t('pricing.addons.button.manage_addon')
   }
 
-  return { text, disabled: !props.addonsAvailable }
+  return { text }
 })
 
 </script>
@@ -122,10 +121,7 @@ const addonButton = computed(() => {
           {{ $t('pricing.addons.quantity', { quantity }) }}
         </div>
       </div>
-      <Button :label="addonButton.text" class="select-button" :disabled="addonButton.disabled" />
-      <div v-if="bestPremiumProduct" class="footer">
-        {{ $t('pricing.addons.requires_plan', {name: bestPremiumProduct.product_name}) }}
-      </div>
+      <Button :label="addonButton.text" class="select-button" />
     </div>
   </div>
 </template>
@@ -174,7 +170,7 @@ const addonButton = computed(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 28px 7px 28px;
+    padding: 16px 28px 29px 28px;
 
     .price {
       font-size: 26px;
@@ -224,15 +220,6 @@ const addonButton = computed(() => {
     .select-button {
       width: 100%;
       @include pricing.pricing_button;
-      margin-bottom: 21px;
-    }
-
-    .footer {
-      width: 100%;
-      text-align: right;
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text-color-discreet);
     }
   }
 
@@ -295,10 +282,6 @@ const addonButton = computed(() => {
         margin-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;
-      }
-
-      .footer {
-        font-size: 10px;
       }
     }
   }
