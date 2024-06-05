@@ -2,7 +2,7 @@
 import type Dialog from 'primevue/dialog'
 
 const { width } = useWindowSize()
-const { setTouchableElement, onSwipe } = useSwipe()
+const { setTouchableElement } = useSwipe()
 
 interface Props {
   header?: string,
@@ -17,8 +17,7 @@ const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
 
 const onShow = () => {
   if (dialog.value?.container) {
-    setTouchableElement(dialog.value?.container)
-    onSwipe(() => {
+    setTouchableElement(dialog.value?.container, () => {
       visible.value = false
       return true
     })

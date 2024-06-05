@@ -1,9 +1,9 @@
-export type SwipeCallback = (event: TouchEvent) => void | boolean; // if callback returns true we keep the element at it's position (example: dialog hides where you left it and not pops back)
-export type SwipeOptions = {
-    directinoal_threshold?: number; // Pixels offset to trigger swipe
-};
+import { intersection } from 'lodash-es'
+import type { SwipeCallback, SwipeDirection, SwipeOptions } from '~/types/swipe'
+
 export const useSwipe = (options: Ref<SwipeOptions> = ref({
-  directinoal_threshold: 100
+  directinoal_threshold: 100,
+  directions: ['all']
 }), bounce = true) => {
   const touchStartX = ref(0)
   const touchEndX = ref(0)
@@ -11,10 +11,6 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   const touchEndY = ref(0)
   const touchableElement = ref<HTMLElement | undefined>()
 
-  const onSwipeLeft = ref<SwipeCallback>()
-  const onSwipeRight = ref<SwipeCallback>()
-  const onSwipeUp = ref<SwipeCallback>()
-  const onSwipeDown = ref<SwipeCallback>()
   const onSwipe = ref<SwipeCallback>() // triggers if any swipe happend
 
   const onTouchStart = (event: TouchEvent) => {
@@ -35,17 +31,18 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
       return
     }
     let divX = event.changedTouches[0].screenX - touchStartX.value
-    if (!onSwipeLeft.value && !onSwipe.value && divX < 0) {
+    const directions = options.value.directions ?? []
+    if (!intersection(directions, ['all', 'left']).length && divX < 0) {
       divX = 0
     }
-    if (!onSwipeRight.value && !onSwipe.value && divX > 0) {
+    if (!intersection(directions, ['all', 'right']).length && divX > 0) {
       divX = 0
     }
     let divY = event.changedTouches[0].screenY - touchStartY.value
-    if (!onSwipeUp.value && !onSwipe.value && divY < 0) {
+    if (!intersection(directions, ['all', 'top']).length && divY < 0) {
       divY = 0
     }
-    if (!onSwipeDown.value && !onSwipe.value && divY > 0) {
+    if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
       divY = 0
     }
     const transform = `translate(${divX}px, ${divY}px)`
@@ -55,33 +52,36 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   const handleGesture = (event: TouchEvent) => {
     const divX = Math.abs(touchEndX.value - touchStartX.value)
     const divY = Math.abs(touchEndY.value - touchStartY.value)
-    let keepPosition = false
     const threshold = options.value?.directinoal_threshold ?? 0
-    if (touchEndX.value < touchStartX.value && divX > threshold && onSwipeLeft.value?.(event)) {
-      keepPosition = true
+    const gDirections: SwipeDirection[] = []
+    if (touchEndX.value < touchStartX.value && divX > threshold) {
+      gDirections.push('left')
     }
 
-    if (touchEndX.value > touchStartX.value && divX > threshold && onSwipeRight.value?.(event)) {
-      keepPosition = true
+    if (touchEndX.value > touchStartX.value && divX > threshold) {
+      gDirections.push('right')
     }
 
-    if (touchEndY.value < touchStartY.value && divY > threshold && onSwipeUp.value?.(event)) {
-      keepPosition = true
+    if (touchEndY.value < touchStartY.value && divY > threshold) {
+      gDirections.push('top')
     }
 
-    if (touchEndY.value > touchStartY.value && divY > threshold && onSwipeDown.value?.(event)) {
-      keepPosition = true
+    if (touchEndY.value > touchStartY.value && divY > threshold) {
+      gDirections.push('bottom')
+    }
+    if (gDirections.length) {
+      gDirections.push('all')
     }
 
-    if (Math.max(divY, divX) > threshold && onSwipe.value?.(event)) {
-      keepPosition = true
+    if (intersection(gDirections, options.value.directions).length && onSwipe.value?.(event, gDirections)) {
+      return true
     }
-    return keepPosition
   }
 
-  const setElement = (elem: HTMLElement) => {
+  const setElement = (elem: HTMLElement, callback: SwipeCallback) => {
     clearElement()
     touchableElement.value = elem
+    onSwipe.value = callback
     if (touchableElement.value) {
       touchableElement.value.addEventListener('touchstart', onTouchStart, false)
       touchableElement.value.addEventListener('touchend', onTouchEnd, false)
@@ -105,11 +105,6 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   })
 
   return {
-    setTouchableElement: (elem: HTMLElement) => setElement(elem),
-    onSwipeLeft: (callback: SwipeCallback) => (onSwipeLeft.value = callback),
-    onSwipeRight: (callback: SwipeCallback) => (onSwipeRight.value = callback),
-    onSwipeUp: (callback: SwipeCallback) => (onSwipeUp.value = callback),
-    onSwipeDown: (callback: SwipeCallback) => (onSwipeDown.value = callback),
-    onSwipe: (callback: SwipeCallback) => (onSwipe.value = callback)
+    setTouchableElement: (elem: HTMLElement, callback: SwipeCallback) => setElement(elem, callback)
   }
 }

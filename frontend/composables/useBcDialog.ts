@@ -3,7 +3,7 @@ import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
 export function useBcDialog <T> (dialogProps?: DialogProps) {
   const { width } = useWindowSize()
-  const { setTouchableElement, onSwipe } = useSwipe()
+  const { setTouchableElement } = useSwipe()
 
   const props = ref<T>()
   const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
@@ -46,8 +46,7 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
       return
     }
 
-    setTouchableElement(dialog as HTMLElement)
-    onSwipe(() => {
+    setTouchableElement(dialog as HTMLElement, () => {
       onClose()
       return true
     })
