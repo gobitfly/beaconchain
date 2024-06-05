@@ -30,7 +30,17 @@ func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 }
 
 func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	return nil // nop
+	// if mutex is locked, return early
+	if !d.ExportMutex.TryLock() {
+		log.Infof("execution payloads exporter is already running")
+		return nil
+	}
+	defer d.ExportMutex.Unlock()
+	err = d.maintainTable()
+	if err != nil {
+		return fmt.Errorf("error maintaining table: %w", err)
+	}
+	return nil
 }
 
 func (d *executionPayloadsExporter) Init() error {
@@ -53,11 +63,6 @@ func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.Stand
 		return nil
 	}
 	defer d.ExportMutex.Unlock()
-
-	err = d.maintainTable()
-	if err != nil {
-		return fmt.Errorf("error maintaining table: %w", err)
-	}
 
 	start := time.Now()
 	// update cached view
