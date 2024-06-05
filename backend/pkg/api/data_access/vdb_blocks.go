@@ -18,7 +18,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// TODO sorting by rewards doesn't work; CL rewards present nowhere - depends on BIDS-3036
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	var err error
 	var currentCursor t.BlocksCursor
@@ -138,7 +137,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		sortColName = `status`
 		val = currentCursor.Status
 	case enums.VDBBlockProposerReward:
-		// TODO check types (decimal/uint?)
 		sortColName = `reward`
 		val = currentCursor.Reward.Decimal.BigInt().Uint64()
 	}
@@ -383,7 +381,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			}
 			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
-			reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
+			if dashboardId.Validators == nil {
+				reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
+			} else {
+				reward.El = proposal.Reward.Decimal.Mul(decimal.NewFromInt(1e18))
+			}
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
