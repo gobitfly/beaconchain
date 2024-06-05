@@ -19,8 +19,8 @@ const props = defineProps<Props>()
 const quantity = computed(() => {
   let q = 0
   user.value?.subscriptions?.forEach((subscription) => {
-    if (subscription.product_id === props.addon.product_id) {
-      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id === subscription.product_id) !== undefined ? 1 : 0
+    if (subscription.product_id === props.addon.product_id_monthly || subscription.product_id === props.addon.product_id_yearly) {
+      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id_monthly === subscription.product_id || addon.product_id_yearly === subscription.product_id) !== undefined ? 1 : 0
     }
   })
 

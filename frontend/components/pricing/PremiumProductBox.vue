@@ -63,10 +63,10 @@ const planButton = computed(() => {
     const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
     if (!subscription) {
       text = $t('pricing.premium_product.button.select_plan')
-    } else if (subscription.product_id === props.product.product_id) {
+    } else if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
       text = $t('pricing.premium_product.button.manage_plan')
     } else {
-      const subscribedProduct = products.value?.premium_products.find(product => product.product_id === subscription.product_id)
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
       if (subscribedProduct !== undefined) {
         if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
           text = $t('pricing.premium_product.button.upgrade')
