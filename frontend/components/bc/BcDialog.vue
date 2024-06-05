@@ -2,7 +2,9 @@
 import type Dialog from 'primevue/dialog'
 
 const { width } = useWindowSize()
-const { setTouchableElement } = useSwipe()
+const { setTouchableElement } = useSwipe({
+  invalidSwipeClasses: ['p-dialog-content']
+})
 
 interface Props {
   header?: string,

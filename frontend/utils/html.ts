@@ -13,3 +13,20 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   }
   return false
 }
+
+export function hasClassOrParentWithClass (child:HTMLElement | null, classList: string[]): boolean {
+  if (!child) {
+    return false
+  }
+
+  if (classList.find((c) => {
+    if (child.classList?.contains(c)) {
+      console.log('we found a match', child)
+      return true
+    }
+    return false
+  })) {
+    return true
+  }
+  return hasClassOrParentWithClass(child.parentElement, classList)
+}

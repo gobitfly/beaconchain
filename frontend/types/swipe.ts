@@ -3,4 +3,5 @@ export type SwipeCallback = (event: TouchEvent, directions: SwipeDirection[]) =>
 export type SwipeOptions = {
     directinoal_threshold?: number; // Pixels offset to trigger swipe
     directions?: SwipeDirection[];
+    invalidSwipeClasses?: string[];
 };
