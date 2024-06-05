@@ -8,14 +8,14 @@ interface ApiChainInfo {
 }
 
 // in the parentheses are temporary values so the rest of the front-end doesn't crash until these variables are filled with actual data from the the API response
-const networks = ref<ApiChainInfo[]>([{ chain_id: ChainIDs.Ethereum, name: '' }])
-const currentNetwork = ref<ChainIDs>(ChainIDs.Ethereum)
+const networkList = ref<ApiChainInfo[]>([{ chain_id: ChainIDs.Ethereum, name: '' }])
+const networkChoice = ref<ChainIDs>(ChainIDs.Ethereum)
 let currentNetworkHasBeenChosen = false
 
 function fillDataFromResponse (response : ApiDataResponse<ApiChainInfo[]>) {
-  networks.value = response.data.sort((a, b) => ChainInfo[a.chain_id].priority - ChainInfo[b.chain_id].priority)
+  networkList.value = response.data.sort((a, b) => ChainInfo[a.chain_id].priority - ChainInfo[b.chain_id].priority)
   if (!currentNetworkHasBeenChosen) {
-    currentNetwork.value = networks.value[0].chain_id // the network with the best priority in file `networks.ts` is chosen by default from the list
+    networkChoice.value = networkList.value[0].chain_id // the network with the best priority in file `networks.ts` is chosen by default from the list
   }
 }
 
@@ -30,17 +30,18 @@ if (dataAccess.mock) {
   })
 }
 
-function setCurrentNetwork (network: ChainIDs) {
-  currentNetwork.value = network
+function setCurrentNetwork (chainId: ChainIDs) {
+  networkChoice.value = chainId
   currentNetworkHasBeenChosen = true
 }
 
 export function useNetwork () {
-  const availableNetworks = computed(() => networks.value.map(apiInfo => apiInfo.chain_id))
-  const networkInfo = computed(() => ChainInfo[currentNetwork.value])
+  const availableNetworks = computed(() => networkList.value.map(apiInfo => apiInfo.chain_id))
+  const currentNetwork = computed(() => networkChoice.value)
+  const networkInfo = computed(() => ChainInfo[networkChoice.value])
 
   function epochsPerDay (): number {
-    const info = ChainInfo[currentNetwork.value]
+    const info = ChainInfo[networkChoice.value]
     if (info.timeStampSlot0 === undefined) {
       return 0
     }
@@ -48,7 +49,7 @@ export function useNetwork () {
   }
 
   function epochToTs (epoch: number): number | undefined {
-    const info = ChainInfo[currentNetwork.value]
+    const info = ChainInfo[networkChoice.value]
     if (info.timeStampSlot0 === undefined || epoch < 0) {
       return undefined
     }
@@ -57,7 +58,7 @@ export function useNetwork () {
   }
 
   function slotToTs (slot: number): number | undefined {
-    const info = ChainInfo[currentNetwork.value]
+    const info = ChainInfo[networkChoice.value]
     if (info.timeStampSlot0 === undefined || slot < 0) {
       return undefined
     }
@@ -66,7 +67,7 @@ export function useNetwork () {
   }
 
   function tsToSlot (ts: number): number {
-    const info = ChainInfo[currentNetwork.value]
+    const info = ChainInfo[networkChoice.value]
     if (info.timeStampSlot0 === undefined) {
       return -1
     }
@@ -74,7 +75,7 @@ export function useNetwork () {
   }
 
   function slotToEpoch (slot: number): number {
-    const info = ChainInfo[currentNetwork.value]
+    const info = ChainInfo[networkChoice.value]
     if (info.timeStampSlot0 === undefined) {
       return -1
     }
