@@ -131,6 +131,8 @@ const addonButton = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/pricing.scss';
+
 .box-container {
   width: 290px;
   height: 100%;
@@ -221,9 +223,7 @@ const addonButton = computed(() => {
 
     .select-button {
       width: 100%;
-      height: 43px;
-      font-size: 20px;
-      font-weight: 500;
+      @include pricing.pricing_button;
       margin-bottom: 21px;
     }
 

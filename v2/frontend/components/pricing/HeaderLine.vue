@@ -28,7 +28,7 @@
   margin-bottom: 55px;
 
   .header-line {
-    width: var(--pricing-content-width-desktop);
+    width: var(--pricing-content-width);
     display: flex;
     flex-direction: column;
 
@@ -49,12 +49,8 @@
     padding-left: 5px;
     margin-bottom: 30px;
 
-    .header-line {
-      width: var(--pricing-content-width-mobile);
-
-      .subtitle {
-        font-size: 20px;
-      }
+    .header-line .subtitle {
+      font-size: 20px;
     }
   }
 }

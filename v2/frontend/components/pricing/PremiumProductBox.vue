@@ -194,6 +194,8 @@ const minorFeatures = computed<Feature[]>(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/pricing.scss';
+
 .box-container {
   box-sizing: border-box;
   width: 293px;
@@ -286,9 +288,7 @@ const minorFeatures = computed<Feature[]>(() => {
 
   .plan-button {
     width: 100%;
-    height: 44px;
-    font-size: 18px;
-    border-radius: 7px;
+    @include pricing.pricing_button;
     margin-bottom: 5px;
 
     &.dismiss {
