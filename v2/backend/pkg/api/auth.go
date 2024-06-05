@@ -69,7 +69,14 @@ func getCsrfProtectionMiddleware(cfg *types.Config) func(http.Handler) http.Hand
 	if cfg.Frontend.SessionSameSiteNone {
 		sameSite = csrf.SameSiteNoneMode
 	}
-	return csrf.Protect(csrfBytes, csrf.Secure(!cfg.Frontend.CsrfInsecure), csrf.Path("/"), csrf.Domain(cfg.Frontend.SessionCookieDomain), csrf.SameSite(sameSite), csrf.CookieName("_v2_csrf"))
+
+	return csrf.Protect(
+		csrfBytes,
+		csrf.Secure(!cfg.Frontend.CsrfInsecure),
+		csrf.Path("/"),
+		csrf.Domain(cfg.Frontend.SessionCookieDomain),
+		csrf.SameSite(sameSite),
+	)
 }
 
 func csrfInjecterMiddleware(next http.Handler) http.Handler {
