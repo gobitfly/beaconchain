@@ -1,20 +1,11 @@
 <script lang="ts" setup>
 const { t: $t } = useI18n()
-const { products, bestPremiumProduct } = useProductsStore()
-const { user } = useUserStore()
+const { products } = useProductsStore()
 
 interface Props {
   isYearly: boolean
 }
 defineProps<Props>()
-
-const addonsAvailable = computed(() => {
-  if (!products?.value?.premium_products || !bestPremiumProduct?.value) {
-    return false
-  }
-
-  return user.value?.subscriptions.find(sub => sub.product_id === bestPremiumProduct.value?.product_id_monthly || sub.product_id === bestPremiumProduct.value?.product_id_yearly) !== undefined
-})
 </script>
 
 <template>
@@ -32,7 +23,6 @@ const addonsAvailable = computed(() => {
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
         :key="addon.product_id_yearly"
         :addon="addon"
-        :addons-available="addonsAvailable"
         :is-yearly="isYearly"
       />
     </div>

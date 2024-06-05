@@ -625,8 +625,7 @@
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"
-      },
-      "requires_plan": "requires {name} plan"
+      }
     }
   },
   "time_duration": {
