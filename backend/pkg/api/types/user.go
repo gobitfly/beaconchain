@@ -32,7 +32,7 @@ const ProductStoreStripe ProductStore = "stripe"
 const ProductStoreIosAppstore ProductStore = "ios-appstore"
 const ProductStoreAndroidPlaystore ProductStore = "android-playstore"
 const ProductStoreEthpool ProductStore = "ethpool"
-const ProductStoreManual ProductStore = "manual"
+const ProductStoreCustom ProductStore = "curstom"
 
 type ProductSummary struct {
 	StripePublicKey                      string                                 `json:"stripe_public_key"`
