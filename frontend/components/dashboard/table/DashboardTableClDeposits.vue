@@ -18,7 +18,7 @@ const { slotToEpoch } = useNetwork()
 const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardClDepositsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -125,7 +125,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   :no-wrap="true"
                   type="public_key"
                 />
-                <span v-else>{{ $t('table.all_time_total') }}</span>
+                <span v-else>Σ</span>
               </template>
             </Column>
             <Column field="index" :header="$t('common.index')">
@@ -138,7 +138,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 >
                   {{ slotProps.data.index }}
                 </BcLink>
-                <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
+                <span v-else-if="!colsVisible.publicKey">Σ</span>
               </template>
             </Column>
             <Column
@@ -304,7 +304,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
