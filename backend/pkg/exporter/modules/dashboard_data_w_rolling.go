@@ -50,9 +50,9 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	} else {
-		err = tx.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	}
 	return bounds, err
 }
@@ -71,6 +71,11 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHead uint64) error {
+	return d.aggregateInternal(days, tableName, currentEpochHead, false)
+}
+
+// Note that currentEpochHead is the current exported epoch in the db
+func (d *RollingAggregator) aggregateInternal(days int, tableName string, currentEpochHead uint64, forceBootstrap bool) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -78,6 +83,10 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	defer utils.Rollback(tx)
 
 	bootstrap := false
+	if forceBootstrap {
+		bootstrap = true
+		d.log.Infof("force bootstrap rolling %dd", days)
+	}
 
 	// get epoch boundaries for current stored rolling 24h
 	bounds, err := d.getCurrentRollingBounds(tx, tableName)
@@ -143,6 +152,19 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 		return errors.Wrap(err, "failed to get missing tail epochs")
 	}
 	if len(missing) > 0 {
+		// If exporter falls back on head around the bootstrap bound end, it will start backfill
+		// and will trigger a rolling aggregate on bound end. But it will not bootstrap since recent data is
+		// maybe just a few epochs old. So it will try to add to head and remove from tail but since we are in
+		// bootstrap mode tail epochs won't be there.
+		// Now when this occurs and epochs are missing AND the current head is a bootstrap end, we force a bootstrap to solve this.
+
+		// a bool helper to indicate whether currentEpochHead is the end of a bootstrap bound
+		_, utcEndBound := getDayAggregateBounds(currentEpochHead)
+		isCurrentEpochHeadBootstrapBound := utcEndBound-1 == currentEpochHead
+
+		if isCurrentEpochHeadBootstrapBound {
+			return d.aggregateInternal(days, tableName, currentEpochHead, true)
+		}
 		return errors.New(fmt.Sprintf("missing epochs in db for rolling %dd tail: %v", days, missing))
 	}
 
