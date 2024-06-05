@@ -16,6 +16,10 @@ func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, err
 
 	availableCurrencies := price.GetAvailableCurrencies()
 	for _, code := range availableCurrencies {
+		if code == "ETH" {
+			// Don't return ETH/ETH info
+			continue
+		}
 		rate := price.GetPrice("ETH", code)
 		result = append(result, t.EthConversionRate{
 			Currency: price.GetCurrencyLabel(code),
