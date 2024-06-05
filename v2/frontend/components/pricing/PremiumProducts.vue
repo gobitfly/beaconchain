@@ -11,7 +11,7 @@ defineProps<Props>()
 <template>
   <div class="premium-products-container">
     <div class="premium-products-row">
-      <template v-for="product in products?.premium_products" :key="product.product_id">
+      <template v-for="product in products?.premium_products" :key="product.product_id_yearly">
         <PricingPremiumProductBox
           v-if="product.price_per_year_eur > 0"
           :product
