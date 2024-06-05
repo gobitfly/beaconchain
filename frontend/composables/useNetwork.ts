@@ -41,7 +41,7 @@ export function useNetwork () {
   const networkInfo = computed(() => ChainInfo[networkChoice.value])
 
   function epochsPerDay (): number {
-    const info = ChainInfo[networkChoice.value]
+    const info = networkInfo.value
     if (info.timeStampSlot0 === undefined) {
       return 0
     }
@@ -49,7 +49,7 @@ export function useNetwork () {
   }
 
   function epochToTs (epoch: number): number | undefined {
-    const info = ChainInfo[networkChoice.value]
+    const info = networkInfo.value
     if (info.timeStampSlot0 === undefined || epoch < 0) {
       return undefined
     }
@@ -58,7 +58,7 @@ export function useNetwork () {
   }
 
   function slotToTs (slot: number): number | undefined {
-    const info = ChainInfo[networkChoice.value]
+    const info = networkInfo.value
     if (info.timeStampSlot0 === undefined || slot < 0) {
       return undefined
     }
@@ -67,7 +67,7 @@ export function useNetwork () {
   }
 
   function tsToSlot (ts: number): number {
-    const info = ChainInfo[networkChoice.value]
+    const info = networkInfo.value
     if (info.timeStampSlot0 === undefined) {
       return -1
     }
@@ -75,7 +75,7 @@ export function useNetwork () {
   }
 
   function slotToEpoch (slot: number): number {
-    const info = ChainInfo[networkChoice.value]
+    const info = networkInfo.value
     if (info.timeStampSlot0 === undefined) {
       return -1
     }

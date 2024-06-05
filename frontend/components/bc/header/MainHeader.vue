@@ -73,7 +73,7 @@ const userMenu = computed(() => {
         </span>
         <span v-if="rate">
           <span>
-            <IconNetwork :chain-id="currentNetwork" :colored="false" />{{ networkInfo.elCurrency }}
+            <IconNetwork :chain-id="currentNetwork" class="network-icon" :harmonize_perceived_size="true" :colored="false" />{{ networkInfo.elCurrency }}
           </span>:
           <span> {{ rate.symbol }}
             <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
@@ -202,8 +202,9 @@ $smallHeaderThreshold: 1024px;
       }
       margin-right: var(--padding-large);
       .network-icon {
-        height: 14px;
-        width: auto;
+        vertical-align: middle;
+        height: 18px;
+        width: 18px;
         margin-right: var(--padding-small);
       }
     }
