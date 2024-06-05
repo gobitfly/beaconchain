@@ -35,6 +35,10 @@ const scrollToAddons = () => {
   </BcPageWrapper>
 </template>
 
+<style lang="scss">
+@import "~/assets/css/pricing.scss";
+</style>
+
 <style lang="scss" scoped>
 @use '~/assets/css/pricing.scss';
 
