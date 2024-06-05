@@ -36,7 +36,7 @@ const scrollToAddons = () => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use '~/assets/css/pricing.scss';
 
 .page-container {
   width: 100%;
@@ -52,7 +52,7 @@ const scrollToAddons = () => {
     font-family: var(--montserrat-family);
     font-weight: var(--montserrat-medium);
 
-    max-width: var(--pricing-content-width-desktop);
+    max-width: var(--pricing-content-width);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -61,8 +61,7 @@ const scrollToAddons = () => {
 
     .view-addons-button {
       width: 215px;
-      height: 45px;
-      font-size: 18px;
+      @include pricing.pricing_button;
       display: flex;
       gap: 12px;
       margin-bottom: 35px;
@@ -72,7 +71,6 @@ const scrollToAddons = () => {
   @media (max-width: 1360px) {
     .page-content {
       width: 100%;
-      max-width: var(--pricing-content-width-mobile);
 
       .view-addons-button {
         padding: 7px 17px;
