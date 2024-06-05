@@ -31,7 +31,7 @@ export const ProductStoreStripe: ProductStore = "stripe";
 export const ProductStoreIosAppstore: ProductStore = "ios-appstore";
 export const ProductStoreAndroidPlaystore: ProductStore = "android-playstore";
 export const ProductStoreEthpool: ProductStore = "ethpool";
-export const ProductStoreCustom: ProductStore = "curstom";
+export const ProductStoreCustom: ProductStore = "custom";
 export interface ProductSummary {
   stripe_public_key: string;
   api_products: ApiProduct[];
