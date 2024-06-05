@@ -119,7 +119,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.proposer" default="-" />
+                  {{ slotProps.data.proposer || '-' }}
                 </BcLink>
               </template>
             </Column>

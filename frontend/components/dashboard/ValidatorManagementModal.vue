@@ -34,7 +34,9 @@ const selectedValidator = ref<string>('')
 const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
 const { isLoggedIn, user } = useUserStore()
 
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
+const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
+
+const { value: query, temp: tempQuery, bounce: setQuery, instant: instantQuery } = useDebounceValue<PathValues | undefined>(initialQuery, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -56,6 +58,7 @@ const resetData = () => {
   selected.value = []
   selectedGroup.value = -1
   cursor.value = undefined
+  instantQuery(initialQuery)
 }
 
 const onClose = () => {
