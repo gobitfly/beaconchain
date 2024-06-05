@@ -7,24 +7,12 @@ import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
 const { user } = useUserStore()
-const { products } = useProductsStore()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
   isYearly: boolean
 }
 const props = defineProps<Props>()
-
-const quantity = computed(() => {
-  let q = 0
-  user.value?.subscriptions?.forEach((subscription) => {
-    if (subscription.product_id === props.addon.product_id_monthly || subscription.product_id === props.addon.product_id_yearly) {
-      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id_monthly === subscription.product_id || addon.product_id_yearly === subscription.product_id) !== undefined ? 1 : 0
-    }
-  })
-
-  return q
-})
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
@@ -116,11 +104,6 @@ const addonButton = computed(() => {
           </template>
         </BcTooltip>
       </div>
-      <div class="quantity-container">
-        <div>
-          {{ $t('pricing.addons.quantity', { quantity }) }}
-        </div>
-      </div>
       <Button :label="addonButton.text" class="select-button" />
     </div>
   </div>
@@ -175,7 +158,7 @@ const addonButton = computed(() => {
     .price {
       font-size: 26px;
       font-weight: 600;
-      margin-bottom: 15px;
+      margin-bottom: 24px;
 
       .month {
         color: var(--text-color-discreet);
@@ -206,15 +189,7 @@ const addonButton = computed(() => {
       border-radius: 15px;
       background: var(--subcontainer-background);
       font-size: 15px;
-      margin-bottom: 24px;
-    }
-
-    .quantity-container {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-      font-size: 17px;
-      margin-bottom: 30px;
+      margin-bottom: 56px;
     }
 
     .select-button {
@@ -247,11 +222,11 @@ const addonButton = computed(() => {
     }
 
     .description-container {
-      padding: 10px 25px 4px 25px;
+      padding: 10px 25px 10px 25px;
 
       .price {
         font-size: 18px;
-        margin-bottom: 11px;
+        margin-bottom: 17px;
 
         .month {
           font-size: 12px;
@@ -270,16 +245,10 @@ const addonButton = computed(() => {
         height: 21px;
         gap: 4px;
         font-size: 10px;
-        margin-bottom: 17px;
-      }
-
-      .quantity-container {
-        font-size: 12px;
-        margin-bottom: 18px;
+        margin-bottom: 39px;
       }
 
       .select-button {
-        margin-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;
       }
