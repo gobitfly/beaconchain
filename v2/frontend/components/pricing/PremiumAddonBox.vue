@@ -19,8 +19,8 @@ const props = defineProps<Props>()
 const quantity = computed(() => {
   let q = 0
   user.value?.subscriptions?.forEach((subscription) => {
-    if (subscription.product_id === props.addon.product_id) {
-      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id === subscription.product_id) !== undefined ? 1 : 0
+    if (subscription.product_id === props.addon.product_id_monthly || subscription.product_id === props.addon.product_id_yearly) {
+      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id_monthly === subscription.product_id || addon.product_id_yearly === subscription.product_id) !== undefined ? 1 : 0
     }
   })
 
@@ -82,7 +82,7 @@ const addonButton = computed(() => {
         </div>
       </div>
     </div>
-    <div class="price-container">
+    <div class="description-container">
       <div class="price">
         <template v-if="isYearly">
           <div>
@@ -131,8 +131,10 @@ const addonButton = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/pricing.scss';
+
 .box-container {
-  width: 348px;
+  width: 290px;
   height: 100%;
   background-color: var(--container-background);
   border: 2px solid var(--container-border-color);
@@ -145,10 +147,10 @@ const addonButton = computed(() => {
     flex-direction: column;
     align-items: center;
     border-bottom: 2px solid var(--container-border-color);
-    padding: 35px 0 26px 0;
+    padding: 28px 0 21px 0;
 
     .validator-count {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
 
       .subtext {
@@ -162,30 +164,30 @@ const addonButton = computed(() => {
 
       .per-validator {
         color: var(--text-color-discreet);
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 400;
       }
     }
   }
 
-  .price-container {
+  .description-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px 34px 9px 34px;
+    padding: 16px 28px 7px 28px;
 
     .price {
-      font-size: 32px;
+      font-size: 26px;
       font-weight: 600;
-      margin-bottom: 28px;
+      margin-bottom: 15px;
 
       .month {
         color: var(--text-color-discreet);
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 600;
 
         &[yearly] {
-          font-size: 17px;
+          font-size: 14px;
           font-weight: 500;
         }
       }
@@ -204,33 +206,25 @@ const addonButton = computed(() => {
       justify-content: center;
       align-items: center;
       gap: 13px;
-      height: 37px;
-      border-radius: 18px;
+      height: 30px;
+      border-radius: 15px;
       background: var(--subcontainer-background);
-      font-size: 17px;
-      margin-bottom: 29px;
+      font-size: 15px;
+      margin-bottom: 24px;
     }
 
     .quantity-container {
       display: flex;
       align-items: center;
       gap: 13px;
-      font-size: 20px;
-      margin-bottom: 32px;
-
-      :deep(.p-inputtext.p-component.p-inputnumber-input) {
-        width: 52px;
-        border-radius: 9px;
-        text-align: center;
-      }
+      font-size: 17px;
+      margin-bottom: 30px;
     }
 
     .select-button {
       width: 100%;
-      height: 52px;
-      font-size: 25px;
-      font-weight: 500;
-      margin-bottom: 26px;
+      @include pricing.pricing_button;
+      margin-bottom: 21px;
     }
 
     .footer {
@@ -242,7 +236,7 @@ const addonButton = computed(() => {
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     width: 200px;
 
     .summary-container {
@@ -265,7 +259,7 @@ const addonButton = computed(() => {
       }
     }
 
-    .price-container {
+    .description-container {
       padding: 10px 25px 4px 25px;
 
       .price {
@@ -298,8 +292,6 @@ const addonButton = computed(() => {
       }
 
       .select-button {
-        height: 30px;
-        font-size: 14px;
         margin-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;

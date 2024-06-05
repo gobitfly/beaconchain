@@ -11,7 +11,7 @@ defineProps<Props>()
 <template>
   <div class="premium-products-container">
     <div class="premium-products-row">
-      <template v-for="product in products?.premium_products" :key="product.product_id">
+      <template v-for="product in products?.premium_products" :key="product.product_id_yearly">
         <PricingPremiumProductBox
           v-if="product.price_per_year_eur > 0"
           :product
@@ -28,34 +28,40 @@ defineProps<Props>()
 <style lang="scss" scoped>
 .premium-products-container {
   width: 100%;
+  max-width: fit-content;
 
   .premium-products-row {
     display: flex;
-    gap: 17px;
     justify-content: space-between;
     overflow-x: auto;
-    padding-bottom: 7px;
+    gap: 14px;
+    padding-bottom: 4px;
   }
 
   .footnote {
     font-family: var(--roboto-family);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--text-color-discreet);
     display: flex;
     justify-content: flex-end;
+    margin-top: 4px;
   }
 
   margin-bottom: 38px;
+}
 
-  @media (max-width: 600px) {
-    .premium-products-container{
-      margin-bottom: 36px;
-
-      .footnote {
-        font-size: 8px;
-      }
+@media (max-width: 1360px) {
+  .premium-products-container{
+    .premium-products-row {
+      gap: 10px;
     }
+
+    .footnote {
+      font-size: 8px;
+    }
+
+    margin-bottom: 36px;
   }
 }
 </style>

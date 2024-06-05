@@ -22,19 +22,20 @@
   display: flex;
   justify-content: center;
   padding: 21px 0;
-  border: 1px solid var(--container-border-color);
+  border-top: 1px solid var(--container-border-color);
+  border-bottom: 1px solid var(--container-border-color);
   background: var(--container-background);
   margin-bottom: 55px;
 
   .header-line {
-    width: var(--content-width);
+    width: var(--pricing-content-width);
     display: flex;
     flex-direction: column;
 
     .title {
       font-size: 18px;
       color: var(--primary-color);
-      margin-bottom: var(--padding);
+      margin-bottom: 12px;
     }
 
     .subtitle {
@@ -43,14 +44,14 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1360px) {
   .header-line-container{
-      padding-left: 5px;
-      margin-bottom: 30px;
+    padding-left: 5px;
+    margin-bottom: 30px;
 
-      .header-line .subtitle {
-        font-size: 20px;
-      }
+    .header-line .subtitle {
+      font-size: 20px;
     }
+  }
 }
 </style>
