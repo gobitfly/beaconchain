@@ -112,7 +112,6 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		premiumProduct.Store = ""
 	}
 
-	userIsEligibleForAddons := false
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
 		effectiveProductId := premiumProduct.ProductId
@@ -125,9 +124,6 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			effectiveProductId = "guppy"
 		}
 		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
-			if utils.ProductIsEligibleForAddons(effectiveProductId) {
-				userIsEligibleForAddons = true
-			}
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
 			if effectiveProductId != "premium_free" {
@@ -171,9 +167,7 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
 				foundAddon = true
 				for i := 0; i < addon.Quantity; i++ {
-					if userIsEligibleForAddons {
-						userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
-					}
+					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
 					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 						ProductId:       utils.PriceIdToProductId(addon.PriceId),
 						ProductName:     p.ProductName,

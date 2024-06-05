@@ -134,12 +134,3 @@ func MapProductV2ToV1(product string) string {
 	}
 	return ""
 }
-
-func ProductIsEligibleForAddons(productId string) bool {
-	switch productId {
-	case "orca", "orca.yearly":
-		return true
-	default:
-		return false
-	}
-}
