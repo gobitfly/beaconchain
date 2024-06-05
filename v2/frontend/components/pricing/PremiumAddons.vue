@@ -13,7 +13,7 @@ const addonsAvailable = computed(() => {
     return false
   }
 
-  return user.value?.subscriptions.find(sub => sub.product_id === bestPremiumProduct.value?.product_id) !== undefined
+  return user.value?.subscriptions.find(sub => sub.product_id === bestPremiumProduct.value?.product_id_monthly || sub.product_id === bestPremiumProduct.value?.product_id_yearly) !== undefined
 })
 </script>
 
@@ -30,7 +30,7 @@ const addonsAvailable = computed(() => {
     <div class="addons-row">
       <PricingPremiumAddonBox
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
-        :key="addon.product_id"
+        :key="addon.product_id_yearly"
         :addon="addon"
         :addons-available="addonsAvailable"
         :is-yearly="isYearly"
