@@ -1,12 +1,13 @@
 import type { DialogProps } from 'primevue/dialog'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
-export function useBcDialog <T> (dialogProps?: DialogProps, dialogContent: Ref<HTMLElement | undefined> = ref()) {
+export function useBcDialog <T> (dialogProps?: DialogProps) {
   const { width } = useWindowSize()
-  const { setTouchableElement, onSwipeDown, onSwipeLeft } = useSwipe()
+  const { setTouchableElement, onSwipe } = useSwipe()
 
   const props = ref<T>()
   const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
+  const uuid = ref(generateUUID())
 
   const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
 
@@ -33,8 +34,23 @@ export function useBcDialog <T> (dialogProps?: DialogProps, dialogContent: Ref<H
       dialogRef.value.options.props.modal = true
       dialogRef.value.options.props.draggable = false
       dialogRef.value.options.props.position = position.value
+      dialogRef.value.options.props.pt = { ...dialogRef.value.options.props.pt, root: { uuid: uuid.value } }
     }
     props.value = dialogRef?.value?.data
+  })
+
+  onMounted(() => {
+    const dialog = document.querySelector(`[uuid="${uuid.value}"]`)
+
+    if (!dialog) {
+      return
+    }
+
+    setTouchableElement(dialog as HTMLElement)
+    onSwipe(() => {
+      onClose()
+      return true
+    })
   })
 
   watch(position, (pos) => {
@@ -48,16 +64,5 @@ export function useBcDialog <T> (dialogProps?: DialogProps, dialogContent: Ref<H
       dialogRef.value.close()
     }
   }
-
-  watch(dialogContent, (content) => {
-    const parent = content?.parentElement?.parentElement
-    if (!parent) {
-      return
-    }
-    setTouchableElement(parent)
-    onSwipeDown(onClose)
-    onSwipeLeft(onClose)
-  })
-
   return { props, dialogRef, setHeader }
 }

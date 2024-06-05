@@ -1,4 +1,4 @@
-export type SwipeCallback = (event: TouchEvent) => void;
+export type SwipeCallback = (event: TouchEvent) => void | boolean; // if callback returns true we keep the element at it's position (example: dialog hides where you left it and not pops back)
 export type SwipeOptions = {
     directinoal_threshold?: number; // Pixels offset to trigger swipe
 };
@@ -15,6 +15,7 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   const onSwipeRight = ref<SwipeCallback>()
   const onSwipeUp = ref<SwipeCallback>()
   const onSwipeDown = ref<SwipeCallback>()
+  const onSwipe = ref<SwipeCallback>() // triggers if any swipe happend
 
   const onTouchStart = (event: TouchEvent) => {
     touchStartX.value = event.changedTouches[0].screenX
@@ -23,8 +24,8 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   const onTouchEnd = (event: TouchEvent) => {
     touchEndX.value = event.changedTouches[0].screenX
     touchEndY.value = event.changedTouches[0].screenY
-    handleGesture(event)
-    if (touchableElement.value) {
+
+    if (!handleGesture(event) && touchableElement.value) {
       touchableElement.value.style.transform = ''
     }
   }
@@ -34,17 +35,17 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
       return
     }
     let divX = event.changedTouches[0].screenX - touchStartX.value
-    if (!onSwipeLeft.value && divX < 0) {
+    if (!onSwipeLeft.value && !onSwipe.value && divX < 0) {
       divX = 0
     }
-    if (!onSwipeRight.value && divX > 0) {
+    if (!onSwipeRight.value && !onSwipe.value && divX > 0) {
       divX = 0
     }
     let divY = event.changedTouches[0].screenY - touchStartY.value
-    if (!onSwipeUp.value && divY < 0) {
+    if (!onSwipeUp.value && !onSwipe.value && divY < 0) {
       divY = 0
     }
-    if (!onSwipeDown.value && divY > 0) {
+    if (!onSwipeDown.value && !onSwipe.value && divY > 0) {
       divY = 0
     }
     const transform = `translate(${divX}px, ${divY}px)`
@@ -54,21 +55,28 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
   const handleGesture = (event: TouchEvent) => {
     const divX = Math.abs(touchEndX.value - touchStartX.value)
     const divY = Math.abs(touchEndY.value - touchStartY.value)
-    if (touchEndX.value < touchStartX.value && divX > (options.value?.directinoal_threshold ?? 0)) {
-      onSwipeLeft.value?.(event)
+    let keepPosition = false
+    const threshold = options.value?.directinoal_threshold ?? 0
+    if (touchEndX.value < touchStartX.value && divX > threshold && onSwipeLeft.value?.(event)) {
+      keepPosition = true
     }
 
-    if (touchEndX.value > touchStartX.value && divX > (options.value?.directinoal_threshold ?? 0)) {
-      onSwipeRight.value?.(event)
+    if (touchEndX.value > touchStartX.value && divX > threshold && onSwipeRight.value?.(event)) {
+      keepPosition = true
     }
 
-    if (touchEndY.value < touchStartY.value && divY > (options.value?.directinoal_threshold ?? 0)) {
-      onSwipeUp.value?.(event)
+    if (touchEndY.value < touchStartY.value && divY > threshold && onSwipeUp.value?.(event)) {
+      keepPosition = true
     }
 
-    if (touchEndY.value > touchStartY.value && divY > (options.value?.directinoal_threshold ?? 0)) {
-      onSwipeDown.value?.(event)
+    if (touchEndY.value > touchStartY.value && divY > threshold && onSwipeDown.value?.(event)) {
+      keepPosition = true
     }
+
+    if (Math.max(divY, divX) > threshold && onSwipe.value?.(event)) {
+      keepPosition = true
+    }
+    return keepPosition
   }
 
   const setElement = (elem: HTMLElement) => {
@@ -101,6 +109,7 @@ export const useSwipe = (options: Ref<SwipeOptions> = ref({
     onSwipeLeft: (callback: SwipeCallback) => (onSwipeLeft.value = callback),
     onSwipeRight: (callback: SwipeCallback) => (onSwipeRight.value = callback),
     onSwipeUp: (callback: SwipeCallback) => (onSwipeUp.value = callback),
-    onSwipeDown: (callback: SwipeCallback) => (onSwipeDown.value = callback)
+    onSwipeDown: (callback: SwipeCallback) => (onSwipeDown.value = callback),
+    onSwipe: (callback: SwipeCallback) => (onSwipe.value = callback)
   }
 }
