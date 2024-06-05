@@ -12,7 +12,7 @@ import (
 )
 
 func (d *DataAccessService) GetUser(email string) (*t.User, error) {
-	// TODO:patrick
+	// TODO @patrick
 	result := &t.User{}
 	err := d.userReader.Get(result, `
 		WITH
@@ -44,11 +44,11 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 }
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
-	// TODO:patrick improve and unmock
+	// TODO @patrick improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},
-		ApiPerks: t.ApiPerks{ // TODO @patrick this is hardcoded for now, but should be fetched from db
+		ApiPerks: t.ApiPerks{
 			UnitsPerSecond:    10,
 			UnitsPerMonth:     10,
 			ApiKeys:           4,
@@ -188,10 +188,10 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 }
 
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO:patrick put into db instead of hardcoding here and make it configurable
+	// TODO @patrick put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
 		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-		ApiProducts: []t.ApiProduct{ // TODO:patrick this data is not final yet
+		ApiProducts: []t.ApiProduct{ // TODO @patrick this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",

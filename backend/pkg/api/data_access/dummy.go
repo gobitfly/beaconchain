@@ -2,15 +2,12 @@ package dataaccess
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -357,49 +354,4 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	r := t.SearchValidatorsByGraffiti{}
 	err := commonFakeData(&r)
 	return &r, err
-}
-
-// stripe
-func (d *DummyService) RemoveStripeCustomer(customerID string) error {
-	return nil
-}
-
-func (d *DummyService) CreateStripeSubscription(tx *sql.Tx, customerID, priceID, subscriptionID string, payload json.RawMessage) error {
-	return nil
-}
-
-func (d *DummyService) UpdateStripeSubscription(tx *sql.Tx, priceID, subscriptionID string, payload json.RawMessage) error {
-	return nil
-}
-
-func (d *DummyService) UpdateStripeSubscriptionStatus(tx *sql.Tx, id string, status bool, payload *json.RawMessage) error {
-	return nil
-}
-
-func (d *DummyService) GetStripeUserSubscription(id uint64, purchaseGroup string) (types.UserSubscription, error) {
-	r := types.UserSubscription{}
-	err := commonFakeData(&r)
-	return r, err
-}
-
-func (d *DummyService) GetStripeSubscription(id string) (*types.StripeSubscription, error) {
-	r := types.StripeSubscription{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) UpdateStripeCustomerID(email, customerID string) error {
-	return nil
-}
-
-func (d *DummyService) GetStripeCustomerEmail(customerID string) (string, error) {
-	r := ""
-	err := commonFakeData(&r)
-	return r, err
-}
-
-func (d *DummyService) GetStripeCustomerUserID(customerID string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
 }

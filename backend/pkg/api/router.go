@@ -34,7 +34,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
-	// TODO:patrick - remove this test route
+	// TODO @patrick - remove this test route
 	router.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 
@@ -43,7 +43,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	return router
 }
 
-// TODO:patrick - remove this test route
+// TODO @patrick - remove this test route
 func TestStripe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	_, err := w.Write([]byte(fmt.Sprintf(`
