@@ -352,11 +352,6 @@ const minorFeatures = computed<Feature[]>(() => {
         margin-bottom: 18px;
       }
     }
-
-    .plan-button {
-      font-size: 14px;
-      height: 30px;
-    }
   }
 }
 
