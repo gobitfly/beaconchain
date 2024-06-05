@@ -338,7 +338,9 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 			FROM
 				cached_eth1_deposits_lookup
 			WHERE
-				dashboard_id = $1`
+				dashboard_id = $1
+			GROUP BY
+				dashboard_id`
 		filter = dashboardId.Id
 	}
 
@@ -382,7 +384,9 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.V
 			FROM
 				cached_blocks_deposits_lookup
 			WHERE
-				dashboard_id = $1`
+				dashboard_id = $1
+			GROUP BY
+				dashboard_id`
 		filter = dashboardId.Id
 	}
 
