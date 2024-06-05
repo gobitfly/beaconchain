@@ -62,7 +62,7 @@ func (r *NodeClient) GetSyncCommitteesAssignments(epoch *uint64, stateID any) (*
 	if epoch == nil {
 		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees", r.Endpoint, stateID)
 	} else {
-		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, epoch)
+		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, *epoch)
 	}
 	return network.Get[types.StandardSyncCommitteesResponse](r.httpClient, requestURL)
 }
