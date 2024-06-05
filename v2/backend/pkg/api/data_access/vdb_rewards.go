@@ -131,18 +131,40 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		}
 
 		if search != "" {
-			// Create a secondary query to get the group ids that match the search term
-			// We cannot do everything in one query because we need to know the "epoch total" even for groups we do not search for
-			groupIdQueryParams := []interface{}{}
+			if dashboardId.AggregateGroups {
+				if epochSearch == -1 && indexSearch == -1 {
+					// If we have a search term but no epoch or index search then we can return empty results
+					return result, &paging, nil
+				}
 
-			indexSearchQuery := ""
-			if indexSearch != -1 {
-				groupIdQueryParams = append(groupIdQueryParams, indexSearch)
-				indexSearchQuery = fmt.Sprintf(" OR v.validator_index = $%d", len(groupIdQueryParams))
-			}
+				found := false
+				if indexSearch != -1 {
+					// Find whether the index is in the dashboard
+					// If it is then show all the data
+					d.alloyReader.Get(&found, `
+						SELECT EXISTS(
+								SELECT 1 
+								FROM users_val_dashboards_validators
+								WHERE dashboard_id = $1 AND validator_index = $2)
+						`, dashboardId.Id, indexSearch)
+				}
+				if !found && epochSearch != -1 {
+					queryParams = append(queryParams, epochSearch)
+					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+				}
+			} else {
+				// Create a secondary query to get the group ids that match the search term
+				// We cannot do everything in one query because we need to know the "epoch total" even for groups we do not search for
+				groupIdQueryParams := []interface{}{}
 
-			groupIdQueryParams = append(groupIdQueryParams, dashboardId.Id, search)
-			groupIdQuery := fmt.Sprintf(`
+				indexSearchQuery := ""
+				if indexSearch != -1 {
+					groupIdQueryParams = append(groupIdQueryParams, indexSearch)
+					indexSearchQuery = fmt.Sprintf(" OR v.validator_index = $%d", len(groupIdQueryParams))
+				}
+
+				groupIdQueryParams = append(groupIdQueryParams, dashboardId.Id, search)
+				groupIdQuery := fmt.Sprintf(`
 					SELECT
 						DISTINCT(group_id)
 					FROM users_val_dashboards_validators v
@@ -150,41 +172,50 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					WHERE v.dashboard_id = $%d AND (g.name ILIKE ($%d||'%%') %s)
 					`, len(groupIdQueryParams)-1, len(groupIdQueryParams), indexSearchQuery)
 
-			var groupIdSearch []uint64
-			err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdQueryParams...)
-			if err != nil {
-				return nil, nil, err
-			}
+				var groupIdSearch []uint64
+				err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdQueryParams...)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			// Convert to a map for an easy check later
-			for _, groupId := range groupIdSearch {
-				groupIdSearchMap[groupId] = true
-			}
+				// Convert to a map for an easy check later
+				for _, groupId := range groupIdSearch {
+					groupIdSearchMap[groupId] = true
+				}
 
-			if len(groupIdSearchMap) == 0 {
-				if epochSearch != -1 {
-					// If we have an epoch search but no group search then we can restrict the query to the epoch
-					queryParams = append(queryParams, epochSearch)
-					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
-				} else {
-					// No search for goup or epoch possible, return empty results
-					return result, &paging, nil
+				if len(groupIdSearchMap) == 0 {
+					if epochSearch != -1 {
+						// If we have an epoch search but no group search then we can restrict the query to the epoch
+						queryParams = append(queryParams, epochSearch)
+						whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+					} else {
+						// No search for goup or epoch possible, return empty results
+						return result, &paging, nil
+					}
 				}
 			}
 		}
 
+		groupIdQuery := "v.group_id,"
+		groupByQuery := "GROUP BY e.epoch, v.group_id"
 		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
+		if dashboardId.AggregateGroups {
+			queryParams = append(queryParams, t.AggregatedGroupId)
+			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			groupByQuery = "GROUP BY e.epoch"
+			orderQuery = fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
+		}
 
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
-				v.group_id,
+				%s
 				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
 			%s
-			GROUP BY e.epoch, v.group_id
-			%s`, rewardsDataQuery, whereQuery, orderQuery)
+			%s
+			%s`, groupIdQuery, rewardsDataQuery, whereQuery, groupByQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		queryParams = append(queryParams, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
@@ -203,12 +234,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			if indexSearch != -1 {
 				// Find whether the index is in the list of validators
 				// If it is then show all the data
-				for _, validator := range dashboardId.Validators {
-					if validator == t.VDBValidator(indexSearch) {
-						found = true
-						break
-					}
-				}
+				found = utils.ElementExists(dashboardId.Validators, t.VDBValidator(indexSearch))
 			}
 			if !found && epochSearch != -1 {
 				queryParams = append(queryParams, epochSearch)
@@ -333,7 +359,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		totalRewards[epoch] = t.VDBRewardsTableRow{
 			Epoch:   epoch,
 			Duty:    duty,
-			GroupId: t.AllGroups,
+			GroupId: t.AggregatedGroupId,
 			Reward: t.ClElValue[decimal.Decimal]{
 				El: totalInfo.ElRewards,
 				Cl: utils.GWeiToWei(big.NewInt(totalInfo.ClRewards)),
