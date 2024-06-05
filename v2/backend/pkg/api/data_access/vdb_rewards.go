@@ -535,7 +535,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
-	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
+	// bar chart for the CL and EL rewards for each group for each epoch.
+	// NO series for all groups combined except if AggregateGroups is true.
 	// series id is group id, series property is 'cl' or 'el'
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
@@ -543,7 +544,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 
 	queryResult := []struct {
 		Epoch     uint64          `db:"epoch"`
-		GroupId   uint64          `db:"group_id"`
+		GroupId   int64           `db:"group_id"`
 		ElRewards decimal.Decimal `db:"el_rewards"`
 		ClRewards int64           `db:"cl_rewards"`
 	}{}
@@ -559,17 +560,27 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		`
 
 	if dashboardId.Validators == nil {
+		groupIdQuery := "v.group_id,"
+		groupByQuery := "GROUP BY e.epoch, v.group_id"
+		orderQuery := "ORDER BY e.epoch, v.group_id"
+		if dashboardId.AggregateGroups {
+			queryParams = append(queryParams, t.AggregatedGroupId)
+			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			groupByQuery = "GROUP BY e.epoch"
+			orderQuery = "ORDER BY e.epoch"
+		}
+
 		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
-				v.group_id,
+				%s
 				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
 			WHERE v.dashboard_id = $%d AND e.epoch > $%d
-			GROUP BY e.epoch, v.group_id
-			ORDER BY e.epoch, v.group_id`, rewardsDataQuery, len(queryParams)-1, len(queryParams))
+			%s
+			%s`, groupIdQuery, rewardsDataQuery, len(queryParams)-1, len(queryParams), groupByQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
@@ -590,12 +601,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 	}
 
 	// Create a map structure to store the data
-	epochData := make(map[uint64]map[uint64]t.ClElValue[decimal.Decimal])
+	epochData := make(map[uint64]map[int64]t.ClElValue[decimal.Decimal])
 	epochList := make([]uint64, 0)
 
 	for _, res := range queryResult {
 		if _, ok := epochData[res.Epoch]; !ok {
-			epochData[res.Epoch] = make(map[uint64]t.ClElValue[decimal.Decimal])
+			epochData[res.Epoch] = make(map[int64]t.ClElValue[decimal.Decimal])
 			epochList = append(epochList, res.Epoch)
 		}
 
@@ -607,7 +618,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 
 	// Get the list of groups
 	// It should be identical for all epochs
-	var groupList []uint64
+	var groupList []int64
 	for _, groupData := range epochData {
 		for groupId := range groupData {
 			groupList = append(groupList, groupId)
@@ -635,9 +646,9 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		result.Categories = append(result.Categories, epoch)
 		for idx, series := range result.Series {
 			if series.Property == "el" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].El)
+				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][int64(series.Id)].El)
 			} else if series.Property == "cl" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].Cl)
+				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][int64(series.Id)].Cl)
 			} else {
 				return nil, fmt.Errorf("unknown series property: %s", series.Property)
 			}
