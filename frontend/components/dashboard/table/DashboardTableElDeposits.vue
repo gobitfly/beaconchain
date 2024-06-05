@@ -15,7 +15,7 @@ const { t: $t } = useI18n()
 const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardElDepositsStore()
 const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { overview } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -125,21 +125,20 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   :no-wrap="true"
                   type="public_key"
                 />
-                <span v-else>{{ $t('table.all_time_total') }}</span>
+                <span v-else>Σ</span>
               </template>
             </Column>
             <Column field="index" :header="$t('common.index')">
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.index !== undefined"
                   :to="`/validator/${slotProps.data.index}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   {{ slotProps.data.index }}
-                </NuxtLink>
-                <span v-else-if="!colsVisible.publicKey">{{ $t('table.all_time_total') }}</span>
+                </BcLink>
+                <span v-else-if="!colsVisible.publicKey">Σ</span>
               </template>
             </Column>
             <Column
@@ -161,15 +160,14 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
               :header="$t('common.block')"
             >
               <template #body="slotProps">
-                <NuxtLink
+                <BcLink
                   v-if="slotProps.data.index !== undefined"
                   :to="`/block/${slotProps.data.block}`"
                   target="_blank"
                   class="link"
-                  :no-prefetch="true"
                 >
                   <BcFormatNumber :value="slotProps.data.block" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column field="age">
@@ -267,9 +265,9 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                   <div class="label">
                     {{ $t('common.block') }}
                   </div>
-                  <NuxtLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link" :no-prefetch="true">
+                  <BcLink :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
                     <BcFormatNumber :value="slotProps.data.block" />
-                  </NuxtLink>
+                  </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
@@ -288,7 +286,7 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>

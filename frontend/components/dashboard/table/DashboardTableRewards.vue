@@ -7,6 +7,7 @@ import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -20,6 +21,7 @@ const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<Tab
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -38,7 +40,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch(() => [dashboardKey.value, overview.value], () => {
   loadData()
 }, { immediate: true })
 
@@ -49,7 +51,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -133,7 +135,7 @@ const wrappedRewards = computed(() => {
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
-            :add-spacer="true"
+            :add-spacer="colsVisible.age"
             :is-row-expandable="isRowExpandable"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
@@ -143,9 +145,9 @@ const wrappedRewards = computed(() => {
           >
             <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
               <template #body="slotProps">
-                <NuxtLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank" :no-prefetch="true">
+                <BcLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank">
                   <BcFormatNumber :value="slotProps.data.epoch" />
-                </NuxtLink>
+                </BcLink>
               </template>
             </Column>
             <Column v-if="colsVisible.age" field="age">
@@ -245,14 +247,14 @@ const wrappedRewards = computed(() => {
               />
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartRewardsChart />
+          <DashboardChartRewardsChart v-if="showInDevelopment" />
         </div>
       </template>
     </BcTableControl>
@@ -276,7 +278,7 @@ const wrappedRewards = computed(() => {
     @include utils.truncate-text;
 
     @media (max-width: 450px) {
-      @include utils.set-all-width(60px);
+      @include utils.set-all-width(80px);
     }
   }
 

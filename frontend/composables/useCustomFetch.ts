@@ -42,7 +42,9 @@ export function useCustomFetch () {
     }
 
     const url = useRequestURL()
-    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = useRuntimeConfig()
+    const runtimeConfig = useRuntimeConfig()
+    const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
+    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
     const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
@@ -87,7 +89,7 @@ export function useCustomFetch () {
       }
       return res._data as T
     } catch (e: any) {
-      if (!dontShowError) {
+      if (!dontShowError && showInDevelopment) {
         showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
       }
       throw (e)

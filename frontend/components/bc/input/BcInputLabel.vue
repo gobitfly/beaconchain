@@ -11,6 +11,8 @@ interface Props {
   disabled?: boolean,
   canBeEmpty?: boolean,
   maxlength?: number,
+  pattern?: RegExp,
+  trimInput?: boolean,
 }
 
 const props = defineProps<Props>()
@@ -22,7 +24,10 @@ const isEditing = ref(false)
 const editValue = ref<string>(props.value ?? '')
 
 const iconClick = () => {
-  if (props.disabled) {
+  if (props.trimInput) {
+    editValue.value = editValue.value.trim()
+  }
+  if (icon.value.disabled) {
     return
   }
   if (!isEditing.value) {
@@ -41,7 +46,7 @@ const iconClick = () => {
 
 const icon = computed(() => ({
   icon: isEditing.value ? faCheck : faEdit,
-  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty))) ? true : null
+  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty)) || (props.pattern && !props.pattern.test(editValue.value))) ? true : null
 }))
 
 watch(() => props.value, (v) => {
