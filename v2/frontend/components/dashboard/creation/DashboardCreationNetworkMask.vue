@@ -5,7 +5,7 @@ import { useNetwork } from '~/composables/useNetwork'
 const { currentNetwork } = useNetwork()
 
 // TODO: Get this list from the API
-const ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Holesky, ChainIDs.Gnosis]
+const ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Holesky]
 
 const network = defineModel<ChainIDs>('network')
 const selection = ref<string>('')
