@@ -404,7 +404,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -414,7 +414,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -424,7 +424,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.SASRhash_value }
   },
@@ -434,7 +434,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRhash_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRhash_value }
   },
@@ -444,7 +444,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRstr_value }
   },
@@ -454,7 +454,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
   }
@@ -464,7 +464,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countSource: 'validators',
+    countSource: 'num_value',
     queryParamField: Indirect.SASRstr_value,
     howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
   } */

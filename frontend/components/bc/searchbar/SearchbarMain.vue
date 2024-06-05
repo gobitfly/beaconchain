@@ -419,7 +419,7 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
         input: userInputText.value,
         networks,
         types,
-        include_validators: areResultsCountable(types, true)
+        count: areResultsCountable(types, true)
       }
     })
   } catch (error) {

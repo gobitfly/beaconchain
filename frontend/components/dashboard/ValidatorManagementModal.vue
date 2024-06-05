@@ -97,21 +97,53 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = (result: ResultSuggestion) => {
+  /*  From Lucca:
+      -----------
+  The `POST /validator-dashboards/{id}/validators` endpoint has new fields in its request body.
+  They must be used to add batches of validators by deposit address, withdrawal address or graffiti.
+
+  So, now, to add validators, send a request to `/validator-dashboards/{id}/validators` with either:
+  {
+    validators: ["<first index or pubkey>", "<second index or pubkey>", ...]
+           OR
+    deposit_address: "<deposit address>"
+           OR
+    withdrawal_address: "<withdrawal address>"
+           OR
+    graffiti: "graffiti"
+  }
+  */
   if (total.value + result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
   }
-  let list: string[]
+
+  let list: string[] = []
+  selectedValidator.value = ''
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
       list = [String(result.rawResult.num_value!)]
       selectedValidator.value = String(list[0])
+      // TODO: call the endpoint with `{ validators: list }` in the body
       break
-    default:
-      list = result.rawResult.validators!.map(index => String(index))
-      selectedValidator.value = ''
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
+      // TODO: call the endpoint with `{ deposit_address: result.rawResult.hash_value! }` in the body
+      // TODO: fill our variable `list` with the indices of the new validators
+      break
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
+      // TODO: call the endpoint with `{ withdrawal_address: result.rawResult.hash_value! }` in the body
+      // TODO: fill our variable `list` with the indices of the new validators
+      break
+    case ResultType.ValidatorsByGraffiti :
+      // TODO: call the endpoint with `{ graffiti: result.rawResult.str_value! }` in the body
+      // TODO: fill our variable `list` with the indices of the new validators
+      break
   }
+
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
   } else {

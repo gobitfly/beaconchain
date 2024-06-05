@@ -7,7 +7,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const searched = body?.input as string
   const searchableTypes = body?.types as ResultType[]
   const searchableNetworks = body?.networks as number[]
-  const countIdenticalValidators = body?.include_validators as boolean
+  const countIdenticalValidators = body?.count as boolean
   const response : SearchAheadAPIresponse = {} as SearchAheadAPIresponse
   response.data = []
 
@@ -87,7 +87,8 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 1,
         type: 'validators_by_deposit_ens_name',
-        str_value: searched + 'kETH-hodler-club.eth'
+        str_value: searched + 'kETH-hodler-club.eth',
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
       },
       {
         chain_id: 1,
@@ -118,7 +119,8 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 1,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '.bitfly.eth'
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D'
       },
       {
         chain_id: 1,
@@ -285,12 +287,14 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '-futureoffinance.eth'
+        str_value: searched + '-futureoffinance.eth',
+        hash_value: '0x0701BF988309bf45a6771afaa6B8802Ba3E24090'
       },
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '.bitfly.eth'
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D'
       }
     )
   }
@@ -305,11 +309,16 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   // adding fake numbers of identical results where it is possible
   if (countIdenticalValidators) {
     for (const singleRes of response.data) {
-      if (TypeInfo[singleRes.type as ResultType].countSource) {
-        const size = 2 + Math.floor(50 * Math.random())
-        singleRes.validators = [] as number[]
-        for (let v = 0; v < size; v++) {
-          singleRes.validators.push(Math.floor(1400000 * Math.random()))
+      const whereToWrite = TypeInfo[singleRes.type as ResultType].countSource
+      if (whereToWrite) {
+        const size = 2 + Math.floor(30 * Math.random())
+        if (Array.isArray(singleRes[whereToWrite])) {
+          (singleRes[whereToWrite] as number[]) = []
+          for (let v = 0; v < size; v++) {
+            (singleRes[whereToWrite] as number[]).push(Math.floor(1400000 * Math.random()))
+          }
+        } else {
+          (singleRes[whereToWrite] as number) = size
         }
       }
     }
