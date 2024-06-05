@@ -1,11 +1,11 @@
 import { reduce } from 'lodash-es'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useNetwork } from '~/composables/useNetwork'
 import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
 
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 
 export function useCurrency () {
   const { latestState } = useLatestStateStore()

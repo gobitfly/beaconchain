@@ -2,8 +2,9 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
+import { useNetwork } from '~/composables/useNetwork'
 
-const { epochToTs, slotToTs } = useNetworkStore()
+const { epochToTs, slotToTs } = useNetwork()
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60

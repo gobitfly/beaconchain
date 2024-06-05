@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import { ChainInfo, ChainIDs } from '~/types/networks'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useNetwork } from '~/composables/useNetwork'
+
+const { currentNetwork } = useNetwork()
 
 // TODO: Get this list from the API
 const ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Holesky, ChainIDs.Gnosis]
-
-const availableNetworks = useNetworkStore().getAvailableNetworks()
 
 const network = defineModel<ChainIDs>('network')
 const selection = ref<string>('')
@@ -16,7 +16,8 @@ const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
   return {
     value: String(chainId),
     text: ChainInfo[chainId].name,
-    disabled: !(chainId in availableNetworks)
+    disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `true` for everything once dashboards can be created for all networks in `ValidatorDashboardNetworkList`
+    componentClass: 'dashboard-creation-button-network-icon'
   }
 })
 
@@ -42,7 +43,7 @@ const continueDisabled = computed(() => {
         v-model="selection"
         class="single-bar"
         :buttons="buttonList"
-        :initial="network ? String(network) : ''"
+        :initial="String(currentNetwork)"
         :are-buttons-networks="true"
       />
       <div class="row-container">
@@ -79,5 +80,12 @@ const continueDisabled = computed(() => {
         width: 90px;
       }
     }
+  }
+</style>
+
+<style lang="scss">
+  .dashboard-creation-button-network-icon {
+    width: 100%;
+    height: 100%;
   }
 </style>

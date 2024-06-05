@@ -265,5 +265,5 @@ export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
  * @returns List sorted in place, so the same as parameter `list`.
  */
 export function sortChainIDsByPriority (list : ChainIDs[]) : ChainIDs[] {
-  return list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+  return list.sort((a, b) => ChainInfo[a].priority - ChainInfo[b].priority)
 }

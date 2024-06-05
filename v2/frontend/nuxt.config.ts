@@ -39,7 +39,7 @@ export default defineNuxtConfig({
       logIp: '',
       logFile: '',
       showInDevelopment: '',
-      onlyChainId: ''
+      chainIdByDefault: ''
     },
     private: {
       apiServer: '',

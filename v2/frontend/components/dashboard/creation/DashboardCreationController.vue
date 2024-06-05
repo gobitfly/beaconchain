@@ -7,7 +7,7 @@ import { API_PATH } from '~/types/customFetch'
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { dashboards } = useUserDashboardStore()
-const { user } = useUserStore()
+const { user, isLoggedIn } = useUserStore()
 
 interface Props {
   displayType: DashboardCreationDisplayType,
@@ -22,7 +22,6 @@ const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
 const network = ref<ChainIDs>()
 const { dashboardKey, publicEntities } = useDashboardKey()
-const { isLoggedIn } = useUserStore()
 const { fetch } = useCustomFetch()
 const route = useRoute()
 

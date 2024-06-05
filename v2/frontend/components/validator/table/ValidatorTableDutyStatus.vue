@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ValidatorHistoryDuties } from '~/types/api/common'
+import { useNetwork } from '~/composables/useNetwork'
 
 interface Props {
   data?: ValidatorHistoryDuties,
@@ -8,7 +9,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 
 const mapped = computed(() => {
   const mapSuccess = (status?: 'success' | 'partial' | 'failed' | 'orphaned') => {
