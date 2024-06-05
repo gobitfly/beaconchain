@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
 import { formatEpochToDate } from '~/utils/format'
+import { useNetwork } from '~/composables/useNetwork'
 
 interface Props {
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
@@ -9,7 +10,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { epochsPerDay } = useNetworkStore()
+const { epochsPerDay } = useNetwork()
 
 const dateText = computed(() => {
   const date = formatEpochToDate(props.startEpoch, props.t('locales.date'))

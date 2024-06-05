@@ -352,18 +352,13 @@ interface ApiChainInfo {
 }
 
 export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChainInfo[]> {
-  const restriction = useRuntimeConfig().public.onlyChainId
   const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
 
-  if (restriction) {
-    result.data.push({ chain_id: Number(restriction), name: '' })
-  } else {
-    result.data.push(
-      { chain_id: 1, name: 'ethereum' },
-      { chain_id: 17000, name: 'holesky' },
-      { chain_id: 100, name: 'gnosis' }
-    )
-  }
+  result.data.push(
+    { chain_id: 1, name: 'ethereum' },
+    { chain_id: 17000, name: 'holesky' },
+    { chain_id: 100, name: 'gnosis' }
+  )
 
   return result
 }

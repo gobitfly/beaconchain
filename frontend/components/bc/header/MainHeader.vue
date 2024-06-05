@@ -6,13 +6,13 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useNetwork } from '~/composables/useNetwork'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
-const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
+const { slotToEpoch, currentNetwork, networkInfo } = useNetwork()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()

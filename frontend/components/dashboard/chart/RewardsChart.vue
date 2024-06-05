@@ -23,9 +23,9 @@ import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashb
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useNetwork } from '~/composables/useNetwork'
 
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
 const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? networkNativeELcurrency.value : currency.value)
