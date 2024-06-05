@@ -127,7 +127,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="group_id"
               body-class="group-id"
               header-class="group-id"
-              :sortable="colsVisible.groupSort"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -174,7 +173,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               v-if="colsVisible.rewardsRecipient"
               field="reward_recipient"
               header-class="reward_recipient"
-              :sortable="true"
               :header="$t('dashboard.validator.col.reward_recipient')"
             >
               <template #body="slotProps">
