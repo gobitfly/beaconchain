@@ -47,7 +47,7 @@ const scrollToAddons = () => {
 
   .page-content {
     // The pricing page uses unique styling, dimensions, font settings and so on that are not used anywhere else
-    // That's why this component includes a lot of css
+    // That's why this component and its children include a lot of handcraftet css
     // If a new page is introduced that uses the same parameters, consider moving them to a shared location
     font-family: var(--montserrat-family);
     font-weight: var(--montserrat-medium);
@@ -75,8 +75,6 @@ const scrollToAddons = () => {
       .view-addons-button {
         padding: 7px 17px;
         width: 150px;
-        height: 30px;
-        font-size: 15px;
         gap: 8px;
       }
     }

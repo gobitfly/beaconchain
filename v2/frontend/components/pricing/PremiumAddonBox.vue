@@ -292,8 +292,6 @@ const addonButton = computed(() => {
       }
 
       .select-button {
-        height: 30px;
-        font-size: 14px;
         margin-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;
