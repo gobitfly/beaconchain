@@ -55,6 +55,12 @@ func (d *DummyService) GetUser(email string) (*t.User, error) {
 	return &r, err
 }
 
+func (d *DummyService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
 	r := t.ProductSummary{}
 	err := commonFakeData(&r)
@@ -133,7 +139,31 @@ func (d *DummyService) GetValidatorDashboardGroupExists(dashboardId t.VDBIdPrima
 	return true, nil
 }
 
-func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+func (d *DummyService) GetValidatorDashboardExistingValidatorCount(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	r := []t.VDBPostValidatorsData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
 	r := []t.VDBPostValidatorsData{}
 	err := commonFakeData(&r)
 	return r, err

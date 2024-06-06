@@ -18,7 +18,7 @@ const (
 	userGroupKey     = "user_group"
 )
 
-func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
+func (h *HandlerService) getUserBySession(r *http.Request) (types.User, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
 	if !authenticated {
 		return types.User{}, newUnauthorizedErr("not authenticated")
@@ -35,6 +35,26 @@ func (h *HandlerService) getUser(r *http.Request) (types.User, error) {
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
+}
+
+func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		return 0, err
+	}
+	return user.Id, nil
+}
+
+func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
+	apiKey := r.URL.Query().Get("api_key")
+	if apiKey == "" {
+		return 0, newUnauthorizedErr("missing api key")
+	}
+	userId, err := h.dai.GetUserIdByApiKey(apiKey)
+	if err != nil {
+		return userId, newUnauthorizedErr("invalid api key")
+	}
+	return userId, nil
 }
 
 // Handlers
@@ -113,34 +133,39 @@ func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Reque
 
 // Middlewares
 
-// checks if user has access to dashboard
-func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
-		if err != nil {
-			// if primary id is not used, no need to check access
+// returns a middleware that checks if user has access to dashboard when a primary id is used
+// expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
+func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var err error
+			dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+			if err != nil {
+				// if primary id is not used, no need to check access
+				next.ServeHTTP(w, r)
+				return
+			}
+			// primary id is used -> user needs to have access to dashboard
+
+			userId, err := userIdFunc(r)
+			if err != nil {
+				handleErr(w, err)
+				return
+			}
+			dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
+			if err != nil {
+				handleErr(w, err)
+				return
+			}
+
+			if dashboard.UserId != userId {
+				// user does not have access to dashboard
+				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
+				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
+				return
+			}
+
 			next.ServeHTTP(w, r)
-			return
-		}
-		// primary id is used -> user needs to have access to dashboard
-
-		user, err := h.getUser(r)
-		if err != nil {
-			handleErr(w, err)
-			return
-		}
-		dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
-		if err != nil {
-			handleErr(w, err)
-			return
-		}
-
-		if dashboard.UserId != user.Id {
-			// user does not have access to dashboard, return 404 to avoid leaking information
-			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+		})
+	}
 }

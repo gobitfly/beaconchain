@@ -31,6 +31,7 @@ type DataAccessor interface {
 	GetProductSummary() (*t.ProductSummary, error)
 	// TODO: move to user repository
 	GetUser(email string) (*t.User, error)
+	GetUserIdByApiKey(apiKey string) (uint64, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 
