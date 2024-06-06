@@ -1,5 +1,5 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
-import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
+import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -306,23 +306,14 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
   }
   // adding fake numbers of identical results where it is possible
-  // TODO evaluate if this is still needed and fix the error if so
-  /* if (countIdenticalValidators) {
-    for (const singleRes of response.data) {
-      const whereToWrite = TypeInfo[singleRes.type as ResultType].countSource
-      if (whereToWrite) {
-        const size = 2 + Math.floor(30 * Math.random())
-        if (Array.isArray(singleRes[whereToWrite])) {
-          (singleRes[whereToWrite] as number[]) = []
-          for (let v = 0; v < size; v++) {
-            (singleRes[whereToWrite] as number[]).push(Math.floor(1400000 * Math.random()))
-          }
-        } else {
-          (singleRes[whereToWrite] as number) = size
-        }
-      }
+  for (const singleRes of response.data) {
+    const batchSize = 2 + Math.floor(30 * Math.random())
+    switch (TypeInfo[singleRes.type as ResultType].countSource) {
+      case Indirect.APInum_value: singleRes.num_value = batchSize
+        break
+      // add cases here in the future if new fields can hold batches or counts
     }
-  } */
+  }
 
   return response
 }
