@@ -80,7 +80,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 
 func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// TODO patrick
-	user, err := h.getUser(r)
+	user, err := h.getUserBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -100,12 +100,12 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUser(r)
+	userId, err := h.GetUserIdBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetUserDashboards(user.Id)
+	data, err := h.dai.GetUserDashboards(userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -180,7 +180,7 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	user, err := h.getUser(r)
+	user, err := h.getUserBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -218,14 +218,14 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		handleErr(w, err)
 		return
 	}
-	// set variables depending on public id being used
+	// set name depending on dashboard id
 	var name string
-	if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
+	if reInteger.MatchString(dashboardIdParam) {
+		name, err = h.dai.GetValidatorDashboardName(dashboardId.Id)
+	} else if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
 		var publicIdInfo *types.VDBPublicId
 		publicIdInfo, err = h.dai.GetValidatorDashboardPublicId(types.VDBIdPublic(dashboardIdParam))
 		name = publicIdInfo.Name
-	} else {
-		name, err = h.dai.GetValidatorDashboardName(dashboardId.Id)
 	}
 	if err != nil {
 		handleErr(w, err)

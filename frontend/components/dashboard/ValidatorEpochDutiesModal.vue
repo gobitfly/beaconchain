@@ -89,6 +89,9 @@ const mapDuties = (duties: ValidatorHistoryDuties) => {
 
 const title = computed(() => {
   let t = $t('dashboard.validator.duties.title')
+  if (props.value?.epoch) {
+    t += ` ${formatNumber(props.value.epoch)}`
+  }
   if (props.value?.groupName && !size.value.expandable) {
     t += ` (${props.value.groupName})`
   }
@@ -136,7 +139,7 @@ watch([title, size], () => {
                 target="_blank"
                 class="link validator_link"
               >
-                <BcFormatNumber :value="slotProps.data.validator" />
+                {{ slotProps.data.validator }}
               </BcLink>
             </template>
           </Column>

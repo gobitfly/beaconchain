@@ -116,7 +116,7 @@ type BlocksCursor struct {
 	Proposer uint64
 	Group    uint64
 	Status   uint64
-	Reward   decimal.NullDecimal
+	Reward   decimal.Decimal
 }
 
 type NetworkInfo struct {
