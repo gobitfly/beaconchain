@@ -107,3 +107,12 @@ type PremiumPerks struct {
 	MachineMonitoringHistorySeconds uint64 `json:"machine_monitoring_history_seconds"`
 	CustomMachineAlerts             bool   `json:"custom_machine_alerts"`
 }
+
+type StripeCreateCheckoutSession struct {
+	SessionId string `json:"sessionId,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type StripeCustomerPortal struct {
+	Url string `json:"url"`
+}
