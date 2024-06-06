@@ -551,7 +551,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
-	var reward int64
+	var reward sql.NullInt64
 	table := ""
 
 	switch days {
@@ -570,7 +570,7 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 	query := fmt.Sprintf(`select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`, table)
 
 	err = db.AlloyReader.Get(&reward, query, validators)
-	if err != nil {
+	if err != nil || !reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
@@ -578,11 +578,11 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 	if days == -1 { // for all time APR
 		aprDivisor = 90
 	}
-	clAPR = ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
+	clAPR = ((float64(reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
 	if math.IsNaN(clAPR) {
 		clAPR = 0
 	}
-	clIncome = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
+	clIncome = decimal.NewFromInt(reward.Int64).Mul(decimal.NewFromInt(1e9))
 
 	query = fmt.Sprintf(`
 	SELECT 
