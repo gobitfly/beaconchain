@@ -7,7 +7,6 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const searched = body?.input as string
   const searchableTypes = body?.types as ResultType[]
   const searchableNetworks = body?.networks as number[]
-  const countIdenticalValidators = body?.count as boolean
   const response : SearchAheadAPIresponse = {} as SearchAheadAPIresponse
   response.data = []
 
@@ -307,7 +306,8 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
   }
   // adding fake numbers of identical results where it is possible
-  if (countIdenticalValidators) {
+  // TODO evaluate if this is still needed and fix the error if so
+  /* if (countIdenticalValidators) {
     for (const singleRes of response.data) {
       const whereToWrite = TypeInfo[singleRes.type as ResultType].countSource
       if (whereToWrite) {
@@ -322,7 +322,7 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
         }
       }
     }
-  }
+  } */
 
   return response
 }
