@@ -173,7 +173,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" default="-" />
+                  {{ slotProps.data.index || "-" }}
                 </BcLink>
                 <div v-else class="all-time-total">
                   Σ
