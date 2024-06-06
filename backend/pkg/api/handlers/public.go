@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gorilla/mux"
@@ -126,20 +127,34 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		Validators []string `json:"validators"`
-		GroupId    uint64   `json:"group_id,omitempty"`
+		GroupId           uint64   `json:"group_id,omitempty"`
+		Validators        []string `json:"validators,omitempty"`
+		DepositAddress    string   `json:"deposit_address,omitempty"`
+		WithdrawalAddress string   `json:"withdrawal_address,omitempty"`
+		Graffiti          string   `json:"graffiti,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
 		return
 	}
-	indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
-	groupId := req.GroupId
+	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
+	fields := []interface{}{req.Validators, req.DepositAddress, req.WithdrawalAddress, req.Graffiti}
+	var count int
+	for _, set := range fields {
+		if !reflect.ValueOf(set).IsZero() {
+			count++
+		}
+	}
+	if count != 1 {
+		v.add("request body", "exactly one of `validators`, `deposit_address`, `withdrawal_address`, `graffiti` must be set. please check the API documentation for more information")
+	}
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
+
+	groupId := req.GroupId
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -148,30 +163,63 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-
-	// TODO get real limit
+	// TODO get real limit once stripe is implemented
 	limit := ^uint64(0) // user mustn't add more validators than the limit
+	var data []types.VDBPostValidatorsData
+	var dataErr error
+	switch {
+	case req.Validators != nil:
+		indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
+		if v.hasErrors() {
+			handleErr(w, v)
+			return
+		}
+		validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		// check if adding more validators than allowed
+		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(dashboardId, validators)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if uint64(len(validators)) > existingValidatorCount+limit {
+			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
+			return
+		}
+		data, dataErr = h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 
-	validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(dashboardId, validators)
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	if uint64(len(validators)) > existingValidatorCount+limit {
-		returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
-		return
-	}
-	data, err := h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
-	if err != nil {
-		handleErr(w, err)
-		return
+	case req.DepositAddress != "":
+		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
+		if v.hasErrors() {
+			handleErr(w, v)
+			return
+		}
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, depositAddress, limit)
+
+	case req.WithdrawalAddress != "":
+		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
+		if v.hasErrors() {
+			handleErr(w, v)
+			return
+		}
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, withdrawalAddress, limit)
+
+	case req.Graffiti != "":
+		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
+		if v.hasErrors() {
+			handleErr(w, v)
+			return
+		}
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
 	}
 
+	if dataErr != nil {
+		handleErr(w, dataErr)
+		return
+	}
 	response := types.ApiResponse{
 		Data: data,
 	}
