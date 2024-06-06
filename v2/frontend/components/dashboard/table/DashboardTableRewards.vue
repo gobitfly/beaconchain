@@ -40,7 +40,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(() => [dashboardKey.value, overview.value], () => {
+watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
