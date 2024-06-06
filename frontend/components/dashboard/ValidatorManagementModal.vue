@@ -46,7 +46,7 @@ type ValidatorUpdateBody = {
     deposit_address?: string,
     withdrawal_address?: string,
     graffiti?: string,
-    group_id?: string
+    group_id?: number
 }
 
 const size = computed(() => {
@@ -80,7 +80,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
     warn('no validators selected to change group')
     return
   }
-  body.group_id = groupId !== -1 ? groupId?.toString() : '0'
+  body.group_id = groupId && groupId !== -1 ? groupId : 0
 
   await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body }, { dashboardKey: dashboardKey.value })
 
