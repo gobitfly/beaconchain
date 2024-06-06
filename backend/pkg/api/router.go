@@ -95,7 +95,10 @@ var config = {
 }
 console.log('config',config)
 
-fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>{
+	config.csrfToken = r.headers.get('x-csrf-token')
+	return r.json()
+}).then((d)=>{
 	console.log('userInfo',d)
 	document.getElementById('userInfoRaw').innerText = JSON.stringify(d, null, 2)
 }).catch(err => {
@@ -118,7 +121,10 @@ function createCheckoutSession(priceId) {
 	if (isNaN(addonQuantity)) addonQuantity = 1
 	return fetch("/user/stripe/create-checkout-session", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: { 
+			"Content-Type": "application/json",
+			"X-CSRF-Token": config.csrfToken
+		},
 		credentials: 'include',
 		body: JSON.stringify({ priceId: priceId, addonQuantity: addonQuantity })
 	})
@@ -152,7 +158,10 @@ for (let i = 0; i < manageBillingButtons.length; i++) {
 	manageBillingButtons[i].addEventListener("click", function (e) {
     fetch("/user/stripe/customer-portal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+		"Content-Type": "application/json",
+		"X-CSRF-Token": config.csrfToken
+	},
       credentials: "include",
       body: JSON.stringify({returnURL: window.location.href}),
     })
