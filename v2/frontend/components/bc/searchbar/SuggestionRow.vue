@@ -106,7 +106,7 @@ const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
         :class="[barShape, colorTheme, dropdownLayout, suggestion.output.description?'greyish':'']"
       />
     </BcSearchbarMiddleEllipsis>
-    <div class="premium-invitation" :class="[dropdownLayout]" @click="(e : Event) => e.stopPropagation()">
+    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
       <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
     </div>
     <div class="cell-category" :class="[barShape,dropdownLayout,deactivationClass]">
@@ -144,7 +144,7 @@ const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
       :text="formatIdentificationCell()"
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <div class="premium-invitation" :class="[dropdownLayout]" @click="(e : Event) => e.stopPropagation()">
+    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
       <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
     </div>
     <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout,deactivationClass]">
@@ -367,7 +367,7 @@ const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
   @include common-to-all-rowstyles;
 
   &.large-dropdown {
-    grid-template-columns: 40px 126px auto min-content min-content;
+    grid-template-columns: 40px 126px 1fr min-content min-content;
   }
   &.narrow-dropdown {
     grid-template-columns: 40px 1fr min-content min-content;

@@ -28,7 +28,7 @@ There are more props that you can give to configure the search bar:
 ```TS
 :only-networks="[<list of chain IDs that the bar is authorized to search over>]" // Without this prop, the bar searches over all networks.
 :keep-dropdown-open="true" // When the user selects a result, the drop-down does not close.
-:row-lacks-premium-subscription="<call-back function returning `true` if the result-suggestion that it is passed must be deactivated>" // For the rows that the functions returns `true` on, the user is invited to subscribe to a premium plan
+:row-lacks-premium-subscription="<call-back function returning `true` if the result-suggestion that it is passed must be deactivated>" // For the rows that the function returns `true` on, the user is invited to subscribe to a premium plan
 ```
 
 The list of possible values for `:bar-shape`, `:color-theme` and `:bar-purpose` are respectively in enums `SearchbarShape`, `SearchbarColors` and `SearchbarPurpose` in file _searchbar.ts_.
