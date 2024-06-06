@@ -567,9 +567,9 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
 	}
 
-	query := fmt.Sprintf(`select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`, table)
+	query := `select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`
 
-	err = db.AlloyReader.Get(&reward, query, validators)
+	err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, table), validators)
 	if err != nil || !reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
@@ -582,22 +582,34 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 	if math.IsNaN(clAPR) {
 		clAPR = 0
 	}
+	if days == -1 {
+		err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
+		if err != nil || !reward.Valid {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+	}
 	clIncome = decimal.NewFromInt(reward.Int64).Mul(decimal.NewFromInt(1e9))
 
-	query = fmt.Sprintf(`
+	query = `
 	SELECT 
 		COALESCE(SUM(fee_recipient_reward), 0) 
 	FROM blocks 
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
-	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`, table)
-	err = db.AlloyReader.Get(&elIncome, query, validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
+	err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
-	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
 	elIncomeFloat, _ := elIncome.Float64()
-
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
+
+	if days == -1 {
+		err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+	}
+	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
 
 	return elIncome, elAPR, clIncome, clAPR, nil
 }
