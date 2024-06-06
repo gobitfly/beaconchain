@@ -28,6 +28,7 @@ There are more props that you can give to configure the search bar:
 ```TS
 :only-networks="[<list of chain IDs that the bar is authorized to search over>]" // Without this prop, the bar searches over all networks.
 :keep-dropdown-open="true" // When the user selects a result, the drop-down does not close.
+:row-lacks-premium-subscription="<call-back function returning `true` if the result-suggestion that it is passed must be deactivated>" // For the rows that the functions returns `true` on, the user is invited to subscribe to a premium plan
 ```
 
 The list of possible values for `:bar-shape`, `:color-theme` and `:bar-purpose` are respectively in enums `SearchbarShape`, `SearchbarColors` and `SearchbarPurpose` in file _searchbar.ts_.
@@ -38,12 +39,6 @@ You can write your own function for `:pick-by-default`, or give the example func
 ```TS
 :pick-by-default="pickHighestPriorityAmongBestMatchings"
 ```
-
-The handler that you give to prop `@go` receives one parameter:
-```TS
-function myHandler (result : ResultSuggestion)
-```
-To get a description of the information carried in the parameter, look at the comments around the declaration of type `ResultSuggestion`.
 
 The search-bar offers methods that you can call for further tailoring:
 ```TS
@@ -62,18 +57,18 @@ not be necessary to modify the code of the search-bar (its behavior and look are
   2. Tell the bar how to read/display it by adding a new entry in the `TypeInfo` record.
 
 **If the API gets the ability to return a new field in some or all elements of its response array:**
-  1. Write the name of the new field in `SingleAPIresult`.
+  1. Write the name of the new field in `SingleAPIresult` in _searchbar.ts_.
   2. Create a reference to it in `Indirect`.
   3. In `TypeInfo`, tell the bar when/where this field must be read (by giving its `Indirect` reference).
-  4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`
-  5. Add a case for the reference in function `realizeData()` in _SearchbarMain.vue_
+  4. Add a case for the reference in function `wasOutputDataGivenByTheAPI()`.
+  5. Add a case for the reference in function `realizeData()`.
 
 **If for some type of result you want to change the information / order of the information that the user sees in the corresponding rows of the result-suggestion list:**
   1. Locate this result type in record `TypeInfo`.
   2. In that entry, change / swap the references that are in field `howToFillresultSuggestionOutput`.
 
 **If you want to change in depth the whole result-suggestion list (to change how every row displays the information):**
-  1. Add a display-mode in the `SuggestionrowCells` enum in _searchbar.ts_
+  1. Add a display-mode in the `SuggestionrowCells` enum in _searchbar.ts_.
   2. Update the `SearchbarPurposeInfo` record there to tell the bar which Purpose must use your new mode.
   3. Implement this mode in a new root `<div>` at the end of the `<template>` of `SuggestionRow.vue`.
 
