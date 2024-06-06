@@ -30,7 +30,7 @@ const (
 
 // source of truth for all possible search types and their regex
 var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
-	validatorByIndex:                 reNumber,
+	validatorByIndex:                 reInteger,
 	validatorByPublicKey:             reValidatorPublicKey,
 	validatorsByDepositAddress:       reEthereumAddress,
 	validatorsByDepositEnsName:       reEnsName,
