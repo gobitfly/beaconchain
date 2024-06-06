@@ -15,7 +15,7 @@ import type { CookieDashboard } from '~/types/dashboard'
 const { isLoggedIn } = useUserStore()
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
-const { refreshDashboards, updateHash, dashboards, getDashboardLabel } = useUserDashboardStore()
+const { refreshDashboards, updateHash, dashboards, cookieDashboards, getDashboardLabel } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const seoTitle = computed(() => {
@@ -46,13 +46,17 @@ onMounted(() => {
   }
 })
 
-watch(dashboardKey, (newKey, oldKey) => {
-  if (!isLoggedIn.value) {
+watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
+  if (!newLoggedIn) {
     // We update the key for our public dashboard
-    const cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
+    let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
     // If the old key does not match the dashboards key then it probabbly means we opened a different public dashboard as a link
-    if (cd && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
+    const isPublic = isNaN(parseInt(newKey))
+    if (cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
+    } else if (!newKey || !isPublic) {
+      cd = cookieDashboards.value?.validator_dashboards?.[0] as CookieDashboard
+      setDashboardKey(cd?.hash ?? '')
     }
   }
 })

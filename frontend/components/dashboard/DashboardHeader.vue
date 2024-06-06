@@ -91,7 +91,7 @@ const items = computed<MenuBarEntry[]>(() => {
 
   addToSortedItems(0, dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
-    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash ?? cd.id}`)
+    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
   }))
   addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
     const cd = db as CookieDashboard
