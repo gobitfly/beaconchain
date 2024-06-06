@@ -1,17 +1,18 @@
 <script lang="ts" setup>
-// TODO: Add links to Buttons (don't forget Downgrade "button")
-
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
+import { type PremiumProduct, ProductCategoryPremium, type StripeCustomerPortal, type StripeCreateCheckoutSession } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
-const { bestPremiumProduct } = useProductsStore()
+import { API_PATH } from '~/types/customFetch'
+
+/// ///////////////
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
-const { products } = useProductsStore()
+const { products, bestPremiumProduct } = useProductsStore()
 const { user } = useUserStore()
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
 
 interface Props {
   product: PremiumProduct,
@@ -55,15 +56,44 @@ const percentages = computed(() => {
   }
 })
 
+// TODO: Maybe move this to parent and communicate via events
+// Then, parent could pass a disabled prop so all buttons are deactivated
+async function stripeCustomerPortal () {
+  const res = await fetch<StripeCustomerPortal>(API_PATH.STRIPE_CUSTOMER_PORTAL, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ returnURL: 'https://jkihuwegfsgjkhsdgf.beaconcha.in/api/test/stripe?api_key=TFpLcWowc2dUbDA3Z0gyNW5XU0Vl' })
+  })
+  console.log('StripeCustomerPortal res', res)
+
+  // TODO: Open new tab with res.url
+}
+
+async function stripePurchase () {
+  const res = await fetch<StripeCreateCheckoutSession>(API_PATH.STRIPE_CHECKOUT_SESSION, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ priceId: props.isYearly ? props.product.price_per_year_eur : props.product.price_per_month_eur, addonQuantity: 1 })
+  })
+  console.log('StripeCreateCheckoutSession res', res)
+
+  /*
+  TODO:
+  Use https://js.stripe.com/v3/ and then
+  stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
+    console.error("error redirecting to stripe checkout", err)
+  */
+}
+
 const planButton = computed(() => {
   let isDowngrade = false
   let text = $t('pricing.premium_product.button.select_plan')
+  let callback: () => Promise<void> = stripePurchase
 
-  if (user.value?.subscriptions) {
-    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
-    if (!subscription) {
-      text = $t('pricing.premium_product.button.select_plan')
-    } else if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
+  const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
+  if (subscription) {
+    callback = stripeCustomerPortal
+    if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
       text = $t('pricing.premium_product.button.manage_plan')
     } else {
       const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
@@ -78,7 +108,7 @@ const planButton = computed(() => {
     }
   }
 
-  return { text, isDowngrade }
+  return { text, isDowngrade, callback }
 })
 
 const mainFeatures = computed<Feature[]>(() => {
@@ -185,10 +215,10 @@ const minorFeatures = computed<Feature[]>(() => {
           :link="feature.link"
         />
       </div>
-      <div v-if="planButton.isDowngrade" class="plan-button dismiss">
+      <div v-if="planButton.isDowngrade" class="plan-button dismiss" @click="planButton.callback()">
         {{ planButton.text }}
       </div>
-      <Button v-else :label="planButton.text" class="plan-button" />
+      <Button v-else :label="planButton.text" class="plan-button" @click="planButton.callback()" />
     </div>
   </div>
 </template>
