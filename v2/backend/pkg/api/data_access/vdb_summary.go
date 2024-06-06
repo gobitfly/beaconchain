@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +20,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// TODO: implement sorting, filtering & paging
+	// TODO: implement sorting & paging
 	ret := make(map[uint64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
 
@@ -43,16 +45,42 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
 
+	searchValidator := -1
+	if search != "" {
+		if strings.HasPrefix(search, "0x") && len(search) == 98 {
+			// user searches for a validator pubkey
+			// retrieve the associated validator index from the mapping
+			validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+			if err != nil {
+				releaseValMapLock()
+				return nil, nil, err
+			}
+
+			if index, found := validatorMapping.ValidatorIndices[search]; found {
+				searchValidator = int(index)
+			} else {
+				searchValidator = math.MaxInt32
+			}
+			releaseValMapLock()
+		} else if !strings.HasPrefix(search, "0x") {
+			var err error
+			searchValidator, err = strconv.Atoi(search)
+			if err != nil {
+				searchValidator = -1
+			}
+		}
+	}
+
 	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []t.VDBValidator, tableName string) (map[uint64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
 			query := `select 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
-				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-					from  %[1]s
+				from  %[1]s
 				where validator_index = ANY($1)
 			) as a;`
 			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
@@ -66,12 +94,17 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-					from users_val_dashboards_validators 
+				from users_val_dashboards_validators 
 				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-				where dashboard_id = $1
+				where dashboard_id = $1%[2]s
 				group by 1
 			) as a;`
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
+
+			filterQuery := " AND $2 = -1"
+			if searchValidator != -1 {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			}
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName, filterQuery), dashboardId, searchValidator)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
@@ -93,7 +126,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 			var queryResult []validatorsPerGroup
 
-			err := d.alloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
+			filterQuery := " AND $2 = -1"
+			if searchValidator != -1 {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			}
+
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(`SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1%s ORDER BY group_id, validator_index`, filterQuery), dashboardId.Id, searchValidator)
 			if err != nil {
 				return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 			}
@@ -241,14 +279,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
-			COALESCE(slashed, false) as slashed,
+			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
+			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from users_val_dashboards_validators
-		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
+		inner join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
+		left join %[2]s on %[2]s.slashed_by = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
 		`
 
@@ -280,13 +320,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
-			COALESCE(slashed, false) as slashed,
+			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
+			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s
+		left join %[2]s on %[2]s.slashed_by = %[1]s.validator_index
 		where %[1]s.validator_index = ANY($1)
 	`
 	}
@@ -327,7 +369,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		SyncExecuted  uint32 `db:"sync_executed"`
 		SyncRewards   int64  `db:"sync_rewards"`
 
-		Slashed bool `db:"slashed"`
+		SlashedInPeriod bool   `db:"slashed_in_period"`
+		SlashedAmount   uint32 `db:"slashed_amount"`
 
 		DepositsCount uint32 `db:"deposits_count"`
 
@@ -339,15 +382,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table, slashedByCountTable string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		var err error
 
 		if len(validators) > 0 {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), validators)
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
 		} else {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId, groupId)
 		}
 
 		if err != nil {
@@ -406,15 +449,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
 
-			if row.Slashed {
+			if row.SlashedInPeriod {
 				data.Slashed.StatusCount.Failed++
-				if data.Slashed.Validators == nil {
-					data.Slashed.Validators = make([]t.VDBValidator, 0, 10)
-					data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
-				}
-			} else {
-				data.Slashed.StatusCount.Success++
+				data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
+			data.Slashed.StatusCount.Success += uint64(row.SlashedAmount)
+
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
 			totalSyncExpected += row.SyncCommitteesExpected
@@ -459,7 +499,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", 1, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_daily",
+			"validator_dashboard_data_rolling_daily_slashedby_count",
+			1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -467,7 +510,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", 7, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_weekly",
+			"validator_dashboard_data_rolling_weekly_slashedby_count",
+			7, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -475,7 +521,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 30, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_monthly",
+			"validator_dashboard_data_rolling_monthly_slashedby_count",
+			30, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -483,7 +532,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", -1, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_total",
+			"validator_dashboard_data_rolling_total_slashedby_count",
+			-1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -499,7 +551,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
-	var reward int64
+	var reward sql.NullInt64
 	table := ""
 
 	switch days {
@@ -515,10 +567,10 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
 	}
 
-	query := fmt.Sprintf(`select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`, table)
+	query := `select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`
 
-	err = db.AlloyReader.Get(&reward, query, validators)
-	if err != nil {
+	err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, table), validators)
+	if err != nil || !reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
@@ -526,26 +578,39 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 	if days == -1 { // for all time APR
 		aprDivisor = 90
 	}
-	clAPR = ((float64(reward) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
+	clAPR = ((float64(reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
 	if math.IsNaN(clAPR) {
 		clAPR = 0
 	}
-	clIncome = decimal.NewFromInt(reward).Mul(decimal.NewFromInt(1e9))
+	if days == -1 {
+		err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
+		if err != nil || !reward.Valid {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+	}
+	clIncome = decimal.NewFromInt(reward.Int64).Mul(decimal.NewFromInt(1e9))
 
-	query = fmt.Sprintf(`
+	query = `
 	SELECT 
-		COALESCE(SUM(fee_recipient_reward), 0) 
+		COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0)
 	FROM blocks 
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
-	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`, table)
-	err = db.AlloyReader.Get(&elIncome, query, validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
+	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
+	err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
-	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
 	elIncomeFloat, _ := elIncome.Float64()
-
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
+
+	if days == -1 {
+		err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+	}
+	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
 
 	return elIncome, elAPR, clIncome, clAPR, nil
 }
@@ -717,9 +782,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 	case enums.ValidatorDuties.Proposal:
 		columnCond = "blocks_scheduled > 0"
 	case enums.ValidatorDuties.Slashed:
-		// TODO: Wait for slashings to be available in the database
-		// columnCond = "(slashed OR slashings_executed > 0)"
-		columnCond = "slashed"
+		columnCond = "slashed_by IS NOT NULL"
 	}
 
 	// Get ALL validator indices for the given filters
