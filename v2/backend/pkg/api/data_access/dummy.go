@@ -55,6 +55,12 @@ func (d *DummyService) GetUser(email string) (*t.User, error) {
 	return &r, err
 }
 
+func (d *DummyService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
 	r := t.ProductSummary{}
 	err := commonFakeData(&r)

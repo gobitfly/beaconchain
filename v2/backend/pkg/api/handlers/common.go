@@ -544,6 +544,7 @@ func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
 
+//nolint:unparam
 func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
