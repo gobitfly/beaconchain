@@ -16,7 +16,7 @@ const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboard
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
-const { hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -38,7 +38,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
@@ -119,7 +119,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.proposer" default="-" />
+                  {{ slotProps.data.proposer || '-' }}
                 </BcLink>
               </template>
             </Column>
