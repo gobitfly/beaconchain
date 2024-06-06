@@ -20,7 +20,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// TODO: implement sorting, filtering & paging
+	// TODO: implement sorting & paging
 	ret := make(map[uint64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
 
