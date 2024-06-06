@@ -161,7 +161,7 @@ export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<
 export interface VDBExecutionDepositsTableRow {
   public_key: PubKey;
   index?: number /* uint64 */;
-  group_id: number /* uint64 */;
+  group_id: number /* int64 */;
   block: number /* uint64 */;
   timestamp: number /* int64 */;
   from: Address;
@@ -175,7 +175,7 @@ export type InternalGetValidatorDashboardExecutionLayerDepositsResponse = ApiPag
 export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
   index: number /* uint64 */;
-  group_id: number /* uint64 */;
+  group_id: number /* int64 */;
   epoch: number /* uint64 */;
   slot: number /* uint64 */;
   withdrawal_credential: Hash;
