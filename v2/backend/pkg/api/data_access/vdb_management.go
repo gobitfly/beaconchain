@@ -96,71 +96,6 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
-	result := &t.UserDashboardsData{}
-
-	dbReturn := []struct {
-		Id           uint64         `db:"id"`
-		Name         string         `db:"name"`
-		PublicId     sql.NullString `db:"public_id"`
-		PublicName   sql.NullString `db:"public_name"`
-		SharedGroups sql.NullBool   `db:"shared_groups"`
-	}{}
-
-	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
-			uvd.id,
-			uvd.name,
-			uvds.public_id,
-			uvds.name AS public_name,
-			uvds.shared_groups
-		FROM users_val_dashboards uvd
-		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
-		WHERE uvd.user_id = $1
-	`, userId)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill the result
-	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
-	for _, row := range dbReturn {
-		if _, ok := validatorDashboardMap[row.Id]; !ok {
-			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
-				Id:        row.Id,
-				Name:      row.Name,
-				PublicIds: []t.VDBPublicId{},
-			}
-		}
-		if row.PublicId.Valid {
-			result := t.VDBPublicId{}
-			result.PublicId = row.PublicId.String
-			result.Name = row.PublicName.String
-			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
-
-			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
-		}
-	}
-	for _, validatorDashboard := range validatorDashboardMap {
-		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
-	}
-
-	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
-			id,
-			name
-		FROM users_acc_dashboards
-		WHERE user_id = $1
-	`, userId)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func (d *DataAccessService) CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 
@@ -486,6 +421,14 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
 	}
 	return nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardGroupCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*) FROM users_val_dashboards_groups WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
@@ -878,6 +821,16 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 	return err
 }
 
+func (d *DataAccessService) GetValidatorDashboardValidatorsCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
+}
+
 func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	dbReturn := struct {
 		PublicId     string `db:"public_id"`
@@ -979,4 +932,14 @@ func (d *DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId t
 	}
 
 	return err
+}
+
+func (d *DataAccessService) GetValidatorDashboardPublicIdCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_sharing
+		WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
 }

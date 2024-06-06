@@ -101,7 +101,7 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
-type User struct {
+type UserCredentialInfo struct {
 	Id        uint64 `db:"id"`
 	Password  string `db:"password"`
 	ProductId string `db:"product_id"`
