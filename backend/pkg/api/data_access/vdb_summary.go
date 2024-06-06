@@ -592,9 +592,10 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 
 	query = `
 	SELECT 
-		COALESCE(SUM(fee_recipient_reward), 0) 
+		COALESCE(SUM(GREATEST(rb.value / 1e18, fee_recipient_reward)), 0)
 	FROM blocks 
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
+	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
 	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
 	err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
