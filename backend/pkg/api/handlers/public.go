@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
@@ -126,21 +127,17 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
 		Validators []string `json:"validators"`
-		GroupId    string   `json:"group_id,omitempty"`
+		GroupId    uint64   `json:"group_id,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
 		return
 	}
 	indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
-	groupId := v.checkGroupId(req.GroupId, allowEmpty)
+	groupId := req.GroupId
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
-	}
-	// empty group id becomes default group
-	if groupId == types.AllGroups {
-		groupId = types.DefaultGroupId
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, uint64(groupId))
 	if err != nil {
@@ -151,12 +148,24 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
+
+	// TODO get real limit
+	limit := ^uint64(0) // user mustn't add more validators than the limit
+
 	validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	// TODO check validator limit reached
+	existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(dashboardId, validators)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if uint64(len(validators)) > existingValidatorCount+limit {
+		returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
+		return
+	}
 	data, err := h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
 	if err != nil {
 		handleErr(w, err)

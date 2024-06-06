@@ -449,7 +449,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 			return
 		}
 		if uint64(len(validators)) > existingValidatorCount+limit {
-			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", existingValidatorCount+limit))
+			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
