@@ -509,9 +509,9 @@ func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-/* func returnConflict(w http.ResponseWriter, err error) {
+func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
-} */
+}
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
