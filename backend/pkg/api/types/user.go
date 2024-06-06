@@ -108,6 +108,8 @@ type PremiumPerks struct {
 	CustomMachineAlerts             bool   `json:"custom_machine_alerts"`
 }
 
+// TODO @patrick StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse
+
 type StripeCreateCheckoutSession struct {
 	SessionId string `json:"sessionId,omitempty"`
 	Error     string `json:"error,omitempty"`
