@@ -592,7 +592,7 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 
 	query = `
 	SELECT 
-		COALESCE(SUM(GREATEST(rb.value / 1e18, fee_recipient_reward)), 0)
+		COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0)
 	FROM blocks 
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
 	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
