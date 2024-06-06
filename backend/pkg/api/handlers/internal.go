@@ -180,7 +180,7 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	user, err := h.getUserBySession(r)
+	userId, err := h.GetUserIdBySession(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -200,7 +200,22 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboard(user.Id, name, uint64(network))
+	userInfo, err := h.dai.GetUserInfo(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		return
+	}
+
+	data, err := h.dai.CreateValidatorDashboard(userId, name, uint64(network))
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -302,7 +317,27 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		handleErr(w, v)
 		return
 	}
-	// TODO check group limit reached
+	// check if user has reached the maximum number of groups
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	groupCount, err := h.dai.GetValidatorDashboardGroupCount(dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+		returnConflict(w, errors.New("maximum number of validator dashboard groups reached"))
+		return
+	}
+
 	data, err := h.dai.CreateValidatorDashboardGroup(dashboardId, name)
 	if err != nil {
 		handleErr(w, err)
@@ -430,8 +465,17 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	// TODO get real limit once stripe is implemented
-	limit := ^uint64(0) // user mustn't add more validators than the limit
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
@@ -565,6 +609,16 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 		handleErr(w, v)
 		return
 	}
+	publicIdCount, err := h.dai.GetValidatorDashboardPublicIdCount(dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if publicIdCount >= 1 {
+		returnConflict(w, errors.New("cannot create more than one public id"))
+		return
+	}
+
 	data, err := h.dai.CreateValidatorDashboardPublicId(dashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
 		handleErr(w, err)

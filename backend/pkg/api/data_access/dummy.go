@@ -49,8 +49,8 @@ func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	return &r, err
 }
 
-func (d *DummyService) GetUser(email string) (*t.User, error) {
-	r := t.User{}
+func (d *DummyService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+	r := t.UserCredentialInfo{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -384,4 +384,28 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	r := t.SearchValidatorsByGraffiti{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) GetUserValidatorDashboardCount(userId uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetValidatorDashboardGroupCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetValidatorDashboardValidatorsCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetValidatorDashboardPublicIdCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
 }
