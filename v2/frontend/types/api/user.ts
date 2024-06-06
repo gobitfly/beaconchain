@@ -99,3 +99,10 @@ export interface PremiumPerks {
   machine_monitoring_history_seconds: number /* uint64 */;
   custom_machine_alerts: boolean;
 }
+export interface StripeCreateCheckoutSession {
+  sessionId?: string;
+  error?: string;
+}
+export interface StripeCustomerPortal {
+  url: string;
+}
