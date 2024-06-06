@@ -400,6 +400,10 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		handleErr(w, err)
 		return
 	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
 	fields := []interface{}{req.Validators, req.DepositAddress, req.WithdrawalAddress, req.Graffiti}
 	var count int
