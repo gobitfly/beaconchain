@@ -55,36 +55,40 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		return result, &paging, nil
 	}
 
-	validatorGroupMap := make(map[t.VDBValidator]uint64)
+	validatorGroupMap := make(map[t.VDBValidator]int64)
 	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
 		queryResult := []struct {
 			ValidatorIndex t.VDBValidator `db:"validator_index"`
-			GroupId        uint64         `db:"group_id"`
+			GroupId        int64          `db:"group_id"`
 		}{}
 
-		queryArgs := []interface{}{dashboardId.Id}
+		queryParams := []interface{}{dashboardId.Id}
 		validatorsQuery := fmt.Sprintf(`
 			SELECT 
 				validator_index,
 				group_id
 			FROM users_val_dashboards_validators
 			WHERE dashboard_id = $%d
-			`, len(queryArgs))
+			`, len(queryParams))
 
 		if len(validatorSearch) > 0 {
-			queryArgs = append(queryArgs, pq.Array(validatorSearch))
-			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryArgs))
+			queryParams = append(queryParams, pq.Array(validatorSearch))
+			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryParams))
 		}
 
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryArgs...)
+		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryParams...)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		for _, res := range queryResult {
-			validatorGroupMap[res.ValidatorIndex] = res.GroupId
+			groupId := res.GroupId
+			if dashboardId.AggregateGroups {
+				groupId = t.AggregatedGroupId
+			}
+			validatorGroupMap[res.ValidatorIndex] = groupId
 			validators = append(validators, res.ValidatorIndex)
 		}
 	} else {
@@ -472,7 +476,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
-	queryArgs := []interface{}{}
+	queryParams := []interface{}{}
 	withdrawalsQuery := `
 		SELECT 
 			t.validator_index,
@@ -484,14 +488,14 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 		`
 
 	if dashboardId.Validators == nil {
-		queryArgs = append(queryArgs, dashboardId.Id)
+		queryParams = append(queryParams, dashboardId.Id)
 		dashboardIdQuery := fmt.Sprintf(`
 			INNER JOIN users_val_dashboards_validators v ON v.validator_index = t.validator_index
-			WHERE v.dashboard_id = $%d`, len(queryArgs))
+			WHERE v.dashboard_id = $%d`, len(queryParams))
 
 		if len(validatorSearch) > 0 {
-			queryArgs = append(queryArgs, pq.Array(validatorSearch))
-			dashboardIdQuery += fmt.Sprintf(" AND t.validator_index = ANY ($%d)", len(queryArgs))
+			queryParams = append(queryParams, pq.Array(validatorSearch))
+			dashboardIdQuery += fmt.Sprintf(" AND t.validator_index = ANY ($%d)", len(queryParams))
 		}
 
 		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, dashboardIdQuery)
@@ -509,14 +513,14 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.
 			return result, nil
 		}
 
-		queryArgs = append(queryArgs, pq.Array(validators))
+		queryParams = append(queryParams, pq.Array(validators))
 		validatorsQuery := fmt.Sprintf(`
-			WHERE t.validator_index = ANY ($%d)`, len(queryArgs))
+			WHERE t.validator_index = ANY ($%d)`, len(queryParams))
 
 		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
 	}
 
-	err = d.alloyReader.Select(&queryResult, withdrawalsQuery, queryArgs...)
+	err = d.alloyReader.Select(&queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
