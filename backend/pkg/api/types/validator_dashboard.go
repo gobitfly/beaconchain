@@ -221,7 +221,7 @@ type VDBWithdrawalsTableRow struct {
 	Epoch             uint64          `json:"epoch"`
 	Slot              uint64          `json:"slot"`
 	Index             VDBValidator    `json:"index"`
-	GroupId           uint64          `json:"group_id"`
+	GroupId           int64           `json:"group_id"`
 	Recipient         Address         `json:"recipient"`
 	Amount            decimal.Decimal `json:"amount"`
 	IsMissingEstimate bool            `json:"is_missing_estimate"`
