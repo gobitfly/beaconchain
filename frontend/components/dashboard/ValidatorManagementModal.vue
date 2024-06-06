@@ -41,6 +41,14 @@ const selected = ref<VDBManageValidatorsTableRow[]>()
 const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
+type ValidatorUpdateBody = {
+  validators?: string[],
+    deposit_address?: string,
+    withdrawal_address?: string,
+    graffiti?: string,
+    groupId?: string
+}
+
 const size = computed(() => {
   return {
     expandable: width.value < 1060,
@@ -67,14 +75,14 @@ const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] 
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
-const changeGroup = async (validators?: string[], groupId?: number) => {
-  if (!validators?.length) {
+const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
+  if (!body.validators?.length && !body.deposit_address && !body.graffiti && !body.withdrawal_address) {
     warn('no validators selected to change group')
     return
   }
-  const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
+  body.groupId = groupId !== -1 ? groupId?.toString() : '0'
 
-  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
+  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body }, { dashboardKey: dashboardKey.value })
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -97,22 +105,6 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 }
 
 const addValidator = (result: ResultSuggestion) => {
-  /*  From Lucca:
-      -----------
-  The `POST /validator-dashboards/{id}/validators` endpoint has new fields in its request body.
-  They must be used to add batches of validators by deposit address, withdrawal address or graffiti.
-
-  So, now, to add validators, send a request to `/validator-dashboards/{id}/validators` with either:
-  {
-    validators: ["<first index or pubkey>", "<second index or pubkey>", ...]
-           OR
-    deposit_address: "<deposit address>"
-           OR
-    withdrawal_address: "<withdrawal address>"
-           OR
-    graffiti: "graffiti"
-  }
-  */
   if (total.value + result.count > maxValidatorsPerDashboard.value) {
     dialog.open(BcPremiumModal, {})
     return
@@ -120,34 +112,32 @@ const addValidator = (result: ResultSuggestion) => {
 
   let list: string[] = []
   selectedValidator.value = ''
+  const body: ValidatorUpdateBody = {}
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
       list = [String(result.rawResult.num_value!)]
-      selectedValidator.value = String(list[0])
-      // TODO: call the endpoint with `{ validators: list }` in the body
+      selectedValidator.value = list[0]
+      body.validators = list
       break
     case ResultType.ValidatorsByDepositAddress :
     case ResultType.ValidatorsByDepositEnsName :
-      // TODO: call the endpoint with `{ deposit_address: result.rawResult.hash_value! }` in the body
-      // TODO: fill our variable `list` with the indices of the new validators
+      body.deposit_address = result.rawResult.hash_value
       break
     case ResultType.ValidatorsByWithdrawalCredential :
     case ResultType.ValidatorsByWithdrawalAddress :
     case ResultType.ValidatorsByWithdrawalEnsName :
-      // TODO: call the endpoint with `{ withdrawal_address: result.rawResult.hash_value! }` in the body
-      // TODO: fill our variable `list` with the indices of the new validators
+      body.withdrawal_address = result.rawResult.hash_value
       break
     case ResultType.ValidatorsByGraffiti :
-      // TODO: call the endpoint with `{ graffiti: result.rawResult.str_value! }` in the body
-      // TODO: fill our variable `list` with the indices of the new validators
+      body.graffiti = result.rawResult.str_value
       break
   }
 
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
   } else {
-    changeGroup(list, selectedGroup.value)
+    changeGroup(body, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
@@ -158,7 +148,7 @@ const editSelected = () => {
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       if (response?.data !== undefined) {
-        changeGroup(mapIndexOrPubKey(selected.value), response?.data)
+        changeGroup({ validators: mapIndexOrPubKey(selected.value) }, response?.data)
       }
     },
     data: {
@@ -213,7 +203,7 @@ watch(() => [dashboardKey.value, visible.value, query.value], () => {
 }, { immediate: true })
 
 const switchValidatorGroup = (row: VDBManageValidatorsTableRow, group: number) => {
-  changeGroup(mapIndexOrPubKey([row].concat(selected.value ?? [])), group)
+  changeGroup({ validators: mapIndexOrPubKey([row].concat(selected.value ?? [])) }, group)
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {
