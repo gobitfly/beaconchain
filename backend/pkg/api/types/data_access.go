@@ -10,6 +10,7 @@ import (
 // it won't be converted to typescript or used in the frontend
 
 const DefaultGroupId = 0
+const AggregatedGroupId = -1
 const AllGroups = -1
 const DefaultGroupName = "default"
 
