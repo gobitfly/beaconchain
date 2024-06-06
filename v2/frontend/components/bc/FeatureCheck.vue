@@ -9,29 +9,20 @@ defineProps<Props>()
 </script>
 
 <template>
-  <div class="check-container">
-    <div v-if="available" class="checkmark">
-      <FontAwesomeIcon :icon="faCheck" />
-    </div>
-    <div v-else class="cross">
-      <FontAwesomeIcon :icon="faClose" />
-    </div>
-  </div>
+  <FontAwesomeIcon v-if="available" :icon="faCheck" class="checkmark" />
+  <FontAwesomeIcon v-else :icon="faClose" class="cross" />
 </template>
 
 <style lang="scss" scoped>
-.check-container {
-  svg{
-    width: 100%;
-    height: 100%;
-  }
+.checkmark {
+  color: var(--primary-orange);
+  width: 18px;
+  height: 20px;
+}
 
-  .checkmark {
-    color: var(--primary-orange);
-  }
-
-  .cross {
-    color: var(--text-color-discreet);
-  }
+.cross {
+  color: var(--text-color-discreet);
+  width: 14px;
+  height: 20px;
 }
 </style>

@@ -1,20 +1,11 @@
 <script lang="ts" setup>
 const { t: $t } = useI18n()
-const { products, bestPremiumProduct } = useProductsStore()
-const { user } = useUserStore()
+const { products } = useProductsStore()
 
 interface Props {
   isYearly: boolean
 }
 defineProps<Props>()
-
-const addonsAvailable = computed(() => {
-  if (!products?.value?.premium_products || !bestPremiumProduct?.value) {
-    return false
-  }
-
-  return user.value?.subscriptions.find(sub => sub.product_id === bestPremiumProduct.value?.product_id) !== undefined
-})
 </script>
 
 <template>
@@ -30,9 +21,8 @@ const addonsAvailable = computed(() => {
     <div class="addons-row">
       <PricingPremiumAddonBox
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
-        :key="addon.product_id"
+        :key="addon.product_id_yearly"
         :addon="addon"
-        :addons-available="addonsAvailable"
         :is-yearly="isYearly"
       />
     </div>
@@ -44,31 +34,34 @@ const addonsAvailable = computed(() => {
   width: 100%;
   display: flex;
   align-items: flex-start;
-  gap: 70px;
+  gap: 10px;
 
   .text-container {
     display: flex;
     flex-direction: column;
 
     .title {
-      font-size: 32px;
+      font-size: 26px;
       color: var(--primary-color);
     }
 
     .subtitle {
-      font-size: 35px;
+      font-size: 29px;
     }
   }
 
   .addons-row {
     width: 100%;
-    min-width: min-content;
+    max-width: fit-content;
+    flex-shrink: 0;
     display: flex;
-    gap: 7px;
+    justify-content: space-between;
     overflow-x: auto;
+    gap: 7px;
+    padding-bottom: 4px;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     flex-direction: column;
     gap: 15px;
 

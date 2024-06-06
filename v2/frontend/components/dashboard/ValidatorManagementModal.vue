@@ -34,12 +34,22 @@ const selectedValidator = ref<string>('')
 const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
 const { isLoggedIn, user } = useUserStore()
 
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'index:asc' }, 500)
+const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
+
+const { value: query, temp: tempQuery, bounce: setQuery, instant: instantQuery } = useDebounceValue<PathValues | undefined>(initialQuery, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
 const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
+
+type ValidatorUpdateBody = {
+  validators?: string[],
+    deposit_address?: string,
+    withdrawal_address?: string,
+    graffiti?: string,
+    group_id?: number
+}
 
 const size = computed(() => {
   return {
@@ -56,6 +66,7 @@ const resetData = () => {
   selected.value = []
   selectedGroup.value = -1
   cursor.value = undefined
+  instantQuery(initialQuery)
 }
 
 const onClose = () => {
@@ -67,14 +78,14 @@ const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] 
   return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
 }
 
-const changeGroup = async (validators?: string[], groupId?: number) => {
-  if (!validators?.length) {
+const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
+  if (!body.validators?.length && !body.deposit_address && !body.graffiti && !body.withdrawal_address) {
     warn('no validators selected to change group')
     return
   }
-  const targetGroupId = groupId !== -1 ? groupId?.toString() : '0'
+  body.group_id = groupId && groupId !== -1 ? groupId : 0
 
-  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body: { validators, group_id: targetGroupId } }, { dashboardKey: dashboardKey.value })
+  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body }, { dashboardKey: dashboardKey.value })
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -101,21 +112,35 @@ const addValidator = (result: ResultSuggestion) => {
     dialog.open(BcPremiumModal, {})
     return
   }
-  let list: string[]
+
+  let list: string[] = []
+  selectedValidator.value = ''
+  const body: ValidatorUpdateBody = {}
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
       list = [String(result.rawResult.num_value!)]
-      selectedValidator.value = String(list[0])
+      selectedValidator.value = list[0]
+      body.validators = list
       break
-    default:
-      list = result.rawResult.validators!.map(index => String(index))
-      selectedValidator.value = ''
+    case ResultType.ValidatorsByDepositAddress :
+    case ResultType.ValidatorsByDepositEnsName :
+      body.deposit_address = result.rawResult.hash_value
+      break
+    case ResultType.ValidatorsByWithdrawalCredential :
+    case ResultType.ValidatorsByWithdrawalAddress :
+    case ResultType.ValidatorsByWithdrawalEnsName :
+      body.withdrawal_address = result.rawResult.hash_value
+      break
+    case ResultType.ValidatorsByGraffiti :
+      body.graffiti = result.rawResult.str_value
+      break
   }
+
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
   } else {
-    changeGroup(list, selectedGroup.value)
+    changeGroup(body, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
@@ -126,7 +151,7 @@ const editSelected = () => {
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       if (response?.data !== undefined) {
-        changeGroup(mapIndexOrPubKey(selected.value), response?.data)
+        changeGroup({ validators: mapIndexOrPubKey(selected.value) }, response?.data)
       }
     },
     data: {
@@ -181,7 +206,7 @@ watch(() => [dashboardKey.value, visible.value, query.value], () => {
 }, { immediate: true })
 
 const switchValidatorGroup = (row: VDBManageValidatorsTableRow, group: number) => {
-  changeGroup(mapIndexOrPubKey([row].concat(selected.value ?? [])), group)
+  changeGroup({ validators: mapIndexOrPubKey([row].concat(selected.value ?? [])) }, group)
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {

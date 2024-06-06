@@ -58,14 +58,13 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByDepositAddress{
-		Address:    address,
-		Validators: make([]uint64, 0),
+		Address: address,
 	}
-	err := db.ReaderDb.Select(&ret.Validators, "select validatorindex from validators where pubkey in (select publickey from eth1_deposits where from_address = $1) order by validatorindex LIMIT 10;", address)
+	err := db.ReaderDb.Get(&ret.Count, "select count(validatorindex) from validators where pubkey in (select publickey from eth1_deposits where from_address = $1);", address)
 	if err != nil {
 		return nil, err
 	}
-	if len(ret.Validators) == 0 {
+	if ret.Count == 0 {
 		return nil, ErrNotFound
 	}
 	return ret, nil
@@ -81,13 +80,12 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByWithdrwalCredential{
 		WithdrawalCredential: credential,
-		Validators:           make([]uint64, 0),
 	}
-	err := db.ReaderDb.Select(&ret.Validators, "select validatorindex from validators where withdrawalcredentials = $1 order by validatorindex LIMIT 10;", credential)
+	err := db.ReaderDb.Get(&ret.Count, "select count(validatorindex) from validators where withdrawalcredentials = $1;", credential)
 	if err != nil {
 		return nil, err
 	}
-	if len(ret.Validators) == 0 {
+	if ret.Count == 0 {
 		return nil, ErrNotFound
 	}
 	return ret, nil
@@ -102,14 +100,13 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.C
 func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByGraffiti{
-		Graffiti:   graffiti,
-		Validators: make([]uint64, 0),
+		Graffiti: graffiti,
 	}
-	err := db.ReaderDb.Select(&ret.Validators, "select distinct proposer from blocks where graffiti_text = $1 limit 10;", graffiti) // added a limit here to keep the query fast
+	err := db.ReaderDb.Get(&ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
 	if err != nil {
 		return nil, err
 	}
-	if len(ret.Validators) == 0 {
+	if ret.Count == 0 {
 		return nil, ErrNotFound
 	}
 	return ret, nil

@@ -126,7 +126,7 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 
 		setPrice("mGNO", "GNO", float64(1)/float64(32))
 		setPrice("GNO", "mGNO", 32)
-		setPrice("mGNO", "mGNO", float64(1)/float64(32))
+		setPrice("mGNO", "mGNO", 1)
 		setPrice("GNO", "GNO", 1)
 
 		calcPairs["GNO"] = true
