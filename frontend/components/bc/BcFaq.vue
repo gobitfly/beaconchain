@@ -11,13 +11,11 @@ const { t: $t } = useI18n()
 
 const questions = computed(() => {
   const list = []
-  let notFound = false
-  let index = 0
-  while (!notFound) {
-    const path = `${props.translationPath}.${index}`
+  while (true) {
+    const path: string = `${props.translationPath}.${(list.length)}`
     const question = tD($t, `${path}.question`)
     if (!question) {
-      notFound = true
+      break
     } else {
       list.push({
         path,
@@ -26,7 +24,6 @@ const questions = computed(() => {
         linkPath: tD($t, `${path}.link.path`),
         linkLabel: tD($t, `${path}.link.label`)
       })
-      index++
     }
   }
   return list
@@ -42,13 +39,15 @@ const questions = computed(() => {
         <template #headericon>
           <FontAwesomeIcon :icon="faCaretRight" />
         </template>
-        <p v-for="(anser, index) in quest.answers" :key="index">
-          {{ anser }}
-        </p>
-        <div class="footer">
-          <BcLink v-if="quest.linkPath" :path="quest.linkPath" class="link">
-            {{ quest.linkLabel }}
-          </BcLink>
+        <div class="answer">
+          <p v-for="(answer, index) in quest.answers" :key="index">
+            {{ answer }}
+          </p>
+          <div v-if="quest.linkPath" class="footer">
+            <BcLink :to="quest.linkPath" target="_blank" class="link">
+              {{ quest.linkLabel }}
+            </BcLink>
+          </div>
         </div>
       </AccordionTab>
     </Accordion>
@@ -78,6 +77,9 @@ const questions = computed(() => {
   .footer {
     display: flex;
     justify-content: flex-end;
+  }
+  .answer {
+    padding: 16px;
   }
 }
 </style>
