@@ -102,7 +102,7 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 	ret := &t.SearchValidatorsByGraffiti{
 		Graffiti: graffiti,
 	}
-	err := db.ReaderDb.Get(&ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti) // added a limit here to keep the query fast
+	err := db.ReaderDb.Get(&ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
 	if err != nil {
 		return nil, err
 	}
