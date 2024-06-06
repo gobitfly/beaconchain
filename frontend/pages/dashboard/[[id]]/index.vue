@@ -14,7 +14,7 @@ import type { CookieDashboard } from '~/types/dashboard'
 
 const { isLoggedIn } = useUserStore()
 
-const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
+const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards, cookieDashboards, getDashboardLabel } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -35,19 +35,8 @@ function showDashboardCreationDialog () {
   dashboardCreationControllerModal.value?.show()
 }
 
-onMounted(() => {
-  if (dashboardKey.value === '') {
-    // we don't have a key and no validator dashboard: show the create panel
-    if (dashboards.value?.validator_dashboards?.length) {
-      // if we have a validator dashboard but none selected: select the first
-      const cd = dashboards.value.validator_dashboards[0] as CookieDashboard
-      setDashboardKey(cd.hash ?? cd.id.toString())
-    }
-  }
-})
-
 watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
-  if (!newLoggedIn) {
+  if (!newLoggedIn || !newKey) {
     // We update the key for our public dashboard
     let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
     // If the old key does not match the dashboards key then it probabbly means we opened a different public dashboard as a link
@@ -59,7 +48,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
       setDashboardKey(cd?.hash ?? '')
     }
   }
-})
+}, { immediate: true })
 </script>
 
 <template>
