@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,16 +45,42 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 	}
 
+	searchValidator := -1
+	if search != "" {
+		if strings.HasPrefix(search, "0x") && len(search) == 98 {
+			// user searches for a validator pubkey
+			// retrieve the associated validator index from the mapping
+			validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+			if err != nil {
+				releaseValMapLock()
+				return nil, nil, err
+			}
+
+			if index, found := validatorMapping.ValidatorIndices[search]; found {
+				searchValidator = int(index)
+			} else {
+				searchValidator = math.MaxInt32
+			}
+			releaseValMapLock()
+		} else if !strings.HasPrefix(search, "0x") {
+			var err error
+			searchValidator, err = strconv.Atoi(search)
+			if err != nil {
+				searchValidator = -1
+			}
+		}
+	}
+
 	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []t.VDBValidator, tableName string) (map[uint64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
 			query := `select 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 				select 
-				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-					from  %[1]s
+				from  %[1]s
 				where validator_index = ANY($1)
 			) as a;`
 			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
@@ -66,12 +94,17 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 					SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 					SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-					from users_val_dashboards_validators 
+				from users_val_dashboards_validators 
 				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-				where dashboard_id = $1
+				where dashboard_id = $1%[2]s
 				group by 1
 			) as a;`
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
+
+			filterQuery := " AND $2 = -1"
+			if searchValidator != -1 {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			}
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName, filterQuery), dashboardId, searchValidator)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
@@ -93,7 +126,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 			var queryResult []validatorsPerGroup
 
-			err := d.alloyReader.Select(&queryResult, `SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY group_id, validator_index`, dashboardId.Id)
+			filterQuery := " AND $2 = -1"
+			if searchValidator != -1 {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			}
+
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(`SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1%s ORDER BY group_id, validator_index`, filterQuery), dashboardId.Id, searchValidator)
 			if err != nil {
 				return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 			}
