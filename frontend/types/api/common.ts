@@ -91,7 +91,6 @@ export interface SearchResult {
   hash_value?: string;
   str_value?: string;
   num_value?: number /* uint64 */;
-  validators?: number /* uint64 */[];
 }
 export type InternalPostSearchResponse = ApiDataResponse<SearchResult[]>;
 export interface VDBPublicId {

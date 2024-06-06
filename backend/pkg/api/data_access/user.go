@@ -3,30 +3,47 @@ package dataaccess
 import (
 	"database/sql"
 	"fmt"
+	"math"
+	"time"
 
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 )
 
-func (d *DataAccessService) GetUser(email string) (*t.User, error) {
-	// TODO patrick
-	result := &t.User{}
+type UserRepository interface {
+	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
+	GetUserIdByApiKey(apiKey string) (uint64, error)
+	GetUserInfo(id uint64) (*t.UserInfo, error)
+	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
+	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+}
+
+func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+	// TODO @patrick
+	result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions 
-				left join users on users.id = user_id 
+				LEFT JOIN users ON users.id = user_id 
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
-					WHEN 'whale' THEN 1
-					WHEN 'goldfish' THEN 2
-					WHEN 'plankton' THEN 3
-					ELSE 4  -- For any other product_id values
+					WHEN 'orca.yearly'    THEN  1
+					WHEN 'orca'           THEN  2
+					WHEN 'dolphin.yearly' THEN  3
+					WHEN 'dolphin'        THEN  4
+					WHEN 'guppy.yearly'   THEN  5
+					WHEN 'guppy'          THEN  6
+					WHEN 'whale'          THEN  7
+					WHEN 'goldfish'       THEN  8
+					WHEN 'plankton'       THEN  9
+					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id as id, password, COALESCE(product_id, '') as product_id, COALESCE(user_group, '') AS user_group 
+		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group 
 		FROM users
-		left join latest_and_greatest_sub on latest_and_greatest_sub.user_id = users.id  
+		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id  
 		WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
@@ -34,13 +51,16 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 	return result, err
 }
 
-func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
-	// TODO patrick
-	// return d.dummy.GetUserInfo(id)
-	return &t.UserInfo{
-		Id:      id,
-		Email:   "mail@dummy.com",
-		ApiKeys: []string{"dummykey1", "dummykey1"},
+func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+	// TODO @recy21
+	return d.dummy.GetUserIdByApiKey(apiKey)
+}
+
+func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+	// TODO @patrick improve and unmock
+	userInfo := &t.UserInfo{
+		Id:      userId,
+		ApiKeys: []string{},
 		ApiPerks: t.ApiPerks{
 			UnitsPerSecond:    10,
 			UnitsPerMonth:     10,
@@ -49,62 +69,147 @@ func (d *DataAccessService) GetUserInfo(id uint64) (*t.UserInfo, error) {
 			ExecutionLayerAPI: true,
 			Layer2API:         true,
 			NoAds:             true,
-			DiscordSuport:     false,
+			DiscordSupport:    false,
 		},
-		PremiumPerks: t.PremiumPerks{
-			AdFree:                          true,
-			ValidatorDasboards:              2,
-			ValidatorsPerDashboard:          1000,
-			ValidatorGroupsPerDashboard:     30,
-			ShareCustomDashboards:           true,
-			ManageDashboardViaApi:           true,
-			HeatmapHistorySeconds:           3600 * 24 * 365,
-			SummaryChartHistorySeconds:      3600 * 24 * 365,
-			EmailNotificationsPerDay:        50,
-			ConfigureNotificationsViaApi:    true,
-			ValidatorGroupNotifications:     60,
-			WebhookEndpoints:                30,
-			MobileAppCustomThemes:           true,
-			MobileAppWidget:                 true,
-			MonitorMachines:                 10,
-			MachineMonitoringHistorySeconds: 3600 * 24 * 30,
-			CustomMachineAlerts:             true,
-		},
-		Subscriptions: []t.UserSubscription{
-			{
-				ProductId:       "orca",
-				ProductName:     "Orca",
-				ProductCategory: t.ProductCategoryPremium,
-				Start:           1715768109,
-				End:             1718446509,
-			},
-			{
-				ProductId:       "1k_extra_valis_per_dasboard",
-				ProductName:     "+1000 Validators per Dasboard",
-				ProductCategory: t.ProductCategoryPremiumAddon,
-				Start:           1715768109,
-				End:             1718446509,
-			},
-			{
-				ProductId:       "10k_extra_valis_per_dasboard",
-				ProductName:     "+10,000 Validators per Dasboard",
-				ProductCategory: t.ProductCategoryPremiumAddon,
-				Start:           1715768109,
-				End:             1718446509,
-			},
-		},
-	}, nil
+		Subscriptions: []t.UserSubscription{},
+	}
+
+	productSummary, err := d.GetProductSummary()
+	if err != nil {
+		return nil, fmt.Errorf("error getting productSummary: %w", err)
+	}
+
+	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	if err != nil {
+		return nil, fmt.Errorf("error getting userEmail: %w", err)
+	}
+
+	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
+	}
+
+	premiumProduct := struct {
+		ProductId string    `db:"product_id"`
+		Store     string    `db:"store"`
+		Start     time.Time `db:"start"`
+		End       time.Time `db:"end"`
+	}{}
+	err = d.userReader.Get(&premiumProduct, `
+		SELECT 
+			COALESCE(uas.product_id, '') AS product_id, 
+			COALESCE(uas.store, '') AS store,
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+		FROM users_app_subscriptions uas
+		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
+		WHERE uas.user_id = $1 AND uas.active = true
+		ORDER BY CASE uas.product_id
+			WHEN 'orca.yearly'    THEN  1
+			WHEN 'orca'           THEN  2
+			WHEN 'dolphin.yearly' THEN  3
+			WHEN 'dolphin'        THEN  4
+			WHEN 'guppy.yearly'   THEN  5
+			WHEN 'guppy'          THEN  6
+			WHEN 'whale'          THEN  7
+			WHEN 'goldfish'       THEN  8
+			WHEN 'plankton'       THEN  9
+			ELSE                       10  -- For any other product_id values
+		END, uas.id DESC
+		LIMIT 1`, userId)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, fmt.Errorf("error getting premiumProduct: %w", err)
+		}
+		premiumProduct.ProductId = "premium_free"
+		premiumProduct.Store = ""
+	}
+
+	foundProduct := false
+	for _, p := range productSummary.PremiumProducts {
+		effectiveProductId := premiumProduct.ProductId
+		switch premiumProduct.ProductId {
+		case "whale":
+			effectiveProductId = "orca"
+		case "goldfish":
+			effectiveProductId = "dolphin"
+		case "plankton":
+			effectiveProductId = "guppy"
+		}
+		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
+			userInfo.PremiumPerks = p.PremiumPerks
+			foundProduct = true
+			if effectiveProductId != "premium_free" {
+				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
+					ProductId:       effectiveProductId,
+					ProductName:     p.ProductName,
+					ProductCategory: t.ProductCategoryPremium,
+					ProductStore:    t.ProductStoreStripe,
+					Start:           premiumProduct.Start.Unix(),
+					End:             premiumProduct.End.Unix(),
+				})
+			}
+			break
+		}
+	}
+	if !foundProduct {
+		return nil, fmt.Errorf("product %s not found", premiumProduct.ProductId)
+	}
+
+	premiumAddons := []struct {
+		PriceId  string    `db:"price_id"`
+		Start    time.Time `db:"start"`
+		End      time.Time `db:"end"`
+		Quantity int       `db:"quantity"`
+	}{}
+	err = d.userReader.Select(&premiumAddons, `
+		SELECT 
+			price_id,
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
+			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
+		FROM users_stripe_subscriptions uss		
+		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
+		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
+	if err != nil {
+		return nil, fmt.Errorf("error getting premiumAddons: %w", err)
+	}
+	for _, addon := range premiumAddons {
+		foundAddon := false
+		for _, p := range productSummary.ExtraDashboardValidatorsPremiumAddon {
+			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
+				foundAddon = true
+				for i := 0; i < addon.Quantity; i++ {
+					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
+					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
+						ProductId:       utils.PriceIdToProductId(addon.PriceId),
+						ProductName:     p.ProductName,
+						ProductCategory: t.ProductCategoryPremiumAddon,
+						ProductStore:    t.ProductStoreStripe,
+						Start:           addon.Start.Unix(),
+						End:             addon.End.Unix(),
+					})
+				}
+			}
+		}
+		if !foundAddon {
+			return nil, fmt.Errorf("addon not found: %v", addon.PriceId)
+		}
+	}
+
+	return userInfo, nil
 }
 
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO patrick
+	// TODO @patrick put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		ApiProducts: []t.ApiProduct{
+		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
+		ApiProducts: []t.ApiProduct{ // TODO @patrick this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",
 				PricePerMonthEur: 0,
-				PricePerYearEur:  0 * 12 * 0.9,
+				PricePerYearEur:  0 * 12,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    10,
 					UnitsPerMonth:     10_000_000,
@@ -113,14 +218,14 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ExecutionLayerAPI: true,
 					Layer2API:         true,
 					NoAds:             true,
-					DiscordSuport:     false,
+					DiscordSupport:    false,
 				},
 			},
 			{
-				ProductId:        "api_iron",
+				ProductId:        "iron",
 				ProductName:      "Iron",
 				PricePerMonthEur: 1.99,
-				PricePerYearEur:  1.99 * 12 * 0.9,
+				PricePerYearEur:  math.Floor(1.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    20,
 					UnitsPerMonth:     20_000_000,
@@ -129,14 +234,14 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ExecutionLayerAPI: true,
 					Layer2API:         true,
 					NoAds:             true,
-					DiscordSuport:     false,
+					DiscordSupport:    false,
 				},
 			},
 			{
-				ProductId:        "api_siler",
+				ProductId:        "silver",
 				ProductName:      "Silver",
 				PricePerMonthEur: 2.99,
-				PricePerYearEur:  2.99 * 12 * 0.9,
+				PricePerYearEur:  math.Floor(2.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    30,
 					UnitsPerMonth:     100_000_000,
@@ -145,14 +250,14 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ExecutionLayerAPI: true,
 					Layer2API:         true,
 					NoAds:             true,
-					DiscordSuport:     false,
+					DiscordSupport:    false,
 				},
 			},
 			{
-				ProductId:        "api_gold",
+				ProductId:        "gold",
 				ProductName:      "Gold",
 				PricePerMonthEur: 3.99,
-				PricePerYearEur:  3.99 * 12 * 0.9,
+				PricePerYearEur:  math.Floor(3.99*12*0.9*100) / 100,
 				ApiPerks: t.ApiPerks{
 					UnitsPerSecond:    40,
 					UnitsPerMonth:     200_000_000,
@@ -161,13 +266,12 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ExecutionLayerAPI: true,
 					Layer2API:         true,
 					NoAds:             true,
-					DiscordSuport:     false,
+					DiscordSupport:    false,
 				},
 			},
 		},
 		PremiumProducts: []t.PremiumProduct{
 			{
-				ProductId:   "premium_free",
 				ProductName: "Free",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          false,
@@ -189,10 +293,11 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					CustomMachineAlerts:             false,
 				},
 				PricePerMonthEur: 0,
-				PricePerYearEur:  0 * 12 * 0.9,
+				PricePerYearEur:  0,
+				ProductIdMonthly: "premium_free",
+				ProductIdYearly:  "premium_free.yearly",
 			},
 			{
-				ProductId:   "guppy",
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          true,
@@ -213,11 +318,14 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					MachineMonitoringHistorySeconds: 3600 * 30,
 					CustomMachineAlerts:             true,
 				},
-				PricePerMonthEur: 9.99,
-				PricePerYearEur:  9.99 * 12 * 0.9,
+				PricePerMonthEur:     9.99,
+				PricePerYearEur:      107.88,
+				ProductIdMonthly:     "guppy",
+				ProductIdYearly:      "guppy.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Guppy,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.GuppyYearly,
 			},
 			{
-				ProductId:   "dolphin",
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          true,
@@ -238,11 +346,14 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,
 				},
-				PricePerMonthEur: 29.99,
-				PricePerYearEur:  29.99 * 12 * 0.9,
+				PricePerMonthEur:     29.99,
+				PricePerYearEur:      311.88,
+				ProductIdMonthly:     "dolphin",
+				ProductIdYearly:      "dolphin.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Dolphin,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.DolphinYearly,
 			},
 			{
-				ProductId:   "orca",
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          true,
@@ -263,26 +374,110 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,
 				},
-				PricePerMonthEur: 49.99,
-				PricePerYearEur:  49.99 * 12 * 0.9,
-				IsPopular:        true,
+				PricePerMonthEur:     49.99,
+				PricePerYearEur:      479.88,
+				ProductIdMonthly:     "orca",
+				ProductIdYearly:      "orca.yearly",
+				StripePriceIdMonthly: utils.Config.Frontend.Stripe.Orca,
+				StripePriceIdYearly:  utils.Config.Frontend.Stripe.OrcaYearly,
+				IsPopular:            true,
 			},
 		},
 		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
 			{
-				ProductId:                "1k_extra_valis_per_dasboard",
-				ProductName:              "+1000 Validators per Dasboard",
+				ProductName:              "1k extra valis per dashboard",
 				ExtraDashboardValidators: 1000,
-				PricePerMonthEur:         9.99,
-				PricePerYearEur:          9.99 * 12 * 0.9,
+				PricePerMonthEur:         74.99,
+				PricePerYearEur:          719.88,
+				ProductIdMonthly:         "vdb_addon_1k",
+				ProductIdYearly:          "vdb_addon_1k.yearly",
+				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
+				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 			},
 			{
-				ProductId:                "10k_extra_valis_per_dasboard",
-				ProductName:              "+10,000 Validators per Dasboard",
+				ProductName:              "10k extra valis per dashboard",
 				ExtraDashboardValidators: 10000,
-				PricePerMonthEur:         15.99,
-				PricePerYearEur:          15.99 * 12 * 0.9,
+				PricePerMonthEur:         449.99,
+				PricePerYearEur:          4319.88,
+				ProductIdMonthly:         "vdb_addon_10k",
+				ProductIdYearly:          "vdb_addon_10k.yearly",
+				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon10k,
+				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon10kYearly,
 			},
 		},
 	}, nil
+}
+
+func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+	result := &t.UserDashboardsData{}
+
+	dbReturn := []struct {
+		Id           uint64         `db:"id"`
+		Name         string         `db:"name"`
+		PublicId     sql.NullString `db:"public_id"`
+		PublicName   sql.NullString `db:"public_name"`
+		SharedGroups sql.NullBool   `db:"shared_groups"`
+	}{}
+
+	// Get the validator dashboards including the public ones
+	err := d.alloyReader.Select(&dbReturn, `
+		SELECT 
+			uvd.id,
+			uvd.name,
+			uvds.public_id,
+			uvds.name AS public_name,
+			uvds.shared_groups
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
+		WHERE uvd.user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fill the result
+	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
+	for _, row := range dbReturn {
+		if _, ok := validatorDashboardMap[row.Id]; !ok {
+			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
+				Id:        row.Id,
+				Name:      row.Name,
+				PublicIds: []t.VDBPublicId{},
+			}
+		}
+		if row.PublicId.Valid {
+			result := t.VDBPublicId{}
+			result.PublicId = row.PublicId.String
+			result.Name = row.PublicName.String
+			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
+		}
+	}
+	for _, validatorDashboard := range validatorDashboardMap {
+		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
+	}
+
+	// Get the account dashboards
+	err = d.alloyReader.Select(&result.AccountDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_acc_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) GetUserValidatorDashboardCount(userId uint64) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*) FROM users_val_dashboards
+		WHERE user_id = $1
+	`, userId)
+	return count, err
 }

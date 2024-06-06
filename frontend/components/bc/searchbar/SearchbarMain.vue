@@ -418,8 +418,7 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
       body: {
         input: userInputText.value,
         networks,
-        types,
-        include_validators: areResultsCountable(types, true)
+        types
       }
     })
   } catch (error) {
