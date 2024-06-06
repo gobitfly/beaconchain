@@ -279,14 +279,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
-			COALESCE(slashed, false) as slashed,
+			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
+			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from users_val_dashboards_validators
-		join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
+		inner join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
+		left join %[2]s on %[2]s.slashed_by = users_val_dashboards_validators.validator_index
 		where (dashboard_id = $1 and group_id = $2)
 		`
 
@@ -318,13 +320,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
 			COALESCE(sync_rewards, 0) as sync_rewards,
-			COALESCE(slashed, false) as slashed,
+			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
+			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
 			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s
+		left join %[2]s on %[2]s.slashed_by = %[1]s.validator_index
 		where %[1]s.validator_index = ANY($1)
 	`
 	}
@@ -365,7 +369,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		SyncExecuted  uint32 `db:"sync_executed"`
 		SyncRewards   int64  `db:"sync_rewards"`
 
-		Slashed bool `db:"slashed"`
+		SlashedInPeriod bool   `db:"slashed_in_period"`
+		SlashedAmount   uint32 `db:"slashed_amount"`
 
 		DepositsCount uint32 `db:"deposits_count"`
 
@@ -377,15 +382,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
+	retrieveAndProcessData := func(query, table, slashedByCountTable string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
 		data := t.VDBGroupSummaryColumn{}
 		var rows []*queryResult
 		var err error
 
 		if len(validators) > 0 {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), validators)
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
 		} else {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table), dashboardId, groupId)
+			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId, groupId)
 		}
 
 		if err != nil {
@@ -444,15 +449,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
 
-			if row.Slashed {
+			if row.SlashedInPeriod {
 				data.Slashed.StatusCount.Failed++
-				if data.Slashed.Validators == nil {
-					data.Slashed.Validators = make([]t.VDBValidator, 0, 10)
-					data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
-				}
-			} else {
-				data.Slashed.StatusCount.Success++
+				data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
+			data.Slashed.StatusCount.Success += uint64(row.SlashedAmount)
+
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
 			totalSyncExpected += row.SyncCommitteesExpected
@@ -497,7 +499,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_daily", 1, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_daily",
+			"validator_dashboard_data_rolling_daily_slashedby_count",
+			1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -505,7 +510,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_weekly", 7, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_weekly",
+			"validator_dashboard_data_rolling_weekly_slashedby_count",
+			7, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -513,7 +521,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_monthly", 30, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_monthly",
+			"validator_dashboard_data_rolling_monthly_slashedby_count",
+			30, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -521,7 +532,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query, "validator_dashboard_data_rolling_total", -1, dashboardId.Id, groupId, validators)
+		data, err := retrieveAndProcessData(query,
+			"validator_dashboard_data_rolling_total",
+			"validator_dashboard_data_rolling_total_slashedby_count",
+			-1, dashboardId.Id, groupId, validators)
 		if err != nil {
 			return err
 		}
@@ -755,9 +769,7 @@ func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.
 	case enums.ValidatorDuties.Proposal:
 		columnCond = "blocks_scheduled > 0"
 	case enums.ValidatorDuties.Slashed:
-		// TODO: Wait for slashings to be available in the database
-		// columnCond = "(slashed OR slashings_executed > 0)"
-		columnCond = "slashed"
+		columnCond = "slashed_by IS NOT NULL"
 	}
 
 	// Get ALL validator indices for the given filters
