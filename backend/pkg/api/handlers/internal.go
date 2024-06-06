@@ -215,14 +215,14 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		handleErr(w, err)
 		return
 	}
-	// set variables depending on public id being used
+	// set name depending on dashboard id
 	var name string
-	if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
+	if reInteger.MatchString(dashboardIdParam) {
+		name, err = h.dai.GetValidatorDashboardName(dashboardId.Id)
+	} else if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
 		var publicIdInfo *types.VDBPublicId
 		publicIdInfo, err = h.dai.GetValidatorDashboardPublicId(types.VDBIdPublic(dashboardIdParam))
 		name = publicIdInfo.Name
-	} else {
-		name, err = h.dai.GetValidatorDashboardName(dashboardId.Id)
 	}
 	if err != nil {
 		handleErr(w, err)
