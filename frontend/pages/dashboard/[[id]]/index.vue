@@ -14,7 +14,7 @@ import type { CookieDashboard } from '~/types/dashboard'
 
 const { isLoggedIn } = useUserStore()
 
-const { dashboardKey, setDashboardKey, isPublic } = useDashboardKeyProvider('validator')
+const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards, cookieDashboards, getDashboardLabel } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
