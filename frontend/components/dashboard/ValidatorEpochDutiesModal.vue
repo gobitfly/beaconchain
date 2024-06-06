@@ -89,6 +89,9 @@ const mapDuties = (duties: ValidatorHistoryDuties) => {
 
 const title = computed(() => {
   let t = $t('dashboard.validator.duties.title')
+  if (props.value?.epoch) {
+    t += ` ${formatNumber(props.value.epoch)}`
+  }
   if (props.value?.groupName && !size.value.expandable) {
     t += ` (${props.value.groupName})`
   }
@@ -131,14 +134,13 @@ watch([title, size], () => {
         >
           <Column field="validator" :sortable="true" :header="$t('dashboard.validator.duties.col.validator')">
             <template #body="slotProps">
-              <NuxtLink
+              <BcLink
                 :to="`/validator/${slotProps.data.validator}`"
                 target="_blank"
                 class="link validator_link"
-                :no-prefetch="true"
               >
-                <BcFormatNumber :value="slotProps.data.validator" />
-              </NuxtLink>
+                {{ slotProps.data.validator }}
+              </BcLink>
             </template>
           </Column>
           <Column field="duties" :header="$t('dashboard.validator.duties.col.duties')">

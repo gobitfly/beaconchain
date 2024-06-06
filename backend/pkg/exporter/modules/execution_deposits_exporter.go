@@ -149,7 +149,7 @@ func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventC
 func (d *executionDepositsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	// important: have to fetch the actual finalized epoch because even tho its called on finalized checkpoint it actually emits for each justified epoch
 	// so we have to do an extra request to get the actual latest finalized epoch
-	res, err := d.CL.GetFinalityCheckpoints("finalized")
+	res, err := d.CL.GetFinalityCheckpoints("head")
 	if err != nil {
 		return err
 	}
@@ -676,18 +676,21 @@ func (d *executionDepositsExporter) aggregateDeposits() error {
 func (d *executionDepositsExporter) updateCachedView() error {
 	err := db.CacheQuery(`
 		SELECT
-		    uvdv.dashboard_id,
-		    uvdv.group_id,
-		    ed.block_number,
-		    ed.log_index
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			ed.block_number,
+			ed.log_index,
+			ed.amount
 		FROM
-		    eth1_deposits ed
-		    INNER JOIN validators v ON ed.publickey = v.pubkey
-		    INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+			eth1_deposits ed
+			INNER JOIN validators v ON ed.publickey = v.pubkey
+			INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
 		ORDER BY
-		    uvdv.dashboard_id DESC,
-		    ed.block_number DESC,
-		    ed.log_index DESC;
-		`, "cached_eth1_deposits_lookup", []string{"dashboard_id, block_number", "log_index"})
+			uvdv.dashboard_id DESC,
+			ed.block_number DESC,
+			ed.log_index DESC;
+		`, "cached_eth1_deposits_lookup",
+		[]string{"dashboard_id", "block_number", "log_index"},
+		[]string{"dashboard_id", "amount"})
 	return err
 }

@@ -3,9 +3,10 @@
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct } from '~/types/api/user'
-import { formatFiat } from '~/utils/format'
+import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
+import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
+const { bestPremiumProduct } = useProductsStore()
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { products } = useProductsStore()
@@ -18,10 +19,6 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const formatPremiumProductPrice = (price: number, digits?: number) => {
-  return formatFiat(price, 'EUR', $t('locales.currency'), digits ?? 2, digits ?? 2)
-}
-
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.product.price_per_year_eur / 12 : props.product.price_per_month_eur
 
@@ -29,24 +26,32 @@ const prices = computed(() => {
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
-    main: formatPremiumProductPrice(mainPrice),
-    monthly: formatPremiumProductPrice(props.product.price_per_month_eur),
-    monthly_based_on_yearly: formatPremiumProductPrice(props.product.price_per_year_eur / 12),
-    yearly: formatPremiumProductPrice(props.product.price_per_year_eur),
-    saving: formatPremiumProductPrice(savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice(mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+    main: formatPremiumProductPrice($t, mainPrice),
+    monthly: formatPremiumProductPrice($t, props.product.price_per_month_eur),
+    monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
+    yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
   }
 })
 
 const percentages = computed(() => {
-  // compare with the last product in the list
-  const compareProduct = products.value?.premium_products[products.value.premium_products.length - 1]
+  if (bestPremiumProduct?.value === undefined) {
+    return {
+      validatorDashboards: 100,
+      validatorsPerDashboard: 100,
+      summaryChart: 100,
+      heatmapChart: 100
+    }
+  }
+
+  const bestProduct = bestPremiumProduct.value
 
   return {
-    validatorDashboards: props.product.premium_perks.validator_dashboards / (compareProduct?.premium_perks.validator_dashboards ?? 1) * 100,
-    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (compareProduct?.premium_perks.validators_per_dashboard ?? 1) * 100,
-    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (compareProduct?.premium_perks.summary_chart_history_seconds ?? 1) * 100,
-    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (compareProduct?.premium_perks.heatmap_history_seconds ?? 1) * 100
+    validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
+    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
+    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (bestProduct.premium_perks.summary_chart_history_seconds) * 100,
+    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (bestProduct.premium_perks.heatmap_history_seconds) * 100
   }
 })
 
@@ -55,16 +60,21 @@ const planButton = computed(() => {
   let text = $t('pricing.premium_product.button.select_plan')
 
   if (user.value?.subscriptions) {
-    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === 'premium')
+    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
     if (!subscription) {
       text = $t('pricing.premium_product.button.select_plan')
-    } else if (subscription.product_id === props.product.product_id) {
+    } else if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
       text = $t('pricing.premium_product.button.manage_plan')
-    } else if (subscription.product_id < props.product.product_id) {
-      text = $t('pricing.premium_product.button.upgrade')
     } else {
-      isDowngrade = true
-      text = $t('pricing.premium_product.button.downgrade')
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
+      if (subscribedProduct !== undefined) {
+        if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+          text = $t('pricing.premium_product.button.upgrade')
+        } else {
+          isDowngrade = true
+          text = $t('pricing.premium_product.button.downgrade')
+        }
+      }
     }
   }
 
@@ -79,10 +89,10 @@ const mainFeatures = computed<Feature[]>(() => {
       percentage: percentages.value.validatorDashboards
     },
     {
-      name: $t('pricing.premium_product.validators_per_dashboard.text', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
-      subtext: $t('pricing.premium_product.per_validator', { amount: prices.value.perValidator }),
+      name: $t('pricing.premium_product.validators_per_dashboard', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
-      tooltip: $t('pricing.premium_product.validators_per_dashboard.tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
       percentage: percentages.value.validatorsPerDashboard
     },
     {
@@ -141,21 +151,21 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ prices.yearly }} {{ $t('pricing.premium_product.yearly') }}*
+          {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
         </div>
       </div>
       <div v-if="isYearly" class="saving-info">
         <div>
-          {{ $t('pricing.premium_product.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', {amount: prices.saving}) }}
         </div>
         <BcTooltip position="top" :fit-content="true">
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.premium_product.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
             </div>
           </template>
         </BcTooltip>
@@ -184,8 +194,11 @@ const minorFeatures = computed<Feature[]>(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/pricing.scss';
+
 .box-container {
-  width: 400px;
+  box-sizing: border-box;
+  width: 293px;
   height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
@@ -194,7 +207,7 @@ const minorFeatures = computed<Feature[]>(() => {
   flex-shrink: 0;
 
   &[popular] {
-    width: 460px;
+    width: 381px;
     border-color: var(--primary-color);
   }
 
@@ -208,21 +221,21 @@ const minorFeatures = computed<Feature[]>(() => {
     font-family: var(--montserrat-family);
 
     .name {
-      font-size: 50px;
+      font-size: 41px;
     }
 
     .popular {
-      font-size: 35px;
+      font-size: 29px;
       color: var(--primary-color);
     }
   }
 
   &[popular] .features-container {
-    padding: 18px 65px;
+    padding: 18px 64px 29px 64px;
   }
 
   &:not([popular]) .features-container {
-    padding: 18px 35px;
+    padding: 18px 25px 29px 25px;
   }
 
   .features-container {
@@ -231,18 +244,18 @@ const minorFeatures = computed<Feature[]>(() => {
     font-family: var(--roboto-family);
 
     .prize {
-      font-size: 70px;
+      font-size: 59px;
       font-family: var(--montserrat-family);
     }
 
     .prize-subtext {
       color: var(--text-color-discreet);
-      font-size: 21px;
+      font-size: 18px;
       font-weight: 400;
       line-height: 1.85;
       display: flex;
       flex-direction: column;
-      margin-bottom: 21px;
+      margin-bottom: 18px;
     }
 
     .saving-info {
@@ -251,10 +264,10 @@ const minorFeatures = computed<Feature[]>(() => {
       justify-content: center;
       align-items: center;
       gap: 13px;
-      height: 37px;
+      height: 30px;
       border-radius: 18px;
       background: var(--subcontainer-background);
-      font-size: 17px;
+      font-size: 15px;
       margin-bottom: 28px;
     }
 
@@ -275,10 +288,7 @@ const minorFeatures = computed<Feature[]>(() => {
 
   .plan-button {
     width: 100%;
-    height: 53px;
-    font-size: 25px;
-    border-radius: 7px;
-    margin-bottom: 5px;
+    @include pricing.pricing_button;
 
     &.dismiss {
       display: flex;
@@ -289,11 +299,11 @@ const minorFeatures = computed<Feature[]>(() => {
     }
   }
 
-  @media (max-width: 600px) {
-    width: 240px;
+  @media (max-width: 1360px) {
+    width: 210px;
 
     &[popular] {
-      width: 320px;
+      width: 275px;
     }
 
     .name-container {
@@ -307,11 +317,11 @@ const minorFeatures = computed<Feature[]>(() => {
     }
 
     &[popular] .features-container {
-      padding: 10px 60px;
+      padding: 10px 45px;
     }
 
     &:not([popular]) .features-container {
-      padding: 10px 20px;
+      padding: 10px 18px;
     }
 
     .features-container {
@@ -340,11 +350,6 @@ const minorFeatures = computed<Feature[]>(() => {
         gap: 3px;
         margin-bottom: 18px;
       }
-    }
-
-    .plan-button {
-      font-size: 14px;
-      height: 30px;
     }
   }
 }

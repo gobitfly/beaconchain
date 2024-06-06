@@ -29,6 +29,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { tm: $tm } = useI18n()
+const { dashboardKey } = useDashboardKey()
 
 const data = computed(() => {
   const col = props.data?.[props.detail]
@@ -128,6 +129,7 @@ const data = computed(() => {
     :validators="data.validators"
     :time-frame="props.detail"
     :context="data.context"
+    :dashboard-key="dashboardKey"
     :group-id="props.row.group_id"
   />
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">

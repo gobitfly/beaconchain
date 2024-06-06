@@ -67,6 +67,8 @@ const size = computed(() => {
   }
 })
 
+const newGroupDisabled = computed(() => !REGEXP_VALID_NAME.test(newGroupName.value))
+
 const resetData = () => {
   search.value = ''
   newGroupName.value = ''
@@ -79,7 +81,8 @@ const onClose = () => {
 }
 
 const addGroup = async () => {
-  if (!newGroupName.value?.length) {
+  newGroupName.value = newGroupName.value.trim()
+  if (newGroupDisabled.value) {
     return
   }
 
@@ -175,7 +178,7 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
             @keypress.enter="addGroup"
           />
-          <Button style="display: inline;" :disabled="!newGroupName.length" @click="addGroup">
+          <Button style="display: inline;" :disabled="newGroupDisabled" @click="addGroup">
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -199,13 +202,14 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
               :header="$t('dashboard.validator.group_management.col.name')"
             >
               <template #body="slotProps">
-                <!-- TODO: wait for the backend to implement group renaming the activate this input and finish the logic -->
                 <BcInputLabel
                   class="edit-group truncate-text"
                   :value="slotProps.data.name"
-                  :default="slotProps.data.id === 0 ? $t('common.default') : ''"
+                  :default="slotProps.data.id === 0 ? $t('dashboard.group.selection.default') : ''"
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isPublic"
+                  :pattern="REGEXP_VALID_NAME"
+                  :trim-input="true"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />

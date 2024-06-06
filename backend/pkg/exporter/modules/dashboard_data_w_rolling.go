@@ -50,9 +50,9 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	} else {
-		err = tx.Get(&bounds, fmt.Sprintf(`SELECT epoch_start as epoch_start, epoch_end as epoch_end FROM %s LIMIT 1`, tableName))
+		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	}
 	return bounds, err
 }
@@ -71,6 +71,11 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHead uint64) error {
+	return d.aggregateInternal(days, tableName, currentEpochHead, false)
+}
+
+// Note that currentEpochHead is the current exported epoch in the db
+func (d *RollingAggregator) aggregateInternal(days int, tableName string, currentEpochHead uint64, forceBootstrap bool) error {
 	tx, err := db.AlloyWriter.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -78,6 +83,10 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	defer utils.Rollback(tx)
 
 	bootstrap := false
+	if forceBootstrap {
+		bootstrap = true
+		d.log.Infof("force bootstrap rolling %dd", days)
+	}
 
 	// get epoch boundaries for current stored rolling 24h
 	bounds, err := d.getCurrentRollingBounds(tx, tableName)
@@ -138,16 +147,29 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 	d.log.Infof("rolling %dd epochs: %d - %d, %d - %d", days, aggHeadEpochStart, aggHeadEpochEnd, aggTailEpochStart, aggTailEpochEnd)
 
 	// sanity check if all tail epochs are present in db
-	missing, err := getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
+	missing, err := edb.GetMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing tail epochs")
 	}
 	if len(missing) > 0 {
+		// If exporter falls back on head around the bootstrap bound end, it will start backfill
+		// and will trigger a rolling aggregate on bound end. But it will not bootstrap since recent data is
+		// maybe just a few epochs old. So it will try to add to head and remove from tail but since we are in
+		// bootstrap mode tail epochs won't be there.
+		// Now when this occurs and epochs are missing AND the current head is a bootstrap end, we force a bootstrap to solve this.
+
+		// a bool helper to indicate whether currentEpochHead is the end of a bootstrap bound
+		_, utcEndBound := getDayAggregateBounds(currentEpochHead)
+		isCurrentEpochHeadBootstrapBound := utcEndBound-1 == currentEpochHead
+
+		if isCurrentEpochHeadBootstrapBound {
+			return d.aggregateInternal(days, tableName, currentEpochHead, true)
+		}
 		return errors.New(fmt.Sprintf("missing epochs in db for rolling %dd tail: %v", days, missing))
 	}
 
 	// sanity check if all head epochs are present in db
-	missingHead, err := getMissingEpochsBetween(int64(aggHeadEpochStart), int64(aggHeadEpochEnd))
+	missingHead, err := edb.GetMissingEpochsBetween(int64(aggHeadEpochStart), int64(aggHeadEpochEnd))
 	if err != nil {
 		return errors.Wrap(err, "failed to get missing head epochs")
 	}
@@ -205,7 +227,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 
 	aggTailEpochStart, aggTailEpochEnd := d.getTailBoundsXDays(days, bounds.EpochStart, intendedHeadEpoch)
 
-	return getMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
+	return edb.GetMissingEpochsBetween(aggTailEpochStart, aggTailEpochEnd)
 }
 
 // Adds the new epochs (headEpochStart to headEpochEnd) to the rolling table and removes the old ones (tailEpochStart to tailEpochEnd)
@@ -248,7 +270,7 @@ func (d *RollingAggregator) addToRolling(tx *sqlx.Tx, tableName string, startEpo
 		StartEpoch:           startEpoch,
 		EndEpoch:             endEpoch,
 		StartBoundEpoch:      tailEnd,
-		TableFrom:            "validator_dashboard_data_epoch",
+		TableFrom:            edb.EpochWriterTableName,
 		TableTo:              tableName,
 		TableFromEpochColumn: "epoch",
 		Log:                  d.log,
@@ -349,7 +371,9 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		}
 	}
 
+	// Use NULLIF(x,0) to save storage space
 	tmpl := `
+		-- Agg Add, From: {{ .TableFrom }}, To: {{ .TableTo }}
 		WITH
 			{{ .Agg.HEAD_BALANCE_QUERY }}
 			{{ .TailBalancesQuery }} -- balance start query
@@ -372,6 +396,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 					{{ .Agg.SUM }}blocks_scheduled{{ .Agg.AGG_END }} as blocks_scheduled,
 					{{ .Agg.SUM }}blocks_proposed{{ .Agg.AGG_END }} as blocks_proposed,
 					{{ .Agg.SUM }}blocks_cl_reward{{ .Agg.AGG_END }} as blocks_cl_reward,
+					{{ .Agg.SUM }}blocks_cl_attestations_reward{{ .Agg.AGG_END }} as blocks_cl_attestations_reward,
+					{{ .Agg.SUM }}blocks_cl_sync_aggregate_reward{{ .Agg.AGG_END }} as blocks_cl_sync_aggregate_reward,
 					{{ .Agg.SUM }}sync_scheduled{{ .Agg.AGG_END }} as sync_scheduled,
 					{{ .Agg.SUM }}sync_executed{{ .Agg.AGG_END }} as sync_executed,
 					{{ .Agg.SUM }}sync_rewards{{ .Agg.AGG_END }} as sync_rewards,
@@ -381,7 +407,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 					{{ .Agg.SUM }}withdrawals_count{{ .Agg.AGG_END }} as withdrawals_count,
 					{{ .Agg.SUM }}withdrawals_amount{{ .Agg.AGG_END }} as withdrawals_amount,
 					{{ .Agg.SUM }}inclusion_delay_sum{{ .Agg.AGG_END }} as inclusion_delay_sum,
-					{{ .Agg.SUM }}block_chance{{ .Agg.AGG_END }} as block_chance,
+					{{ .Agg.SUM }}blocks_expected{{ .Agg.AGG_END }} as blocks_expected,
+					{{ .Agg.SUM }}sync_committees_expected{{ .Agg.AGG_END }} as sync_committees_expected, 
 					{{ .Agg.SUM }}attestations_scheduled{{ .Agg.AGG_END }} as attestations_scheduled,
 					{{ .Agg.SUM }}attestations_executed{{ .Agg.AGG_END }} as attestations_executed,
 					{{ .Agg.SUM }}attestation_head_executed{{ .Agg.AGG_END }} as attestation_head_executed,
@@ -415,6 +442,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				blocks_scheduled,
 				blocks_proposed,
 				blocks_cl_reward,
+				blocks_cl_attestations_reward,
+				blocks_cl_sync_aggregate_reward,
 				sync_scheduled,
 				sync_executed,
 				sync_rewards,
@@ -426,7 +455,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				withdrawals_count,
 				withdrawals_amount,
 				inclusion_delay_sum,
-				block_chance,
+				blocks_expected,
+				sync_committees_expected,
 				attestations_scheduled,
 				attestations_executed,
 				attestation_head_executed,
@@ -458,6 +488,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				COALESCE(aggregate_head.blocks_scheduled, 0) as blocks_scheduled,
 				COALESCE(aggregate_head.blocks_proposed, 0) as blocks_proposed,
 				COALESCE(aggregate_head.blocks_cl_reward, 0) as blocks_cl_reward,
+				COALESCE(aggregate_head.blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
+				COALESCE(aggregate_head.blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward,
 				COALESCE(aggregate_head.sync_scheduled, 0) as sync_scheduled,
 				COALESCE(aggregate_head.sync_executed, 0) as sync_executed,
 				COALESCE(aggregate_head.sync_rewards, 0) as sync_rewards,
@@ -469,7 +501,8 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 				COALESCE(aggregate_head.withdrawals_count, 0) as withdrawals_count,
 				COALESCE(aggregate_head.withdrawals_amount, 0) as withdrawals_amount,
 				COALESCE(aggregate_head.inclusion_delay_sum, 0) as inclusion_delay_sum,
-				COALESCE(aggregate_head.block_chance, 0) as block_chance,
+				COALESCE(aggregate_head.blocks_expected, 0) as blocks_expected,
+				COALESCE(aggregate_head.sync_committees_expected, 0) as sync_committees_expected,
 				COALESCE(aggregate_head.attestations_scheduled, 0) as attestations_scheduled,
 				COALESCE(aggregate_head.attestations_executed, 0) as attestations_executed,
 				COALESCE(aggregate_head.attestation_head_executed, 0) as attestation_head_executed,
@@ -484,40 +517,43 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 			{{ .TailBalancesJoinQuery }} -- balance start join
 			{{ .Agg.HEAD_BALANCE_JOIN }}
 			ON CONFLICT {{ .TableConflict }} DO UPDATE SET
-					attestations_source_reward = COALESCE({{ .TableTo }}.attestations_source_reward, 0) + EXCLUDED.attestations_source_reward,
-					attestations_target_reward = COALESCE({{ .TableTo }}.attestations_target_reward, 0) + EXCLUDED.attestations_target_reward,
-					attestations_head_reward = COALESCE({{ .TableTo }}.attestations_head_reward, 0) + EXCLUDED.attestations_head_reward,
-					attestations_inactivity_reward = COALESCE({{ .TableTo }}.attestations_inactivity_reward, 0) + EXCLUDED.attestations_inactivity_reward,
-					attestations_inclusion_reward = COALESCE({{ .TableTo }}.attestations_inclusion_reward, 0) + EXCLUDED.attestations_inclusion_reward,
-					attestations_reward = COALESCE({{ .TableTo }}.attestations_reward, 0) + EXCLUDED.attestations_reward,
-					attestations_ideal_source_reward = COALESCE({{ .TableTo }}.attestations_ideal_source_reward, 0) + EXCLUDED.attestations_ideal_source_reward,
-					attestations_ideal_target_reward = COALESCE({{ .TableTo }}.attestations_ideal_target_reward, 0) + EXCLUDED.attestations_ideal_target_reward,
-					attestations_ideal_head_reward = COALESCE({{ .TableTo }}.attestations_ideal_head_reward, 0) + EXCLUDED.attestations_ideal_head_reward,
-					attestations_ideal_inactivity_reward = COALESCE({{ .TableTo }}.attestations_ideal_inactivity_reward, 0) + EXCLUDED.attestations_ideal_inactivity_reward,
-					attestations_ideal_inclusion_reward = COALESCE({{ .TableTo }}.attestations_ideal_inclusion_reward, 0) + EXCLUDED.attestations_ideal_inclusion_reward,
-					attestations_ideal_reward = COALESCE({{ .TableTo }}.attestations_ideal_reward, 0) + EXCLUDED.attestations_ideal_reward,
-					blocks_scheduled = COALESCE({{ .TableTo }}.blocks_scheduled, 0) + EXCLUDED.blocks_scheduled,
-					blocks_proposed = COALESCE({{ .TableTo }}.blocks_proposed, 0) + EXCLUDED.blocks_proposed,
-					blocks_cl_reward = COALESCE({{ .TableTo }}.blocks_cl_reward, 0) + EXCLUDED.blocks_cl_reward,
-					sync_scheduled = COALESCE({{ .TableTo }}.sync_scheduled, 0) + EXCLUDED.sync_scheduled,
-					sync_executed = COALESCE({{ .TableTo }}.sync_executed, 0) + EXCLUDED.sync_executed,
-					sync_rewards = COALESCE({{ .TableTo }}.sync_rewards, 0) + EXCLUDED.sync_rewards,
-					slashed = COALESCE(EXCLUDED.slashed, {{ .TableTo }}.slashed),
+					attestations_source_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_source_reward, 0) + EXCLUDED.attestations_source_reward, 0),
+					attestations_target_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_target_reward, 0) + EXCLUDED.attestations_target_reward, 0),
+					attestations_head_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_head_reward, 0) + EXCLUDED.attestations_head_reward, 0),
+					attestations_inactivity_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_inactivity_reward, 0) + EXCLUDED.attestations_inactivity_reward, 0),
+					attestations_inclusion_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_inclusion_reward, 0) + EXCLUDED.attestations_inclusion_reward, 0),
+					attestations_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_reward, 0) + EXCLUDED.attestations_reward, 0),
+					attestations_ideal_source_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_source_reward, 0) + EXCLUDED.attestations_ideal_source_reward, 0),
+					attestations_ideal_target_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_target_reward, 0) + EXCLUDED.attestations_ideal_target_reward, 0),
+					attestations_ideal_head_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_head_reward, 0) + EXCLUDED.attestations_ideal_head_reward, 0),
+					attestations_ideal_inactivity_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_inactivity_reward, 0) + EXCLUDED.attestations_ideal_inactivity_reward, 0),
+					attestations_ideal_inclusion_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_inclusion_reward, 0) + EXCLUDED.attestations_ideal_inclusion_reward, 0),
+					attestations_ideal_reward = NULLIF(COALESCE({{ .TableTo }}.attestations_ideal_reward, 0) + EXCLUDED.attestations_ideal_reward, 0),
+					blocks_scheduled = NULLIF(COALESCE({{ .TableTo }}.blocks_scheduled, 0) + EXCLUDED.blocks_scheduled, 0),
+					blocks_proposed = NULLIF(COALESCE({{ .TableTo }}.blocks_proposed, 0) + EXCLUDED.blocks_proposed, 0),
+					blocks_cl_reward = NULLIF(COALESCE({{ .TableTo }}.blocks_cl_reward, 0) + EXCLUDED.blocks_cl_reward, 0),
+					blocks_cl_attestations_reward = NULLIF(COALESCE({{ .TableTo }}.blocks_cl_attestations_reward, 0) + EXCLUDED.blocks_cl_attestations_reward, 0),
+					blocks_cl_sync_aggregate_reward = NULLIF(COALESCE({{ .TableTo }}.blocks_cl_sync_aggregate_reward, 0) + EXCLUDED.blocks_cl_sync_aggregate_reward, 0),
+					sync_scheduled = NULLIF(COALESCE({{ .TableTo }}.sync_scheduled, 0) + EXCLUDED.sync_scheduled, 0),
+					sync_executed = NULLIF(COALESCE({{ .TableTo }}.sync_executed, 0) + EXCLUDED.sync_executed, 0),
+					sync_rewards = NULLIF(COALESCE({{ .TableTo }}.sync_rewards, 0) + EXCLUDED.sync_rewards, 0),
+					slashed = EXCLUDED.slashed OR {{ .TableTo }}.slashed,
 					balance_end = COALESCE(EXCLUDED.balance_end, {{ .TableTo }}.balance_end),
-					deposits_count = COALESCE({{ .TableTo }}.deposits_count, 0) + EXCLUDED.deposits_count,
-					deposits_amount = COALESCE({{ .TableTo }}.deposits_amount, 0) + EXCLUDED.deposits_amount,
-					withdrawals_count = COALESCE({{ .TableTo }}.withdrawals_count, 0) + EXCLUDED.withdrawals_count,
-					withdrawals_amount = COALESCE({{ .TableTo }}.withdrawals_amount, 0) + EXCLUDED.withdrawals_amount,
-					inclusion_delay_sum = COALESCE({{ .TableTo }}.inclusion_delay_sum, 0) + EXCLUDED.inclusion_delay_sum,
-					block_chance = COALESCE({{ .TableTo }}.block_chance, 0) + EXCLUDED.block_chance,
-					attestations_scheduled = COALESCE({{ .TableTo }}.attestations_scheduled, 0) + EXCLUDED.attestations_scheduled,
-					attestations_executed = COALESCE({{ .TableTo }}.attestations_executed, 0) + EXCLUDED.attestations_executed,
-					attestation_head_executed = COALESCE({{ .TableTo }}.attestation_head_executed, 0) + EXCLUDED.attestation_head_executed,
-					attestation_source_executed = COALESCE({{ .TableTo }}.attestation_source_executed, 0) + EXCLUDED.attestation_source_executed,
-					attestation_target_executed = COALESCE({{ .TableTo }}.attestation_target_executed, 0) + EXCLUDED.attestation_target_executed,
-					optimal_inclusion_delay_sum = COALESCE({{ .TableTo }}.optimal_inclusion_delay_sum, 0) + EXCLUDED.optimal_inclusion_delay_sum,
+					deposits_count = NULLIF(COALESCE({{ .TableTo }}.deposits_count, 0) + EXCLUDED.deposits_count, 0),
+					deposits_amount = NULLIF(COALESCE({{ .TableTo }}.deposits_amount, 0) + EXCLUDED.deposits_amount, 0),
+					withdrawals_count = NULLIF(COALESCE({{ .TableTo }}.withdrawals_count, 0) + EXCLUDED.withdrawals_count, 0),
+					withdrawals_amount = NULLIF(COALESCE({{ .TableTo }}.withdrawals_amount, 0) + EXCLUDED.withdrawals_amount, 0),
+					inclusion_delay_sum = NULLIF(COALESCE({{ .TableTo }}.inclusion_delay_sum, 0) + EXCLUDED.inclusion_delay_sum, 0),
+					blocks_expected = NULLIF(COALESCE({{ .TableTo }}.blocks_expected, 0) + EXCLUDED.blocks_expected, 0),
+					sync_committees_expected = NULLIF(COALESCE({{ .TableTo }}.sync_committees_expected, 0) + EXCLUDED.sync_committees_expected, 0),
+					attestations_scheduled = NULLIF(COALESCE({{ .TableTo }}.attestations_scheduled, 0) + EXCLUDED.attestations_scheduled, 0),
+					attestations_executed = NULLIF(COALESCE({{ .TableTo }}.attestations_executed, 0) + EXCLUDED.attestations_executed, 0),
+					attestation_head_executed = NULLIF(COALESCE({{ .TableTo }}.attestation_head_executed, 0) + EXCLUDED.attestation_head_executed, 0),
+					attestation_source_executed = NULLIF(COALESCE({{ .TableTo }}.attestation_source_executed, 0) + EXCLUDED.attestation_source_executed, 0),
+					attestation_target_executed = NULLIF(COALESCE({{ .TableTo }}.attestation_target_executed, 0) + EXCLUDED.attestation_target_executed, 0),
+					optimal_inclusion_delay_sum = NULLIF(COALESCE({{ .TableTo }}.optimal_inclusion_delay_sum, 0) + EXCLUDED.optimal_inclusion_delay_sum, 0),
 					epoch_end = EXCLUDED.epoch_end,
-					slasher_reward = COALESCE({{ .TableTo }}.slasher_reward, 0) + EXCLUDED.slasher_reward,
+					slasher_reward = NULLIF(COALESCE({{ .TableTo }}.slasher_reward, 0) + EXCLUDED.slasher_reward, 0),
 					slashed_by = COALESCE(EXCLUDED.slashed_by, {{ .TableTo }}.slashed_by),
 					slashed_violation = COALESCE(EXCLUDED.slashed_violation, {{ .TableTo }}.slashed_violation),
 					last_executed_duty_epoch =  COALESCE(EXCLUDED.last_executed_duty_epoch, {{ .TableTo }}.last_executed_duty_epoch)`
@@ -568,7 +604,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 	result, err := tx.Exec(fmt.Sprintf(`
 		WITH
 			footer_balance_starts as (
-				SELECT validator_index, balance_end as balance_start FROM validator_dashboard_data_epoch WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from
+				SELECT validator_index, balance_end as balance_start FROM %[2]s WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from
 			),
 			aggregate_tail as (
 				SELECT 
@@ -588,6 +624,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					SUM(blocks_scheduled) as blocks_scheduled,
 					SUM(blocks_proposed) as blocks_proposed,
 					SUM(blocks_cl_reward) as blocks_cl_reward,
+					SUM(blocks_cl_attestations_reward) as blocks_cl_attestations_reward,
+					SUM(blocks_cl_sync_aggregate_reward) as blocks_cl_sync_aggregate_reward,
 					SUM(sync_scheduled) as sync_scheduled,
 					SUM(sync_executed) as sync_executed,
 					SUM(sync_rewards) as sync_rewards,
@@ -596,7 +634,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					SUM(withdrawals_count) as withdrawals_count,
 					SUM(withdrawals_amount) as withdrawals_amount,
 					SUM(inclusion_delay_sum) as inclusion_delay_sum,
-					SUM(block_chance) as block_chance,
+					SUM(blocks_expected) as blocks_expected,
+					SUM(sync_committees_expected) as sync_committees_expected,
 					SUM(attestations_scheduled) as attestations_scheduled,
 					SUM(attestations_executed) as attestations_executed,
 					SUM(attestation_head_executed) as attestation_head_executed,
@@ -604,10 +643,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					SUM(attestation_target_executed) as attestation_target_executed,
 					SUM(optimal_inclusion_delay_sum) as optimal_inclusion_delay_sum,
 					SUM(slasher_reward) as slasher_reward,
-					MAX(slashed_by) as slashed_by,
-					MAX(slashed_violation) as slashed_violation,
 					MAX(last_executed_duty_epoch) as last_executed_duty_epoch
-				FROM validator_dashboard_data_epoch
+				FROM %[2]s
 				WHERE epoch >= $1 AND epoch < $2
 				GROUP BY validator_index
 			),
@@ -630,6 +667,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					COALESCE(aggregate_tail.blocks_scheduled, 0) as blocks_scheduled,
 					COALESCE(aggregate_tail.blocks_proposed, 0) as blocks_proposed,
 					COALESCE(aggregate_tail.blocks_cl_reward, 0) as blocks_cl_reward,
+					COALESCE(aggregate_tail.blocks_cl_attestations_reward, 0) as blocks_cl_attestations_reward,
+					COALESCE(aggregate_tail.blocks_cl_sync_aggregate_reward, 0) as blocks_cl_sync_aggregate_reward,
 					COALESCE(aggregate_tail.sync_scheduled, 0) as sync_scheduled,
 					COALESCE(aggregate_tail.sync_executed, 0) as sync_executed,
 					COALESCE(aggregate_tail.sync_rewards, 0) as sync_rewards,
@@ -639,7 +678,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					COALESCE(aggregate_tail.withdrawals_count, 0) as withdrawals_count,
 					COALESCE(aggregate_tail.withdrawals_amount, 0) as withdrawals_amount,
 					COALESCE(aggregate_tail.inclusion_delay_sum, 0) as inclusion_delay_sum,
-					COALESCE(aggregate_tail.block_chance, 0) as block_chance,
+					COALESCE(aggregate_tail.blocks_expected, 0) as blocks_expected,
+					COALESCE(aggregate_tail.sync_committees_expected, 0) as sync_committees_expected,
 					COALESCE(aggregate_tail.attestations_scheduled, 0) as attestations_scheduled,
 					COALESCE(aggregate_tail.attestations_executed, 0) as attestations_executed,
 					COALESCE(aggregate_tail.attestation_head_executed, 0) as attestation_head_executed,
@@ -651,7 +691,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 				FROM aggregate_tail  
 				LEFT JOIN footer_balance_starts ON aggregate_tail.validator_index = footer_balance_starts.validator_index
 			)
-			UPDATE %s AS v SET
+			UPDATE %[1]s AS v SET
 					attestations_source_reward = COALESCE(v.attestations_source_reward, 0) - result.attestations_source_reward,
 					attestations_target_reward = COALESCE(v.attestations_target_reward, 0) - result.attestations_target_reward,
 					attestations_head_reward = COALESCE(v.attestations_head_reward, 0) - result.attestations_head_reward,
@@ -667,6 +707,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					blocks_scheduled = COALESCE(v.blocks_scheduled, 0) - result.blocks_scheduled,
 					blocks_proposed = COALESCE(v.blocks_proposed, 0) - result.blocks_proposed,
 					blocks_cl_reward = COALESCE(v.blocks_cl_reward, 0) - result.blocks_cl_reward,
+					blocks_cl_attestations_reward = COALESCE(v.blocks_cl_attestations_reward, 0) - result.blocks_cl_attestations_reward,
+					blocks_cl_sync_aggregate_reward = COALESCE(v.blocks_cl_sync_aggregate_reward, 0) - result.blocks_cl_sync_aggregate_reward,
 					sync_scheduled = COALESCE(v.sync_scheduled, 0) - result.sync_scheduled,
 					sync_executed = COALESCE(v.sync_executed, 0) - result.sync_executed,
 					sync_rewards = COALESCE(v.sync_rewards, 0) - result.sync_rewards,
@@ -676,7 +718,8 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 					withdrawals_count = COALESCE(v.withdrawals_count, 0) - result.withdrawals_count,
 					withdrawals_amount = COALESCE(v.withdrawals_amount, 0) - result.withdrawals_amount,
 					inclusion_delay_sum = COALESCE(v.inclusion_delay_sum, 0) - result.inclusion_delay_sum,
-					block_chance = COALESCE(v.block_chance, 0) - result.block_chance,
+					blocks_expected = COALESCE(v.blocks_expected, 0) - result.blocks_expected,
+					sync_committees_expected = COALESCE(v.sync_committees_expected, 0) - result.sync_committees_expected,
 					attestations_scheduled = COALESCE(v.attestations_scheduled, 0) - result.attestations_scheduled,
 					attestations_executed = COALESCE(v.attestations_executed, 0) - result.attestations_executed,
 					attestation_head_executed = COALESCE(v.attestation_head_executed, 0) - result.attestation_head_executed,
@@ -689,7 +732,7 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 				FROM result
 				WHERE v.validator_index = result.validator_index;
 			
-	`, tableName), startEpoch, endEpoch)
+	`, tableName, edb.EpochWriterTableName), startEpoch, endEpoch)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to update rolling table")

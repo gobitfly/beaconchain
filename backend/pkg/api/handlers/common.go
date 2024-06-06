@@ -51,8 +51,8 @@ var allNetworks []types.NetworkInfo
 
 var (
 	// Subject to change, just examples
-	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`)
-	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
+	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
+	reInteger                      = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
@@ -221,14 +221,14 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 }
 
 type validatorSet struct {
-	Indexes    []uint64
+	Indexes    []types.VDBValidator
 	PublicKeys []string
 }
 
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
 	var v validationError
-	if reNumber.MatchString(id) {
+	if reInteger.MatchString(id) {
 		// given id is a normal id
 		id := v.checkUint(id, "dashboard_id")
 		if v.hasErrors() {
@@ -259,11 +259,11 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
 		if err != nil {
 			return nil, err
 		}
-		return &types.VDBId{Id: dashboardInfo.Id, Validators: nil}, nil
+		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
 		validators, err := h.dai.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
@@ -407,7 +407,7 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	return &types.Sort[T]{Column: sortCol, Desc: order}
 }
 
-func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]uint64, []string) {
+func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if validators == "" && !allowEmpty {
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
@@ -415,15 +415,15 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 	return v.checkValidatorArray(strings.Split(validators, ","), allowEmpty)
 }
 
-func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]uint64, []string) {
+func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if len(validators) == 0 && !allowEmpty {
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	var indexes []uint64
+	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validators {
-		if reNumber.MatchString(validator) {
+		if reInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
 		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)

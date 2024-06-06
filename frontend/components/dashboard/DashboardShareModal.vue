@@ -25,7 +25,7 @@ const isPremiumUser = computed(() => !!user.value?.premium_perks?.share_custom_d
 watch(props, (p) => {
   if (p) {
     // We currently only want to use one public id
-    shareGroups.value = isPremiumUser.value && !!p.dashboard.public_ids?.[0]?.share_settings.group_names
+    shareGroups.value = isPremiumUser.value && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
     isNew.value = !p.dashboard.public_ids?.[0]
     if (isNew.value) {
       dashboardName.value = props.value?.dashboard?.name ?? ''
@@ -36,11 +36,8 @@ watch(props, (p) => {
 }, { immediate: true })
 
 const add = async () => {
-  if (isUpdating.value) {
-    return
-  }
   isUpdating.value = true
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { share_groups: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}` })
   await refreshDashboards()
   dialogRef?.value?.close(true)
   isUpdating.value = false
@@ -49,13 +46,22 @@ const add = async () => {
 const edit = async () => {
   isUpdating.value = true
   const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { group_names: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId })
+  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { body: { name: dashboardName.value, share_settings: { share_groups: shareGroups.value } } }, { dashboardKey: `${props.value?.dashboard.id}`, publicId })
   await refreshDashboards()
   dialogRef?.value?.close(true)
   isUpdating.value = false
 }
 
+const publishDisabled = computed(() => {
+  return isUpdating.value || !REGEXP_VALID_NAME.test(dashboardName.value)
+})
+
 const share = () => {
+  dashboardName.value = dashboardName.value.trim()
+  if (publishDisabled.value) {
+    return
+  }
+
   if (props.value?.dashboard.public_ids?.[0]?.public_id) {
     edit()
   } else {
@@ -78,6 +84,7 @@ const shareGroupTooltip = computed(() => {
         v-model="dashboardName"
         :placeholder="$t('dashboard.share_dialog.setting.name.placeholder')"
         class="input-field"
+        @keypress.enter="share"
       />
       <div class="share-setting">
         <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" :disabled="!isPremiumUser" />
@@ -95,7 +102,7 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="isUpdating" @click="share">
+      <Button :disabled="publishDisabled" @click="share">
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>

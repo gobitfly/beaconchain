@@ -30,11 +30,11 @@ onMounted(async () => {
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
-    <NuxtLink to="/" class="row">
+    <BcLink to="/" class="row">
       <Button class="row">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </Button>
-    </NuxtLink>
+    </BcLink>
     <div class="row">
       Latest Slot: {{ formatNumber(latestState?.current_slot) }}
     </div>
