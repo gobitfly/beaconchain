@@ -143,12 +143,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				if indexSearch != -1 {
 					// Find whether the index is in the dashboard
 					// If it is then show all the data
-					d.alloyReader.Get(&found, `
+					err = d.alloyReader.Get(&found, `
 						SELECT EXISTS(
 								SELECT 1 
 								FROM users_val_dashboards_validators
 								WHERE dashboard_id = $1 AND validator_index = $2)
 						`, dashboardId.Id, indexSearch)
+					if err != nil {
+						return nil, nil, err
+					}
 				}
 				if !found && epochSearch != -1 {
 					queryParams = append(queryParams, epochSearch)
