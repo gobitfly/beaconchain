@@ -1,3 +1,4 @@
+import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
 import { ChainIDs } from '~/types/networks'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
@@ -89,6 +90,12 @@ export type Matching = {
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction { (possibilities : Matching[]) : Matching|undefined }
 
+export interface SearchRequest {
+  input: string,
+  networks: ChainIDs[],
+  types: ResultType[],
+  count?: boolean
+}
 export type SingleAPIresult = SearchResult
 export interface SearchAheadAPIresponse extends ApiErrorResponse, InternalPostSearchResponse {}
 
@@ -101,9 +108,10 @@ export type ResultSuggestionOutput = {
 
 // This type determines different sources that we can retrieve data from, mainly to fill the fields of ResultSuggestionOutput after the API responded
 export enum Indirect {
-  SASRstr_value,
-  SASRnum_value,
-  SASRhash_value,
+  None = 0,
+  APIstr_value,
+  APInum_value,
+  APIhash_value,
   CategoryTitle,
   SubCategoryTitle,
   TypeTitle
@@ -150,7 +158,7 @@ export interface OrganizedResults {
 interface SearchbarPurposeInfoField {
   searchable: Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
   unsearchable: ResultType[], // List of types that the bar will not search for.
-  askAPItoCountResults: boolean, // If `true`, the search-bar will ask the API to count results only when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below).
+  askAPItoCountResults: boolean, // If `true`, the search-bar will ask the API explicitely to count results when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below). Note that even if not asked, the API can still return counts and batches and we will read this information anyway if so.
   button: 'search' | 'add', // Utility of the button.
   placeHolder: string, // I18n path of the hint to display in the input field when it is empty.
   cellsInSuggestionRows: SuggestionrowCells, // Determines what is shown in each row of the result-suggestion list.
@@ -170,7 +178,7 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
   [SearchbarPurpose.AccountAddition]: {
     searchable: [Category.Addresses],
     unsearchable: [ResultType.EnsOverview],
-    askAPItoCountResults: true,
+    askAPItoCountResults: false,
     button: 'add',
     placeHolder: 'search_bar.account_placeholder',
     cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
@@ -179,7 +187,7 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
   [SearchbarPurpose.ValidatorAddition]: {
     searchable: [Category.Validators],
     unsearchable: [],
-    askAPItoCountResults: true,
+    askAPItoCountResults: false,
     button: 'add',
     placeHolder: 'search_bar.validator_placeholder',
     cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
@@ -222,7 +230,7 @@ interface TypeInfoFields {
   subCategory: SubCategory,
   priority: number,
   belongsToAllNetworks: boolean,
-  countSource: undefined | keyof SingleAPIresult, // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
+  countSource: Indirect, // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
   queryParamField : Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
   howToFillresultSuggestionOutput : HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
 }
@@ -234,9 +242,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Tokens,
     priority: 3,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
-    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
+    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value } // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
   },
   [ResultType.NFTs]: {
     title: ['common.nft_as_token', SINGULAR],
@@ -244,9 +252,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.NFTs,
     priority: 4,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.Epochs]: {
     title: ['common.epoch', SINGULAR],
@@ -254,9 +262,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Epochs,
     priority: 12,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' }
   },
   [ResultType.Slots]: {
     title: ['common.slot', SINGULAR],
@@ -264,9 +272,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 11,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.Blocks]: {
     title: ['common.block', SINGULAR],
@@ -274,9 +282,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 10,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.BlockRoots]: {
     title: ['common.block_root', SINGULAR],
@@ -284,9 +292,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 18,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.StateRoots]: {
     title: ['common.state_root', SINGULAR],
@@ -294,9 +302,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.SlotsAndBlocks,
     priority: 19,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.Transactions]: {
     title: ['common.transaction', SINGULAR],
@@ -304,9 +312,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Transactions,
     priority: 17,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.TransactionBatches]: {
     title: ['common.tx_batch', SINGULAR],
@@ -314,9 +322,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 14,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' }
   },
   [ResultType.StateBatches]: {
     title: ['common.state_batch', SINGULAR],
@@ -324,9 +332,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Batches,
     priority: 13,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.SASRnum_value, lowLevelData: '' }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' }
   },
   [ResultType.Contracts]: {
     title: ['common.contract', SINGULAR],
@@ -334,9 +342,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Contracts,
     priority: 2,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value } // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
   [ResultType.Accounts]: {
     title: ['common.account', SINGULAR],
@@ -344,9 +352,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 2,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.EnsAddresses]: {
     title: ['common.ens_address', SINGULAR],
@@ -354,9 +362,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Accounts,
     priority: 1,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SASRstr_value, description: '', lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.EnsOverview]: {
     title: ['common.overview_of_ens', SINGULAR],
@@ -364,9 +372,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.EnsOverview,
     priority: 15,
     belongsToAllNetworks: true,
-    countSource: undefined,
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRstr_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APIstr_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.Graffiti]: {
     title: ['common.graffiti', SINGULAR],
@@ -374,9 +382,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Graffiti,
     priority: 16,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.SASRstr_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.APIstr_value }
   },
   [ResultType.ValidatorsByIndex]: {
     title: ['search_bar.validator_by_index', 0],
@@ -384,9 +392,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRnum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APInum_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.ValidatorsByPubkey]: {
     title: ['search_bar.validator_by_public_key', 0],
@@ -394,9 +402,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9,
     belongsToAllNetworks: false,
-    countSource: undefined,
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.SASRnum_value, lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.None,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.ValidatorsByDepositAddress]: {
     title: ['search_bar.validator_by_deposit_address', 0],
@@ -404,9 +412,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 6,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     title: ['search_bar.validator_by_deposit_ens', 0],
@@ -414,9 +422,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 5,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.SASRstr_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.APIstr_value }
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     title: ['search_bar.validator_by_credential', 0],
@@ -424,9 +432,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: ['search_bar.validator_by_withdrawal_address', 0],
@@ -434,9 +442,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 8,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRhash_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIhash_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.APIhash_value }
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: ['search_bar.validator_by_withdrawal_ens', 0],
@@ -444,9 +452,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 7,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.SASRstr_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.APIstr_value }
   },
   [ResultType.ValidatorsByGraffiti]: {
     title: ['search_bar.validator_by_graffiti', 0],
@@ -454,9 +462,9 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.SASRstr_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.APIstr_value }
   }
   /* [ResultType.ValidatorsByName]: {
     title: ['search_bar.validator_by_name', 0],
@@ -464,11 +472,13 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     subCategory: SubCategory.Validators,
     priority: 9999,
     belongsToAllNetworks: false,
-    countSource: 'num_value',
-    queryParamField: Indirect.SASRstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.SASRstr_value }
+    countSource: Indirect.APInum_value,
+    queryParamField: Indirect.APIstr_value,
+    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.named', 0], lowLevelData: Indirect.APIstr_value }
   } */
 }
+
+export interface PremiumRowCallBackFunction { (result: ResultSuggestion) : boolean }
 
 export interface ExposedSearchbarMethods { // for internal use
   hideResult : (whichOne : ResultSuggestion) => void,
@@ -484,13 +494,35 @@ export type SearchbarDropdownLayout = 'narrow-dropdown' | 'large-dropdown' // fo
 
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {
   switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
-    case Indirect.SASRstr_value :
-    case Indirect.SASRnum_value :
-    case Indirect.SASRhash_value :
+    case Indirect.APIstr_value :
+    case Indirect.APInum_value :
+    case Indirect.APIhash_value :
       return true
     default:
       return false
   }
+}
+
+/**
+ * @returns Data read from the API response. `undefined` means that something is wrong.
+ */
+export function realizeData (apiResponseElement: SingleAPIresult, dataSource: FillFrom, t: ComposerTranslation) : any {
+  const type = apiResponseElement.type as ResultType
+  let sourceField : keyof SingleAPIresult
+
+  switch (dataSource) {
+    case Indirect.None : return ''
+    case Indirect.APIstr_value : sourceField = 'str_value'; break
+    case Indirect.APInum_value : sourceField = 'num_value'; break
+    case Indirect.APIhash_value : sourceField = 'hash_value'; break
+    case Indirect.CategoryTitle : return t(...CategoryInfo[TypeInfo[type].category].title)
+    case Indirect.SubCategoryTitle : return t(...SubCategoryInfo[TypeInfo[type].subCategory].title)
+    case Indirect.TypeTitle : return t(...TypeInfo[type].title)
+    default :
+      return (dataSource === '') ? '' : t(...dataSource)
+  }
+
+  return apiResponseElement[sourceField]
 }
 
 const listOfResultTypesAsDeclared : ResultType[] = []
