@@ -246,11 +246,11 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.STRIPE_CUSTOMER_PORTAL]: {
     path: '/user/stripe/customer-portal',
     method: 'POST',
-    mock: false
+    mock: true
   },
   [API_PATH.STRIPE_CHECKOUT_SESSION]: {
     path: '/user/stripe/create-checkout-session',
     method: 'POST',
-    mock: false
+    mock: true
   }
 }
