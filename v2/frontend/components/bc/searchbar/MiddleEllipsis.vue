@@ -4,7 +4,6 @@ import { type ComponentPublicInstance, warn } from 'vue'
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
-const ScrollBarWidth = 5
 
 const props = defineProps<{
   text?: string,
@@ -221,6 +220,7 @@ watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding th
   }
 })
 
+let mediaqueryWidthListener: MediaQueryList
 watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
 /*  This is a workaround for a bug in Chrome (at least in April 2024).
     Here is the problem:
@@ -233,21 +233,22 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
     return
   }
   if (amIinsideAparent.value || !threshold) {
-    window.removeEventListener('resize', catchResizingCausedByMediaquery)
+    if (mediaqueryWidthListener) { mediaqueryWidthListener.onchange = null }
     return
   }
-  if (!previousThreshold) {
-    window.addEventListener('resize', catchResizingCausedByMediaquery)
-  } else // the new threshold might have passed through the current window width
-    if (!delayedForcedUpdateIncoming) {
-      delayedForcedUpdateIncoming = true
-      setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
-    }
+  mediaqueryWidthListener = window.matchMedia('(max-width: ' + threshold + 'px)')
+  mediaqueryWidthListener.onchange = catchResizingCausedByMediaquery
+  if (previousThreshold && !delayedForcedUpdateIncoming) {
+    // the new threshold might have passed through the current window width
+    delayedForcedUpdateIncoming = true
+    setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
+  }
 }, { immediate: true })
 
 // this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
 function catchResizingCausedByMediaquery () {
-  const width = document.body.clientWidth
+  // const width = document.body.clientWidth
+  console.log('PASSED') /*
   const threshold = props.widthMediaqueryThreshold!
   if (width >= threshold - ScrollBarWidth - 1 && width <= threshold + 1) {
     logStep('event', 'window width (' + String(width) + ') approaches', props.widthMediaqueryThreshold)
@@ -255,7 +256,7 @@ function catchResizingCausedByMediaquery () {
       delayedForcedUpdateIncoming = true
       setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
     }
-  }
+  } */
 }
 
 let resizingObserver: ResizeObserver
@@ -307,7 +308,7 @@ onBeforeUnmount(() => {
   // Tests showed that watchers can be triggered by the unmounting cycle. We prevent useless recalculation to improve smoothness of the UI.
   amImounted = false
   resizingObserver.disconnect()
-  window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  if (mediaqueryWidthListener) { mediaqueryWidthListener.onchange = null }
   delayedForcedUpdateIncoming = false
 })
 
