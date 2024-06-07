@@ -30,6 +30,7 @@ const scrollToAddons = () => {
         </Button>
         <PricingPremiumCompare />
         <PricingPremiumAddons id="addons" :is-yearly="isYearly" />
+        <BcFaq class="faq" translation-path="faq.pricing" />
       </div>
     </div>
   </BcPageWrapper>
@@ -82,6 +83,10 @@ const scrollToAddons = () => {
         gap: 8px;
       }
     }
+  }
+  .faq{
+    width: 100%;
+    margin-top: 51px;
   }
 }
 </style>

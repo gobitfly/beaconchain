@@ -474,3 +474,29 @@
     }
   }
 }
+
+.p-accordion{
+  .p-accordion-tab{
+    .p-accordion-header{
+      color: var(--container-color);
+      background-color: var(--container-background);
+      border: 1px solid var(--container-border-color);
+      border-radius: var(--border-radius);
+      padding: 16px;
+      .p-accordion-header-link{
+        display: flex;
+        justify-content: space-between;
+        flex-direction: row-reverse;
+        align-items: center;
+      }
+    }
+
+    &.p-accordion-tab-active{
+      .p-accordion-header{
+        svg{
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+}
