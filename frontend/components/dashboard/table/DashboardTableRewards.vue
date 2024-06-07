@@ -21,7 +21,7 @@ const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<Tab
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const { overview } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -40,7 +40,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(() => [dashboardKey.value, overview.value], () => {
+watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
@@ -51,7 +51,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -135,7 +135,7 @@ const wrappedRewards = computed(() => {
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
-            :add-spacer="true"
+            :add-spacer="colsVisible.age"
             :is-row-expandable="isRowExpandable"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
@@ -247,7 +247,7 @@ const wrappedRewards = computed(() => {
               />
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>
@@ -278,7 +278,7 @@ const wrappedRewards = computed(() => {
     @include utils.truncate-text;
 
     @media (max-width: 450px) {
-      @include utils.set-all-width(60px);
+      @include utils.set-all-width(80px);
     }
   }
 

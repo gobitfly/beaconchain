@@ -125,7 +125,7 @@ func (d *dashboardData) Init() error {
 				upToEpochPtr = &upToEpoch
 			}
 
-			done, err := d.backfillHeadEpochData(upToEpochPtr)
+			result, err := d.backfillHeadEpochData(upToEpochPtr)
 			if err != nil {
 				d.log.Error(err, "failed to backfill epoch data", 0)
 				metrics.Errors.WithLabelValues("exporter_v2dash_backfill_fail").Inc()
@@ -133,7 +133,7 @@ func (d *dashboardData) Init() error {
 				continue
 			}
 
-			if done {
+			if result.BackfilledToHead {
 				d.log.Infof("dashboard data up to date, starting head export")
 				if debugSetBackfillCompleted {
 					if time.Since(start) > time.Hour {
@@ -181,9 +181,10 @@ func (d *dashboardData) processHeadQueue() {
 			}
 
 			// Back fill to epoch -1 if necessary
+			var backfillResult backfillResult
 			if stage <= 0 {
 				targetEpoch := epoch - 1
-				_, err := d.backfillHeadEpochData(&targetEpoch)
+				backfillResult, err = d.backfillHeadEpochData(&targetEpoch)
 				if err != nil {
 					d.log.Error(err, "failed to backfill head epoch data", 0, map[string]interface{}{"epoch": epoch})
 					metrics.Errors.WithLabelValues("exporter_v2dash_backfill_fail").Inc()
@@ -209,7 +210,7 @@ func (d *dashboardData) processHeadQueue() {
 
 			// Run aggregations
 			if stage <= 2 {
-				err := d.aggregatePerEpoch(debugAggregateMidEveryEpoch || doRollingAggregate, false)
+				err := d.aggregatePerEpoch(debugAggregateMidEveryEpoch || doRollingAggregate, backfillResult.DidPerformBackfill) // keep epoch data if backfill was needed
 				if err != nil {
 					d.log.Error(err, "failed to aggregate", 0, map[string]interface{}{"epoch": epoch})
 					metrics.Errors.WithLabelValues("exporter_v2dash_agg_fail").Inc()
@@ -550,18 +551,23 @@ func getEpochParallelGroups(epochs []uint64, parallelism int) []EpochParallelGro
 
 var unaggregatedWrites = 0
 
+type backfillResult struct {
+	BackfilledToHead   bool // if backfill finished and current chain state is head (only set of backfill to head was requested, so only when upToEpoch = null)
+	DidPerformBackfill bool // whether a backfill was performed at all, false if backfill was not necessary
+}
+
 // can be used to start a backfill up to epoch
-// returns true if there was nothing to backfill, otherwise returns false
 // if upToEpoch is nil, it will backfill until the latest finalized epoch
-func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
+func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (backfillResult, error) {
+	var result = backfillResult{}
 	backfillToChainFinalizedHead := upToEpoch == nil
 	if upToEpoch == nil {
 		res, err := d.CL.GetFinalityCheckpoints("head")
 		if err != nil {
-			return false, errors.Wrap(err, "failed to get finalized checkpoint")
+			return result, errors.Wrap(err, "failed to get finalized checkpoint")
 		}
 		if utils.IsByteArrayAllZero(res.Data.Finalized.Root) {
-			return false, errors.New("network not finalized yet")
+			return result, errors.New("network not finalized yet")
 		}
 		upToEpoch = &res.Data.Finalized.Epoch
 		d.log.Infof("backfilling head epoch data up to epoch %d", *upToEpoch)
@@ -569,7 +575,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 	latestExportedEpoch, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get latest dashboard epoch")
+		return result, errors.Wrap(err, "failed to get latest dashboard epoch")
 	}
 
 	// An unclean shutdown can occur when exporter is shut down in between writing epoch data
@@ -578,7 +584,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 	// Meaning that there is a gap in the last ~epochFetchParallelism epochs
 	uncleanShutdownGaps, err := edb.GetMissingEpochsBetween(int64(latestExportedEpoch-epochFetchParallelism), int64(latestExportedEpoch+1))
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get epoch gaps")
+		return result, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if latestExportedEpoch > 0 && len(uncleanShutdownGaps) > 0 {
@@ -601,7 +607,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 
 	gaps, err := edb.GetMissingEpochsBetween(int64(latestExportedEpoch), int64(*upToEpoch+1))
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get epoch gaps")
+		return result, errors.Wrap(err, "failed to get epoch gaps")
 	}
 
 	if len(gaps) > 0 {
@@ -611,7 +617,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 		if latestExportedEpoch > 0 {
 			err = d.aggregatePerEpoch(false, true)
 			if err != nil {
-				return false, errors.Wrap(err, "failed to aggregate")
+				return result, errors.Wrap(err, "failed to aggregate")
 			}
 		}
 
@@ -700,20 +706,23 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (bool, error) {
 		}
 	}
 
+	result.DidPerformBackfill = len(gaps) > 0
+
 	// Return with "complete" only if task was to sync to chain finalized head and we finished
 	if backfillToChainFinalizedHead {
 		res, err := d.CL.GetFinalityCheckpoints("head")
 		if err != nil {
-			return false, errors.Wrap(err, "failed to get finalized checkpoint")
+			return result, errors.Wrap(err, "failed to get finalized checkpoint")
 		}
 		if utils.IsByteArrayAllZero(res.Data.Finalized.Root) {
-			return false, errors.New("network not finalized yet")
+			return result, errors.New("network not finalized yet")
 		}
 
-		return res.Data.Finalized.Epoch-1 <= *upToEpoch, nil
+		result.BackfilledToHead = res.Data.Finalized.Epoch-1 <= *upToEpoch
+		return result, nil
 	}
 
-	return true, nil
+	return result, nil
 }
 
 func containsEpoch(d []DataEpochProcessed, epoch uint64) bool {
@@ -1722,11 +1731,19 @@ func refreshMaterializedSlashedByCounts() error {
 // Commented out since this is a one time operation, kept in in case we need it again
 // func (d *dashboardData) backfillCLBlockRewards() {
 // 	upTo := 1731488
-// 	startFrom := 307506
+// 	startFrom := 1328805
 // 	batchSize := 8
 // 	parallelization := 8
 
 // 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
+
+// 	err := db.AlloyWriter.Get(&startFrom, "SELECT last_slot FROM meta_slot_export")
+// 	if err != nil {
+// 		d.log.Error(err, "failed to get last slot from meta_slot_export", 0)
+// 		return
+// 	}
+
+// 	// re export 317201 +- 20000
 
 // 	go func() {
 // 		for i := startFrom; i < upTo+batchSize; i += batchSize {
@@ -1770,11 +1787,14 @@ func refreshMaterializedSlashedByCounts() error {
 
 // 	go func() {
 // 		for blockReward := range blocksChan {
-// 			err := storeClBlockRewards(blockReward)
-// 			if err != nil {
-// 				d.log.Error(err, "failed to store cl block rewards", 0)
+// 			for {
+// 				err := storeClBlockRewards(blockReward)
+// 				if err != nil {
+// 					d.log.Error(err, "failed to store cl block rewards", 0)
+// 					continue
+// 				}
+// 				break
 // 			}
-
 // 			highestSlot := uint64(0)
 // 			for slot := range blockReward {
 // 				if slot > highestSlot {
@@ -1784,6 +1804,13 @@ func refreshMaterializedSlashedByCounts() error {
 
 // 			if highestSlot%100 < uint64(batchSize) {
 // 				d.log.Infof("processed blocks, height: %d", highestSlot)
+// 			}
+
+// 			if highestSlot%10000 < uint64(batchSize) {
+// 				_, err := db.AlloyWriter.Exec("UPDATE meta_slot_export SET last_slot = $1", highestSlot)
+// 				if err != nil {
+// 					d.log.Error(err, "failed to update last slot in meta_slot_export", 0)
+// 				}
 // 			}
 // 		}
 // 	}()

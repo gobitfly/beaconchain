@@ -147,7 +147,7 @@ goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=dis
 echo "alloy db schema initialization completed"
 
 echo "adding test user"
-HASHED_PW=$(htpasswd -nbBC 10 user pass | cut -d ":" -sf 2)
+HASHED_PW=$(htpasswd -nbBC 10 user password | cut -d ":" -sf 2)
 psql postgres://postgres:pass@localhost:$POSTGRES_PORT/db?sslmode=disable -c "INSERT INTO users(password, email, email_confirmed) \
 VALUES ('$HASHED_PW', 'test@beaconcha.in', true);"
 echo "created test user with email 'test@beaconcha.in' and password 'pass' "

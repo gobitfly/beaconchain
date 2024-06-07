@@ -16,6 +16,7 @@ const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboard
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -37,7 +38,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
@@ -48,7 +49,7 @@ watch(query, (q) => {
 }, { immediate: true })
 
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -118,7 +119,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.proposer" default="-" />
+                  {{ slotProps.data.proposer || '-' }}
                 </BcLink>
               </template>
             </Column>
@@ -126,7 +127,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="group_id"
               body-class="group-id"
               header-class="group-id"
-              :sortable="colsVisible.groupSort"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -173,7 +173,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               v-if="colsVisible.rewardsRecipient"
               field="reward_recipient"
               header-class="reward_recipient"
-              :sortable="true"
               :header="$t('dashboard.validator.col.reward_recipient')"
             >
               <template #body="slotProps">
@@ -263,7 +262,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator />
+              <DashboardTableAddValidator v-if="!hasValidators" />
             </template>
           </BcTable>
         </ClientOnly>

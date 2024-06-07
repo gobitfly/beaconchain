@@ -88,8 +88,7 @@
     "age": "Age",
     "from": "From",
     "amount": "Amount",
-    "valid": "Valid",
-    "all_time_total": "All time total"
+    "valid": "Valid"
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -368,7 +367,6 @@
       "withdrawals": {
         "title": "Withdrawals",
         "search_placeholder": "Index, Public Key, Address",
-        "all_time_total": "All time total",
         "pending": "Pending",
         "pending_tooltip": "Estimation for next withdrawal currently unavailable",
         "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn"
@@ -639,12 +637,10 @@
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
-      "quantity": "Quantity: {quantity}",
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"
-      },
-      "requires_plan": "requires {name} plan"
+      }
     }
   },
   "time_duration": {

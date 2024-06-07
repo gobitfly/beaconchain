@@ -18,19 +18,31 @@ import (
 )
 
 type executionPayloadsExporter struct {
-	ModuleContext ModuleContext
-	ExportMutex   *sync.Mutex
+	ModuleContext   ModuleContext
+	ExportMutex     *sync.Mutex
+	CachedViewMutex *sync.Mutex
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionPayloadsExporter{
-		ModuleContext: moduleContext,
-		ExportMutex:   &sync.Mutex{},
+		ModuleContext:   moduleContext,
+		ExportMutex:     &sync.Mutex{},
+		CachedViewMutex: &sync.Mutex{},
 	}
 }
 
 func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	return nil // nop
+	// if mutex is locked, return early
+	if !d.ExportMutex.TryLock() {
+		log.Infof("execution payloads exporter is already running")
+		return nil
+	}
+	defer d.ExportMutex.Unlock()
+	err = d.maintainTable()
+	if err != nil {
+		return fmt.Errorf("error maintaining table: %w", err)
+	}
+	return nil
 }
 
 func (d *executionPayloadsExporter) Init() error {
@@ -48,16 +60,11 @@ func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventC
 // can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	// if mutex is locked, return early
-	if !d.ExportMutex.TryLock() {
+	if !d.CachedViewMutex.TryLock() {
 		log.Infof("execution payloads exporter is already running")
 		return nil
 	}
-	defer d.ExportMutex.Unlock()
-
-	err = d.maintainTable()
-	if err != nil {
-		return fmt.Errorf("error maintaining table: %w", err)
-	}
+	defer d.CachedViewMutex.Unlock()
 
 	start := time.Now()
 	// update cached view
@@ -76,7 +83,7 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			uvdv.dashboard_id,
 			uvdv.group_id,
 			b.slot,
-			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward)) as reward,
+			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward) as reward,
 			coalesce(rb.proposer_fee_recipient, b.exec_fee_recipient) as fee_recipient, 
 			rb.value IS NOT NULL AS is_mev
 		FROM
