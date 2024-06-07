@@ -10,7 +10,7 @@ import { API_PATH } from '~/types/customFetch'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const { products, bestPremiumProduct } = useProductsStore()
-const { user } = useUserStore()
+const { user, isLoggedIn } = useUserStore()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
@@ -80,27 +80,36 @@ async function stripePurchase () {
   */
 }
 
+async function forwardToRegister () {
+  await navigateTo('/register')
+}
+
 const planButton = computed(() => {
   let isDowngrade = false
   let text = $t('pricing.premium_product.button.select_plan')
   let callback: () => Promise<void> = stripePurchase
 
-  const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
-  if (subscription) {
-    callback = stripeCustomerPortal
-    if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
-      text = $t('pricing.premium_product.button.manage_plan')
-    } else {
-      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
-      if (subscribedProduct !== undefined) {
-        if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
-          text = $t('pricing.premium_product.button.upgrade')
-        } else {
-          isDowngrade = true
-          text = $t('pricing.premium_product.button.downgrade')
+  if (isLoggedIn.value) {
+    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
+    if (subscription) {
+      callback = stripeCustomerPortal
+      if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
+        text = $t('pricing.premium_product.button.manage_plan')
+      } else {
+        const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
+        if (subscribedProduct !== undefined) {
+          if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+            text = $t('pricing.premium_product.button.upgrade')
+          } else {
+            isDowngrade = true
+            text = $t('pricing.premium_product.button.downgrade')
+          }
         }
       }
     }
+  } else {
+    text = $t('pricing.sign_up')
+    callback = forwardToRegister
   }
 
   return { text, isDowngrade, callback }
