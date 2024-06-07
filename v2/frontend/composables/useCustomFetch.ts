@@ -52,10 +52,12 @@ export function useCustomFetch () {
       baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
+    /*
     // TODO: Hack for testing, will have to either be a .env variable or be solved somehow cleaner
     if (pathName === API_PATH.STRIPE_CUSTOMER_PORTAL || pathName === API_PATH.STRIPE_CHECKOUT_SESSION) {
       baseURL = 'https://jkihuwegfsgjkhsdgf.beaconcha.in/'
     }
+    */
 
     options.headers = new Headers({ ...options.headers, ...headers })
     if (apiKey) {

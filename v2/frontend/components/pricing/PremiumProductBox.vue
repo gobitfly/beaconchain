@@ -60,19 +60,14 @@ const percentages = computed(() => {
 // Then, parent could pass a disabled prop so all buttons are deactivated
 async function stripeCustomerPortal () {
   const res = await fetch<StripeCustomerPortal>(API_PATH.STRIPE_CUSTOMER_PORTAL, {
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ returnURL: 'https://jkihuwegfsgjkhsdgf.beaconcha.in/api/test/stripe?api_key=TFpLcWowc2dUbDA3Z0gyNW5XU0Vl' })
+    body: JSON.stringify({ returnURL: window.location.href })
   })
-  console.log('StripeCustomerPortal res', res)
 
-  // TODO: Open new tab with res.url
+  window.open(res?.url, '_blank')
 }
 
 async function stripePurchase () {
   const res = await fetch<StripeCreateCheckoutSession>(API_PATH.STRIPE_CHECKOUT_SESSION, {
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ priceId: props.isYearly ? props.product.price_per_year_eur : props.product.price_per_month_eur, addonQuantity: 1 })
   })
   console.log('StripeCreateCheckoutSession res', res)
