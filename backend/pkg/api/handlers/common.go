@@ -444,7 +444,7 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	for _, validator := range validators {
 		switch {
 		case validator.intValue != nil:
-			indexes = append(indexes, types.VDBValidator(*validator.intValue))
+			indexes = append(indexes, *validator.intValue)
 		case validator.strValue != nil:
 			if !reValidatorPublicKey.MatchString(*validator.strValue) {
 				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.strValue))
