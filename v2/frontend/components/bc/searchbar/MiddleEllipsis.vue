@@ -73,7 +73,9 @@ const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle : CSSStyleDeclaration
 let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
 
+let mediaqueryWidthListener: MediaQueryList
 let delayedForcedUpdateIncoming = false
+
 let classPropsDuringLastUpdate = props.class || ''
 let textPropsDuringLastUpdate = props.text || ''
 let initialFlexGrowDuringLastUpdate : number | undefined
@@ -220,7 +222,6 @@ watch(() => props.ellipses, (newEllipses) => { // reacts to changes regarding th
   }
 })
 
-let mediaqueryWidthListener: MediaQueryList
 watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
 /*  This is a workaround for a bug in Chrome (at least in April 2024).
     Here is the problem:
@@ -238,25 +239,19 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
   }
   mediaqueryWidthListener = window.matchMedia('(max-width: ' + threshold + 'px)')
   mediaqueryWidthListener.onchange = catchResizingCausedByMediaquery
-  if (previousThreshold && !delayedForcedUpdateIncoming) {
+  if (previousThreshold) {
     // the new threshold might have passed through the current window width
-    delayedForcedUpdateIncoming = true
-    setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
+    catchResizingCausedByMediaquery()
   }
 }, { immediate: true })
 
 // this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
 function catchResizingCausedByMediaquery () {
-  // const width = document.body.clientWidth
-  console.log('PASSED') /*
-  const threshold = props.widthMediaqueryThreshold!
-  if (width >= threshold - ScrollBarWidth - 1 && width <= threshold + 1) {
-    logStep('event', 'window width (' + String(width) + ') approaches', props.widthMediaqueryThreshold)
-    if (!delayedForcedUpdateIncoming) {
-      delayedForcedUpdateIncoming = true
-      setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
-    }
-  } */
+  logStep('event', 'props.widthMediaqueryThreshold reached:', props.widthMediaqueryThreshold)
+  if (!delayedForcedUpdateIncoming) {
+    delayedForcedUpdateIncoming = true
+    setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
+  }
 }
 
 let resizingObserver: ResizeObserver
