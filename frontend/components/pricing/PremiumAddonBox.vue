@@ -6,7 +6,8 @@ import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon 
 import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
-const { user } = useUserStore()
+const { user, isLoggedIn } = useUserStore()
+const { stripeCustomerPortal, stripePurchase, isStripeProcessing } = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
@@ -37,13 +38,32 @@ const text = computed(() => {
   }
 })
 
-const addonButton = computed(() => {
-  let text = $t('pricing.addons.button.select_addon')
-  if (user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon) !== undefined) {
-    text = $t('pricing.addons.button.manage_addon')
+const addonSubscription = computed(() => {
+  return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon)
+})
+
+// TODO: Ponder on moving this to provider (as the code for the plans is very similar)
+async function buttonCallback () {
+  if (isStripeProcessing.value) {
+    return
   }
 
-  return { text }
+  if (isLoggedIn.value) {
+    if (addonSubscription.value) {
+      await stripeCustomerPortal()
+    } else {
+      await stripePurchase(props.isYearly ? props.addon.price_per_year_eur : props.addon.price_per_month_eur, 1)
+    }
+  } else {
+    await navigateTo('/register')
+  }
+}
+
+const addonButton = computed(() => {
+  return {
+    text: addonSubscription.value ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon'),
+    disabled: isStripeProcessing.value
+  }
 })
 
 </script>
@@ -104,7 +124,7 @@ const addonButton = computed(() => {
           </template>
         </BcTooltip>
       </div>
-      <Button :label="addonButton.text" class="select-button" />
+      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="buttonCallback" />
     </div>
   </div>
 </template>
