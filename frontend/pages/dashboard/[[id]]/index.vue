@@ -11,6 +11,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
+import { isPublicKey } from '~/utils/dashboard/key'
 
 const { isLoggedIn } = useUserStore()
 
@@ -37,13 +38,13 @@ function showDashboardCreationDialog () {
 
 watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
   if (!newLoggedIn || !newKey) {
-    // We update the key for our public dashboard
+    // Some checks if we need to update the dashboard key or the public dashboard
     let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-    // If the old key does not match the dashboards key then it probabbly means we opened a different public dashboard as a link
-    const isPublic = isNaN(parseInt(newKey))
+    const isPublic = isPublicKey(newKey)
+    // we got a new public dashboard hash but the old hash matches the stored dashboard - so we update the stored dashboard
     if (cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       updateHash('validator', newKey)
-    } else if (!newKey || !isPublic) {
+    } else if (!newKey || !isPublic) { // trying to view a private dashboad but not logged in
       cd = cookieDashboards.value?.validator_dashboards?.[0] as CookieDashboard
       setDashboardKey(cd?.hash ?? '')
     }
