@@ -233,8 +233,10 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
   if (SSR || !navigator.userAgent.includes('Chrom')) {
     return
   }
+  if (mediaqueryWidthListener) {
+    mediaqueryWidthListener.onchange = null
+  }
   if (amIinsideAparent.value || !threshold) {
-    if (mediaqueryWidthListener) { mediaqueryWidthListener.onchange = null }
     return
   }
   mediaqueryWidthListener = window.matchMedia('(max-width: ' + threshold + 'px)')
