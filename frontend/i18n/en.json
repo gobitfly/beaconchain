@@ -598,6 +598,7 @@
   },
   "pricing": {
     "seo_title": "Premium Pricing", 
+    "compare": "Compare Plans",
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
@@ -645,6 +646,7 @@
       "validator_groups_per_dashboard": "Validator groups per dashboard",
       "share_custom_dashboards": "Share custom dashboards",
       "manage_dashboard_via_api": "Manage dashboard via API",
+      "bulk_adding": "Bulk adding",
       "heatmap_history_seconds": "Heatmap history",
       "summary_chart_history_seconds": "Summary chart history",
       "email_notifications_per_day": "Email notifications per day",
@@ -656,6 +658,9 @@
       "monitor_machines": "Monitor machines",
       "machine_monitoring_history_seconds": "Machine monitoring history",
       "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
+    },
+    "tooltips": {
+      "validators_per_dashboard": "After Pectra hardfork: {eth} ETH maximum effective balance"
     },
     "view_addons": "View Add-Ons",
     "addons": {
