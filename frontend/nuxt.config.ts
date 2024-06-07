@@ -21,6 +21,7 @@ try {
 }
 
 export default defineNuxtConfig({
+  ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
   devServer: {
     https: {
@@ -30,19 +31,19 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiClient: '',
-      legacyApiClient: '',
-      apiKey: '',
+      apiClient: process.env.PUBLIC_API_CLIENT,
+      legacyApiClient: process.env.PUBLIC_LEGACY_API_CLIENT,
+      apiKey: process.env.PUBLIC_API_KEY,
       gitVersion,
-      domain: '',
-      v1Domain: '',
+      domain: process.env.PUBLIC_DOMAIN,
+      v1Domain: process.env.PUBLIC_V1_DOMAIN,
       logIp: '',
       logFile: '',
       showInDevelopment: ''
     },
     private: {
-      apiServer: '',
-      legacyApiServer: ''
+      apiServer: process.env.PRIVATE_API_SERVER,
+      legacyApiServer: process.env.PRIVATE_LEGACY_API_SERVER
     }
   },
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],

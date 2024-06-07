@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Accordeon">
+      <PlaygroundAccordeon />
+    </TabPanel>
     <TabPanel header="Clipping in the middle">
       <PlaygroundMiddleEllipsisTests />
     </TabPanel>

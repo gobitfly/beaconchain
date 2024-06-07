@@ -52,7 +52,7 @@ var allNetworks []types.NetworkInfo
 var (
 	// Subject to change, just examples
 	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
-	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
+	reInteger                      = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
@@ -228,7 +228,7 @@ type validatorSet struct {
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
 	var v validationError
-	if reNumber.MatchString(id) {
+	if reInteger.MatchString(id) {
 		// given id is a normal id
 		id := v.checkUint(id, "dashboard_id")
 		if v.hasErrors() {
@@ -423,7 +423,7 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validators {
-		if reNumber.MatchString(validator) {
+		if reInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
 		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
@@ -528,9 +528,9 @@ func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-/* func returnConflict(w http.ResponseWriter, err error) {
+func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
-} */
+}
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
@@ -563,6 +563,7 @@ func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
 
+//nolint:unparam
 func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
