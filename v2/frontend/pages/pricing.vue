@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 const { t: $t } = useI18n()
 
 useBcSeo('pricing.seo_title')
+useStripeProvider()
 
 const { getProducts } = useProductsStore()
 await useAsyncData('get_products', () => getProducts())
