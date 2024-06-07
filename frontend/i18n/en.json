@@ -599,6 +599,8 @@
   "pricing": {
     "seo_title": "Premium Pricing", 
     "compare": "Compare Plans",
+    "show_feature": "Show Features",
+    "hide_feature": "Hide Features",
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",

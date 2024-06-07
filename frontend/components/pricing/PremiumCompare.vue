@@ -23,6 +23,8 @@ type CompareRow = {
   values?: CompareValue[]
 }
 
+const showContent = ref(false)
+
 const rows = computed(() => {
   const sorted = products.value?.premium_products?.sort((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
   const rows: CompareRow[] = []
@@ -31,7 +33,9 @@ const rows = computed(() => {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
-    if (property.includes('_per_day')) {
+    if (value === 0) {
+      value = false
+    } else if (property.includes('_per_day')) {
       value = $t('time_duration.days', { amount: value }, value === 1 ? 1 : 2)
     } else if (property.includes('_seconds')) {
       value = formatTimeDuration(value as number, $t)
@@ -96,7 +100,6 @@ const rows = computed(() => {
   addRow('perc', 'monitor_machines')
   addRow('perc', 'machine_monitoring_history_seconds')
   addRow('perc', 'custom_machine_alerts')
-  console.log(sorted, rows)
   return rows
 })
 
@@ -105,7 +108,7 @@ const rows = computed(() => {
 <template>
   <div class="compare-plans-container">
     <h1>{{ $t('pricing.compare') }}</h1>
-    <div class="content">
+    <div class="content" :class="{ 'show-content': showContent }">
       <div v-for="(row, index) in rows" :key="index" :class="row.type" class="row">
         <div class="label">
           <span>{{ row.label }}</span>
@@ -122,6 +125,12 @@ const rows = computed(() => {
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
+      </div>
+      <BcBlurOverlay class="blur" />
+      <div class="button-row">
+        <Button @click="()=>showContent = !showContent">
+          {{ $t(showContent?'pricing.hide_feature':'pricing.show_feature') }}
+        </Button>
       </div>
     </div>
   </div>
@@ -140,10 +149,11 @@ const rows = computed(() => {
   font-size: 16px;
   font-weight: 400;
 
-  margin-bottom: 43px;
+  margin-bottom: 94px;
 
   @media (max-width: 1360px) {
     font-size: 12px;
+    margin-bottom: 45px;
   }
 
   h1 {
@@ -163,6 +173,38 @@ const rows = computed(() => {
     overflow-y: hidden;
     width: 100%;
     padding-bottom: 8px;
+    max-height: 300px;
+    position: relative;
+
+    .blur {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 75%;
+    }
+
+    .button-row {
+      position: absolute;
+      z-index: 10;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    &.show-content {
+      max-height: unset;
+
+      .blur {
+        display: none;
+      }
+
+      .button-row {
+        position: unset;
+        padding-top: 20px;
+      }
+    }
 
     .row {
       display: flex;
