@@ -116,6 +116,9 @@ func (v *validationError) add(paramName, problem string) {
 		*v = make(validationError)
 	}
 	validationMap := *v
+	if _, ok := validationMap[paramName]; ok {
+		problem = validationMap[paramName] + "; " + problem
+	}
 	validationMap[paramName] = problem
 }
 
@@ -412,17 +415,10 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	return v.checkValidatorArray(strings.Split(validators, ","), allowEmpty)
-}
-
-func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]types.VDBValidator, []string) {
-	if len(validators) == 0 && !allowEmpty {
-		v.add("validators", "list of validators is must not be empty")
-		return nil, nil
-	}
+	validatorsSlice := strings.Split(validators, ",")
 	var indexes []types.VDBValidator
 	var publicKeys []string
-	for _, validator := range validators {
+	for _, validator := range validatorsSlice {
 		if reInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
 		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
@@ -433,6 +429,30 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 			publicKeys = append(publicKeys, validator)
 		} else {
 			v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
+		}
+	}
+	return indexes, publicKeys
+}
+
+func (v *validationError) checkValidators(validators []intOrString, allowEmpty bool) ([]types.VDBValidator, []string) {
+	if len(validators) == 0 && !allowEmpty {
+		v.add("validators", "list of validators is empty")
+		return nil, nil
+	}
+	var indexes []types.VDBValidator
+	var publicKeys []string
+	for _, validator := range validators {
+		switch {
+		case validator.intValue != nil:
+			indexes = append(indexes, types.VDBValidator(*validator.intValue))
+		case validator.strValue != nil:
+			if !reValidatorPublicKey.MatchString(*validator.strValue) {
+				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.strValue))
+				continue
+			}
+			publicKeys = append(publicKeys, *validator.strValue)
+		default:
+			v.add("validators", "list contains invalid validator")
 		}
 	}
 	return indexes, publicKeys

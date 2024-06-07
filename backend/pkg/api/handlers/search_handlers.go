@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -338,7 +339,7 @@ func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]s
 	for _, network := range networks {
 		chainId, ok := isValidNetwork(network)
 		if !ok {
-			v.add("networks", "list contains invalid network, please check the API documentation")
+			v.add("networks", fmt.Sprintf("invalid network '%s'", network))
 			break
 		}
 		networkSet[chainId] = struct{}{}
@@ -359,8 +360,8 @@ func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchType
 	// list not empty, check if types are valid
 	for _, t := range types {
 		if _, typeExists := searchTypeToRegex[t]; !typeExists {
-			v.add("types", "list contains invalid type, please check the API documentation")
-			break
+			v.add("types", fmt.Sprintf("invalid search type '%s'", t))
+			continue
 		}
 		typeSet[t] = struct{}{}
 	}

@@ -425,11 +425,11 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		GroupId           uint64   `json:"group_id,omitempty"`
-		Validators        []string `json:"validators,omitempty"`
-		DepositAddress    string   `json:"deposit_address,omitempty"`
-		WithdrawalAddress string   `json:"withdrawal_address,omitempty"`
-		Graffiti          string   `json:"graffiti,omitempty"`
+		GroupId           uint64        `json:"group_id,omitempty"`
+		Validators        []intOrString `json:"validators,omitempty"`
+		DepositAddress    string        `json:"deposit_address,omitempty"`
+		WithdrawalAddress string        `json:"withdrawal_address,omitempty"`
+		Graffiti          string        `json:"graffiti,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
@@ -480,7 +480,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	var dataErr error
 	switch {
 	case req.Validators != nil:
-		indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
+		indices, pubkeys := v.checkValidators(req.Validators, forbidEmpty)
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
