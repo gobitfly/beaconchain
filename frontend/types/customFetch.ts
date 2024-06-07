@@ -234,7 +234,7 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.SEARCH]: {
     path: '/search',
     method: 'POST',
-    mock: true,
+    mock: false,
     mockFunction: simulateAPIresponseForTheSearchBar
   },
   [API_PATH.PRODUCT_SUMMARY]: {
