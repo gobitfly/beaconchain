@@ -4,6 +4,7 @@ import { type ComponentPublicInstance, warn } from 'vue'
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
+const ScrollBarWidth = 5
 
 const props = defineProps<{
   text?: string,
@@ -244,20 +245,17 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
     }
 }, { immediate: true })
 
-let lastWindowWidthCaught = 0
 // this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
 function catchResizingCausedByMediaquery () {
-  const windowWidthCaught = document.documentElement.clientWidth
-  const diffA = props.widthMediaqueryThreshold! - lastWindowWidthCaught
-  const diffB = windowWidthCaught - props.widthMediaqueryThreshold!
-  if (lastWindowWidthCaught && diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
-    logStep('event', 'window width passed through', props.widthMediaqueryThreshold)
+  const width = document.body.clientWidth
+  const threshold = props.widthMediaqueryThreshold!
+  if (width >= threshold - ScrollBarWidth - 1 && width <= threshold + 1) {
+    logStep('event', 'window width (' + String(width) + ') approaches', props.widthMediaqueryThreshold)
     if (!delayedForcedUpdateIncoming) {
       delayedForcedUpdateIncoming = true
       setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
     }
   }
-  lastWindowWidthCaught = windowWidthCaught
 }
 
 let resizingObserver: ResizeObserver
@@ -311,7 +309,6 @@ onBeforeUnmount(() => {
   resizingObserver.disconnect()
   window.removeEventListener('resize', catchResizingCausedByMediaquery)
   delayedForcedUpdateIncoming = false
-  lastWindowWidthCaught = 0
 })
 
 onUnmounted(() => {
