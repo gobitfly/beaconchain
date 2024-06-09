@@ -11,7 +11,6 @@ export function useCurrency () {
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
-  const currency = readonly(selectedCurrency)
   function setCurrency (newCurrency: Currency) {
     selectedCurrency.value = newCurrency
   }
@@ -39,6 +38,8 @@ export function useCurrency () {
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
 
+  const currency = computed(() => selectedCurrency.value && available.value.includes(selectedCurrency.value) ? selectedCurrency.value : available.value[0])
+
   const withLabel = computed(() => {
     return available.value?.map(currency => ({
       currency,
@@ -46,9 +47,9 @@ export function useCurrency () {
     }))
   })
 
-  watch([latestState, currency], () => {
+  watch([latestState, selectedCurrency], () => {
     // once we loaded our latestState and see that we don't support the currency we switch back to the first item
-    if (latestState.value && !available.value.includes(currency.value)) {
+    if (latestState.value && !available.value.includes(selectedCurrency.value)) {
       selectedCurrency.value = available.value[0]
     }
   })
