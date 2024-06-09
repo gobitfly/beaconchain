@@ -33,7 +33,7 @@ export function useCurrency () {
       list.push(networkInfo.value.clCurrency)
     }
     if (showInDevelopment) {
-      list.push('NAT')
+      list.splice(0, 1, 'NAT')
     }
     return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
   })
