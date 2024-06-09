@@ -52,7 +52,7 @@ var allNetworks []types.NetworkInfo
 var (
 	// Subject to change, just examples
 	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
-	reNumber                       = regexp.MustCompile(`^[0-9]+$`)
+	reInteger                      = regexp.MustCompile(`^[0-9]+$`)
 	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
@@ -116,6 +116,9 @@ func (v *validationError) add(paramName, problem string) {
 		*v = make(validationError)
 	}
 	validationMap := *v
+	if _, ok := validationMap[paramName]; ok {
+		problem = validationMap[paramName] + "; " + problem
+	}
 	validationMap[paramName] = problem
 }
 
@@ -228,7 +231,7 @@ type validatorSet struct {
 // parseDashboardId is a helper function to validate the string dashboard id param.
 func parseDashboardId(id string) (interface{}, error) {
 	var v validationError
-	if reNumber.MatchString(id) {
+	if reInteger.MatchString(id) {
 		// given id is a normal id
 		id := v.checkUint(id, "dashboard_id")
 		if v.hasErrors() {
@@ -412,18 +415,11 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	return v.checkValidatorArray(strings.Split(validators, ","), allowEmpty)
-}
-
-func (v *validationError) checkValidatorArray(validators []string, allowEmpty bool) ([]types.VDBValidator, []string) {
-	if len(validators) == 0 && !allowEmpty {
-		v.add("validators", "list of validators is must not be empty")
-		return nil, nil
-	}
+	validatorsSlice := strings.Split(validators, ",")
 	var indexes []types.VDBValidator
 	var publicKeys []string
-	for _, validator := range validators {
-		if reNumber.MatchString(validator) {
+	for _, validator := range validatorsSlice {
+		if reInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
 		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
@@ -438,6 +434,30 @@ func (v *validationError) checkValidatorArray(validators []string, allowEmpty bo
 	return indexes, publicKeys
 }
 
+func (v *validationError) checkValidators(validators []intOrString, allowEmpty bool) ([]types.VDBValidator, []string) {
+	if len(validators) == 0 && !allowEmpty {
+		v.add("validators", "list of validators is empty")
+		return nil, nil
+	}
+	var indexes []types.VDBValidator
+	var publicKeys []string
+	for _, validator := range validators {
+		switch {
+		case validator.intValue != nil:
+			indexes = append(indexes, *validator.intValue)
+		case validator.strValue != nil:
+			if !reValidatorPublicKey.MatchString(*validator.strValue) {
+				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.strValue))
+				continue
+			}
+			publicKeys = append(publicKeys, *validator.strValue)
+		default:
+			v.add("validators", "list contains invalid validator")
+		}
+	}
+	return indexes, publicKeys
+}
+
 func (v *validationError) checkDate(dateString string) time.Time {
 	// expecting date in format "YYYY-MM-DD"
 	date, err := time.Parse("2006-01-02", dateString)
@@ -445,6 +465,25 @@ func (v *validationError) checkDate(dateString string) time.Time {
 		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
 	}
 	return date
+}
+
+func (v *validationError) checkNetwork(network intOrString) uint64 {
+	chainId, ok := isValidNetwork(network)
+	if !ok {
+		v.add("network", fmt.Sprintf("given value '%s' is not a valid network", network))
+	}
+	return chainId
+}
+
+// isValidNetwork checks if the given network is a valid network.
+// It returns the chain id of the network and true if it is valid, otherwise 0 and false.
+func isValidNetwork(network intOrString) (uint64, bool) {
+	for _, realNetwork := range allNetworks {
+		if (network.intValue != nil && realNetwork.ChainId == *network.intValue) || (network.strValue != nil && realNetwork.Name == *network.strValue) {
+			return realNetwork.ChainId, true
+		}
+	}
+	return 0, false
 }
 
 // --------------------------------------
@@ -509,9 +548,9 @@ func returnNotFound(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusNotFound, err)
 }
 
-/* func returnConflict(w http.ResponseWriter, err error) {
+func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
-} */
+}
 
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
@@ -544,6 +583,7 @@ func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
 
+//nolint:unparam
 func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
@@ -553,53 +593,47 @@ func newNotFoundErr(format string, args ...interface{}) error {
 }
 
 // --------------------------------------
-// network helpers
+// intOrString is a custom type that can be unmarshalled from either an int or a string (strings will also be parsed to int if possible).
+// if unmarshaling throws no errors one of the two fields will be set, the other will be nil.
+type intOrString struct {
+	intValue *uint64
+	strValue *string
+}
 
-// network is a custom type for network chain IDs.
-// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
-type network int64
-
-func (v *validationError) checkNetwork(network network) network {
-	if network == -1 {
-		v.add("network", "given value is not a valid network")
+func (v *intOrString) UnmarshalJSON(data []byte) error {
+	// Attempt to unmarshal as uint64 first
+	var intValue uint64
+	if err := json.Unmarshal(data, &intValue); err == nil {
+		v.intValue = &intValue
+		return nil
 	}
-	return network
-}
 
-var _ json.Unmarshaler = (*network)(nil)
-
-func (n network) MarshalJSON() ([]byte, error) {
-	return json.Marshal(n)
-}
-
-// if a json field is a network, it can be unmarshalled from either a chain ID or network name.
-// if the inputted network is not found, it is set to -1.
-func (n *network) UnmarshalJSON(data []byte) error {
-	var chainId int64 = -1
-	var networkName string
-
-	// Try to unmarshal as either chain ID or network name
-	if err := json.Unmarshal(data, &chainId); err != nil {
-		// If unmarshalling as chain ID fails, try unmarshalling as network name
-		if err := json.Unmarshal(data, &networkName); err != nil {
-			return fmt.Errorf("failed to unmarshal network from json: %s", err)
+	// If unmarshalling as uint64 fails, try to unmarshal as string
+	var strValue string
+	if err := json.Unmarshal(data, &strValue); err == nil {
+		if parsedInt, err := strconv.ParseUint(strValue, 10, 64); err == nil {
+			v.intValue = &parsedInt
+		} else {
+			v.strValue = &strValue
 		}
+		return nil
 	}
 
-	// Search for the network in the networks slice
-	for _, realNetwork := range allNetworks {
-		if realNetwork.ChainId == uint64(chainId) || realNetwork.Name == networkName {
-			*n = network(realNetwork.ChainId)
-			return nil
-		}
-	}
-
-	// network is semantically invalid, set to -1
-	*n = network(-1)
-	return nil
+	// If both unmarshalling attempts fail, return an error
+	return fmt.Errorf("failed to unmarshal intOrString from json: %s", string(data))
 }
 
-func (network) JSONSchema() *jsonschema.Schema {
+func (v intOrString) String() string {
+	if v.intValue != nil {
+		return strconv.FormatUint(*v.intValue, 10)
+	}
+	if v.strValue != nil {
+		return *v.strValue
+	}
+	return ""
+}
+
+func (intOrString) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		OneOf: []*jsonschema.Schema{
 			{Type: "string"}, {Type: "integer"},

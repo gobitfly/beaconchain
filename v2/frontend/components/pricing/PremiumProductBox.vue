@@ -231,11 +231,11 @@ const minorFeatures = computed<Feature[]>(() => {
   }
 
   &[popular] .features-container {
-    padding: 18px 64px;
+    padding: 18px 64px 29px 64px;
   }
 
   &:not([popular]) .features-container {
-    padding: 18px 25px;
+    padding: 18px 25px 29px 25px;
   }
 
   .features-container {
@@ -289,7 +289,6 @@ const minorFeatures = computed<Feature[]>(() => {
   .plan-button {
     width: 100%;
     @include pricing.pricing_button;
-    margin-bottom: 5px;
 
     &.dismiss {
       display: flex;

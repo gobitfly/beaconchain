@@ -22,6 +22,7 @@ type DataAccessor interface {
 	ValidatorDashboardRepository
 	SearchRepository
 	NetworkRepository
+	UserRepository
 
 	Close()
 
@@ -29,13 +30,8 @@ type DataAccessor interface {
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
 	GetProductSummary() (*t.ProductSummary, error)
-	// TODO: move to user repository
-	GetUser(email string) (*t.User, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
-
-	GetUserInfo(id uint64) (*t.UserInfo, error)
-	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 }
 
 type DataAccessService struct {

@@ -8,26 +8,28 @@ type SearchValidator struct {
 }
 
 type SearchValidatorsByDepositEnsName struct {
-	EnsName    string
-	Validators []uint64
+	EnsName string
+	Address []byte
+	Count   uint64
 }
 
 type SearchValidatorsByDepositAddress struct {
-	Address    []byte
-	Validators []uint64
+	Address []byte
+	Count   uint64
 }
 
 type SearchValidatorsByWithdrwalCredential struct {
 	WithdrawalCredential []byte
-	Validators           []uint64
+	Count                uint64
 }
 
 type SearchValidatorsByWithrawalEnsName struct {
-	EnsName    string
-	Validators []uint64
+	EnsName string
+	Address []byte
+	Count   uint64
 }
 
 type SearchValidatorsByGraffiti struct {
-	Graffiti   string
-	Validators []uint64
+	Graffiti string
+	Count    uint64
 }

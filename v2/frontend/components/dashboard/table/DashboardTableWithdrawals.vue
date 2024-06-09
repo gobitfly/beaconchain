@@ -23,7 +23,7 @@ const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmou
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
-const { hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -44,7 +44,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch([dashboardKey, overview], () => {
   loadData()
   getTotalAmount(dashboardKey.value)
 }, { immediate: true })
@@ -174,7 +174,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" default="-" />
+                  {{ slotProps.data.index || "-" }}
                 </BcLink>
                 <div v-else class="all-time-total">
                   Σ

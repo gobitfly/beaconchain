@@ -38,7 +38,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	router.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 
-	addRoutes(handlerService, publicRouter, internalRouter, debug)
+	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
 	return router
 }
@@ -95,7 +95,10 @@ var config = {
 }
 console.log('config',config)
 
-fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>{
+	config.csrfToken = r.headers.get('x-csrf-token')
+	return r.json()
+}).then((d)=>{
 	console.log('userInfo',d)
 	document.getElementById('userInfoRaw').innerText = JSON.stringify(d, null, 2)
 }).catch(err => {
@@ -118,7 +121,10 @@ function createCheckoutSession(priceId) {
 	if (isNaN(addonQuantity)) addonQuantity = 1
 	return fetch("/user/stripe/create-checkout-session", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: { 
+			"Content-Type": "application/json",
+			"X-CSRF-Token": config.csrfToken
+		},
 		credentials: 'include',
 		body: JSON.stringify({ priceId: priceId, addonQuantity: addonQuantity })
 	})
@@ -152,7 +158,10 @@ for (let i = 0; i < manageBillingButtons.length; i++) {
 	manageBillingButtons[i].addEventListener("click", function (e) {
     fetch("/user/stripe/customer-portal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+		"Content-Type": "application/json",
+		"X-CSRF-Token": config.csrfToken
+	},
       credentials: "include",
       body: JSON.stringify({returnURL: window.location.href}),
     })
@@ -211,8 +220,8 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 	)
 }
 
-func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
-	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, debug)
+func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
+	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, cfg)
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
@@ -342,7 +351,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
 }
 
-func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
+func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	vdbPath := "/validator-dashboards"
 	publicRouter.HandleFunc(vdbPath, hs.PublicPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
 	internalRouter.HandleFunc(vdbPath, hs.InternalPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
@@ -350,9 +359,9 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
-	if !debug {
-		publicDashboardRouter.Use(hs.VDBAuthMiddleware)
-		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey))
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
 	}
 
 	endpoints := []endpoint{

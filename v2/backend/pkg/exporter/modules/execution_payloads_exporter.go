@@ -18,19 +18,31 @@ import (
 )
 
 type executionPayloadsExporter struct {
-	ModuleContext ModuleContext
-	ExportMutex   *sync.Mutex
+	ModuleContext   ModuleContext
+	ExportMutex     *sync.Mutex
+	CachedViewMutex *sync.Mutex
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionPayloadsExporter{
-		ModuleContext: moduleContext,
-		ExportMutex:   &sync.Mutex{},
+		ModuleContext:   moduleContext,
+		ExportMutex:     &sync.Mutex{},
+		CachedViewMutex: &sync.Mutex{},
 	}
 }
 
 func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	return nil // nop
+	// if mutex is locked, return early
+	if !d.ExportMutex.TryLock() {
+		log.Infof("execution payloads exporter is already running")
+		return nil
+	}
+	defer d.ExportMutex.Unlock()
+	err = d.maintainTable()
+	if err != nil {
+		return fmt.Errorf("error maintaining table: %w", err)
+	}
+	return nil
 }
 
 func (d *executionPayloadsExporter) Init() error {
@@ -48,16 +60,11 @@ func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventC
 // can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	// if mutex is locked, return early
-	if !d.ExportMutex.TryLock() {
+	if !d.CachedViewMutex.TryLock() {
 		log.Infof("execution payloads exporter is already running")
 		return nil
 	}
-	defer d.ExportMutex.Unlock()
-
-	err = d.maintainTable()
-	if err != nil {
-		return fmt.Errorf("error maintaining table: %w", err)
-	}
+	defer d.CachedViewMutex.Unlock()
 
 	start := time.Now()
 	// update cached view

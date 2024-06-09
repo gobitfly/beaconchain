@@ -60,6 +60,7 @@ const onInput = (value: string) => {
   display: flex;
   align-items: center;
   gap: var(--padding);
+  flex-shrink: 0;
 
   .side {
     flex-grow: 1;
