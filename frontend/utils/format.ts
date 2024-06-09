@@ -2,7 +2,6 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import { useNetwork } from '~/composables/useNetwork'
 
 const { epochToTs, slotToTs } = useNetwork()
 

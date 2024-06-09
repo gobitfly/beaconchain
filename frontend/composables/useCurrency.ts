@@ -1,6 +1,4 @@
 import { reduce } from 'lodash-es'
-import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import { useNetwork } from '~/composables/useNetwork'
 import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'

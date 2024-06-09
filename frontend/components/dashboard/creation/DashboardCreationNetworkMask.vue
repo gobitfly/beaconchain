@@ -1,11 +1,17 @@
 <script lang="ts" setup>
-import { ChainInfo, ChainIDs } from '~/types/networks'
+import { ChainInfo, ChainIDs, isMainNet } from '~/types/networks'
 import { useNetwork } from '~/composables/useNetwork'
 
 const { currentNetwork } = useNetwork()
 
-// TODO: Get this list from the API
-const ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Holesky]
+// TODO: get the list from the API...
+let ValidatorDashboardNetworkList: ChainIDs[]
+if (isMainNet(currentNetwork.value)) {
+  ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Gnosis]
+} else {
+  ValidatorDashboardNetworkList = [ChainIDs.Holesky, ChainIDs.Chiado]
+}
+// ... and remove this.
 
 const network = defineModel<ChainIDs>('network')
 const selection = ref<string>('')
@@ -16,7 +22,7 @@ const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
   return {
     value: String(chainId),
     text: ChainInfo[chainId].name,
-    disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all networks in `ValidatorDashboardNetworkList`
+    disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
     componentClass: 'dashboard-creation-button-network-icon'
   }
 })
