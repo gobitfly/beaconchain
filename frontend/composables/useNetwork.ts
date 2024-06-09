@@ -45,7 +45,7 @@ export function useNetwork () {
     if (info.timeStampSlot0 === undefined) {
       return 0
     }
-    return 24 * 60 * 60 / (info.slotsPerEpoch! * info.secondsPerSlot!)
+    return 24 * 60 * 60 / (info.slotsPerEpoch * info.secondsPerSlot)
   }
 
   function epochToTs (epoch: number): number | undefined {
@@ -54,7 +54,7 @@ export function useNetwork () {
       return undefined
     }
 
-    return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch!) * info.secondsPerSlot!)
+    return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch) * info.secondsPerSlot)
   }
 
   function slotToTs (slot: number): number | undefined {
@@ -63,7 +63,7 @@ export function useNetwork () {
       return undefined
     }
 
-    return info.timeStampSlot0 + (slot * info.secondsPerSlot!)
+    return info.timeStampSlot0 + (slot * info.secondsPerSlot)
   }
 
   function tsToSlot (ts: number): number {
@@ -71,7 +71,7 @@ export function useNetwork () {
     if (info.timeStampSlot0 === undefined) {
       return -1
     }
-    return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot!)
+    return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot)
   }
 
   function slotToEpoch (slot: number): number {
@@ -79,7 +79,7 @@ export function useNetwork () {
     if (info.timeStampSlot0 === undefined) {
       return -1
     }
-    return Math.floor(slot / info.slotsPerEpoch!)
+    return Math.floor(slot / info.slotsPerEpoch)
   }
 
   return {

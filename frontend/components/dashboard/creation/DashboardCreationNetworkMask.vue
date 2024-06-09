@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { IconNetwork } from '#components'
 import { ChainInfo, ChainIDs, isMainNet } from '~/types/networks'
 import { useNetwork } from '~/composables/useNetwork'
 
@@ -23,6 +24,8 @@ const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
     value: String(chainId),
     text: ChainInfo[chainId].name,
     disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
+    component: IconNetwork,
+    componentData: { chainId, colored: false },
     componentClass: 'dashboard-creation-button-network-icon'
   }
 })
