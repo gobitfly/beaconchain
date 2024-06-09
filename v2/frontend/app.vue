@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { generateUUID } from '~/utils/misc'
-import { useNetwork } from '~/composables/useNetwork'
 
 // Used for debugging purposes, might be removed or moved later
 provide('app-uuid', { value: generateUUID() })
