@@ -34,7 +34,7 @@ type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 // ------------------------------------------------------------
 // Summary Tab
 type VDBSummaryTableRow struct {
-	GroupId    uint64                  `json:"group_id"`
+	GroupId    int64                   `json:"group_id"`
 	Efficiency PeriodicValues[float64] `json:"efficiency"`
 	Validators []uint64                `json:"validators"`
 }
