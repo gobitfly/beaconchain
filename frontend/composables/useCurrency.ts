@@ -2,10 +2,11 @@ import { reduce } from 'lodash-es'
 import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
-  const { networkInfo } = useNetwork()
+  const { networkInfo } = useNetworkStore()
   const { t: $t } = useI18n()
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 

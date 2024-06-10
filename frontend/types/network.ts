@@ -251,7 +251,7 @@ export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
 
 /**
  * Should be used only when you test a network different from the current one.
- * Whereverer you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetwork.ts`.
+ * Whereverer you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetworkStore.ts`.
  */
 export function isMainNet (network: ChainIDs) : boolean {
   return (ChainInfo[network].mainNet === network)
@@ -259,7 +259,7 @@ export function isMainNet (network: ChainIDs) : boolean {
 
 /**
  * Should be used only when you test a network different from the current one.
- * Whereverer you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetwork.ts`.
+ * Whereverer you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetworkStore.ts`.
  */
 export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
@@ -267,7 +267,7 @@ export function isL1 (network: ChainIDs) : boolean {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Whereverer you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetwork.ts`.
+ * Whereverer you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetworkStore.ts`.
  */
 export function epochsPerDay (chainId: ChainIDs): number {
   const info = ChainInfo[chainId]
@@ -279,7 +279,7 @@ export function epochsPerDay (chainId: ChainIDs): number {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Whereverer you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetwork.ts`.
+ * Whereverer you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
  */
 export function epochToTs (chainId: ChainIDs, epoch: number): number | undefined {
   const info = ChainInfo[chainId]
@@ -292,7 +292,7 @@ export function epochToTs (chainId: ChainIDs, epoch: number): number | undefined
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Whereverer you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetwork.ts`.
+ * Whereverer you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetworkStore.ts`.
  */
 export function slotToTs (chainId: ChainIDs, slot: number): number | undefined {
   const info = ChainInfo[chainId]
@@ -305,7 +305,7 @@ export function slotToTs (chainId: ChainIDs, slot: number): number | undefined {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Whereverer you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetwork.ts`.
+ * Whereverer you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
  */
 export function tsToSlot (chainId: ChainIDs, ts: number): number {
   const info = ChainInfo[chainId]
@@ -317,7 +317,7 @@ export function tsToSlot (chainId: ChainIDs, ts: number): number {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Whereverer you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetwork.ts`.
+ * Whereverer you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
  */
 export function slotToEpoch (chainId: ChainIDs, slot: number): number {
   const info = ChainInfo[chainId]
