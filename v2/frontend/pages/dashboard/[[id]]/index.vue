@@ -71,6 +71,7 @@ watch(dashboardKey, (newKey, oldKey) => {
       :display-type="'modal'"
     />
     <BcPageWrapper>
+      <DashboardSharedDashboardModal />
       <template #top>
         <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
