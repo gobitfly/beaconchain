@@ -145,6 +145,17 @@ const addValidator = (result: ResultSuggestion) => {
   searchBar.value!.empty()
 }
 
+// called for each row in the drop-down of the search bar and returns `true` if the row must be deactivated
+function isSearchResultRestricted (result: ResultSuggestion) : boolean {
+  switch (result.type) {
+    case ResultType.ValidatorsByIndex:
+    case ResultType.ValidatorsByPubkey:
+      return false
+    default:
+      return isPublic.value || !user.value?.premium_perks?.ad_free
+  }
+}
+
 const editSelected = () => {
   hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
@@ -265,6 +276,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :color-theme="SearchbarColors.Default"
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
             :only-networks="[ChainIDs.Ethereum]"
+            :row-lacks-premium-subscription="isSearchResultRestricted"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :screen-width-causing-sudden-change="0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here to avoid visual bugs in the list of results */"
             class="search-bar"

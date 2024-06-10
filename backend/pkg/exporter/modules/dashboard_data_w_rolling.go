@@ -2,6 +2,7 @@ package modules
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"text/template"
@@ -566,25 +567,47 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 	custom.Log.Debugf("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
-	result, err := tx.Exec(queryBuffer.String(),
-		custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	if err != nil {
-		return errors.Wrap(err, "failed to update rolling table")
+	resultChan := make(chan sql.Result, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		result, err := tx.ExecContext(ctx, queryBuffer.String(),
+			custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch,
+		)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- result
+	}()
+
+	select {
+	case result := <-resultChan:
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return errors.Wrap(err, "failed to get rows affected")
+		}
+
+		custom.Log.Infof("updated %s, affected %d rows", custom.TableTo, rowsAffected)
+		if rowsAffected == 0 {
+			custom.Log.Infof("no rows affected, nothing to update for %s", custom.TableTo)
+		}
+
+		return nil
+	case err := <-errChan:
+		if err != nil {
+			return errors.Wrap(err, "failed to update rolling table")
+		}
+	case <-ctx.Done():
+		// Query took longer than 5 minutes, cancel and return error
+		cancel()
+		return errors.New("query took longer than 5 minutes, canceled")
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err, "failed to get rows affected")
-	}
-
-	custom.Log.Infof("updated %s, affected %d rows", custom.TableTo, rowsAffected)
-	if rowsAffected == 0 {
-		custom.Log.Infof("no rows affected, nothing to update for %s", custom.TableTo)
-	}
-
-	return err
+	return nil
 }
 
 // startEpoch incl, endEpoch excl
