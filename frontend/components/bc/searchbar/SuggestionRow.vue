@@ -25,8 +25,9 @@ const props = defineProps<{
   barShape: SearchbarShape,
   colorTheme: SearchbarColors,
   dropdownLayout : SearchbarDropdownLayout,
-  screenWidthCausingSuddenChange: number,
-  barPurpose: SearchbarPurpose
+  barPurpose: SearchbarPurpose,
+  rowLacksPremiumSubscription: boolean,
+  screenWidthCausingSuddenChange: number
 }>()
 
 const { t } = useI18n()
@@ -60,16 +61,18 @@ function formatDescriptionCell () : string {
   }
   return props.suggestion.output.description
 }
+
+const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
 </script>
 
 <template>
   <div
     v-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory"
     class="rowstyle_name-description-low-level-category"
-    :class="[barShape,colorTheme,dropdownLayout]"
+    :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
   >
     <!-- In this mode, all possible cells are shown (this was the very first design on Figma) -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,dropdownLayout]">
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork
         :chain-id="props.suggestion.chainId"
@@ -79,16 +82,16 @@ function formatDescriptionCell () : string {
         class="network-icon"
       />
     </div>
-    <div v-else class="cell-icons" :class="[barShape,dropdownLayout]">
+    <div v-else class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_name"
-      :class="[barShape,dropdownLayout]"
+      :class="[barShape,dropdownLayout,deactivationClass]"
       :text="suggestion.output.name"
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="[barShape,dropdownLayout]" :width-mediaquery-threshold="screenWidthCausingSuddenChange">
+    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="[barShape,dropdownLayout,deactivationClass]" :width-mediaquery-threshold="screenWidthCausingSuddenChange">
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
@@ -103,7 +106,10 @@ function formatDescriptionCell () : string {
         :class="[barShape, colorTheme, dropdownLayout, suggestion.output.description?'greyish':'']"
       />
     </BcSearchbarMiddleEllipsis>
-    <div class="cell-category" :class="[barShape,dropdownLayout]">
+    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
+      <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
+    </div>
+    <div class="cell-category" :class="[barShape,dropdownLayout,deactivationClass]">
       <span class="category-label" :class="[barShape,colorTheme,dropdownLayout]">
         {{ t(...CategoryInfo[TypeInfo[props.suggestion.type].category].title) }}
       </span>
@@ -113,10 +119,10 @@ function formatDescriptionCell () : string {
   <div
     v-else-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription"
     class="rowstyle_subcategory-identification-description"
-    :class="[barShape,colorTheme,dropdownLayout]"
+    :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
   >
     <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="barShape">
+    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork
         :chain-id="props.suggestion.chainId"
@@ -126,19 +132,22 @@ function formatDescriptionCell () : string {
         class="network-icon"
       />
     </div>
-    <div v-else class="cell-icons" :class="barShape">
+    <div v-else class="cell-icons" :class="[barShape,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
     </div>
-    <div class="cell-subcategory" :class="[barShape,dropdownLayout]">
+    <div class="cell-subcategory" :class="[barShape,dropdownLayout,deactivationClass]">
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_bi_identification"
-      :class="[barShape,dropdownLayout]"
+      :class="[barShape,dropdownLayout,deactivationClass]"
       :text="formatIdentificationCell()"
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout]">
+    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
+      <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
+    </div>
+    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout,deactivationClass]">
       {{ formatDescriptionCell() }}
     </div>
   </div>
@@ -150,6 +159,11 @@ function formatDescriptionCell () : string {
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use "~/assets/css/fonts.scss";
+
+.deactivated {
+  opacity: 0.6;
+  pointer-events: none;
+}
 
 @mixin common-to-all-rowstyles {
   cursor: pointer;
@@ -166,7 +180,11 @@ function formatDescriptionCell () : string {
   border-radius: var(--border-radius);
   @include fonts.standard_text;
 
-  &:hover {
+  &.deactivated {
+    opacity: unset;
+  }
+
+  &:hover:not(.deactivated) {
     &.default {
       background-color: var(--dropdown-background-hover);
     }
@@ -231,6 +249,19 @@ function formatDescriptionCell () : string {
     margin-top: auto;
     margin-bottom: auto;
   }
+
+  .premium-invitation {
+    display: flex;
+    position: relative;
+    margin-top: auto;
+    margin-bottom: auto;
+    justify-content: right;
+    .gem {
+      margin-left: 10px;
+      margin-right: 10px;
+    }
+    pointer-events: auto;
+  }
 }
 
 // specific style when SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory
@@ -239,10 +270,10 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   &.large-dropdown {
-    grid-template-columns: 40px 130px auto 130px;
+    grid-template-columns: 40px 130px 1fr min-content 130px;
   }
   &.narrow-dropdown {
-    grid-template-columns: 40px 130px auto;
+    grid-template-columns: 40px 130px 1fr min-content;
   }
 
   .cell_name {
@@ -288,11 +319,19 @@ function formatDescriptionCell () : string {
     }
   }
 
+  .premium-invitation {
+    grid-column: 4;
+    &.narrow-dropdown {
+      grid-row: 1;
+      grid-row-end: span 2;
+    }
+  }
+
   .cell-category {
     display: flex;
     position: relative;
     &.large-dropdown {
-      grid-column: 4;
+      grid-column: 5;
       grid-row: 1;
       margin-top: auto;
       margin-bottom: auto;
@@ -302,6 +341,7 @@ function formatDescriptionCell () : string {
       grid-column: 2;
       grid-row: 2;
     }
+
     .category-label {
       display: inline-flex;
       position: relative;
@@ -327,10 +367,10 @@ function formatDescriptionCell () : string {
   @include common-to-all-rowstyles;
 
   &.large-dropdown {
-    grid-template-columns: 40px 126px auto min-content;
+    grid-template-columns: 40px 126px 1fr min-content min-content;
   }
   &.narrow-dropdown {
-    grid-template-columns: 40px auto min-content;
+    grid-template-columns: 40px 1fr min-content min-content;
   }
 
   .cell-subcategory {
@@ -362,8 +402,18 @@ function formatDescriptionCell () : string {
     &.narrow-dropdown {
       grid-row: 2;
       grid-column: 2;
-      grid-column-end: span 2;
+      grid-column-end: span 3;
       font-weight: var(--standard_text_font_weight);
+    }
+  }
+
+  .premium-invitation {
+    &.large-dropdown {
+      grid-column: 4;
+    }
+    &.narrow-dropdown {
+      grid-row: 1;
+      grid-column: 3;
     }
   }
 
@@ -371,13 +421,13 @@ function formatDescriptionCell () : string {
     @include cells_blockchain-info_common;
 
     &.large-dropdown {
-      grid-column: 4;
+      grid-column: 5;
       width: 128px;
       padding-left: 16px;
     }
     &.narrow-dropdown {
       grid-row: 1;
-      grid-column: 3;
+      grid-column: 4;
       color: var(--searchbar-text-detail-default);
     }
     box-sizing: border-box;
