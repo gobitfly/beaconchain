@@ -72,7 +72,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
-const searchPlaceholder = computed(() => showInDevelopment ? $t(isPublic.value ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder') : undefined)
+const searchPlaceholder = computed(() => $t(isPublic.value ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder') : undefined)
 
 </script>
 <template>
