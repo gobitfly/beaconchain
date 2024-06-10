@@ -32,7 +32,7 @@ const colsVisible = computed(() => {
     slot: width.value > 875,
     epoch: width.value > 805,
     recipient: width.value > 695,
-    amount: width.value > 500
+    age: width.value > 500
   }
 })
 
@@ -227,7 +227,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -260,7 +263,6 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               </template>
             </Column>
             <Column
-              v-if="colsVisible.amount"
               field="amount"
               :sortable="true"
               body-class="amount"
