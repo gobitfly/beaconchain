@@ -20,7 +20,8 @@ type CompareRow = {
   type: RowType,
   label?: string,
   comingSoon?: boolean,
-  values?: CompareValue[]
+  values?: CompareValue[],
+  className?: string
 }
 
 const showContent = ref(false)
@@ -49,8 +50,8 @@ const rows = computed(() => {
       tooltip
     }
   }
-  const addRow = (type: RowType, property?: string, comingSoon = false) => {
-    const row: CompareRow = { type, comingSoon }
+  const addRow = (type: RowType, property?: string, className?: string, comingSoon = false) => {
+    const row: CompareRow = { type, comingSoon, className }
     switch (type) {
       case 'header':
         row.values = sorted.map(p => ({ value: p.product_name }))
@@ -74,30 +75,30 @@ const rows = computed(() => {
   addRow('header')
 
   addRow('group', 'general')
-  addRow('perc', 'ad_free')
-  addRow('perc', 'support_us')
+  addRow('perc', 'ad_free', 'first-in-group')
+  addRow('perc', 'support_us', 'last-in-group')
 
   addRow('group', 'dashboard')
-  addRow('perc', 'validator_dashboards')
+  addRow('perc', 'validator_dashboards', 'first-in-group')
   addRow('perc', 'validators_per_dashboard')
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
-  addRow('perc', 'manage_dashboard_via_api', true)
+  addRow('perc', 'manage_dashboard_via_api', undefined, true)
   addRow('perc', 'heatmap_history_seconds')
-  addRow('perc', 'summary_chart_history_seconds')
+  addRow('perc', 'summary_chart_history_seconds', 'last-in-group')
 
-  addRow('group', 'notification', true)
-  addRow('perc', 'email_notifications_per_day')
+  addRow('group', 'notification', undefined, true)
+  addRow('perc', 'email_notifications_per_day', 'first-in-group')
   addRow('perc', 'configure_notifications_via_api')
   addRow('perc', 'validator_group_notifications')
-  addRow('perc', 'webhook_endpoints')
+  addRow('perc', 'webhook_endpoints', 'last-in-group')
 
   addRow('group', 'mobille_app')
-  addRow('perc', 'mobile_app_custom_themes')
+  addRow('perc', 'mobile_app_custom_themes', 'first-in-group')
   addRow('perc', 'mobile_app_widget')
   addRow('perc', 'monitor_machines')
   addRow('perc', 'machine_monitoring_history_seconds')
-  addRow('perc', 'custom_machine_alerts')
+  addRow('perc', 'custom_machine_alerts', 'last last-in-group')
   return rows
 })
 
@@ -107,7 +108,7 @@ const rows = computed(() => {
   <div class="compare-plans-container">
     <h1>{{ $t('pricing.compare') }}</h1>
     <div class="content" :class="{ 'show-content': showContent }">
-      <div v-for="(row, index) in rows" :key="index" :class="row.type" class="row">
+      <div v-for="(row, index) in rows" :key="index" :class="[row.type, row.className]" class="row">
         <div class="label">
           <span>{{ row.label }}</span>
           <span v-if="row.comingSoon" class="coming-soon"> {{ $t('pricing.premium_product.coming_soon') }}</span>
@@ -163,7 +164,7 @@ const rows = computed(() => {
   }
 
   .content {
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     width: 100%;
     padding-bottom: 8px;
@@ -178,7 +179,7 @@ const rows = computed(() => {
     }
 
     .button-row {
-      position: absolute;
+      position: sticky;
       z-index: 10;
       bottom: 20px;
       left: 0;
@@ -189,14 +190,19 @@ const rows = computed(() => {
 
     &.show-content {
       max-height: unset;
+      overflow-x: auto;
 
       .blur {
         display: none;
       }
 
       .button-row {
-        position: unset;
-        padding-top: 20px;
+        padding-top: 75px;
+        bottom: 0;
+
+        @media (max-width: 1360px) {
+          padding-top: 15px;
+        }
       }
     }
 
@@ -205,6 +211,7 @@ const rows = computed(() => {
       gap: 7px;
       min-height: 51px;
       width: calc(100% - 1px);
+      min-width: fit-content;
       border-left: 1px solid transparent;
 
       &.header,
@@ -219,6 +226,10 @@ const rows = computed(() => {
         .label {
           padding-left: 21px;
         }
+      }
+
+      &.perc {
+        min-height: 36px;
       }
 
       &.header {
@@ -308,12 +319,30 @@ const rows = computed(() => {
         }
       }
 
-      &:last-child {
+      &.last {
         .value {
           border-bottom: var(--border-style);
 
           border-bottom-left-radius: var(--border-radius);
           border-bottom-right-radius: var(--border-radius);
+        }
+      }
+
+      &.first-in-group {
+        min-height: 42px;
+
+        .label,
+        .value {
+          padding-top: 6px;
+        }
+      }
+
+      &.last-in-group {
+        min-height: 42px;
+
+        .label,
+        .value {
+          padding-bottom: 6px;
         }
       }
     }
