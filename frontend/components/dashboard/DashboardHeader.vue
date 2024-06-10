@@ -28,7 +28,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { isLoggedIn } = useUserStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
-const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
+const { dashboardKey, dashboardType, setDashboardKey, isPrivate, isShared } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -56,7 +56,7 @@ const getDashboardName = (db: Dashboard): string => {
 }
 
 const items = computed<MenuBarEntry[]>(() => {
-  if (dashboards.value === undefined) {
+  if (dashboards.value === undefined || isShared.value) {
     return []
   }
 
@@ -168,7 +168,7 @@ const editDashboard = () => {
           </span>
         </template>
       </Menubar>
-      <Button class="p-button-icon-only" @click="emit('showCreation')">
+      <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>
     </div>
