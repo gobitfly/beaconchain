@@ -5,9 +5,16 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 const { t: $t } = useI18n()
 
 useBcSeo('pricing.seo_title')
+const { stripeInit } = useStripeProvider()
 
-const { getProducts } = useProductsStore()
+const { products, getProducts } = useProductsStore()
+
 await useAsyncData('get_products', () => getProducts())
+watch(products, () => {
+  if (products.value?.stripe_public_key) {
+    stripeInit(products.value.stripe_public_key)
+  }
+}, { immediate: true })
 
 const isYearly = ref(true)
 
