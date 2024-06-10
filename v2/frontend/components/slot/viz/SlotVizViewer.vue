@@ -4,7 +4,7 @@ import { type SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
 import { IconSlotAttestation, IconSlotBlockProposal, IconSlotSlashing, IconSlotSync } from '#components'
 import { COOKIE_KEY } from '~/types/cookie'
-import { useNetwork } from '~/composables/useNetwork'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
   data: SlotVizEpoch[]
@@ -12,7 +12,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { tsToSlot } = useNetwork()
+const { tsToSlot } = useNetworkStore()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync'] })
 

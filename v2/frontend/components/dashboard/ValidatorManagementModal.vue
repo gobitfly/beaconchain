@@ -14,10 +14,11 @@ import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import { type SearchBar, SearchbarShape, SearchbarColors, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 import { API_PATH, type PathValues } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
-const { currentNetwork } = useNetwork()
+const { currentNetwork } = useNetworkStore()
 
 const { width } = useWindowSize()
 

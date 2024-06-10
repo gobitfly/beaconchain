@@ -35,7 +35,7 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
-import { useNetwork } from '~/composables/useNetwork'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
 const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
@@ -46,7 +46,7 @@ defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
 const { t } = useI18n()
 const { fetch } = useCustomFetch()
-const { availableNetworks } = useNetwork()
+const { availableNetworks } = useNetworkStore()
 
 const props = defineProps<{
   barShape: SearchbarShape, // shape of the bar

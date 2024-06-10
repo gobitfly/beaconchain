@@ -5,10 +5,14 @@ const { getUser } = useUserStore()
 const { tick } = useInterval(12)
 const { refreshLatestState } = useLatestStateStore()
 
+if (useRuntimeConfig().public.chainIdByDefault) {
+  useNetworkStore().setCurrentNetwork(Number(useRuntimeConfig().public.chainIdByDefault))
+}
+
 await useAsyncData('latest_state', () => refreshLatestState(), { watch: [tick] })
 await useAsyncData('get_user', () => getUser())
-
 </script>
+
 <template>
   <slot />
 </template>

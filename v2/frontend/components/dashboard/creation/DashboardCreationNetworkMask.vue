@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
 import { ChainInfo, ChainIDs } from '~/types/network'
-import { useNetwork } from '~/composables/useNetwork'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { currentNetwork, isMainNet } = useNetwork()
+const { currentNetwork, isMainNet } = useNetworkStore()
 
 // TODO: get the list from the API...
 let ValidatorDashboardNetworkList: ChainIDs[]

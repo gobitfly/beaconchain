@@ -15,12 +15,6 @@ useHead({
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
-
-const { setCurrentNetwork } = useNetwork()
-if (useRuntimeConfig().public.chainIdByDefault) {
-  setCurrentNetwork(Number(useRuntimeConfig().public.chainIdByDefault))
-}
-
 </script>
 
 <template>

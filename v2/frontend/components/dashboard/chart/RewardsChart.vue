@@ -22,11 +22,11 @@ import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashb
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
-import { useNetwork } from '~/composables/useNetwork'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 import { useFormat } from '~/composables/useFormat'
 
 const { formatEpochToDate } = useFormat()
-const { networkInfo } = useNetwork()
+const { networkInfo } = useNetworkStore()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
 const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? networkNativeELcurrency.value : currency.value)
