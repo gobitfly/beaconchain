@@ -661,9 +661,6 @@
       "machine_monitoring_history_seconds": "Machine monitoring history",
       "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
     },
-    "tooltips": {
-      "validators_per_dashboard": "After Pectra hardfork: {eth} ETH maximum effective balance"
-    },
     "view_addons": "View Add-Ons",
     "addons": {
       "title": "Premium Add-Ons",

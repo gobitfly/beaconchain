@@ -43,7 +43,7 @@ const rows = computed(() => {
 
     let tooltip: string | undefined
     if (property === 'validators_per_dashboard') {
-      tooltip = $t(`pricing.tooltips.${property}`, { eth: perks.validators_per_dashboard * 32 })
+      tooltip = $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(perks.validators_per_dashboard * 32) })
     }
 
     return {
@@ -59,7 +59,7 @@ const rows = computed(() => {
         break
       case 'group':
         row.label = $t(`pricing.groups.${property}`)
-        row.values = sorted.map(p => ({}))
+        row.values = sorted.map(_p => ({}))
         break
       case 'perc':
         row.label = $t(`pricing.percs.${property}`)
@@ -121,24 +121,20 @@ const rows = computed(() => {
           <span v-else>
             {{ value.value }}
           </span>
-          <BcTooltip v-if="value.tooltip" :fit-content="true" :text="value.tooltip">
+          <BcTooltip v-if="value.tooltip" :fit-content="true" :text="value.tooltip" class="info-icon">
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
       </div>
       <BcBlurOverlay class="blur" />
       <div class="button-row">
-        <Button @click="()=>showContent = !showContent">
-          {{ $t(showContent?'pricing.hide_feature':'pricing.show_feature') }}
+        <Button class="pricing_button" @click="() => showContent = !showContent">
+          {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
         </Button>
       </div>
     </div>
   </div>
 </template>
-
-<script lang="ts" setup>
-
-</script>
 
 <style lang="scss" scoped>
 .compare-plans-container {
@@ -146,7 +142,7 @@ const rows = computed(() => {
   width: 100%;
 
   border-radius: 7px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
 
   margin-bottom: 94px;
@@ -289,11 +285,20 @@ const rows = computed(() => {
 
         border-left: var(--border-style);
         border-right: var(--border-style);
-        border-top-left-radius: var(--border-radius);
-        border-top-right-radius: var(--border-radius);
 
         @media (max-width: 1360px) {
           width: 100px;
+        }
+
+        .info-icon {
+          height: 9px;
+          width: 9px;
+          display: inline-flex;
+
+          svg {
+            width: 100%;
+            height: 100%;
+          }
         }
       }
 
