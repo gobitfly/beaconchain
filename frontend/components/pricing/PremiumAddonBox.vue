@@ -42,7 +42,6 @@ const addonSubscription = computed(() => {
   return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon)
 })
 
-// TODO: Ponder on moving this to provider (as the code for the plans is very similar)
 async function buttonCallback () {
   if (isStripeDisabled.value) {
     return
