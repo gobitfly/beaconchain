@@ -315,6 +315,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
+                    {{ $t('common.age') }}:
+                  </div>
+                  <BcFormatTimePassed type="slot" :value="slotProps.data.slot" />
+                </div>
+                <div class="row">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.recipient') }}:
                   </div>
                   <BcFormatHash
@@ -326,12 +332,6 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                     :ens="slotProps.data.recipient?.ens"
                   />
                   <span v-else>-</span>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t('dashboard.validator.col.amount') }}:
-                  </div>
-                  <BcFormatValue :value="slotProps.data.amount" :class="getExpansionValueClass(slotProps.data)" />
                 </div>
               </div>
             </template>
