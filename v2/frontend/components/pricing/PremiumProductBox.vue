@@ -1,17 +1,17 @@
 <script lang="ts" setup>
-// TODO: Add links to Buttons (don't forget Downgrade "button")
-
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
-const { bestPremiumProduct } = useProductsStore()
+
+/// ///////////////
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
-const { products } = useProductsStore()
-const { user } = useUserStore()
+const { products, bestPremiumProduct } = useProductsStore()
+const { user, isLoggedIn } = useUserStore()
 const { t: $t } = useI18n()
+const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
   product: PremiumProduct,
@@ -55,30 +55,51 @@ const percentages = computed(() => {
   }
 })
 
+const premiumSubscription = computed(() => {
+  return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
+})
+
+async function buttonCallback () {
+  if (isStripeDisabled.value) {
+    return
+  }
+
+  if (isLoggedIn.value) {
+    if (premiumSubscription.value) {
+      await stripeCustomerPortal()
+    } else {
+      await stripePurchase(props.isYearly ? props.product.stripe_price_id_yearly : props.product.stripe_price_id_monthly, 1)
+    }
+  } else {
+    await navigateTo('/register')
+  }
+}
+
 const planButton = computed(() => {
   let isDowngrade = false
   let text = $t('pricing.premium_product.button.select_plan')
 
-  if (user.value?.subscriptions) {
-    const subscription = user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
-    if (!subscription) {
-      text = $t('pricing.premium_product.button.select_plan')
-    } else if (subscription.product_id === props.product.product_id_monthly || subscription.product_id === props.product.product_id_yearly) {
-      text = $t('pricing.premium_product.button.manage_plan')
-    } else {
-      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === subscription.product_id || product.product_id_yearly === subscription.product_id)
-      if (subscribedProduct !== undefined) {
-        if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
-          text = $t('pricing.premium_product.button.upgrade')
-        } else {
-          isDowngrade = true
-          text = $t('pricing.premium_product.button.downgrade')
+  if (isLoggedIn.value) {
+    if (premiumSubscription.value) {
+      if (premiumSubscription.value.product_id === props.product.product_id_monthly || premiumSubscription.value.product_id === props.product.product_id_yearly) {
+        text = $t('pricing.premium_product.button.manage_plan')
+      } else {
+        const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === premiumSubscription.value!.product_id || product.product_id_yearly === premiumSubscription.value!.product_id)
+        if (subscribedProduct !== undefined) {
+          if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+            text = $t('pricing.premium_product.button.upgrade')
+          } else {
+            isDowngrade = true
+            text = $t('pricing.premium_product.button.downgrade')
+          }
         }
       }
     }
+  } else {
+    text = $t('pricing.sign_up')
   }
 
-  return { text, isDowngrade }
+  return { text, isDowngrade, disabled: isStripeDisabled.value || undefined }
 })
 
 const mainFeatures = computed<Feature[]>(() => {
@@ -185,10 +206,10 @@ const minorFeatures = computed<Feature[]>(() => {
           :link="feature.link"
         />
       </div>
-      <div v-if="planButton.isDowngrade" class="plan-button dismiss">
+      <div v-if="planButton.isDowngrade" :disabled="planButton.disabled" class="plan-button dismiss" @click="buttonCallback()">
         {{ planButton.text }}
       </div>
-      <Button v-else :label="planButton.text" class="plan-button" />
+      <Button v-else :label="planButton.text" :disabled="planButton.disabled" class="plan-button" @click="buttonCallback()" />
     </div>
   </div>
 </template>

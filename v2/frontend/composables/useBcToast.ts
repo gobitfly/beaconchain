@@ -1,5 +1,5 @@
 import { inject, warn } from 'vue'
-import type { BcToastProvider, ToastData } from '~/types/taost'
+import type { BcToastProvider, ToastData } from '~/types/toast'
 
 export function useBcToast () {
   const toast = inject<BcToastProvider>('bcToast')

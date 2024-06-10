@@ -611,6 +611,7 @@
     "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
+    "sign_up": "Sign Up",
     "premium_product": {
       "popular": "Popular!",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
