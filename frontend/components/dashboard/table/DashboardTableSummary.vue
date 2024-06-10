@@ -72,12 +72,14 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
+const searchPlaceholder = computed(() => showInDevelopment ? $t(isPublic.value ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder') : undefined)
+
 </script>
 <template>
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.summary.title')"
-      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
@@ -100,7 +102,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
           >
             <Column
               field="group_id"
-              :sortable="true"
+              :sortable="showInDevelopment"
               body-class="group-id bold"
               header-class="group-id"
               :header="$t('dashboard.validator.col.group')"
@@ -111,7 +113,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             </Column>
             <Column
               field="efficiency_last_24h"
-              :sortable="true"
+              :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_last_24h')"
             >
               <template #body="slotProps">
@@ -121,7 +123,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               v-if="colsVisible.efficiency_plus"
               field="efficiency_last_7d"
-              :sortable="true"
+              :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_last_7d')"
             >
               <template #body="slotProps">
@@ -131,7 +133,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               v-if="colsVisible.efficiency_plus"
               field="efficiency_last_30d"
-              :sortable="true"
+              :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_last_30d')"
             >
               <template #body="slotProps">
@@ -141,7 +143,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               v-if="colsVisible.efficiency_plus"
               field="efficiency_all_time"
-              :sortable="true"
+              :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_all_time')"
             >
               <template #body="slotProps">
@@ -151,7 +153,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
             <Column
               v-if="colsVisible.validator"
               class="validator_column"
-              :sortable="true"
+              :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.validators')"
             >
               <template #body="slotProps">
