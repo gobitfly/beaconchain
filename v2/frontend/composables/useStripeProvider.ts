@@ -1,4 +1,5 @@
-import { provide } from 'vue'
+import { provide, warn } from 'vue'
+import { type Stripe, loadStripe } from '@stripe/stripe-js'
 import type { StripeProvider } from '~/types/stripe'
 import type { StripeCustomerPortal, StripeCreateCheckoutSession } from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
@@ -6,47 +7,59 @@ import { API_PATH } from '~/types/customFetch'
 export function useStripeProvider () {
   const { fetch } = useCustomFetch()
 
+  const stripe = ref<Stripe | null>(null)
+
   const isStripeProcessing = ref(false)
 
-  // TODO: Testcode, remove
-  const sleep = (milliseconds: number): Promise<void> => {
-    return new Promise<void>((resolve) => {
-      setTimeout(resolve, milliseconds)
-    })
+  const isStripeDisabled = computed(() => {
+    return stripe === null || stripe.value === undefined || isStripeProcessing.value
+  })
+
+  const stripeInit = async (stripePulicKey: string) => {
+    if (stripePulicKey === '') {
+      return
+    }
+
+    stripe.value = await loadStripe(stripePulicKey)
   }
 
   const stripeCustomerPortal = async () => {
-    isStripeProcessing.value = true
+    if (isStripeDisabled.value) {
+      return
+    }
 
-    await (sleep(1000)) // TODO: Test code, remove
+    isStripeProcessing.value = true
 
     const res = await fetch<StripeCustomerPortal>(API_PATH.STRIPE_CUSTOMER_PORTAL, {
       body: JSON.stringify({ returnURL: window.location.href })
     })
-    isStripeProcessing.value = false
 
     window.open(res?.url, '_blank')
+
+    isStripeProcessing.value = false
   }
 
   const stripePurchase = async (priceId: number, amount: number) => {
-    isStripeProcessing.value = true
+    if (isStripeDisabled.value) {
+      return
+    }
 
-    await (sleep(1000)) // TODO: Test code, remove
+    isStripeProcessing.value = true
 
     const res = await fetch<StripeCreateCheckoutSession>(API_PATH.STRIPE_CHECKOUT_SESSION, {
       body: JSON.stringify({ priceIde: priceId, addonQuantity: amount })
     })
+
+    if (res.sessionId) {
+      stripe.value!.redirectToCheckout({ sessionId: res.sessionId }) // stripe.value! checked via isStripeDisabled.value
+    } else {
+      warn('StripeCreateCheckoutSession error', res)
+    }
+
     isStripeProcessing.value = false
-
-    console.log('StripeCreateCheckoutSession res', res)
-
-    /*
-    TODO:
-    Use https://js.stripe.com/v3/ and then
-    stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
-      console.error("error redirecting to stripe checkout", err)
-    */
   }
 
-  provide<StripeProvider>('stripe', { stripeCustomerPortal, stripePurchase, isStripeProcessing })
+  provide<StripeProvider>('stripe', { stripeInit, stripeCustomerPortal, stripePurchase, isStripeDisabled })
+
+  return { stripeInit }
 }

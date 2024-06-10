@@ -1,5 +1,6 @@
 export interface StripeProvider{
+  stripeInit: (stripePulicKey: string) => Promise<void>,
   stripeCustomerPortal: () => Promise<void>,
   stripePurchase: (priceId: number, amount: number) => Promise<void>,
-  isStripeProcessing: Ref<boolean>
+  isStripeDisabled: Ref<boolean>
 }
