@@ -46,6 +46,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	}
 
 	searchValidator := -1
+	searchGroupName := ""
+	var searchValue interface{}
 	if search != "" {
 		if strings.HasPrefix(search, "0x") && len(search) == 98 {
 			// user searches for a validator pubkey
@@ -61,6 +63,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			} else {
 				searchValidator = math.MaxInt32
 			}
+			searchValue = searchValidator
 			releaseValMapLock()
 		} else if !strings.HasPrefix(search, "0x") {
 			var err error
@@ -68,6 +71,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			if err != nil {
 				searchValidator = -1
 			}
+			searchValue = searchValidator
+		} else {
+			searchGroupName = search
+			searchValue = searchGroupName
 		}
 	}
 
@@ -103,8 +110,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			filterQuery := " AND $2 = -1"
 			if searchValidator != -1 {
 				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			} else if searchGroupName != "" {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND name = $2)"
 			}
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName, filterQuery), dashboardId, searchValidator)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName, filterQuery), dashboardId, searchValue)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
@@ -129,9 +138,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			filterQuery := " AND $2 = -1"
 			if searchValidator != -1 {
 				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND validator_index = $2)"
+			} else if searchGroupName != "" {
+				filterQuery = " AND group_id = (SELECT group_id FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND name = $2)"
 			}
 
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(`SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1%s ORDER BY group_id, validator_index`, filterQuery), dashboardId.Id, searchValidator)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(`SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1%s ORDER BY group_id, validator_index`, filterQuery), dashboardId.Id, searchValue)
 			if err != nil {
 				return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 			}
