@@ -51,7 +51,7 @@ async function buttonCallback () {
     if (addonSubscription.value) {
       await stripeCustomerPortal()
     } else {
-      await stripePurchase(props.isYearly ? props.addon.price_per_year_eur : props.addon.price_per_month_eur, 1)
+      await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, 1)
     }
   } else {
     await navigateTo('/register')
