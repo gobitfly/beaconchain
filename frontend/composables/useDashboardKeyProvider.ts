@@ -34,7 +34,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
       }
       // if you are not logged in then only set the key if it's not an id
       if (isLoggedIn.value || isNaN(parseInt(dashboardKeyCookie.value))) {
-        setDashboardKey(dashboardKeyCookie.value)
+        setDashboardKey(`${dashboardKeyCookie.value}`)
       }
       return
     }
