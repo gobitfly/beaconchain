@@ -212,6 +212,7 @@ function reconfigureSearchbar () {
 }
 
 watch(() => props, reconfigureSearchbar, { immediate: true })
+watch(() => availableNetworks, reconfigureSearchbar)
 
 let resizingObserver: ResizeObserver
 if (process.client) {
