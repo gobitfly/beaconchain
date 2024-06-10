@@ -48,6 +48,7 @@
     "@fortawesome/vue-fontawesome": "^3.0.6",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@pinia/nuxt": "^0.5.1",
+    "@stripe/stripe-js": "^3.5.0",
     "echarts": "^5.5.0",
     "git-describe": "^4.1.1",
     "lodash-es": "^4.17.21",
