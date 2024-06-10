@@ -36,7 +36,9 @@ export enum API_PATH {
   LOGIN = '/login',
   LOGOUT = '/logout',
   SEARCH = '/search',
-  PRODUCT_SUMMARY = '/productSummary'
+  PRODUCT_SUMMARY = '/productSummary',
+  STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
+  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session'
 }
 
 export type PathValues = Record<string, string | number>
@@ -239,6 +241,16 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.PRODUCT_SUMMARY]: {
     path: '/product-summary',
+    mock: false
+  },
+  [API_PATH.STRIPE_CUSTOMER_PORTAL]: {
+    path: '/user/stripe/customer-portal',
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.STRIPE_CHECKOUT_SESSION]: {
+    path: '/user/stripe/create-checkout-session',
+    method: 'POST',
     mock: false
   }
 }

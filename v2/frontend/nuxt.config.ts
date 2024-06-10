@@ -37,6 +37,7 @@ export default defineNuxtConfig({
       gitVersion,
       domain: process.env.PUBLIC_DOMAIN,
       v1Domain: process.env.PUBLIC_V1_DOMAIN,
+      stripeBaseUrl: process.env.NUXT_PUBLIC_STRIPE_BASE_URL,
       logIp: '',
       logFile: '',
       showInDevelopment: ''
