@@ -22,7 +22,7 @@ export function useStripe () {
     await stripe.stripeCustomerPortal()
   }
 
-  const stripePurchase = async (priceId: number, amount: number) => {
+  const stripePurchase = async (priceId: string, amount: number) => {
     if (!stripe) {
       warn('stripe provider not injected')
       return

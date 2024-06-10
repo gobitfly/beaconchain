@@ -6,6 +6,8 @@ import { API_PATH } from '~/types/customFetch'
 
 export function useStripeProvider () {
   const { fetch } = useCustomFetch()
+  const { public: { stripeBaseUrl } } = useRuntimeConfig()
+  const fixedBaseUrl = stripeBaseUrl || 'https://jkihuwegfsgjkhsdgf.beaconcha.in'
 
   const stripe = ref<Stripe | null>(null)
 
@@ -31,7 +33,8 @@ export function useStripeProvider () {
     isStripeProcessing.value = true
 
     const res = await fetch<StripeCustomerPortal>(API_PATH.STRIPE_CUSTOMER_PORTAL, {
-      body: JSON.stringify({ returnURL: window.location.href })
+      body: JSON.stringify({ returnURL: window.location.href }),
+      baseURL: fixedBaseUrl
     })
 
     window.open(res?.url, '_blank')
@@ -39,7 +42,7 @@ export function useStripeProvider () {
     isStripeProcessing.value = false
   }
 
-  const stripePurchase = async (priceId: number, amount: number) => {
+  const stripePurchase = async (priceId: string, amount: number) => {
     if (isStripeDisabled.value) {
       return
     }
@@ -47,7 +50,8 @@ export function useStripeProvider () {
     isStripeProcessing.value = true
 
     const res = await fetch<StripeCreateCheckoutSession>(API_PATH.STRIPE_CHECKOUT_SESSION, {
-      body: JSON.stringify({ priceIde: priceId, addonQuantity: amount })
+      body: JSON.stringify({ priceId, addonQuantity: amount }),
+      baseURL: fixedBaseUrl
     })
 
     if (res.sessionId) {
