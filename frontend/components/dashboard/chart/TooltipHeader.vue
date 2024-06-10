@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
-import { formatEpochToDate } from '~/utils/format'
+import { useFormat } from '~/composables/useFormat'
 import { useNetwork } from '~/composables/useNetwork'
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { epochsPerDay } = useNetwork()
+const { formatEpochToDate } = useFormat()
 
 const dateText = computed(() => {
   const date = formatEpochToDate(props.startEpoch, props.t('locales.date'))
@@ -24,7 +25,6 @@ const epochText = computed(() => {
   const endEpoch = props.startEpoch + epochsPerDay()
   return `${props.t('common.epoch')} ${props.startEpoch} - ${endEpoch}`
 })
-
 </script>
 
 <template>

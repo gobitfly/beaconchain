@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs, isMainNet } from '~/types/networks'
+import { ChainInfo, ChainIDs } from '~/types/network'
 import { useNetwork } from '~/composables/useNetwork'
 
-const { currentNetwork } = useNetwork()
+const { currentNetwork, isMainNet } = useNetwork()
 
 // TODO: get the list from the API...
 let ValidatorDashboardNetworkList: ChainIDs[]
-if (isMainNet(currentNetwork.value)) {
+if (isMainNet()) {
   ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Gnosis]
 } else {
   ValidatorDashboardNetworkList = [ChainIDs.Holesky, ChainIDs.Chiado]

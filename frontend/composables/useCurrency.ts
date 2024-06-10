@@ -3,10 +3,9 @@ import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
 
-const { networkInfo } = useNetwork()
-
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
+  const { networkInfo } = useNetwork()
   const { t: $t } = useI18n()
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 

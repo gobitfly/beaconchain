@@ -33,7 +33,7 @@ import {
   type CategoryFilter,
   type NetworkFilter
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/networks'
+import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 import { useNetwork } from '~/composables/useNetwork'
 
