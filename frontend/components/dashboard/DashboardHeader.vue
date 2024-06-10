@@ -191,6 +191,9 @@ const editDashboard = () => {
   }
 
   .edit_button {
+    border-color: var(--container-border-color);
+    background-color: var(--container-background);
+    color: var(--container-color);
     flex-shrink: 0;
   }
 

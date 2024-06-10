@@ -73,7 +73,9 @@ const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle : CSSStyleDeclaration
 let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
 
+let mediaqueryWidthListener: MediaQueryList
 let delayedForcedUpdateIncoming = false
+
 let classPropsDuringLastUpdate = props.class || ''
 let textPropsDuringLastUpdate = props.text || ''
 let initialFlexGrowDuringLastUpdate : number | undefined
@@ -231,33 +233,27 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
   if (SSR || !navigator.userAgent.includes('Chrom')) {
     return
   }
+  if (mediaqueryWidthListener) {
+    mediaqueryWidthListener.onchange = null
+  }
   if (amIinsideAparent.value || !threshold) {
-    window.removeEventListener('resize', catchResizingCausedByMediaquery)
     return
   }
-  if (!previousThreshold) {
-    window.addEventListener('resize', catchResizingCausedByMediaquery)
-  } else // the new threshold might have passed through the current window width
-    if (!delayedForcedUpdateIncoming) {
-      delayedForcedUpdateIncoming = true
-      setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
-    }
+  mediaqueryWidthListener = window.matchMedia('(max-width: ' + threshold + 'px)')
+  mediaqueryWidthListener.onchange = catchResizingCausedByMediaquery
+  if (previousThreshold) {
+    // the new threshold might have passed through the current window width
+    catchResizingCausedByMediaquery()
+  }
 }, { immediate: true })
 
-let lastWindowWidthCaught = 0
 // this function is a workaround for a bug in Chrome (see the watcher of `props.widthMediaqueryThreshold` for explanations)
 function catchResizingCausedByMediaquery () {
-  const windowWidthCaught = document.documentElement.clientWidth
-  const diffA = props.widthMediaqueryThreshold! - lastWindowWidthCaught
-  const diffB = windowWidthCaught - props.widthMediaqueryThreshold!
-  if (lastWindowWidthCaught && diffA * diffB > -0.01) { // Javascript calculates sometimes -0 so we can't compare to 0
-    logStep('event', 'window width passed through', props.widthMediaqueryThreshold)
-    if (!delayedForcedUpdateIncoming) {
-      delayedForcedUpdateIncoming = true
-      setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
-    }
+  logStep('event', 'props.widthMediaqueryThreshold reached:', props.widthMediaqueryThreshold)
+  if (!delayedForcedUpdateIncoming) {
+    delayedForcedUpdateIncoming = true
+    setTimeout(() => { delayedForcedUpdateIncoming = false; handleResizingEvent(true) }, 50)
   }
-  lastWindowWidthCaught = windowWidthCaught
 }
 
 let resizingObserver: ResizeObserver
@@ -309,9 +305,8 @@ onBeforeUnmount(() => {
   // Tests showed that watchers can be triggered by the unmounting cycle. We prevent useless recalculation to improve smoothness of the UI.
   amImounted = false
   resizingObserver.disconnect()
-  window.removeEventListener('resize', catchResizingCausedByMediaquery)
+  if (mediaqueryWidthListener) { mediaqueryWidthListener.onchange = null }
   delayedForcedUpdateIncoming = false
-  lastWindowWidthCaught = 0
 })
 
 onUnmounted(() => {
