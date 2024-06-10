@@ -3,7 +3,7 @@
  * If you want to change the behavior of the component or the information it displays, it is possible that you simply need to change a few parameters
  * in searchbar.ts rather than altering the code of the component. The possibilities offered by this configuration file are explanined in readme.md
  */
-import { ChainIDs } from '~/types/networks'
+import { ChainIDs } from '~/types/network'
 import {
   CategoryInfo,
   SubCategoryInfo,

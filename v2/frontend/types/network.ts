@@ -1,27 +1,3 @@
-/* This file sets types and fundamental data about different networks.
-
-   To use it, you need to write first:
-     import { ChainIDs, ChainInfo } from '~/types/networks'
-
-   First, the file defines identifiers equal to the chain IDs of the networks.
-   In your code, you write ChainIDs.Ethereum whenever you want to represent the main Ethereum network,
-   or ChainIDs.Sepolia for the Sepolia testnet and so on.
-   Those constants are integers but for a safer code you should define your constants, fields, variables
-   and parameters as the type ChainIDs.
-
-   The most important feature of this file is to provide a mapping between those chain IDs and
-   information about the networks.
-   For example, when your variable myNetwork is equal to 10200 (namely ChainIDs.Chiado, a testnet of Gnosis) :
-   * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
-   * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis (100).
-     So, to check whether your network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
-     or simply !isMainNet(myNetwork) whose implementation does the same test (first, add the function to your import list)
-   * ChainInfo[myNetwork].elCurrency is equal to 'xDAI' whereas ChainInfo[myNetwork].clCurrency is 'GNO'
-
-   To check whether a network is a L1, you can do myNetwork === ChainInfo[myNetwork].L1
-   or simply isL1(myNetwork) whose implementation does the same test (first, add the function to your import list)
-*/
-
 import type { CryptoCurrency } from '~/types/currencies'
 
 export enum ChainFamily {
@@ -259,14 +235,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   }
 }
 
-export function isMainNet (network: ChainIDs) : boolean {
-  return (ChainInfo[network].mainNet === network)
-}
-
-export function isL1 (network: ChainIDs) : boolean {
-  return (ChainInfo[network].L1 === network)
-}
-
 export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list : ChainIDs[] = []
 
@@ -279,6 +247,84 @@ export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
     sortChainIDsByPriority(list)
   }
   return list
+}
+
+/**
+ * Should be used only when you test a network different from the current one.
+ * Whereverer you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetwork.ts`.
+ */
+export function isMainNet (network: ChainIDs) : boolean {
+  return (ChainInfo[network].mainNet === network)
+}
+
+/**
+ * Should be used only when you test a network different from the current one.
+ * Whereverer you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetwork.ts`.
+ */
+export function isL1 (network: ChainIDs) : boolean {
+  return (ChainInfo[network].L1 === network)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Whereverer you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetwork.ts`.
+ */
+export function epochsPerDay (chainId: ChainIDs): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return 0
+  }
+  return 24 * 60 * 60 / (info.slotsPerEpoch * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Whereverer you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetwork.ts`.
+ */
+export function epochToTs (chainId: ChainIDs, epoch: number): number | undefined {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined || epoch < 0) {
+    return undefined
+  }
+
+  return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch) * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Whereverer you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetwork.ts`.
+ */
+export function slotToTs (chainId: ChainIDs, slot: number): number | undefined {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined || slot < 0) {
+    return undefined
+  }
+
+  return info.timeStampSlot0 + (slot * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Whereverer you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetwork.ts`.
+ */
+export function tsToSlot (chainId: ChainIDs, ts: number): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Whereverer you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetwork.ts`.
+ */
+export function slotToEpoch (chainId: ChainIDs, slot: number): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return Math.floor(slot / info.slotsPerEpoch)
 }
 
 /**
