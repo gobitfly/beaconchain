@@ -40,13 +40,13 @@ func (VDBSummaryColumn) NewFromString(s string) VDBSummaryColumn {
 	switch s {
 	case "group_id":
 		return VDBSummaryGroup
-	case "efficiency_day":
+	case "efficiency_last_24h":
 		return VDBSummaryEfficiencyDay
-	case "efficiency_week":
+	case "efficiency_last_7d":
 		return VDBSummaryEfficiencyWeek
-	case "efficiency_month":
+	case "efficiency_last_30d":
 		return VDBSummaryEfficiencyMonth
-	case "efficiency_total":
+	case "efficiency_all_time":
 		return VDBSummaryEfficiencyTotal
 	case "validators":
 		return VDBSummaryValidators
