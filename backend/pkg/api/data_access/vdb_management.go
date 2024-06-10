@@ -793,10 +793,74 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(d
 }
 
 func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// TODO
-	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
-	// then add no more than `limit` validators associated with the graffiti to the dashboard
-	return d.dummy.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
+	var existingValidators []t.VDBValidator
+	// 1. Move all existing validators with matching graffiti into new group
+	updateQuery := `
+	UPDATE users_val_dashboards_validators uvdv
+	SET group_id = $1
+	FROM blocks b
+	WHERE uvdv.dashboard_id = $2 AND b.proposer = uvdv.validator_index AND graffiti_text = $3 AND status = '1'
+	RETURNING validator_index
+	`
+	err := d.alloyWriter.Select(&existingValidators, updateQuery, groupId, dashboardId, graffiti)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Add max(limit) new validators with matching graffiti to group; preferred active validators sorted by index
+	insertQuery := `
+	INSERT INTO users_val_dashboards_validators
+		(
+		dashboard_id,
+		group_id,
+		validator_index	
+		)
+	SELECT
+		$1,
+		$2,
+		proposer
+	FROM
+		blocks b
+	LEFT JOIN validators v on v.validatorindex = b.proposer
+	WHERE
+		b.status = '1'
+		AND graffiti_text = $3
+		AND proposer NOT IN (
+		SELECT
+			validator_index
+		FROM
+			users_val_dashboards_validators uvdv
+		WHERE
+			uvdv.dashboard_id = $1)
+	GROUP BY v.status, proposer
+	ORDER BY v.status DESC, proposer
+	LIMIT $4
+	RETURNING validator_index
+	`
+	var newValidators []t.VDBValidator
+	err = d.alloyWriter.Select(&newValidators, insertQuery, groupId, dashboardId, graffiti, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Get pubkeys for return data
+	var data []t.VDBPostValidatorsData
+	pubkeyQuery :=
+		`
+	SELECT
+		pubkey,
+		$1 as group_id
+	FROM
+		validators
+	WHERE
+		validatorindex = ANY($2);
+	`
+	err = d.alloyWriter.Select(&data, pubkeyQuery, groupId, append(existingValidators, newValidators...))
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
