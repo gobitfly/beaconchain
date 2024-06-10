@@ -35,8 +35,6 @@ const rows = computed(() => {
     let value = get(perks, property)
     if (value === 0) {
       value = false
-    } else if (property.includes('_per_day')) {
-      value = $t('time_duration.days', { amount: value }, value === 1 ? 1 : 2)
     } else if (property.includes('_seconds')) {
       value = formatTimeDuration(value as number, $t)
     }
@@ -217,6 +215,10 @@ const rows = computed(() => {
         @media (max-width: 1360px) {
           font-size: 12px;
         }
+
+        .label {
+          padding-left: 21px;
+        }
       }
 
       &.header {
@@ -236,21 +238,25 @@ const rows = computed(() => {
         flex-grow: 1;
         min-height: 100%;
         padding-right: 10px;
-        padding-left: 21px;
-        text-align: end;
+        text-align: right;
         min-width: 121px;
 
         .coming-soon {
           font-size: 11px;
+          margin-bottom: -4px;
 
           @media (max-width: 1360px) {
             font-size: 12px;
+            margin-bottom: unset;
           }
         }
 
         @media (max-width: 1360px) {
           justify-content: flex-start;
           text-align: left;
+          align-content: baseline;
+          align-self: center;
+          padding-left: 21px;
         }
       }
 
