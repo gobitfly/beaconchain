@@ -1,5 +1,5 @@
 import { provide } from 'vue'
-import type { BcToastProvider, ToastData } from '~/types/taost'
+import type { BcToastProvider, ToastData } from '~/types/toast'
 
 const TOAST_TIME = 3000
 
