@@ -357,7 +357,8 @@ export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChai
   result.data.push(
     { chain_id: 1, name: 'ethereum' },
     { chain_id: 17000, name: 'holesky' },
-    { chain_id: 100, name: 'gnosis' }
+    { chain_id: 100, name: 'gnosis' },
+    { chain_id: 10200, name: 'chiado' }
   )
 
   return result

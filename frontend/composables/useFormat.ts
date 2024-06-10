@@ -1,7 +1,6 @@
 import { type StringUnitLength } from 'luxon'
 import * as formatTs from '~/utils/format'
 import type { AgeFormat } from '~/types/settings'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 export function useFormat () {
   const { currentNetwork } = useNetworkStore()

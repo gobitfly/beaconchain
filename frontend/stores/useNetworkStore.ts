@@ -17,7 +17,7 @@ const store = defineStore('network-store', () => {
   }>({
     // The values below are temporary and get replaced with actual data when the API responds.
     // In the meantime, they allow the front-end to run for a few seconds with default values.
-    availableNetworks: [{ chain_id: networkTs.ChainIDs.Ethereum, name: 'Ethereum' }],
+    availableNetworks: [{ chain_id: networkTs.ChainIDs.Ethereum, name: networkTs.ChainInfo[networkTs.ChainIDs.Ethereum].name }],
     currentNetwork: networkTs.ChainIDs.Ethereum,
     availableNetworksHasBeenFilled: false,
     currentNetworkHasBeenChosen: false
