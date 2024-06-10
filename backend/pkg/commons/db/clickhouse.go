@@ -1,6 +1,5 @@
 package db
 
-
 import (
 	"context"
 	"crypto/tls"
@@ -134,7 +133,6 @@ func DumpToClickhouse(data interface{}, table string) error {
 	}
 	log.Debugf("sent batch in %s", time.Since(start))
 	return nil
-
 }
 
 // ConvertToColumnar efficiently converts a slice of any struct type to a slice of slices, each representing a column.
@@ -187,4 +185,3 @@ func ConvertToColumnar(data interface{}) ([]interface{}, error) {
 	log.Infof("columnarized %d rows with %d columns in %s", v.Len(), numFields, time.Since(start))
 	return columns, nil
 }
-

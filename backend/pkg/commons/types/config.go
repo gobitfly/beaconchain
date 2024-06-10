@@ -86,7 +86,7 @@ type Config struct {
 	RedisSessionStoreEndpoint string `yaml:"redisSessionStoreEndpoint" envconfig:"REDIS_SESSION_STORE_ENDPOINT"`
 	TieredCacheProvider       string `yaml:"tieredCacheProvider" envconfig:"CACHE_PROVIDER"`
 	ReportServiceStatus       bool   `yaml:"reportServiceStatus" envconfig:"REPORT_SERVICE_STATUS"`
-	ClickHouse 			  struct {
+	ClickHouse                struct {
 		ReaderDatabase struct {
 			Username     string `yaml:"user" envconfig:"CLICKHOUSE_READER_DB_USERNAME"`
 			Password     string `yaml:"password" envconfig:"CLICKHOUSE_READER_DB_PASSWORD"`
@@ -106,7 +106,7 @@ type Config struct {
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_IDLE_CONNS"`
 		} `yaml:"writerDatabase"`
 	} `yaml:"clickhouse"`
-	Indexer                   struct {
+	Indexer struct {
 		Enabled bool `yaml:"enabled" envconfig:"INDEXER_ENABLED"`
 		Node    struct {
 			Port     string `yaml:"port" envconfig:"INDEXER_NODE_PORT"`
