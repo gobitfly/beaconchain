@@ -174,6 +174,7 @@ func main() {
 	defer db.FrontendWriterDB.Close()
 
 	// clickhouse
+	//nolint:forbidigo
 	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.ClickHouse.WriterDatabase.Username,
 		Password:     cfg.ClickHouse.WriterDatabase.Password,
@@ -194,7 +195,7 @@ func main() {
 		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
 	}, "clickhouse", "clickhouse")
 	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	defer db.ClickHouseWriter.Close() //nolint:forbidigo
 
 	// Initialize the persistent redis client
 	rdc := redis.NewClient(&redis.Options{

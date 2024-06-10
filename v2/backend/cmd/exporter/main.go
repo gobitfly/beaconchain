@@ -89,7 +89,7 @@ func main() {
 			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
 			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 			SSL:          cfg.AlloyReader.SSL,
-			}, "pgx", "postgres")
+		}, "pgx", "postgres")
 	}()
 
 	wg.Add(1)
