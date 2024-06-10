@@ -11,7 +11,7 @@ import type { Feature } from '~/types/pricing'
 const { products, bestPremiumProduct } = useProductsStore()
 const { user, isLoggedIn } = useUserStore()
 const { t: $t } = useI18n()
-const { stripeCustomerPortal, stripePurchase, isStripeProcessing } = useStripe()
+const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
   product: PremiumProduct,
@@ -60,7 +60,7 @@ const premiumSubscription = computed(() => {
 })
 
 async function buttonCallback () {
-  if (isStripeProcessing.value) {
+  if (isStripeDisabled.value) {
     return
   }
 
@@ -99,7 +99,7 @@ const planButton = computed(() => {
     text = $t('pricing.sign_up')
   }
 
-  return { text, isDowngrade, disabled: isStripeProcessing.value || undefined }
+  return { text, isDowngrade, disabled: isStripeDisabled.value || undefined }
 })
 
 const mainFeatures = computed<Feature[]>(() => {

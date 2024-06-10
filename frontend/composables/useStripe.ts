@@ -4,6 +4,15 @@ import type { StripeProvider } from '~/types/stripe'
 export function useStripe () {
   const stripe = inject<StripeProvider>('stripe')
 
+  const stripeInit = async (stripePulicKey: string) => {
+    if (!stripe) {
+      warn('stripe provider not injected')
+      return
+    }
+
+    await stripe.stripeInit(stripePulicKey)
+  }
+
   const stripeCustomerPortal = async () => {
     if (!stripe) {
       warn('stripe provider not injected')
@@ -22,14 +31,14 @@ export function useStripe () {
     await stripe.stripePurchase(priceId, amount)
   }
 
-  const isStripeProcessing = computed(() => {
+  const isStripeDisabled = computed(() => {
     if (!stripe) {
       warn('stripe provider not injected')
       return
     }
 
-    return stripe?.isStripeProcessing.value
+    return stripe?.isStripeDisabled.value
   })
 
-  return { stripeCustomerPortal, stripePurchase, isStripeProcessing }
+  return { stripeInit, stripeCustomerPortal, stripePurchase, isStripeDisabled }
 }

@@ -7,7 +7,7 @@ import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useI18n()
 const { user, isLoggedIn } = useUserStore()
-const { stripeCustomerPortal, stripePurchase, isStripeProcessing } = useStripe()
+const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
@@ -44,7 +44,7 @@ const addonSubscription = computed(() => {
 
 // TODO: Ponder on moving this to provider (as the code for the plans is very similar)
 async function buttonCallback () {
-  if (isStripeProcessing.value) {
+  if (isStripeDisabled.value) {
     return
   }
 
@@ -62,7 +62,7 @@ async function buttonCallback () {
 const addonButton = computed(() => {
   return {
     text: addonSubscription.value ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon'),
-    disabled: isStripeProcessing.value
+    disabled: isStripeDisabled.value
   }
 })
 
