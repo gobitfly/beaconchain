@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
@@ -211,8 +212,26 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		)
 	}
+
+	allowedHostsRegex := make([]*regexp.Regexp, len(allowedHosts))
+	var err error
+	for i, host := range allowedHosts {
+		allowedHostsRegex[i], err = regexp.Compile(host)
+
+		if err != nil {
+			log.Fatal(err, "error compiling allowed host regex", 0)
+		}
+	}
+
 	return gorillaHandlers.CORS(
-		gorillaHandlers.AllowedOrigins(allowedHosts),
+		gorillaHandlers.AllowedOriginValidator(func(s string) bool {
+			for _, host := range allowedHostsRegex {
+				if host.MatchString(s) {
+					return true
+				}
+			}
+			return false
+		}),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
 		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
