@@ -75,14 +75,14 @@ export function useCustomFetch () {
     if (pathName === API_PATH.LOGIN) {
       const res = await $fetch<LoginResponse>(path, {
         method,
-        ...options,
-        baseURL
+        baseURL,
+        ...options
       })
       return res as T
     }
 
     try {
-      const res = await $fetch.raw<T>(path, { method, ...options, baseURL })
+      const res = await $fetch.raw<T>(path, { method, baseURL, ...options })
       if (method === 'GET') {
         // We get the csrf header from GET requests
         setCsrfHeader(res.headers)
