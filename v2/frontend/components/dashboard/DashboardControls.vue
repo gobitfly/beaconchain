@@ -71,7 +71,8 @@ const shareButtonOptions = computed(() => {
 
   const label = !edit ? $t('dashboard.shared') : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
-  return { label, icon, edit }
+  const disabled = isShared.value || !dashboardKey.value
+  return { label, icon, edit, disabled }
 })
 
 const shareView = () => {
@@ -179,7 +180,7 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
-      <Button class="share-button" :disabled="!dashboardKey" @click="share()">
+      <Button class="share-button" :disabled="shareButtonOptions.disabled" @click="share()">
         {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
       <Button v-if="deleteButtonOptions.visible" class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
