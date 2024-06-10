@@ -838,26 +838,20 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardI
 	RETURNING validator_index
 	`
 	var newValidators []t.VDBValidator
-	err = d.alloyWriter.Select(&newValidators, insertQuery, groupId, dashboardId, graffiti, limit)
+	err = d.alloyWriter.Select(&newValidators, insertQuery, dashboardId, groupId, graffiti, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// 3. Get pubkeys for return data
-	var data []t.VDBPostValidatorsData
-	pubkeyQuery :=
-		`
-	SELECT
-		pubkey,
-		$1 as group_id
-	FROM
-		validators
-	WHERE
-		validatorindex = ANY($2);
-	`
-	err = d.alloyWriter.Select(&data, pubkeyQuery, groupId, append(existingValidators, newValidators...))
+	pubkeys, err := d.services.GetPubkeySliceFromIndexSlice(append(existingValidators, newValidators...))
 	if err != nil {
 		return nil, err
+	}
+	data := make([]t.VDBPostValidatorsData, len(pubkeys))
+	for i, v := range pubkeys {
+		data[i].GroupId = groupId
+		data[i].PublicKey = v
 	}
 
 	return data, nil
