@@ -4,6 +4,7 @@ import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
 const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
 const { isShared } = useDashboardKey()
 const { t: $t } = useI18n()
+const route = useRoute()
 
 const visible = computed(() => isShared.value && cookiePreference.value !== undefined)
 </script>
@@ -18,7 +19,7 @@ const visible = computed(() => isShared.value && cookiePreference.value !== unde
   >
     <div class="dialog-container">
       {{ $t('dashboard.shared_modal.text') }}
-      <BcLink :to="`/dashboard`">
+      <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
         <Button class="get-started">
           {{ $t('dashboard.shared_modal.get_started') }}
         </Button>
