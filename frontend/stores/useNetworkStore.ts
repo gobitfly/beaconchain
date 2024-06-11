@@ -40,7 +40,7 @@ export function useNetworkStore () {
   }
 
   const availableNetworks = computed(() => data.value.availableNetworks)
-  const currentNetwork = computed(() => (data.value.currentNetwork === networkTs.ChainIDs.Any) ? availableNetworks.value[0] : data.value.currentNetwork)
+  const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function setCurrentNetwork (chainId: networkTs.ChainIDs) {
