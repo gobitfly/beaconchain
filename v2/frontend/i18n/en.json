@@ -673,6 +673,7 @@
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
       "currently_active": "Currently active: {amount}",
+      "contact_support": ["Contact", "support", "for a higher limit"],
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"

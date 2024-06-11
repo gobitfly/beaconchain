@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle, faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons'
 import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
+import { Target } from '~/types/links'
 
 const { t: $t } = useI18n()
 const { user, isLoggedIn } = useUserStore()
@@ -11,7 +12,8 @@ const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
-  isYearly: boolean
+  isYearly: boolean,
+  maximumValidatorLimit: number
 }
 const props = defineProps<Props>()
 
@@ -44,36 +46,41 @@ const addonSubscriptionCount = computed(() => {
   return user.value?.subscriptions?.filter(sub => sub.product_category === ProductCategoryPremiumAddon && (sub.product_id === props.addon.product_id_monthly || sub.product_id === props.addon.product_id_yearly)).length || 0
 })
 
-async function stripeButtonCallback () {
-  if (isStripeDisabled.value) {
-    return
-  }
-
-  if (isLoggedIn.value) {
-    if (addonSubscriptionCount.value > 0) {
-      await stripeCustomerPortal()
-    } else {
-      await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
-    }
-  } else {
-    await navigateTo('/login')
-  }
-}
-
 const addonButton = computed(() => {
   let text = $t('pricing.get_started')
   if (isLoggedIn.value) {
     text = addonSubscriptionCount.value > 0 ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon')
   }
 
+  async function callback () {
+    if (isStripeDisabled.value) {
+      return
+    }
+
+    if (isLoggedIn.value) {
+      if (addonSubscriptionCount.value > 0) {
+        await stripeCustomerPortal()
+      } else {
+        await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
+      }
+    } else {
+      await navigateTo('/login')
+    }
+  }
+
   return {
     text,
-    disabled: isStripeDisabled.value
+    disabled: isStripeDisabled.value,
+    callback
   }
 })
 
 const maximumQuantity = computed(() => {
-  return 10 // TODO: Implement logic to get the maximum quantity
+  return Math.floor(props.maximumValidatorLimit - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators
+})
+
+const limitReached = computed(() => {
+  return quantityForPurchase.value >= maximumQuantity.value
 })
 
 const purchaseQuantityButtons = computed(() => {
@@ -87,7 +94,7 @@ const purchaseQuantityButtons = computed(() => {
       }
     },
     plus: {
-      disabled: quantityForPurchase.value >= maximumQuantity.value,
+      disabled: limitReached.value,
       callback: () => {
         if (quantityForPurchase.value < maximumQuantity.value) {
           quantityForPurchase.value++
@@ -169,7 +176,16 @@ const purchaseQuantityButtons = computed(() => {
           </Button>
         </div>
       </div>
-      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="stripeButtonCallback" />
+      <div class="limit-reached-row">
+        <div v-if="limitReached">
+          {{ tOf($t, 'pricing.addons.contact_support', 0) }}
+          <BcLink to="https://dsc.gg/beaconchain  " :target="Target.External" class="link">
+            {{ tOf($t, 'pricing.addons.contact_support', 1) }}
+          </BcLink>
+          {{ tOf($t, 'pricing.addons.contact_support', 2) }}
+        </div>
+      </div>
+      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="addonButton.callback" />
     </div>
   </div>
 </template>
@@ -288,7 +304,14 @@ const purchaseQuantityButtons = computed(() => {
         }
       }
 
-      margin-bottom: 40px;
+      margin-bottom: 20px;
+    }
+
+    .limit-reached-row {
+      height: 16px;
+      font-size: 13px;
+
+      margin-bottom: 20px;
     }
 
     .select-button {
