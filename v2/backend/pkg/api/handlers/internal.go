@@ -511,7 +511,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, depositAddress, limit)
 
 	case req.WithdrawalAddress != "":
-		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
+		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return

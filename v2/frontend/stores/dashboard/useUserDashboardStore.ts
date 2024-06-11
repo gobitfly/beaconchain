@@ -2,9 +2,10 @@ import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
-import { type DashboardKey, type DashboardType, type CookieDashboard, type ValidatorDashboardNetwork, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
+import { type DashboardKey, type DashboardType, type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
+import type { ChainIDs } from '~/types/network'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -59,10 +60,7 @@ export function useUserDashboardStore () {
     dashboardCookie.value = JSON.stringify(dashboards.value)
   }
 
-  async function createValidatorDashboard (name: string, network: ValidatorDashboardNetwork, dashboardKey?: string):Promise<CookieDashboard |undefined> {
-    // TODO: implement real mapping of network id's once backend is ready for it (will not be part of first release)
-    warn(`we are currently ignoring the network ${network}`)
-
+  async function createValidatorDashboard (name: string, network: ChainIDs, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? '' }
@@ -74,7 +72,7 @@ export function useUserDashboardStore () {
       return cd
     }
     // Create user specific Validator dashboard
-    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network: 1 } })
+    const res = await fetch<{data: VDBPostReturnData}>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network } })
     if (res.data) {
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],

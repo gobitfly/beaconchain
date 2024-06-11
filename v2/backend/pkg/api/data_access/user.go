@@ -52,8 +52,12 @@ func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredenti
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
-	// TODO @recy21
-	return d.dummy.GetUserIdByApiKey(apiKey)
+	var userId uint64
+	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
+	}
+	return userId, err
 }
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
@@ -313,7 +317,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupNotifications:     3,
 					WebhookEndpoints:                3,
 					MobileAppCustomThemes:           true,
-					MobileAppWidget:                 true,
+					MobileAppWidget:                 false,
 					MonitorMachines:                 2,
 					MachineMonitoringHistorySeconds: 3600 * 30,
 					CustomMachineAlerts:             true,
@@ -329,7 +333,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          true,
-					ValidatorDasboards:              1,
+					ValidatorDasboards:              2,
 					ValidatorsPerDashboard:          300,
 					ValidatorGroupsPerDashboard:     10,
 					ShareCustomDashboards:           true,
@@ -340,8 +344,8 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     10,
 					WebhookEndpoints:                10,
-					MobileAppCustomThemes:           false,
-					MobileAppWidget:                 false,
+					MobileAppCustomThemes:           true,
+					MobileAppWidget:                 true,
 					MonitorMachines:                 10,
 					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,

@@ -438,7 +438,7 @@
           "proposals": "Proposals",
           "validators_proposal": "Validators",
           "slashed": "Slashings",
-          "validators_slashings": "Validators",
+          "validators_slashings": "Slashed Validators",
           "apr": "APR",
           "luck": "Luck"
         },
@@ -602,6 +602,9 @@
   },
   "pricing": {
     "seo_title": "Premium Pricing", 
+    "compare": "Compare Plans",
+    "show_feature": "Show Features",
+    "hide_feature": "Hide Features",
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
@@ -635,6 +638,33 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
+    }, 
+    "groups": {
+      "general": "General",
+      "dashboard": "Dashboard",
+      "notification": "v2 Notification",
+      "mobille_app": "Mobile App"
+    },
+    "percs": {
+      "ad_free": "Ad free",
+      "support_us": "Support us",
+      "validators_per_dashboard": "Validator dashboards",
+      "validator_dashboards": "Validators per dashboard",
+      "validator_groups_per_dashboard": "Validator groups per dashboard",
+      "share_custom_dashboards": "Share custom dashboards",
+      "manage_dashboard_via_api": "Manage dashboard via API",
+      "bulk_adding": "Bulk adding",
+      "heatmap_history_seconds": "Heatmap history",
+      "summary_chart_history_seconds": "Summary chart history",
+      "email_notifications_per_day": "Email notifications per day",
+      "configure_notifications_via_api": "Configure notifications via API",
+      "validator_group_notifications": "Validator group notifications",
+      "webhook_endpoints": "Webhook endpoints",
+      "mobile_app_custom_themes": "Custom themes",
+      "mobile_app_widget": "App widget",
+      "monitor_machines": "Monitor machines",
+      "machine_monitoring_history_seconds": "Machine monitoring history",
+      "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
     },
     "view_addons": "View Add-Ons",
     "addons": {

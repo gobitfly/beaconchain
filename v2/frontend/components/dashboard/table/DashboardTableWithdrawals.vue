@@ -7,6 +7,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: string}
 
@@ -17,7 +18,7 @@ const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetwork()
+const { slotToEpoch } = useNetworkStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
