@@ -163,7 +163,7 @@ func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input
 		return &types.SearchResult{
 			Type:      string(validatorByIndex),
 			ChainId:   chainId,
-			HashValue: hex.EncodeToString(result.PublicKey),
+			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
 			NumValue:  &result.Index,
 		}, nil
 	}
@@ -187,7 +187,7 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		return &types.SearchResult{
 			Type:      string(validatorByPublicKey),
 			ChainId:   chainId,
-			HashValue: hex.EncodeToString(result.PublicKey),
+			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
 			NumValue:  &result.Index,
 		}, nil
 	}
@@ -210,7 +210,7 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 		return &types.SearchResult{
 			Type:      string(validatorsByDepositAddress),
 			ChainId:   chainId,
-			HashValue: hex.EncodeToString(result.Address),
+			HashValue: "0x" + hex.EncodeToString(result.Address),
 			NumValue:  &result.Count,
 		}, nil
 	}
@@ -230,7 +230,7 @@ func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Cont
 			Type:      string(validatorsByDepositEnsName),
 			ChainId:   chainId,
 			StrValue:  result.EnsName,
-			HashValue: hex.EncodeToString(result.Address),
+			HashValue: "0x" + hex.EncodeToString(result.Address),
 			NumValue:  &result.Count,
 		}, nil
 	}
@@ -253,7 +253,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 		return &types.SearchResult{
 			Type:      string(validatorsByWithdrawalCredential),
 			ChainId:   chainId,
-			HashValue: hex.EncodeToString(result.WithdrawalCredential),
+			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
 			NumValue:  &result.Count,
 		}, nil
 	}
@@ -277,7 +277,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 		return &types.SearchResult{
 			Type:      string(validatorsByWithdrawalAddress),
 			ChainId:   chainId,
-			HashValue: hex.EncodeToString(result.WithdrawalCredential),
+			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
 			NumValue:  &result.Count,
 		}, nil
 	}
@@ -297,7 +297,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 			Type:      string(validatorsByWithdrawalEns),
 			ChainId:   chainId,
 			StrValue:  result.EnsName,
-			HashValue: hex.EncodeToString(result.Address),
+			HashValue: "0x" + hex.EncodeToString(result.Address),
 			NumValue:  &result.Count,
 		}, nil
 	}
