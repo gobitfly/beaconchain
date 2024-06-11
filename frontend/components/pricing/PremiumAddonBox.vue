@@ -13,7 +13,7 @@ const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
   isYearly: boolean,
-  maximumValidatorLimit: number
+  maximumValidatorLimit?: number
 }
 const props = defineProps<Props>()
 
@@ -76,7 +76,7 @@ const addonButton = computed(() => {
 })
 
 const maximumQuantity = computed(() => {
-  return Math.floor(props.maximumValidatorLimit - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators
+  return Math.floor((props.maximumValidatorLimit || 10000) - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators
 })
 
 const limitReached = computed(() => {

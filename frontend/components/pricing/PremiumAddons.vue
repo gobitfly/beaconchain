@@ -24,7 +24,7 @@ defineProps<Props>()
         :key="addon.product_id_yearly"
         :addon="addon"
         :is-yearly="isYearly"
-        :maximum-validator-limit="101000"
+        :maximum-validator-limit="products?.validators_per_dashboard_limit"
       />
     </div>
   </div>
