@@ -959,12 +959,12 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardI
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
-		// Remove all validators for the dashboard
-		_, err := d.alloyWriter.Exec(`
-			DELETE FROM users_val_dashboards_validators 
-			WHERE dashboard_id = $1
-		`, dashboardId)
-		return err
+		// // Remove all validators for the dashboard
+		// _, err := d.alloyWriter.Exec(`
+		// 	DELETE FROM users_val_dashboards_validators
+		// 	WHERE dashboard_id = $1
+		// `, dashboardId)
+		return fmt.Errorf("calling RemoveValidatorDashboardValidators with empty validators list is not allowed")
 	}
 
 	//Create the query to delete validators
