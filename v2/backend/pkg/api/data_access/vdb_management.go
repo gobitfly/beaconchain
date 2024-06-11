@@ -791,7 +791,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(dash
 		return nil, fmt.Errorf("invalid deposit address: %s", address)
 	}
 	var validatorIndices []uint64
-	err = d.readerDb.Get(&validatorIndices, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.Select(&validatorIndices, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -808,7 +808,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(d
 		return nil, err
 	}
 	var validatorIndices []uint64
-	err = d.readerDb.Get(&validatorIndices, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.Select(&validatorIndices, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -821,7 +821,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardI
 	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
 	// then add no more than `limit` validators associated with the deposit address to the dashboard
 	var validatorIndices []uint64
-	err := d.readerDb.Get(&validatorIndices, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	err := d.readerDb.Select(&validatorIndices, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
 	if err != nil {
 		return nil, err
 	}
