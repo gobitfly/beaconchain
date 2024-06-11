@@ -4,11 +4,17 @@
 const { getUser } = useUserStore()
 const { tick } = useInterval(12)
 const { refreshLatestState } = useLatestStateStore()
+const { loadAvailableNetworks, setCurrentNetwork } = useNetworkStore()
 
 await useAsyncData('latest_state', () => refreshLatestState(), { watch: [tick] })
 await useAsyncData('get_user', () => getUser())
+await useAsyncData('get-supported-networks', () => loadAvailableNetworks())
 
+if (useRuntimeConfig().public.chainIdByDefault) {
+  setCurrentNetwork(Number(useRuntimeConfig().public.chainIdByDefault))
+}
 </script>
+
 <template>
   <slot />
 </template>

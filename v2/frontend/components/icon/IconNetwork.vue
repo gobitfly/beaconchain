@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChainFamily, ChainIDs, ChainInfo } from '~/types/networks'
+import { ChainFamily, ChainIDs, ChainInfo } from '~/types/network'
 const colorMode = useColorMode()
 
 // Usage :

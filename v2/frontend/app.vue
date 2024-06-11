@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { generateUUID } from '~/utils/misc'
+
 // Used for debugging purposes, might be removed or moved later
 provide('app-uuid', { value: generateUUID() })
 useHead({
@@ -14,7 +15,6 @@ useHead({
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
-
 </script>
 
 <template>

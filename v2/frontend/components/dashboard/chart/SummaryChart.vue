@@ -12,7 +12,7 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
-import { formatEpochToDate } from '~/utils/format'
+import { useFormat } from '~/composables/useFormat'
 import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
@@ -29,7 +29,7 @@ use([
 ])
 
 const { fetch } = useCustomFetch()
-
+const { formatEpochToDate } = useFormat()
 const { dashboardKey } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
