@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sort"
@@ -779,24 +780,54 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 }
 
 func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// TODO
 	// for all validators already in the dashboard that are associated with the deposit address, update the group
 	// then add no more than `limit` validators associated with the deposit address to the dashboard
-	return d.dummy.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, address, limit)
+	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(addressParsed) != 20 {
+		return nil, fmt.Errorf("invalid deposit address: %s", address)
+	}
+	var validatorIndices []uint64
+	err = d.readerDb.Get(&validatorIndices, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// AddValidatorDashboardValidators will handle updating groups for validators already in the dashboard
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
 }
 
 func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// TODO
 	// for all validators already in the dashboard that are associated with the withdrawal address, update the group
-	// then add no more than `limit` validators associated with the withdrawal address to the dashboard
-	return d.dummy.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, address, limit)
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	var validatorIndices []uint64
+	err = d.readerDb.Get(&validatorIndices, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// AddValidatorDashboardValidators will handle updating groups for validators already in the dashboard
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
 }
 
 func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// TODO
 	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
-	// then add no more than `limit` validators associated with the graffiti to the dashboard
-	return d.dummy.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	var validatorIndices []uint64
+	err := d.readerDb.Get(&validatorIndices, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// AddValidatorDashboardValidators will handle updating groups for validators already in the dashboard
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
