@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle, faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons'
 import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 
@@ -14,6 +14,8 @@ interface Props {
   isYearly: boolean
 }
 const props = defineProps<Props>()
+
+const quantity = ref(1)
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
@@ -59,8 +61,9 @@ async function buttonCallback () {
 }
 
 const quantityInfo = computed(() => {
+  // TODO: Testcode, implement
   return {
-    amount: 1
+    amount: props.addon.product_name === '10k extra valis per dashboard' ? 5 : 0
   }
 })
 
@@ -135,8 +138,17 @@ const addonButton = computed(() => {
         </BcTooltip>
       </div>
       <div class="quantity-row">
-        <div v-if="quantityInfo.amount">
+        <div v-if="quantityInfo.amount" class="quantity-label">
           {{ $t('pricing.addons.currently_active', { amount: quantityInfo.amount }) }}
+        </div>
+        <div v-else class="quantity-setter">
+          <Button class="p-button-icon-only">
+            <FontAwesomeIcon :icon="faMinus" />
+          </Button>
+          <InputNumber v-model="quantity" class="quantity-input" input-id="integeronly" />
+          <Button class="p-button-icon-only">
+            <FontAwesomeIcon :icon="faPlus" />
+          </Button>
         </div>
       </div>
       <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="buttonCallback" />
@@ -224,7 +236,41 @@ const addonButton = computed(() => {
       border-radius: 15px;
       background: var(--subcontainer-background);
       font-size: 15px;
-      margin-bottom: 56px;
+      margin-bottom: 24px;
+    }
+
+    .quantity-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 30px;
+
+      .quantity-label {
+        font-size: 17px;
+      }
+
+      .quantity-setter {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+
+        .quantity-input {
+          width: 45px;
+
+          > :first-child {
+            width: 100%;
+            text-align: center;
+          }
+        }
+
+        > * {
+          height: 100%;
+        }
+      }
+
+      margin-bottom: 40px;
     }
 
     .select-button {
@@ -280,6 +326,32 @@ const addonButton = computed(() => {
         height: 21px;
         gap: 4px;
         font-size: 10px;
+        margin-bottom: 17px;
+      }
+
+      .quantity-row {
+        height: 20px;
+
+        .quantity-label {
+          font-size: 12px;
+        }
+
+        .quantity-setter {
+          gap: 8px;
+
+          .quantity-input {
+            width: 30px;
+
+            > :first-child {
+              font-size: 12px;
+            }
+          }
+
+          > .p-button {
+            width: 20px;
+          }
+        }
+
         margin-bottom: 39px;
       }
 
