@@ -11,7 +11,8 @@ defineProps<Props>()
 <template>
   <BcTooltip v-if="status === 'success' && reward" class="combine-rewards">
     <BcFormatValue :value="reward?.el" :no-tooltip="true" />
-    <BcFormatValue :value="reward?.cl" :no-tooltip="true" />
+    <BcFormatValue v-if="reward?.cl && reward.cl != '0'" :value="reward?.cl" :no-tooltip="true" />
+    <span v-else>{{ $t('dashboard.validator.blocks.cl_pending') }}</span>
     <template #tooltip>
       <div>
         <div class="tt-row">
@@ -20,7 +21,8 @@ defineProps<Props>()
         </div>
         <div class="tt-row">
           <span>{{ $t('dashboard.validator.blocks.cl_rewards') }}: </span>
-          <BcFormatValue :value="reward?.cl" :no-tooltip="true" :full-value="true" />
+          <BcFormatValue v-if="reward?.cl && reward.cl != '0'" :value="reward?.cl" :no-tooltip="true" :full-value="true" />
+          <span v-else>{{ $t('dashboard.validator.blocks.pending') }}</span>
         </div>
       </div>
     </template>
@@ -40,7 +42,7 @@ defineProps<Props>()
   display: inline-flex;
   flex-direction: column;
 
-  >div:last-child {
+  >div:last-child, >span:last-child {
     font-size: var(--small_text_font_size);
     color: var(--text-color-discreet);
   }
