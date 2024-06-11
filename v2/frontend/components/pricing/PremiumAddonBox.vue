@@ -54,13 +54,18 @@ async function buttonCallback () {
       await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, 1)
     }
   } else {
-    await navigateTo('/register')
+    await navigateTo('/login')
   }
 }
 
 const addonButton = computed(() => {
+  let text = $t('pricing.get_started')
+  if (isLoggedIn.value) {
+    text = addonSubscription.value ? $t('pricing.addons.button.manage_subscription') : $t('pricing.addons.button.select_addon')
+  }
+
   return {
-    text: addonSubscription.value ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon'),
+    text,
     disabled: isStripeDisabled.value
   }
 })
@@ -95,7 +100,7 @@ const addonButton = computed(() => {
             {{ prices.monthly_based_on_yearly }}
           </div>
           <div class="month" yearly>
-            {{ $t('pricing.per_month') }}
+            {{ $t('pricing.addons.per_month') }}
           </div>
           <div class="year">
             {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
@@ -106,7 +111,7 @@ const addonButton = computed(() => {
             {{ prices.monthly }}
           </div>
           <div class="month">
-            {{ $t('pricing.per_month') }}*
+            {{ $t('pricing.addons.per_month') }}*
           </div>
         </template>
       </div>
