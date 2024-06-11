@@ -106,7 +106,7 @@ const addonButton = computed(() => {
             {{ prices.monthly_based_on_yearly }}
           </div>
           <div class="month" yearly>
-            {{ $t('pricing.addons.per_month') }}
+            {{ $t('pricing.per_month') }}
           </div>
           <div class="year">
             {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
@@ -117,7 +117,7 @@ const addonButton = computed(() => {
             {{ prices.monthly }}
           </div>
           <div class="month">
-            {{ $t('pricing.addons.per_month') }}*
+            {{ $t('pricing.per_month') }}*
           </div>
         </template>
       </div>

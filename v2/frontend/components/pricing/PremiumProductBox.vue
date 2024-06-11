@@ -172,7 +172,7 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
           {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
