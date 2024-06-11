@@ -395,7 +395,7 @@ const purchaseQuantityButtons = computed(() => {
           gap: 8px;
 
           .quantity-input {
-            width: 30px;
+            width: 35px;
 
             > :first-child {
               font-size: 12px;
@@ -407,7 +407,14 @@ const purchaseQuantityButtons = computed(() => {
           }
         }
 
-        margin-bottom: 39px;
+        margin-bottom: 10px;
+      }
+
+      .limit-reached-row {
+        height: 10px;
+        font-size: 8px;
+
+        margin-bottom: 20px;
       }
 
       .select-button {
