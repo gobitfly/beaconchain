@@ -76,11 +76,11 @@ const addonButton = computed(() => {
 })
 
 const maximumQuantity = computed(() => {
-  return Math.floor((props.maximumValidatorLimit || 10000) - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators
+  return Math.ceil(((props.maximumValidatorLimit || 10000) - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators)
 })
 
 const limitReached = computed(() => {
-  return quantityForPurchase.value > maximumQuantity.value
+  return quantityForPurchase.value >= maximumQuantity.value
 })
 
 const purchaseQuantityButtons = computed(() => {
