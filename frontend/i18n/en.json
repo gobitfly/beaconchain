@@ -604,6 +604,7 @@
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
+    "per_month": "per month",
     "monthly": "Monthly",
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
@@ -616,7 +617,6 @@
     "get_started": "Get started now",
     "premium_product": {
       "popular": "Popular!",
-      "per_month": "per month",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
       "validators_per_dashboard": "{amount} Validators per Dashboard",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
@@ -666,7 +666,6 @@
     "addons": {
       "title": "Premium Add-Ons",
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
-      "per_month": "per month per Add-On",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
       "currently_active": "Currently active: {amount}",
