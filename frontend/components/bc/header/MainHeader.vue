@@ -289,6 +289,7 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
+      height: unset;
 
       .logo {
         display: flex;
@@ -321,7 +322,6 @@ $smallHeaderThreshold: 1024px;
         }
       }
 
-      height: unset;
       .variant {
         position: relative;
         margin-top: auto;
