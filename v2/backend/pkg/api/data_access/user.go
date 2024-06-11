@@ -20,7 +20,7 @@ type UserRepository interface {
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
-	// TODO @patrick
+	// TODO @patrick post-beta improve product-mgmt
 	result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
@@ -61,7 +61,7 @@ func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
 }
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
-	// TODO @patrick improve and unmock
+	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},
@@ -201,14 +201,19 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		}
 	}
 
+	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
+		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
+	}
+
 	return userInfo, nil
 }
 
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO @patrick put into db instead of hardcoding here and make it configurable
+	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-		ApiProducts: []t.ApiProduct{ // TODO @patrick this data is not final yet
+		ValidatorsPerDashboardLimit: 101_000,
+		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
+		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",
