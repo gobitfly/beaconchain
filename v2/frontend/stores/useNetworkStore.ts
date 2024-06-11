@@ -10,10 +10,10 @@ interface ApiChainInfo {
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: ApiChainInfo[],
+    availableNetworks: networkTs.ChainIDs[],
     currentNetwork: networkTs.ChainIDs
   }>({
-    availableNetworks: [{ chain_id: networkTs.ChainIDs.Ethereum, name: networkTs.ChainInfo[networkTs.ChainIDs.Ethereum].name }],
+    availableNetworks: [networkTs.ChainIDs.Ethereum],
     currentNetwork: networkTs.ChainIDs.Any
   })
   return { data }
@@ -28,15 +28,19 @@ export function useNetworkStore () {
   async function loadAvailableNetworks () {
     try {
       const { fetch } = useCustomFetch()
-      data.value.availableNetworks = (await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)).data
+      const APIresponse = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
+      if (!APIresponse.data || !APIresponse.data.length) {
+        return false
+      }
+      data.value.availableNetworks = networkTs.sortChainIDsByPriority(APIresponse.data.map(apiInfo => apiInfo.chain_id))
       return true
     } catch {
       return false
     }
   }
 
-  const availableNetworks = computed(() => networkTs.sortChainIDsByPriority(data.value.availableNetworks.map(apiInfo => apiInfo.chain_id)))
-  const currentNetwork = computed(() => (data.value.currentNetwork !== networkTs.ChainIDs.Any) ? data.value.currentNetwork : availableNetworks.value[0])
+  const availableNetworks = computed(() => data.value.availableNetworks)
+  const currentNetwork = computed(() => (data.value.currentNetwork === networkTs.ChainIDs.Any) ? availableNetworks.value[0] : data.value.currentNetwork)
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function setCurrentNetwork (chainId: networkTs.ChainIDs) {
