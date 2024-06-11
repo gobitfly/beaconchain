@@ -80,7 +80,7 @@ const maximumQuantity = computed(() => {
 })
 
 const limitReached = computed(() => {
-  return quantityForPurchase.value >= maximumQuantity.value
+  return quantityForPurchase.value > maximumQuantity.value
 })
 
 const purchaseQuantityButtons = computed(() => {
@@ -167,11 +167,25 @@ const purchaseQuantityButtons = computed(() => {
           {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
         </div>
         <div v-else class="quantity-setter">
-          <Button class="p-button-icon-only" :disabled="purchaseQuantityButtons.minus.disabled" @click="purchaseQuantityButtons.minus.callback">
+          <Button
+            class="p-button-icon-only"
+            :disabled="purchaseQuantityButtons.minus.disabled"
+            @click="purchaseQuantityButtons.minus.callback"
+          >
             <FontAwesomeIcon :icon="faMinus" />
           </Button>
-          <InputNumber v-model="quantityForPurchase" class="quantity-input" input-id="integeronly" :min="1" :max="maximumQuantity" />
-          <Button class="p-button-icon-only" :disabled="purchaseQuantityButtons.plus.disabled" @click="purchaseQuantityButtons.plus.callback">
+          <InputNumber
+            v-model="quantityForPurchase"
+            class="quantity-input"
+            input-id="integeronly"
+            :min="1"
+            :max="maximumQuantity"
+          />
+          <Button
+            class="p-button-icon-only"
+            :disabled="purchaseQuantityButtons.plus.disabled"
+            @click="purchaseQuantityButtons.plus.callback"
+          >
             <FontAwesomeIcon :icon="faPlus" />
           </Button>
         </div>
