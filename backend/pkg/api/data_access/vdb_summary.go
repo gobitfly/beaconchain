@@ -53,7 +53,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	}
 
 	searchValidator := -1
-	var searchGroup map[int]bool
+	searchGroup := make(map[int]bool)
 	if search != "" {
 		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
 			search = strings.ToLower(search)
@@ -72,9 +72,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			searchValidator = int(number)
-		} else {
-			// No valid search term found, return empty results
-			return []t.VDBSummaryTableRow{}, &paging, nil
 		}
 	}
 
@@ -193,7 +190,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					v.validator_index
 				FROM users_val_dashboards_validators v
 				INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
-				WHERE dashboard_id = $1
+				WHERE v.dashboard_id = $1
 				ORDER BY v.group_id, v.validator_index`, dashboardId.Id)
 				if err != nil {
 					return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
@@ -278,10 +275,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		retMux.Lock()
 		defer retMux.Unlock()
 		for groupId, efficiency := range data {
-			if _, ok := searchGroup[int(groupId)]; len(searchGroup) > 0 && !ok && groupId != t.AllGroups {
-				continue
-			}
-
 			if ret[groupId] == nil {
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
@@ -299,10 +292,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		retMux.Lock()
 		defer retMux.Unlock()
 		for groupId, efficiency := range data {
-			if _, ok := searchGroup[int(groupId)]; len(searchGroup) > 0 && !ok && groupId != t.AllGroups {
-				continue
-			}
-
 			if ret[groupId] == nil {
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
@@ -320,10 +309,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		retMux.Lock()
 		defer retMux.Unlock()
 		for groupId, efficiency := range data {
-			if _, ok := searchGroup[int(groupId)]; len(searchGroup) > 0 && !ok && groupId != t.AllGroups {
-				continue
-			}
-
 			if ret[groupId] == nil {
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
@@ -341,10 +326,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		retMux.Lock()
 		defer retMux.Unlock()
 		for groupId, efficiency := range data {
-			if _, ok := searchGroup[int(groupId)]; len(searchGroup) > 0 && !ok && groupId != t.AllGroups {
-				continue
-			}
-
 			if ret[groupId] == nil {
 				ret[groupId] = &t.VDBSummaryTableRow{GroupId: groupId}
 			}
@@ -358,10 +339,15 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %v", err)
 	}
 
-	if searchValidator != -1 && len(searchGroup) > 0 {
+	if search != "" && len(searchGroup) == 0 {
 		return []t.VDBSummaryTableRow{}, &paging, nil
 	}
 
+	for groupId := range ret {
+		if _, ok := searchGroup[int(groupId)]; len(searchGroup) > 0 && !ok && groupId != t.AllGroups {
+			delete(ret, groupId)
+		}
+	}
 	if !showTotalRow {
 		delete(ret, t.AllGroups)
 	}
