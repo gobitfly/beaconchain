@@ -333,7 +333,9 @@
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
         "el_rewards": "Execution Layer Reward",
-        "cl_rewards": "Consensus Layer Reward"
+        "cl_rewards": "Consensus Layer Reward",
+        "cl_pending": "CL Pending",
+        "pending": "Pending"
       },
       "rewards": {
         "title": "Rewards",
