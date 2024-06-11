@@ -25,7 +25,7 @@ const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
     text: ChainInfo[chainId].name,
     disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
     component: IconNetwork,
-    componentData: { chainId, colored: false },
+    componentProps: { chainId, colored: false },
     componentClass: 'dashboard-creation-button-network-icon'
   }
 })
