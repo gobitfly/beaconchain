@@ -126,11 +126,11 @@ const rows = computed(() => {
         </div>
       </div>
       <BcBlurOverlay class="blur" />
-      <div class="button-row">
-        <Button class="pricing_button" @click="() => showContent = !showContent">
-          {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
-        </Button>
-      </div>
+    </div>
+    <div class="button-row" :class="{ 'show-content': showContent }">
+      <Button class="pricing_button" @click="() => showContent = !showContent">
+        {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
+      </Button>
     </div>
   </div>
 </template>
@@ -178,31 +178,12 @@ const rows = computed(() => {
       height: 75%;
     }
 
-    .button-row {
-      position: sticky;
-      z-index: 10;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-    }
-
     &.show-content {
       max-height: unset;
       overflow-x: auto;
 
       .blur {
         display: none;
-      }
-
-      .button-row {
-        padding-top: 75px;
-        bottom: 0;
-
-        @media (max-width: 1360px) {
-          padding-top: 15px;
-        }
       }
     }
 
@@ -254,7 +235,7 @@ const rows = computed(() => {
 
         .coming-soon {
           font-size: 11px;
-          margin-bottom: -4px;
+          margin-bottom: -1px;
 
           @media (max-width: 1360px) {
             font-size: 12px;
@@ -279,11 +260,13 @@ const rows = computed(() => {
         border-bottom-left-radius: var(--border-radius);
 
         .label {
-          .comming-soon {
+          .coming-soon {
             font-size: 13px;
+            margin-bottom: -2px;
 
             @media (max-width: 1360px) {
               font-size: 12px;
+              margin-bottom: unset;
             }
           }
         }
@@ -347,6 +330,21 @@ const rows = computed(() => {
       }
     }
 
+  }
+
+  .button-row {
+    margin-top: 25px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+
+    &.show-content {
+      margin-top: 75px;
+
+      @media (max-width: 1360px) {
+        margin-top: 15px;
+      }
+    }
   }
 }
 </style>
