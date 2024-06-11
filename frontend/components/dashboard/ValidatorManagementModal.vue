@@ -13,11 +13,12 @@ import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidato
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import { type SearchBar, SearchbarShape, SearchbarColors, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { ChainIDs } from '~/types/networks'
 import { API_PATH, type PathValues } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
+const { currentNetwork } = useNetworkStore()
 
 const { width } = useWindowSize()
 
@@ -145,7 +146,7 @@ const addValidator = (result: ResultSuggestion) => {
   searchBar.value!.empty()
 }
 
-// called for each row in the drop-down of the search bar and returns `true` if the row must be deactivated
+// called for each row in the drop-down of the search bar and returns `true` to deactivate the row
 function isSearchResultRestricted (result: ResultSuggestion) : boolean {
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
@@ -269,13 +270,13 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
       <template #bc-table-sub-header>
         <div class="add-row">
           <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: below, replace "[ChainIDs.Ethereum]" with a variable containing the array of chain id(s) that the validators should belong to -->
+          <!-- TODO: below, "[currentNetwork]" is wrong! Replace it with an array containing the chain ID that the dashboard was created for (it is not necessarily the current network). -->
           <BcSearchbarMain
             ref="searchBar"
             :bar-shape="SearchbarShape.Small"
             :color-theme="SearchbarColors.Default"
             :bar-purpose="SearchbarPurpose.ValidatorAddition"
-            :only-networks="[ChainIDs.Ethereum]"
+            :only-networks="[currentNetwork]"
             :row-lacks-premium-subscription="isSearchResultRestricted"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
             :screen-width-causing-sudden-change="0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here to avoid visual bugs in the list of results */"

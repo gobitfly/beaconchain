@@ -33,17 +33,21 @@ import {
   type CategoryFilter,
   type NetworkFilter
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
 const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
-const { t } = useI18n()
+defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
+const { t } = useI18n()
 const { fetch } = useCustomFetch()
+const { availableNetworks } = useNetworkStore()
+
 const props = defineProps<{
   barShape: SearchbarShape, // shape of the bar
   colorTheme: SearchbarColors, // colors of the bar and its dropdown
@@ -55,8 +59,6 @@ const props = defineProps<{
   keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
-
-defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
 enum States {
   NoText,
@@ -188,7 +190,7 @@ function reconfigureSearchbar () {
     allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
   }
   // creates the entries storing the state of the network filter, and deselect all networks
-  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
+  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : availableNetworks.value
   userInputNetworks.value.clear()
   for (const nw of networks) {
     userInputNetworks.value.set(nw, false)
@@ -210,6 +212,7 @@ function reconfigureSearchbar () {
 }
 
 watch(() => props, reconfigureSearchbar, { immediate: true })
+watch(availableNetworks, reconfigureSearchbar)
 
 let resizingObserver: ResizeObserver
 if (process.client) {
