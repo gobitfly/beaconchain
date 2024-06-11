@@ -18,6 +18,8 @@ const { isLoggedIn } = useUserStore()
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards, cookieDashboards, getDashboardLabel } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+// when we run into an error loading a dashboard keep it here to prevent an infinity loop
+const errorDashboardKeys: string[] = []
 
 const seoTitle = computed(() => {
   return getDashboardLabel(dashboardKey.value, 'validator')
@@ -26,14 +28,27 @@ const seoTitle = computed(() => {
 useBcSeo(seoTitle, true)
 
 const { refreshOverview, overview } = useValidatorDashboardOverviewStore()
-await Promise.all([
-  useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] }),
-  useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
-])
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] })
+
+const { error: validatorOverviewError } = await useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
+watch(validatorOverviewError, (error) => {
+  if (error && dashboardKey.value) {
+    if (!errorDashboardKeys.includes(dashboardKey.value)) {
+      errorDashboardKeys.push(dashboardKey.value)
+    }
+    setDashboardKey('')
+  }
+}, { immediate: true })
 
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 function showDashboardCreationDialog () {
   dashboardCreationControllerModal.value?.show()
+}
+
+const setDashboardKeyIfNoError = (key: string) => {
+  if (!errorDashboardKeys.includes(key)) {
+    setDashboardKey(key)
+  }
 }
 
 watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
@@ -41,12 +56,20 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
     // Some checks if we need to update the dashboard key or the public dashboard
     let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
     const isPublic = isPublicKey(newKey)
-    // we got a new public dashboard hash but the old hash matches the stored dashboard - so we update the stored dashboard
-    if (cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
-      updateHash('validator', newKey)
-    } else if (!newKey || !isPublic) { // trying to view a private dashboad but not logged in
+    if (newLoggedIn) {
+      // if we are logged in and have no dashboard key we only want to switch to the first dashboard if it is a private one
+      if (!cd.hash) {
+        setDashboardKeyIfNoError(cd.id.toString())
+      }
+    } else if (!newLoggedIn && cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
+      // we got a new public dashboard hash but the old hash matches the stored dashboard - so we update the stored dashboard
+      if (!errorDashboardKeys.includes(newKey)) {
+        updateHash('validator', newKey)
+      }
+    } else if (!newKey || !isPublic) {
+      // trying to view a private dashboad but not logged in
       cd = cookieDashboards.value?.validator_dashboards?.[0] as CookieDashboard
-      setDashboardKey(cd?.hash ?? '')
+      setDashboardKeyIfNoError(cd?.hash ?? '')
     }
   }
 }, { immediate: true })
