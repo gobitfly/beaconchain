@@ -179,7 +179,7 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 type VDBExecutionDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	Index                *uint64         `json:"index,omitempty"`
-	GroupId              int64           `json:"group_id"`
+	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
 	Timestamp            int64           `json:"timestamp"`
 	From                 Address         `json:"from"`
@@ -194,7 +194,7 @@ type InternalGetValidatorDashboardExecutionLayerDepositsResponse ApiPagingRespon
 type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	Index                uint64          `json:"index"`
-	GroupId              int64           `json:"group_id"`
+	GroupId              uint64          `json:"group_id"`
 	Epoch                uint64          `json:"epoch"`
 	Slot                 uint64          `json:"slot"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
