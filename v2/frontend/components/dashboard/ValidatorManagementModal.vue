@@ -32,7 +32,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic } = useDashboardKey()
+const { addEntities, removeEntities, dashboardKey, isPublic, dashboardType } = useDashboardKey()
+const { updateHash } = useUserDashboardStore()
 const { isLoggedIn, user } = useUserStore()
 
 const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
@@ -140,6 +141,9 @@ const addValidator = (result: ResultSuggestion) => {
 
   if (isPublic.value || !isLoggedIn.value) {
     addEntities(list)
+    if (!isLoggedIn.value) {
+      updateHash(dashboardType.value, dashboardKey.value)
+    }
   } else {
     changeGroup(body, selectedGroup.value)
   }
