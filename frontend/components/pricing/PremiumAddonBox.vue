@@ -40,17 +40,17 @@ const text = computed(() => {
   }
 })
 
-const addonSubscription = computed(() => {
-  return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon)
+const addonSubscriptionCount = computed(() => {
+  return user.value?.subscriptions?.filter(sub => sub.product_category === ProductCategoryPremiumAddon && (sub.product_id === props.addon.product_id_monthly || sub.product_id === props.addon.product_id_yearly)).length || 0
 })
 
-async function buttonCallback () {
+async function stripeButtonCallback () {
   if (isStripeDisabled.value) {
     return
   }
 
   if (isLoggedIn.value) {
-    if (addonSubscription.value) {
+    if (addonSubscriptionCount.value > 0) {
       await stripeCustomerPortal()
     } else {
       await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, 1)
@@ -60,17 +60,10 @@ async function buttonCallback () {
   }
 }
 
-const quantityInfo = computed(() => {
-  // TODO: Testcode, implement
-  return {
-    amount: props.addon.product_name === '10k extra valis per dashboard' ? 5 : 0
-  }
-})
-
 const addonButton = computed(() => {
   let text = $t('pricing.get_started')
   if (isLoggedIn.value) {
-    text = addonSubscription.value ? $t('pricing.addons.button.manage_subscription') : $t('pricing.addons.button.select_addon')
+    text = addonSubscriptionCount.value > 0 ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon')
   }
 
   return {
@@ -138,8 +131,8 @@ const addonButton = computed(() => {
         </BcTooltip>
       </div>
       <div class="quantity-row">
-        <div v-if="quantityInfo.amount" class="quantity-label">
-          {{ $t('pricing.addons.currently_active', { amount: quantityInfo.amount }) }}
+        <div v-if="addonSubscriptionCount" class="quantity-label">
+          {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
         </div>
         <div v-else class="quantity-setter">
           <Button class="p-button-icon-only">
@@ -151,7 +144,7 @@ const addonButton = computed(() => {
           </Button>
         </div>
       </div>
-      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="buttonCallback" />
+      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="stripeButtonCallback" />
     </div>
   </div>
 </template>
