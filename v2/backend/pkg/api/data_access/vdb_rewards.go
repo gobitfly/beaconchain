@@ -205,7 +205,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		groupByQuery := "GROUP BY e.epoch, v.group_id"
 		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
 		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.AggregatedGroupId)
+			queryParams = append(queryParams, t.DefaultGroupId)
 			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
 			groupByQuery = "GROUP BY e.epoch"
 			orderQuery = fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
@@ -366,7 +366,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		totalRewards[epoch] = t.VDBRewardsTableRow{
 			Epoch:   epoch,
 			Duty:    duty,
-			GroupId: t.AggregatedGroupId,
+			GroupId: t.AllGroups,
 			Reward: t.ClElValue[decimal.Decimal]{
 				El: totalInfo.ElRewards,
 				Cl: utils.GWeiToWei(big.NewInt(totalInfo.ClRewards)),
@@ -567,7 +567,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 
 	queryResult := []struct {
 		Epoch     uint64          `db:"epoch"`
-		GroupId   int64           `db:"group_id"`
+		GroupId   uint64          `db:"group_id"`
 		ElRewards decimal.Decimal `db:"el_rewards"`
 		ClRewards int64           `db:"cl_rewards"`
 	}{}
@@ -587,7 +587,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		groupByQuery := "GROUP BY e.epoch, v.group_id"
 		orderQuery := "ORDER BY e.epoch, v.group_id"
 		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.AggregatedGroupId)
+			queryParams = append(queryParams, t.DefaultGroupId)
 			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
 			groupByQuery = "GROUP BY e.epoch"
 			orderQuery = "ORDER BY e.epoch"
@@ -624,12 +624,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 	}
 
 	// Create a map structure to store the data
-	epochData := make(map[uint64]map[int64]t.ClElValue[decimal.Decimal])
+	epochData := make(map[uint64]map[uint64]t.ClElValue[decimal.Decimal])
 	epochList := make([]uint64, 0)
 
 	for _, res := range queryResult {
 		if _, ok := epochData[res.Epoch]; !ok {
-			epochData[res.Epoch] = make(map[int64]t.ClElValue[decimal.Decimal])
+			epochData[res.Epoch] = make(map[uint64]t.ClElValue[decimal.Decimal])
 			epochList = append(epochList, res.Epoch)
 		}
 
@@ -641,7 +641,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 
 	// Get the list of groups
 	// It should be identical for all epochs
-	var groupList []int64
+	var groupList []uint64
 	for _, groupData := range epochData {
 		for groupId := range groupData {
 			groupList = append(groupList, groupId)
@@ -669,9 +669,9 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		result.Categories = append(result.Categories, epoch)
 		for idx, series := range result.Series {
 			if series.Property == "el" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][int64(series.Id)].El)
+				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].El)
 			} else if series.Property == "cl" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][int64(series.Id)].Cl)
+				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].Cl)
 			} else {
 				return nil, fmt.Errorf("unknown series property: %s", series.Property)
 			}
