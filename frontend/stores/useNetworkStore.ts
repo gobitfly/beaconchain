@@ -14,7 +14,7 @@ const store = defineStore('network-store', () => {
     currentNetwork: networkTs.ChainIDs
   }>({
     availableNetworks: [networkTs.ChainIDs.Ethereum],
-    currentNetwork: networkTs.ChainIDs.Any
+    currentNetwork: networkTs.ChainIDs.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
   })
   return { data }
 })
