@@ -241,7 +241,7 @@
       "attestation_target": "Attestation Target",
       "proposer_el": "Proposer EL Reward",
       "proposer_attestation": "Proposer Att. Reward",
-      "proposer_sync": "Proposer Sync. Reward:",
+      "proposer_sync": "Proposer Sync. Reward",
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
