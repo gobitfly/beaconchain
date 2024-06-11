@@ -34,7 +34,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
       }
       // only use the dashboard cookie key as default if you are not logged in and it's not private
       if (!isLoggedIn.value && isPublicKey(dashboardKeyCookie.value)) {
-        setDashboardKey(dashboardKeyCookie.value)
+        setDashboardKey(`${dashboardKeyCookie.value}`)
       }
       return
     }

@@ -280,6 +280,10 @@
         }
       }
     },
+    "shared_modal": {
+      "text": "Create your own dashboard to get the most out of beaconcha.in",
+      "get_started": "Get started"
+    },
     "group": {
       "selection": {
         "all": "All groups",
