@@ -195,8 +195,10 @@
       "missed": "Missed",
       "orphaned": "Orphaned",
       "scheduled": "Scheduled",
-      "success": "Proposed"
+      "success": "Proposed",
+      "probably_missed": "Missed *"
     },
+    "status_might_change_on_reorg": "This block's status may change if a chain reorganistion occurs",
     "col": {
       "proposer": "Proposer",
       "graffiti": "Graffiti",
