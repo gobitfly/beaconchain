@@ -230,7 +230,9 @@ const editDashboard = () => {
       width: 145px;
 
       &:has(.text-disabled) {
-        opacity: 0.5;
+        > .p-menuitem-content{
+          opacity: 0.5;
+        }
       }
     }
   }

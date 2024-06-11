@@ -51,6 +51,7 @@
       padding: var(--padding);
       white-space: nowrap;
       text-overflow: ellipsis;
+      max-width: 200px;
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
