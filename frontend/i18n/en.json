@@ -669,6 +669,7 @@
       "per_month": "per month per Add-On",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
+      "currently_active": "Currently active: {amount}",
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"
