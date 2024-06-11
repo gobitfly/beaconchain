@@ -25,6 +25,10 @@ const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
+  if (isShared.value) {
+    return undefined
+  }
+
   const buttons: MenuBarEntry[] = []
 
   buttons.push({
@@ -67,7 +71,8 @@ const shareButtonOptions = computed(() => {
 
   const label = !edit ? $t('dashboard.shared') : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
-  return { label, icon, edit }
+  const disabled = isShared.value || !dashboardKey.value
+  return { label, icon, edit, disabled }
 })
 
 const shareView = () => {
@@ -99,6 +104,8 @@ const share = () => {
 }
 
 const deleteButtonOptions = computed(() => {
+  const visible = !isShared.value
+
   const disabled = isPublic.value && publicEntities.value?.length === 0
 
   // private dashboards always get deleted, public dashboards only get cleared
@@ -108,7 +115,7 @@ const deleteButtonOptions = computed(() => {
   const privateDashboardsCount = isLoggedIn.value ? ((dashboards.value?.validator_dashboards?.length ?? 0) + (dashboards.value?.account_dashboards?.length ?? 0)) : 0
   const forward = deleteDashboard ? (privateDashboardsCount > 1) : (privateDashboardsCount > 0)
 
-  return { disabled, deleteDashboard, forward }
+  return { visible, disabled, deleteDashboard, forward }
 })
 
 const onDelete = () => {
@@ -173,10 +180,10 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="action-button-container">
-      <Button class="share-button" :disabled="!dashboardKey" @click="share()">
+      <Button class="share-button" :disabled="shareButtonOptions.disabled" @click="share()">
         {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
-      <Button class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
+      <Button v-if="deleteButtonOptions.visible" class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>

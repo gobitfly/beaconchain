@@ -15,7 +15,6 @@ import {
 import VChart from 'vue-echarts'
 import type { ECBasicOption } from 'echarts/types/dist/shared'
 import { BigNumber } from '@ethersproject/bignumber'
-import { formatEpochToDate } from '~/utils/format'
 import { getChartTextColor, getChartTooltipBackgroundColor, getRewardChartColors, getRewardsChartLineColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
@@ -23,10 +22,14 @@ import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashb
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useFormat } from '~/composables/useFormat'
 
+const { formatEpochToDate } = useFormat()
+const { networkInfo } = useNetworkStore()
+const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
-// TODO: once we have different chains we migh need to change the default from 'ETH' to the dashboard currency
-const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? 'ETH' : currency.value)
+const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? networkNativeELcurrency.value : currency.value)
 
 use([
   GridComponent,

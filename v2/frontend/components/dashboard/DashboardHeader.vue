@@ -28,7 +28,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { isLoggedIn } = useUserStore()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { dashboards, getDashboardLabel, refreshDashboards } = useUserDashboardStore()
-const { dashboardKey, dashboardType, setDashboardKey, isPrivate } = useDashboardKey()
+const { dashboardKey, dashboardType, setDashboardKey, isPrivate, isShared } = useDashboardKey()
 
 const emit = defineEmits<{(e: 'showCreation'): void }>()
 
@@ -56,7 +56,7 @@ const getDashboardName = (db: Dashboard): string => {
 }
 
 const items = computed<MenuBarEntry[]>(() => {
-  if (dashboards.value === undefined) {
+  if (dashboards.value === undefined || isShared.value) {
     return []
   }
 
@@ -80,7 +80,7 @@ const items = computed<MenuBarEntry[]>(() => {
   }
   const createMenuBarButton = (type: DashboardType, label: string, id: DashboardKey): MenuBarButton => {
     if (type === dashboardType.value) {
-      return { label, command: () => setDashboardKey(id), active: id === dashboardKey.value }
+      return { label, command: () => setDashboardKey(id), active: id === dashboardKey.value, route: `/dashboard/${id}` }
     }
 
     if (type === 'validator') {
@@ -88,10 +88,9 @@ const items = computed<MenuBarEntry[]>(() => {
     }
     return { label, route: `/account-dashboard/${id}` }
   }
-
   addToSortedItems(0, dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
-    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash ?? cd.id}`)
+    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
   }))
   addToSortedItems(3, dashboards.value?.account_dashboards?.map((db) => {
     const cd = db as CookieDashboard
@@ -100,9 +99,9 @@ const items = computed<MenuBarEntry[]>(() => {
   const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
   addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications', disabledTooltip }])
 
+  // if we are in a public dashboard and change the validators then the route does not get updated
+  const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
   return sortedItems.map((items) => {
-    // if we are in a public dashboard and change the validators then the route does not get updated
-    const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
     const active = items.find(i => i.active || i.route === fixedRoute.path)
     return {
       active: !!active,
@@ -156,7 +155,7 @@ const editDashboard = () => {
           <BcTooltip v-if="item.disabledTooltip" :text="item.disabledTooltip" class="button-content" @click.stop.prevent="() => undefined">
             <span class="text-disabled">{{ item.label }}</span>
           </BcTooltip>
-          <BcLink v-else-if="item.route" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
+          <BcLink v-else-if="item.route && !item.command" :to="item.route" class="pointer" :class="{ 'p-active': item.active }">
             <span class="button-content" :class="[item.class]">
               <span class="text">{{ item.label }}</span>
               <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
@@ -168,7 +167,7 @@ const editDashboard = () => {
           </span>
         </template>
       </Menubar>
-      <Button class="p-button-icon-only" @click="emit('showCreation')">
+      <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
         <IconPlus alt="Plus icon" width="100%" height="100%" />
       </Button>
     </div>
