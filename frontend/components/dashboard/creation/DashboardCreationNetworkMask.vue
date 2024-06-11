@@ -22,10 +22,11 @@ watch(selection, (value) => { network.value = Number(value) as ChainIDs })
 const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
   return {
     value: String(chainId),
-    text: ChainInfo[chainId].name,
+    text: ChainInfo[chainId].family as string,
+    subText: (ChainInfo[chainId].name !== ChainInfo[chainId].family as string) ? ChainInfo[chainId].name : ChainInfo[chainId].description,
     disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
     component: IconNetwork,
-    componentProps: { chainId, colored: false },
+    componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
     componentClass: 'dashboard-creation-button-network-icon'
   }
 })
