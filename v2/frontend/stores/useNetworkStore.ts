@@ -12,14 +12,11 @@ const store = defineStore('network-store', () => {
   const data = ref<{
     availableNetworks: ApiChainInfo[],
     currentNetwork: networkTs.ChainIDs,
-    availableNetworksHasBeenFilled: boolean,
     currentNetworkHasBeenChosen: boolean
   }>({
-    // The values below are temporary and get replaced with actual data when the API responds.
-    // In the meantime, they allow the front-end to run for a few seconds with default values.
+    // default values if anything wrong happens when the list of available networks is requested from the API
     availableNetworks: [{ chain_id: networkTs.ChainIDs.Ethereum, name: networkTs.ChainInfo[networkTs.ChainIDs.Ethereum].name }],
     currentNetwork: networkTs.ChainIDs.Ethereum,
-    availableNetworksHasBeenFilled: false,
     currentNetworkHasBeenChosen: false
   })
   return { data }
@@ -28,16 +25,22 @@ const store = defineStore('network-store', () => {
 export function useNetworkStore () {
   const { data } = storeToRefs(store())
 
-  if (!data.value.availableNetworksHasBeenFilled) {
-    const { fetch } = useCustomFetch()
-    data.value.availableNetworksHasBeenFilled = true // do not put it inside the `then()` otherwise the calls to `useNetworkStore()` made before the API responds will call the API multiple times
-    fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS).then((response) => {
-      data.value.availableNetworks = response.data.sort((a, b) => networkTs.ChainInfo[a.chain_id].priority - networkTs.ChainInfo[b.chain_id].priority)
+  /**
+   * Needs to be called once, when the front-end is loading. Unnecessary afterwards.
+   */
+  async function loadAvailableNetworks () {
+    try {
+      const { fetch } = useCustomFetch()
+      const list = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
+      data.value.availableNetworks = list.data.sort((a, b) => networkTs.ChainInfo[a.chain_id].priority - networkTs.ChainInfo[b.chain_id].priority)
       if (!data.value.currentNetworkHasBeenChosen) {
-        // by default, the current network is the one with the best priority in file `networks.ts`
+      // by default, the current network is the one with the best priority
         data.value.currentNetwork = data.value.availableNetworks[0].chain_id
       }
-    })
+      return true
+    } catch {
+      return false
+    }
   }
 
   const availableNetworks = computed(() => data.value.availableNetworks.map(apiInfo => apiInfo.chain_id))
@@ -78,6 +81,7 @@ export function useNetworkStore () {
   }
 
   return {
+    loadAvailableNetworks,
     availableNetworks,
     currentNetwork,
     networkInfo,
