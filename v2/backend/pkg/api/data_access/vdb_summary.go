@@ -31,17 +31,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 	showTotalRow := false
 
-	validators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		for _, validator := range dashboardId.Validators {
-			validators = append(validators, validator)
-		}
-
-		ret[t.DefaultGroupId] = &t.VDBSummaryTableRow{
-			Validators: append([]t.VDBValidator{}, validators...),
-		}
-	}
-
 	type queryResult struct {
 		GroupId                int64          `db:"group_id"`
 		AttestationReward      sql.NullString `db:"attestations_reward"`
@@ -72,6 +61,20 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			searchValidator = int(number)
+		}
+	}
+
+	validators := make([]t.VDBValidator, 0)
+	if dashboardId.Validators != nil {
+		for _, validator := range dashboardId.Validators {
+			if searchValidator != -1 && int(validator) == searchValidator {
+				searchGroup[t.DefaultGroupId] = true
+			}
+			validators = append(validators, validator)
+		}
+
+		ret[t.DefaultGroupId] = &t.VDBSummaryTableRow{
+			Validators: append([]t.VDBValidator{}, validators...),
 		}
 	}
 
@@ -754,11 +757,11 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	if dashboardId.Validators != nil {
 		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 			select
-			epoch_start,
+				epoch_start,
 				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
 				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-				from  validator_dashboard_data_daily
+			from  validator_dashboard_data_daily
 			WHERE day > $1 AND validator_index = ANY($2)
 			group by 1
 		) as a ORDER BY epoch_start, group_id;`
