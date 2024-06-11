@@ -21,12 +21,19 @@ export function useValidatorDashboardOverviewStore () {
       data.value = undefined
       return
     }
-    const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
-    data.value = res.data
+    try {
+      const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
+      data.value = res.data
 
-    clearOverviewDependentCaches()
+      clearOverviewDependentCaches()
 
-    return overview.value
+      return overview.value
+    } catch (e) {
+      data.value = undefined
+      clearOverviewDependentCaches()
+
+      throw e
+    }
   }
 
   function clearOverviewDependentCaches () {

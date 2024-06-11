@@ -1,27 +1,3 @@
-/* This file sets types and fundamental data about different networks.
-
-   To use it, you need to write first:
-     import { ChainIDs, ChainInfo } from '~/types/networks'
-
-   First, the file defines identifiers equal to the chain IDs of the networks.
-   In your code, you write ChainIDs.Ethereum whenever you want to represent the main Ethereum network,
-   or ChainIDs.Sepolia for the Sepolia testnet and so on.
-   Those constants are integers but for a safer code you should define your constants, fields, variables
-   and parameters as the type ChainIDs.
-
-   The most important feature of this file is to provide a mapping between those chain IDs and
-   information about the networks.
-   For example, when your variable myNetwork is equal to 10200 (namely ChainIDs.Chiado, a testnet of Gnosis) :
-   * ChainInfo[myNetwork].path  is the beginning of the path used to address this network in API endpoints.
-   * ChainInfo[myNetwork].mainNet  is equal to the chain ID of the mainnet of Gnosis (100).
-     So, to check whether your network is a testnet, you can do  myNetwork != ChainInfo[myNetwork].mainNet
-     or simply !isMainNet(myNetwork) whose implementation does the same test (first, add the function to your import list)
-   * ChainInfo[myNetwork].elCurrency is equal to 'xDAI' whereas ChainInfo[myNetwork].clCurrency is 'GNO'
-
-   To check whether a network is a L1, you can do myNetwork === ChainInfo[myNetwork].L1
-   or simply isL1(myNetwork) whose implementation does the same test (first, add the function to your import list)
-*/
-
 import type { CryptoCurrency } from '~/types/currencies'
 
 export enum ChainFamily {
@@ -62,6 +38,9 @@ interface ChainInfoFields {
   L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
+  timeStampSlot0: number, // if this property is 0, it means that the network has no slots
+  secondsPerSlot: number, // if this property is 0, it means that the network has no slots
+  slotsPerEpoch: number, // if this property is 0, it means that the network has no slots
   path: string,
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
@@ -75,6 +54,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Any,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/undefined',
     priority: 0 // data belonging to all networks is displayed first by default
   },
@@ -87,6 +69,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1606824023,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/ethereum',
     priority: 1
   },
@@ -98,6 +83,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1695902400,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/holesky',
     priority: 2
   },
@@ -109,6 +97,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 1655733600,
+    secondsPerSlot: 12,
+    slotsPerEpoch: 32,
     path: '/sepolia',
     priority: 3
   },
@@ -121,6 +112,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/arbitrum-one-ethereum',
     priority: 10
   },
@@ -132,6 +126,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/arbitrum-nova-ethereum',
     priority: 11
   },
@@ -143,6 +140,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/arbitrum-one-sepolia',
     priority: 12
   },
@@ -155,6 +155,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/optimism-ethereum',
     priority: 20
   },
@@ -166,6 +169,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/optimism-sepolia',
     priority: 21
   },
@@ -178,6 +184,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/base-ethereum',
     priority: 30
   },
@@ -189,6 +198,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
+    timeStampSlot0: 0,
+    secondsPerSlot: 0,
+    slotsPerEpoch: 0,
     path: '/base-sepolia',
     priority: 31
   },
@@ -201,6 +213,9 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
+    timeStampSlot0: 1638993340,
+    secondsPerSlot: 5,
+    slotsPerEpoch: 16,
     path: '/gnosis',
     priority: 40
   },
@@ -212,29 +227,15 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
+    timeStampSlot0: 1665396300,
+    secondsPerSlot: 5,
+    slotsPerEpoch: 16,
     path: '/chiado',
     priority: 41
   }
 }
 
-export function isMainNet (network: ChainIDs) : boolean {
-  return (ChainInfo[network].mainNet === network)
-}
-
-export function isL1 (network: ChainIDs) : boolean {
-  return (ChainInfo[network].L1 === network)
-}
-
-// TODO: request it from the API
-export function getListOfImplementedChainIDs (sortByPriority : boolean) : ChainIDs[] {
-  const list = [ChainIDs.Ethereum, ChainIDs.ArbitrumOneEthereum, ChainIDs.OptimismEthereum, ChainIDs.BaseEthereum, ChainIDs.Gnosis]
-  if (sortByPriority) {
-    sortListOfChainIDs(list)
-  }
-  return list
-}
-
-export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
+export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
   const list : ChainIDs[] = []
 
   for (const id in ChainIDs) {
@@ -243,11 +244,93 @@ export function getListOfChainIDs (sortByPriority : boolean) : ChainIDs[] {
     }
   }
   if (sortByPriority) {
-    sortListOfChainIDs(list)
+    sortChainIDsByPriority(list)
   }
   return list
 }
 
-function sortListOfChainIDs (list : ChainIDs[]) {
-  list.sort((a, b) => { return ChainInfo[a].priority - ChainInfo[b].priority })
+/**
+ * Should be used only when you test a network different from the current one.
+ * Whereever you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetworkStore.ts`.
+ */
+export function isMainNet (network: ChainIDs) : boolean {
+  return (ChainInfo[network].mainNet === network)
+}
+
+/**
+ * Should be used only when you test a network different from the current one.
+ * Wherever you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetworkStore.ts`.
+ */
+export function isL1 (network: ChainIDs) : boolean {
+  return (ChainInfo[network].L1 === network)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetworkStore.ts`.
+ */
+export function epochsPerDay (chainId: ChainIDs): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return 0
+  }
+  return 24 * 60 * 60 / (info.slotsPerEpoch * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
+ */
+export function epochToTs (chainId: ChainIDs, epoch: number): number | undefined {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined || epoch < 0) {
+    return undefined
+  }
+
+  return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch) * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetworkStore.ts`.
+ */
+export function slotToTs (chainId: ChainIDs, slot: number): number | undefined {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined || slot < 0) {
+    return undefined
+  }
+
+  return info.timeStampSlot0 + (slot * info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
+ */
+export function tsToSlot (chainId: ChainIDs, ts: number): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
+ */
+export function slotToEpoch (chainId: ChainIDs, slot: number): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return Math.floor(slot / info.slotsPerEpoch)
+}
+
+/**
+ * @param list List to sort. Its order will be modified because the function sorts in place.
+ * @returns List sorted in place, so the same as parameter `list`.
+ */
+export function sortChainIDsByPriority (list : ChainIDs[]) : ChainIDs[] {
+  return list.sort((a, b) => ChainInfo[a].priority - ChainInfo[b].priority)
 }

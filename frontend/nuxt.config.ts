@@ -40,7 +40,8 @@ export default defineNuxtConfig({
       stripeBaseUrl: process.env.NUXT_PUBLIC_STRIPE_BASE_URL,
       logIp: '',
       logFile: '',
-      showInDevelopment: ''
+      showInDevelopment: '',
+      chainIdByDefault: ''
     },
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,

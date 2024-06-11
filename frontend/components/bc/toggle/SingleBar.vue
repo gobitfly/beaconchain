@@ -6,6 +6,7 @@ interface Props {
     icon?: IconDefinition,
     text?: string,
     component?: Component,
+    componentProps?: any,
     componentClass?: string,
     value: string,
     disabled?: boolean
@@ -49,7 +50,7 @@ function onButtonClicked (value: string) {
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" :class="button.componentClass" />
+          <component :is="button.component" v-bind="button.componentProps" :class="button.componentClass" />
         </slot>
       </template>
     </BcToggleSingleBarButton>
