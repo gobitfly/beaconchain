@@ -42,16 +42,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	indexSearch := int64(-1)
 	epochSearch := int64(-1)
 	if search != "" {
-		if utils.IsHash(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
+		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-			defer releaseLock()
 			if err != nil {
 				return nil, nil, err
 			}
@@ -61,6 +56,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				// No validator index for pubkey found, return empty results
 				return result, &paging, nil
 			}
+			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 			epochSearch = int64(number)
@@ -666,16 +662,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	// Analyze the search term
 	indexSearch := int64(-1)
 	if search != "" {
-		if utils.IsHash(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
+		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-			defer releaseLock()
 			if err != nil {
 				return nil, nil, err
 			}
@@ -685,8 +676,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 				// No validator index for pubkey found, return empty results
 				return result, &paging, nil
 			}
+			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
+		} else {
+			// No valid search term found
+			return result, &paging, nil
 		}
 	}
 
