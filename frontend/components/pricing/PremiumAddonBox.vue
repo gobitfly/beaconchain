@@ -15,7 +15,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const quantity = ref(1)
+const quantityForPurchase = ref(1)
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
@@ -33,7 +33,7 @@ const prices = computed(() => {
   }
 })
 
-const text = computed(() => {
+const boxText = computed(() => {
   return {
     validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
     perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
@@ -53,7 +53,7 @@ async function stripeButtonCallback () {
     if (addonSubscriptionCount.value > 0) {
       await stripeCustomerPortal()
     } else {
-      await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, 1)
+      await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
     }
   } else {
     await navigateTo('/login')
@@ -72,13 +72,38 @@ const addonButton = computed(() => {
   }
 })
 
+const maximumQuantity = computed(() => {
+  return 10 // TODO: Implement logic to get the maximum quantity
+})
+
+const purchaseQuantityButtons = computed(() => {
+  return {
+    minus: {
+      disabled: quantityForPurchase.value <= 1,
+      callback: () => {
+        if (quantityForPurchase.value > 1) {
+          quantityForPurchase.value--
+        }
+      }
+    },
+    plus: {
+      disabled: quantityForPurchase.value >= maximumQuantity.value,
+      callback: () => {
+        if (quantityForPurchase.value < maximumQuantity.value) {
+          quantityForPurchase.value++
+        }
+      }
+    }
+  }
+})
+
 </script>
 
 <template>
   <div class="box-container">
     <div class="summary-container">
       <div class="validator-count">
-        {{ text.validatorCount }}
+        {{ boxText.validatorCount }}
         <div class="subtext">
           {{ $t('pricing.addons.per_dashboard') }}
           <BcTooltip position="top" :fit-content="true">
@@ -91,7 +116,7 @@ const addonButton = computed(() => {
           </BcTooltip>
         </div>
         <div class="per-validator">
-          {{ text.perValidator }}
+          {{ boxText.perValidator }}
         </div>
       </div>
     </div>
@@ -135,11 +160,11 @@ const addonButton = computed(() => {
           {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
         </div>
         <div v-else class="quantity-setter">
-          <Button class="p-button-icon-only">
+          <Button class="p-button-icon-only" :disabled="purchaseQuantityButtons.minus.disabled" @click="purchaseQuantityButtons.minus.callback">
             <FontAwesomeIcon :icon="faMinus" />
           </Button>
-          <InputNumber v-model="quantity" class="quantity-input" input-id="integeronly" />
-          <Button class="p-button-icon-only">
+          <InputNumber v-model="quantityForPurchase" class="quantity-input" input-id="integeronly" :min="1" :max="maximumQuantity" />
+          <Button class="p-button-icon-only" :disabled="purchaseQuantityButtons.plus.disabled" @click="purchaseQuantityButtons.plus.callback">
             <FontAwesomeIcon :icon="faPlus" />
           </Button>
         </div>
