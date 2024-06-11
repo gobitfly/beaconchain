@@ -33,6 +33,7 @@ export const ProductStoreAndroidPlaystore: ProductStore = "android-playstore";
 export const ProductStoreEthpool: ProductStore = "ethpool";
 export const ProductStoreCustom: ProductStore = "custom";
 export interface ProductSummary {
+  validators_per_dashboard_limit: number /* uint64 */;
   stripe_public_key: string;
   api_products: ApiProduct[];
   premium_products: PremiumProduct[];
