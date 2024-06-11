@@ -71,7 +71,7 @@ async function buttonCallback () {
       await stripePurchase(props.isYearly ? props.product.stripe_price_id_yearly : props.product.stripe_price_id_monthly, 1)
     }
   } else {
-    await navigateTo('/register')
+    await navigateTo('/login')
   }
 }
 
@@ -96,7 +96,7 @@ const planButton = computed(() => {
       }
     }
   } else {
-    text = $t('pricing.sign_up')
+    text = $t('pricing.get_started')
   }
 
   return { text, isDowngrade, disabled: isStripeDisabled.value || undefined }
@@ -172,7 +172,7 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t('pricing.premium_product.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
           {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
