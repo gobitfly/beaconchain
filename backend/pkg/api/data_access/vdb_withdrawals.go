@@ -55,13 +55,13 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		return result, &paging, nil
 	}
 
-	validatorGroupMap := make(map[t.VDBValidator]int64)
+	validatorGroupMap := make(map[t.VDBValidator]uint64)
 	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
 		queryResult := []struct {
 			ValidatorIndex t.VDBValidator `db:"validator_index"`
-			GroupId        int64          `db:"group_id"`
+			GroupId        uint64         `db:"group_id"`
 		}{}
 
 		queryParams := []interface{}{dashboardId.Id}
@@ -86,7 +86,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId
 		for _, res := range queryResult {
 			groupId := res.GroupId
 			if dashboardId.AggregateGroups {
-				groupId = t.AggregatedGroupId
+				groupId = t.DefaultGroupId
 			}
 			validatorGroupMap[res.ValidatorIndex] = groupId
 			validators = append(validators, res.ValidatorIndex)
