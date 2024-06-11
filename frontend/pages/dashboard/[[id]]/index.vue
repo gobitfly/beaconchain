@@ -88,11 +88,11 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
       :display-type="'modal'"
     />
     <BcPageWrapper>
-      <DashboardSharedDashboardModal />
       <template #top>
         <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
+      <DashboardSharedDashboardModal />
       <DashboardControls />
       <div>
         <DashboardValidatorSlotViz />
