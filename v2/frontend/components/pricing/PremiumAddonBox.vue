@@ -58,6 +58,12 @@ async function buttonCallback () {
   }
 }
 
+const quantityInfo = computed(() => {
+  return {
+    amount: 1
+  }
+})
+
 const addonButton = computed(() => {
   let text = $t('pricing.get_started')
   if (isLoggedIn.value) {
@@ -127,6 +133,11 @@ const addonButton = computed(() => {
             </div>
           </template>
         </BcTooltip>
+      </div>
+      <div class="quantity-row">
+        <div v-if="quantityInfo.amount">
+          {{ $t('pricing.addons.currently_active', { amount: quantityInfo.amount }) }}
+        </div>
       </div>
       <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="buttonCallback" />
     </div>
