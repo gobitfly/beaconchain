@@ -198,7 +198,7 @@
       "success": "Proposed",
       "probably_missed": "Missed *"
     },
-    "status_might_change_on_reorg": "This block's status may change if a chain reorganistion occurs",
+    "status_might_change_on_reorg": "This block's status may change if a chain reorganization occurs.",
     "col": {
       "proposer": "Proposer",
       "graffiti": "Graffiti",
