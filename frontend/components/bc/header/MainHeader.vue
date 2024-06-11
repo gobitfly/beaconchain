@@ -139,7 +139,7 @@ const userMenu = computed(() => {
 @use "~/assets/css/fonts.scss";
 
 // do not change these two values without changing the values in types/header.ts accordingly
-$mobileHeaderThreshold: 470px;
+$mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
 .anchor {
