@@ -31,6 +31,7 @@
     width: var(--pricing-content-width);
     display: flex;
     flex-direction: column;
+    padding: 0 21px;
 
     .title {
       font-size: 18px;

@@ -38,7 +38,7 @@
 
     .text {
       color: var(--primary-contrast-color);
-      font-size: 15px;
+      font-size: 12px;
       font-weight: var(--montserrat-semi-bold);
       padding-left: 18px;
     }
