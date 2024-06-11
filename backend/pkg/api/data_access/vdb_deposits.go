@@ -134,9 +134,9 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 		}
 		if row.GroupId.Valid {
 			if dashboardId.AggregateGroups {
-				responseData[i].GroupId = t.AggregatedGroupId
+				responseData[i].GroupId = t.DefaultGroupId
 			} else {
-				responseData[i].GroupId = row.GroupId.Int64
+				responseData[i].GroupId = uint64(row.GroupId.Int64)
 			}
 		} else {
 			responseData[i].GroupId = t.DefaultGroupId
@@ -282,9 +282,9 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 		}
 		if row.GroupId.Valid {
 			if dashboardId.AggregateGroups {
-				responseData[i].GroupId = t.AggregatedGroupId
+				responseData[i].GroupId = t.DefaultGroupId
 			} else {
-				responseData[i].GroupId = row.GroupId.Int64
+				responseData[i].GroupId = uint64(row.GroupId.Int64)
 			}
 		} else {
 			responseData[i].GroupId = t.DefaultGroupId
