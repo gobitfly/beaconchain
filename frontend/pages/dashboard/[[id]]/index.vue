@@ -58,7 +58,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
     const isPublic = isPublicKey(newKey)
     if (newLoggedIn) {
       // if we are logged in and have no dashboard key we only want to switch to the first dashboard if it is a private one
-      if (!cd.hash) {
+      if (cd && !cd.hash) {
         setDashboardKeyIfNoError(cd.id.toString())
       }
     } else if (!newLoggedIn && cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
@@ -92,6 +92,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
         <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>
+      <DashboardSharedDashboardModal />
       <DashboardControls />
       <div>
         <DashboardValidatorSlotViz />

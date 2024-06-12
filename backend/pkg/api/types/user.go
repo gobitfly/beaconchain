@@ -35,6 +35,7 @@ const ProductStoreEthpool ProductStore = "ethpool"
 const ProductStoreCustom ProductStore = "custom"
 
 type ProductSummary struct {
+	ValidatorsPerDashboardLimit          uint64                                 `json:"validators_per_dashboard_limit"`
 	StripePublicKey                      string                                 `json:"stripe_public_key"`
 	ApiProducts                          []ApiProduct                           `json:"api_products"`
 	PremiumProducts                      []PremiumProduct                       `json:"premium_products"`
@@ -108,7 +109,7 @@ type PremiumPerks struct {
 	CustomMachineAlerts             bool   `json:"custom_machine_alerts"`
 }
 
-// TODO @patrick StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse
+// TODO @patrick post-beta StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse
 
 type StripeCreateCheckoutSession struct {
 	SessionId string `json:"sessionId,omitempty"`

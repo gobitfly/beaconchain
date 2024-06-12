@@ -20,13 +20,13 @@ type UserRepository interface {
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
-	// TODO @patrick
+	// TODO @patrick post-beta improve product-mgmt
 	result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions 
-				LEFT JOIN users ON users.id = user_id 
+				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
 					WHEN 'orca.yearly'    THEN  1
@@ -61,7 +61,7 @@ func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
 }
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
-	// TODO @patrick improve and unmock
+	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},
@@ -107,7 +107,7 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
-		WHERE uas.user_id = $1 AND uas.active = true
+		WHERE uas.user_id = $1 AND uas.active = true AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 		ORDER BY CASE uas.product_id
 			WHEN 'orca.yearly'    THEN  1
 			WHEN 'orca'           THEN  2
@@ -201,14 +201,19 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		}
 	}
 
+	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
+		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
+	}
+
 	return userInfo, nil
 }
 
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO @patrick put into db instead of hardcoding here and make it configurable
+	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-		ApiProducts: []t.ApiProduct{ // TODO @patrick this data is not final yet
+		ValidatorsPerDashboardLimit: 101_000,
+		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
+		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",

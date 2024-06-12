@@ -35,7 +35,7 @@ export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewD
  * Summary Tab
  */
 export interface VDBSummaryTableRow {
-  group_id: number /* uint64 */;
+  group_id: number /* int64 */;
   efficiency: PeriodicValues<number /* float64 */>;
   validators: number /* uint64 */[];
 }
