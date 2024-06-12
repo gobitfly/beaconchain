@@ -40,7 +40,7 @@ const groupName = computed(() => {
   return getGroupLabel($t, props.groupId, groups.value)
 })
 
-const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
+const cappedValidators = computed(() => [...props.validators].sort((a, b) => a - b).slice(0, 10) || [])
 
 </script>
 <template>

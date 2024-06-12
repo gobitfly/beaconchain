@@ -32,7 +32,7 @@ const MAX_VALIDATORS = 1000
 
 watch(props, async (p) => {
   if (p) {
-    shownValidators.value = p.validators?.sort((a, b) => a - b)
+    shownValidators.value = [...p.validators].sort((a, b) => a - b)
     validators.value = p.validators
     setHeader(
       p?.groupName
