@@ -804,7 +804,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 		groupByQuery := "GROUP BY 1, 2"
 		orderQuery := "ORDER BY epoch_start, group_id"
 		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.AllGroups)
+			queryParams = append(queryParams, t.DefaultGroupId)
 			groupIdQuery = "$3::smallint AS group_id,"
 			groupByQuery = "GROUP BY 1"
 			orderQuery = "ORDER BY epoch_start"
