@@ -166,7 +166,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :body-class="colsVisible.mobileStatus ? 'status-mobile' : ''"
             >
               <template #body="slotProps">
-                <BlockTableStatus :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
+                <BlockTableStatus class="block-status" :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
               </template>
             </Column>
             <Column
@@ -228,7 +228,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     {{ $t('dashboard.validator.col.status') }}:
                   </div>
                   <div class="value">
-                    <BlockTableStatus :status="slotProps.data.status" :mobile="false" />
+                    <BlockTableStatus :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="false" />
                   </div>
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
@@ -314,7 +314,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   .future-row {
     td {
 
-      >div,
+      >div:not(.block-status),
       >span {
         opacity: 0.5;
       }

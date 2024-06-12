@@ -4,11 +4,17 @@ import type { TagSize, TagColor } from '~/types/tag'
 
 interface Props {
   status?: BlockStatus,
+  blockSlot?: number,
   mobile?: boolean
 }
 const props = defineProps<Props>()
 
 const { t: $t } = useI18n()
+
+const { latestState } = useLatestStateStore()
+
+// we don't want to be reactive to the current_slot
+const currentSlot = latestState.value?.current_slot || 0
 
 const mapped = computed(() => {
   if (!props.status) {
@@ -16,10 +22,14 @@ const mapped = computed(() => {
   }
   const size: TagSize = props.mobile ? 'circle' : 'default'
   let color: TagColor
-  const tStatus = $t(`block.status.${props.status}`)
+  const status = props.status === 'scheduled' && (props.blockSlot && (props.blockSlot < currentSlot)) ? 'probably_missed' : props.status
+  const tStatus = $t(`block.status.${status}`)
   const label = props.mobile ? tStatus.substring(0, 1) : tStatus
-  const tooltip = props.mobile ? tStatus : undefined
-  switch (props.status) {
+  const tooltip = status === 'probably_missed' ? $t('block.status_might_change_on_reorg') : props.mobile ? tStatus : undefined
+  switch (status) {
+    case 'probably_missed':
+      color = 'partial'
+      break
     case 'missed':
       color = 'failed'
       break
@@ -35,6 +45,7 @@ const mapped = computed(() => {
   }
 
   return {
+    status,
     size,
     color,
     label,
