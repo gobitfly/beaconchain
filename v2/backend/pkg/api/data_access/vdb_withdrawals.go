@@ -562,11 +562,7 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator,
 	validatorSearch := make([]t.VDBValidator, 0)
 
 	if search != "" {
-		if utils.IsHash(search) || utils.IsEth1Address(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
+		if strings.HasPrefix(search, "0x") && (utils.IsHash(search) || utils.IsEth1Address(search)) {
 			search = strings.ToLower(search)
 
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
