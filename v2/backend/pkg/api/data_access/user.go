@@ -132,21 +132,25 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
 		effectiveProductId := premiumProduct.ProductId
+		productName := p.ProductName
 		switch premiumProduct.ProductId {
 		case "whale":
 			effectiveProductId = "orca"
+			productName = "Whale"
 		case "goldfish":
 			effectiveProductId = "dolphin"
+			productName = "Goldfish"
 		case "plankton":
 			effectiveProductId = "guppy"
+			productName = "Plankton"
 		}
 		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
 			if effectiveProductId != "premium_free" {
 				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
-					ProductId:       effectiveProductId,
-					ProductName:     p.ProductName,
+					ProductId:       premiumProduct.ProductId,
+					ProductName:     productName,
 					ProductCategory: t.ProductCategoryPremium,
 					ProductStore:    t.ProductStoreStripe,
 					Start:           premiumProduct.Start.Unix(),
@@ -322,9 +326,9 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupNotifications:     3,
 					WebhookEndpoints:                3,
 					MobileAppCustomThemes:           true,
-					MobileAppWidget:                 false,
+					MobileAppWidget:                 true,
 					MonitorMachines:                 2,
-					MachineMonitoringHistorySeconds: 3600 * 30,
+					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,
 				},
 				PricePerMonthEur:     9.99,
