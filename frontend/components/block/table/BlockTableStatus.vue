@@ -13,13 +13,16 @@ const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
 
+// we don't want to be reactive to the current_slot
+const currentSlot = latestState.value?.current_slot || 0
+
 const mapped = computed(() => {
   if (!props.status) {
     return
   }
   const size: TagSize = props.mobile ? 'circle' : 'default'
   let color: TagColor
-  const status = props.status === 'scheduled' && (props.blockSlot && (props.blockSlot < (latestState.value?.current_slot ?? 0))) ? 'probably_missed' : props.status
+  const status = props.status === 'scheduled' && (props.blockSlot && (props.blockSlot < currentSlot)) ? 'probably_missed' : props.status
   const tStatus = $t(`block.status.${status}`)
   const label = props.mobile ? tStatus.substring(0, 1) : tStatus
   const tooltip = status === 'probably_missed' ? $t('block.status_might_change_on_reorg') : props.mobile ? tStatus : undefined
