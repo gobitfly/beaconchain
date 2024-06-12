@@ -21,8 +21,8 @@ const tableIsShown = ref(true)
 const onInput = (value: string) => {
   emit('setSearch', value)
 }
-
 </script>
+
 <template>
   <slot name="bc-table-header">
     <div class="bc-table-header">
