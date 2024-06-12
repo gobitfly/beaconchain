@@ -227,8 +227,11 @@ const editDashboard = () => {
 
     :deep(.p-menubar-root-list > .p-menuitem) {
       width: 145px;
+    }
+    :deep(.p-menubar-root-list .p-menuitem) {
 
-      &:has(.text-disabled) {
+      &:has(>.p-menuitem-content .text-disabled) {
+          cursor: default;
         > .p-menuitem-content{
           opacity: 0.5;
         }
