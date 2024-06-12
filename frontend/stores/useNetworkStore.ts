@@ -28,11 +28,11 @@ export function useNetworkStore () {
   async function loadAvailableNetworks () {
     try {
       const { fetch } = useCustomFetch()
-      const APIresponse = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
-      if (!APIresponse.data || !APIresponse.data.length) {
+      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
+      if (!response.data || !response.data.length) {
         return false
       }
-      data.value.availableNetworks = networkTs.sortChainIDsByPriority(APIresponse.data.map(apiInfo => apiInfo.chain_id))
+      data.value.availableNetworks = networkTs.sortChainIDsByPriority(response.data.map(apiInfo => apiInfo.chain_id))
       return true
     } catch {
       return false
