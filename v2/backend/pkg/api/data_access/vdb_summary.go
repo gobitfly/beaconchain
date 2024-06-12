@@ -98,7 +98,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 				from  %[1]s
 				where validator_index = ANY($2)
 			) as a;`
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), t.DefaultGroupId, validatorList)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), int(t.DefaultGroupId), validatorList)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
