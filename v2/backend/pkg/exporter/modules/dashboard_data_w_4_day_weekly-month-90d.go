@@ -82,11 +82,10 @@ func (d *dayUpAggregator) getMissingRollingDayHeadEpochs(intendedHeadEpoch uint6
 		return nil, errors.Wrap(err, "failed to get missing 90d head epochs")
 	}
 
-	d.log.Infof("missing head 7d: %v", week)
-	d.log.Infof("missing head 30d: %v", month)
-	d.log.Infof("missing head 90d: %v", ninety)
+	heads := utils.Deduplicate(append(append(week, month...), ninety...))
+	d.log.Infof("missing head: %v", heads)
 
-	return utils.Deduplicate(append(append(week, month...), ninety...)), nil
+	return heads, nil
 }
 
 func (d *dayUpAggregator) getMissingRollingXDaysTailEpochs(days int, intendedHeadEpoch uint64, tableName string) ([]uint64, error) {
@@ -104,6 +103,12 @@ func (d *dayUpAggregator) getMissingRollingXDaysHeadEpochs(days int, intendedHea
 	if bounds.EpochEnd <= 0 || intendedHeadEpoch-bounds.EpochEnd < d.epochWriter.getRetentionEpochDuration() {
 		return nil, nil
 	}
+
+	// don't fetch head if bootstrap is necessary anyway
+	if intendedHeadEpoch+1-bounds.EpochEnd >= d.rollingAggregator.getBootstrapOnEpochsBehind() {
+		return nil, nil
+	}
+
 	return edb.GetMissingEpochsBetween(int64(bounds.EpochEnd), int64(intendedHeadEpoch)+1)
 }
 
@@ -131,7 +136,7 @@ type MultipleDaysRollingAggregatorImpl struct {
 // and the epoch_start from the bootstrap head (epoch_start of epoch)
 func (d *MultipleDaysRollingAggregatorImpl) getBootstrapBounds(epoch uint64, days uint64) (uint64, uint64) {
 	currentStartBounds, _ := getDayAggregateBounds(epoch)
-	xDayOldEpoch := int64(epoch - days*utils.EpochsPerDay())
+	xDayOldEpoch := int64(currentStartBounds - days*utils.EpochsPerDay())
 	if xDayOldEpoch < 0 {
 		xDayOldEpoch = 0
 	}
@@ -157,7 +162,7 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 	}
 	latestDay := latestDayBounds.Day
 
-	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days-1))
+	tailStart, _ := d.getBootstrapBounds(latestDayBounds.EpochStart, uint64(days))
 	xDayOldDay := utils.EpochToTime(tailStart).Format("2006-01-02")
 
 	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
