@@ -282,9 +282,13 @@
         }
       }
     },
-    "shared_modal": {
+    "shared_modal_with_own": {
+      "text": "Access your personalized dashboard",
+      "button": "Go to Dashboard"
+    },
+    "shared_modal_without_own": {
       "text": "Create your own dashboard to get the most out of beaconcha.in",
-      "get_started": "Get started"
+      "button": "Get started"
     },
     "group": {
       "selection": {

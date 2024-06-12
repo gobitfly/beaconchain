@@ -3,10 +3,21 @@ import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
 
 const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
 const { isShared } = useDashboardKey()
+const { dashboards } = useUserDashboardStore()
 const { t: $t } = useI18n()
 const route = useRoute()
 
 const visible = computed(() => isShared.value && cookiePreference.value !== undefined)
+
+const text = computed(() => {
+  const userHasOwnDashboard = ((dashboards.value?.validator_dashboards?.length || 0) + (dashboards.value?.account_dashboards?.length || 0)) > 0
+  const textRoot = userHasOwnDashboard ? 'dashboard.shared_modal_with_own' : 'dashboard.shared_modal_without_own'
+
+  const caption = $t(textRoot + '.text')
+  const button = $t(textRoot + '.button')
+
+  return { caption, button }
+})
 </script>
 
 <template>
@@ -18,10 +29,10 @@ const visible = computed(() => isShared.value && cookiePreference.value !== unde
     position="bottom"
   >
     <div class="dialog-container">
-      {{ $t('dashboard.shared_modal.text') }}
+      {{ text.caption }}
       <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
         <Button class="get-started">
-          {{ $t('dashboard.shared_modal.get_started') }}
+          {{ text.button }}
         </Button>
       </BcLink>
     </div>
