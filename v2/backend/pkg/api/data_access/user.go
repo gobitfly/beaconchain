@@ -135,10 +135,10 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		productName := p.ProductName
 		switch premiumProduct.ProductId {
 		case "whale":
-			effectiveProductId = "orca"
+			effectiveProductId = "dolphin"
 			productName = "Whale"
 		case "goldfish":
-			effectiveProductId = "dolphin"
+			effectiveProductId = "guppy"
 			productName = "Goldfish"
 		case "plankton":
 			effectiveProductId = "guppy"
