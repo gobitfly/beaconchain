@@ -45,6 +45,7 @@
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
+    cursor: default;
 
     .p-menuitem {
       border-radius: var(--border-radius);
@@ -52,6 +53,7 @@
       white-space: nowrap;
       text-overflow: ellipsis;
       max-width: 200px;
+      cursor: pointer;
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
