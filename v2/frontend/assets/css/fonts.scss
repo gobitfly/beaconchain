@@ -1,12 +1,12 @@
 @font-face {
   font-family: "Montserrat";
-  font-weight: 400 500 600;
+  font-weight: 400 500 600 700;
   src: url("/fonts/Montserrat-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "Montserrat";
-  font-weight: 400 500 600;
+  font-weight: 400 500 600 700;
   font-style: italic;
   src: url("/fonts/Montserrat-Italic-VariableFont_wght.ttf") format("truetype");
 }
@@ -74,6 +74,7 @@
   --montserrat-light: 400;
   --montserrat-medium: 500;
   --montserrat-semi-bold: 600;
+  --montserrat-bold: 700;
 
   --roboto-family: "Roboto";
   --roboto-light: 300;
