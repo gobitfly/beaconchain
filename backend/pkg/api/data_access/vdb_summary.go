@@ -145,15 +145,15 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
 			if result.AttestationReward != nil && result.AttestationIdealReward != nil {
-				attestationEfficiency.Float64 = result.AttestationReward.Div(totalAttestationIdealReward).InexactFloat64()
+				attestationEfficiency.Float64 = result.AttestationReward.Div(*result.AttestationIdealReward).InexactFloat64()
 				attestationEfficiency.Valid = true
 			}
 			if result.BlocksProposed != nil && result.BlocksScheduled != nil {
-				proposerEfficiency.Float64 = result.BlocksProposed.Div(totalBlocksScheduled).InexactFloat64()
+				proposerEfficiency.Float64 = result.BlocksProposed.Div(*result.BlocksScheduled).InexactFloat64()
 				proposerEfficiency.Valid = true
 			}
 			if result.SyncExecuted != nil && result.SyncScheduled != nil {
-				syncEfficiency.Float64 = result.SyncExecuted.Div(totalSyncScheduled).InexactFloat64()
+				syncEfficiency.Float64 = result.SyncExecuted.Div(*result.SyncScheduled).InexactFloat64()
 				syncEfficiency.Valid = true
 			}
 			data[result.GroupId] = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
