@@ -344,6 +344,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
+		if dashboardId.AggregateGroups {
+			data[i].GroupId = t.DefaultGroupId
+		}
 		data[i].Proposer = proposal.Proposer
 		data[i].Epoch = proposal.Epoch
 		data[i].Slot = proposal.Slot
