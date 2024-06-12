@@ -5,6 +5,7 @@ interface Props {
   buttons: {
     icon?: IconDefinition,
     text?: string,
+    subText?: string,
     component?: Component,
     componentProps?: any,
     componentClass?: string,
@@ -44,6 +45,7 @@ function onButtonClicked (value: string) {
       :key="button.value"
       :icon="button.icon"
       :text="button.text"
+      :sub-text="button.subText"
       :selected="values[button.value]"
       :disabled="button.disabled"
       @click="!button.disabled && onButtonClicked(button.value)"

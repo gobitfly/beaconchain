@@ -10,14 +10,11 @@ interface ApiChainInfo {
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: ApiChainInfo[],
-    currentNetwork: networkTs.ChainIDs,
-    currentNetworkHasBeenChosen: boolean
+    availableNetworks: networkTs.ChainIDs[],
+    currentNetwork: networkTs.ChainIDs
   }>({
-    // default values if anything wrong happens when the list of available networks is requested from the API
-    availableNetworks: [{ chain_id: networkTs.ChainIDs.Ethereum, name: networkTs.ChainInfo[networkTs.ChainIDs.Ethereum].name }],
-    currentNetwork: networkTs.ChainIDs.Ethereum,
-    currentNetworkHasBeenChosen: false
+    availableNetworks: [networkTs.ChainIDs.Ethereum],
+    currentNetwork: networkTs.ChainIDs.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
   })
   return { data }
 })
@@ -28,28 +25,26 @@ export function useNetworkStore () {
   /**
    * Needs to be called once, when the front-end is loading. Unnecessary afterwards.
    */
-  async function loadAvailableNetworks () {
+  async function loadAvailableNetworks () : Promise<boolean> {
     try {
       const { fetch } = useCustomFetch()
-      const list = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
-      data.value.availableNetworks = list.data.sort((a, b) => networkTs.ChainInfo[a.chain_id].priority - networkTs.ChainInfo[b.chain_id].priority)
-      if (!data.value.currentNetworkHasBeenChosen) {
-      // by default, the current network is the one with the best priority
-        data.value.currentNetwork = data.value.availableNetworks[0].chain_id
+      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
+      if (!response.data || !response.data.length) {
+        return false
       }
+      data.value.availableNetworks = networkTs.sortChainIDsByPriority(response.data.map(apiInfo => apiInfo.chain_id))
       return true
     } catch {
       return false
     }
   }
 
-  const availableNetworks = computed(() => data.value.availableNetworks.map(apiInfo => apiInfo.chain_id))
-  const currentNetwork = computed(() => data.value.currentNetwork)
-  const networkInfo = computed(() => networkTs.ChainInfo[data.value.currentNetwork])
+  const availableNetworks = computed(() => data.value.availableNetworks)
+  const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
+  const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function setCurrentNetwork (chainId: networkTs.ChainIDs) {
     data.value.currentNetwork = chainId
-    data.value.currentNetworkHasBeenChosen = true
   }
 
   function isMainNet () : boolean {
