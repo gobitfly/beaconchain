@@ -241,7 +241,7 @@
       "attestation_target": "Attestation Target",
       "proposer_el": "Proposer EL Reward",
       "proposer_attestation": "Proposer Att. Reward",
-      "proposer_sync": "Proposer Sync. Reward:",
+      "proposer_sync": "Proposer Sync. Reward",
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
@@ -279,6 +279,10 @@
           ]
         }
       }
+    },
+    "shared_modal": {
+      "text": "Create your own dashboard to get the most out of beaconcha.in",
+      "get_started": "Get started"
     },
     "group": {
       "selection": {
@@ -329,7 +333,9 @@
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
         "el_rewards": "Execution Layer Reward",
-        "cl_rewards": "Consensus Layer Reward"
+        "cl_rewards": "Consensus Layer Reward",
+        "cl_pending": "CL Pending",
+        "pending": "Pending"
       },
       "rewards": {
         "title": "Rewards",
@@ -604,17 +610,17 @@
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
+    "per_month": "per month",
     "monthly": "Monthly",
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
     "excluding_vat": "* All prices are excluding VAT",
-    "per_month": "per month",
     "amount_per_year": "{amount} yearly",
     "savings": "You save {amount} a year",
     "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
-    "sign_up": "Sign Up",
+    "get_started": "Get started now",
     "premium_product": {
       "popular": "Popular!",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
@@ -668,6 +674,8 @@
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
+      "currently_active": "Currently active: {amount}",
+      "contact_support": ["Contact", "support", "for a higher limit"],
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"
