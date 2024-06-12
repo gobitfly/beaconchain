@@ -56,7 +56,7 @@ const percentages = computed(() => {
 })
 
 async function buttonCallback () {
-  if (isStripeDisabled.value) {
+  if (planButton.value.disabled) {
     return
   }
 
