@@ -38,8 +38,9 @@
 
     .text {
       color: var(--primary-contrast-color);
-      font-size: 12px;
+      font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
+      line-height: 1.1;
       padding-left: 18px;
     }
   }
