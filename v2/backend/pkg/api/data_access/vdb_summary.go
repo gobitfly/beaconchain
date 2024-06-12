@@ -63,6 +63,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			searchValidator = int(number)
+		} else if dashboardId.AggregateGroups {
+			// Searching for a group name is not supported when aggregating groups
+			return []t.VDBSummaryTableRow{}, &paging, nil
 		}
 	}
 
