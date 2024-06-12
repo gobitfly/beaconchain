@@ -435,6 +435,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
+	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	query := `SELECT
 			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
 			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
@@ -705,6 +706,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			}
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
+		} else {
+			// No valid search term found, return empty results
+			return result, &paging, nil
 		}
 	}
 
