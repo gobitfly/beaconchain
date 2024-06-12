@@ -210,7 +210,7 @@ type DayRollingAggregatorImpl struct {
 func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch uint64, _ uint64) (uint64, uint64) {
 	currentStartBounds, _ := getHourAggregateBounds(latestExportedHourEpoch)
 
-	dayOldEpoch := int64(latestExportedHourEpoch - utils.EpochsPerDay())
+	dayOldEpoch := int64(currentStartBounds - utils.EpochsPerDay())
 	if dayOldEpoch < 0 {
 		dayOldEpoch = 0
 	}
