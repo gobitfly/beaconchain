@@ -109,7 +109,7 @@ func (d *RollingAggregator) aggregateInternal(days int, tableName string, curren
 	}
 
 	if bootstrap {
-		metrics.Errors.WithLabelValues(fmt.Sprintf("exporter_v2dash_agg_bootstrap_%dd", days)).Inc()
+		metrics.Tasks.WithLabelValues(fmt.Sprintf("exporter_v2dash_agg_bootstrap_%dd", days)).Inc()
 		d.log.Infof("rolling %dd bootstraping starting", days)
 
 		err = d.bootstrap(tx, days, tableName)
@@ -197,6 +197,8 @@ func (d *RollingAggregator) aggregateInternal(days int, tableName string, curren
 			return errors.New(fmt.Sprintf("sanity check failed, rolling boundaries are out of bounds for %vd agg (%d-%d, %d)", days, sanityBounds.EpochStart, sanityBounds.EpochEnd, sanityBounds.EpochEnd-sanityBounds.EpochStart))
 		}
 	}
+
+	metrics.State.WithLabelValues(fmt.Sprintf("exporter_v2dash_rolling_%dd_bounds_end", days)).Set(float64(sanityBounds.EpochEnd))
 
 	err = tx.Commit()
 	if err != nil {
@@ -609,7 +611,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 	case <-ctx.Done():
 		// Query took longer than x minutes, cancel and return error
 		cancel()
-
+		metrics.Errors.WithLabelValues("exporter_v2dash_bandaid").Inc()
 		if debugDeadlockBandaid {
 			_, err := db.AlloyWriter.Exec(`SELECT pg_cancel_backend(pid)
 			FROM pg_stat_activity
