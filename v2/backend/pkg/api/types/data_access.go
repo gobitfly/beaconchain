@@ -9,9 +9,9 @@ import (
 // everything that goes in this file is for the data access layer only
 // it won't be converted to typescript or used in the frontend
 
-const DefaultGroupId = 0
-const AllGroups = -1
-const DefaultGroupName = "default"
+const DefaultGroupId int = 0
+const AllGroups int = -1
+const DefaultGroupName string = "default"
 
 type Sort[T enums.Enum] struct {
 	Column T
