@@ -627,6 +627,7 @@
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "get_started": "Get started now",
+    "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
     "premium_product": {
       "popular": "Popular!",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
