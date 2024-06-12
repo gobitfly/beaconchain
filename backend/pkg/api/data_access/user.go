@@ -103,8 +103,8 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		SELECT 
 			COALESCE(uas.product_id, '') AS product_id, 
 			COALESCE(uas.store, '') AS store,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
-			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
 		WHERE uas.user_id = $1 AND uas.active = true
