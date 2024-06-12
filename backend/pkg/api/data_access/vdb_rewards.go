@@ -48,12 +48,14 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
+				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
+				releaseLock()
 				return result, &paging, nil
 			}
 			releaseLock()
@@ -668,12 +670,14 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
+				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
+				releaseLock()
 				return result, &paging, nil
 			}
 			releaseLock()
