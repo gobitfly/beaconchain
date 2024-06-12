@@ -3,20 +3,28 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 interface Props {
   icon?: IconDefinition,
-  text?: string
+  text?: string,
+  subText?: string,
   selected: boolean,
   disabled?:boolean,
 }
-defineProps<Props>()
+const props = defineProps<Props>()
 
+const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
 </script>
 
 <template>
-  <ToggleButton class="bc-toggle" :disabled="disabled" :model-value="selected" :on-label="text" :off-label="text">
+  <ToggleButton class="bc-toggle" :disabled="disabled" :model-value="selected">
     <template #icon="slotProps">
       <slot name="icon" v-bind="slotProps">
         <FontAwesomeIcon v-if="icon" :icon="icon" />
       </slot>
+      <div class="label">
+        {{ text }}
+        <div v-if="subText" class="sub">
+          {{ subText }}
+        </div>
+      </div>
     </template>
   </ToggleButton>
 </template>
@@ -34,7 +42,7 @@ defineProps<Props>()
 
       width: 100%;
       height: 100%;
-      padding: 16px 0 15px 0;
+      padding: v-bind(topBottomPadding) 0;
       border: 1px var(--container-border-color) solid;
       border-radius: var(--border-radius);
       background-color: var(--container-background);
@@ -46,7 +54,7 @@ defineProps<Props>()
       }
 
       :deep(.p-button-label) {
-        @include fonts.subtitle_text;
+        display: none;
       }
 
       :deep(svg) {
@@ -56,6 +64,13 @@ defineProps<Props>()
         opacity: 0.5;
         cursor: default;
       }
+    }
+  }
+
+  .label {
+    @include fonts.subtitle_text;
+    .sub {
+      font-size: var(--tiny_text_font_size);
     }
   }
 }

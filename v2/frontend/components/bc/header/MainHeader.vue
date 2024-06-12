@@ -117,11 +117,14 @@ const userMenu = computed(() => {
         <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
 
-      <div class="grid-cell logo">
-        <BcLink to="/" class="logo-component">
+      <div class="grid-cell explorer-info">
+        <BcLink to="/" class="logo">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
-          beaconcha.in
+          <span class="name">beaconcha.in</span>
         </BcLink>
+        <span class="variant">
+          v2 beta | {{ networkInfo.name }}
+        </span>
       </div>
 
       <div class="grid-cell mega-menu">
@@ -136,7 +139,7 @@ const userMenu = computed(() => {
 @use "~/assets/css/fonts.scss";
 
 // do not change these two values without changing the values in types/header.ts accordingly
-$mobileHeaderThreshold: 470px;
+$mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
 .anchor {
@@ -278,7 +281,7 @@ $smallHeaderThreshold: 1024px;
       }
     }
 
-    .logo {
+    .explorer-info {
       grid-column: 2;
       @media (min-width: $smallHeaderThreshold) {
         @include bottom-cell(2);
@@ -286,25 +289,45 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
-      .logo-component {
+      height: unset;
+
+      .logo {
         display: flex;
-        align-items: flex-end;
+        position: relative;
+        margin-top: auto;
         gap: var(--padding);
         font-family: var(--logo_font_family);
         font-size: var(--logo_font_size);
         font-weight: var(--logo_font_weight);
         letter-spacing: var(--logo_letter_spacing);
-        line-height: 20px;
+        svg {
+          margin-top: auto;
+        }
+        .name {
+          display: inline-flex;
+          position: relative;
+          margin-top: auto;
+          line-height: 22px;
+        }
         @media (max-width: 1359px) {
           font-size: var(--logo_small_font_size);
           letter-spacing: var(--logo_small_letter_spacing);
           gap: 6px;
-          align-items: center;
+          .name {
+            line-height: 14px;
+          }
           svg {
             height: 18px;
-            margin-bottom: 7px;
           }
         }
+      }
+
+      .variant {
+        position: relative;
+        margin-top: auto;
+        line-height: 10px;
+        font-size: var(--tiny_text_font_size);
+        color: var(--megamenu-text-color);
       }
     }
 

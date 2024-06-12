@@ -1,6 +1,7 @@
 export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>, removeDynamicUrlValue = false) {
   const { t: $t } = useI18n()
   const route = useRoute()
+  const { networkInfo } = useNetworkStore()
 
   const year = new Date().getFullYear()
 
@@ -23,7 +24,7 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
     } else if (pageTitle?.value) {
       parts.splice(0, 0, `${pageTitle.value}`)
     }
-    return parts.join(' - ')
+    return networkInfo.value.description + ' ' + networkInfo.value.name + ' ' + parts.join(' - ')
   }
 
   useSeoMeta({
