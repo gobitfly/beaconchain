@@ -61,7 +61,7 @@ func GetNetwork() string {
 	return strings.ToLower(Config.Chain.ClConfig.ConfigName)
 }
 
-func ElementExists(arr []string, el string) bool {
+func ElementExists[T comparable](arr []T, el T) bool {
 	for _, e := range arr {
 		if e == el {
 			return true
