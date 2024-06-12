@@ -430,6 +430,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
 	ret := &t.VDBGroupRewardsData{}
 
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
 	type queryResult struct {
 		AttestationSourceReward      decimal.Decimal `db:"attestations_source_reward"`
 		AttestationTargetReward      decimal.Decimal `db:"attestations_target_reward"`
@@ -684,6 +689,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
+
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
 
 	// Initialize the cursor
 	var currentCursor t.ValidatorDutiesCursor
