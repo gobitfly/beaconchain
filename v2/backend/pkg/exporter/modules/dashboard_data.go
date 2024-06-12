@@ -725,6 +725,8 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (backfillResult
 					}
 					d.log.InfoWithFields(map[string]interface{}{"epoch start": datas[0].Epoch, "epoch end": lastEpoch}, "backfill, aggregated epoch data")
 				}
+
+				metrics.State.WithLabelValues("exporter_v2dash_last_exported_epoch").Set(float64(lastEpoch))
 			}
 
 			if lastEpoch%225 < epochFetchParallelism {
@@ -845,11 +847,11 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 
 	err = errGroup.Wait()
 	if err != nil {
-		metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_roling_fail").Inc()
+		metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_rolling_fail").Inc()
 		return errors.Wrap(err, "failed to aggregate")
 	}
 	d.log.Infof("[time] all of epoch based aggregation took %v", time.Since(start))
-	metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_non_roling").Observe(time.Since(start).Seconds())
+	metrics.TaskDuration.WithLabelValues("exporter_v2dash_agg_non_rolling").Observe(time.Since(start).Seconds())
 
 	if updateRollingWindows {
 		// todo you could add it to the err group above IF no bootstrap is needed.
@@ -873,6 +875,8 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 			return errors.Wrap(err, "failed to clear old epochs")
 		}
 	}
+
+	metrics.State.WithLabelValues("exporter_v2dash_last_exported_epoch").Set(float64(currentExportedEpoch))
 
 	// clear old hourly aggregated epochs, do not remove epochs from epoch table here as these are needed for Mid aggregation
 	err = d.epochToHour.clearOldHourAggregations(int64(currentExportedEpoch - d.epochToHour.getHourRetentionDurationEpochs()))
@@ -962,6 +966,8 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 			return nil
 		}
 	}
+
+	metrics.State.WithLabelValues("exporter_v2dash_last_finalized_epoch").Set(float64(res.Data.Finalized.Epoch))
 
 	d.headEpochQueue <- res.Data.Finalized.Epoch
 
