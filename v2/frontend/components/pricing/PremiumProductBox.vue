@@ -81,18 +81,15 @@ const planButton = computed(() => {
 
   if (isLoggedIn.value) {
     if (premiumSubscription.value) {
-      if (premiumSubscription.value.product_id === props.product.product_id_monthly || premiumSubscription.value.product_id === props.product.product_id_yearly) {
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === premiumSubscription.value!.product_id || product.product_id_yearly === premiumSubscription.value!.product_id)
+      if ((premiumSubscription.value.product_id === props.product.product_id_monthly || premiumSubscription.value.product_id === props.product.product_id_yearly) || subscribedProduct === undefined) {
+        // (this box is either for the subscribed product) || (the user has an unknown product, possible from V1 or maybe a custom plan)
         text = $t('pricing.premium_product.button.manage_plan')
+      } else if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+        text = $t('pricing.premium_product.button.upgrade')
       } else {
-        const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === premiumSubscription.value!.product_id || product.product_id_yearly === premiumSubscription.value!.product_id)
-        if (subscribedProduct !== undefined) {
-          if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
-            text = $t('pricing.premium_product.button.upgrade')
-          } else {
-            isDowngrade = true
-            text = $t('pricing.premium_product.button.downgrade')
-          }
-        }
+        isDowngrade = true
+        text = $t('pricing.premium_product.button.downgrade')
       }
     }
   } else {
