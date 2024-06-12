@@ -40,6 +40,7 @@
       color: var(--primary-contrast-color);
       font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
+      line-height: 1.1;
       padding-left: 18px;
     }
   }
@@ -68,15 +69,12 @@
 
 @media (max-width: 1360px) {
   .type-toggle-container {
-      .premium .text {
-        font-size: 11px;
-        font-weight: 700;
-      }
 
-      .api-keys .text {
-        font-size: 11px;
-        font-weight: 700;
-      }
+    .api-keys .text,
+    .premium .text {
+      font-size: 11px;
+      font-weight: var(--montserrat-bold);
     }
+  }
 }
 </style>
