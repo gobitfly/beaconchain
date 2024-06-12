@@ -14,6 +14,7 @@ interface Props {
   tableClass?: string
   addSpacer?: boolean
   loading?: boolean
+  hidePager?: boolean
 }
 const props = defineProps<Props>()
 
@@ -140,7 +141,7 @@ const sort = computed(() => {
     </template>
     <template #footer>
       <BcTablePager
-        v-if="data?.paging"
+        v-if="!hidePager && data?.paging"
         :page-size="pageSize ?? 0"
         :paging="data?.paging"
         :cursor="cursor"
