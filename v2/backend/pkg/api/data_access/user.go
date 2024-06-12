@@ -147,12 +147,25 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
+
+			store := t.ProductStoreStripe
+			switch premiumProduct.Store {
+			case "ios-appstore":
+				store = t.ProductStoreIosAppstore
+			case "android-playstore":
+				store = t.ProductStoreAndroidPlaystore
+			case "ethpool":
+				store = t.ProductStoreEthpool
+			case "manuall":
+				store = t.ProductStoreCustom
+			}
+
 			if effectiveProductId != "premium_free" {
 				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 					ProductId:       premiumProduct.ProductId,
 					ProductName:     productName,
 					ProductCategory: t.ProductCategoryPremium,
-					ProductStore:    t.ProductStoreStripe,
+					ProductStore:    store,
 					Start:           premiumProduct.Start.Unix(),
 					End:             premiumProduct.End.Unix(),
 				})
