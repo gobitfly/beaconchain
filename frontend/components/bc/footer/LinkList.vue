@@ -21,7 +21,7 @@ const columns: Row[] = [
   {
     title: $t('footer.legal_notices'),
     links: [
-      [$t('footer.imprint'), faBuilding, '/imprint', Target.Internal],
+      [$t('footer.imprint'), faBuilding, 'https://beaconcha.in/imprint', Target.Internal],
       [$t('footer.terms'), faFileContract, 'https://storage.googleapis.com/legal.beaconcha.in/tos.pdf', Target.External],
       [$t('footer.privacy'), faUserSecret, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', Target.External]
     ]
