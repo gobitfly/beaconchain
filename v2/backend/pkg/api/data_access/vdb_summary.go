@@ -80,11 +80,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		}
 	}
 
-	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []t.VDBValidator, tableName string) (map[int64]float64, error) {
+	retrieveAndProcessData := func(dashboardId t.VDBIdPrimary, validatorList []t.VDBValidator, aggregateGroups bool, tableName string) (map[int64]float64, error) {
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
-			query := `select 0 AS group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
+			query := `select $1 AS group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
 				select 
 					SUM(attestations_reward)::decimal AS attestations_reward,
 					SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward,
@@ -93,16 +93,24 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					SUM(sync_executed)::decimal AS sync_executed,
 					SUM(sync_scheduled)::decimal AS sync_scheduled
 				from  %[1]s
-				where validator_index = ANY($1)
+				where validator_index = ANY($2)
 			) as a;`
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), validatorList)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), t.DefaultGroupId, validatorList)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
 		} else {
-			query := `select group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
+			queryParams := []interface{}{}
+			groupIdQuery := "group_id,"
+			if aggregateGroups {
+				queryParams = append(queryParams, t.DefaultGroupId)
+				groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			}
+
+			queryParams = append(queryParams, dashboardId)
+			query := fmt.Sprintf(`select group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
 				select 
-					group_id,
+					%[1]s
 					SUM(attestations_reward)::decimal AS attestations_reward,
 					SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward,
 					SUM(blocks_proposed)::decimal AS blocks_proposed,
@@ -110,12 +118,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					SUM(sync_executed)::decimal AS sync_executed,
 					SUM(sync_scheduled)::decimal AS sync_scheduled
 				from users_val_dashboards_validators 
-				join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-				where dashboard_id = $1
+				join %[2]s on %[2]s.validator_index = users_val_dashboards_validators.validator_index
+				where dashboard_id = $%[3]d
 				group by 1
-			) as a;`
+			) as a;`, groupIdQuery, tableName, len(queryParams))
 
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), dashboardId)
+			err := d.alloyReader.Select(&queryResult, query, queryParams...)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
@@ -187,16 +195,26 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 			var queryResult []validatorsPerGroup
 
+			queryParams := []interface{}{}
+			groupIdQuery := "v.group_id,"
+			if dashboardId.AggregateGroups {
+				queryParams = append(queryParams, t.DefaultGroupId)
+				groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			}
+
 			if search != "" {
-				err := d.alloyReader.Select(&queryResult, `
+				queryParams = append(queryParams, dashboardId.Id)
+				query := fmt.Sprintf(`
 				SELECT
-					v.group_id,
+					%s
 					g.name AS group_name,
 					v.validator_index
 				FROM users_val_dashboards_validators v
 				INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
-				WHERE v.dashboard_id = $1
-				ORDER BY v.group_id, v.validator_index`, dashboardId.Id)
+				WHERE v.dashboard_id = $%d
+				ORDER BY v.group_id, v.validator_index`, groupIdQuery, len(queryParams))
+
+				err := d.alloyReader.Select(&queryResult, query, queryParams...)
 				if err != nil {
 					return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 				}
@@ -209,13 +227,16 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					}
 				}
 			} else {
-				err := d.alloyReader.Select(&queryResult, `
+				queryParams = append(queryParams, dashboardId.Id)
+				query := fmt.Sprintf(`
 				SELECT
-					group_id,
-					validator_index
-				FROM users_val_dashboards_validators
-				WHERE dashboard_id = $1
-				ORDER BY group_id, validator_index`, dashboardId.Id)
+					%s
+					v.validator_index
+				FROM users_val_dashboards_validators v
+				WHERE dashboard_id = $%d
+				ORDER BY group_id, validator_index`, groupIdQuery, len(queryParams))
+
+				err := d.alloyReader.Select(&queryResult, query, queryParams...)
 				if err != nil {
 					return fmt.Errorf("error retrieving validator groups for dashboard: %v", err)
 				}
@@ -272,7 +293,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	}
 
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_daily")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, dashboardId.AggregateGroups, "validator_dashboard_data_rolling_daily")
 		if err != nil {
 			return err
 		}
@@ -289,7 +310,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_weekly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, dashboardId.AggregateGroups, "validator_dashboard_data_rolling_weekly")
 		if err != nil {
 			return err
 		}
@@ -306,7 +327,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_monthly")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, dashboardId.AggregateGroups, "validator_dashboard_data_rolling_monthly")
 		if err != nil {
 			return err
 		}
@@ -323,7 +344,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		return nil
 	})
 	wg.Go(func() error {
-		data, err := retrieveAndProcessData(dashboardId.Id, validators, "validator_dashboard_data_rolling_total")
+		data, err := retrieveAndProcessData(dashboardId.Id, validators, dashboardId.AggregateGroups, "validator_dashboard_data_rolling_total")
 		if err != nil {
 			return err
 		}
@@ -375,6 +396,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
 	ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
+
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
 
 	query := `select
 			users_val_dashboards_validators.validator_index,
@@ -766,25 +792,36 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 			from  validator_dashboard_data_daily
 			WHERE day > $1 AND validator_index = ANY($2)
 			group by 1
-		) as a ORDER BY epoch_start, group_id;`
+		) as a ORDER BY epoch_start;`
 		err := d.alloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
 	} else {
-		query := `select epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
-			select
-			epoch_start, 
-				group_id,
-				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-				from users_val_dashboards_validators 
-			join validator_dashboard_data_daily on validator_dashboard_data_daily.validator_index = users_val_dashboards_validators.validator_index
-			where day > $1 AND dashboard_id = $2
-			group by 1, 2
-		) as a ORDER BY epoch_start, group_id;`
-		err := d.alloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Id)
+		queryParams := []interface{}{cutOffDate, dashboardId.Id}
+
+		groupIdQuery := "v.group_id,"
+		groupByQuery := "GROUP BY 1, 2"
+		orderQuery := "ORDER BY epoch_start, group_id"
+		if dashboardId.AggregateGroups {
+			queryParams = append(queryParams, t.AllGroups)
+			groupIdQuery = "$3::smallint AS group_id,"
+			groupByQuery = "GROUP BY 1"
+			orderQuery = "ORDER BY epoch_start"
+		}
+		query := fmt.Sprintf(`SELECT epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+			SELECT
+				d.epoch_start, 
+				%s
+				SUM(d.attestations_reward)::decimal / NULLIF(SUM(d.attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+				SUM(d.blocks_proposed)::decimal / NULLIF(SUM(d.blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+				SUM(d.sync_executed)::decimal / NULLIF(SUM(d.sync_scheduled)::decimal, 0) AS sync_efficiency
+			FROM users_val_dashboards_validators v
+			INNER JOIN validator_dashboard_data_daily d ON d.validator_index = v.validator_index
+			WHERE day > $1 AND dashboard_id = $2
+			%s
+		) as a %s;`, groupIdQuery, groupByQuery, orderQuery)
+		err := d.alloyReader.Select(&queryResults, query, queryParams...)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -852,6 +889,12 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 // allowed periods are: all_time, last_24h, last_7d, last_30d
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]t.VDBValidator, error) {
 	var validators []t.VDBValidator
+
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
 	if dashboardId.Validators == nil {
 		// Get the validators in case a dashboard id is provided
 		validatorsQuery := `
