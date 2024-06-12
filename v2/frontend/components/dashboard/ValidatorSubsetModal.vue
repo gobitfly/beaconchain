@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import type { TimeFrame } from '~/types/value'
 import type { DashboardKey } from '~/types/dashboard'
+import { sortValidatorIds } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
 import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/types/api/validator_dashboard'
 
@@ -32,7 +33,7 @@ const MAX_VALIDATORS = 1000
 
 watch(props, async (p) => {
   if (p) {
-    shownValidators.value = p.validators?.sort((a, b) => a - b)
+    shownValidators.value = sortValidatorIds(p.validators)
     validators.value = p.validators
     setHeader(
       p?.groupName
@@ -56,7 +57,7 @@ watch(props, async (p) => {
       }
 
       const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
-      validators.value = res.data.sort((a, b) => a - b)
+      validators.value = sortValidatorIds(res.data)
       shownValidators.value = validators.value
       isLoading.value = false
     }
