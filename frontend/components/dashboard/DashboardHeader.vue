@@ -138,7 +138,6 @@ const editDashboard = () => {
     }
   })
 }
-
 </script>
 
 <template>

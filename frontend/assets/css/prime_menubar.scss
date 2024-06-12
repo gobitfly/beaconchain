@@ -6,8 +6,7 @@
   color: var(--text-color);
   user-select: none;
 
-  .p-menubar-root-list
-  {
+  .p-menubar-root-list {
     flex-wrap: nowrap;
     gap: var(--padding);
 
@@ -16,6 +15,7 @@
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
+      cursor: pointer;
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
