@@ -327,7 +327,7 @@ $smallHeaderThreshold: 1024px;
         margin-top: auto;
         line-height: 10px;
         font-size: var(--tiny_text_font_size);
-        color: var(--grey);
+        color: var(--megamenu-text-color);
       }
     }
 
