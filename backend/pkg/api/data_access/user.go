@@ -228,7 +228,7 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		ValidatorsPerDashboardLimit: 101_000,
+		ValidatorsPerDashboardLimit: 102_000,
 		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
 		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
