@@ -567,7 +567,12 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 	custom.Log.Debugf("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	timeout := 60 * time.Minute
+	if debugDeadlockBandaid {
+		timeout = 15 * time.Minute
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	resultChan := make(chan sql.Result, 1)
@@ -602,9 +607,21 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 			return errors.Wrap(err, "failed to update rolling table")
 		}
 	case <-ctx.Done():
-		// Query took longer than 5 minutes, cancel and return error
+		// Query took longer than x minutes, cancel and return error
 		cancel()
-		return errors.New("query took longer than 5 minutes, canceled")
+
+		if debugDeadlockBandaid {
+			_, err := db.AlloyWriter.Exec(`SELECT pg_cancel_backend(pid)
+			FROM pg_stat_activity
+			WHERE pid = ANY(pg_blocking_pids(pg_backend_pid()))
+			AND state = 'active'
+			AND query_start < now() - interval '10 minutes'
+			AND query LIKE '%validator_dashboard%';`)
+			if err != nil {
+				return errors.Wrap(err, "failed to kill backend process")
+			}
+		}
+		return errors.New(fmt.Sprintf("query took longer than %d minutes, canceled and backend process canceled", int(timeout.Minutes())))
 	}
 
 	return nil
