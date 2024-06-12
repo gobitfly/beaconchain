@@ -72,7 +72,7 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHead uint64) error {
-	return d.aggregateInternal(days, tableName, currentEpochHead, false)
+	return d.aggregateInternal(days, tableName, currentEpochHead, debugForceBootstrapRollingTables)
 }
 
 // Note that currentEpochHead is the current exported epoch in the db
@@ -109,7 +109,7 @@ func (d *RollingAggregator) aggregateInternal(days int, tableName string, curren
 	}
 
 	if bootstrap {
-		metrics.Errors.WithLabelValues(fmt.Sprintf("exporter_v2dash_agg_bootstrap_%dd", days)).Inc()
+		metrics.Tasks.WithLabelValues(fmt.Sprintf("exporter_v2dash_agg_bootstrap_%dd", days)).Inc()
 		d.log.Infof("rolling %dd bootstraping starting", days)
 
 		err = d.bootstrap(tx, days, tableName)
@@ -198,6 +198,8 @@ func (d *RollingAggregator) aggregateInternal(days int, tableName string, curren
 		}
 	}
 
+	metrics.State.WithLabelValues(fmt.Sprintf("exporter_v2dash_rolling_%dd_bounds_end", days)).Set(float64(sanityBounds.EpochEnd))
+
 	err = tx.Commit()
 	if err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
@@ -214,7 +216,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 		}
 	}
 
-	needsBootstrap := int64(intendedHeadEpoch-bounds.EpochEnd) >= int64(d.getBootstrapOnEpochsBehind())
+	needsBootstrap := debugForceBootstrapRollingTables || int64(intendedHeadEpoch-bounds.EpochEnd) >= int64(d.getBootstrapOnEpochsBehind())
 
 	d.log.Infof("%dd needs bootstrap: %v", days, needsBootstrap)
 	// if rolling table is empty / not bootstrapped yet or needs a bootstrap assume bounds of what the would be after a bootstrap
@@ -567,7 +569,12 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 	custom.Log.Debugf("TableTo: %v | TableFrom: %v | StartEpoch: %v | EndEpoch: %v | StartBoundEpoch: %v", custom.TableTo, custom.TableFrom, custom.StartEpoch, custom.EndEpoch, custom.StartBoundEpoch)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	timeout := 60 * time.Minute
+	if debugDeadlockBandaid {
+		timeout = 15 * time.Minute
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	resultChan := make(chan sql.Result, 1)
@@ -602,9 +609,21 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 			return errors.Wrap(err, "failed to update rolling table")
 		}
 	case <-ctx.Done():
-		// Query took longer than 5 minutes, cancel and return error
+		// Query took longer than x minutes, cancel and return error
 		cancel()
-		return errors.New("query took longer than 5 minutes, canceled")
+		metrics.Errors.WithLabelValues("exporter_v2dash_bandaid").Inc()
+		if debugDeadlockBandaid {
+			_, err := db.AlloyWriter.Exec(`SELECT pg_cancel_backend(pid)
+			FROM pg_stat_activity
+			WHERE pid = ANY(pg_blocking_pids(pg_backend_pid()))
+			AND state = 'active'
+			AND query_start < now() - interval '10 minutes'
+			AND query LIKE '%validator_dashboard%';`)
+			if err != nil {
+				return errors.Wrap(err, "failed to kill backend process")
+			}
+		}
+		return errors.New(fmt.Sprintf("query took longer than %d minutes, canceled and backend process canceled", int(timeout.Minutes())))
 	}
 
 	return nil
