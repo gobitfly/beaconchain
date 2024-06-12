@@ -87,7 +87,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		var queryResult []queryResult
 
 		if len(validatorList) > 0 {
-			query := `select $1 AS group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
+			query := `select $1::smallint AS group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
 				select 
 					SUM(attestations_reward)::decimal AS attestations_reward,
 					SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward,
@@ -98,7 +98,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 				from  %[1]s
 				where validator_index = ANY($2)
 			) as a;`
-			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), int(t.DefaultGroupId), validatorList)
+			err := d.alloyReader.Select(&queryResult, fmt.Sprintf(query, tableName), t.DefaultGroupId, validatorList)
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
 			}
