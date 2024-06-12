@@ -10,3 +10,10 @@ export function totalDutyRewards (duties?: ValidatorHistoryDuties) {
     return convertSum(...values)
   }
 }
+
+export function sortValidatorIds (list?: number[]): number[] {
+  if (!list) {
+    return []
+  }
+  return [...list].sort((a, b) => a - b)
+}
