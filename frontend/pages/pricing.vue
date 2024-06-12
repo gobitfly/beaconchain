@@ -31,6 +31,7 @@ const scrollToAddons = () => {
         <PricingTypeToggle />
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isYearly" />
+        <PricingPremiumViaAppBanner />
         <PricingPremiumProducts :is-yearly="isYearly" />
         <Button class="view-addons-button" @click="scrollToAddons()">
           {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />

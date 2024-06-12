@@ -1,15 +1,15 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct, ProductCategoryPremium } from '~/types/api/user'
+import { type PremiumProduct } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
 
 /// ///////////////
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
-const { products, bestPremiumProduct } = useProductsStore()
-const { user, isLoggedIn } = useUserStore()
+const { products, bestPremiumProduct, currentPremiumSubscription } = useProductsStore()
+const { isLoggedIn } = useUserStore()
 const { t: $t } = useI18n()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
@@ -55,17 +55,13 @@ const percentages = computed(() => {
   }
 })
 
-const premiumSubscription = computed(() => {
-  return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
-})
-
 async function buttonCallback () {
   if (isStripeDisabled.value) {
     return
   }
 
   if (isLoggedIn.value) {
-    if (premiumSubscription.value) {
+    if (currentPremiumSubscription.value) {
       await stripeCustomerPortal()
     } else {
       await stripePurchase(props.isYearly ? props.product.stripe_price_id_yearly : props.product.stripe_price_id_monthly, 1)
@@ -80,9 +76,9 @@ const planButton = computed(() => {
   let text = $t('pricing.premium_product.button.select_plan')
 
   if (isLoggedIn.value) {
-    if (premiumSubscription.value) {
-      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === premiumSubscription.value!.product_id || product.product_id_yearly === premiumSubscription.value!.product_id)
-      if ((premiumSubscription.value.product_id === props.product.product_id_monthly || premiumSubscription.value.product_id === props.product.product_id_yearly) || subscribedProduct === undefined) {
+    if (currentPremiumSubscription.value) {
+      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === currentPremiumSubscription.value!.product_id || product.product_id_yearly === currentPremiumSubscription.value!.product_id)
+      if ((currentPremiumSubscription.value.product_id === props.product.product_id_monthly || currentPremiumSubscription.value.product_id === props.product.product_id_yearly) || subscribedProduct === undefined) {
         // (this box is either for the subscribed product) || (the user has an unknown product, possible from V1 or maybe a custom plan)
         text = $t('pricing.premium_product.button.manage_plan')
       } else if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
