@@ -31,7 +31,7 @@ const text = computed(() => {
     <div class="dialog-container">
       {{ text.caption }}
       <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
-        <Button class="get-started">
+        <Button class="button">
           {{ text.button }}
         </Button>
       </BcLink>
@@ -47,8 +47,9 @@ const text = computed(() => {
   align-items: center;
   gap: var(--padding-large);
 
-  .get-started {
-    min-width: 120px;
+  .button {
+    min-width: fit-content;
+    white-space: nowrap;
   }
 }
 </style>
