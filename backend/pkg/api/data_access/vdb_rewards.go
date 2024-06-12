@@ -66,7 +66,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 5000 // 10 (temp adjust until exporter has cought back up)
+	const epochLookBack = 10
 
 	queryResult := []struct {
 		Epoch                 uint64          `db:"epoch"`
