@@ -72,7 +72,7 @@ func (d *RollingAggregator) getTailBoundsXDays(days int, boundsStart uint64, int
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHead uint64) error {
-	return d.aggregateInternal(days, tableName, currentEpochHead, false)
+	return d.aggregateInternal(days, tableName, currentEpochHead, debugForceBootstrapRollingTables)
 }
 
 // Note that currentEpochHead is the current exported epoch in the db
@@ -216,7 +216,7 @@ func (d *RollingAggregator) getMissingRollingTailEpochs(days int, intendedHeadEp
 		}
 	}
 
-	needsBootstrap := int64(intendedHeadEpoch-bounds.EpochEnd) >= int64(d.getBootstrapOnEpochsBehind())
+	needsBootstrap := debugForceBootstrapRollingTables || int64(intendedHeadEpoch-bounds.EpochEnd) >= int64(d.getBootstrapOnEpochsBehind())
 
 	d.log.Infof("%dd needs bootstrap: %v", days, needsBootstrap)
 	// if rolling table is empty / not bootstrapped yet or needs a bootstrap assume bounds of what the would be after a bootstrap

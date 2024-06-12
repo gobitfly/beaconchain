@@ -45,6 +45,10 @@ const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: tr
 
 const debugDeadlockBandaid = true // prod: fix root cause then set to false
 
+// This flag can be used to force a bootstrap of the rolling tables. This is done once, after the bootstrap completes it switches back to off and normal rolling aggregation.
+// Can be used to fix a corrupted rolling table.
+var debugForceBootstrapRollingTables = false // prod: false
+
 // ----------- END OF DEBUG FLAGS ------------
 
 // How many epochs will be fetched in parallel from the node (relevant for backfill and rolling tail fetching). We are fetching the head epoch and
@@ -861,6 +865,8 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 			metrics.Errors.WithLabelValues("exporter_v2dash_agg_non_fail").Inc()
 			return errors.Wrap(err, "failed to aggregate rolling windows")
 		}
+
+		debugForceBootstrapRollingTables = false // reset flag after first run
 
 		err = refreshMaterializedSlashedByCounts()
 		if err != nil {
