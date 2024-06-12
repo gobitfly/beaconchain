@@ -25,7 +25,7 @@ export function useNetworkStore () {
   /**
    * Needs to be called once, when the front-end is loading. Unnecessary afterwards.
    */
-  async function loadAvailableNetworks () {
+  async function loadAvailableNetworks () : Promise<boolean> {
     try {
       const { fetch } = useCustomFetch()
       const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
