@@ -8,7 +8,7 @@ import type { Feature } from '~/types/pricing'
 /// ///////////////
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
-const { products, bestPremiumProduct, currentPremiumSubscription } = useProductsStore()
+const { products, bestPremiumProduct, currentPremiumSubscription, isPremiumSubscribedViaApp } = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useI18n()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
@@ -92,7 +92,9 @@ const planButton = computed(() => {
     text = $t('pricing.get_started')
   }
 
-  return { text, isDowngrade, disabled: isStripeDisabled.value || undefined }
+  const disabled = isStripeDisabled.value || isPremiumSubscribedViaApp.value || undefined
+
+  return { text, isDowngrade, disabled }
 })
 
 const mainFeatures = computed<Feature[]>(() => {

@@ -1,17 +1,10 @@
 <script lang="ts" setup>
-import { ProductStoreAndroidPlaystore, ProductStoreIosAppstore } from '~/types/api/user'
-
 const { t: $t } = useI18n()
-const { currentPremiumSubscription } = useProductsStore()
-
-const visible = computed(() => {
-  const store = currentPremiumSubscription.value?.product_store
-  return (store === ProductStoreAndroidPlaystore || store === ProductStoreIosAppstore)
-})
+const { isPremiumSubscribedViaApp } = useProductsStore()
 </script>
 
 <template>
-  <div v-if="visible" class="banner">
+  <div v-if="isPremiumSubscribedViaApp" class="banner">
     {{ $t('pricing.premium_via_app_banner') }}
   </div>
 </template>
