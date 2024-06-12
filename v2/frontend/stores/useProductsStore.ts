@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { InternalGetProductSummaryResponse, ProductSummary } from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
-import { ProductCategoryPremium } from '~/types/api/user'
+import { ProductCategoryPremium, ProductStoreAndroidPlaystore, ProductStoreIosAppstore } from '~/types/api/user'
 
 const productsStore = defineStore('products_store', () => {
   const data = ref <ProductSummary>()
@@ -24,6 +24,11 @@ export function useProductsStore () {
     return user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremium)
   })
 
+  const isPremiumSubscribedViaApp = computed(() => {
+    const store = currentPremiumSubscription.value?.product_store
+    return (store === ProductStoreAndroidPlaystore || store === ProductStoreIosAppstore)
+  })
+
   async function getProducts () {
     if (data.value) {
       return data.value
@@ -35,5 +40,5 @@ export function useProductsStore () {
     return res
   }
 
-  return { products, getProducts, bestPremiumProduct, currentPremiumSubscription }
+  return { products, getProducts, bestPremiumProduct, currentPremiumSubscription, isPremiumSubscribedViaApp }
 }
