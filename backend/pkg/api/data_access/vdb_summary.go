@@ -32,13 +32,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	showTotalRow := false
 
 	type queryResult struct {
-		GroupId                int64          `db:"group_id"`
-		AttestationReward      sql.NullString `db:"attestations_reward"`
-		AttestationIdealReward sql.NullString `db:"attestations_ideal_reward"`
-		BlocksProposed         sql.NullString `db:"blocks_proposed"`
-		BlocksScheduled        sql.NullString `db:"blocks_scheduled"`
-		SyncExecuted           sql.NullString `db:"sync_executed"`
-		SyncScheduled          sql.NullString `db:"sync_scheduled"`
+		GroupId                int64            `db:"group_id"`
+		AttestationReward      *decimal.Decimal `db:"attestations_reward"`
+		AttestationIdealReward *decimal.Decimal `db:"attestations_ideal_reward"`
+		BlocksProposed         *decimal.Decimal `db:"blocks_proposed"`
+		BlocksScheduled        *decimal.Decimal `db:"blocks_scheduled"`
+		SyncExecuted           *decimal.Decimal `db:"sync_executed"`
+		SyncScheduled          *decimal.Decimal `db:"sync_scheduled"`
 	}
 
 	searchValidator := -1
@@ -124,36 +124,36 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 		data := make(map[int64]float64)
 		var totalAttestationReward, totalAttestationIdealReward, totalBlocksProposed, totalBlocksScheduled, totalSyncExecuted, totalSyncScheduled decimal.Decimal
 		for _, result := range queryResult {
-			if result.AttestationReward.Valid {
-				totalAttestationReward = totalAttestationReward.Add(decimal.RequireFromString(result.AttestationReward.String))
+			if result.AttestationReward != nil {
+				totalAttestationReward = totalAttestationReward.Add(*result.AttestationReward)
 			}
-			if result.AttestationIdealReward.Valid {
-				totalAttestationIdealReward = totalAttestationIdealReward.Add(decimal.RequireFromString(result.AttestationIdealReward.String))
+			if result.AttestationIdealReward != nil {
+				totalAttestationIdealReward = totalAttestationIdealReward.Add(*result.AttestationIdealReward)
 			}
-			if result.BlocksProposed.Valid {
-				totalBlocksProposed = totalBlocksProposed.Add(decimal.RequireFromString(result.BlocksProposed.String))
+			if result.BlocksProposed != nil {
+				totalBlocksProposed = totalBlocksProposed.Add(*result.BlocksProposed)
 			}
-			if result.BlocksScheduled.Valid {
-				totalBlocksScheduled = totalBlocksScheduled.Add(decimal.RequireFromString(result.BlocksScheduled.String))
+			if result.BlocksScheduled != nil {
+				totalBlocksScheduled = totalBlocksScheduled.Add(*result.BlocksScheduled)
 			}
-			if result.SyncExecuted.Valid {
-				totalSyncExecuted = totalSyncExecuted.Add(decimal.RequireFromString(result.SyncExecuted.String))
+			if result.SyncExecuted != nil {
+				totalSyncExecuted = totalSyncExecuted.Add(*result.SyncExecuted)
 			}
-			if result.SyncScheduled.Valid {
-				totalSyncScheduled = totalSyncScheduled.Add(decimal.RequireFromString(result.SyncScheduled.String))
+			if result.SyncScheduled != nil {
+				totalSyncScheduled = totalSyncScheduled.Add(*result.SyncScheduled)
 			}
 
 			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-			if result.AttestationReward.Valid && result.AttestationIdealReward.Valid {
-				attestationEfficiency.Float64 = decimal.RequireFromString(result.AttestationReward.String).Div(totalAttestationIdealReward).InexactFloat64()
+			if result.AttestationReward != nil && result.AttestationIdealReward != nil {
+				attestationEfficiency.Float64 = result.AttestationReward.Div(totalAttestationIdealReward).InexactFloat64()
 				attestationEfficiency.Valid = true
 			}
-			if result.BlocksProposed.Valid && result.BlocksScheduled.Valid {
-				proposerEfficiency.Float64 = decimal.RequireFromString(result.BlocksProposed.String).Div(totalBlocksScheduled).InexactFloat64()
+			if result.BlocksProposed != nil && result.BlocksScheduled != nil {
+				proposerEfficiency.Float64 = result.BlocksProposed.Div(totalBlocksScheduled).InexactFloat64()
 				proposerEfficiency.Valid = true
 			}
-			if result.SyncExecuted.Valid && result.SyncScheduled.Valid {
-				syncEfficiency.Float64 = decimal.RequireFromString(result.SyncExecuted.String).Div(totalSyncScheduled).InexactFloat64()
+			if result.SyncExecuted != nil && result.SyncScheduled != nil {
+				syncEfficiency.Float64 = result.SyncExecuted.Div(totalSyncScheduled).InexactFloat64()
 				syncEfficiency.Valid = true
 			}
 			data[result.GroupId] = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
