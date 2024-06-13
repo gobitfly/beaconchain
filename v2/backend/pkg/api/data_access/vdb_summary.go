@@ -627,8 +627,19 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			data.AttestationEfficiency = 0
 		}
 
+		luckDays := float64(days)
+		if days == -1 {
+			luckDays = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours() / 24
+			if luckDays == 0 {
+				luckDays = 1
+			}
+		}
+
 		if totalBlockChance > 0 {
 			data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
+
+			// calculate the average time it takes for the set of validators to propose a single block on average
+			data.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * 24 * float64(time.Hour))
 		} else {
 			data.Luck.Proposal.Percent = 0
 		}
@@ -640,6 +651,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
 			syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
 			data.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
+
+			// calculate the average time it takes for the set of validators to be elected into a sync committee on average
+			data.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * 24 * float64(time.Hour))
 		}
 
 		if totalInclusionDelayDivisor > 0 {
