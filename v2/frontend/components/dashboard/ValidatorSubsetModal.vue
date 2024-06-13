@@ -23,7 +23,7 @@ interface Props {
   groupId?: number,
   validators: number[],
 }
-const { props, setHeader } = useBcDialog<Props>()
+const { props, setHeader } = useBcDialog<Props>(undefined)
 
 const visible = defineModel<boolean>()
 const isLoading = ref(false)
