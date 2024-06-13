@@ -98,6 +98,7 @@ const doHide = (event?: Event) => {
   if (event?.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event?.target as HTMLElement)) {
     return
   }
+  removeParentListeners()
   if (isSelected.value) {
     doSelect(null)
   }
@@ -137,25 +138,30 @@ watch(() => [props.title, props.text], () => {
   }
 })
 
-const onWIndowResize = () => {
+const onWindowResize = () => {
   doHide()
-  addScrollParent()
 }
 
-onMounted(() => {
-  document.addEventListener('click', doHide)
-  document.addEventListener('scroll', doHide)
-  window.addEventListener('resize', onWIndowResize)
-  checkScrollListener(true)
-  addScrollParent()
+watch(isOpen, (value) => {
+  if (value) {
+    document.addEventListener('click', doHide)
+    document.addEventListener('scroll', doHide)
+    window.addEventListener('resize', onWindowResize)
+    checkScrollListener(true)
+    addScrollParent()
+  }
 })
 
-onUnmounted(() => {
+function removeParentListeners () {
   document.removeEventListener('click', doHide)
   document.removeEventListener('scroll', doHide)
-  window.removeEventListener('resize', onWIndowResize)
+  window.removeEventListener('resize', onWindowResize)
   checkScrollListener(false)
   removeScrollParent()
+}
+
+onUnmounted(() => {
+  removeParentListeners()
   if (isSelected.value) {
     doSelect(null)
   }
