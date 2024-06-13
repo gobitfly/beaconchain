@@ -8,6 +8,7 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	gorillaHandlers "github.com/gorilla/handlers"
@@ -40,6 +41,8 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
+
+	router.Use(metrics.HttpMiddleware)
 
 	return router
 }
