@@ -550,7 +550,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(row.BlocksClReward.Mul(gWei))
+		ret.Proposal.Income = ret.Proposal.Income.Add(row.BlocksClReward.Mul(gWei)).Add(row.BlocksElReward)
 		ret.Proposal.StatusCount.Success += uint64(row.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
 
