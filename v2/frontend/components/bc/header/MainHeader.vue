@@ -330,17 +330,18 @@ $smallHeaderThreshold: 1024px;
 
       .variant {
         position: relative;
-        font-size: var(--tiny_text_font_size);
-        line-height: 10px;
         margin-top: auto;
+        font-size: var(--tiny_text_font_size);
         @media (max-width: $mobileHeaderThreshold) {
           margin-bottom: auto;
           font-size: var(--button_font_size);
         }
         color: var(--megamenu-text-color);
-        @media (max-width: $smallHeaderThreshold) {
+        @media (max-width: $smallHeaderThreshold) { // when it is in the upper header...
+          // ... the background is always dark blue (no matter the theme (dark/light)), so we need a light grey:
           color: var(--grey);
         }
+        line-height: 10px;
       }
     }
 
