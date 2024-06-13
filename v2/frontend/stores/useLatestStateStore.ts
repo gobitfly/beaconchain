@@ -13,9 +13,17 @@ export function useLatestStateStore () {
 
   const latestState = computed(() => data.value)
 
-  async function refreshLatestState () {
-    const res = await fetch<InternalGetLatestStateResponse>(API_PATH.LATEST_STATE)
-    data.value = res.data
+  async function refreshLatestState () : Promise<LatestStateData|undefined> {
+    try {
+      const res = await fetch<InternalGetLatestStateResponse>(API_PATH.LATEST_STATE)
+      if (!res.data) {
+        return undefined
+      }
+      data.value = res.data
+      return data.value
+    } catch {
+      return undefined
+    }
   }
 
   return { latestState, refreshLatestState }
