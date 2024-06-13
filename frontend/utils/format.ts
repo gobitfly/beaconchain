@@ -195,6 +195,14 @@ export function formatTimeDuration (seconds: number | undefined, t: ComposerTran
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
 
+export function formatNanoSecondDuration (nano:number | undefined, t: ComposerTranslation):string | undefined {
+  if (nano === undefined) {
+    return undefined
+  }
+  const seconds = Math.floor(nano / 1000000000)
+  return formatTimeDuration(seconds, t)
+}
+
 export function formatFiat (value:number, currency: string, locales: string, minimumFractionDigits?: number, maximumFractionDigits?: number) {
   const formatter = new Intl.NumberFormat(locales, {
     style: 'currency',
