@@ -31,7 +31,7 @@ const showContent = ref(false)
 const rows = computed(() => {
   const sorted = products.value?.premium_products?.sort((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
   const rows: CompareRow[] = []
-  const mapValue = (property: string, perks: PremiumPerks) => {
+  const mapValue = (property: string, perks: PremiumPerks):CompareValue => {
     if (['support_us', 'bulk_adding'].includes(property)) {
       return { value: perks.ad_free }
     }
@@ -49,8 +49,7 @@ const rows = computed(() => {
 
     return {
       value,
-      tooltip,
-      class: undefined as string | undefined
+      tooltip
     }
   }
   const addRow = (type: RowType, property?: string, className?: string, comingSoon = false, hidePositiveValues = false) => {
