@@ -2,11 +2,11 @@ import { intersection } from 'lodash-es'
 import type { SwipeCallback, SwipeDirection, SwipeOptions } from '~/types/swipe'
 
 export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
-  const options = ref<SwipeOptions>({
-    directinoal_threshold: 100,
+  const options = {
+    directional_threshold: 100,
     directions: ['all'],
     ...swipeOptions
-  })
+  }
   const touchStartX = ref(0)
   const touchEndX = ref(0)
   const touchStartY = ref(0)
@@ -20,7 +20,7 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (event.target === touchableElement.value) {
       return true
     }
-    return !hasClassOrParentWithClass(event.target as HTMLElement, options.value.invalidSwipeClasses ?? [])
+    return !isOrIsInIteractiveContainer(event.target as HTMLElement, touchableElement.value)
   }
 
   const onTouchStart = (event: TouchEvent) => {
@@ -53,17 +53,15 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     }
     let divX = event.changedTouches[0].screenX - touchStartX.value
     let divY = event.changedTouches[0].screenY - touchStartY.value
-    const directions = options.value.directions ?? []
+    const directions = options.directions
     if (!intersection(directions, ['all', 'left']).length && divX < 0) {
       divX = 0
-    }
-    if (!intersection(directions, ['all', 'right']).length && divX > 0) {
+    } else if (!intersection(directions, ['all', 'right']).length && divX > 0) {
       divX = 0
     }
     if (!intersection(directions, ['all', 'top']).length && divY < 0) {
       divY = 0
-    }
-    if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
+    } else if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
       divY = 0
     }
     // Only move horizontally or vertically
@@ -80,28 +78,27 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   const handleGesture = (event: TouchEvent) => {
     const divX = Math.abs(touchEndX.value - touchStartX.value)
     const divY = Math.abs(touchEndY.value - touchStartY.value)
-    const threshold = options.value?.directinoal_threshold ?? 0
+    const threshold = options.directional_threshold
     const gDirections: SwipeDirection[] = []
-    if (touchEndX.value < touchStartX.value && divX > threshold) {
-      gDirections.push('left')
+    if (divX > threshold) {
+      if (touchEndX.value < touchStartX.value) {
+        gDirections.push('left')
+      } else {
+        gDirections.push('right')
+      }
     }
-
-    if (touchEndX.value > touchStartX.value && divX > threshold) {
-      gDirections.push('right')
-    }
-
-    if (touchEndY.value < touchStartY.value && divY > threshold) {
-      gDirections.push('top')
-    }
-
-    if (touchEndY.value > touchStartY.value && divY > threshold) {
-      gDirections.push('bottom')
+    if (divY > threshold) {
+      if (touchEndY.value < touchStartY.value) {
+        gDirections.push('top')
+      } else {
+        gDirections.push('bottom')
+      }
     }
     if (gDirections.length) {
       gDirections.push('all')
     }
 
-    if (intersection(gDirections, options.value.directions).length && onSwipe.value?.(event, gDirections)) {
+    if (intersection(gDirections, options.directions).length && onSwipe.value?.(event, gDirections)) {
       return true
     }
   }
@@ -122,7 +119,7 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (touchableElement.value) {
       touchableElement.value.removeEventListener('touchstart', onTouchStart)
       touchableElement.value.removeEventListener('touchend', onTouchEnd)
-      touchableElement.value.addEventListener('touchcancel', onTouchEnd, false)
+      touchableElement.value.removeEventListener('touchcancel', onTouchEnd, false)
       touchableElement.value.removeEventListener('touchmove', onTouchMove)
       touchableElement.value = undefined
     }

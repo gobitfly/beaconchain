@@ -14,19 +14,16 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   return false
 }
 
-export function hasClassOrParentWithClass (child:HTMLElement | null, classList: string[]): boolean {
-  if (!child) {
+export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearchAtElement?: HTMLElement): boolean {
+  if (!child || child === stopSearchAtElement) {
     return false
   }
 
-  if (classList.find((c) => {
-    if (child.classList?.contains(c)) {
-      console.log('we found a match', child)
-      return true
-    }
-    return false
-  })) {
+  if (child.nodeName === 'INPUT') {
     return true
   }
-  return hasClassOrParentWithClass(child.parentElement, classList)
+  if (child.offsetWidth < child.scrollWidth || child.offsetHeight < child.scrollHeight) {
+    return true
+  }
+  return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
 }
