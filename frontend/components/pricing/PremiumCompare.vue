@@ -8,10 +8,12 @@ import type { PremiumPerks } from '~/types/api/user'
 
 const { t: $t } = useI18n()
 const { products } = useProductsStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareValue = {
   value?: string | boolean,
   tooltip?: string,
+  class?: string
 }
 
 type RowType = 'header' | 'group' | 'perc'
@@ -47,10 +49,11 @@ const rows = computed(() => {
 
     return {
       value,
-      tooltip
+      tooltip,
+      class: undefined as string | undefined
     }
   }
-  const addRow = (type: RowType, property?: string, className?: string, comingSoon = false) => {
+  const addRow = (type: RowType, property?: string, className?: string, comingSoon = false, hidePositiveValues = false) => {
     const row: CompareRow = { type, comingSoon, className }
     switch (type) {
       case 'header':
@@ -66,7 +69,12 @@ const rows = computed(() => {
           if (!property) {
             return {}
           }
-          return mapValue(property, p.premium_perks)
+          const mv = mapValue(property, p.premium_perks)
+          if (hidePositiveValues && mv.value) {
+            mv.value = $t('common.soon')
+            mv.class = 'coming-soon'
+          }
+          return mv
         })
         break
     }
@@ -84,14 +92,14 @@ const rows = computed(() => {
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
   addRow('perc', 'manage_dashboard_via_api', undefined, true)
-  addRow('perc', 'heatmap_history_seconds')
-  addRow('perc', 'summary_chart_history_seconds', 'last-in-group')
+  addRow('perc', 'heatmap_history_seconds', undefined, false, !showInDevelopment)
+  addRow('perc', 'summary_chart_history_seconds', 'last-in-group', false, !showInDevelopment)
 
-  addRow('group', 'notification', undefined, true)
-  addRow('perc', 'email_notifications_per_day', 'first-in-group')
+  addRow('group', 'notification', undefined, !showInDevelopment)
+  addRow('perc', 'email_notifications_per_day', 'first-in-group', false, !showInDevelopment)
   addRow('perc', 'configure_notifications_via_api')
-  addRow('perc', 'validator_group_notifications')
-  addRow('perc', 'webhook_endpoints', 'last-in-group')
+  addRow('perc', 'validator_group_notifications', undefined, false, !showInDevelopment)
+  addRow('perc', 'webhook_endpoints', 'last-in-group', false, !showInDevelopment)
 
   addRow('group', 'mobille_app')
   addRow('perc', 'mobile_app_custom_themes', 'first-in-group')
@@ -113,7 +121,7 @@ const rows = computed(() => {
           <span>{{ row.label }}</span>
           <span v-if="row.comingSoon" class="coming-soon"> {{ $t('pricing.premium_product.coming_soon') }}</span>
         </div>
-        <div v-for="(value, vIndex) in row.values" :key="vIndex" class="value">
+        <div v-for="(value, vIndex) in row.values" :key="vIndex" class="value" :class="value.class">
           <span v-if="typeof value.value === 'boolean'">
             <BcFeatureCheck :available="value.value" />
           </span>
@@ -299,6 +307,10 @@ const rows = computed(() => {
             width: 100%;
             height: 100%;
           }
+        }
+
+        &.coming-soon {
+          font-style: italic;
         }
       }
 
