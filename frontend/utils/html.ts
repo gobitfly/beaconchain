@@ -35,12 +35,15 @@ export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearc
   return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
 }
 
-export function findScrollParent (child:HTMLElement | null): HTMLElement | null {
+export function findAllScrollParents (child:HTMLElement | null, list?: HTMLElement[]): HTMLElement[] {
+  if (!list) {
+    list = []
+  }
   if (!child) {
-    return null
+    return list
   }
   if (isScrollable(child)) {
-    return child
+    list.push(child)
   }
-  return findScrollParent(child.parentElement)
+  return findAllScrollParents(child.parentElement, list)
 }

@@ -16,7 +16,7 @@ interface Props {
 const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
-let scrollParent: HTMLElement | null = null
+let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
 const { selected, doSelect } = useTooltipStore()
 const { width, height } = useWindowSize()
@@ -122,16 +122,11 @@ const checkScrollListener = (add: boolean) => {
 
 const addScrollParent = () => {
   removeScrollParent()
-  scrollParent = findScrollParent(bcTooltipOwner.value)
-  if (scrollParent) {
-    scrollParent.addEventListener('scroll', doHide)
-  }
+  scrollParents = findAllScrollParents(bcTooltipOwner.value)
+  scrollParents.forEach(elem => elem.addEventListener('scroll', doHide))
 }
 const removeScrollParent = () => {
-  if (scrollParent) {
-    scrollParent.removeEventListener('scroll', doHide)
-    scrollParent = null
-  }
+  scrollParents.forEach(elem => elem.removeEventListener('scroll', doHide))
 }
 
 watch(() => [props.title, props.text], () => {
