@@ -16,6 +16,7 @@ interface Props {
 const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
+let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
 const { selected, doSelect } = useTooltipStore()
 const { width, height } = useWindowSize()
@@ -93,8 +94,8 @@ const onHover = () => {
   }
 }
 
-const doHide = (event: Event) => {
-  if (event.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event.target as HTMLElement)) {
+const doHide = (event?: Event) => {
+  if (event?.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event?.target as HTMLElement)) {
     return
   }
   if (isSelected.value) {
@@ -119,6 +120,15 @@ const checkScrollListener = (add: boolean) => {
   }
 }
 
+const addScrollParent = () => {
+  removeScrollParent()
+  scrollParents = findAllScrollParents(bcTooltipOwner.value)
+  scrollParents.forEach(elem => elem.addEventListener('scroll', doHide))
+}
+const removeScrollParent = () => {
+  scrollParents.forEach(elem => elem.removeEventListener('scroll', doHide))
+}
+
 watch(() => [props.title, props.text], () => {
   if (isOpen.value) {
     requestAnimationFrame(() => {
@@ -127,16 +137,25 @@ watch(() => [props.title, props.text], () => {
   }
 })
 
+const onWIndowResize = () => {
+  doHide()
+  addScrollParent()
+}
+
 onMounted(() => {
   document.addEventListener('click', doHide)
   document.addEventListener('scroll', doHide)
+  window.addEventListener('resize', onWIndowResize)
   checkScrollListener(true)
+  addScrollParent()
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', doHide)
   document.removeEventListener('scroll', doHide)
+  window.removeEventListener('resize', onWIndowResize)
   checkScrollListener(false)
+  removeScrollParent()
   if (isSelected.value) {
     doSelect(null)
   }
