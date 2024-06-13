@@ -7,7 +7,8 @@ const { dashboards } = useUserDashboardStore()
 const { t: $t } = useI18n()
 const route = useRoute()
 
-const visible = computed(() => isShared.value && cookiePreference.value !== undefined)
+const dismissed = ref(false)
+const visible = computed(() => isShared.value && !dismissed.value && cookiePreference.value !== undefined)
 
 const text = computed(() => {
   const userHasOwnDashboard = ((dashboards.value?.validator_dashboards?.length || 0) + (dashboards.value?.account_dashboards?.length || 0)) > 0
@@ -30,11 +31,16 @@ const text = computed(() => {
   >
     <div class="dialog-container">
       {{ text.caption }}
-      <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
-        <Button class="button">
-          {{ text.button }}
-        </Button>
-      </BcLink>
+      <div class="button-row">
+        <div class="dismiss" @click="dismissed=true">
+          {{ $t('navigation.dismiss') }}
+        </div>
+        <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
+          <Button>
+            {{ text.button }}
+          </Button>
+        </BcLink>
+      </div>
     </div>
   </Dialog>
 </template>
@@ -44,12 +50,19 @@ const text = computed(() => {
 
 .dialog-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--padding-large);
+  gap: var(--padding);
 
-  .button {
-    min-width: fit-content;
-    white-space: nowrap;
+  .button-row {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-large);
+
+    .dismiss {
+      cursor: pointer;
+      color: var(--text-color-disabled);
+    }
   }
 }
 </style>
