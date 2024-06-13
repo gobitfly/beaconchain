@@ -2,6 +2,7 @@ import type { HashTabs } from '~/types/hashTabs'
 
 export function useHashTabs (tabs: HashTabs) {
   const activeIndex = ref(-1)
+  const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
     const list = Object.values(tabs)
@@ -25,16 +26,19 @@ export function useHashTabs (tabs: HashTabs) {
   }
 
   onMounted(() => {
-    const hash = window.location.hash
+    const hash = initialHash?.replace('#', '')
     activeIndex.value = hash && tabs[hash] && !tabs[hash].disabled ? tabs[hash].index : findFirstValidIndex()
   })
 
   const updateHash = (index: number) => {
+    if (process.server) {
+      return
+    }
     window.location.hash = findHashForIndex(index)
   }
 
   watch(activeIndex, (index) => {
-    if (process.server) {
+    if (process.server && index < 0) {
       return
     }
     updateHash(index)
