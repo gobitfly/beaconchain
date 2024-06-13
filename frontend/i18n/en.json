@@ -13,6 +13,7 @@
     "expected": "Expected",
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
+    "every_x":"Every {duration}",
     "id": "ID",
     "average": "Average",
     "index": "Index",
