@@ -308,8 +308,11 @@ $smallHeaderThreshold: 1024px;
           position: relative;
           margin-top: auto;
           line-height: 22px;
+          @media (max-width: $mobileHeaderThreshold) {
+            display: none;
+          }
         }
-        @media (max-width: 1359px) {
+        @media (max-width: 1360px) {
           font-size: var(--logo_small_font_size);
           letter-spacing: var(--logo_small_letter_spacing);
           gap: 6px;
@@ -318,16 +321,26 @@ $smallHeaderThreshold: 1024px;
           }
           svg {
             height: 18px;
+            @media (max-width: $mobileHeaderThreshold) {
+              height: 30px;
+            }
           }
         }
       }
 
       .variant {
         position: relative;
-        margin-top: auto;
-        line-height: 10px;
         font-size: var(--tiny_text_font_size);
+        line-height: 10px;
+        margin-top: auto;
+        @media (max-width: $mobileHeaderThreshold) {
+          margin-bottom: auto;
+          font-size: var(--button_font_size);
+        }
         color: var(--megamenu-text-color);
+        @media (max-width: $smallHeaderThreshold) {
+          color: var(--grey);
+        }
       }
     }
 
