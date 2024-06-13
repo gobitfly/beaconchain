@@ -13,3 +13,17 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   }
   return false
 }
+
+export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearchAtElement?: HTMLElement): boolean {
+  if (!child || child === stopSearchAtElement) {
+    return false
+  }
+
+  if (child.nodeName === 'INPUT') {
+    return true
+  }
+  if (child.offsetWidth < child.scrollWidth || child.offsetHeight < child.scrollHeight) {
+    return true
+  }
+  return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
+}
