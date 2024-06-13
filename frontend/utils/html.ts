@@ -14,6 +14,13 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   return false
 }
 
+function isScrollable (element: HTMLElement): boolean {
+  if (element.offsetWidth < element.scrollWidth || element.offsetHeight < element.scrollHeight) {
+    return true
+  }
+  return false
+}
+
 export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearchAtElement?: HTMLElement): boolean {
   if (!child || child === stopSearchAtElement) {
     return false
@@ -22,8 +29,18 @@ export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearc
   if (child.nodeName === 'INPUT') {
     return true
   }
-  if (child.offsetWidth < child.scrollWidth || child.offsetHeight < child.scrollHeight) {
+  if (isScrollable(child)) {
     return true
   }
   return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
+}
+
+export function findScrollParent (child:HTMLElement | null): HTMLElement | null {
+  if (!child) {
+    return null
+  }
+  if (isScrollable(child)) {
+    return child
+  }
+  return findScrollParent(child.parentElement)
 }
