@@ -16,7 +16,7 @@ const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboard
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
-const { hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -38,7 +38,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
@@ -119,7 +119,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.proposer" default="-" />
+                  {{ slotProps.data.proposer || '-' }}
                 </BcLink>
               </template>
             </Column>
@@ -127,7 +127,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="group_id"
               body-class="group-id"
               header-class="group-id"
-              :sortable="colsVisible.groupSort"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -164,17 +163,16 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="status"
               :sortable="!colsVisible.mobileStatus"
               :header="$t('dashboard.validator.col.status')"
-              :body-class="colsVisible.mobileStatus ? 'status-mobile' : ''"
+              :body-class="colsVisible.mobileStatus ? 'status-mobile status' : 'status'"
             >
               <template #body="slotProps">
-                <BlockTableStatus :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
+                <BlockTableStatus class="block-status" :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
               </template>
             </Column>
             <Column
               v-if="colsVisible.rewardsRecipient"
               field="reward_recipient"
               header-class="reward_recipient"
-              :sortable="true"
               :header="$t('dashboard.validator.col.reward_recipient')"
             >
               <template #body="slotProps">
@@ -230,7 +228,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                     {{ $t('dashboard.validator.col.status') }}:
                   </div>
                   <div class="value">
-                    <BlockTableStatus :status="slotProps.data.status" :mobile="false" />
+                    <BlockTableStatus :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="false" />
                   </div>
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
@@ -312,11 +310,17 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       @include utils.truncate-text;
     }
   }
+  .reward {
+    padding: 4px 7px !important;
+  }
+  .status {
+    padding: 13px 7px !important;
+  }
 
   .future-row {
     td {
 
-      >div,
+      >div:not(.block-status),
       >span {
         opacity: 0.5;
       }

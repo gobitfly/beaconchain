@@ -17,6 +17,7 @@ export interface UserSubscription {
   product_id: string;
   product_name: string;
   product_category: ProductCategory;
+  product_store: ProductStore;
   start: number /* int64 */;
   end: number /* int64 */;
 }
@@ -25,7 +26,15 @@ export type ProductCategory = string;
 export const ProductCategoryApi: ProductCategory = "api";
 export const ProductCategoryPremium: ProductCategory = "premium";
 export const ProductCategoryPremiumAddon: ProductCategory = "premium_addon";
+export type ProductStore = string;
+export const ProductStoreStripe: ProductStore = "stripe";
+export const ProductStoreIosAppstore: ProductStore = "ios-appstore";
+export const ProductStoreAndroidPlaystore: ProductStore = "android-playstore";
+export const ProductStoreEthpool: ProductStore = "ethpool";
+export const ProductStoreCustom: ProductStore = "custom";
 export interface ProductSummary {
+  validators_per_dashboard_limit: number /* uint64 */;
+  stripe_public_key: string;
   api_products: ApiProduct[];
   premium_products: PremiumProduct[];
   extra_dashboard_validators_premium_addons: ExtraDashboardValidatorsPremiumAddon[];
@@ -38,6 +47,8 @@ export interface ApiProduct {
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
   is_popular: boolean;
+  stripe_price_id_monthly: string;
+  stripe_price_id_yearly: string;
 }
 export interface ApiPerks {
   units_per_second: number /* uint64 */;
@@ -50,19 +61,25 @@ export interface ApiPerks {
   discord_support: boolean;
 }
 export interface PremiumProduct {
-  product_id: string;
   product_name: string;
   premium_perks: PremiumPerks;
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
   is_popular: boolean;
+  product_id_monthly: string;
+  product_id_yearly: string;
+  stripe_price_id_monthly: string;
+  stripe_price_id_yearly: string;
 }
 export interface ExtraDashboardValidatorsPremiumAddon {
-  product_id: string;
   product_name: string;
   extra_dashboard_validators: number /* uint64 */;
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
+  product_id_monthly: string;
+  product_id_yearly: string;
+  stripe_price_id_monthly: string;
+  stripe_price_id_yearly: string;
 }
 export interface PremiumPerks {
   ad_free: boolean; // note that this is somhow redunant, since there is already ApiPerks.NoAds
@@ -82,4 +99,11 @@ export interface PremiumPerks {
   monitor_machines: number /* uint64 */;
   machine_monitoring_history_seconds: number /* uint64 */;
   custom_machine_alerts: boolean;
+}
+export interface StripeCreateCheckoutSession {
+  sessionId?: string;
+  error?: string;
+}
+export interface StripeCustomerPortal {
+  url: string;
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { ChainInfo } from '~/types/networks'
+import { ChainInfo } from '~/types/network'
 
 defineProps<{
   barShape: SearchbarShape,

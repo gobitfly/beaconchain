@@ -1,31 +1,23 @@
 <script lang="ts" setup>
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle, faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons'
 import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
+import { Target } from '~/types/links'
 
 const { t: $t } = useI18n()
-const { user } = useUserStore()
-const { products, bestPremiumProduct } = useProductsStore()
+const { user, isLoggedIn } = useUserStore()
+const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
-  addonsAvailable: boolean,
-  isYearly: boolean
+  isYearly: boolean,
+  maximumValidatorLimit?: number
 }
 const props = defineProps<Props>()
 
-const quantity = computed(() => {
-  let q = 0
-  user.value?.subscriptions?.forEach((subscription) => {
-    if (subscription.product_id === props.addon.product_id) {
-      q += products.value?.extra_dashboard_validators_premium_addons.find(addon => addon.product_id === subscription.product_id) !== undefined ? 1 : 0
-    }
-  })
-
-  return q
-})
+const quantityForPurchase = ref(1)
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
@@ -43,20 +35,73 @@ const prices = computed(() => {
   }
 })
 
-const text = computed(() => {
+const boxText = computed(() => {
   return {
     validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
     perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
   }
 })
 
+const addonSubscriptionCount = computed(() => {
+  return user.value?.subscriptions?.filter(sub => sub.product_category === ProductCategoryPremiumAddon && (sub.product_id === props.addon.product_id_monthly || sub.product_id === props.addon.product_id_yearly)).length || 0
+})
+
 const addonButton = computed(() => {
-  let text = $t('pricing.addons.button.select_addon')
-  if (user.value?.subscriptions?.find(sub => sub.product_category === ProductCategoryPremiumAddon) !== undefined) {
-    text = $t('pricing.addons.button.manage_addon')
+  let text = $t('pricing.get_started')
+  if (isLoggedIn.value) {
+    text = addonSubscriptionCount.value > 0 ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon')
   }
 
-  return { text, disabled: !props.addonsAvailable }
+  async function callback () {
+    if (isStripeDisabled.value) {
+      return
+    }
+
+    if (isLoggedIn.value) {
+      if (addonSubscriptionCount.value > 0) {
+        await stripeCustomerPortal()
+      } else {
+        await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
+      }
+    } else {
+      await navigateTo('/login')
+    }
+  }
+
+  return {
+    text,
+    disabled: isStripeDisabled.value,
+    callback
+  }
+})
+
+const maximumQuantity = computed(() => {
+  return Math.floor(((props.maximumValidatorLimit || 10000) - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators)
+})
+
+const limitReached = computed(() => {
+  return quantityForPurchase.value >= maximumQuantity.value
+})
+
+const purchaseQuantityButtons = computed(() => {
+  return {
+    minus: {
+      disabled: quantityForPurchase.value <= 1,
+      callback: () => {
+        if (quantityForPurchase.value > 1) {
+          quantityForPurchase.value--
+        }
+      }
+    },
+    plus: {
+      disabled: limitReached.value,
+      callback: () => {
+        if (quantityForPurchase.value < maximumQuantity.value) {
+          quantityForPurchase.value++
+        }
+      }
+    }
+  }
 })
 
 </script>
@@ -65,7 +110,7 @@ const addonButton = computed(() => {
   <div class="box-container">
     <div class="summary-container">
       <div class="validator-count">
-        {{ text.validatorCount }}
+        {{ boxText.validatorCount }}
         <div class="subtext">
           {{ $t('pricing.addons.per_dashboard') }}
           <BcTooltip position="top" :fit-content="true">
@@ -78,11 +123,11 @@ const addonButton = computed(() => {
           </BcTooltip>
         </div>
         <div class="per-validator">
-          {{ text.perValidator }}
+          {{ boxText.perValidator }}
         </div>
       </div>
     </div>
-    <div class="price-container">
+    <div class="description-container">
       <div class="price">
         <template v-if="isYearly">
           <div>
@@ -117,22 +162,53 @@ const addonButton = computed(() => {
           </template>
         </BcTooltip>
       </div>
-      <div class="quantity-container">
-        <div>
-          {{ $t('pricing.addons.quantity', { quantity }) }}
+      <div class="quantity-row">
+        <div v-if="addonSubscriptionCount" class="quantity-label">
+          {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
+        </div>
+        <div v-else class="quantity-setter">
+          <Button
+            class="p-button-icon-only"
+            :disabled="purchaseQuantityButtons.minus.disabled"
+            @click="purchaseQuantityButtons.minus.callback"
+          >
+            <FontAwesomeIcon :icon="faMinus" />
+          </Button>
+          <InputNumber
+            v-model="quantityForPurchase"
+            class="quantity-input"
+            input-id="integeronly"
+            :min="1"
+            :max="maximumQuantity"
+          />
+          <Button
+            class="p-button-icon-only"
+            :disabled="purchaseQuantityButtons.plus.disabled"
+            @click="purchaseQuantityButtons.plus.callback"
+          >
+            <FontAwesomeIcon :icon="faPlus" />
+          </Button>
         </div>
       </div>
-      <Button :label="addonButton.text" class="select-button" :disabled="addonButton.disabled" />
-      <div v-if="bestPremiumProduct" class="footer">
-        {{ $t('pricing.addons.requires_plan', {name: bestPremiumProduct.product_name}) }}
+      <div class="limit-reached-row">
+        <div v-if="limitReached">
+          {{ tOf($t, 'pricing.addons.contact_support', 0) }}
+          <BcLink to="https://dsc.gg/beaconchain  " :target="Target.External" class="link">
+            {{ tOf($t, 'pricing.addons.contact_support', 1) }}
+          </BcLink>
+          {{ tOf($t, 'pricing.addons.contact_support', 2) }}
+        </div>
       </div>
+      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="addonButton.callback" />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/pricing.scss';
+
 .box-container {
-  width: 348px;
+  width: 290px;
   height: 100%;
   background-color: var(--container-background);
   border: 2px solid var(--container-border-color);
@@ -145,10 +221,10 @@ const addonButton = computed(() => {
     flex-direction: column;
     align-items: center;
     border-bottom: 2px solid var(--container-border-color);
-    padding: 35px 0 26px 0;
+    padding: 28px 0 21px 0;
 
     .validator-count {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
 
       .subtext {
@@ -162,30 +238,30 @@ const addonButton = computed(() => {
 
       .per-validator {
         color: var(--text-color-discreet);
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 400;
       }
     }
   }
 
-  .price-container {
+  .description-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px 34px 9px 34px;
+    padding: 16px 28px 29px 28px;
 
     .price {
-      font-size: 32px;
+      font-size: 26px;
       font-weight: 600;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
 
       .month {
         color: var(--text-color-discreet);
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 600;
 
         &[yearly] {
-          font-size: 17px;
+          font-size: 14px;
           font-weight: 500;
         }
       }
@@ -204,45 +280,61 @@ const addonButton = computed(() => {
       justify-content: center;
       align-items: center;
       gap: 13px;
-      height: 37px;
-      border-radius: 18px;
+      height: 30px;
+      border-radius: 15px;
       background: var(--subcontainer-background);
-      font-size: 17px;
-      margin-bottom: 29px;
+      font-size: 15px;
+      margin-bottom: 24px;
     }
 
-    .quantity-container {
+    .quantity-row {
       display: flex;
       align-items: center;
-      gap: 13px;
-      font-size: 20px;
-      margin-bottom: 32px;
+      justify-content: center;
+      width: 100%;
+      height: 30px;
 
-      :deep(.p-inputtext.p-component.p-inputnumber-input) {
-        width: 52px;
-        border-radius: 9px;
-        text-align: center;
+      .quantity-label {
+        font-size: 17px;
       }
+
+      .quantity-setter {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+
+        .quantity-input {
+          width: 45px;
+
+          > :first-child {
+            width: 100%;
+            text-align: center;
+          }
+        }
+
+        > * {
+          height: 100%;
+        }
+      }
+
+      margin-bottom: 20px;
+    }
+
+    .limit-reached-row {
+      height: 16px;
+      font-size: 13px;
+
+      margin-bottom: 20px;
     }
 
     .select-button {
       width: 100%;
-      height: 52px;
-      font-size: 25px;
-      font-weight: 500;
-      margin-bottom: 26px;
-    }
-
-    .footer {
-      width: 100%;
-      text-align: right;
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text-color-discreet);
+      @include pricing.pricing_button;
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 1360px) {
     width: 200px;
 
     .summary-container {
@@ -265,12 +357,12 @@ const addonButton = computed(() => {
       }
     }
 
-    .price-container {
-      padding: 10px 25px 4px 25px;
+    .description-container {
+      padding: 10px 25px 10px 25px;
 
       .price {
         font-size: 18px;
-        margin-bottom: 11px;
+        margin-bottom: 17px;
 
         .month {
           font-size: 12px;
@@ -292,21 +384,42 @@ const addonButton = computed(() => {
         margin-bottom: 17px;
       }
 
-      .quantity-container {
-        font-size: 12px;
-        margin-bottom: 18px;
+      .quantity-row {
+        height: 20px;
+
+        .quantity-label {
+          font-size: 12px;
+        }
+
+        .quantity-setter {
+          gap: 8px;
+
+          .quantity-input {
+            width: 35px;
+
+            > :first-child {
+              font-size: 12px;
+            }
+          }
+
+          > .p-button {
+            width: 20px;
+          }
+        }
+
+        margin-bottom: 10px;
+      }
+
+      .limit-reached-row {
+        height: 10px;
+        font-size: 8px;
+
+        margin-bottom: 20px;
       }
 
       .select-button {
-        height: 30px;
-        font-size: 14px;
-        margin-bottom: 10px;
         padding-left: 10px;
         padding-right: 10px;
-      }
-
-      .footer {
-        font-size: 10px;
       }
     }
   }

@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
@@ -92,71 +94,6 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 	}
 
 	result := maps.Keys(validators)
-
-	return result, nil
-}
-
-func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
-	result := &t.UserDashboardsData{}
-
-	dbReturn := []struct {
-		Id           uint64         `db:"id"`
-		Name         string         `db:"name"`
-		PublicId     sql.NullString `db:"public_id"`
-		PublicName   sql.NullString `db:"public_name"`
-		SharedGroups sql.NullBool   `db:"shared_groups"`
-	}{}
-
-	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
-			uvd.id,
-			uvd.name,
-			uvds.public_id,
-			uvds.name AS public_name,
-			uvds.shared_groups
-		FROM users_val_dashboards uvd
-		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
-		WHERE uvd.user_id = $1
-	`, userId)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill the result
-	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
-	for _, row := range dbReturn {
-		if _, ok := validatorDashboardMap[row.Id]; !ok {
-			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
-				Id:        row.Id,
-				Name:      row.Name,
-				PublicIds: []t.VDBPublicId{},
-			}
-		}
-		if row.PublicId.Valid {
-			result := t.VDBPublicId{}
-			result.PublicId = row.PublicId.String
-			result.Name = row.PublicName.String
-			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
-
-			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
-		}
-	}
-	for _, validatorDashboard := range validatorDashboardMap {
-		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
-	}
-
-	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
-			id,
-			name
-		FROM users_acc_dashboards
-		WHERE user_id = $1
-	`, userId)
-	if err != nil {
-		return nil, err
-	}
 
 	return result, nil
 }
@@ -258,15 +195,11 @@ func (d *DataAccessService) UpdateValidatorDashboardName(dashboardId t.VDBIdPrim
 }
 
 func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error) {
-	validators, err := d.getDashboardValidators(dashboardId)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
-	wg := errgroup.Group{}
 	data := t.VDBOverviewData{}
-
+	wg := errgroup.Group{}
+	var err error
 	// Groups
-	if len(dashboardId.Validators) == 0 && !dashboardId.AggregateGroups {
+	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
 		wg.Go(func() error {
 			var queryResult []struct {
@@ -292,18 +225,34 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 			return nil
 		})
 	}
+	validators, err := d.getDashboardValidators(dashboardId)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
 
 	// Validator Status
 	wg.Go(func() error {
-		query := `SELECT status AS statename, COUNT(*) AS statecount
-		FROM validators
-		WHERE validatorindex = ANY($1)
-		GROUP BY status`
+		var query string
 		var queryResult []struct {
 			Name  string `db:"statename"`
 			Count uint64 `db:"statecount"`
 		}
-		err = d.readerDb.Select(&queryResult, query, validators)
+		params := []interface{}{}
+		if dashboardId.Validators == nil {
+			query = `SELECT status AS statename, COUNT(*) AS statecount
+			FROM validators v
+			INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validatorindex
+			WHERE uvdv.dashboard_id = $1
+			GROUP BY status`
+			params = append(params, dashboardId.Id)
+		} else {
+			query = `SELECT status AS statename, COUNT(*) AS statecount
+			FROM validators
+			WHERE validatorindex = ANY($1)
+			GROUP BY status`
+			params = append(params, validators)
+		}
+		err := d.alloyReader.Select(&queryResult, query, params...)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
@@ -334,70 +283,63 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 		return nil
 	})
 
-	// Rewards + Efficiency
-	retrieveData := func(tableName string) {
-		wg.Go(func() error {
-			query := `select
-				SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-				SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-				SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency,
+	query := `SELECT
+		SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+		SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+		SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+	FROM %[1]s v
+	INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
+	WHERE uvdv.dashboard_id = $1`
 
-				SUM(balance_start) AS balance_start,
-				SUM(balance_end) AS balance_end,
-				SUM(deposits_amount) AS deposits_amount,
-				SUM(withdrawals_amount) AS withdrawals_amount,
-				SUM(blocks_el_reward) AS blocks_el_reward
-			from %[1]s
-			where validator_index = ANY($1)
-			`
+	if dashboardId.Validators != nil {
+		query = `SELECT
+			SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+		FROM %[1]s
+		WHERE validator_index = ANY($1)`
+	}
+
+	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+		// Rewards + APR
+		wg.Go(func() error {
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(validators, days)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+		// Efficiency
+		wg.Go(func() error {
+			var params interface{}
+			if dashboardId.Validators == nil {
+				params = dashboardId.Id
+			} else {
+				params = validators
+			}
 			var queryResult struct {
 				AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
 				ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
 				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+			}
 
-				BalanceStart      sql.NullInt64 `db:"balance_start"`
-				BalanceEnd        sql.NullInt64 `db:"balance_end"`
-				DepositsAmount    sql.NullInt64 `db:"deposits_amount"`
-				WithdrawalsAmount sql.NullInt64 `db:"withdrawals_amount"`
-				BlocksElReward    sql.NullInt64 `db:"blocks_el_reward"`
-			}
-			err = d.alloyReader.Get(&queryResult, fmt.Sprintf(query, tableName), validators)
+			err := d.alloyReader.Get(&queryResult, fmt.Sprintf(query, table), params)
 			if err != nil {
-				return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+				return err
 			}
-			var rewardsField *t.ClElValue[decimal.Decimal]
-			var efficiencyField *float64
-			switch tableName {
-			case "validator_dashboard_data_rolling_daily":
-				rewardsField = &data.Rewards.Last24h
-				efficiencyField = &data.Efficiency.Last24h
-			case "validator_dashboard_data_rolling_weekly":
-				rewardsField = &data.Rewards.Last7d
-				efficiencyField = &data.Efficiency.Last7d
-			case "validator_dashboard_data_rolling_monthly":
-				rewardsField = &data.Rewards.Last30d
-				efficiencyField = &data.Efficiency.Last30d
-			case "validator_dashboard_data_rolling_total":
-				rewardsField = &data.Rewards.AllTime
-				efficiencyField = &data.Efficiency.AllTime
-			}
-			(*rewardsField).El = decimal.NewFromInt(queryResult.BlocksElReward.Int64)
-			(*rewardsField).Cl = decimal.NewFromInt(queryResult.BalanceEnd.Int64 + queryResult.WithdrawalsAmount.Int64 - queryResult.BalanceStart.Int64 - queryResult.DepositsAmount.Int64).Mul(decimal.NewFromInt(1e9))
-			*efficiencyField = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+			*efficiency = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
 			return nil
 		})
 	}
 
-	retrieveData("validator_dashboard_data_rolling_daily")
-	retrieveData("validator_dashboard_data_rolling_weekly")
-	retrieveData("validator_dashboard_data_rolling_monthly")
-	retrieveData("validator_dashboard_data_rolling_total")
-
-	// Apr
-	// TODO APR is WIP; imo we need activation time per validator, calculate its respective apr and accumulate the average per timeframe
-	// But waiting for Peter implementation of apr calc
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_daily", 1, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_weekly", 7, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_monthly", 30, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = wg.Wait()
+
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
 	}
@@ -481,6 +423,14 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(dashboardId t.VDBIdPri
 		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
 	}
 	return nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardGroupCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*) FROM users_val_dashboards_groups WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
@@ -731,7 +681,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupExists(dashboardId t.VDBId
 	return groupExists, err
 }
 
-func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+// return how many of the passed validators are already in the dashboard
+func (d *DataAccessService) GetValidatorDashboardExistingValidatorCount(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
+	if len(validators) == 0 {
+		return 0, nil
+	}
+
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND validator_index = ANY($2)
+	`, dashboardId, pq.Array(validators))
+	return count, err
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil
@@ -815,14 +780,191 @@ func (d *DataAccessService) AddValidatorDashboardValidators(dashboardId t.VDBIdP
 	return result, nil
 }
 
+func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// for all validators already in the dashboard that are associated with the deposit address, update the group
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(addressParsed) != 20 {
+		return nil, fmt.Errorf("invalid deposit address: %s", address)
+	}
+	var validatorIndicesToAdd []uint64
+	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the existing validators
+	var existingValidators []uint64
+	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
+	for _, validatorIndex := range existingValidators {
+		existingValidatorsMap[validatorIndex] = true
+	}
+
+	// filter out the validators that are already in the dashboard
+	var validatorIndicesToUpdate []uint64
+	var validatorIndicesToInsert []uint64
+	for _, validatorIndex := range validatorIndicesToAdd {
+		if _, ok := existingValidatorsMap[validatorIndex]; ok {
+			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
+		} else {
+			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
+		}
+	}
+
+	// update the group for all existing validators
+	validatorIndices := make([]uint64, 0, int(limit))
+	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
+
+	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
+	if len(validatorIndicesToInsert) > 0 {
+		freeSpace := int(limit) - len(existingValidators)
+		if freeSpace > 0 {
+			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
+				log.Infof("limiting the number of validators to insert to %d", freeSpace)
+				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
+			}
+			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
+		}
+	}
+
+	if len(validatorIndices) == 0 {
+		// no validators to add
+		return []t.VDBPostValidatorsData{}, nil
+	}
+	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// for all validators already in the dashboard that are associated with the withdrawal address, update the group
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	var validatorIndicesToAdd []uint64
+	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the existing validators
+	var existingValidators []uint64
+	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
+	for _, validatorIndex := range existingValidators {
+		existingValidatorsMap[validatorIndex] = true
+	}
+
+	// filter out the validators that are already in the dashboard
+	var validatorIndicesToUpdate []uint64
+	var validatorIndicesToInsert []uint64
+	for _, validatorIndex := range validatorIndicesToAdd {
+		if _, ok := existingValidatorsMap[validatorIndex]; ok {
+			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
+		} else {
+			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
+		}
+	}
+
+	// update the group for all existing validators
+	validatorIndices := make([]uint64, 0, int(limit))
+	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
+
+	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
+	if len(validatorIndicesToInsert) > 0 {
+		freeSpace := int(limit) - len(existingValidators)
+		if freeSpace > 0 {
+			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
+				log.Infof("limiting the number of validators to insert to %d", freeSpace)
+				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
+			}
+			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
+		}
+	}
+
+	if len(validatorIndices) == 0 {
+		// no validators to add
+		return []t.VDBPostValidatorsData{}, nil
+	}
+	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
+}
+
+func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
+	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	var validatorIndicesToAdd []uint64
+	err := d.readerDb.Select(&validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the existing validators
+	var existingValidators []uint64
+	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
+	for _, validatorIndex := range existingValidators {
+		existingValidatorsMap[validatorIndex] = true
+	}
+
+	// filter out the validators that are already in the dashboard
+	var validatorIndicesToUpdate []uint64
+	var validatorIndicesToInsert []uint64
+	for _, validatorIndex := range validatorIndicesToAdd {
+		if _, ok := existingValidatorsMap[validatorIndex]; ok {
+			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
+		} else {
+			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
+		}
+	}
+
+	// update the group for all existing validators
+	validatorIndices := make([]uint64, 0, int(limit))
+	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
+
+	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
+	if len(validatorIndicesToInsert) > 0 {
+		freeSpace := int(limit) - len(existingValidators)
+		if freeSpace > 0 {
+			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
+				log.Infof("limiting the number of validators to insert to %d", freeSpace)
+				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
+			}
+			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
+		}
+	}
+
+	if len(validatorIndices) == 0 {
+		// no validators to add
+		return []t.VDBPostValidatorsData{}, nil
+	}
+	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
+	return d.AddValidatorDashboardValidators(dashboardId, groupId, validatorIndices)
+}
+
 func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
-		// Remove all validators for the dashboard
-		_, err := d.alloyWriter.Exec(`
-			DELETE FROM users_val_dashboards_validators 
-			WHERE dashboard_id = $1
-		`, dashboardId)
-		return err
+		// // Remove all validators for the dashboard
+		// _, err := d.alloyWriter.Exec(`
+		// 	DELETE FROM users_val_dashboards_validators
+		// 	WHERE dashboard_id = $1
+		// `, dashboardId)
+		return fmt.Errorf("calling RemoveValidatorDashboardValidators with empty validators list is not allowed")
 	}
 
 	//Create the query to delete validators
@@ -835,6 +977,16 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(dashboardId t.VDB
 	_, err := d.alloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validators))
 
 	return err
+}
+
+func (d *DataAccessService) GetValidatorDashboardValidatorsCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
 }
 
 func (d *DataAccessService) CreateValidatorDashboardPublicId(dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
@@ -938,4 +1090,14 @@ func (d *DataAccessService) RemoveValidatorDashboardPublicId(publicDashboardId t
 	}
 
 	return err
+}
+
+func (d *DataAccessService) GetValidatorDashboardPublicIdCount(dashboardId t.VDBIdPrimary) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*)
+		FROM users_val_dashboards_sharing
+		WHERE dashboard_id = $1
+	`, dashboardId)
+	return count, err
 }

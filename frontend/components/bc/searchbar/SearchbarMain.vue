@@ -8,21 +8,19 @@ import { levenshteinDistance } from '~/utils/misc'
 import {
   Category,
   ResultType,
-  type FillFrom,
   type HowToFillresultSuggestionOutput,
   type ResultSuggestionOutput,
-  CategoryInfo,
-  SubCategoryInfo,
   TypeInfo,
   getListOfResultTypes,
   getListOfResultTypesInCategory,
   wasOutputDataGivenByTheAPI,
+  realizeData,
+  type SearchRequest,
   type SingleAPIresult,
   type SearchAheadAPIresponse,
   type ResultSuggestion,
   type ResultSuggestionInternal,
   type OrganizedResults,
-  Indirect,
   SearchbarShape,
   type SearchbarColors,
   type SearchbarDropdownLayout,
@@ -30,33 +28,37 @@ import {
   SearchbarPurposeInfo,
   type Matching,
   type PickingCallBackFunction,
+  type PremiumRowCallBackFunction,
   type ExposedSearchbarMethods,
   type CategoryFilter,
   type NetworkFilter
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo, getListOfImplementedChainIDs } from '~/types/networks'
+import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const MinimumTimeBetweenAPIcalls = 1000 // ms
-const layoutThreshold = 500 // px  (tells when the bar will switch between its narrow and large layouts)
+const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
-const { t } = useI18n()
+defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
+const { t } = useI18n()
 const { fetch } = useCustomFetch()
+const { availableNetworks } = useNetworkStore()
+
 const props = defineProps<{
   barShape: SearchbarShape, // shape of the bar
   colorTheme: SearchbarColors, // colors of the bar and its dropdown
   barPurpose: SearchbarPurpose, // what the bar will be used for
   screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
   onlyNetworks?: ChainIDs[], // the bar will search on these networks only
+  rowLacksPremiumSubscription?: PremiumRowCallBackFunction, // the bar calls this function for each row and deactivates the row if it returns `true`
   pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
   keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
 const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
-
-defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
 enum States {
   NoText,
@@ -188,7 +190,7 @@ function reconfigureSearchbar () {
     allTypesBelongToAllNetworks &&= TypeInfo[t].belongsToAllNetworks // this variable will be used to know whether it is useless to show the network-filter selector
   }
   // creates the entries storing the state of the network filter, and deselect all networks
-  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : getListOfImplementedChainIDs(true)
+  const networks = (props.onlyNetworks !== undefined && props.onlyNetworks.length > 0) ? props.onlyNetworks : availableNetworks.value
   userInputNetworks.value.clear()
   for (const nw of networks) {
     userInputNetworks.value.set(nw, false)
@@ -210,6 +212,7 @@ function reconfigureSearchbar () {
 }
 
 watch(() => props, reconfigureSearchbar, { immediate: true })
+watch(availableNetworks, reconfigureSearchbar)
 
 let resizingObserver: ResizeObserver
 if (process.client) {
@@ -412,15 +415,18 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
   try {
     const networks = Array.from(nextSearchScope.networks)
     const types = generateTypesFromCategories(nextSearchScope.categories)
+    const body : SearchRequest = {
+      input: userInputText.value,
+      networks,
+      types
+    }
+    if (areResultsCountable(types, true)) {
+      body.count = true
+    }
     received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: {
-        input: userInputText.value,
-        networks,
-        types,
-        include_validators: areResultsCountable(types, true)
-      }
+      body
     })
   } catch (error) {
     received = undefined
@@ -533,12 +539,12 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
 
   for (const k in howToFillresultSuggestionOutput) {
     const key = k as keyof HowToFillresultSuggestionOutput
-    const data = realizeData(apiResponseElement, howToFillresultSuggestionOutput[key])
+    const data = realizeData(apiResponseElement, howToFillresultSuggestionOutput[key], t)
     if (data === undefined) {
       warn('The API returned a search-ahead result of type ', type, ' with a missing field.')
       return undefined
     } else {
-      output[key] = data
+      output[key] = String(data)
     }
   }
 
@@ -551,18 +557,18 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   }
 
   // retrieving the data that identifies this very result in the back-end (will be important for the callback function `@go`)
-  const queryParam = realizeData(apiResponseElement, TypeInfo[type].queryParamField) as string
+  const queryParam = String(realizeData(apiResponseElement, TypeInfo[type].queryParamField, t))
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
   if (areResultsCountable([type], false)) {
-    const countSource = apiResponseElement[TypeInfo[type].countSource!]
-    if (!countSource) {
+    const countSource = realizeData(apiResponseElement, TypeInfo[type].countSource, t)
+    if (countSource === undefined) {
       count = NaN
     } else {
       count = (Array.isArray(countSource)) ? countSource.length : Number(countSource)
     }
-    if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults && (isNaN(count) || count <= 0)) {
+    if ((SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults && isNaN(count)) || count <= 0) {
       warn('The API returned a search-ahead result of type ', type, ' but the batch or count data is missing or wrong.')
       return undefined
     }
@@ -582,28 +588,6 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   }
 
   return { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement, stringifyiedRawResult, nameWasUnknown }
-}
-
-function realizeData (apiResponseElement : SingleAPIresult, dataSource : FillFrom) : string | undefined {
-  const type = apiResponseElement.type as ResultType
-  let sourceField : keyof SingleAPIresult
-
-  switch (dataSource) {
-    case Indirect.SASRstr_value : sourceField = 'str_value'; break
-    case Indirect.SASRnum_value : sourceField = 'num_value'; break
-    case Indirect.SASRhash_value : sourceField = 'hash_value'; break
-    case Indirect.CategoryTitle : return t(...CategoryInfo[TypeInfo[type].category].title)
-    case Indirect.SubCategoryTitle : return t(...SubCategoryInfo[TypeInfo[type].subCategory].title)
-    case Indirect.TypeTitle : return t(...TypeInfo[type].title)
-    default :
-      return (dataSource === '') ? '' : t(...dataSource)
-  }
-
-  if (apiResponseElement[sourceField] !== undefined) {
-    return String(apiResponseElement[sourceField])
-  }
-
-  return undefined
 }
 
 function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : boolean {
@@ -729,6 +713,7 @@ function informationIfHiddenResults () : string {
                   :color-theme="colorTheme"
                   :dropdown-layout="dropdownLayout"
                   :bar-purpose="barPurpose"
+                  :row-lacks-premium-subscription="!!rowLacksPremiumSubscription && rowLacksPremiumSubscription(suggestion)"
                   :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
                   @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
                 />

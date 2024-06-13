@@ -1,12 +1,15 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -19,9 +22,10 @@ type endpoint struct {
 }
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
-	router := mux.NewRouter().PathPrefix("/api").Subrouter()
-	publicRouter := router.PathPrefix("/v2").Subrouter()
-	internalRouter := router.PathPrefix("/i").Subrouter()
+	router := mux.NewRouter()
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
+	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
@@ -31,9 +35,171 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
-	addRoutes(handlerService, publicRouter, internalRouter, debug)
+	// TODO @patrick - remove this test route
+	router.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
+
+	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
 	return router
+}
+
+// TODO @patrick - remove this test route
+func TestStripe(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	_, err := w.Write([]byte(fmt.Sprintf(`
+<h2>manage</h2>
+<div>
+<button class="manage-billing">Manage Billing</button>
+</div>
+<div>
+<button class="purchase" data-product-id="plankton">purchase plankton</button>
+<button class="purchase" data-product-id="goldfish">purchase goldfish</button>
+<button class="purchase" data-product-id="whale">purchase whale</button>
+<button class="purchase" data-product-id="guppy">purchase guppy</button>
+<button class="purchase" data-product-id="guppyYearly">purchase guppy.yearly</button>
+<button class="purchase" data-product-id="dolphin">purchase dolphin</button>
+<button class="purchase" data-product-id="dolphinYearly">purchase dolphin.yearly</button>
+<button class="purchase" data-product-id="orca">purchase orca</button>
+<button class="purchase" data-product-id="orcaYearly">purchase orca.yearly</button>
+</div>
+<div>
+<input type="number" id="addon-quantity" value="1">
+<button class="purchase" data-product-id="vdbAddon1k">purchase vdbAddon1k</button>
+<button class="purchase" data-product-id="vdbAddon1kYearly">purchase vdbAddon1kYearly</button>
+<button class="purchase" data-product-id="vdbAddon10k">purchase vdbAddon10k</button>
+<button class="purchase" data-product-id="vdbAddon10kYearly">purchase vdbAddon10kYearly</button>
+</div>
+
+<h2>info</h2>
+<pre id="userInfoRaw"></pre>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+
+var config = {
+	betaKey  	     : "%[1]s",
+	publicKey        : "%[2]s",
+	plankton         : "%[3]s",
+	goldfish         : "%[4]s",
+	whale            : "%[5]s",
+	guppy            : "%[6]s",
+	dolphin          : "%[7]s",
+	orca             : "%[8]s",
+	vdbAddon1k       : "%[9]s",
+	vdbAddon10k      : "%[10]s",
+	guppyYearly      : "%[11]s",
+	dolphinYearly    : "%[12]s",
+	orcaYearly       : "%[13]s",
+	vdbAddon1kYearly : "%[14]s",
+	vdbAddon10kYearly: "%[15]s",
+}
+console.log('config',config)
+
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>{
+	config.csrfToken = r.headers.get('x-csrf-token')
+	return r.json()
+}).then((d)=>{
+	console.log('userInfo',d)
+	document.getElementById('userInfoRaw').innerText = JSON.stringify(d, null, 2)
+}).catch(err => {
+	console.error("error getting api user me", err)
+})
+
+function handleFetchResult(result) {
+	if (!result.ok) {
+		return result.json().then(function (json) {
+			if (json.error && json.error.message) {
+				throw new Error(result.url + ' ' + result.status + ' ' + json.error.message)
+			}
+		})
+	}
+	return result.json()
+}
+
+function createCheckoutSession(priceId) {
+	let addonQuantity = parseInt(document.getElementById("addon-quantity").value)
+	if (isNaN(addonQuantity)) addonQuantity = 1
+	return fetch("/user/stripe/create-checkout-session", {
+		method: "POST",
+		headers: { 
+			"Content-Type": "application/json",
+			"X-CSRF-Token": config.csrfToken
+		},
+		credentials: 'include',
+		body: JSON.stringify({ priceId: priceId, addonQuantity: addonQuantity })
+	})
+	.then(handleFetchResult)
+	.catch(err => {
+		console.error("error posting to create checkout session endpoint", err)
+	})
+}
+
+function setupStripe() {
+	try {
+		var stripe = Stripe(config.publicKey)
+		var purchaseButtons = document.querySelectorAll(".purchase")
+		for (let i = 0; i < purchaseButtons.length; i++) {
+			purchaseButtons[i].addEventListener('click', function(e) {
+				let priceId = config[e.target.getAttribute('data-product-id')]
+				createCheckoutSession(priceId).then((d) => {
+					stripe.redirectToCheckout({ sessionId: d.sessionId }).then(handleResult).catch(err => {
+						console.error("error redirecting to stripe checkout", err)
+					})
+				})
+			})
+		}
+	} catch (err) {
+		console.error("error creating stripe object", err)
+	}
+}
+
+var manageBillingButtons = document.querySelectorAll(".manage-billing")
+for (let i = 0; i < manageBillingButtons.length; i++) {
+	manageBillingButtons[i].addEventListener("click", function (e) {
+    fetch("/user/stripe/customer-portal", {
+      method: "POST",
+      headers: { 
+		"Content-Type": "application/json",
+		"X-CSRF-Token": config.csrfToken
+	},
+      credentials: "include",
+      body: JSON.stringify({returnURL: window.location.href}),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        // window.location.href = data.url
+		window.open(data.url, '_blank').focus();
+      })
+      .catch((error) => {
+        console.error("Error:", error)
+      })
+  })
+}
+
+setupStripe()
+</script>
+`,
+		utils.Config.ApiKeySecret,
+		utils.Config.Frontend.Stripe.PublicKey,
+		utils.Config.Frontend.Stripe.Plankton,
+		utils.Config.Frontend.Stripe.Goldfish,
+		utils.Config.Frontend.Stripe.Whale,
+		utils.Config.Frontend.Stripe.Guppy,
+		utils.Config.Frontend.Stripe.Dolphin,
+		utils.Config.Frontend.Stripe.Orca,
+		utils.Config.Frontend.Stripe.VdbAddon1k,
+		utils.Config.Frontend.Stripe.VdbAddon10k,
+		utils.Config.Frontend.Stripe.GuppyYearly,
+		utils.Config.Frontend.Stripe.DolphinYearly,
+		utils.Config.Frontend.Stripe.OrcaYearly,
+		utils.Config.Frontend.Stripe.VdbAddon1kYearly,
+		utils.Config.Frontend.Stripe.VdbAddon10kYearly,
+	)))
+	if err != nil {
+		log.Error(err, "error writing response", 0)
+		http.Error(w, "error writing response", http.StatusInternalServerError)
+	}
 }
 
 func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
@@ -46,8 +212,26 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		)
 	}
+
+	allowedHostsRegex := make([]*regexp.Regexp, len(allowedHosts))
+	var err error
+	for i, host := range allowedHosts {
+		allowedHostsRegex[i], err = regexp.Compile(host)
+
+		if err != nil {
+			log.Fatal(err, "error compiling allowed host regex", 0)
+		}
+	}
+
 	return gorillaHandlers.CORS(
-		gorillaHandlers.AllowedOrigins(allowedHosts),
+		gorillaHandlers.AllowedOriginValidator(func(s string) bool {
+			for _, host := range allowedHostsRegex {
+				if host.MatchString(s) {
+					return true
+				}
+			}
+			return false
+		}),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
 		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
@@ -55,8 +239,8 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 	)
 }
 
-func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
-	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, debug)
+func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
+	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, cfg)
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
@@ -186,7 +370,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
 }
 
-func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
+func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	vdbPath := "/validator-dashboards"
 	publicRouter.HandleFunc(vdbPath, hs.PublicPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
 	internalRouter.HandleFunc(vdbPath, hs.InternalPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
@@ -194,9 +378,9 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
-	if !debug {
-		publicDashboardRouter.Use(hs.VDBAuthMiddleware)
-		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey))
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
 	}
 
 	endpoints := []endpoint{

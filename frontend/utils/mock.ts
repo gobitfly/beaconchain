@@ -1,5 +1,6 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
-import { type SearchAheadAPIresponse, type ResultType, TypeInfo } from '~/types/searchbar'
+import type { ApiDataResponse } from '~/types/api/common'
+import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -7,7 +8,6 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
   const searched = body?.input as string
   const searchableTypes = body?.types as ResultType[]
   const searchableNetworks = body?.networks as number[]
-  const countIdenticalValidators = body?.include_validators as boolean
   const response : SearchAheadAPIresponse = {} as SearchAheadAPIresponse
   response.data = []
 
@@ -87,7 +87,8 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 1,
         type: 'validators_by_deposit_ens_name',
-        str_value: searched + 'kETH-hodler-club.eth'
+        str_value: searched + 'kETH-hodler-club.eth',
+        hash_value: '0x3bfCb296F2d28FaDE20a7E53A508F73557Ca938'
       },
       {
         chain_id: 1,
@@ -118,7 +119,8 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 1,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '.bitfly.eth'
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D'
       },
       {
         chain_id: 1,
@@ -285,12 +287,14 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '-futureoffinance.eth'
+        str_value: searched + '-futureoffinance.eth',
+        hash_value: '0x0701BF988309bf45a6771afaa6B8802Ba3E24090'
       },
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_ens_name',
-        str_value: searched + '.bitfly.eth'
+        str_value: searched + '.bitfly.eth',
+        hash_value: '0xEB84C94dCBBceF74bf6CEB74Bc9bBf418939202D'
       }
     )
   }
@@ -303,15 +307,12 @@ export function simulateAPIresponseForTheSearchBar (body? : Record<string, any>)
     response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
   }
   // adding fake numbers of identical results where it is possible
-  if (countIdenticalValidators) {
-    for (const singleRes of response.data) {
-      if (TypeInfo[singleRes.type as ResultType].countSource) {
-        const size = 2 + Math.floor(50 * Math.random())
-        singleRes.validators = [] as number[]
-        for (let v = 0; v < size; v++) {
-          singleRes.validators.push(Math.floor(1400000 * Math.random()))
-        }
-      }
+  for (const singleRes of response.data) {
+    const batchSize = 2 + Math.floor(30 * Math.random())
+    switch (TypeInfo[singleRes.type as ResultType].countSource) {
+      case Indirect.APInum_value: singleRes.num_value = batchSize
+        break
+      // add cases here in the future if new fields can hold batches or counts
     }
   }
 
@@ -343,4 +344,22 @@ export function mockLatestState (..._:any): InternalGetLatestStateResponse {
       ]
     }
   }
+}
+
+interface ApiChainInfo {
+  chain_id: number,
+  name: string
+}
+
+export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChainInfo[]> {
+  const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
+
+  result.data.push(
+    { chain_id: 1, name: 'ethereum' },
+    { chain_id: 17000, name: 'holesky' },
+    { chain_id: 100, name: 'gnosis' },
+    { chain_id: 10200, name: 'chiado' }
+  )
+
+  return result
 }

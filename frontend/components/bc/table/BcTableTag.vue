@@ -14,7 +14,7 @@ defineProps<Props>()
 
 </script>
 <template>
-  <BcTooltip v-if="label || icon" class="tag" :class="[color, size]" :text="tooltip">
+  <BcTooltip v-if="label || icon" class="tag" :class="[color, size]" :text="tooltip" :fit-content="true">
     {{ label }}
     <FontAwesomeIcon v-if="icon" :icon="icon" />
   </BcTooltip>

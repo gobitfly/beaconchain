@@ -32,7 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-//go:embed migrations/*.sql
+//go:embed migrations/*/*.sql
 var EmbedMigrations embed.FS
 
 var DBPGX *pgxpool.Conn
@@ -43,6 +43,9 @@ var ReaderDb *sqlx.DB
 
 var AlloyReader *sqlx.DB
 var AlloyWriter *sqlx.DB
+
+var ClickHouseReader *sqlx.DB
+var ClickHouseWriter *sqlx.DB
 
 var PersistentRedisDbClient *redis.Client
 
@@ -69,13 +72,13 @@ func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
 
 	err := dbConn.Ping()
 	if err != nil {
-		log.Fatal(fmt.Errorf("unable to ping %s", dataBaseName), "", 0)
+		log.Fatal(fmt.Errorf("unable to ping %s. error: %w", dataBaseName, err), "", 0)
 	}
 
 	dbConnectionTimeout.Stop()
 }
 
-func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sqlx.DB, *sqlx.DB) {
+func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driverName string, databaseBrand string) (*sqlx.DB, *sqlx.DB) {
 	if writer.MaxOpenConns == 0 {
 		writer.MaxOpenConns = 50
 	}
@@ -96,13 +99,23 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	sslMode := "disable"
-	if writer.SSL {
-		sslMode = "require"
+	var sslParam string
+	if driverName == "clickhouse" {
+		sslParam = "secure=false"
+		if writer.SSL {
+			sslParam = "secure=true"
+		}
+		// debug
+		// sslParam += "&debug=true"
+	} else {
+		sslParam = "sslmode=disable"
+		if writer.SSL {
+			sslParam = "sslmode=require"
+		}
 	}
 
-	log.Infof("initializing writer db connection to %v:%v/%v with %v/%v conn limit", writer.Host, writer.Port, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
-	dbConnWriter, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslMode))
+	log.Infof("connecting to %s database %s:%s/%s as writer with %d/%d max open/idle connections", databaseBrand, writer.Host, writer.Port, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
+	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslParam))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
@@ -117,13 +130,22 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 		return dbConnWriter, dbConnWriter
 	}
 
-	sslMode = "disable"
-	if reader.SSL {
-		sslMode = "require"
+	if driverName == "clickhouse" {
+		sslParam = "secure=false"
+		if writer.SSL {
+			sslParam = "secure=true"
+		}
+		// debug
+		// sslParam += "&debug=true"
+	} else {
+		sslParam = "sslmode=disable"
+		if writer.SSL {
+			sslParam = "sslmode=require"
+		}
 	}
 
-	log.Infof("initializing reader db connection to %v:%v with %v/%v conn limit", reader.Host, reader.Port, reader.MaxIdleConns, reader.MaxOpenConns)
-	dbConnReader, err := sqlx.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslMode))
+	log.Infof("connecting to %s database %s:%s/%s as reader with %d/%d max open/idle connections", databaseBrand, reader.Host, reader.Port, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
+	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslParam))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
@@ -136,23 +158,67 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig) (*sq
 	return dbConnWriter, dbConnReader
 }
 
-func ApplyEmbeddedDbSchema(version int64) error {
+func ApplyEmbeddedDbSchema(version int64, database string) error {
+	var targetDB *sqlx.DB
+	var migrationPath string
 	goose.SetBaseFS(EmbedMigrations)
-
-	if err := goose.SetDialect("postgres"); err != nil {
-		return err
+	switch database {
+	case "postgres":
+		if err := goose.SetDialect("postgres"); err != nil {
+			return err
+		}
+		targetDB = WriterDb
+		migrationPath = "migrations/postgres"
+	case "alloy":
+		if err := goose.SetDialect("postgres"); err != nil {
+			return err
+		}
+		targetDB = AlloyWriter
+		migrationPath = "migrations/alloy"
+	case "clickhouse":
+		if err := goose.SetDialect("clickhouse"); err != nil {
+			return err
+		}
+		targetDB = ClickHouseWriter
+		migrationPath = "migrations/clickhouse"
+	default:
+		return fmt.Errorf("unknown target database: %s", database)
 	}
 
-	if version == -2 {
-		if err := goose.Up(WriterDb.DB, "migrations"); err != nil {
+	switch {
+	case version == -3:
+		// downgrade once branch. 15 second countdown to prevent shit hitting the fan
+		for i := 0; i < 15; i++ {
+			log.Warnf("downgrading %s by one version. you have %d seconds to abort the command", database, 15-i)
+			time.Sleep(time.Second)
+		}
+		if err := goose.Down(targetDB.DB, migrationPath); err != nil {
 			return err
 		}
-	} else if version == -1 {
-		if err := goose.UpByOne(WriterDb.DB, "migrations"); err != nil {
+	case version == -2:
+		log.Warnf("upgrading %s to the latest version", database)
+		if err := goose.Up(targetDB.DB, migrationPath); err != nil {
 			return err
 		}
-	} else {
-		if err := goose.UpTo(WriterDb.DB, "migrations", version); err != nil {
+	case version == -1:
+		log.Warnf("upgrading %s by one version", database)
+		if err := goose.UpByOne(targetDB.DB, migrationPath); err != nil {
+			return err
+		}
+	case version < 0:
+		// downgrade target branch. 15 second countdown to prevent shit hitting the fan
+		version = -version
+		for i := 0; i < 15; i++ {
+			log.Warnf("downgrading %s to version %d. you have %d seconds to abort the command", database, version, 15-i)
+			time.Sleep(time.Second)
+		}
+		if err := goose.DownTo(targetDB.DB, migrationPath, version); err != nil {
+			return err
+		}
+	default:
+		// upgrade target branch.
+		log.Warnf("upgrading %s to version %d", database, version)
+		if err := goose.UpTo(targetDB.DB, migrationPath, version); err != nil {
 			return err
 		}
 	}

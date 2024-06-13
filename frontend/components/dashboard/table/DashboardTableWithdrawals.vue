@@ -7,6 +7,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
 type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: string}
 
@@ -17,12 +18,12 @@ const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
 const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetwork()
+const { slotToEpoch } = useNetworkStore()
 const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
-const { hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -32,7 +33,7 @@ const colsVisible = computed(() => {
     slot: width.value > 875,
     epoch: width.value > 805,
     recipient: width.value > 695,
-    amount: width.value > 500
+    age: width.value > 500
   }
 })
 
@@ -43,7 +44,7 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(dashboardKey, () => {
+watch([dashboardKey, overview], () => {
   loadData()
   getTotalAmount(dashboardKey.value)
 }, { immediate: true })
@@ -173,7 +174,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.index" default="-" />
+                  {{ slotProps.data.index || "-" }}
                 </BcLink>
                 <div v-else class="all-time-total">
                   Σ
@@ -227,7 +228,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -260,7 +264,6 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               </template>
             </Column>
             <Column
-              v-if="colsVisible.amount"
               field="amount"
               :sortable="true"
               body-class="amount"
@@ -313,6 +316,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
+                    {{ $t('common.age') }}:
+                  </div>
+                  <BcFormatTimePassed type="slot" :value="slotProps.data.slot" />
+                </div>
+                <div class="row">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.recipient') }}:
                   </div>
                   <BcFormatHash
@@ -324,12 +333,6 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                     :ens="slotProps.data.recipient?.ens"
                   />
                   <span v-else>-</span>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t('dashboard.validator.col.amount') }}:
-                  </div>
-                  <BcFormatValue :value="slotProps.data.amount" :class="getExpansionValueClass(slotProps.data)" />
                 </div>
               </div>
             </template>

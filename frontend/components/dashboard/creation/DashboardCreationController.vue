@@ -1,12 +1,13 @@
 <script lang="ts" setup>
-import { type DashboardType, type ValidatorDashboardNetwork } from '~/types/dashboard'
+import { type DashboardType } from '~/types/dashboard'
 import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
+import { ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { dashboards } = useUserDashboardStore()
-const { user } = useUserStore()
+const { user, isLoggedIn } = useUserStore()
 
 interface Props {
   displayType: DashboardCreationDisplayType,
@@ -19,10 +20,8 @@ const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
-// TODO: replace network types once we have them
-const network = ref<ValidatorDashboardNetwork>()
+const network = ref<ChainIDs>()
 const { dashboardKey, publicEntities } = useDashboardKey()
-const { isLoggedIn } = useUserStore()
 const { fetch } = useCustomFetch()
 const route = useRoute()
 

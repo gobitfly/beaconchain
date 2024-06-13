@@ -86,7 +86,27 @@ type Config struct {
 	RedisSessionStoreEndpoint string `yaml:"redisSessionStoreEndpoint" envconfig:"REDIS_SESSION_STORE_ENDPOINT"`
 	TieredCacheProvider       string `yaml:"tieredCacheProvider" envconfig:"CACHE_PROVIDER"`
 	ReportServiceStatus       bool   `yaml:"reportServiceStatus" envconfig:"REPORT_SERVICE_STATUS"`
-	Indexer                   struct {
+	ClickHouse                struct {
+		ReaderDatabase struct {
+			Username     string `yaml:"user" envconfig:"CLICKHOUSE_READER_DB_USERNAME"`
+			Password     string `yaml:"password" envconfig:"CLICKHOUSE_READER_DB_PASSWORD"`
+			Name         string `yaml:"name" envconfig:"CLICKHOUSE_READER_DB_NAME"`
+			Host         string `yaml:"host" envconfig:"CLICKHOUSE_READER_DB_HOST"`
+			Port         string `yaml:"port" envconfig:"CLICKHOUSE_READER_DB_PORT"`
+			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_READER_DB_MAX_OPEN_CONNS"`
+			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_READER_DB_MAX_IDLE_CONNS"`
+		} `yaml:"readerDatabase"`
+		WriterDatabase struct {
+			Username     string `yaml:"user" envconfig:"CLICKHOUSE_WRITER_DB_USERNAME"`
+			Password     string `yaml:"password" envconfig:"CLICKHOUSE_WRITER_DB_PASSWORD"`
+			Name         string `yaml:"name" envconfig:"CLICKHOUSE_WRITER_DB_NAME"`
+			Host         string `yaml:"host" envconfig:"CLICKHOUSE_WRITER_DB_HOST"`
+			Port         string `yaml:"port" envconfig:"CLICKHOUSE_WRITER_DB_PORT"`
+			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_OPEN_CONNS"`
+			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_IDLE_CONNS"`
+		} `yaml:"writerDatabase"`
+	} `yaml:"clickhouse"`
+	Indexer struct {
 		Enabled bool `yaml:"enabled" envconfig:"INDEXER_ENABLED"`
 		Node    struct {
 			Port     string `yaml:"port" envconfig:"INDEXER_NODE_PORT"`
@@ -151,15 +171,35 @@ type Config struct {
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"FRONTEND_WRITER_DB_MAX_IDLE_CONNS"`
 		} `yaml:"writerDatabase"`
 		Stripe struct {
+			Webhook   string `yaml:"webhook" envconfig:"FRONTEND_STRIPE_WEBHOOK"`
 			SecretKey string `yaml:"secretKey" envconfig:"FRONTEND_STRIPE_SECRET_KEY"`
 			PublicKey string `yaml:"publicKey" envconfig:"FRONTEND_STRIPE_PUBLIC_KEY"`
-			Sapphire  string `yaml:"sapphire" envconfig:"FRONTEND_STRIPE_SAPPHIRE"`
-			Emerald   string `yaml:"emerald" envconfig:"FRONTEND_STRIPE_EMERALD"`
-			Diamond   string `yaml:"diamond" envconfig:"FRONTEND_STRIPE_DIAMOND"`
-			Whale     string `yaml:"whale" envconfig:"FRONTEND_STRIPE_WHALE"`
-			Goldfish  string `yaml:"goldfish" envconfig:"FRONTEND_STRIPE_GOLDFISH"`
-			Plankton  string `yaml:"plankton" envconfig:"FRONTEND_STRIPE_PLANKTON"`
-			Webhook   string `yaml:"webhook" envconfig:"FRONTEND_STRIPE_WEBHOOK"`
+
+			Sapphire string `yaml:"sapphire" envconfig:"FRONTEND_STRIPE_SAPPHIRE"`
+			Emerald  string `yaml:"emerald" envconfig:"FRONTEND_STRIPE_EMERALD"`
+			Diamond  string `yaml:"diamond" envconfig:"FRONTEND_STRIPE_DIAMOND"`
+			Whale    string `yaml:"whale" envconfig:"FRONTEND_STRIPE_WHALE"`
+			Goldfish string `yaml:"goldfish" envconfig:"FRONTEND_STRIPE_GOLDFISH"`
+			Plankton string `yaml:"plankton" envconfig:"FRONTEND_STRIPE_PLANKTON"`
+
+			Iron         string `yaml:"iron" envconfig:"FRONTEND_STRIPE_IRON"`
+			IronYearly   string `yaml:"ironYearly" envconfig:"FRONTEND_STRIPE_IRON_YEARLY"`
+			Silver       string `yaml:"silver" envconfig:"FRONTEND_STRIPE_SILVER"`
+			SilverYearly string `yaml:"silverYearly" envconfig:"FRONTEND_STRIPE_SILVER_YEARLY"`
+			Gold         string `yaml:"gold" envconfig:"FRONTEND_STRIPE_GOLD"`
+			GoldYearly   string `yaml:"goldYearly" envconfig:"FRONTEND_STRIPE_GOLD_YEARLY"`
+
+			Guppy         string `yaml:"guppy" envconfig:"FRONTEND_STRIPE_GUPPY"`
+			GuppyYearly   string `yaml:"guppyYearly" envconfig:"FRONTEND_STRIPE_GUPPY_YEARLY"`
+			Dolphin       string `yaml:"dolphin" envconfig:"FRONTEND_STRIPE_DOLPHIN"`
+			DolphinYearly string `yaml:"dolphinYearly" envconfig:"FRONTEND_STRIPE_DOLPHIN_YEARLY"`
+			Orca          string `yaml:"orca" envconfig:"FRONTEND_STRIPE_ORCA"`
+			OrcaYearly    string `yaml:"orcaYearly" envconfig:"FRONTEND_STRIPE_ORCA_YEARLY"`
+
+			VdbAddon1k        string `yaml:"vdbAddon1k" envconfig:"FRONTEND_STRIPE_VDB_ADDON_1K"`
+			VdbAddon1kYearly  string `yaml:"vdbAddon1kYearly" envconfig:"FRONTEND_STRIPE_VDB_ADDON_1K_YEARLY"`
+			VdbAddon10k       string `yaml:"vdbAddon10k" envconfig:"FRONTEND_STRIPE_VDB_ADDON_10K"`
+			VdbAddon10kYearly string `yaml:"vdbAddon10kYearly" envconfig:"FRONTEND_STRIPE_VDB_ADDON_10K_YEARLY"`
 		}
 		Ratelimits struct {
 			FreeDay       int `yaml:"freeDay" envconfig:"FRONTEND_RATELIMITS_FREE_DAY"`

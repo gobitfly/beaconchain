@@ -1,4 +1,4 @@
-import { simulateAPIresponseForTheSearchBar } from '~/utils/mock'
+import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -36,7 +36,10 @@ export enum API_PATH {
   LOGIN = '/login',
   LOGOUT = '/logout',
   SEARCH = '/search',
-  PRODUCT_SUMMARY = '/productSummary'
+  AVAILABLE_NETWORKS = '/availableNetworks',
+  PRODUCT_SUMMARY = '/productSummary',
+  STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
+  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session'
 }
 
 export type PathValues = Record<string, string | number>
@@ -234,11 +237,27 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.SEARCH]: {
     path: '/search',
     method: 'POST',
-    mock: false,
-    mockFunction: simulateAPIresponseForTheSearchBar
+    mockFunction: simulateAPIresponseForTheSearchBar,
+    mock: false
+  },
+  [API_PATH.AVAILABLE_NETWORKS]: {
+    path: '/available-networks',
+    method: 'GET',
+    mockFunction: simulateAPIresponseAboutNetworkList,
+    mock: true
   },
   [API_PATH.PRODUCT_SUMMARY]: {
     path: '/product-summary',
+    mock: false
+  },
+  [API_PATH.STRIPE_CUSTOMER_PORTAL]: {
+    path: '/user/stripe/customer-portal',
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.STRIPE_CHECKOUT_SESSION]: {
+    path: '/user/stripe/create-checkout-session',
+    method: 'POST',
     mock: false
   }
 }

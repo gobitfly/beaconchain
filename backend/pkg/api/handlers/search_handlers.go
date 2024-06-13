@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -30,7 +31,7 @@ const (
 
 // source of truth for all possible search types and their regex
 var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
-	validatorByIndex:                 reNumber,
+	validatorByIndex:                 reInteger,
 	validatorByPublicKey:             reValidatorPublicKey,
 	validatorsByDepositAddress:       reEthereumAddress,
 	validatorsByDepositEnsName:       reEnsName,
@@ -46,28 +47,19 @@ var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		Input             string          `json:"input"`
-		Networks          []network       `json:"networks,omitempty"`
-		Types             []searchTypeKey `json:"types,omitempty"`
-		IncludeValidators bool            `json:"include_validators,omitempty"`
+		Input    string          `json:"input"`
+		Networks []intOrString   `json:"networks,omitempty"`
+		Types    []searchTypeKey `json:"types,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
 		return
 	}
 	// if the input slices are empty, the sets will contain all possible values
-	networkSet := v.checkNetworkSlice(req.Networks)
+	chainIdSet := v.checkNetworkSlice(req.Networks)
 	searchTypeSet := v.checkSearchTypes(req.Types)
 	if v.hasErrors() {
 		handleErr(w, v)
-		return
-	}
-
-	// for beta launch check if the include_validators flag is set and only Ethereum is queried
-	// TODO: Remove this check once the feature is fully implemented
-	_, containsEthereum := networkSet[1]
-	if !req.IncludeValidators || !containsEthereum || len(networkSet) > 1 {
-		returnError(w, http.StatusServiceUnavailable, errors.New("feature not available, please set `include_validators` to true and only query the Ethereum network"))
 		return
 	}
 
@@ -81,11 +73,11 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		if !searchTypeToRegex[searchType].MatchString(req.Input) {
 			continue
 		}
-		for network := range networkSet {
-			network := network
+		for chainId := range chainIdSet {
+			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
-				searchResult, err := h.handleSearch(ctx, req.Input, searchType, uint64(network))
+				searchResult, err := h.handleSearch(ctx, req.Input, searchType, chainId)
 				if err != nil {
 					if errors.Is(err, dataaccess.ErrNotFound) {
 						return nil
@@ -169,11 +161,10 @@ func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorByIndex),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.PublicKey),
-			NumValue:   &result.Index,
-			Validators: []uint64{result.Index},
+			Type:      string(validatorByIndex),
+			ChainId:   chainId,
+			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
+			NumValue:  &result.Index,
 		}, nil
 	}
 }
@@ -194,11 +185,10 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorByPublicKey),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.PublicKey),
-			NumValue:   &result.Index,
-			Validators: []uint64{result.Index},
+			Type:      string(validatorByPublicKey),
+			ChainId:   chainId,
+			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
+			NumValue:  &result.Index,
 		}, nil
 	}
 }
@@ -218,10 +208,10 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByDepositAddress),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.Address),
-			Validators: result.Validators,
+			Type:      string(validatorsByDepositAddress),
+			ChainId:   chainId,
+			HashValue: "0x" + hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -237,10 +227,11 @@ func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Cont
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByDepositEnsName),
-			ChainId:    chainId,
-			StrValue:   result.EnsName,
-			Validators: result.Validators,
+			Type:      string(validatorsByDepositEnsName),
+			ChainId:   chainId,
+			StrValue:  result.EnsName,
+			HashValue: "0x" + hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -260,10 +251,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalCredential),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
-			Validators: result.Validators,
+			Type:      string(validatorsByWithdrawalCredential),
+			ChainId:   chainId,
+			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -284,10 +275,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalAddress),
-			ChainId:    chainId,
-			HashValue:  hex.EncodeToString(result.WithdrawalCredential),
-			Validators: result.Validators,
+			Type:      string(validatorsByWithdrawalAddress),
+			ChainId:   chainId,
+			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -303,10 +294,11 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByWithdrawalEns),
-			ChainId:    chainId,
-			StrValue:   result.EnsName,
-			Validators: result.Validators,
+			Type:      string(validatorsByWithdrawalEns),
+			ChainId:   chainId,
+			StrValue:  result.EnsName,
+			HashValue: "0x" + hex.EncodeToString(result.Address),
+			NumValue:  &result.Count,
 		}, nil
 	}
 }
@@ -322,10 +314,10 @@ func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, i
 		}
 
 		return &types.SearchResult{
-			Type:       string(validatorsByGraffiti),
-			ChainId:    chainId,
-			StrValue:   result.Graffiti,
-			Validators: result.Validators,
+			Type:     string(validatorsByGraffiti),
+			ChainId:  chainId,
+			StrValue: result.Graffiti,
+			NumValue: &result.Count,
 		}, nil
 	}
 }
@@ -333,24 +325,24 @@ func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, i
 // --------------------------------------
 //   Input Validation
 
-// if the passed slice is empty, return a set with all networks; otherwise check if the passed networks are valid
-func (v *validationError) checkNetworkSlice(networksSlice []network) map[network]struct{} {
-	networkSet := map[network]struct{}{}
+// if the passed slice is empty, return a set with all chain IDs; otherwise check if the passed networks are valid
+func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]struct{} {
+	networkSet := map[uint64]struct{}{}
 	// if the list is empty, query all networks
-	if len(networksSlice) == 0 {
+	if len(networks) == 0 {
 		for _, n := range allNetworks {
-			networkSet[network(n.ChainId)] = struct{}{}
+			networkSet[n.ChainId] = struct{}{}
 		}
 		return networkSet
 	}
 	// list not empty, check if networks are valid
-	for _, n := range networksSlice {
-		// chain id was already checked in the unmarshal step, if it's invalid it will be -1
-		if n == -1 {
-			v.add("networks", "list contains invalid network, please check the API documentation")
+	for _, network := range networks {
+		chainId, ok := isValidNetwork(network)
+		if !ok {
+			v.add("networks", fmt.Sprintf("invalid network '%s'", network))
 			break
 		}
-		networkSet[n] = struct{}{}
+		networkSet[chainId] = struct{}{}
 	}
 	return networkSet
 }
@@ -368,8 +360,8 @@ func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchType
 	// list not empty, check if types are valid
 	for _, t := range types {
 		if _, typeExists := searchTypeToRegex[t]; !typeExists {
-			v.add("types", "list contains invalid type, please check the API documentation")
-			break
+			v.add("types", fmt.Sprintf("invalid search type '%s'", t))
+			continue
 		}
 		typeSet[t] = struct{}{}
 	}

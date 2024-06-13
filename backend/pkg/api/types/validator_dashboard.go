@@ -34,7 +34,7 @@ type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 // ------------------------------------------------------------
 // Summary Tab
 type VDBSummaryTableRow struct {
-	GroupId    uint64                  `json:"group_id"`
+	GroupId    int64                   `json:"group_id"`
 	Efficiency PeriodicValues[float64] `json:"efficiency"`
 	Validators []uint64                `json:"validators"`
 }
@@ -178,7 +178,7 @@ type InternalGetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatma
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
-	Index                *VDBValidator   `json:"index,omitempty"`
+	Index                *uint64         `json:"index,omitempty"`
 	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
 	Timestamp            int64           `json:"timestamp"`
@@ -193,7 +193,7 @@ type InternalGetValidatorDashboardExecutionLayerDepositsResponse ApiPagingRespon
 
 type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
-	Index                VDBValidator    `json:"index"`
+	Index                uint64          `json:"index"`
 	GroupId              uint64          `json:"group_id"`
 	Epoch                uint64          `json:"epoch"`
 	Slot                 uint64          `json:"slot"`
@@ -220,7 +220,7 @@ type InternalGetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse
 type VDBWithdrawalsTableRow struct {
 	Epoch             uint64          `json:"epoch"`
 	Slot              uint64          `json:"slot"`
-	Index             VDBValidator    `json:"index"`
+	Index             uint64          `json:"index"`
 	GroupId           uint64          `json:"group_id"`
 	Recipient         Address         `json:"recipient"`
 	Amount            decimal.Decimal `json:"amount"`
@@ -237,7 +237,7 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 // ------------------------------------------------------------
 // Manage Modal
 type VDBManageValidatorsTableRow struct {
-	Index                VDBValidator    `json:"index"`
+	Index                uint64          `json:"index"`
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`

@@ -107,12 +107,11 @@ type ChainConfig struct {
 }
 
 type SearchResult struct {
-	Type       string   `json:"type"`
-	ChainId    uint64   `json:"chain_id"`
-	HashValue  string   `json:"hash_value,omitempty"`
-	StrValue   string   `json:"str_value,omitempty"`
-	NumValue   *uint64  `json:"num_value,omitempty"`
-	Validators []uint64 `json:"validators,omitempty"`
+	Type      string  `json:"type"`
+	ChainId   uint64  `json:"chain_id"`
+	HashValue string  `json:"hash_value,omitempty"`
+	StrValue  string  `json:"str_value,omitempty"`
+	NumValue  *uint64 `json:"num_value,omitempty"`
 }
 
 type InternalPostSearchResponse ApiDataResponse[[]SearchResult]

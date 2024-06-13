@@ -18,7 +18,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// TODO sorting by rewards doesn't work; CL rewards present nowhere - depends on BIDS-3036
 func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	var err error
 	var currentCursor t.BlocksCursor
@@ -116,9 +115,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		Status       uint64              `db:"status"`
 		Block        sql.NullInt64       `db:"block"`
 		FeeRecipient []byte              `db:"fee_recipient"`
-		Reward       decimal.NullDecimal `db:"total_reward"`
+		ElReward     decimal.NullDecimal `db:"el_reward"`
 		ClReward     decimal.NullDecimal `db:"cl_reward"`
 		GraffitiText string              `db:"graffiti_text"`
+
+		// for cursor only
+		Reward decimal.Decimal
 	}
 
 	// handle sorting
@@ -138,9 +140,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		sortColName = `status`
 		val = currentCursor.Status
 	case enums.VDBBlockProposerReward:
-		// TODO check types (decimal/uint?)
 		sortColName = `reward`
-		val = currentCursor.Reward.Decimal.BigInt().Uint64()
+		val = currentCursor.Reward.BigInt().Uint64()
 	}
 	onlyPrimarySort := sortColName == `slot`
 	if currentCursor.IsValid() {
@@ -223,25 +224,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	}
 
 	groupIdCol := "group_id"
-	feeRecipient := "fee_recipient"
+	// this is actually just used for sorting for "reward".. will not consider EL rewards of unfinalized blocks atm
 	reward := "reward"
 	if dashboardId.Validators != nil {
 		groupIdCol = fmt.Sprintf("%d AS %s", t.DefaultGroupId, groupIdCol)
-		feeRecipient = "coalesce(rb.proposer_fee_recipient, blocks.exec_fee_recipient) AS " + feeRecipient
 		reward = "coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS " + reward
 	}
+	selectFields := fmt.Sprintf(`
+		r.proposer,
+		%s,
+		r.epoch,
+		r.slot,
+		r.status,
+		block,
+		COALESCE(rb.proposer_fee_recipient, blocks.exec_fee_recipient) AS fee_recipient,
+		COALESCE(rb.value / 1e18, ep.fee_recipient_reward) AS el_reward,
+		cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
+		r.graffiti_text`, groupIdCol)
 	query := fmt.Sprintf(`SELECT
-			proposer,
-			%s,
-			epoch,
-			r.slot,
-			status,
-			block,
-			fee_recipient,
-			reward AS total_reward,
-			cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
-			graffiti_text
-		FROM ( SELECT * FROM (`, groupIdCol)
+			%s
+		FROM ( SELECT * FROM (`, selectFields)
 	// supply scheduled proposals, if any
 	if len(scheduledProposers) > 0 {
 		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
@@ -254,36 +256,25 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		params = append(params, scheduledEpochs)
 		params = append(params, scheduledSlots)
 		query = fmt.Sprintf(`SELECT distinct on (%s) 
-			proposer,
-			%s,
-			epoch,
-			r.slot,
-			status,
-			block,
-			fee_recipient,
-			reward AS total_reward,
-			cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
-			graffiti_text
+			%s
 		FROM ( SELECT * FROM (WITH scheduled_proposals (
 			proposer,
 			epoch,
 			slot,
 			status,
 			block,
-			fee_recipient,
 			reward,
 			graffiti_text
 		) AS (SELECT 
 			*,
 			'0',
 			null::int,
-			null::bytea,
 			null::int,
 			''
 			FROM unnest($%d::int[], $%d::int[], $%d::int[]))
 		SELECT * FROM scheduled_proposals
 		UNION
-		(`, distinct, groupIdCol, len(params)-2, len(params)-1, len(params))
+		(`, distinct, selectFields, len(params)-2, len(params)-1, len(params))
 	}
 	query += fmt.Sprintf(`
 	SELECT
@@ -293,10 +284,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		status,
 		exec_block_number AS block,
 		%s,
-		%s,
 		graffiti_text
 	FROM blocks
-	`, feeRecipient, reward)
+	`, reward)
 
 	if dashboardId.Validators == nil {
 		query += `
@@ -328,6 +318,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	`, len(params))
 	rewardsStr := `) r
 	LEFT JOIN consensus_payloads cp on r.slot = cp.slot
+	LEFT JOIN blocks on r.slot = blocks.slot
+	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
+	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
 	`
 
 	startTime := time.Now()
@@ -351,6 +344,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
+		if dashboardId.AggregateGroups {
+			data[i].GroupId = t.DefaultGroupId
+		}
 		data[i].Proposer = proposal.Proposer
 		data[i].Epoch = proposal.Epoch
 		data[i].Slot = proposal.Slot
@@ -377,17 +373,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		block := uint64(proposal.Block.Int64)
 		data[i].Block = &block
 		var reward t.ClElValue[decimal.Decimal]
-		if proposal.Reward.Valid {
+		if proposal.ElReward.Valid {
 			rewardRecp := t.Address{
 				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
 			}
 			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
-			reward.El = proposal.Reward.Decimal.Sub(proposal.ClReward.Decimal).Mul(decimal.NewFromInt(1e18))
+			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
+		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward
 	}
 	// determine reward recipient ENS names
