@@ -1,19 +1,42 @@
 <script lang="ts" setup>
-import { IconNetworkEthereum, IconNetworkGnosis } from '#components'
-import type { ValidatorDashboardNetwork } from '~/types/dashboard'
+import { IconNetwork } from '#components'
+import { ChainInfo, ChainIDs } from '~/types/network'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const network = defineModel<ValidatorDashboardNetwork>('network')
-const allNetworks = [
-  { text: 'Ethereum', value: 'ethereum', component: IconNetworkEthereum, componentClass: 'monochromatic' },
-  { text: 'Gnosis', value: 'gnosis', component: IconNetworkGnosis, componentClass: 'monochromatic', disabled: true }
-]
+const { currentNetwork, isMainNet } = useNetworkStore()
+
+// TODO: get the list from the API...
+let ValidatorDashboardNetworkList: ChainIDs[]
+if (isMainNet()) {
+  ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Gnosis]
+} else {
+  ValidatorDashboardNetworkList = [ChainIDs.Holesky, ChainIDs.Chiado]
+}
+// ... and remove this.
+
+const network = defineModel<ChainIDs>('network')
+const selection = ref<string>('')
+
+watch(selection, (value) => { network.value = Number(value) as ChainIDs })
+
+const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
+  return {
+    value: String(chainId),
+    text: ChainInfo[chainId].family as string,
+    subText: (ChainInfo[chainId].name !== ChainInfo[chainId].family as string) ? ChainInfo[chainId].name : ChainInfo[chainId].description,
+    disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
+    component: IconNetwork,
+    componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
+    componentClass: 'dashboard-creation-button-network-icon'
+  }
+})
 
 const { t: $t } = useI18n()
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
 const continueDisabled = computed(() => {
-  return !network.value
+  return !selection.value
 })
 </script>
 
@@ -26,7 +49,13 @@ const continueDisabled = computed(() => {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.network.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="network" class="single-bar" :buttons="allNetworks" :initial="network" />
+      <BcToggleSingleBar
+        v-model="selection"
+        class="single-bar"
+        :buttons="buttonList"
+        :initial="String(currentNetwork)"
+        :are-buttons-networks="true"
+      />
       <div class="row-container">
         <Button @click="emit('back')">
           {{ $t('navigation.back') }}
@@ -61,5 +90,12 @@ const continueDisabled = computed(() => {
         width: 90px;
       }
     }
+  }
+</style>
+
+<style lang="scss">
+  .dashboard-creation-button-network-icon {
+    width: 100%;
+    height: 100%;
   }
 </style>

@@ -27,12 +27,14 @@ export function useUserStore () {
     data.value = user
   }
 
-  const getUser = async () => {
+  async function getUser () : Promise<UserInfo|undefined> {
     try {
       const res = await fetch<InternalGetUserInfoResponse>(API_PATH.USER, undefined, undefined, undefined, true)
       setUser(res.data)
-    } catch (e) {
+      return res.data
+    } catch {
       setUser(undefined)
+      return undefined
     }
   }
 

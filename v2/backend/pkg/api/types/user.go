@@ -35,6 +35,7 @@ const ProductStoreEthpool ProductStore = "ethpool"
 const ProductStoreCustom ProductStore = "custom"
 
 type ProductSummary struct {
+	ValidatorsPerDashboardLimit          uint64                                 `json:"validators_per_dashboard_limit"`
 	StripePublicKey                      string                                 `json:"stripe_public_key"`
 	ApiProducts                          []ApiProduct                           `json:"api_products"`
 	PremiumProducts                      []PremiumProduct                       `json:"premium_products"`
@@ -106,4 +107,15 @@ type PremiumPerks struct {
 	MonitorMachines                 uint64 `json:"monitor_machines"`
 	MachineMonitoringHistorySeconds uint64 `json:"machine_monitoring_history_seconds"`
 	CustomMachineAlerts             bool   `json:"custom_machine_alerts"`
+}
+
+// TODO @patrick post-beta StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse
+
+type StripeCreateCheckoutSession struct {
+	SessionId string `json:"sessionId,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type StripeCustomerPortal struct {
+	Url string `json:"url"`
 }

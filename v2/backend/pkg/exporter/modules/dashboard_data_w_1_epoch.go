@@ -46,6 +46,7 @@ func (d *epochWriter) getPartitionRange(epoch uint64) (uint64, uint64) {
 
 func (d *epochWriter) clearOldEpochs(removeBelowEpoch int64) error {
 	if debugSkipOldEpochClear {
+		d.log.Infof("DEBUG MODE, prevented epoch clear below %d", removeBelowEpoch)
 		return nil
 	}
 

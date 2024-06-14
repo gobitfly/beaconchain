@@ -3,6 +3,7 @@ package modules
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
@@ -19,6 +20,11 @@ type epochToDayAggregator struct {
 	mutex             *sync.Mutex
 	rollingAggregator RollingAggregator
 }
+
+// How long aggregated hours will remain in the database is defined in getDayRetentionDurationDays.
+// This depends on the max rolling timeframe we supports, so 90d as of now.
+// This buffer can be used to increase or decrease from that 90d day target. A value of 1 will keep exactly those 90d in the database.
+const dayRetentionBuffer = 1.2 // do not go below 1
 
 const PartitionDayWidth = 6
 
@@ -210,7 +216,7 @@ type DayRollingAggregatorImpl struct {
 func (d *DayRollingAggregatorImpl) getBootstrapBounds(latestExportedHourEpoch uint64, _ uint64) (uint64, uint64) {
 	currentStartBounds, _ := getHourAggregateBounds(latestExportedHourEpoch)
 
-	dayOldEpoch := int64(latestExportedHourEpoch - utils.EpochsPerDay())
+	dayOldEpoch := int64(currentStartBounds - utils.EpochsPerDay())
 	if dayOldEpoch < 0 {
 		dayOldEpoch = 0
 	}
@@ -408,4 +414,67 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	}
 
 	return nil
+}
+
+func (d *epochToDayAggregator) clearOldDayAggregations(removeOlderThanDays uint64) error {
+	partitions, err := edb.GetPartitionNamesOfTable(edb.DayWriterTableName)
+	if err != nil {
+		return errors.Wrap(err, "failed to get partitions")
+	}
+
+	for _, partition := range partitions {
+		dateFromString, dateToString, err := parseDayRange(fmt.Sprintf(`%s_(\d+)_(\d+)`, edb.DayWriterTableName), partition)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse day range")
+		}
+
+		dateTo, err := time.Parse("20060102", dateToString)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse dateTo")
+		}
+
+		daysAgo := int64(time.Since(dateTo).Hours() / 24)
+
+		if daysAgo > int64(removeOlderThanDays) {
+			d.mutex.Lock()
+			err := d.deleteDayPartition(dateFromString, dateToString)
+			d.log.Infof("Deleted old day partition %s-%s (%d days ago)", dateFromString, dateToString, daysAgo)
+			d.mutex.Unlock()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete day partition")
+			}
+		}
+	}
+
+	return nil
+}
+
+func parseDayRange(pattern, partition string) (string, string, error) {
+	// Compile the regular expression pattern
+	regex := regexp.MustCompile(pattern)
+
+	// Find the matches in the partition string
+	matches := regex.FindStringSubmatch(partition)
+
+	// Check if the partition string matches the pattern
+	if len(matches) != 3 {
+		return "", "", fmt.Errorf("invalid partition string: %s", partition)
+	}
+
+	return matches[1], matches[2], nil
+}
+
+func (d *epochToDayAggregator) getDayRetentionDurationDays() uint64 {
+	return 90 * dayRetentionBuffer // max rolling timeframe
+}
+
+func (d *epochToDayAggregator) deleteDayPartition(epochStartFrom, epochStartTo string) error {
+	query := fmt.Sprintf(`
+		DROP TABLE IF EXISTS %s_%s_%s
+		`,
+		edb.DayWriterTableName, epochStartFrom, epochStartTo,
+	)
+
+	_, err := db.AlloyWriter.Exec(query)
+	return err
 }

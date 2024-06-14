@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
+import { useFormat } from '~/composables/useFormat'
 import { type AgeFormat } from '~/types/settings'
-import { formatGoTimestamp, formatEpochToDateTime, formatSlotToDateTime } from '~/utils/format'
+import { formatGoTimestamp } from '~/utils/format'
+
+const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
 
 interface Props {
   value?: number | string,

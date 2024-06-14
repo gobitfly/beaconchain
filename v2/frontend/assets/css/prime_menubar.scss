@@ -1,5 +1,4 @@
 @use "~/assets/css/fonts.scss";
-@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.button_text;
@@ -7,8 +6,7 @@
   color: var(--text-color);
   user-select: none;
 
-  .p-menubar-root-list
-  {
+  .p-menubar-root-list {
     flex-wrap: nowrap;
     gap: var(--padding);
 
@@ -17,6 +15,7 @@
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
+      cursor: pointer;
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
@@ -46,12 +45,15 @@
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
+    cursor: default;
 
     .p-menuitem {
       border-radius: var(--border-radius);
       padding: var(--padding);
       white-space: nowrap;
       text-overflow: ellipsis;
+      max-width: 200px;
+      cursor: pointer;
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);

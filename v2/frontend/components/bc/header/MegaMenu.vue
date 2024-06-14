@@ -60,8 +60,8 @@ const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
 const { withLabel, currency, setCurrency } = useCurrency()
+const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-
 const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
@@ -975,14 +975,14 @@ defineExpose({
             <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
             <IconCurrency v-else-if="item.currency" :currency="item.currency" />
           </span>
-          <BcLink v-if="item.url" :to="item.url">
+          <BcLink v-if="item.url" :to="item.url" :replace="route.path.startsWith(item.url)">
             <span :class="[item.class]" class="p-menuitem-text">
               <span>{{ item.label }}</span>
             </span>
           </BcLink>
-          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
+          <div v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
             {{ item.label }}
-          </span>
+          </div>
           <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
         </span>
       </template>

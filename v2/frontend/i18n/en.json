@@ -13,6 +13,7 @@
     "expected": "Expected",
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
+    "every_x":"Every {duration}",
     "id": "ID",
     "average": "Average",
     "index": "Index",
@@ -42,6 +43,7 @@
     "true": "True",
     "false": "False",
     "coming_soon": "Coming soon",
+    "soon": "Soon",
     "and_more": "and {count} more"
   },
   "seo": {
@@ -195,12 +197,30 @@
       "missed": "Missed",
       "orphaned": "Orphaned",
       "scheduled": "Scheduled",
-      "success": "Proposed"
+      "success": "Proposed",
+      "probably_missed": "Missed *"
     },
+    "status_might_change_on_reorg": "This block's status may change if a chain reorganization occurs.",
     "col": {
       "proposer": "Proposer",
       "graffiti": "Graffiti",
       "tx_hash": "Tx Hash"
+    }
+  },
+  "faq": {
+    "playground": {
+      "0": {
+        "question": "What is your first question",
+        "answer": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit", "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."],
+        "link" : {
+          "path": "https://beaconcha.in/",
+          "label": "...more infos"
+        }
+      },
+      "1": {
+        "question": "This is a second question",
+        "answer": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit", "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."]
+      }
     }
   },
   "validator": {
@@ -225,7 +245,7 @@
       "attestation_target": "Attestation Target",
       "proposer_el": "Proposer EL Reward",
       "proposer_attestation": "Proposer Att. Reward",
-      "proposer_sync": "Proposer Sync. Reward:",
+      "proposer_sync": "Proposer Sync. Reward",
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
@@ -263,6 +283,14 @@
           ]
         }
       }
+    },
+    "shared_modal_with_own": {
+      "text": "Access your personalized dashboard",
+      "button": "Go to Dashboard"
+    },
+    "shared_modal_without_own": {
+      "text": "Create your own dashboard to get the most out of beaconcha.in",
+      "button": "Get started"
     },
     "group": {
       "selection": {
@@ -313,7 +341,9 @@
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
         "el_rewards": "Execution Layer Reward",
-        "cl_rewards": "Consensus Layer Reward"
+        "cl_rewards": "Consensus Layer Reward",
+        "cl_pending": "CL Pending",
+        "pending": "Pending"
       },
       "rewards": {
         "title": "Rewards",
@@ -418,7 +448,7 @@
           "proposals": "Proposals",
           "validators_proposal": "Validators",
           "slashed": "Slashings",
-          "validators_slashings": "Validators",
+          "validators_slashings": "Slashed Validators",
           "apr": "APR",
           "luck": "Luck"
         },
@@ -582,19 +612,24 @@
   },
   "pricing": {
     "seo_title": "Premium Pricing", 
+    "compare": "Compare Plans",
+    "show_feature": "Show Features",
+    "hide_feature": "Hide Features",
     "premium": "beaconcha.in Premium",
     "API_keys": "API Keys",
     "subtitle": "Monitoring without limits on web and mobile.",
+    "per_month": "per month",
     "monthly": "Monthly",
     "yearly": "Yearly",
     "save_up_to": "SAVE UP TO {percentage}%",
     "excluding_vat": "* All prices are excluding VAT",
-    "per_month": "per month",
     "amount_per_year": "{amount} yearly",
     "savings": "You save {amount} a year",
     "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
+    "get_started": "Get started now",
+    "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
     "premium_product": {
       "popular": "Popular!",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
@@ -614,6 +649,33 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
+    }, 
+    "groups": {
+      "general": "General",
+      "dashboard": "Dashboard",
+      "notification": "v2 Notification",
+      "mobille_app": "Mobile App"
+    },
+    "percs": {
+      "ad_free": "Ad free",
+      "support_us": "Support us",
+      "validators_per_dashboard": "Validator dashboards",
+      "validator_dashboards": "Validators per dashboard",
+      "validator_groups_per_dashboard": "Validator groups per dashboard",
+      "share_custom_dashboards": "Share custom dashboards",
+      "manage_dashboard_via_api": "Manage dashboard via API",
+      "bulk_adding": "Bulk adding",
+      "heatmap_history_seconds": "Heatmap history",
+      "summary_chart_history_seconds": "Summary chart history",
+      "email_notifications_per_day": "Email notifications per day",
+      "configure_notifications_via_api": "Configure notifications via API",
+      "validator_group_notifications": "Validator group notifications",
+      "webhook_endpoints": "Webhook endpoints",
+      "mobile_app_custom_themes": "Custom themes",
+      "mobile_app_widget": "App widget",
+      "monitor_machines": "Monitor machines",
+      "machine_monitoring_history_seconds": "Machine monitoring history",
+      "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
     },
     "view_addons": "View Add-Ons",
     "addons": {
@@ -621,6 +683,8 @@
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
       "validator_amount": "+{amount} Validators",
       "per_dashboard": "per Dashboard",
+      "currently_active": "Currently active: {amount}",
+      "contact_support": ["Contact", "support", "for a higher limit"],
       "button": {
         "select_addon": "Select Add-On",
         "manage_addon": "Manage Add-On"

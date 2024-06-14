@@ -7,6 +7,7 @@ import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import type { TimeFrame } from '~/types/value'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { sortValidatorIds } from '~/utils/dashboard/validator'
 import type { DashboardKey } from '~/types/dashboard'
 
 interface Props {
@@ -40,7 +41,7 @@ const groupName = computed(() => {
   return getGroupLabel($t, props.groupId, groups.value)
 })
 
-const cappedValidators = computed(() => props.validators?.slice(0, 10) || [])
+const cappedValidators = computed(() => sortValidatorIds(props.validators).slice(0, 10))
 
 </script>
 <template>

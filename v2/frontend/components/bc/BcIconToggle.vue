@@ -28,12 +28,12 @@ const toggle = () => {
   <div class="bc-toggle" :class="{ selected }" :disabled="disabled || null" @click="toggle">
     <div class="icon true-icon">
       <slot name="trueIcon">
-        <FontAwesomeIcon v-if="props.trueIcon" :icon="props.trueIcon" />
+        <FontAwesomeIcon v-if="trueIcon" :icon="trueIcon" />
       </slot>
     </div>
     <div class="icon false-icon">
       <slot name="falseIcon">
-        <FontAwesomeIcon v-if="props.falseIcon" :icon="props.falseIcon" />
+        <FontAwesomeIcon v-if="falseIcon" :icon="falseIcon" />
       </slot>
     </div>
     <span class="slider" />
@@ -48,7 +48,7 @@ const toggle = () => {
   height: 23px;
   cursor: pointer;
 
-  &[disabled='true']{
+  &[disabled]{
     cursor: unset;
     pointer-events: none;
     opacity: 0.5;

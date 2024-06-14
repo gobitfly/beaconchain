@@ -51,7 +51,7 @@ const filter = ref<string>('')
         padding 0.2s ease-in-out;
 
       &.visible {
-        width: 188px;
+        width: 230px;
         opacity: 100%;
         padding: 4px;
 

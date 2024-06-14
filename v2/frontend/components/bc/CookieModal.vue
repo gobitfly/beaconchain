@@ -29,9 +29,9 @@ const visible = computed(() => cookiePreference.value === undefined)
         {{ tOf($t, 'cookies.text', 2) }}
       </div>
       <div class="button-container">
-        <Button class="necessary-button" @click="setCookiePreference('functional')">
+        <div class="necessary-button" @click="setCookiePreference('functional')">
           {{ $t('cookies.only_necessary') }}
-        </Button>
+        </div>
         <Button @click="setCookiePreference('all')">
           {{ $t('cookies.accept_all') }}
         </Button>
@@ -65,19 +65,23 @@ const visible = computed(() => cookiePreference.value === undefined)
 
   .button-container {
     display: flex;
-    gap: 7px;
+    align-items: center;
+    gap: var(--padding-large);
     min-width: max-content;
 
     @media (max-width: 670px) {
       flex-direction: column;
       gap: 9px;
       width: 100%;
+
+      > Button {
+        width: 100%;
+      }
     }
 
     .necessary-button {
-      background-color: var(--button-color-dark-pattern);
-      border-color: var(--button-color-dark-pattern);
-      color: var(--button-text-color-dark-pattern);
+      cursor: pointer;
+      color: var(--text-color-disabled);
     }
   }
 }

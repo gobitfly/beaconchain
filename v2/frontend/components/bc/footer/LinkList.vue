@@ -6,7 +6,6 @@ import {
   faBuilding,
   faFileContract,
   faUserSecret,
-  faLaptopCode,
   faFileInvoiceDollar,
   faUserAstronaut,
   faAd,
@@ -22,7 +21,7 @@ const columns: Row[] = [
   {
     title: $t('footer.legal_notices'),
     links: [
-      [$t('footer.imprint'), faBuilding, '/imprint', Target.Internal],
+      [$t('footer.imprint'), faBuilding, 'https://beaconcha.in/imprint', Target.External],
       [$t('footer.terms'), faFileContract, 'https://storage.googleapis.com/legal.beaconcha.in/tos.pdf', Target.External],
       [$t('footer.privacy'), faUserSecret, 'https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf', Target.External]
     ]
@@ -30,8 +29,7 @@ const columns: Row[] = [
   {
     title: $t('footer.resources'),
     links: [
-      [$t('footer.api_docs'), faLaptopCode, '/api/v2/docs/index.html', Target.Internal],
-      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal], // TODO: Requires pricing page to set the toggle at the top to "API Pricing"
+      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
       [$t('footer.premium'), faUserAstronaut, '/pricing', Target.Internal],
       [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal],
       [$t('footer.shop'), faShoppingCart, 'https://shop.beaconcha.in', Target.External],

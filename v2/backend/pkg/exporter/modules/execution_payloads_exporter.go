@@ -25,8 +25,9 @@ type executionPayloadsExporter struct {
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionPayloadsExporter{
-		ModuleContext: moduleContext,
-		ExportMutex:   &sync.Mutex{},
+		ModuleContext:   moduleContext,
+		ExportMutex:     &sync.Mutex{},
+		CachedViewMutex: &sync.Mutex{},
 	}
 }
 

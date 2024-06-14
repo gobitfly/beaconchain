@@ -6,7 +6,7 @@ import type { ValidatorDashboard } from '~/types/api/dashboard'
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
-const name = defineModel<string>('name', { required: true })
+const name = defineModel<string>('name', { default: '' })
 const isLoading = ref(false)
 
 interface Props {

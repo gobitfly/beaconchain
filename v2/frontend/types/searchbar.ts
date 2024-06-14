@@ -1,5 +1,5 @@
 import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
-import { ChainIDs } from '~/types/networks'
+import { ChainIDs } from '~/types/network'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
 export enum SearchbarShape { // do not change the litterals, they are used as class names

@@ -15,7 +15,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     if (!route.name) {
       warn('route name missing', route)
     }
-    const newRoute = router.resolve({ name: route.name!, params: { id: key } })
+    const newRoute = router.resolve({ name: route.name!, params: { id: key }, hash: document?.location?.hash })
     dashboardKey.value = key
     if (process.client) {
       // we only want to change the url in the browser and don't want to trigger a page refresh
@@ -32,9 +32,9 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
       if (!dashboardKeyCookie.value) {
         return
       }
-      // if you are not logged in then only set the key if it's not an id
-      if (isLoggedIn.value || isNaN(parseInt(dashboardKeyCookie.value))) {
-        setDashboardKey(dashboardKeyCookie.value)
+      // only use the dashboard cookie key as default if you are not logged in and it's not private
+      if (!isLoggedIn.value && isPublicKey(dashboardKeyCookie.value) && !isSharedKey(dashboardKeyCookie.value)) {
+        setDashboardKey(`${dashboardKeyCookie.value}`)
       }
       return
     }

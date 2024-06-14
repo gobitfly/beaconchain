@@ -184,15 +184,9 @@ const data = computed(() => {
         </div>
         <div class="row">
           <b>
-            {{ $t('common.expected') }}:
-          </b>
-          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
-        </div>
-        <div class="row">
-          <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_day', {}, data.luck.proposal.average) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t)}) }}
         </div>
         <br>
         <div class="row next_chapter">
@@ -208,15 +202,9 @@ const data = computed(() => {
         </div>
         <div class="row">
           <b>
-            {{ $t('common.expected') }}:
-          </b>
-          {{ $t('common.in_day', {}, data.luck.sync.expected) }}
-        </div>
-        <div class="row">
-          <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_day', {}, data.luck.sync.average) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t)}) }}
         </div>
       </template>
     </BcTooltip>

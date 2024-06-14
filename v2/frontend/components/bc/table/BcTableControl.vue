@@ -21,8 +21,8 @@ const tableIsShown = ref(true)
 const onInput = (value: string) => {
   emit('setSearch', value)
 }
-
 </script>
+
 <template>
   <slot name="bc-table-header">
     <div class="bc-table-header">
@@ -60,6 +60,7 @@ const onInput = (value: string) => {
   display: flex;
   align-items: center;
   gap: var(--padding);
+  flex-shrink: 0;
 
   .side {
     flex-grow: 1;
