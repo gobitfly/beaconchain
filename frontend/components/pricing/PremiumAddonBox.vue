@@ -21,17 +21,17 @@ const quantityForPurchase = ref(1)
 
 const prices = computed(() => {
   const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
-
-  const savingAmount = props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur
+  const quantity = quantityForPurchase.value || 1
+  const savingAmount = (props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur) * quantity
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
-    main: formatPremiumProductPrice($t, mainPrice),
-    monthly: formatPremiumProductPrice($t, props.addon.price_per_month_eur),
-    monthly_based_on_yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur / 12),
-    yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur),
+    main: formatPremiumProductPrice($t, mainPrice * quantity),
+    monthly: formatPremiumProductPrice($t, props.addon.price_per_month_eur * quantity),
+    monthly_based_on_yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur / 12 * quantity),
+    yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur * quantity),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators, 5)
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators * quantity, 5)
   }
 })
 
