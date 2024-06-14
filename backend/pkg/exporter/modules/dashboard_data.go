@@ -890,6 +890,11 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 		return errors.Wrap(err, "failed to clear old hours")
 	}
 
+	err = d.epochToDay.clearOldDayAggregations(d.epochToDay.getDayRetentionDurationDays())
+	if err != nil {
+		return errors.Wrap(err, "failed to clear old days")
+	}
+
 	return nil
 }
 
