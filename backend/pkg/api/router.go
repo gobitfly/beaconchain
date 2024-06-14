@@ -3,10 +3,12 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	gorillaHandlers "github.com/gorilla/handlers"
@@ -39,6 +41,8 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	apiRouter.HandleFunc("/test/stripe", TestStripe).Methods(http.MethodGet)
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
+
+	router.Use(metrics.HttpMiddleware)
 
 	return router
 }
@@ -95,7 +99,10 @@ var config = {
 }
 console.log('config',config)
 
-fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>r.json()).then((d)=>{
+fetch('/api/i/users/me',{headers:{'Authorization':'Bearer '+config.betaKey}}).then((r)=>{
+	config.csrfToken = r.headers.get('x-csrf-token')
+	return r.json()
+}).then((d)=>{
 	console.log('userInfo',d)
 	document.getElementById('userInfoRaw').innerText = JSON.stringify(d, null, 2)
 }).catch(err => {
@@ -118,7 +125,10 @@ function createCheckoutSession(priceId) {
 	if (isNaN(addonQuantity)) addonQuantity = 1
 	return fetch("/user/stripe/create-checkout-session", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: { 
+			"Content-Type": "application/json",
+			"X-CSRF-Token": config.csrfToken
+		},
 		credentials: 'include',
 		body: JSON.stringify({ priceId: priceId, addonQuantity: addonQuantity })
 	})
@@ -152,7 +162,10 @@ for (let i = 0; i < manageBillingButtons.length; i++) {
 	manageBillingButtons[i].addEventListener("click", function (e) {
     fetch("/user/stripe/customer-portal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+		"Content-Type": "application/json",
+		"X-CSRF-Token": config.csrfToken
+	},
       credentials: "include",
       body: JSON.stringify({returnURL: window.location.href}),
     })
@@ -202,8 +215,26 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
 		)
 	}
+
+	allowedHostsRegex := make([]*regexp.Regexp, len(allowedHosts))
+	var err error
+	for i, host := range allowedHosts {
+		allowedHostsRegex[i], err = regexp.Compile(host)
+
+		if err != nil {
+			log.Fatal(err, "error compiling allowed host regex", 0)
+		}
+	}
+
 	return gorillaHandlers.CORS(
-		gorillaHandlers.AllowedOrigins(allowedHosts),
+		gorillaHandlers.AllowedOriginValidator(func(s string) bool {
+			for _, host := range allowedHostsRegex {
+				if host.MatchString(s) {
+					return true
+				}
+			}
+			return false
+		}),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
 		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
 		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),

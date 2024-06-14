@@ -47,6 +47,7 @@ var opts = struct {
 	User                uint64
 	Addresses           string
 	TargetVersion       int64
+	TargetDatabase      string
 	StartEpoch          uint64
 	EndEpoch            uint64
 	StartDay            uint64
@@ -76,7 +77,8 @@ func main() {
 	flag.Uint64Var(&opts.StartDay, "day-start", 0, "start day to debug")
 	flag.Uint64Var(&opts.EndDay, "day-end", 0, "end day to debug")
 	flag.Uint64Var(&opts.Validator, "validator", 0, "validator to check for")
-	flag.Int64Var(&opts.TargetVersion, "target-version", -2, "Db migration target version, use -2 to apply up to the latest version, -1 to apply only the next version or the specific versions")
+	flag.Int64Var(&opts.TargetVersion, "target-version", 0, "Db migration target version. `-3` downgrades the database by one version, `-2` upgrades to the latest version, `-1` upgrades by one version, other negative numbers downgrade to their absolute value, and positive numbers upgrade to their specified version.")
+	flag.StringVar(&opts.TargetDatabase, "target-database", "", "Database to apply the schema to")
 	flag.StringVar(&opts.Table, "table", "", "bigtable table")
 	flag.StringVar(&opts.Family, "family", "", "big table family")
 	flag.StringVar(&opts.Key, "key", "", "big table key")
@@ -148,7 +150,7 @@ func main() {
 		Port:         cfg.ReaderDatabase.Port,
 		MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 		MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-	})
+	}, "pgx", "postgres")
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
 	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
@@ -167,9 +169,33 @@ func main() {
 		Port:         cfg.Frontend.ReaderDatabase.Port,
 		MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 		MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-	})
+	}, "pgx", "postgres")
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
+
+	// clickhouse
+	//nolint:forbidigo
+	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+		Username:     cfg.ClickHouse.WriterDatabase.Username,
+		Password:     cfg.ClickHouse.WriterDatabase.Password,
+		Name:         cfg.ClickHouse.WriterDatabase.Name,
+		Host:         cfg.ClickHouse.WriterDatabase.Host,
+		Port:         cfg.ClickHouse.WriterDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+	}, &types.DatabaseConfig{
+		Username:     cfg.ClickHouse.ReaderDatabase.Username,
+		Password:     cfg.ClickHouse.ReaderDatabase.Password,
+		Name:         cfg.ClickHouse.ReaderDatabase.Name,
+		Host:         cfg.ClickHouse.ReaderDatabase.Host,
+		Port:         cfg.ClickHouse.ReaderDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+	}, "clickhouse", "clickhouse")
+	defer db.ClickHouseReader.Close()
+	defer db.ClickHouseWriter.Close() //nolint:forbidigo
 
 	// Initialize the persistent redis client
 	rdc := redis.NewClient(&redis.Options{
@@ -197,7 +223,14 @@ func main() {
 		}
 	case "applyDbSchema":
 		log.Infof("applying db schema")
-		err := db.ApplyEmbeddedDbSchema(opts.TargetVersion)
+		// require that version is set. require that database name is set
+		if opts.TargetVersion == 0 {
+			log.Fatal(nil, "target version must be set", 0)
+		}
+		if opts.TargetDatabase == "" {
+			log.Fatal(nil, "target database must be set", 0)
+		}
+		err := db.ApplyEmbeddedDbSchema(opts.TargetVersion, opts.TargetDatabase)
 		if err != nil {
 			log.Fatal(err, "error applying db schema", 0)
 		}

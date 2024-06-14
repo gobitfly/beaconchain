@@ -6,12 +6,13 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetwork()
+const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()
@@ -72,7 +73,7 @@ const userMenu = computed(() => {
         </span>
         <span v-if="rate">
           <span>
-            <IconNetworkEthereum class="network-icon monochromatic" />ETH
+            <IconNetwork :chain-id="currentNetwork" class="network-icon" :harmonize-perceived-size="true" :colored="false" />{{ networkInfo.elCurrency }}
           </span>:
           <span> {{ rate.symbol }}
             <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
@@ -116,11 +117,14 @@ const userMenu = computed(() => {
         <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
       </div>
 
-      <div class="grid-cell logo">
-        <BcLink to="/" class="logo-component">
+      <div class="grid-cell explorer-info">
+        <BcLink to="/" class="logo">
           <IconBeaconchainLogo alt="Beaconcha.in logo" />
-          beaconcha.in
+          <span class="name">beaconcha.in</span>
         </BcLink>
+        <span class="variant">
+          v2 beta | {{ networkInfo.name }}
+        </span>
       </div>
 
       <div class="grid-cell mega-menu">
@@ -135,7 +139,7 @@ const userMenu = computed(() => {
 @use "~/assets/css/fonts.scss";
 
 // do not change these two values without changing the values in types/header.ts accordingly
-$mobileHeaderThreshold: 470px;
+$mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
 .anchor {
@@ -146,7 +150,9 @@ $smallHeaderThreshold: 1024px;
   justify-content: center;
   border-bottom: 1px solid var(--container-border-color);
   &.hide-because-it-is-unfinished {
-    border-bottom: none;
+    @media (max-width: $smallHeaderThreshold) {
+      border-bottom: none;
+    }
   }
   background-color: var(--container-background);
   .top-background {
@@ -160,7 +166,7 @@ $smallHeaderThreshold: 1024px;
     position: relative;
     display: grid;
     grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
-    grid-template-rows: var(--navbar-height) min-content;
+    grid-template-rows: var(--navbar-height) minmax(var(--navbar2-height), min-content);
     @media (max-width: $smallHeaderThreshold) {
       grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
@@ -201,8 +207,9 @@ $smallHeaderThreshold: 1024px;
       }
       margin-right: var(--padding-large);
       .network-icon {
-        height: 14px;
-        width: auto;
+        vertical-align: middle;
+        height: 18px;
+        width: 18px;
         margin-right: var(--padding-small);
       }
     }
@@ -276,7 +283,7 @@ $smallHeaderThreshold: 1024px;
       }
     }
 
-    .logo {
+    .explorer-info {
       grid-column: 2;
       @media (min-width: $smallHeaderThreshold) {
         @include bottom-cell(2);
@@ -284,25 +291,59 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
-      .logo-component {
+      height: unset;
+
+      .logo {
         display: flex;
-        align-items: flex-end;
+        position: relative;
+        margin-top: auto;
         gap: var(--padding);
         font-family: var(--logo_font_family);
         font-size: var(--logo_font_size);
         font-weight: var(--logo_font_weight);
         letter-spacing: var(--logo_letter_spacing);
-        line-height: 20px;
-        @media (max-width: 1359px) {
+        svg {
+          margin-top: auto;
+        }
+        .name {
+          display: inline-flex;
+          position: relative;
+          margin-top: auto;
+          line-height: 22px;
+          @media (max-width: $mobileHeaderThreshold) {
+            display: none;
+          }
+        }
+        @media (max-width: 1360px) {
           font-size: var(--logo_small_font_size);
           letter-spacing: var(--logo_small_letter_spacing);
           gap: 6px;
-          align-items: center;
+          .name {
+            line-height: 14px;
+          }
           svg {
             height: 18px;
-            margin-bottom: 7px;
+            @media (max-width: $mobileHeaderThreshold) {
+              height: 30px;
+            }
           }
         }
+      }
+
+      .variant {
+        position: relative;
+        margin-top: auto;
+        font-size: var(--tiny_text_font_size);
+        @media (max-width: $mobileHeaderThreshold) {
+          margin-bottom: auto;
+          font-size: var(--button_font_size);
+        }
+        color: var(--megamenu-text-color);
+        @media (max-width: $smallHeaderThreshold) { // when it is in the upper header...
+          // ... the background is always dark blue (no matter the theme (dark/light)), so we need a light grey:
+          color: var(--grey);
+        }
+        line-height: 10px;
       }
     }
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -18,19 +19,23 @@ const (
 	userGroupKey     = "user_group"
 )
 
-func (h *HandlerService) getUserBySession(r *http.Request) (types.User, error) {
+type ctxKet string
+
+const ctxUserIdKey ctxKet = "user_id"
+
+func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredentialInfo, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
 	if !authenticated {
-		return types.User{}, newUnauthorizedErr("not authenticated")
+		return types.UserCredentialInfo{}, newUnauthorizedErr("not authenticated")
 	}
 	subscription := h.scs.GetString(r.Context(), subscriptionKey)
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 	userId, ok := h.scs.Get(r.Context(), userIdKey).(uint64)
 	if !ok {
-		return types.User{}, errors.New("error parsind user id from session, not a uint64")
+		return types.UserCredentialInfo{}, errors.New("error parsind user id from session, not a uint64")
 	}
 
-	return types.User{
+	return types.UserCredentialInfo{
 		Id:        userId,
 		ProductId: subscription,
 		UserGroup: userGroup,
@@ -91,7 +96,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
-	user, err := h.dai.GetUser(email)
+	user, err := h.dai.GetUserCredentialInfo(email)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = badCredentialsErr
@@ -152,6 +157,11 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 				handleErr(w, err)
 				return
 			}
+			// store user id in context
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+			r = r.WithContext(ctx)
+
 			dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
 			if err != nil {
 				handleErr(w, err)

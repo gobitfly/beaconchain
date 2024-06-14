@@ -22,6 +22,7 @@ type DataAccessor interface {
 	ValidatorDashboardRepository
 	SearchRepository
 	NetworkRepository
+	UserRepository
 
 	Close()
 
@@ -29,14 +30,8 @@ type DataAccessor interface {
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
 	GetProductSummary() (*t.ProductSummary, error)
-	// TODO: move to user repository
-	GetUser(email string) (*t.User, error)
-	GetUserIdByApiKey(apiKey string) (uint64, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
-
-	GetUserInfo(id uint64) (*t.UserInfo, error)
-	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 }
 
 type DataAccessService struct {
@@ -46,6 +41,7 @@ type DataAccessService struct {
 	writerDb                *sqlx.DB
 	alloyReader             *sqlx.DB
 	alloyWriter             *sqlx.DB
+	clickhouseReader        *sqlx.DB
 	userReader              *sqlx.DB
 	userWriter              *sqlx.DB
 	bigtable                *db.Bigtable
@@ -68,11 +64,12 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.WriterDb = das.writerDb
 	db.AlloyReader = das.alloyReader
 	db.AlloyWriter = das.alloyWriter
+	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
 
 	// Create the services
-	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.bigtable, das.persistentRedisDbClient)
+	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
 
 	// Initialize the services
 	das.services.InitServices()
@@ -107,7 +104,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.ReaderDatabase.Port,
 				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-			},
+			}, "pgx", "postgres",
 		)
 	}()
 
@@ -134,7 +131,35 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
 				MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
 				SSL:          cfg.AlloyReader.SSL,
+			}, "pgx", "postgres",
+		)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dataAccessService.clickhouseReader, _ = db.MustInitDB(
+			&types.DatabaseConfig{
+				Username:     cfg.ClickHouse.ReaderDatabase.Username,
+				Password:     cfg.ClickHouse.ReaderDatabase.Password,
+				Name:         cfg.ClickHouse.ReaderDatabase.Name,
+				Host:         cfg.ClickHouse.ReaderDatabase.Host,
+				Port:         cfg.ClickHouse.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+				SSL:          true,
 			},
+			// lets just reuse reader to be extra safe
+			&types.DatabaseConfig{
+				Username:     cfg.ClickHouse.ReaderDatabase.Username,
+				Password:     cfg.ClickHouse.ReaderDatabase.Password,
+				Name:         cfg.ClickHouse.ReaderDatabase.Name,
+				Host:         cfg.ClickHouse.ReaderDatabase.Host,
+				Port:         cfg.ClickHouse.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+				SSL:          true,
+			}, "clickhouse", "clickhouse",
 		)
 	}()
 
@@ -160,7 +185,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.Frontend.ReaderDatabase.Port,
 				MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-			},
+			}, "pgx", "postgres",
 		)
 	}()
 
@@ -222,6 +247,9 @@ func (d *DataAccessService) Close() {
 	}
 	if d.alloyWriter != nil {
 		d.alloyWriter.Close()
+	}
+	if d.clickhouseReader != nil {
+		d.clickhouseReader.Close()
 	}
 	if d.bigtable != nil {
 		d.bigtable.Close()

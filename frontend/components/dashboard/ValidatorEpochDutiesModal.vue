@@ -155,7 +155,7 @@ watch([title, size], () => {
               <ValidatorTableDutyStatus :data="slotProps.data.duties" />
             </template>
           </Column>
-          <Column field="rewards" :sortable="!size.expandable" :header="$t('dashboard.validator.duties.col.rewards')">
+          <Column field="reward" :sortable="!size.expandable" :header="$t('dashboard.validator.duties.col.rewards')">
             <template #body="slotProps">
               <ValidatorTableDutyRewards :data="slotProps.data.duties" />
             </template>

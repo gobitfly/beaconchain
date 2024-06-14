@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getListOfChainIDs, ChainIDs } from '~/types/networks'
+import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
 </script>
 
 <template>
@@ -39,7 +39,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
     <h2>Network icons</h2>
     <div>Monochromous:</div>
     <IconNetwork
-      v-for="id of getListOfChainIDs(false)"
+      v-for="id of getAllExistingChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="false"
@@ -48,7 +48,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
     />
     <div>Colored:</div>
     <IconNetwork
-      v-for="id of getListOfChainIDs(false)"
+      v-for="id of getAllExistingChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="true"
@@ -57,7 +57,7 @@ import { getListOfChainIDs, ChainIDs } from '~/types/networks'
     />
     <div>Harmonized sizes (for example Ethereum looks less skinny compared to the others):</div>
     <IconNetwork
-      v-for="id of getListOfChainIDs(false)"
+      v-for="id of getAllExistingChainIDs(false)"
       :key="id"
       :chain-id="id as ChainIDs"
       :colored="true"

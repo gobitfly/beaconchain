@@ -42,25 +42,23 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	indexSearch := int64(-1)
 	epochSearch := int64(-1)
 	if search != "" {
-		if utils.IsHash(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
+		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-			defer releaseLock()
 			if err != nil {
+				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
+				releaseLock()
 				return result, &paging, nil
 			}
+			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 			epochSearch = int64(number)
@@ -90,11 +88,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 
 	groupIdSearchMap := make(map[uint64]bool, 0)
 
-	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	rewardsDataQuery := `
 		SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
 		COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards,
-		SUM(COALESCE(e.blocks_el_reward, 0)) AS el_rewards,		
+		COALESCE(SUM(COALESCE(r.value, ep.fee_recipient_reward * 1e18)), 0) AS el_rewards,		
 		SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled,
 		SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed,
 		SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled,
@@ -133,18 +130,43 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 		}
 
 		if search != "" {
-			// Create a secondary query to get the group ids that match the search term
-			// We cannot do everything in one query because we need to know the "epoch total" even for groups we do not search for
-			groupIdQueryParams := []interface{}{}
+			if dashboardId.AggregateGroups {
+				if epochSearch == -1 && indexSearch == -1 {
+					// If we have a search term but no epoch or index search then we can return empty results
+					return result, &paging, nil
+				}
 
-			indexSearchQuery := ""
-			if indexSearch != -1 {
-				groupIdQueryParams = append(groupIdQueryParams, indexSearch)
-				indexSearchQuery = fmt.Sprintf(" OR v.validator_index = $%d", len(groupIdQueryParams))
-			}
+				found := false
+				if indexSearch != -1 {
+					// Find whether the index is in the dashboard
+					// If it is then show all the data
+					err = d.alloyReader.Get(&found, `
+						SELECT EXISTS(
+								SELECT 1 
+								FROM users_val_dashboards_validators
+								WHERE dashboard_id = $1 AND validator_index = $2)
+						`, dashboardId.Id, indexSearch)
+					if err != nil {
+						return nil, nil, err
+					}
+				}
+				if !found && epochSearch != -1 {
+					queryParams = append(queryParams, epochSearch)
+					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+				}
+			} else {
+				// Create a secondary query to get the group ids that match the search term
+				// We cannot do everything in one query because we need to know the "epoch total" even for groups we do not search for
+				groupIdQueryParams := []interface{}{}
 
-			groupIdQueryParams = append(groupIdQueryParams, dashboardId.Id, search)
-			groupIdQuery := fmt.Sprintf(`
+				indexSearchQuery := ""
+				if indexSearch != -1 {
+					groupIdQueryParams = append(groupIdQueryParams, indexSearch)
+					indexSearchQuery = fmt.Sprintf(" OR v.validator_index = $%d", len(groupIdQueryParams))
+				}
+
+				groupIdQueryParams = append(groupIdQueryParams, dashboardId.Id, search)
+				groupIdQuery := fmt.Sprintf(`
 					SELECT
 						DISTINCT(group_id)
 					FROM users_val_dashboards_validators v
@@ -152,42 +174,54 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 					WHERE v.dashboard_id = $%d AND (g.name ILIKE ($%d||'%%') %s)
 					`, len(groupIdQueryParams)-1, len(groupIdQueryParams), indexSearchQuery)
 
-			var groupIdSearch []uint64
-			err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdQueryParams...)
-			if err != nil {
-				return nil, nil, err
-			}
+				var groupIdSearch []uint64
+				err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdQueryParams...)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			// Convert to a map for an easy check later
-			for _, groupId := range groupIdSearch {
-				groupIdSearchMap[groupId] = true
-			}
+				// Convert to a map for an easy check later
+				for _, groupId := range groupIdSearch {
+					groupIdSearchMap[groupId] = true
+				}
 
-			if len(groupIdSearchMap) == 0 {
-				if epochSearch != -1 {
-					// If we have an epoch search but no group search then we can restrict the query to the epoch
-					queryParams = append(queryParams, epochSearch)
-					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
-				} else {
-					// No search for goup or epoch possible, return empty results
-					return result, &paging, nil
+				if len(groupIdSearchMap) == 0 {
+					if epochSearch != -1 {
+						// If we have an epoch search but no group search then we can restrict the query to the epoch
+						queryParams = append(queryParams, epochSearch)
+						whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+					} else {
+						// No search for goup or epoch possible, return empty results
+						return result, &paging, nil
+					}
 				}
 			}
 		}
 
+		groupIdQuery := "v.group_id,"
+		groupByQuery := "GROUP BY e.epoch, v.group_id"
 		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
+		if dashboardId.AggregateGroups {
+			queryParams = append(queryParams, t.DefaultGroupId)
+			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			groupByQuery = "GROUP BY e.epoch"
+			orderQuery = fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
+		}
 
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
-				v.group_id,
+				%s
 				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
 			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
+			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 			%s
-			GROUP BY e.epoch, v.group_id
-			%s`, rewardsDataQuery, whereQuery, orderQuery)
+			%s
+			%s`, groupIdQuery, rewardsDataQuery, whereQuery, groupByQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		queryParams = append(queryParams, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
@@ -206,12 +240,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			if indexSearch != -1 {
 				// Find whether the index is in the list of validators
 				// If it is then show all the data
-				for _, validator := range dashboardId.Validators {
-					if validator == t.VDBValidator(indexSearch) {
-						found = true
-						break
-					}
-				}
+				found = utils.ElementExists(dashboardId.Validators, t.VDBValidator(indexSearch))
 			}
 			if !found && epochSearch != -1 {
 				queryParams = append(queryParams, epochSearch)
@@ -229,6 +258,9 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				%s
 			FROM validator_dashboard_data_epoch e
 			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
+			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 			%s
 			GROUP BY e.epoch
 			%s`, len(queryParams), rewardsDataQuery, whereQuery, orderQuery)
@@ -401,6 +433,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
 	ret := &t.VDBGroupRewardsData{}
 
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
 	type queryResult struct {
 		AttestationSourceReward      decimal.Decimal `db:"attestations_source_reward"`
 		AttestationTargetReward      decimal.Decimal `db:"attestations_target_reward"`
@@ -430,6 +467,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
+	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	query := `SELECT
 			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
 			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
@@ -443,7 +481,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
 			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
 			COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward,
-			COALESCE(e.blocks_el_reward, 0) AS blocks_el_reward,
+			COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
 			COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
 			COALESCE(e.sync_executed, 0) AS sync_executed,
 			COALESCE(e.sync_rewards, 0) AS sync_rewards,
@@ -461,6 +499,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		whereClause := `
 		FROM validator_dashboard_data_epoch e
 		LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
+		LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+		LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+		LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 		WHERE e.validator_index = any($1) AND e.epoch = $2
 		`
 		query = fmt.Sprintf("%s %s", query, whereClause)
@@ -474,6 +515,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			FROM users_val_dashboards_validators v
 			INNER JOIN validator_dashboard_data_epoch e ON e.validator_index = v.validator_index
 			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
+			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 			WHERE (v.dashboard_id = $1 AND (v.group_id = $2 OR $2 = -1) AND e.epoch = $3)
 		`
 		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
@@ -506,7 +550,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(row.BlocksClReward.Mul(gWei))
+		ret.Proposal.Income = ret.Proposal.Income.Add(row.BlocksClReward.Mul(gWei)).Add(row.BlocksElReward)
 		ret.Proposal.StatusCount.Success += uint64(row.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
 
@@ -520,6 +564,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 			ret.Slashing.StatusCount.Failed++
 		}
 
+		ret.ProposalElReward = ret.ProposalElReward.Add(row.BlocksElReward)
+
 		ret.ProposalClAttIncReward = ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
 		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
 		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
@@ -529,7 +575,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
-	// bar chart for the CL and EL rewards for each group for each epoch. NO series for all groups combined
+	// bar chart for the CL and EL rewards for each group for each epoch.
+	// NO series for all groups combined except if AggregateGroups is true.
 	// series id is group id, series property is 'cl' or 'el'
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
@@ -545,25 +592,37 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 	queryParams := []interface{}{}
 	rewardsQuery := ""
 
-	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	rewardsDataQuery := `
-		SUM(COALESCE(e.blocks_el_reward, 0)) AS el_rewards,
+		COALESCE(SUM(COALESCE(r.value, ep.fee_recipient_reward * 1e18)), 0) AS el_rewards,
 		SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
 		COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards
 		`
 
 	if dashboardId.Validators == nil {
+		groupIdQuery := "v.group_id,"
+		groupByQuery := "GROUP BY e.epoch, v.group_id"
+		orderQuery := "ORDER BY e.epoch, v.group_id"
+		if dashboardId.AggregateGroups {
+			queryParams = append(queryParams, t.DefaultGroupId)
+			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
+			groupByQuery = "GROUP BY e.epoch"
+			orderQuery = "ORDER BY e.epoch"
+		}
+
 		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
 		rewardsQuery = fmt.Sprintf(`
 			SELECT
 				e.epoch,
-				v.group_id,
+				%s
 				%s
 			FROM validator_dashboard_data_epoch e
 			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
+			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 			WHERE v.dashboard_id = $%d AND e.epoch > $%d
-			GROUP BY e.epoch, v.group_id
-			ORDER BY e.epoch, v.group_id`, rewardsDataQuery, len(queryParams)-1, len(queryParams))
+			%s
+			%s`, groupIdQuery, rewardsDataQuery, len(queryParams)-1, len(queryParams), groupByQuery, orderQuery)
 	} else {
 		// In case a list of validators is provided set the group to the default id
 		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
@@ -573,6 +632,9 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 				$%d::smallint AS group_id,
 				%s
 			FROM validator_dashboard_data_epoch e
+			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
 			WHERE e.validator_index = ANY($%d) AND e.epoch > $%d
 			GROUP BY e.epoch
 			ORDER BY e.epoch`, len(queryParams)-2, rewardsDataQuery, len(queryParams)-1, len(queryParams))
@@ -645,6 +707,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
 
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
 	// Initialize the cursor
 	var currentCursor t.ValidatorDutiesCursor
 	var err error
@@ -666,27 +733,28 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	// Analyze the search term
 	indexSearch := int64(-1)
 	if search != "" {
-		if utils.IsHash(search) {
-			// Ensure that we have a "0x" prefix for the search term
-			if !strings.HasPrefix(search, "0x") {
-				search = "0x" + search
-			}
+		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-			defer releaseLock()
 			if err != nil {
+				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
+				releaseLock()
 				return result, &paging, nil
 			}
+			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
+		} else {
+			// No valid search term found, return empty results
+			return result, &paging, nil
 		}
 	}
 
@@ -775,6 +843,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		`, len(queryParams))
 	}
 
+	joinSubquery += `
+		LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
+		LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
+		LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
+	`
+
 	if colSort.Column == enums.VDBDutiesColumns.Validator {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
@@ -797,14 +871,13 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	}
 
 	// Use a subquery to allow access to total_reward in the where clause
-	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
 	rewardsQuery := fmt.Sprintf(`
 		SELECT *
 		FROM (
 			SELECT
 				e.validator_index,
 				(
-					COALESCE(e.blocks_el_reward, 0) +
+					COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) +
 					CAST((
 						COALESCE(e.attestations_reward, 0) +
 						COALESCE(e.blocks_cl_reward, 0) +
@@ -827,7 +900,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 				COALESCE(e.slasher_reward, 0) AS slasher_reward,
 				COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
 				COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-				COALESCE(e.blocks_el_reward, 0) AS blocks_el_reward,
+				COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
 				COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
 				COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
 			FROM validator_dashboard_data_epoch e

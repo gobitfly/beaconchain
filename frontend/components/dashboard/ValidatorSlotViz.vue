@@ -15,8 +15,8 @@ watch(() => [dashboardKey.value, tick.value], (newValue, oldValue) => {
   }
   refreshSlotViz(dashboardKey.value)
 }, { immediate: true })
-
 </script>
+
 <template>
   <SlotVizViewer v-if="slotViz" :data="slotViz" :timestamp="tick" />
 </template>

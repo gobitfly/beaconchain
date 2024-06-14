@@ -10,6 +10,7 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -50,6 +51,16 @@ func main() {
 
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
+
+	if cfg.Metrics.Enabled {
+		router.Use(metrics.HttpMiddleware)
+		go func(addr string) {
+			log.Infof("serving metrics on %v", addr)
+			if err := metrics.Serve(addr); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}(cfg.Metrics.Address)
+	}
 
 	srv := &http.Server{
 		Handler:      router,

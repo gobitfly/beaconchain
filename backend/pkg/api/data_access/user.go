@@ -11,14 +11,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (d *DataAccessService) GetUser(email string) (*t.User, error) {
-	// TODO @patrick
-	result := &t.User{}
+type UserRepository interface {
+	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
+	GetUserIdByApiKey(apiKey string) (uint64, error)
+	GetUserInfo(id uint64) (*t.UserInfo, error)
+	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
+	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+}
+
+func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+	// TODO @patrick post-beta improve product-mgmt
+	result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions 
-				LEFT JOIN users ON users.id = user_id 
+				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
 					WHEN 'orca.yearly'    THEN  1
@@ -44,12 +52,16 @@ func (d *DataAccessService) GetUser(email string) (*t.User, error) {
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
-	// TODO @recy21
-	return d.dummy.GetUserIdByApiKey(apiKey)
+	var userId uint64
+	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
+	}
+	return userId, err
 }
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
-	// TODO @patrick improve and unmock
+	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},
@@ -91,11 +103,11 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		SELECT 
 			COALESCE(uas.product_id, '') AS product_id, 
 			COALESCE(uas.store, '') AS store,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
-			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
-		WHERE uas.user_id = $1 AND uas.active = true
+		WHERE uas.user_id = $1 AND uas.active = true AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 		ORDER BY CASE uas.product_id
 			WHEN 'orca.yearly'    THEN  1
 			WHEN 'orca'           THEN  2
@@ -120,23 +132,40 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	foundProduct := false
 	for _, p := range productSummary.PremiumProducts {
 		effectiveProductId := premiumProduct.ProductId
+		productName := p.ProductName
 		switch premiumProduct.ProductId {
 		case "whale":
-			effectiveProductId = "orca"
-		case "goldfish":
 			effectiveProductId = "dolphin"
+			productName = "Whale"
+		case "goldfish":
+			effectiveProductId = "guppy"
+			productName = "Goldfish"
 		case "plankton":
 			effectiveProductId = "guppy"
+			productName = "Plankton"
 		}
 		if p.ProductIdMonthly == effectiveProductId || p.ProductIdYearly == effectiveProductId {
 			userInfo.PremiumPerks = p.PremiumPerks
 			foundProduct = true
+
+			store := t.ProductStoreStripe
+			switch premiumProduct.Store {
+			case "ios-appstore":
+				store = t.ProductStoreIosAppstore
+			case "android-playstore":
+				store = t.ProductStoreAndroidPlaystore
+			case "ethpool":
+				store = t.ProductStoreEthpool
+			case "manuall":
+				store = t.ProductStoreCustom
+			}
+
 			if effectiveProductId != "premium_free" {
 				userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
-					ProductId:       effectiveProductId,
-					ProductName:     p.ProductName,
+					ProductId:       premiumProduct.ProductId,
+					ProductName:     productName,
 					ProductCategory: t.ProductCategoryPremium,
-					ProductStore:    t.ProductStoreStripe,
+					ProductStore:    store,
 					Start:           premiumProduct.Start.Unix(),
 					End:             premiumProduct.End.Unix(),
 				})
@@ -189,14 +218,19 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		}
 	}
 
+	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
+		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
+	}
+
 	return userInfo, nil
 }
 
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
-	// TODO @patrick put into db instead of hardcoding here and make it configurable
+	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		StripePublicKey: utils.Config.Frontend.Stripe.PublicKey,
-		ApiProducts: []t.ApiProduct{ // TODO @patrick this data is not final yet
+		ValidatorsPerDashboardLimit: 102_000,
+		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
+		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
 				ProductId:        "api_free",
 				ProductName:      "Free",
@@ -307,7 +341,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					MobileAppCustomThemes:           true,
 					MobileAppWidget:                 true,
 					MonitorMachines:                 2,
-					MachineMonitoringHistorySeconds: 3600 * 30,
+					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,
 				},
 				PricePerMonthEur:     9.99,
@@ -321,7 +355,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                          true,
-					ValidatorDasboards:              1,
+					ValidatorDasboards:              2,
 					ValidatorsPerDashboard:          300,
 					ValidatorGroupsPerDashboard:     10,
 					ShareCustomDashboards:           true,
@@ -332,8 +366,8 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     10,
 					WebhookEndpoints:                10,
-					MobileAppCustomThemes:           false,
-					MobileAppWidget:                 false,
+					MobileAppCustomThemes:           true,
+					MobileAppWidget:                 true,
 					MonitorMachines:                 10,
 					MachineMonitoringHistorySeconds: 3600 * 24 * 30,
 					CustomMachineAlerts:             true,
@@ -398,4 +432,78 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			},
 		},
 	}, nil
+}
+
+func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+	result := &t.UserDashboardsData{}
+
+	dbReturn := []struct {
+		Id           uint64         `db:"id"`
+		Name         string         `db:"name"`
+		PublicId     sql.NullString `db:"public_id"`
+		PublicName   sql.NullString `db:"public_name"`
+		SharedGroups sql.NullBool   `db:"shared_groups"`
+	}{}
+
+	// Get the validator dashboards including the public ones
+	err := d.alloyReader.Select(&dbReturn, `
+		SELECT 
+			uvd.id,
+			uvd.name,
+			uvds.public_id,
+			uvds.name AS public_name,
+			uvds.shared_groups
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
+		WHERE uvd.user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fill the result
+	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
+	for _, row := range dbReturn {
+		if _, ok := validatorDashboardMap[row.Id]; !ok {
+			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
+				Id:        row.Id,
+				Name:      row.Name,
+				PublicIds: []t.VDBPublicId{},
+			}
+		}
+		if row.PublicId.Valid {
+			result := t.VDBPublicId{}
+			result.PublicId = row.PublicId.String
+			result.Name = row.PublicName.String
+			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
+		}
+	}
+	for _, validatorDashboard := range validatorDashboardMap {
+		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
+	}
+
+	// Get the account dashboards
+	err = d.alloyReader.Select(&result.AccountDashboards, `
+		SELECT 
+			id,
+			name
+		FROM users_acc_dashboards
+		WHERE user_id = $1
+	`, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) GetUserValidatorDashboardCount(userId uint64) (uint64, error) {
+	var count uint64
+	err := d.alloyReader.Get(&count, `
+		SELECT COUNT(*) FROM users_val_dashboards
+		WHERE user_id = $1
+	`, userId)
+	return count, err
 }

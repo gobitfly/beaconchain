@@ -33,6 +33,7 @@ export const ProductStoreAndroidPlaystore: ProductStore = "android-playstore";
 export const ProductStoreEthpool: ProductStore = "ethpool";
 export const ProductStoreCustom: ProductStore = "custom";
 export interface ProductSummary {
+  validators_per_dashboard_limit: number /* uint64 */;
   stripe_public_key: string;
   api_products: ApiProduct[];
   premium_products: PremiumProduct[];
@@ -98,4 +99,11 @@ export interface PremiumPerks {
   monitor_machines: number /* uint64 */;
   machine_monitoring_history_seconds: number /* uint64 */;
   custom_machine_alerts: boolean;
+}
+export interface StripeCreateCheckoutSession {
+  sessionId?: string;
+  error?: string;
+}
+export interface StripeCustomerPortal {
+  url: string;
 }

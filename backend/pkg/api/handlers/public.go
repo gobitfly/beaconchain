@@ -127,14 +127,18 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		GroupId           uint64   `json:"group_id,omitempty"`
-		Validators        []string `json:"validators,omitempty"`
-		DepositAddress    string   `json:"deposit_address,omitempty"`
-		WithdrawalAddress string   `json:"withdrawal_address,omitempty"`
-		Graffiti          string   `json:"graffiti,omitempty"`
+		GroupId           uint64        `json:"group_id,omitempty"`
+		Validators        []intOrString `json:"validators,omitempty"`
+		DepositAddress    string        `json:"deposit_address,omitempty"`
+		WithdrawalAddress string        `json:"withdrawal_address,omitempty"`
+		Graffiti          string        `json:"graffiti,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
@@ -163,13 +167,22 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	// TODO get real limit once stripe is implemented
-	limit := ^uint64(0) // user mustn't add more validators than the limit
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
 	case req.Validators != nil:
-		indices, pubkeys := v.checkValidatorArray(req.Validators, forbidEmpty)
+		indices, pubkeys := v.checkValidators(req.Validators, forbidEmpty)
 		if v.hasErrors() {
 			handleErr(w, v)
 			return

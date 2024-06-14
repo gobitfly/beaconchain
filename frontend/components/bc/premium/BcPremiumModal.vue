@@ -25,7 +25,7 @@ onMounted(() => {
     <div class="dismiss" @click="hide()">
       {{ props?.dismissLabel || $t('navigation.dismiss') }}
     </div>
-    <BcLink to="/premium/subscription" target="_blank" @click="hide()">
+    <BcLink to="/pricing" target="_blank" @click="hide()">
       <Button :label="$t('premium.unlock')" />
     </BcLink>
   </div>
