@@ -164,7 +164,7 @@ $smallHeaderThreshold: 1024px;
     position: relative;
     display: grid;
     grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
-    grid-template-rows: var(--navbar-height) min-content;
+    grid-template-rows: var(--navbar-height) minmax(var(--navbar2-height), min-content);
     @media (max-width: $smallHeaderThreshold) {
       grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
