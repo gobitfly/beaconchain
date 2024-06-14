@@ -184,12 +184,6 @@ const data = computed(() => {
         </div>
         <div class="row">
           <b>
-            {{ $t('common.expected') }}:
-          </b>
-          {{ $t('common.in_day', {}, data.luck.proposal.expected) }}
-        </div>
-        <div class="row">
-          <b>
             {{ $t('common.average') }}:
           </b>
           {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t)}) }}
@@ -205,12 +199,6 @@ const data = computed(() => {
             {{ $t('common.luck') }}:
           </b>
           <BcFormatPercent :percent="data.luck.sync.percent" />
-        </div>
-        <div class="row">
-          <b>
-            {{ $t('common.expected') }}:
-          </b>
-          {{ $t('common.in_day', {}, data.luck.sync.expected) }}
         </div>
         <div class="row">
           <b>
