@@ -20,7 +20,6 @@ export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
   const xForwardedFor = useRequestHeader('x-forwarded-for')
   const xRealIp = useRequestHeader('x-real-ip')
-  const { redirectedFrom, fullPath } = useRoute()
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useI18n()
@@ -60,7 +59,7 @@ export function useCustomFetch () {
     const method = options.method || map.method || 'GET'
 
     if (process.server && logIp === 'LOG') {
-      $bcLogger.warn(`${uuid?.value} | fullPath: ${fullPath}, redirectedFrom: ${redirectedFrom}  x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
+      $bcLogger.warn(`${uuid?.value} | x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
     }
 
     // For non GET method's we need to set the csrf header for security

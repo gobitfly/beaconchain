@@ -12,12 +12,37 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
 import { isPublicKey } from '~/utils/dashboard/key'
+import type { HashTabs } from '~/types/hashTabs'
 
 const { isLoggedIn } = useUserStore()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+const tabs: HashTabs = {
+  summary: {
+    index: 0
+  },
+  rewards: {
+    index: 1
+  },
+  blocks: {
+    index: 2
+  },
+  heatmap: {
+    index: 3,
+    disabled: !showInDevelopment
+  },
+  deposits: {
+    index: 4
+  },
+  withdrawals: {
+    index: 5
+  }
+}
+
+const { activeIndex, setActiveIndex } = useHashTabs(tabs)
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const { refreshDashboards, updateHash, dashboards, cookieDashboards, getDashboardLabel } = useUserDashboardStore()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 // when we run into an error loading a dashboard keep it here to prevent an infinity loop
 const errorDashboardKeys: string[] = []
 
@@ -97,7 +122,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView lazy class="dashboard-tab-view">
+      <TabView lazy class="dashboard-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
         <TabPanel>
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
@@ -116,7 +141,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
           </template>
           <DashboardTableBlocks />
         </TabPanel>
-        <TabPanel :disabled="!showInDevelopment">
+        <TabPanel :disabled="tabs.heatmap.disabled">
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
           </template>
