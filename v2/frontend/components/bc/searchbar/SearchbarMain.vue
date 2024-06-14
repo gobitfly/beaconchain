@@ -313,7 +313,7 @@ function userPressedSearchButtonOrEnter () {
       globalState.value.functionToCallAfterResultsGetOrganized = userPressedSearchButtonOrEnter // we request to be called again once the communication with the API is complete
       return // in the meantime, we do not proceed further
   }
-  // from here, we know that the user pressed Enter or clicked the search button to be redirected by us to the most relevant page
+  // from here, we know that the user pressed Enter or clicked the search button to let us select the most relevant result
 
   if (results.organized.howManyResultsIn === 0 && !areThereResultsHiddenByUser()) {
     // nothing matching the input has been found
@@ -332,18 +332,25 @@ function userPressedSearchButtonOrEnter () {
   const possibilities : Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
-      // here we assume that the result with the best `closeness` value is the first one in array `type.suggestions` (see the sorting done in `filterAndOrganizeResults()`)
-      possibilities.push({ closeness: type.suggestions[0].closeness, network: network.chainId, type: type.type, s: type.suggestions[0] } as Matching)
+      // here we assume that the results in array `type.suggestions` are sorted by `closeness` values (see the sorting done in `filterAndOrganizeResults()`)
+      for (const suggestion of type.suggestions) {
+        if (!suggestion.lacksPremiumSubscription) {
+          possibilities.push({ closeness: suggestion.closeness, network: network.chainId, type: type.type, s: suggestion } as Matching)
+          break // no need to continue, other results of the same type would be indistinguishable in the code of function `props.pickByDefault()` (called below) : the only difference is that their closeness values are worse
+        }
+      }
     }
   }
-  // calling back parent's function in charge of making a choice
-  const pickedMatching = props.pickByDefault(possibilities)
-  if (pickedMatching) {
-    if (!props.keepDropdownOpen) {
-      closeDropdown()
+  if (possibilities.length) {
+    // calling back parent's function in charge of making a choice
+    const pickedMatching = props.pickByDefault(possibilities)
+    if (pickedMatching) {
+      if (!props.keepDropdownOpen) {
+        closeDropdown()
+      }
+      // calling back parent's function taking action with the result
+      emit('go', (pickedMatching as any).s as ResultSuggestion)
     }
-    // calling back parent's function taking action with the result
-    emit('go', (pickedMatching as any).s as ResultSuggestion)
   }
 }
 
@@ -584,7 +591,10 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
     }
   }
 
-  return { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement, stringifyiedRawResult, nameWasUnknown }
+  const result = { output, queryParam, closeness, count, chainId, type, rawResult: apiResponseElement }
+  const lacksPremiumSubscription = !!props.rowLacksPremiumSubscription && props.rowLacksPremiumSubscription(result)
+
+  return { ...result, stringifyiedRawResult, nameWasUnknown, lacksPremiumSubscription }
 }
 
 function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : boolean {
@@ -710,7 +720,6 @@ function informationIfHiddenResults () : string {
                   :color-theme="colorTheme"
                   :dropdown-layout="dropdownLayout"
                   :bar-purpose="barPurpose"
-                  :row-lacks-premium-subscription="!!rowLacksPremiumSubscription && rowLacksPremiumSubscription(suggestion)"
                   :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
                   @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
                 />
