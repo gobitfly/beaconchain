@@ -1,5 +1,4 @@
 .p-megamenu {
-  padding: 8px 0 8px 8px;
   background: var(--container-background);
   user-select: none;
   z-index: 1;  // without this, the menu keeps a very high z-index when it is open in mobile mode and then the window is enlarged (the change of mode closes the menu but does not reset its z-index, so the menu bar floats above the search bar)
@@ -37,7 +36,7 @@
     min-width: fit-content;
     right: 0;
     left: auto;
-    top: var(--navbar2-height);
+    top: calc(var(--navbar2-height) - 7px);
     border-radius: var(--border-radius);
   }
   .p-submenu-header {
