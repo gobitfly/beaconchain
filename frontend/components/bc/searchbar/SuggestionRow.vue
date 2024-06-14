@@ -26,7 +26,6 @@ const props = defineProps<{
   colorTheme: SearchbarColors,
   dropdownLayout : SearchbarDropdownLayout,
   barPurpose: SearchbarPurpose,
-  rowLacksPremiumSubscription: boolean,
   screenWidthCausingSuddenChange: number
 }>()
 
@@ -62,7 +61,7 @@ function formatDescriptionCell () : string {
   return props.suggestion.output.description
 }
 
-const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
+const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivated' : ''
 </script>
 
 <template>
@@ -107,7 +106,7 @@ const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
       />
     </BcSearchbarMiddleEllipsis>
     <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
-      <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
+      <BcPremiumGem v-if="suggestion.lacksPremiumSubscription" class="gem" />
     </div>
     <div class="cell-category" :class="[barShape,dropdownLayout,deactivationClass]">
       <span class="category-label" :class="[barShape,colorTheme,dropdownLayout]">
@@ -145,7 +144,7 @@ const deactivationClass = props.rowLacksPremiumSubscription ? 'deactivated' : ''
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
     <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
-      <BcPremiumGem v-if="rowLacksPremiumSubscription" class="gem" />
+      <BcPremiumGem v-if="suggestion.lacksPremiumSubscription" class="gem" />
     </div>
     <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout,deactivationClass]">
       {{ formatDescriptionCell() }}

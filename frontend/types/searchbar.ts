@@ -143,6 +143,7 @@ export interface ResultSuggestion {
 export interface ResultSuggestionInternal extends ResultSuggestion {
   stringifyiedRawResult : string, // Original data given by the API.
   nameWasUnknown : boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not.
+  lacksPremiumSubscription : boolean // `true` if the result is not accessible to the user due to account restrictions
 }
 
 export interface OrganizedResults {
