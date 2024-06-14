@@ -980,9 +980,9 @@ defineExpose({
               <span>{{ item.label }}</span>
             </span>
           </BcLink>
-          <span v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
+          <div v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
             {{ item.label }}
-          </span>
+          </div>
           <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
         </span>
       </template>
