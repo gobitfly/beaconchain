@@ -22,7 +22,7 @@ const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished'
+const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -149,7 +149,7 @@ $smallHeaderThreshold: 1024px;
   width: 100%;
   justify-content: center;
   border-bottom: 1px solid var(--container-border-color);
-  &.hide-because-it-is-unfinished {
+  &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
     @media (max-width: $smallHeaderThreshold) {
       border-bottom: none;
     }
