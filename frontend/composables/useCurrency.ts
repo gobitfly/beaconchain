@@ -8,6 +8,8 @@ export function useCurrency () {
   const { networkInfo } = useNetworkStore()
   const { t: $t } = useI18n()
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+  const available = ref<Currency[]>([])
+  const withLabel = ref<{currency: Currency, label: string}[]>([])
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   function setCurrency (newCurrency: Currency) {
@@ -26,25 +28,27 @@ export function useCurrency () {
     )
   })
 
-  const available = computed<Currency[]>(() => {
-    const list: Currency[] = [networkInfo.value.elCurrency]
+  watch([latestState, networkInfo], () => {
+    let list: Currency[] = [networkInfo.value.elCurrency]
     if (networkInfo.value.clCurrency !== networkInfo.value.elCurrency) {
       list.push(networkInfo.value.clCurrency)
     }
     if (showInDevelopment) {
       list.splice(0, 1, 'NAT')
     }
-    return list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
-  })
+    list = list.concat((latestState.value?.exchange_rates || []).map(r => r.code as Currency))
+    // make sure we update the currency list only if it really changed (to prevent reactivity triggers)
+    if (JSON.stringify(list) !== JSON.stringify(available.value)) {
+      available.value = list
+
+      withLabel.value = list.map(currency => ({
+        currency,
+        label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency)
+      }))
+    }
+  }, { immediate: true })
 
   const currency = computed(() => selectedCurrency.value && available.value.includes(selectedCurrency.value) ? selectedCurrency.value : available.value[0])
-
-  const withLabel = computed(() => {
-    return available.value?.map(currency => ({
-      currency,
-      label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency)
-    }))
-  })
 
   watch([latestState, selectedCurrency], () => {
     // once we loaded our latestState and see that we don't support the currency we switch back to the first item
