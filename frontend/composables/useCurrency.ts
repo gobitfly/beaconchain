@@ -28,7 +28,7 @@ export function useCurrency () {
     )
   })
 
-  watch(latestState, () => {
+  watch([latestState, networkInfo], () => {
     let list: Currency[] = [networkInfo.value.elCurrency]
     if (networkInfo.value.clCurrency !== networkInfo.value.elCurrency) {
       list.push(networkInfo.value.clCurrency)
