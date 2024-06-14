@@ -23,10 +23,11 @@ const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
     validator: width.value >= 1400,
-    efficiency_plus: width.value >= 1180
+    efficiency_all_time: width.value >= 1180,
+    efficiency_last_30d: width.value >= 964,
+    efficiency_last_7d: width.value >= 748
   }
 })
-
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
     q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
@@ -122,7 +123,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
-              v-if="colsVisible.efficiency_plus"
+              v-if="colsVisible.efficiency_last_7d"
               field="efficiency_last_7d"
               :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_last_7d')"
@@ -132,7 +133,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
-              v-if="colsVisible.efficiency_plus"
+              v-if="colsVisible.efficiency_last_30d"
               field="efficiency_last_30d"
               :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_last_30d')"
@@ -142,7 +143,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
-              v-if="colsVisible.efficiency_plus"
+              v-if="colsVisible.efficiency_all_time"
               field="efficiency_all_time"
               :sortable="showInDevelopment"
               :header="$t('dashboard.validator.col.efficiency_all_time')"
