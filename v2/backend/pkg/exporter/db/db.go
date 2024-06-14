@@ -987,7 +987,7 @@ func GetPartitionNamesOfTable(tableName string) ([]string, error) {
 	err := db.AlloyWriter.Select(&partitions, fmt.Sprintf(`
 		SELECT inhrelid::regclass AS partition_name
 		FROM pg_inherits
-		WHERE inhparent = 'public.%s'::regclass;`, tableName),
+		WHERE inhparent = 'public.%s'::regclass order by 1;`, tableName),
 	)
 	return partitions, err
 }
