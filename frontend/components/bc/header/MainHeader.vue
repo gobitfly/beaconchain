@@ -150,7 +150,9 @@ $smallHeaderThreshold: 1024px;
   justify-content: center;
   border-bottom: 1px solid var(--container-border-color);
   &.hide-because-it-is-unfinished {
-    border-bottom: none;
+    @media (max-width: $smallHeaderThreshold) {
+      border-bottom: none;
+    }
   }
   background-color: var(--container-background);
   .top-background {
