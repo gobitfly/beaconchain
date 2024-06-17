@@ -150,12 +150,12 @@ const wrappedRewards = computed(() => {
                 </BcLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age">
+            <Column v-if="colsVisible.age" field="age" body-class="age-field">
               <template #header>
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
+                <BcFormatTimePassed :value="slotProps.data.epoch" />
               </template>
             </Column>
             <Column
@@ -286,8 +286,12 @@ const wrappedRewards = computed(() => {
     @include utils.set-all-width(154px);
   }
 
-  .time-passed {
+  .age-field {
     white-space: nowrap;
+  }
+  tr>td.age-field {
+    padding: 0 7px;
+    @include utils.set-all-width(205px);
   }
 
   tr:not(.p-datatable-row-expansion) {

@@ -170,14 +170,13 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age">
+            <Column field="age" body-class="age-field">
               <template #header>
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
                   v-if="slotProps.data.index !== undefined"
-                  class="time-passed"
                   :value="slotProps.data.timestamp"
                   type="go-timestamp"
                 />
@@ -303,10 +302,6 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
     min-height: 335px;
   }
 
-  .time-passed {
-    white-space: nowrap;
-  }
-
   .withdrawal-credentials {
     @include utils.truncate-text;
   }
@@ -323,6 +318,14 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
       white-space: nowrap;
       overflow: visible;
     }
+  }
+
+  .age-field {
+    white-space: nowrap;
+  }
+  tr>td.age-field {
+    padding: 0 7px;
+    @include utils.set-all-width(110px);
   }
 }
 
