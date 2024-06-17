@@ -633,6 +633,7 @@
     "premium_product": {
       "popular": "Popular!",
       "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
+      "validators": "{amount} Validators",
       "validators_per_dashboard": "{amount} Validators per Dashboard",
       "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
       "timeframe_heatmap_chart": "{timeframe} heatmap chart history",

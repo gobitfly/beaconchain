@@ -98,6 +98,7 @@ const planButton = computed(() => {
 })
 
 const mainFeatures = computed<Feature[]>(() => {
+  const validatorPerDashboardAmount = formatNumber(props.product?.premium_perks.validators_per_dashboard)
   return [
     {
       name: $t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
@@ -105,7 +106,9 @@ const mainFeatures = computed<Feature[]>(() => {
       percentage: percentages.value.validatorDashboards
     },
     {
-      name: $t('pricing.premium_product.validators_per_dashboard', { amount: formatNumber(props.product?.premium_perks.validators_per_dashboard) }),
+      name: props.product.premium_perks.validator_dashboards === 1
+        ? $t('pricing.premium_product.validators', { amount: validatorPerDashboardAmount })
+        : $t('pricing.premium_product.validators_per_dashboard', { amount: validatorPerDashboardAmount }),
       subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
       tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
