@@ -23,7 +23,7 @@
 <style lang="scss" scoped>
 .type-toggle-container {
   width: 280px;
-  height: 41px;
+  height: 50px;
   margin-bottom: 37px;
   display: flex;
   align-items: center;
@@ -82,6 +82,8 @@
 
 @media (max-width: 1360px) {
   .type-toggle-container {
+    width: 240px;
+    height: 43px;
 
     .api-keys .label,
     .premium .label {
