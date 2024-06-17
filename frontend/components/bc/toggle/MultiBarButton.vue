@@ -22,10 +22,10 @@ const icon = computed(() => {
   <BcTooltip :dont-open-permanently="true" :hover-delay="350">
     <template #tooltip>
       <div class="button-tooltip">
-        <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
         <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
+        <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
       </div>
     </template>
     <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''">
@@ -43,7 +43,7 @@ const icon = computed(() => {
   width: max-content;
   text-align: left;
   .individual{
-    margin-top: var(--padding);
+    margin-bottom: var(--padding);
   }
 }
 .bc-toggle {
