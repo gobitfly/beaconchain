@@ -23,7 +23,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   position: relative;
   flex-direction: column;
   align-items: center;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .content {
