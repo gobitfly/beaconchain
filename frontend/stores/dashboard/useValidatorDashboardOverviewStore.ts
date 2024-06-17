@@ -47,5 +47,15 @@ export function useValidatorDashboardOverviewStore () {
     return !!overview.value.validators.online || !!overview.value.validators.exited || !!overview.value.validators.offline || !!overview.value.validators.pending || !!overview.value.validators.slashed
   })
 
-  return { overview, refreshOverview, hasValidators }
+  const validatorCount = computed(() => {
+    if (!overview.value) {
+      return undefined
+    }
+    if (!overview.value.validators) {
+      return 0
+    }
+    return overview.value.validators.exited + overview.value.validators.offline + overview.value.validators.online + overview.value.validators.pending + overview.value.validators.slashed
+  })
+
+  return { overview, refreshOverview, hasValidators, validatorCount }
 }
