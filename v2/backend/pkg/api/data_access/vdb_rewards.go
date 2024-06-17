@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -469,7 +470,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	}
 
 	// Build the query
-	ds := goqu.Select(goqu.L(`
+	ds := goqu.Dialect("postgres").Select(goqu.L(`
 		COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
 		COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
 		COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
@@ -553,7 +554,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	// 	LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 	// 	LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
 
-	query, args, err := ds.ToSQL()
+	query, args, err := ds.Prepared(false).ToSQL()
 	if err != nil {
 		return nil, err
 	}

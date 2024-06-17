@@ -135,33 +135,33 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 		)
 	}()
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	dataAccessService.clickhouseReader, _ = db.MustInitDB(
-	// 		&types.DatabaseConfig{
-	// 			Username:     cfg.ClickHouse.ReaderDatabase.Username,
-	// 			Password:     cfg.ClickHouse.ReaderDatabase.Password,
-	// 			Name:         cfg.ClickHouse.ReaderDatabase.Name,
-	// 			Host:         cfg.ClickHouse.ReaderDatabase.Host,
-	// 			Port:         cfg.ClickHouse.ReaderDatabase.Port,
-	// 			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-	// 			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	// 			SSL:          true,
-	// 		},
-	// 		// lets just reuse reader to be extra safe
-	// 		&types.DatabaseConfig{
-	// 			Username:     cfg.ClickHouse.ReaderDatabase.Username,
-	// 			Password:     cfg.ClickHouse.ReaderDatabase.Password,
-	// 			Name:         cfg.ClickHouse.ReaderDatabase.Name,
-	// 			Host:         cfg.ClickHouse.ReaderDatabase.Host,
-	// 			Port:         cfg.ClickHouse.ReaderDatabase.Port,
-	// 			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-	// 			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	// 			SSL:          true,
-	// 		}, "clickhouse", "clickhouse",
-	// 	)
-	// }()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dataAccessService.clickhouseReader, _ = db.MustInitDB(
+			&types.DatabaseConfig{
+				Username:     cfg.ClickHouse.ReaderDatabase.Username,
+				Password:     cfg.ClickHouse.ReaderDatabase.Password,
+				Name:         cfg.ClickHouse.ReaderDatabase.Name,
+				Host:         cfg.ClickHouse.ReaderDatabase.Host,
+				Port:         cfg.ClickHouse.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+				SSL:          true,
+			},
+			// lets just reuse reader to be extra safe
+			&types.DatabaseConfig{
+				Username:     cfg.ClickHouse.ReaderDatabase.Username,
+				Password:     cfg.ClickHouse.ReaderDatabase.Password,
+				Name:         cfg.ClickHouse.ReaderDatabase.Name,
+				Host:         cfg.ClickHouse.ReaderDatabase.Host,
+				Port:         cfg.ClickHouse.ReaderDatabase.Port,
+				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+				SSL:          true,
+			}, "clickhouse", "clickhouse",
+		)
+	}()
 
 	// Initialize the user database
 	wg.Add(1)
