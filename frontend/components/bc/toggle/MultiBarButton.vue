@@ -19,7 +19,7 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true">
+  <BcTooltip :dont-open-permanently="true" :hover-delay="350">
     <template #tooltip>
       <div class="button-tooltip">
         <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
