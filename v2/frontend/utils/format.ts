@@ -106,7 +106,7 @@ function formatTs (ts?: number, timestamp?: number, format: AgeFormat = 'relativ
   }
 }
 
-function formatTsToAbsolute (ts: number, locales: string, includeTime?: boolean): string {
+export function formatTsToAbsolute (ts: number, locales: string, includeTime?: boolean): string {
   const timeOptions: Intl.DateTimeFormatOptions = includeTime
     ? {
         hour: 'numeric',

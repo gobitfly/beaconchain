@@ -6,6 +6,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   <BcCookieModal />
   <div class="page">
     <BcHeaderMainHeader :is-home-page="props.isHomePage" />
+    <BcMaintenanceBanner />
     <div class="content">
       <slot name="top" />
       <BcAdControl />
