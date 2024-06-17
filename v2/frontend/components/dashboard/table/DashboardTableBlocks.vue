@@ -216,7 +216,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :header="$t('block.col.graffiti')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.graffiti }}
+                <BcFormatGraffiti :graffiti="slotProps.data.graffiti" />
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -275,9 +275,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('block.col.graffiti') }}:
                   </div>
-                  <div class="value">
-                    {{ slotProps.data.graffiti }}
-                  </div>
+                  <BcFormatGraffiti :graffiti="slotProps.data.graffiti" />
                 </div>
               </div>
             </template>
@@ -342,7 +340,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   }
 
   .graffiti {
-    @include utils.set-all-width(130px);
+    @include utils.set-all-width(140px);
     @include utils.truncate-text;
   }
 
