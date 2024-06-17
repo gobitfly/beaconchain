@@ -379,7 +379,7 @@
         }
       },
       "withdrawals": {
-        "title": "Withdrawals",
+        "title": "Consensus Layer Withdrawals",
         "search_placeholder": "Index, Public Key, Address",
         "pending": "Pending",
         "pending_tooltip": "Estimation for next withdrawal currently unavailable",
@@ -463,7 +463,7 @@
         "blocks": "Blocks",
         "heatmap": "Heatmap",
         "deposits": "Deposits",
-        "withdrawals": "Withdrawals"
+        "withdrawals": "CL Withdrawals"
       },
       "tooltip": {
         "attestation_efficiency": {
