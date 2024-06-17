@@ -41,17 +41,23 @@ import (
 	"golang.org/x/text/language"
 )
 
+// Initializes the notification sender process
+// Should only run once in the entire application
 func InitNotificationSender() {
 	log.Infof("starting notifications-sender")
 	go notificationSender()
 }
 
+// Initializes the notification collector process
+// Should run for every network separately
 func InitNotificationCollector(pubkeyCachePath string) {
 	err := initPubkeyCache(pubkeyCachePath)
 	if err != nil {
 		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
 	}
 
+	// This initializes the eth client release notes collector
+	// It should only run once in the entire application (which is not the case now)
 	go ethclients.Init()
 
 	go notificationCollector()
@@ -119,6 +125,7 @@ func notificationCollector() {
 				break
 			}
 
+			// Epochs are marged as notified before notifications are queued to prevent duplicate notifications in case of queuing errors
 			_, err = db.WriterDb.Exec("INSERT INTO epochs_notified VALUES ($1, NOW())", epoch)
 			if err != nil {
 				log.Error(err, "error marking notification status for epoch %v in db: %v", 0, log.Fields{"epoch": epoch})
@@ -226,11 +233,14 @@ func notificationSender() {
 }
 
 func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.Notification, error) {
+	// map format is map[userId]map[eventName][]notification
 	notificationsByUserID := map[uint64]map[types.EventName][]types.Notification{}
+
 	start := time.Now()
 	var err error
 	var dbIsCoherent bool
 
+	// do another coherence check, better safe than sorry
 	err = db.WriterDb.Get(&dbIsCoherent, `
 		SELECT
 			NOT (array[false] && array_agg(is_coherent)) AS is_coherent
@@ -1394,6 +1404,8 @@ func (n *validatorProposalNotification) GetInfoMarkdown() string {
 }
 
 func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+	// this retrieves all users that are subscribed to the missed attestaiton event
+	// returns the validators they are subscribed for as pubkey
 	_, subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missted attestations %w", err)
@@ -1407,7 +1419,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 	}
 
 	// get attestations for all validators for the last 4 epochs
-
 	validators, err := db.GetValidatorIndices()
 	if err != nil {
 		return err
@@ -1422,13 +1433,13 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 
 	events := make([]dbResult, 0)
 
-	epochAttested := make(map[types.Epoch]uint64)
-	epochTotal := make(map[types.Epoch]uint64)
+	epochAttested := make(map[types.Epoch]uint64) // used for cohercence checks, counts how many valid attestations we have for each epoch
+	epochTotal := make(map[types.Epoch]uint64)    // counts the total number of attestation for each epoch
 	for currentEpoch, participation := range participationPerEpoch {
 		for validatorIndex, participated := range participation {
 			epochTotal[currentEpoch] = epochTotal[currentEpoch] + 1 // count the total attestations for each epoch
 
-			if !participated {
+			if !participated { // create the missed attestation events for the current epoch if some subscriber has subscribed to this validator
 				pubkey, err := GetPubkeyForIndex(uint64(validatorIndex))
 				if err == nil {
 					if currentEpoch != types.Epoch(epoch) || subMap[hex.EncodeToString(pubkey)] == nil {
@@ -1439,7 +1450,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 						ValidatorIndex: uint64(validatorIndex),
 						Epoch:          uint64(currentEpoch),
 						Status:         0,
-						EventFilter:    pubkey,
+						EventFilter:    pubkey, // use the pubkey to identify the validator
 					})
 				} else {
 					log.Error(err, "error retrieving pubkey for validator", 0, map[string]interface{}{"validatorIndex": validatorIndex})
@@ -1452,11 +1463,13 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 
 	// process missed attestation events
 	for _, event := range events {
+		// get the subscribers for the specific validator (validator pubkey is encoded as event.EventFilter)
 		subscribers, ok := subMap[hex.EncodeToString(event.EventFilter)]
 		if !ok {
 			return fmt.Errorf("error event returned that does not exist: %x", event.EventFilter)
 		}
 		for _, sub := range subscribers {
+			// do some basic checks
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
 			}
@@ -1477,12 +1490,15 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 				EventName:      types.ValidatorMissedAttestationEventName,
 				EventFilter:    hex.EncodeToString(event.EventFilter),
 			}
+			// init the map if it does not exist
 			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
 				notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
 			}
+			// init the map if it does not exist
 			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
 				notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
 			}
+			// make sure there are no duplicate notifications for a single user
 			isDuplicate := false
 			for _, userEvent := range notificationsByUserID[*sub.UserID][n.GetEventName()] {
 				if userEvent.GetSubscriptionID() == n.SubscriptionID {
@@ -1492,6 +1508,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 			if isDuplicate {
 				continue
 			}
+			// append the notification to the result map
 			notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
