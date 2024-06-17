@@ -147,11 +147,11 @@
   "slotViz": {
     "head": "Head",
     "filter": {
-      "attestation": "If enabled, attestations will be shown.",
-      "proposal": "If enabled, blocks will be shown.",
-      "slashing": "If enabled, slashings will be shown.",
-      "sync": "If enabled, sync committees will be shown.",
-      "visible": "If enabled, all duties will be shown."
+      "attestation": "Attestations will be shown, if enabled.",
+      "proposal": "Blocks will be shown, if enabled.",
+      "slashing": "Slashings will be shown, if enabled.",
+      "sync": "Sync committees will be shown, if enabled.",
+      "visible": "All duties will be shown, if enabled."
     },
     "tooltip": {
       "attestation": "Attestation",

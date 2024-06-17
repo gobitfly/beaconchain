@@ -51,10 +51,10 @@ export function useValidatorDashboardOverviewStore () {
     if (!overview.value) {
       return undefined
     }
-    if (!overview.value?.validators) {
+    if (!overview.value.validators) {
       return 0
     }
-    return overview.value?.validators.exited + overview.value?.validators.offline + overview.value?.validators.online + overview.value?.validators.pending + overview.value?.validators.slashed
+    return overview.value.validators.exited + overview.value.validators.offline + overview.value.validators.online + overview.value.validators.pending + overview.value.validators.slashed
   })
 
   return { overview, refreshOverview, hasValidators, validatorCount }
