@@ -81,7 +81,8 @@ const scrollToAddons = () => {
       z-index: 256;
       top: 0px;
       padding-top: 25px;
-      padding-bottom: 37px;
+      padding-bottom: 25px;
+      margin-bottom: 12px;
       background-color: var(--background-color);
       width: 100vw;
       justify-content: center;
