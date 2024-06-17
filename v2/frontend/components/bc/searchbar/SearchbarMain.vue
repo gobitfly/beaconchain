@@ -37,7 +37,7 @@ import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const MinimumTimeBetweenAPIcalls = 1000 // ms
+const MinimumTimeBetweenAPIcalls = 400 // ms
 const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
