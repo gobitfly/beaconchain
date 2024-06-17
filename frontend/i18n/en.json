@@ -82,6 +82,10 @@
     "multiple_times": "The error {error} happened {count} times",
     "ws_error": "Webservice error"
   },
+  "maintenance": {
+    "planned": "Maintenance is scheduled ({date})",
+    "ongoing": "Maintenance: Some features are unavailable"
+  },
   "table": {
     "first": "First",
     "last": "Last",
