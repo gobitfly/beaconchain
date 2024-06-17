@@ -150,7 +150,7 @@
       "attestation": "If enabled, attestations will be shown.",
       "proposal": "If enabled, blocks will be shown.",
       "slashing": "If enabled, slashings will be shown.",
-      "sync": "If enabled, sync-comm will be shown.",
+      "sync": "If enabled, sync committees will be shown.",
       "visible": "If enabled, all duties will be shown."
     },
     "tooltip": {
