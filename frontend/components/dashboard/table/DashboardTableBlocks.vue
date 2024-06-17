@@ -150,12 +150,12 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 <span v-else>-</span>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age">
+            <Column v-if="colsVisible.age" field="age" body-class="age-field">
               <template #header>
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
+                <BcFormatTimePassed :value="slotProps.data.epoch" />
               </template>
             </Column>
             <Column
@@ -221,7 +221,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     <BcTableAgeHeader />
                   </div>
-                  <BcFormatTimePassed class="time-passed" :value="slotProps.data.epoch" />
+                  <BcFormatTimePassed class="age-field" :value="slotProps.data.epoch" />
                 </div>
                 <div v-if="!colsVisible.slot" class="row">
                   <div class="label">
@@ -300,8 +300,12 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
     @include utils.truncate-text;
   }
 
-  .time-passed {
+  .age-field {
     white-space: nowrap;
+  }
+  tr>td.age-field {
+    padding: 0 7px;
+    @include utils.set-all-width(142px);
   }
 
   .reward,
