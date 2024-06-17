@@ -72,9 +72,7 @@ export default defineNuxtConfig({
     vueI18n: './i18n.config.ts'
   },
   routeRules: {
-    '/': {
-      redirect: '/dashboard'
-    }
+
   },
   nitro: {
     compressPublicAssets: true

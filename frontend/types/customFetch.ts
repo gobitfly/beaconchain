@@ -238,7 +238,7 @@ export const mapping: Record<string, MappingData> = {
     path: '/search',
     method: 'POST',
     mockFunction: simulateAPIresponseForTheSearchBar,
-    mock: false
+    mock: true
   },
   [API_PATH.AVAILABLE_NETWORKS]: {
     path: '/available-networks',
