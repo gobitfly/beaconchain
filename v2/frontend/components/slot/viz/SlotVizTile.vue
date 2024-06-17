@@ -16,6 +16,7 @@ const data = computed(() => {
     slashing: props.selectedCategories.includes('slashing') ? props.data.slashing : undefined,
     sync: props.selectedCategories.includes('sync') ? props.data.sync : undefined
   }
+  const showIcons = props.selectedCategories.includes('visible')
   let outer = ''
   const icons: SlotVizIcons[] = []
   switch (slot.status) {
@@ -58,17 +59,19 @@ const data = computed(() => {
     }
   }
 
-  if (slot.proposal) {
-    icons.push('proposal')
-  }
-  if (slot.slashing) {
-    icons.push('slashing')
-  }
-  if (slot.sync) {
-    icons.push('sync')
-  }
-  if (slot.attestations) {
-    icons.push('attestation')
+  if (showIcons) {
+    if (slot.proposal) {
+      icons.push('proposal')
+    }
+    if (slot.slashing) {
+      icons.push('slashing')
+    }
+    if (slot.sync) {
+      icons.push('sync')
+    }
+    if (slot.attestations) {
+      icons.push('attestation')
+    }
   }
 
   return {
