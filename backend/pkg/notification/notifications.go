@@ -263,6 +263,12 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 
 	log.Infof("started collecting notifications")
 
+	// in general notification collection should work by first retrieving all users
+	// that are subscribed to a specific event type
+	// and then each occurancy of the specific event type
+	// then both should be matched and notifications should be sent for users that have
+	// subscribed to the affected validator & event type
+	// use maps to avoid long iterations
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_attestation").Inc()
@@ -1920,6 +1926,8 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]ma
 	if err != nil {
 		return fmt.Errorf("error getting slashed validators from database, err: %w", err)
 	}
+
+	// here we get all the subscribers to the slashed validators (this assumes that slashings are not that frequent)
 	query := ""
 	resultsLen := len(dbResult)
 	for i, event := range dbResult {
