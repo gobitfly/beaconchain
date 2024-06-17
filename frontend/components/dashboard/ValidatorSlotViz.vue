@@ -3,6 +3,7 @@
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 
 const { dashboardKey } = useDashboardKey()
+const { validatorCount } = useValidatorDashboardOverviewStore()
 
 const { tick, resetTick } = useInterval(12)
 
@@ -15,10 +16,17 @@ watch(() => [dashboardKey.value, tick.value], (newValue, oldValue) => {
   }
   refreshSlotViz(dashboardKey.value)
 }, { immediate: true })
+
+const initiallyHideVisible = computed(() => {
+  if (validatorCount.value === undefined) {
+    return undefined
+  }
+  return validatorCount.value > 60
+})
 </script>
 
 <template>
-  <SlotVizViewer v-if="slotViz" :data="slotViz" :timestamp="tick" />
+  <SlotVizViewer v-if="slotViz" :data="slotViz" :timestamp="tick" :initially-hide-visible="initiallyHideVisible" />
 </template>
 
 <style lang="scss" scoped>

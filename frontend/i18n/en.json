@@ -92,6 +92,10 @@
     "amount": "Amount",
     "valid": "Valid"
   },
+  "filter": {
+    "enabled": "Filter enabled.",
+    "disabled": "Filter disabled."
+  },
   "premium": {
     "title": "beaconcha.in Premium",
     "description": "Monitoring without limits on web and mobile.",
@@ -142,6 +146,13 @@
   },
   "slotViz": {
     "head": "Head",
+    "filter": {
+      "attestation": "If enabled, attestations will be shown.",
+      "proposal": "If enabled, blocks will be shown.",
+      "slashing": "If enabled, slashings will be shown.",
+      "sync": "If enabled, sync-comm will be shown.",
+      "visible": "If enabled, all duties will be shown."
+    },
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
