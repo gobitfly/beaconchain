@@ -78,7 +78,7 @@ const scrollToAddons = () => {
     .type-toggle-row {
       display: flex;
       position: sticky;
-      z-index: 256;
+      z-index: 128;
       top: 0px;
       padding-top: 25px;
       padding-bottom: 25px;
