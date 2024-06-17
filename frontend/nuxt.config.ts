@@ -41,7 +41,8 @@ export default defineNuxtConfig({
       logIp: '',
       logFile: '',
       showInDevelopment: '',
-      chainIdByDefault: process.env.PUBLIC_CHAIN_ID_BY_DEFAULT
+      chainIdByDefault: process.env.PUBLIC_CHAIN_ID_BY_DEFAULT,
+      maintenanceTS: ''
     },
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
