@@ -400,9 +400,9 @@
       },
       "overview": {
         "your_online_validators": "Your Online Validators",
-        "7d_efficiency": "7d Efficiency",
-        "7d_rewards": "7d Rewards",
-        "7d_apr": "7d APR"
+        "24h_efficiency": "24h Efficiency",
+        "30d_rewards": "30d Rewards",
+        "30d_apr": "30d APR"
       },
       "col": {
         "duty": "Duty",
