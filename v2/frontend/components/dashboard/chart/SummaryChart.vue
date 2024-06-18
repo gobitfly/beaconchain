@@ -11,7 +11,6 @@ import {
   DataZoomComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { min } from 'lodash-es'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { useFormat } from '~/composables/useFormat'
 import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
