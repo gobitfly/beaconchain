@@ -82,6 +82,10 @@
     "multiple_times": "The error {error} happened {count} times",
     "ws_error": "Webservice error"
   },
+  "maintenance": {
+    "planned": "Maintenance is scheduled ({date})",
+    "ongoing": "Maintenance: Some features are unavailable"
+  },
   "table": {
     "first": "First",
     "last": "Last",
@@ -91,6 +95,10 @@
     "from": "From",
     "amount": "Amount",
     "valid": "Valid"
+  },
+  "filter": {
+    "enabled": "Filter enabled.",
+    "disabled": "Filter disabled."
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -142,6 +150,13 @@
   },
   "slotViz": {
     "head": "Head",
+    "filter": {
+      "attestation": "If enabled, attestations will be shown.",
+      "proposal": "If enabled, blocks will be shown.",
+      "slashing": "If enabled, slashings will be shown.",
+      "sync": "If enabled, sync committees will be shown.",
+      "visible": "If enabled, all duties will be shown."
+    },
     "tooltip": {
       "attestation": "Attestation",
       "sync": "Sync Committee",
@@ -660,8 +675,8 @@
     "percs": {
       "ad_free": "Ad free",
       "support_us": "Support us",
-      "validators_per_dashboard": "Validator dashboards",
-      "validator_dashboards": "Validators per dashboard",
+      "validator_dashboards": "Validator dashboards",
+      "validators_per_dashboard": "Validators per dashboard",
       "validator_groups_per_dashboard": "Validator groups per dashboard",
       "share_custom_dashboards": "Share custom dashboards",
       "manage_dashboard_via_api": "Manage dashboard via API",
