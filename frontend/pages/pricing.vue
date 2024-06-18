@@ -28,7 +28,9 @@ const scrollToAddons = () => {
   <BcPageWrapper>
     <div class="page-container">
       <div class="page-content">
-        <PricingTypeToggle />
+        <div class="type-toggle-row">
+          <PricingTypeToggle />
+        </div>
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isYearly" />
         <PricingPremiumViaAppBanner />
@@ -52,6 +54,7 @@ const scrollToAddons = () => {
 @use '~/assets/css/pricing.scss';
 
 .page-container {
+  position: relative;
   width: 100%;
 
   display: flex;
@@ -62,6 +65,7 @@ const scrollToAddons = () => {
     // The pricing page uses unique styling, dimensions, font settings and so on that are not used anywhere else
     // That's why this component and its children include a lot of handcraftet css
     // If a new page is introduced that uses the same parameters, consider moving them to a shared location
+    position: relative;
     font-family: var(--montserrat-family);
     font-weight: var(--montserrat-medium);
 
@@ -70,8 +74,19 @@ const scrollToAddons = () => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-top: 25px;
 
+    .type-toggle-row {
+      display: flex;
+      position: sticky;
+      z-index: 128;
+      top: 0px;
+      padding-top: 25px;
+      padding-bottom: 25px;
+      margin-bottom: 12px;
+      background-color: var(--background-color);
+      width: 100vw;
+      justify-content: center;
+    }
     .view-addons-button {
       width: 215px;
       @include pricing.pricing_button;
