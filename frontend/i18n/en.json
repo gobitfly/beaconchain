@@ -708,6 +708,15 @@
       }
     }
   },
+  "user_settings": {
+    "subscriptions": {
+      "title": "Subscriptions",
+      "explanation": "Premium features for web and beaconcha.in mobile app experience."
+    },
+    "email": "Email",
+    "password": "Password",
+    "delete_account": "Delete Account"
+  },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",
     "minutes": "{amount} minute | {amount} minutes",
