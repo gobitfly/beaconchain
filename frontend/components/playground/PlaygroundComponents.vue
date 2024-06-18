@@ -3,6 +3,9 @@
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
+    <TabPanel header="Color Blind Enhancements">
+      <PlaygroundColorblind />
+    </TabPanel>
     <TabPanel header="Clipping in the middle">
       <PlaygroundMiddleEllipsisTests />
     </TabPanel>
