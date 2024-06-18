@@ -102,11 +102,11 @@ defineProps<Props>()
         gap: 0;
 
         .name {
-          font-size: 14px;
+          font-size: 12px;
         }
 
         .additional-info-row {
-          font-size: 12px;
+          font-size: 10px;
         }
       }
     }
