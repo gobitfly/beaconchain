@@ -31,7 +31,7 @@ const prices = computed(() => {
     monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
     yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard / props.product.premium_perks.validator_dashboards, 6)
   }
 })
 
@@ -319,10 +319,10 @@ const minorFeatures = computed<Feature[]>(() => {
   }
 
   @media (max-width: 1360px) {
-    width: 210px;
+    width: 240px;
 
     &[popular] {
-      width: 275px;
+      width: 300px;
     }
 
     .name-container {
