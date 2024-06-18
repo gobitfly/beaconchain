@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import type { Component } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  icons: {
-    icon?: IconDefinition
-    component?: Component,
-    value: string
-  }[]
+  icons: MultiBarItem[]
 }
 
 const props = defineProps<Props>()
@@ -34,10 +30,18 @@ watch(modelValues, () => {
 
 <template>
   <div class="bc-togglebar">
-    <BcToggleMultiBarButton v-for="icon in props.icons" :key="icon.value" v-model="modelValues[icon.value]" :icon="icon.icon">
+    <BcToggleMultiBarButton
+      v-for="icon in props.icons"
+      :key="icon.value"
+      v-model="modelValues[icon.value]"
+      :class="icon.className"
+      :icon="icon.icon"
+      :tooltip="icon.tooltip"
+    >
       <template #icon>
         <slot :name="icon.value">
-          <component :is="icon.component" />
+          <component :is="icon.component" v-if="icon.component" />
+          <FontAwesomeIcon v-else-if="icon.icon" :icon="icon.icon" />
         </slot>
       </template>
     </BcToggleMultiBarButton>
