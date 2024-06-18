@@ -4,10 +4,18 @@
 
 <template>
   <BcPageWrapper>
-    Welcome to the brand new user settings page!
+    <div class="settings-container">
+      <UserSettingsSubscriptions />
+      <UserSettingsEmail />
+      <UserSettingsPassword />
+      <UserSettingsDeleteAccount />
+    </div>
   </BcPageWrapper>
 </template>
 
 <style lang="scss" scoped>
-
+.settings-container {
+  display: flex;
+  flex-direction: column;
+}
 </style>
