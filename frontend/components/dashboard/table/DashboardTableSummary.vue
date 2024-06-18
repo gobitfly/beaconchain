@@ -5,6 +5,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { SummaryTimeFrames, type SummaryTimeFrame } from '~/types/dashboard/summary'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -16,8 +17,13 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
+const useAbsoluteValues = ref(true)
+
 const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
+
+const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
+const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -79,11 +85,24 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <template>
   <div>
     <BcTableControl
-      :title="$t('dashboard.validator.summary.title')"
+      v-model="useAbsoluteValues"
       :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
+      <template #header-center>
+        <h1 class="summary_title">
+          {{ $t('dashboard.validator.summary.title') }}
+        </h1>
+        <BcDropdown
+          v-model="selectedTimeFrame"
+          :options="timeFrames"
+          option-value="id"
+          option-label="name"
+          class="small"
+          :placeholder="$t('dashboard.group.selection.placeholder')"
+        />
+      </template>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
@@ -187,6 +206,12 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+
+.summary_title{
+  @media (max-width: 600px) {
+    display:none;
+  }
+}
 
 :deep(.summary_table) {
   --col-width: 216px;
