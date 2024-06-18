@@ -31,7 +31,7 @@ const prices = computed(() => {
     monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
     yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard, 5)
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard / props.product.premium_perks.validator_dashboards, 6)
   }
 })
 
