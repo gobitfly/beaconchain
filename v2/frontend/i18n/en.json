@@ -675,8 +675,8 @@
     "percs": {
       "ad_free": "Ad free",
       "support_us": "Support us",
-      "validators_per_dashboard": "Validator dashboards",
-      "validator_dashboards": "Validators per dashboard",
+      "validator_dashboards": "Validator dashboards",
+      "validators_per_dashboard": "Validators per dashboard",
       "validator_groups_per_dashboard": "Validator groups per dashboard",
       "share_custom_dashboards": "Share custom dashboards",
       "manage_dashboard_via_api": "Manage dashboard via API",
