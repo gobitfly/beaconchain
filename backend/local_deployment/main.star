@@ -55,6 +55,7 @@ def run(plan, args):
 				image = "clickhouse/clickhouse-server:24.2",
 				ports = {
 					CLICKHOUSE_PORT_ID: PortSpec(9000, application_protocol = "clickhouse"),
+					"http": PortSpec(8123),
 				},
 				env_vars = {
 					"CLICKHOUSE_DB": CLICKHOUSE_DB,
