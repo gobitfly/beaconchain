@@ -6,9 +6,7 @@ import {
   faBuilding,
   faFileContract,
   faUserSecret,
-  faFileInvoiceDollar,
   faUserAstronaut,
-  faAd,
   faShoppingCart,
   faCheckCircle
 } from '@fortawesome/pro-solid-svg-icons'
@@ -29,9 +27,9 @@ const columns: Row[] = [
   {
     title: $t('footer.resources'),
     links: [
-      [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
+      // [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal], // TODO: Add link once API prices are available
       [$t('footer.premium'), faUserAstronaut, '/pricing', Target.Internal],
-      [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal],
+      // [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal], // TODO: Add link once advertise page is available
       [$t('footer.shop'), faShoppingCart, 'https://shop.beaconcha.in', Target.External],
       [$t('footer.status'), faCheckCircle, 'https://status.beaconcha.in/', Target.External]
     ]
