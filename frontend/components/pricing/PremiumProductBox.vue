@@ -319,10 +319,10 @@ const minorFeatures = computed<Feature[]>(() => {
   }
 
   @media (max-width: 1360px) {
-    width: 210px;
+    width: 275px;
 
     &[popular] {
-      width: 275px;
+      width: 330px;
     }
 
     .name-container {
