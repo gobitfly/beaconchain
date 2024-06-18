@@ -71,7 +71,7 @@ const currentSlotId = computed(() => {
   return Math.max(mostRecentScheduledSlotId.value ?? 0, tsToSlot((props.timestamp ?? 0) / 1000) - 1)
 })
 
-watch(props, () => {
+watch(() => props, () => {
   if (props.initiallyHideVisible !== undefined) {
     const initialIndex = selectedCategories.value.indexOf('initial')
     if (initialIndex < 0) {
