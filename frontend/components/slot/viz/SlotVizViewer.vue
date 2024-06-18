@@ -113,7 +113,9 @@ watch(props, () => {
       <h1 class="network">
         {{ networkInfo?.family }} {{ networkInfo?.name }}
       </h1>
-      <BcDropdown class="groups" />
+      <div class="header-right">
+        <slot name="header-right" />
+      </div>
     </div>
     <div class="grid">
       <template v-for="row in props.data" :key="row.epoch">
@@ -147,12 +149,12 @@ watch(props, () => {
     padding: var(--padding-large) var(--padding-large) var(--padding) 9px;
     gap: var(--padding);
     grid-template:
-      [row1-start] "info filter-row network groups"[row1-end] / max-content max-content 1fr max-content;
+      [row1-start] "info filter-row network header-right"[row1-end] / max-content max-content 1fr max-content;
 
     @media (max-width: 800px) {
       column-gap: var(--padding-small);
       grid-template:
-        [row1-start] "network network network"[row1-end] [row2-start] "info filter-row groups"[row2-end] / max-content 1fr max-content;
+        [row1-start] "network network network"[row1-end] [row2-start] "info filter-row header-right"[row2-end] / max-content 1fr max-content;
     }
 
     .network {
@@ -176,10 +178,13 @@ watch(props, () => {
       }
     }
 
-    .groups {
-      grid-area: groups;
+    .header-right {
+      grid-area: header-right;
       width: 196px;
-      @media (max-width: 800px) {
+      margin-top: auto;
+      margin-bottom: auto;
+
+      @media (max-width: 600px) {
         width: 87px;
       }
     }
