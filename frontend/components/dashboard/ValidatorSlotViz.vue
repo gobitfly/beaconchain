@@ -4,6 +4,7 @@ import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotViz
 
 const { dashboardKey } = useDashboardKey()
 const { validatorCount } = useValidatorDashboardOverviewStore()
+const { networkInfo } = useNetworkStore()
 
 const { tick, resetTick } = useInterval(12)
 
@@ -26,7 +27,7 @@ const initiallyHideVisible = computed(() => {
 </script>
 
 <template>
-  <SlotVizViewer v-if="slotViz" :data="slotViz" :timestamp="tick" :initially-hide-visible="initiallyHideVisible" />
+  <SlotVizViewer v-if="slotViz" :data="slotViz" :network-info="networkInfo" :timestamp="tick" :initially-hide-visible="initiallyHideVisible" />
 </template>
 
 <style lang="scss" scoped>
