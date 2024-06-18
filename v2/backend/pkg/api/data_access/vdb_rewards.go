@@ -470,28 +470,28 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	}
 
 	// Build the query
-	ds := goqu.Dialect("postgres").Select(goqu.L(`
-		COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-		COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-		COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-		COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward,
-		COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward,
-		COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-		COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-		COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-		COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-		COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-		COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-		COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward,
-		COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
-		COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-		COALESCE(e.sync_executed, 0) AS sync_executed,
-		COALESCE(e.sync_rewards, 0) AS sync_rewards,
-		e.slashed_by IS NOT NULL AS slashed_in_epoch,
-		COALESCE(s.slashed_amount, 0) AS slashed_amount,
-		COALESCE(e.slasher_reward, 0) AS slasher_reward,
-		COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-		COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward`))
+	ds := goqu.Dialect("postgres").Select(
+		goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
+		goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
+		goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
+		goqu.L("COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward"),
+		goqu.L("COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward"),
+		goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
+		goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
+		goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
+		goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+		goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
+		goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
+		goqu.L("COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward"),
+		goqu.L("COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward"),
+		goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
+		goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
+		goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+		goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
+		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"),
+		goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
+		goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
+		goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
