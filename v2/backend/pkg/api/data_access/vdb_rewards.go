@@ -496,65 +496,26 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
 		ds = ds.
-			From(goqu.T("validator_dashboard_data_epoch").As("e")).
-			Where(goqu.C("e.validator_index").In(pq.Array(dashboardId.Validators)), goqu.Ex{"e.epoch": epoch})
+			From(goqu.L("validator_dashboard_data_epoch AS e")).
+			Where(goqu.L("e.validator_index = ANY(?) AND e.epoch = ?", pq.Array(dashboardId.Validators), epoch))
 	} else { // handle the case when we have a dashboard id and an optional group id
 		ds = ds.
-			From(goqu.T("users_val_dashboards_validators").As("v")).
-			InnerJoin(goqu.T("validator_dashboard_data_epoch").As("e"), goqu.On(
-				goqu.Ex{"e.validator_index": goqu.I("v.validator_index")},
-			)).
-			Where(goqu.Ex{"v.dashboard_id": dashboardId.Id}, goqu.Ex{"e.epoch": epoch})
+			From(goqu.L("users_val_dashboards_validators AS v")).
+			InnerJoin(goqu.L("validator_dashboard_data_epoch AS e"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ? AND e.epoch = ?", dashboardId.Id, epoch))
 
 		if groupId != t.AllGroups {
-			ds = ds.Where(goqu.Ex{"v.group_id": groupId})
+			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
 		}
 	}
 
 	ds = ds.
-		LeftJoin(goqu.T("validator_dashboard_data_epoch_slashedby_count").As("s"), goqu.On(
-			goqu.And(
-				goqu.Ex{"e.epoch": goqu.I("s.epoch")},
-				goqu.Ex{"e.validator_index": goqu.I("s.slashed_by")},
-			))).
-		LeftJoin(goqu.T("blocks").As("b"), goqu.On(
-			goqu.And(
-				goqu.Ex{"e.epoch": goqu.I("b.epoch")},
-				goqu.Ex{"e.validator_index": goqu.I("b.proposer")},
-				goqu.Ex{"b.status": "1"},
-			))).
-		LeftJoin(goqu.T("execution_payloads").As("ep"), goqu.On(
-			goqu.Ex{"ep.block_hash": goqu.I("b.exec_block_hash")},
-		)).
-		LeftJoin(goqu.T("relays_blocks").As("r"), goqu.On(
-			goqu.Ex{"r.exec_block_hash": goqu.I("b.exec_block_hash")},
-		))
+		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
+		LeftJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
 
-	// SQL LITERAL
-	// if len(dashboardId.Validators) > 0 {
-	// 	ds = ds.
-	// 		From(goqu.L("validator_dashboard_data_epoch AS e")).
-	// 		Where(goqu.L("e.validator_index = ANY(?) AND e.epoch = ?", pq.Array(dashboardId.Validators), epoch))
-	// } else { // handle the case when we have a dashboard id and an optional group id
-	// 	ds = ds.
-	// 		From(goqu.L("users_val_dashboards_validators AS v")).
-	// 		InnerJoin(goqu.L("validator_dashboard_data_epoch AS e"), goqu.On(
-	// 			goqu.L("e.validator_index = v.validator_index"),
-	// 		)).
-	// 		Where(goqu.L("v.dashboard_id = ? AND e.epoch = ?", dashboardId.Id, epoch))
-
-	// 	if groupId != t.AllGroups {
-	// 		ds = ds.Where(goqu.L("v.group_id = ?", groupId))
-	// 	}
-	// }
-
-	// ds = ds.
-	// 	LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
-	// 	LeftJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
-	// 	LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-	// 	LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
-
-	query, args, err := ds.Prepared(false).ToSQL()
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
