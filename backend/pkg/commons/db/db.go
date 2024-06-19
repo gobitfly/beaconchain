@@ -132,14 +132,14 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 
 	if driverName == "clickhouse" {
 		sslParam = "secure=false"
-		if writer.SSL {
+		if reader.SSL {
 			sslParam = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
 		sslParam = "sslmode=disable"
-		if writer.SSL {
+		if reader.SSL {
 			sslParam = "sslmode=require"
 		}
 	}
@@ -150,7 +150,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
-	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
+	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", reader.Host, reader.Port, writer.Name))
 	dbConnReader.SetConnMaxIdleTime(time.Second * 30)
 	dbConnReader.SetConnMaxLifetime(time.Minute)
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
