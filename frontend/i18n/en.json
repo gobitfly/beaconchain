@@ -481,6 +481,11 @@
           "apr": "APR",
           "luck": "Luck"
         },
+        "status": {
+          "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",
+          "scheduled_sync": "No scheduled sync participation | One validator is scheduled to be part of a sync committee | {count} validators are scheduled to be part of a sync committee",
+          "slashing": "No slashed validators | One slashed validator | {count} slashed validators"
+        },
         "chart": {
           "all_groups": "All Groups",
           "efficiency": "Efficiency"

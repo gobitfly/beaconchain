@@ -93,25 +93,31 @@ const data: ValidatorHistoryDuties[] = [
 
 <template>
   <div class="container">
+    <DashboardTableSummaryStatus class="summary" :scheduled-sync-count="9" :current-sync-count="0" :slashed-count="1" />
+    <DashboardTableSummaryStatus class="summary" :scheduled-sync-count="0" :current-sync-count="8" :slashed-count="0" />
     <div v-for="(duty, index) in data" :key="index" class="item">
-      <ValidatorTableDutyStatus :data="duty" :compact="index===1" />
+      <ValidatorTableDutyStatus :data="duty" :compact="index === 1" />
       <ValidatorTableDutyRewards :data="duty" />
     </div>
   </div>
 </template>
 <style lang="scss" scoped>
-.container{
+.container {
   display: flex;
   flex-wrap: wrap;
 
-  .item{
+  .summary{
+    margin: 10px;
+  }
+  .item {
     flex-grow: 0;
     display: inline-flex;
     gap: 10px;
     padding: 10px;
     margin: 10px;
     border: solid 1px beige;
-    width: fit-content;;
+    width: fit-content;
+    ;
   }
 }
 </style>
