@@ -93,8 +93,21 @@ const data: ValidatorHistoryDuties[] = [
 
 <template>
   <div class="container">
-    <DashboardTableSummaryStatus class="summary" :scheduled-sync-count="9" :current-sync-count="0" :slashed-count="1" />
-    <DashboardTableSummaryStatus class="summary" :scheduled-sync-count="0" :current-sync-count="8" :slashed-count="0" />
+    <div class="item">
+      <DashboardTableSummaryValidators :absolute="true" :validators="{online:12093,offline:123,exited:2134, pending: 10, slashed: 1}" context="group" />
+    </div>
+    <div class="item">
+      <DashboardTableSummaryValidators :absolute="false" :validators="{online:12093,offline:123,exited:2134, pending: 10, slashed: 1}" context="group" />
+    </div>
+    <div class="item">
+      <DashboardTableSummaryValidators :absolute="true" :validators="{online:12093,offline:0,exited:0, pending: 0, slashed: 0}" context="group" />
+    </div>
+    <div class="item">
+      <DashboardTableSummaryStatus :scheduled-sync-count="9" :current-sync-count="0" :slashed-count="1" />
+    </div>
+    <div class="item">
+      <DashboardTableSummaryStatus :scheduled-sync-count="0" :current-sync-count="8" :slashed-count="0" />
+    </div>
     <div v-for="(duty, index) in data" :key="index" class="item">
       <ValidatorTableDutyStatus :data="duty" :compact="index === 1" />
       <ValidatorTableDutyRewards :data="duty" />
@@ -106,9 +119,6 @@ const data: ValidatorHistoryDuties[] = [
   display: flex;
   flex-wrap: wrap;
 
-  .summary{
-    margin: 10px;
-  }
   .item {
     flex-grow: 0;
     display: inline-flex;
