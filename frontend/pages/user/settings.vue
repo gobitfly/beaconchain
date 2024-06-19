@@ -1,5 +1,10 @@
 <script lang="ts" setup>
+const { isLoggedIn } = useUserStore()
 
+if (!isLoggedIn.value) {
+  // only users that are logged in can view this page
+  await navigateTo('../login')
+}
 </script>
 
 <template>
@@ -15,8 +20,10 @@
 
 <style lang="scss" scoped>
 .settings-container {
+  width: 750px;
+
   display: flex;
   flex-direction: column;
-  width: 750px;
+  gap: var(--padding)
 }
 </style>
