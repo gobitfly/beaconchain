@@ -36,13 +36,13 @@ const dataList = computed(() => {
     label: $t(`${tPath}your_online_validators`)
   }
   const efficiency: OverviewTableData = {
-    label: $t(`${tPath}7d_efficiency`)
+    label: $t(`${tPath}24h_efficiency`)
   }
   const rewards: OverviewTableData = {
-    label: $t(`${tPath}7d_rewards`)
+    label: $t(`${tPath}30d_rewards`)
   }
   const apr: OverviewTableData = {
-    label: $t(`${tPath}7d_apr`)
+    label: $t(`${tPath}30d_apr`)
   }
   const list: OverviewTableData[] = [active, efficiency, rewards, apr]
 
@@ -62,13 +62,13 @@ const dataList = computed(() => {
     ]
   ]
 
-  efficiency.value = { label: formatPercent(v?.efficiency.last_7d ?? 0) }
+  efficiency.value = { label: formatPercent(v?.efficiency.last_24h ?? 0) }
   efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v?.efficiency[k] ?? 0) }))
 
-  rewards.value = converter.value.weiToValue(totalElCl(v?.rewards.last_7d ?? { el: '0', cl: '0' }), { addPlus: true })
+  rewards.value = converter.value.weiToValue(totalElCl(v?.rewards.last_30d ?? { el: '0', cl: '0' }), { addPlus: true })
   rewards.infos = TimeFrames.map(k => createInfo(k, v?.rewards[k] ?? { el: '0', cl: '0' }, formatValueWei))
 
-  apr.value = { label: formatPercent(totalElClNumbers(v?.apr.last_7d ?? { cl: 0, el: 0 })) }
+  apr.value = { label: formatPercent(totalElClNumbers(v?.apr.last_30d ?? { cl: 0, el: 0 })) }
   apr.infos = TimeFrames.map(k => createInfo(k, v?.apr[k] ?? { cl: 0, el: 0 }, formatValuePercent))
   return list
 })
