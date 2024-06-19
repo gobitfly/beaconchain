@@ -157,12 +157,13 @@
   },
   "slotViz": {
     "head": "Head",
+    "info_tootlip": "Slot Viz explanation",
     "filter": {
       "attestation": "If enabled, attestations will be shown.",
       "proposal": "If enabled, blocks will be shown.",
       "slashing": "If enabled, slashings will be shown.",
       "sync": "If enabled, sync committees will be shown.",
-      "visible": "If enabled, all duties will be shown."
+      "visible": "If enabled, all duty icons for the duties selected to the left will be shown."
     },
     "tooltip": {
       "attestation": "Attestation",
