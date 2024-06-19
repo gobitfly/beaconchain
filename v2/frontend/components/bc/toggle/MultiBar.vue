@@ -51,7 +51,7 @@ watch(modelValues, () => {
 <style lang="scss" scoped>
 .bc-togglebar {
   display: inline-flex;
-  gap: var(--padding);
+  gap: var(--padding-small);
   padding: 7px 10px;
 
   background-color: var(--container-background);

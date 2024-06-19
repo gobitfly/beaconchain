@@ -14,8 +14,12 @@ export function useValidatorSlotVizStore () {
 
   const slotViz = computed(() => data.value)
 
-  async function refreshSlotViz (dashboardKey: DashboardKey) {
-    const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(API_PATH.DASHBOARD_SLOTVIZ, { headers: {} }, { dashboardKey: dashboardKey || 'MQ' })
+  async function refreshSlotViz (dashboardKey: DashboardKey, groups?: number[]) {
+    let query
+    if (groups?.length) {
+      query = { groups: groups.join(',') }
+    }
+    const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(API_PATH.DASHBOARD_SLOTVIZ, { headers: {}, query }, { dashboardKey: dashboardKey || 'MQ' })
 
     // We use this hacky solution as we don't have an api endpoint to load a slot viz without validators
     // So we load it for a small public dashboard and then remove the validator informations from it.
