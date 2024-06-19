@@ -6,7 +6,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
+func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
+	// TODO if `groupIds`` is empty, get all groups; otherwise only fetch data for the specific groups
 	validatorsArray, err := d.getDashboardValidators(dashboardId)
 	if err != nil {
 		return nil, err

@@ -73,6 +73,8 @@ const option = computed(() => {
   interface SeriesObject {
     data: number[];
     type: string;
+    smooth: boolean;
+    symbol: string,
     name: string;
   }
 
@@ -84,6 +86,8 @@ const option = computed(() => {
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',
+        smooth: true,
+        symbol: 'none',
         name
       }
       series.push(newObj)
@@ -121,7 +125,9 @@ const option = computed(() => {
         padding: [0, 0, 30, 0]
       },
       type: 'value',
-      minInterval: 50,
+      minInterval: 10,
+      maxInterval: 20,
+      min: (range: any) => Math.max(0, 10 * Math.ceil(range.min / 10 - 1)),
       silent: true,
       axisLabel: {
         formatter: '{value} %',
