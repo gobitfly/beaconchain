@@ -82,12 +82,6 @@ const selectedLabel = computed(() => {
         :options="groups"
         option-label="name"
         option-value="id"
-        panel-style-class="my-fucking-style"
-        overlay-class="my-fucking-overlay"
-        panel-class="my-fucking-panel"
-        :panel-props="{
-          class:'my-fucking-panel-props-class'
-        }"
         :placeholder="$t('dashboard.group.selection.all')"
         class="group-selection"
       >
