@@ -1,12 +1,6 @@
 <script lang="ts" setup>
 const { t: $t } = useI18n()
 const { currentPremiumSubscription } = useProductsStore()
-const { isLoggedIn } = useUserStore()
-
-if (!isLoggedIn.value) {
-  // only users that are logged in can view this page
-  await navigateTo('../login')
-}
 
 </script>
 
@@ -31,6 +25,7 @@ if (!isLoggedIn.value) {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/main.scss';
 @use '~/assets/css/fonts.scss';
 
 .subscriptions-container {
@@ -39,15 +34,14 @@ if (!isLoggedIn.value) {
   gap: var(--padding);
 
   padding: var(--padding-large);
-  background-color: var(--container-background);
-  border: 1px solid var(--container-border-color);
+  @include main.container;
 
-  .title{
+  .title {
     @include fonts.dialog_header;
     margin-bottom: 9px;
   }
 
-  .subtitle{
+  .subtitle {
     @include fonts.subtitle_text;
   }
 
@@ -56,9 +50,9 @@ if (!isLoggedIn.value) {
     margin-bottom: var(--padding);
   }
 
-  .button-row{
+  .button-row {
     display: flex;
-    justify-content: end;
+    justify-content: flex-end;
     align-items: center;
     gap: 30px;
 

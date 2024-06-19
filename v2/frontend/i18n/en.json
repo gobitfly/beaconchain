@@ -713,7 +713,11 @@
       "title": "Subscriptions",
       "explanation": "Premium features for web and beaconcha.in mobile app experience."
     },
-    "email": "Email",
+    "email": {
+      "title": "Email",
+      "new": "New Email Address",
+      "confirm": "Confirm Email Address"
+    },
     "password": "Password",
     "delete_account": "Delete Account"
   },
