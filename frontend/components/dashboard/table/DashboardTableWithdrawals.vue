@@ -231,6 +231,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             <Column
               v-if="colsVisible.age"
               field="age"
+              body-class="age-field"
             >
               <template #header>
                 <BcTableAgeHeader />
@@ -239,7 +240,6 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 <BcFormatTimePassed
                   v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
                   type="slot"
-                  class="time-passed"
                   :value="slotProps.data.slot"
                 />
               </template>
@@ -315,9 +315,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   </BcLink>
                 </div>
                 <div class="row">
-                  <div class="label">
-                    {{ $t('common.age') }}:
-                  </div>
+                  <BcTableAgeHeader class="label" />
                   <BcFormatTimePassed type="slot" :value="slotProps.data.slot" />
                 </div>
                 <div class="row">
@@ -363,8 +361,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
     @include utils.truncate-text;
   }
 
-  .time-passed {
+  age-field {
     white-space: nowrap;
+  }
+  tr>td.age-field {
+    padding: 0 7px;
+    @include utils.set-all-width(156px);
   }
 
   .amount .all-time-total {

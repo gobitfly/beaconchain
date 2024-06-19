@@ -8,11 +8,11 @@ const toggleAgeSetting = () => {
 }
 </script>
 <template>
-  <span class="age" @click="toggleAgeSetting">{{ $t('table.age') }}</span>
+  <span class="age-header" @click="toggleAgeSetting">{{ $t('table.age') }}</span>
 </template>
 
 <style lang="scss" scoped>
-.age{
+.age-header {
   color: var(--primary-color);
   cursor: pointer;
 }
