@@ -700,13 +700,16 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardSlotViz(*dashboardId)
+	groupIds := v.checkGroupIdList(r.URL.Query().Get("group_ids"))
+
+	data, err := h.dai.GetValidatorDashboardSlotViz(*dashboardId, groupIds)
 	if err != nil {
 		handleErr(w, err)
 		return
