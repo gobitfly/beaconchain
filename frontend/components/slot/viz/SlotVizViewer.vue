@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { faEye } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faInfoCircle
+} from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { type SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
@@ -7,11 +11,13 @@ import { IconSlotAttestation, IconSlotBlockProposal, IconSlotSlashing, IconSlotS
 import { COOKIE_KEY } from '~/types/cookie'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import type { MultiBarItem } from '~/types/multiBar'
+import type { ChainInfoFields } from '~/types/network'
 
 interface Props {
   data: SlotVizEpoch[],
   initiallyHideVisible?: boolean,
   timestamp?: number
+  networkInfo?: ChainInfoFields
 }
 const props = defineProps<Props>()
 
@@ -95,27 +101,37 @@ watch(props, () => {
 </script>
 <template>
   <div id="slot-viz" class="content">
-    <div class="rows">
-      <div class="row" />
-      <div v-for="row in props.data" :key="row.epoch" class="row">
+    <div class="header-row">
+      <BcTooltip class="info" :text="$t('slotViz.info_tootlip')" :dont-open-permanently="true">
+        <BcLink to="https://kb.beaconcha.in/v2beta/slot-visualization#how-does-it-work" target="_blank" class="link">
+          <FontAwesomeIcon :icon="faInfoCircle" />
+        </BcLink>
+      </BCTooltip>
+      <div class="filter-row">
+        <BcToggleMultiBar v-model="selectedCategories" :icons="icons" />
+      </div>
+      <h1 class="network">
+        {{ networkInfo?.family }} {{ networkInfo?.name }}
+      </h1>
+      <div class="header-right">
+        <slot name="header-right" />
+      </div>
+    </div>
+    <div class="grid">
+      <template v-for="row in props.data" :key="row.epoch">
         <div class="epoch">
           <BcFormatNumber :text="row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch)" />
         </div>
-      </div>
-    </div>
-    <div class="rows">
-      <div class="row">
-        <BcToggleMultiBar v-model="selectedCategories" :icons="icons" />
-      </div>
-      <div v-for="row in props.data" :key="row.epoch" class="row">
-        <SlotVizTile
-          v-for="slot in row.slots"
-          :key="slot.slot"
-          :data="slot"
-          :selected-categories="selectedCategories"
-          :current-slot-id="currentSlotId"
-        />
-      </div>
+        <div class="row">
+          <SlotVizTile
+            v-for="slot in row.slots"
+            :key="slot.slot"
+            :data="slot"
+            :selected-categories="selectedCategories"
+            :current-slot-id="currentSlotId"
+          />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -124,23 +140,76 @@ watch(props, () => {
 @use '~/assets/css/fonts.scss';
 
 .content {
+  position: relative;
   @include main.container;
-  display: flex;
-  gap: var(--padding);
-  overflow-x: auto;
-  overflow-y: hidden;
-  min-height: 180px;
-  padding: var(--padding-large) var(--padding-large) var(--padding-large) 9px;
+
+  .header-row {
+    display: grid;
+    justify-content: center;
+    padding: var(--padding-large) var(--padding-large) var(--padding) 9px;
+    gap: var(--padding);
+    grid-template:
+      [row1-start] "info filter-row network header-right"[row1-end] / max-content max-content 1fr max-content;
+
+    @media (max-width: 800px) {
+      column-gap: var(--padding-small);
+      grid-template:
+        [row1-start] "network network network"[row1-end] [row2-start] "info filter-row header-right"[row2-end] / max-content 1fr max-content;
+    }
+
+    .network {
+      grid-area: network;
+      flex-grow: 1;
+      text-align: center;
+      margin-top: auto;
+      margin-bottom: auto;
+      justify-self: stretch;
+    }
+
+    .info {
+      grid-area: info;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 49px;
+
+      @media (max-width: 800px) {
+        width: 20px;
+      }
+    }
+
+    .header-right {
+      grid-area: header-right;
+      width: 196px;
+      margin-top: auto;
+      margin-bottom: auto;
+
+      @media (max-width: 490px) {
+        width: 87px;
+      }
+    }
+
+    .filter-row {
+      grid-area: filter-row;
+      display: flex;
+      align-items: center;
+    }
+  }
 
   .epoch {
     @include fonts.small_text_bold;
+    margin-top: auto;
+    margin-bottom: auto;
   }
 
-  .rows {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--padding-large);
+  .grid {
+    padding: 0 var(--padding-large) var(--padding-large) 9px;
+    display: grid;
+    gap: var(--padding);
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 180px;
+    grid-template-columns: 49px max-content;
 
     .row {
       display: flex;
@@ -148,10 +217,6 @@ watch(props, () => {
       justify-content: flex-start;
       height: 30px;
       gap: var(--padding);
-
-      &:first-child {
-        height: 46px;
-      }
     }
   }
 
@@ -167,7 +232,7 @@ watch(props, () => {
     height: 100%;
     width: 1px;
     position: absolute;
-    left: -8px;
+    left: -5px;
   }
 }
 </style>
