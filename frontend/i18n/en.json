@@ -150,7 +150,7 @@
   },
   "slotViz": {
     "head": "Head",
-    "info_tootlip": "Slot viz explainer",
+    "info_tootlip": "Slot Viz explanation",
     "filter": {
       "attestation": "If enabled, attestations will be shown.",
       "proposal": "If enabled, blocks will be shown.",
