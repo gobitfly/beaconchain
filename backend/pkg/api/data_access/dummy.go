@@ -203,7 +203,7 @@ func (d *DummyService) RemoveValidatorDashboardPublicId(publicDashboardId t.VDBI
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
+func (d *DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
 	r := struct {
 		Epochs []t.SlotVizEpoch `faker:"slice_len=4"`
 	}{}
