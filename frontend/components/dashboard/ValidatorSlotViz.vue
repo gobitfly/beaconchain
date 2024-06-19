@@ -62,7 +62,7 @@ const selectedLabel = computed(() => {
   if (selectedGroups.value.length === 0 || selectedGroups.value.length === groups.value.length) {
     return $t('dashboard.group.selection.all')
   }
-  return selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)).join(', ')
+  return orderBy(selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)), [g => g.toLowerCase()], 'asc').join(', ')
 })
 
 </script>
