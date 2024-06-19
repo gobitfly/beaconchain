@@ -8,7 +8,7 @@ const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
 
-useBcSeo('login.title')
+useBcSeo('login_and_register.title_login')
 
 const { handleSubmit, errors } = useForm()
 const { value: email } = useField<string>('email', validateAddress)
@@ -16,20 +16,20 @@ const { value: password } = useField<string>('password', validatePassword)
 
 function validateAddress (value: string) : true|string {
   if (!value) {
-    return $t('login.no_email')
+    return $t('login_and_register.no_email')
   }
   if (!REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login.invalid_email')
+    return $t('login_and_register.invalid_email')
   }
   return true
 }
 
 function validatePassword (value: string) : true|string {
   if (!value) {
-    return $t('login.no_password')
+    return $t('login_and_register.no_password')
   }
   if (value.length < 5) {
-    return $t('login.invalid_password')
+    return $t('login_and_register.invalid_password')
   }
   return true
 }
@@ -40,7 +40,7 @@ const onSubmit = handleSubmit(async (values) => {
     await navigateTo('/')
   } catch (error) {
     password.value = ''
-    toast.showError({ summary: $t('login.error_toast_title'), group: $t('login.error_toast_group'), detail: $t('login.error_toast_message') })
+    toast.showError({ summary: $t('login_and_register.error_toast_title'), group: $t('login_and_register.error_toast_group'), detail: $t('login_and_register.error_toast_message') })
   }
 })
 
@@ -54,7 +54,7 @@ const passwordError = ref<string|undefined>(undefined)
     <div class="container">
       <form @submit="onSubmit">
         <div class="input-row">
-          <label for="email" class="label">{{ $t('login.email') }}</label>
+          <label for="email" class="label">{{ $t('login_and_register.email') }}</label>
           <InputText
             id="email"
             v-model="email"
@@ -69,7 +69,7 @@ const passwordError = ref<string|undefined>(undefined)
           </div>
         </div>
         <div class="input-row">
-          <label for="password" class="label">{{ $t('login.password') }}</label>
+          <label for="password" class="label">{{ $t('login_and_register.password') }}</label>
           <InputText
             id="password"
             v-model="password"
@@ -85,12 +85,12 @@ const passwordError = ref<string|undefined>(undefined)
         </div>
         <div class="last-row">
           <div class="account-invitation">
-            {{ $t('login.dont_have_account') }}<br>
+            {{ $t('login_and_register.dont_have_account') }}<br>
             <BcLink to="/register" :target="Target.Internal" class="link">
-              {{ $t('login.signup_here') }}
+              {{ $t('login_and_register.signup_here') }}
             </BcLink>
           </div>
-          <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
+          <Button class="button" type="submit" :label="$t('login_and_register.submit_login')" :disabled="!canSubmit" />
         </div>
       </form>
     </div>
@@ -105,7 +105,7 @@ const passwordError = ref<string|undefined>(undefined)
   width: 300px;
   height: 230px;
   margin: auto;
-  margin-top: 60px;
+  margin-top: 100px;
   margin-bottom: 50px;
   padding: var(--padding);
 
@@ -141,6 +141,9 @@ const passwordError = ref<string|undefined>(undefined)
         position: relative;
         @include fonts.small_text;
         margin-right: auto;
+      }
+      .button {
+        margin-top: auto;
       }
     }
 
