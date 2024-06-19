@@ -21,5 +21,5 @@ export type DashboardValidatorContext = 'dashboard' | 'group' | 'attestation' | 
 
 export type SummaryRow = { details: TimeFrame[], prop: SummaryDetailsEfficiencyCombinedProp, title: string}
 
-export const SummaryTimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
+export const SummaryTimeFrames = ['last_1h', 'last_24h', 'last_7d', 'last_30d', 'all_time'] as const
 export type SummaryTimeFrame = typeof SummaryTimeFrames[number]
