@@ -54,7 +54,7 @@
 
     display: flex;
     flex-direction: column;
-    align-items: start;
+    align-items: flex-start;
     justify-content: center;
 
     border-width: 1px 1px 1px 0;
