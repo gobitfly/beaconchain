@@ -17,7 +17,7 @@ export function useValidatorSlotVizStore () {
   async function refreshSlotViz (dashboardKey: DashboardKey, groups?: number[]) {
     let query
     if (groups?.length) {
-      query = { groups: groups.join(',') }
+      query = { group_ids: groups.join(',') }
     }
     const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(API_PATH.DASHBOARD_SLOTVIZ, { headers: {}, query }, { dashboardKey: dashboardKey || 'MQ' })
 
