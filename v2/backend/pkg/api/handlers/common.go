@@ -314,11 +314,16 @@ func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
 func (v *validationError) checkExistingGroupId(param string) uint64 {
-	id := v.checkGroupId(param, forbidEmpty)
-	if id < 0 {
-		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
+	return v.checkUint(param, "group_id")
+}
+
+func (v *validationError) checkGroupIdList(groupIds string) []uint64 {
+	groupIdsSlice := strings.Split(groupIds, ",")
+	var ids []uint64
+	for _, id := range groupIdsSlice {
+		ids = append(ids, v.checkUint(id, "group_ids"))
 	}
-	return uint64(id)
+	return ids
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
