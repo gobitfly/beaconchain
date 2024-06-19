@@ -30,7 +30,7 @@ export enum ChainIDs {
   Chiado = 10200
 }
 
-interface ChainInfoFields {
+export interface ChainInfoFields {
   name: string,
   description: string,
   family: ChainFamily,

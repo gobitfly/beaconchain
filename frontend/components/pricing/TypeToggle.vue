@@ -21,7 +21,6 @@
 .type-toggle-container {
   width: 280px;
   height: 41px;
-  margin-bottom: 37px;
   display: flex;
   align-items: center;
   user-select: none;
