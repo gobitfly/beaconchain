@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -467,65 +469,62 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
-	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
-	query := `SELECT
-			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-			COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-			COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward,
-			COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward,
-			COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-			COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-			COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-			COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-			COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward,
-			COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
-			COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-			COALESCE(e.sync_executed, 0) AS sync_executed,
-			COALESCE(e.sync_rewards, 0) AS sync_rewards,
-			e.slashed_by IS NOT NULL AS slashed_in_epoch,
-			COALESCE(s.slashed_amount, 0) AS slashed_amount,
-			COALESCE(e.slasher_reward, 0) AS slasher_reward,
-			COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-			COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
-		`
-
-	var rows []*queryResult
+	// Build the query
+	ds := goqu.Dialect("postgres").Select(
+		goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
+		goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
+		goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
+		goqu.L("COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward"),
+		goqu.L("COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward"),
+		goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
+		goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
+		goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
+		goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+		goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
+		goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
+		goqu.L("COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward"),
+		goqu.L("COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward"),
+		goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
+		goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
+		goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+		goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
+		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"),
+		goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
+		goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
+		goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
-		whereClause := `
-		FROM validator_dashboard_data_epoch e
-		LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-		LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-		LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-		LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-		WHERE e.validator_index = any($1) AND e.epoch = $2
-		`
-		query = fmt.Sprintf("%s %s", query, whereClause)
-		err := d.alloyReader.Select(&rows, query, pq.Array(dashboardId.Validators), epoch)
-		if err != nil {
-			log.Error(err, "error while getting validator dashboard group rewards", 0)
-			return nil, err
-		}
+		ds = ds.
+			From(goqu.L("validator_dashboard_data_epoch AS e")).
+			Where(goqu.L("e.validator_index = ANY(?) AND e.epoch = ?", pq.Array(dashboardId.Validators), epoch))
 	} else { // handle the case when we have a dashboard id and an optional group id
-		joinAndWhereClause := `
-			FROM users_val_dashboards_validators v
-			INNER JOIN validator_dashboard_data_epoch e ON e.validator_index = v.validator_index
-			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			WHERE (v.dashboard_id = $1 AND (v.group_id = $2 OR $2 = -1) AND e.epoch = $3)
-		`
-		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
-		err := d.alloyReader.Select(&rows, query, dashboardId.Id, groupId, epoch)
-		if err != nil {
-			log.Error(err, "error while getting validator dashboard group rewards", 0)
-			return nil, err
+		ds = ds.
+			From(goqu.L("users_val_dashboards_validators AS v")).
+			InnerJoin(goqu.L("validator_dashboard_data_epoch AS e"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ? AND e.epoch = ?", dashboardId.Id, epoch))
+
+		if groupId != t.AllGroups {
+			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
 		}
+	}
+
+	ds = ds.
+		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
+		LeftJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*queryResult
+	err = d.alloyReader.Select(&rows, query, args...)
+	if err != nil {
+		log.Error(err, "error while getting validator dashboard group rewards", 0)
+		return nil, err
 	}
 
 	gWei := decimal.NewFromInt(1e9)
