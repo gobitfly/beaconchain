@@ -35,7 +35,5 @@ export default function ({ name, params }: RouteLocationNormalizedLoaded) {
       )
     case 'mobile':
       return navigateTo(`${v1Domain}/mobile`, { external: true })
-    case 'register':
-      return navigateTo(`${v1Domain}/register`, { external: true })
   }
 }

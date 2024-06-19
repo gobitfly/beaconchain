@@ -505,20 +505,30 @@
       }
     }
   },
-  "login": {
-    "password": "Password",
-    "submit": "Login",
-    "title": "Login",
+  "login_and_register": {
+    "title_login": "Log in",
+    "title_register": "Sign up",
+    "submit_login": "Log in",
+    "submit_register": "Sign up",
     "email": "Email address",
-    "dont_have_account": "You do not have an account?",
-    "signup_here": "Click here to sign up.",
-    "invalid_email": "Please enter a valid email address.",
-    "invalid_password": "Your password must contain at least 5 characters.",
+    "password": "Password",
+    "choose_password": "Choose a password",
+    "confirm_password": "Confirm your password",
     "no_email": "Please enter your email address.",
+    "invalid_email": "Please enter a valid email address.",
     "no_password": "Please enter your password.",
+    "invalid_password": "Your password must contain at least 5 characters.",
+    "retype_password": "Please type your password again",
+    "passwords_dont_match": "The same password must be typed twice.",
+    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "not_agreed": "Please accept the contracts.",
     "error_toast_title": "Error",
     "error_toast_group": "Cannot log in",
-    "error_toast_message": "your email or your password is unknown."
+    "error_toast_message": "your email or your password is unknown.",
+    "dont_have_account": "You do not have an account?",
+    "signup_here": "Click here to sign up.",
+    "already_have_account": "You already have an account?",
+    "login_here": "Click here to log in."
   },
   "header": {
     "current_slot": "Current Slot",
