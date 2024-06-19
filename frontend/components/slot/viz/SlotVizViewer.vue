@@ -184,7 +184,7 @@ watch(props, () => {
       margin-top: auto;
       margin-bottom: auto;
 
-      @media (max-width: 600px) {
+      @media (max-width: 490px) {
         width: 87px;
       }
     }

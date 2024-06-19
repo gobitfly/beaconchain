@@ -1,5 +1,6 @@
 <script setup lang="ts">
 
+import { orderBy } from 'lodash-es'
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
@@ -33,7 +34,7 @@ const groups = computed(() => {
   if (!overview.value?.groups) {
     return []
   }
-  return overview.value.groups
+  return orderBy(overview.value.groups, [g => g.name.toLowerCase()], 'asc')
 })
 
 const selectAll = () => {
@@ -81,6 +82,12 @@ const selectedLabel = computed(() => {
         :options="groups"
         option-label="name"
         option-value="id"
+        panel-style-class="my-fucking-style"
+        overlay-class="my-fucking-overlay"
+        panel-class="my-fucking-panel"
+        :panel-props="{
+          class:'my-fucking-panel-props-class'
+        }"
         :placeholder="$t('dashboard.group.selection.all')"
         class="group-selection"
       >
