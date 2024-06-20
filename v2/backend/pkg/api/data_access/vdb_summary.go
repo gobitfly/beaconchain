@@ -394,12 +394,40 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
-	/* ret := &t.VDBGroupSummaryData{}
-	wg := errgroup.Group{}
+	// TODO: implement data retrieval for the following new field
+	// SyncCommitteeCount
+	// TotalMissedRewards
+
+	ret := &t.VDBGroupSummaryData{}
 
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
 		groupId = t.AllGroups
+	}
+
+	table := ""
+	slashedByCountTable := ""
+	days := 0
+
+	switch period {
+	case enums.Last24h:
+		table = "validator_dashboard_data_rolling_daily"
+		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
+		days = 1
+	case enums.Last7d:
+		table = "validator_dashboard_data_rolling_weekly"
+		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
+		days = 7
+	case enums.Last30d:
+		table = "validator_dashboard_data_rolling_monthly"
+		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
+		days = 30
+	case enums.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
+		days = -1
+	default:
+		return nil, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
 	query := `select
@@ -532,187 +560,126 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	retrieveAndProcessData := func(query, table, slashedByCountTable string, days int, dashboardId t.VDBIdPrimary, groupId int64, validators []t.VDBValidator) (*t.VDBGroupSummaryColumn, error) {
-		data := t.VDBGroupSummaryColumn{}
-		var rows []*queryResult
-		var err error
+	var rows []*queryResult
+	var err error
 
-		if len(validators) > 0 {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
-		} else {
-			err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId, groupId)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		totalAttestationRewards := int64(0)
-		totalIdealAttestationRewards := int64(0)
-		totalBlockChance := float64(0)
-		totalInclusionDelaySum := int64(0)
-		totalInclusionDelayDivisor := int64(0)
-		totalSyncExpected := float64(0)
-
-		validatorArr := make([]t.VDBValidator, 0)
-		startEpoch := math.MaxUint32
-		for _, row := range rows {
-			if row.EpochStart < startEpoch { // set the start epoch for querying the EL APR
-				startEpoch = row.EpochStart
-			}
-			validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
-			totalAttestationRewards += row.AttestationReward
-			totalIdealAttestationRewards += row.AttestationIdealReward
-
-			data.AttestationCount.Success += uint64(row.AttestationsExecuted)
-			data.AttestationCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsExecuted)
-
-			data.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
-			data.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
-
-			data.AttestationsSource.StatusCount.Success += uint64(row.AttestationSourceExecuted)
-			data.AttestationsSource.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
-
-			data.AttestationsTarget.StatusCount.Success += uint64(row.AttestationTargetExecuted)
-			data.AttestationsTarget.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
-
-			if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
-				row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
-			}
-			data.Proposals.StatusCount.Success += uint64(row.BlocksProposed)
-			data.Proposals.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
-
-			if row.BlocksScheduled > 0 {
-				if data.Proposals.Validators == nil {
-					data.Proposals.Validators = make([]t.VDBValidator, 0, 10)
-				}
-				data.Proposals.Validators = append(data.Proposals.Validators, t.VDBValidator(row.ValidatorIndex))
-			}
-
-			data.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
-			data.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
-
-			if row.SyncScheduled > 0 {
-				if data.SyncCommittee.Validators == nil {
-					data.SyncCommittee.Validators = make([]t.VDBValidator, 0, 10)
-				}
-				data.SyncCommittee.Validators = append(data.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
-			}
-
-			if row.SlashedInPeriod {
-				data.Slashing.StatusCount.Failed++
-				data.Slashing.Validators = append(data.Slashing.Validators, t.VDBValidator(row.ValidatorIndex))
-			}
-			data.Slashing.StatusCount.Success += uint64(row.SlashedAmount)
-
-			totalBlockChance += row.BlockChance
-			totalInclusionDelaySum += row.InclusionDelaySum
-			totalSyncExpected += row.SyncCommitteesExpected
-
-			if row.InclusionDelaySum > 0 {
-				totalInclusionDelayDivisor += row.AttestationsScheduled
-			}
-		}
-
-		data.Income.El, data.Apr.El, data.Income.Cl, data.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
-		if err != nil {
-			return nil, err
-		}
-
-		data.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-		if data.AttestationEfficiency < 0 || math.IsNaN(data.AttestationEfficiency) {
-			data.AttestationEfficiency = 0
-		}
-
-		luckDays := float64(days)
-		if days == -1 {
-			luckDays = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours() / 24
-			if luckDays == 0 {
-				luckDays = 1
-			}
-		}
-
-		if totalBlockChance > 0 {
-			data.Luck.Proposal.Percent = (float64(data.Proposals.StatusCount.Failed) + float64(data.Proposals.StatusCount.Success)) / totalBlockChance * 100
-
-			// calculate the average time it takes for the set of validators to propose a single block on average
-			data.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * 24 * float64(time.Hour))
-		} else {
-			data.Luck.Proposal.Percent = 0
-		}
-
-		if totalSyncExpected == 0 {
-			data.Luck.Sync.Percent = 0
-		} else {
-			totalSyncSlotDuties := float64(data.SyncCommittee.StatusCount.Failed) + float64(data.SyncCommittee.StatusCount.Success)
-			slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
-			syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
-			data.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
-
-			// calculate the average time it takes for the set of validators to be elected into a sync committee on average
-			data.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * 24 * float64(time.Hour))
-		}
-
-		if totalInclusionDelayDivisor > 0 {
-			data.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
-		} else {
-			data.AttestationAvgInclDist = 0
-		}
-
-		return &data, nil
+	if len(validators) > 0 {
+		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
+	} else {
+		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId, groupId)
 	}
-
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query,
-			"validator_dashboard_data_rolling_daily",
-			"validator_dashboard_data_rolling_daily_slashedby_count",
-			1, dashboardId.Id, groupId, validators)
-		if err != nil {
-			return err
-		}
-		ret.Last24h = *data
-		return nil
-	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query,
-			"validator_dashboard_data_rolling_weekly",
-			"validator_dashboard_data_rolling_weekly_slashedby_count",
-			7, dashboardId.Id, groupId, validators)
-		if err != nil {
-			return err
-		}
-		ret.Last7d = *data
-		return nil
-	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query,
-			"validator_dashboard_data_rolling_monthly",
-			"validator_dashboard_data_rolling_monthly_slashedby_count",
-			30, dashboardId.Id, groupId, validators)
-		if err != nil {
-			return err
-		}
-		ret.Last30d = *data
-		return nil
-	})
-	wg.Go(func() error {
-		data, err := retrieveAndProcessData(query,
-			"validator_dashboard_data_rolling_total",
-			"validator_dashboard_data_rolling_total_slashedby_count",
-			-1, dashboardId.Id, groupId, validators)
-		if err != nil {
-			return err
-		}
-		ret.AllTime = *data
-		return nil
-	})
-	err := wg.Wait()
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+		return nil, err
 	}
-	return ret, nil */
-	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId, period)
+
+	totalAttestationRewards := int64(0)
+	totalIdealAttestationRewards := int64(0)
+	totalBlockChance := float64(0)
+	totalInclusionDelaySum := int64(0)
+	totalInclusionDelayDivisor := int64(0)
+	totalSyncExpected := float64(0)
+	totalProposals := uint32(0)
+
+	validatorArr := make([]t.VDBValidator, 0)
+	startEpoch := math.MaxUint32
+	for _, row := range rows {
+		if row.EpochStart < startEpoch { // set the start epoch for querying the EL APR
+			startEpoch = row.EpochStart
+		}
+		validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
+		totalAttestationRewards += row.AttestationReward
+		totalIdealAttestationRewards += row.AttestationIdealReward
+
+		ret.AttestationsHead.Success += uint64(row.AttestationHeadExecuted)
+		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+
+		ret.AttestationsSource.Success += uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+
+		ret.AttestationsTarget.Success += uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+
+		if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
+			row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
+		}
+
+		totalProposals += row.BlocksScheduled
+		if row.BlocksScheduled > 0 {
+			ret.ProposalValidators = append(ret.ProposalValidators, t.VDBValidator(row.ValidatorIndex))
+		}
+
+		ret.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
+		ret.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
+
+		if row.SyncScheduled > 0 {
+			if ret.SyncCommittee.Validators == nil {
+				ret.SyncCommittee.Validators = make([]t.VDBValidator, 0, 10)
+			}
+			ret.SyncCommittee.Validators = append(ret.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
+		}
+
+		if row.SlashedInPeriod {
+			ret.Slashings.StatusCount.Failed++
+			ret.Slashings.Validators = append(ret.Slashings.Validators, t.VDBValidator(row.ValidatorIndex))
+		}
+		ret.Slashings.StatusCount.Success += uint64(row.SlashedAmount)
+
+		totalBlockChance += row.BlockChance
+		totalInclusionDelaySum += row.InclusionDelaySum
+		totalSyncExpected += row.SyncCommitteesExpected
+
+		if row.InclusionDelaySum > 0 {
+			totalInclusionDelayDivisor += row.AttestationsScheduled
+		}
+	}
+
+	ret.Income.El, ret.Apr.El, ret.Income.Cl, ret.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
+	if err != nil {
+		return nil, err
+	}
+
+	ret.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
+	if ret.AttestationEfficiency < 0 || math.IsNaN(ret.AttestationEfficiency) {
+		ret.AttestationEfficiency = 0
+	}
+
+	luckDays := float64(days)
+	if days == -1 {
+		luckDays = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours() / 24
+		if luckDays == 0 {
+			luckDays = 1
+		}
+	}
+
+	if totalBlockChance > 0 {
+		ret.Luck.Proposal.Percent = (float64(totalProposals)) / totalBlockChance * 100
+
+		// calculate the average time it takes for the set of validators to propose a single block on average
+		ret.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * 24 * float64(time.Hour))
+	} else {
+		ret.Luck.Proposal.Percent = 0
+	}
+
+	if totalSyncExpected == 0 {
+		ret.Luck.Sync.Percent = 0
+	} else {
+		totalSyncSlotDuties := float64(ret.SyncCommittee.StatusCount.Failed) + float64(ret.SyncCommittee.StatusCount.Success)
+		slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
+		syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
+		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
+
+		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
+		ret.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * 24 * float64(time.Hour))
+	}
+
+	if totalInclusionDelayDivisor > 0 {
+		ret.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
+	} else {
+		ret.AttestationAvgInclDist = 0
+	}
+
+	return ret, nil
 }
 
 func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
