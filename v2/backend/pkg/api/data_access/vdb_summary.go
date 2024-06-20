@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -16,11 +13,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
-	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// TODO: implement sorting & paging
+func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+	/* // TODO: implement sorting & paging
 	ret := make(map[int64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
 
@@ -88,7 +84,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 		if len(validatorList) > 0 {
 			query := `select $1::smallint AS group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
-				select 
+				select
 					SUM(attestations_reward)::decimal AS attestations_reward,
 					SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward,
 					SUM(blocks_proposed)::decimal AS blocks_proposed,
@@ -112,7 +108,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 			queryParams = append(queryParams, dashboardId)
 			query := fmt.Sprintf(`select group_id, attestations_reward, attestations_ideal_reward, blocks_proposed, blocks_scheduled, sync_executed, sync_scheduled FROM (
-				select 
+				select
 					%[1]s
 					SUM(attestations_reward)::decimal AS attestations_reward,
 					SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward,
@@ -120,7 +116,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 					SUM(blocks_scheduled)::decimal AS blocks_scheduled,
 					SUM(sync_executed)::decimal AS sync_executed,
 					SUM(sync_scheduled)::decimal AS sync_scheduled
-				from users_val_dashboards_validators 
+				from users_val_dashboards_validators
 				join %[2]s on %[2]s.validator_index = users_val_dashboards_validators.validator_index
 				where dashboard_id = $%[3]d
 				group by 1
@@ -393,11 +389,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 
 	paging.TotalCount = uint64(len(retArr))
 
-	return retArr, &paging, nil
+	return retArr, &paging, nil */
+	return d.dummy.GetValidatorDashboardSummary(dashboardId, period, cursor, colSort, search, limit)
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
-	ret := &t.VDBGroupSummaryData{}
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
+	/* ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
 	if dashboardId.AggregateGroups {
@@ -603,10 +600,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			}
 
 			if row.SlashedInPeriod {
-				data.Slashed.StatusCount.Failed++
-				data.Slashed.Validators = append(data.Slashed.Validators, t.VDBValidator(row.ValidatorIndex))
+				data.Slashing.StatusCount.Failed++
+				data.Slashing.Validators = append(data.Slashing.Validators, t.VDBValidator(row.ValidatorIndex))
 			}
-			data.Slashed.StatusCount.Success += uint64(row.SlashedAmount)
+			data.Slashing.StatusCount.Success += uint64(row.SlashedAmount)
 
 			totalBlockChance += row.BlockChance
 			totalInclusionDelaySum += row.InclusionDelaySum
@@ -714,7 +711,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
-	return ret, nil
+	return ret, nil */
+	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId, period)
 }
 
 func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
