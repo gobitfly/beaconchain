@@ -1,173 +1,215 @@
 <script lang="ts" setup>
-type Permutation = (0|1|2)[]
+type Channel = 0 | 1 | 2
+const R: Channel = 0
+const G: Channel = 1
+const B: Channel = 2
+type Order = Channel[]
+const contributionToI = [0.3, 0.6, 0.1]
 
+enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormI }
+
+/** Classic color space in two variants (depending on the parameter given to the constructor) :
+ *  - either the values are between 0-1 and linear with respect to light intensity,
+ *  - or the values are between 0-255 and include a gamma (the standard way to store images). */
 class RGB {
-  chans: number[]
+  readonly space: CS
+  readonly chans: number[]
 
-  protected format: 1 | 8
-
-  constructor (from: RGB | undefined) {
-    if (!from) {
-      this.chans = [0, 0, 0]
-      this.format = 1
-      return
-    }
-    this.chans = [...from.chans]
-    this.format = from.format
+  /** @param valuesAreLinear if `true` is given, the values will be between 0-1 and linear with respect to light intensity,
+   *  otherwise the values will be between 0-255 and include a gamma (the standard way to store images). */
+  constructor (valuesAreLinear: boolean) {
+    this.space = valuesAreLinear ? CS.RGBlinear : CS.RGBgamma
+    this.chans = [0, 0, 0]
   }
 
-  fillRGB1fromRGB8 (rgb8: number[] | RGB) {
-    if (!Array.isArray(rgb8)) {
-      rgb8 = rgb8.chans
+  /** Copy color from another RGB or Eye object, or even from a regular array of 3 values.
+   * Color spaces are automatically converted if they are different.
+   * However, when an array of numbers is given, its values are expected to be compatible with this instance of RGB (either linear or gamma-shaped). */
+  import (from: number[] | RGB | Eye) : void {
+    if (Array.isArray(from) || from.space === this.space) {
+      if (!Array.isArray(from)) {
+        from = (from as RGB).chans
+      }
+      for (let i = R; i < B; i++) {
+        this.chans[i] = from[i]
+      }
+    } else {
+      switch (from.space) {
+        case CS.RGBlinear :
+          for (let i = R; i < B; i++) {
+            this.chans[i] = Math.round(((from as RGB).chans[i] ** 0.454545) * 255)
+          }
+          break
+        case CS.RGBgamma :
+          for (let i = R; i < B; i++) {
+            this.chans[i] = ((from as RGB).chans[i] / 255) ** 2.2
+          }
+          break
+        case CS.EyePercI :
+        case CS.EyeNormI :
+          from.export(this)
+          break
+      }
     }
-    this.chans[0] = (rgb8[0] / 255) ** 2.2
-    this.chans[1] = (rgb8[1] / 255) ** 2.2
-    this.chans[2] = (rgb8[2] / 255) ** 2.2
-    this.format = 1
   }
 
-  fillRGB8fromRGB1 (rgb1: number[] | RGB) {
-    if (!Array.isArray(rgb1)) {
-      rgb1 = rgb1.chans
-    }
-    this.chans[0] = (rgb1[0] ** 0.454545) * 255
-    this.chans[1] = (rgb1[1] ** 0.454545) * 255
-    this.chans[2] = (rgb1[2] ** 0.454545) * 255
-    this.format = 8
+  /** Copy the color of this object to another RGB or Eye object.
+   * Color spaces are automatically converted if they are different. */
+  export (to: RGB | Eye) : void {
+    to.import(this)
   }
 
-  limit () {
-    limit(this.chans, 0, (this.format === 1) ? 1 : 255)
+  limit () : void {
+    const max = (this.space === CS.RGBlinear) ? 1 : 255
+    for (let i = R; i < B; i++) {
+      if (this.chans[i] < 0) { this.chans[i] = 0 }
+      if (this.chans[i] > max) { this.chans[i] = max }
+    }
   }
 }
 
-/** color space supposedly close to human perception */
+/** Color space supposedly close to human perception, in two variants (depending on the parameter given to the constructor) :
+ * - either the intensity of the light is stored in `i` and follows what a human eye perceives,
+ * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
-  /** Perceived wavelength indicating where the color is on the rainbow. Key values: 0 is pure red. 1/3 is pure green. 2/3 is pure blue. 1 is pure red again.
-   * Important: After changing the value of `w` or `p`, you must always set `i` or `j`. */
+  readonly space: CS
+  /** Perceived wavelength indicating where the color is on the rainbow. Key values: 0 is pure red. 1/3 is pure green. 2/3 is pure blue. 1 is pure red again. */
   w: number
-  /** Perceived purity indicating how much light not contributing to the perceived wavelength is present.
-   * Important: After changing the value of `w` or `p`, you must always set `i` or `j`. */
+  /** Perceived purity indicating how much light not contributing to the perceived wavelength is present. */
   p: number
   /** Perceived intensity of the light, so not normalized (given `w` and `p`, the maximum perceived intensity that can be reached with `w` and `p` is often less than 1).
-   * Changing this value updates `j` accordingly. */
-  get i () : number { return this.I }
+   * Property `iMax` tells the maximum value that `i` can take for the current values of `w` and `p`.
+   * `i` is considered only if `true` has been passed to the constructor, otherwise its value is undefined and giving it a value has no effect. */
+  i: number
   /** Normalized intensity of the light, any value between 0 and 1 is possible.
-   * Changing this value updates `i` accordingly. */
-  get j () : number { return this.J }
+   * `j` is considered only if `false` has been passed to the constructor, otherwise its value is undefined and giving it a value has no effect. */
+  j: number
   /** Maximum value that `i` can have under the constraint set by `w` and `p`.
-   * Updated when they change. */
-  get iMax () : number { return this.Imax }
-
-  /** Read `iMax` to know the maximum value that `i` can take for the current values of `w` and `p`. */
-  set i (val: number) {
-    this.I = val
-  }
-
-  set j (val: number) {
-    this.J = val
-  }
-
-  static channelIcontribution = [0.3, 0.6, 0.1]
-  private I: number
-  private J: number
-  private Imax: number
-
-  fillFromRGB1 (rgb1: RGB) {
-    const rgb = rgb1.chans
-    const [a, b, c] = order(rgb)
-    if (rgb[c] <= 0) {
-      // the highest channel is 0 so the color is black
-      this.w = this.p = this.I = this.J = this.Imax = 0
-      return
-    } else if (rgb[a] >= 1) {
-      // the lowest channel is 1 so the color is white
-      this.w = this.p = 0
-      this.I = this.J = this.Imax = 1
-      return
+   * This value is kept up-to-date automatically. */
+  get iMax () : number {
+    if (this.Imax.wOfValue !== this.w || this.Imax.pOfValue !== this.p) {
+      this.snapshotImax(this.i / rgb[z])
     }
-    const sumOfDominants = rgb[b] + rgb[c] // sum of the two channels surrounding the color
-    switch (a) { // a is the channel with the lowest value
-      case 0 : // the dominant channels are G and B
-        this.w = (1 + rgb[2] / sumOfDominants) / 3
-        break
-      case 1 : // the dominant channels are R and B
-        this.w = (2 + rgb[0] / sumOfDominants) / 3
-        break
-      case 2 : // the dominant channels are R and G
-        this.w = (0 + rgb[1] / sumOfDominants) / 3
-        break
-    }
-    this.p = 1 - (2 * rgb[a]) / sumOfDominants
-    this.J = rgb[c] // due to our definitions of w and p, this value turns out to be the ratio between I (no matter how I is calculated) and the maximum I that could be reached with w and p constant
-    const [x, y, z] = order([Eye.channelIcontribution[0] * rgb[0], Eye.channelIcontribution[1] * rgb[1], Eye.channelIcontribution[2] * rgb[2]])
-    this.I = Eye.channelIcontribution[y] * rgb[y] + Eye.channelIcontribution[z] * rgb[z]
-    this.Imax = Eye.channelIcontribution[y] * rgb[y] / rgb[z] + Eye.channelIcontribution[z]
+    return this.Imax.value
   }
 
-  exportToRGB1 () : RGB {
-    if (spi.s <= 1 / 3) {
-      // the dominant channels are R and G
-      const factor = 1 / 
-      const G = 
-      return [
-        ,
-        ,
-      ]
-    } else
-      if (spi.s <= 2 / 3) {
-        // the dominant channels are G and B
-        const factor = 1 / 
-        const G = 
-        return [
-          ,
-          ,
-        ]
-      } else {
-        // the dominant channels are R and B
-        const factor = 1 / 
-        const G = 
-        return [
-          ,
-          ,
-        ]
+  private Imax = {
+    value: 0,
+    wOfValue: 0,
+    pOfValue: 0
+  }
+
+  protected static rgbLinear = new RGB(true)
+
+  import (from: RGB | Eye) : void {
+    if (from.space === CS.RGBgamma) {
+      Eye.rgbLinear.import(from as RGB)
+      from = Eye.rgbLinear
+    }
+    if (from.space === CS.RGBlinear) {
+      const rgb = (from as RGB).chans
+      const [a, b, c] = Eye.orderRGB(rgb)
+      if (rgb[c] <= 0) {
+        // the highest channel has a value of 0 so the color is black
+        this.w = this.p = this.i = this.j = 0
+        this.snapshotImax(0)
+        return
+      } else if (rgb[a] >= 1) {
+        // the lowest channel has a value of 1 so the color is white
+        this.w = this.p = 0
+        this.i = this.j = 1
+        this.snapshotImax(1)
+        return
       }
+      const sumOfDominants = rgb[b] + rgb[c] // sum of the two channels surrounding the color
+      const { anchor, left } = Eye.spectralPosition(a)
+      this.w = (rgb[anchor] / sumOfDominants + left) / 3
+      this.p = 1 - (2 * rgb[a]) / sumOfDominants
+      this.j = rgb[c] // due to our definitions of w and p, this value turns out to be the ratio between I (no matter how I is calculated) and the maximum I that could be reached with w and p constant
+      const [, y, z] = Eye.orderRGB([contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]])
+      this.i = contributionToI[y] * rgb[y] + contributionToI[z] * rgb[z]
+      this.snapshotImax(this.i / rgb[z])
+      return
+    }
+    from = from as Eye // for the static checker
+    if (from.space === this.space) {
+      this.w = from.w
+      this.p = from.p
+      this.i = from.i
+      this.j = from.j
+      this.snapshotImax(from.Imax.value)
+    } else {
+      // either we convert  EyePercI into EyeNormI  or  EyeNormI into EyePercI
+    }
   }
 
-  constructor () {
-    this.w = this.p = this.I = this.J = this.Imax = 0
+  export (to: RGB | Eye) : void {
+    if (to.space === CS.EyePercI || to.space === CS.EyeNormI) {
+      to.import(this)
+    } else {
+      to = to as RGB // for the static checker
+      if (to.space === CS.RGBgamma) {
+        this.export(Eye.rgbLinear)
+        to.import(Eye.rgbLinear)
+      } else {
+        // convert Eye into RGBlinear
+      }
+    }
   }
-}
 
-function order (p : number[]) : Permutation {
-  let a = 0 as Permutation[number]
-  let b = 1 as Permutation[number]
-  const c = 2 as Permutation[number]
-  if (p[b] < p[a]) { [a, b] = [b, a] }
-  if (p[c] < p[a]) { return [c, a, b] }
-  if (p[c] < p[b]) { return [a, c, b] }
-  return [a, b, c]
-}
+  protected snapshotImax (iMax: number) : void {
+    this.Imax.value = iMax
+    this.Imax.pOfValue = this.p
+    this.Imax.wOfValue = this.w
+  }
 
-function limit (p : number[], min: number, max: number) {
-  for (let i = 0; i < 3; i++) {
-    if (p[i] < min) { p[i] = min }
-    if (p[i] > max) { p[i] = max }
+  protected static orderRGB (rgb : number[]) : Order {
+    if (rgb[R] < rgb[G]) {
+      if (rgb[G] < rgb[B]) {
+        return [R, G, B]
+      }
+      return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
+    }
+    if (rgb[R] < rgb[B]) {
+      return [G, R, B]
+    }
+    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R]
+  }
+
+  protected static spectralPosition (weakestChan: Channel) {
+    switch (weakestChan) {
+      case R : // the dominant channels are G and B
+        return { anchor: B, left: 1 }
+      case G : // the dominant channels are B and R
+        return { anchor: R, left: 2 }
+      case B : // the dominant channels are R and G
+        return { anchor: G, left: 0 }
+    }
+    // impossible but the static checker believes it can happen:
+    return { anchor: R, left: 0 }
+  }
+
+  protected static wToOrder (w : number) : Order {
+    if (w < 1 / 3) {
+      return (w < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
+    }
+    if (w < 2 / 3) {
+      return (w < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
+    }
+    return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
+  }
+
+  /** @param intensityAsPerceived if `true` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives,
+   * otherwise it will be stored in `j` and normalized so it can take any value between 0 and 1. */
+  constructor (intensityAsPerceived: boolean) {
+    this.space = intensityAsPerceived ? CS.EyePercI : CS.EyeNormI
+    this.w = this.p = this.i = this.j = 0
   }
 }
 </script>
 
 <template>
-  <div>
-    {{ order([33,55,88]) }} - 0,1,2 <br>
-    {{ order([55,33,88]) }} - 1,0,2 <br>
-    .
-    {{ order([33,88,55]) }} - 0,2,1 <br>
-    {{ order([55,88,33]) }} - 2,0,1 <br>
-    .
-    {{ order([88,33,55]) }} - 1,2,0 <br>
-    {{ order([88,55,33]) }} - 2,1,0 <br>
-  </div>
+  <div />
 </template>
 
 <style lang="scss" scoped>
