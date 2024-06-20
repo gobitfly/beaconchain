@@ -726,7 +726,11 @@
       "new": "New password",
       "confirm": "Confirm new password"
     },
-    "delete_account": "Delete Account"
+    "delete_account": {
+      "title": "Delete Account",
+      "warning": "Warning! You will not be able to recover your account!",
+      "button": "Delete My Account"
+    }
   },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",
