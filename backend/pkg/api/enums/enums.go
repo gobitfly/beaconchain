@@ -25,11 +25,11 @@ var _ EnumFactory[VDBSummaryColumn] = VDBSummaryColumn(0)
 
 const (
 	VDBSummaryGroup VDBSummaryColumn = iota
-	VDBSummaryEfficiencyDay
-	VDBSummaryEfficiencyWeek
-	VDBSummaryEfficiencyMonth
-	VDBSummaryEfficiencyTotal
-	VDBSummaryValidators // Sort by count, not by index
+	VDBSummaryValidators
+	VDBSummaryEfficiency
+	VDBSummaryAttestations
+	VDBSummaryProposals
+	VDBSummaryReward
 )
 
 func (c VDBSummaryColumn) Int() int {
@@ -40,35 +40,35 @@ func (VDBSummaryColumn) NewFromString(s string) VDBSummaryColumn {
 	switch s {
 	case "group_id":
 		return VDBSummaryGroup
-	case "efficiency_last_24h":
-		return VDBSummaryEfficiencyDay
-	case "efficiency_last_7d":
-		return VDBSummaryEfficiencyWeek
-	case "efficiency_last_30d":
-		return VDBSummaryEfficiencyMonth
-	case "efficiency_all_time":
-		return VDBSummaryEfficiencyTotal
 	case "validators":
 		return VDBSummaryValidators
+	case "efficiency":
+		return VDBSummaryEfficiency
+	case "attestations":
+		return VDBSummaryAttestations
+	case "proposals":
+		return VDBSummaryProposals
+	case "reward":
+		return VDBSummaryReward
 	default:
 		return VDBSummaryColumn(-1)
 	}
 }
 
 var VDBSummaryColumns = struct {
-	Group           VDBSummaryColumn
-	EfficiencyDay   VDBSummaryColumn
-	EfficiencyWeek  VDBSummaryColumn
-	EfficiencyMonth VDBSummaryColumn
-	EfficiencyTotal VDBSummaryColumn
-	Validators      VDBSummaryColumn
+	Group        VDBSummaryColumn
+	Validators   VDBSummaryColumn
+	Efficiency   VDBSummaryColumn
+	Attestations VDBSummaryColumn
+	Proposals    VDBSummaryColumn
+	Reward       VDBSummaryColumn
 }{
 	VDBSummaryGroup,
-	VDBSummaryEfficiencyDay,
-	VDBSummaryEfficiencyWeek,
-	VDBSummaryEfficiencyMonth,
-	VDBSummaryEfficiencyTotal,
 	VDBSummaryValidators,
+	VDBSummaryEfficiency,
+	VDBSummaryAttestations,
+	VDBSummaryProposals,
+	VDBSummaryReward,
 }
 
 // ----------------
