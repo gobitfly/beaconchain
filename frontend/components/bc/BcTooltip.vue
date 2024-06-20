@@ -11,6 +11,8 @@ interface Props {
   fitContent?: boolean,
   renderTextAsHtml?: boolean,
   scrollContainer?: string // query selector for scrollable parent container
+  dontOpenPermanently?: boolean
+  hoverDelay?: number
 }
 
 const props = defineProps<Props>()
@@ -82,15 +84,23 @@ const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
   } else if (canBeOpened.value) {
-    doSelect(bcTooltipOwner.value)
+    if (props.dontOpenPermanently) {
+      instantHover(true)
+    } else {
+      doSelect(bcTooltipOwner.value)
+    }
     setPosition()
   }
 }
 
 const onHover = () => {
   if (canBeOpened.value && !selected.value) {
-    instantHover(true)
-    setPosition()
+    if (props.hoverDelay) {
+      bounceHover(true, false, false, props.hoverDelay)
+    } else {
+      instantHover(true)
+      setPosition()
+    }
   }
 }
 
@@ -144,6 +154,7 @@ const onWindowResize = () => {
 
 watch(isOpen, (value) => {
   if (value) {
+    setPosition()
     document.addEventListener('click', doHide)
     document.addEventListener('scroll', doHide)
     window.addEventListener('resize', onWindowResize)
@@ -258,6 +269,7 @@ onUnmounted(() => {
   color: var(--tt-color);
   @include fonts.tooltip_text;
   pointer-events: none;
+  max-width: 300px;
 
   &.dark {
     --tt-bg-color: var(--light-black);

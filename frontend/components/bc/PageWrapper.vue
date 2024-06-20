@@ -6,6 +6,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   <BcCookieModal />
   <div class="page">
     <BcHeaderMainHeader :is-home-page="props.isHomePage" />
+    <BcMaintenanceBanner />
     <div class="content">
       <slot name="top" />
       <BcAdControl />
@@ -23,7 +24,7 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   position: relative;
   flex-direction: column;
   align-items: center;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .content {

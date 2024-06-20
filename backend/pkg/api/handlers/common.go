@@ -82,6 +82,7 @@ var (
 	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
+	errForbidden    = errors.New("forbidden")
 )
 
 type Paging struct {
@@ -314,11 +315,16 @@ func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
 func (v *validationError) checkExistingGroupId(param string) uint64 {
-	id := v.checkGroupId(param, forbidEmpty)
-	if id < 0 {
-		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
+	return v.checkUint(param, "group_id")
+}
+
+func (v *validationError) checkGroupIdList(groupIds string) []uint64 {
+	groupIdsSlice := strings.Split(groupIds, ",")
+	var ids []uint64
+	for _, id := range groupIdsSlice {
+		ids = append(ids, v.checkUint(id, "group_ids"))
 	}
-	return uint64(id)
+	return ids
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
@@ -365,6 +371,8 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
+//
+//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -552,6 +560,10 @@ func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }
 
+func returnForbidden(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusForbidden, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -567,6 +579,9 @@ func handleErr(w http.ResponseWriter, err error) {
 		return
 	} else if errors.Is(err, errUnauthorized) {
 		returnUnauthorized(w, err)
+		return
+	} else if errors.Is(err, errForbidden) {
+		returnForbidden(w, err)
 		return
 	}
 	returnInternalServerError(w, err)
@@ -586,6 +601,10 @@ func newBadRequestErr(format string, args ...interface{}) error {
 //nolint:unparam
 func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
+}
+
+func newForbiddenErr(format string, args ...interface{}) error {
+	return errWithMsg(errForbidden, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {
