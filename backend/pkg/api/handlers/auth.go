@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
@@ -50,8 +51,16 @@ func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
 	return user.Id, nil
 }
 
+const authHeaderPrefix = "Bearer "
+
 func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
-	apiKey := r.URL.Query().Get("api_key")
+	var apiKey string
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, authHeaderPrefix) {
+		apiKey = strings.TrimPrefix(authHeader, authHeaderPrefix)
+	} else {
+		apiKey = r.URL.Query().Get("api_key")
+	}
 	if apiKey == "" {
 		return 0, newUnauthorizedErr("missing api key")
 	}
@@ -178,4 +187,27 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// returns a middleware that checks if user has premium perk to use public validator dashboard api
+// in the middleware chain, this should be used after GetVDBAuthMiddleware
+func (h *HandlerService) VDBPublicApiCheckMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// get user id from context
+		userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+		if !ok {
+			handleErr(w, errors.New("error getting user id from context"))
+			return
+		}
+		userInfo, err := h.dai.GetUserInfo(userId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if !userInfo.PremiumPerks.ManageDashboardViaApi {
+			handleErr(w, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
