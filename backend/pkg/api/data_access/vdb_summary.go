@@ -390,7 +390,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	paging.TotalCount = uint64(len(retArr))
 
 	return retArr, &paging, nil */
-	return nil, nil, nil
+	return d.dummy.GetValidatorDashboardSummary(dashboardId, period, cursor, colSort, search, limit)
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
@@ -712,7 +712,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
 	return ret, nil */
-	return nil, nil
+	return d.dummy.GetValidatorDashboardGroupSummary(dashboardId, groupId, period)
 }
 
 func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {

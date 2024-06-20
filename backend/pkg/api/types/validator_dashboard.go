@@ -46,19 +46,26 @@ type VDBSummaryValidators struct {
 }
 
 type VDBSummaryTableRow struct {
-	GroupId      int64                      `json:"group_id"`
-	Status       VDBSummaryStatus           `json:"status"`
-	Validators   VDBSummaryValidators       `json:"validators"`
-	Efficiency   float64                    `json:"efficiency"`
-	Attestations StatusCount                `json:"attestations"`
-	Proposals    StatusCount                `json:"proposals"`
-	Reward       ClElValue[decimal.Decimal] `json:"reward"`
+	GroupId                  int64                      `json:"group_id"`
+	Status                   VDBSummaryStatus           `json:"status"`
+	Validators               VDBSummaryValidators       `json:"validators"`
+	Efficiency               float64                    `json:"efficiency"`
+	AverageNetworkEfficiency float64                    `json:"average_network_efficiency"`
+	Attestations             StatusCount                `json:"attestations"`
+	Proposals                StatusCount                `json:"proposals"`
+	Reward                   ClElValue[decimal.Decimal] `json:"reward"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
 type VDBGroupSummaryColumnItem struct {
 	StatusCount StatusCount `json:"status_count"`
 	Validators  []uint64    `json:"validators,omitempty"`
+}
+
+type VDBGroupSummarySyncCount struct {
+	CurrentValidators  uint64 `json:"current_validators"`
+	UpcomingValidators uint64 `json:"upcoming_validators"`
+	PastPeriods        uint64 `json:"past_periods"`
 }
 type VDBGroupSummaryData struct {
 	AttestationsHead       StatusCount `json:"attestations_head"`
@@ -68,8 +75,10 @@ type VDBGroupSummaryData struct {
 	AttestationAvgInclDist float64     `json:"attestation_avg_incl_dist"`
 
 	SyncCommittee      VDBGroupSummaryColumnItem `json:"sync"`
+	SyncCommitteeCount VDBGroupSummarySyncCount  `json:"sync_count"`
 	Slashings          VDBGroupSummaryColumnItem `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
 	ProposalValidators []uint64                  `json:"proposal_validators"`
+	TotalMissedRewards decimal.Decimal           `json:"total_missed_rewards"` // probably EL only?
 
 	Apr    ClElValue[float64]         `json:"apr"`
 	Income ClElValue[decimal.Decimal] `json:"income"`
