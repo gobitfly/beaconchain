@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import { useField, useForm } from 'vee-validate'
+import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
 const { value: newEmail } = useField<string>('newEmail', validateEmail)
 const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
 
 // TODO: This duplicates code from login.vue. Move to a shared file.
+// Shared file will be created in a different PR. Wait until it can be merged.
 function validateEmail (value: string) : true | string {
   if (!value) {
     return $t('login.no_email')
@@ -19,14 +22,19 @@ function validateEmail (value: string) : true | string {
 }
 
 const onSubmit = handleSubmit(async (values) => {
-  // TODO: remove
-  console.log('submitting email form with values:', values)
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
   try {
-    // TODO: implement
+    await fetch(API_PATH.USER_CHANGE_EMAIL, {
+      body: {
+        email: values.email
+      }
+    })
   } catch (error) {
-    toast.showError({ summary: $t('login.error_toast_title'), group: $t('login.error_toast_group'), detail: $t('login.error_toast_message') })
+    toast.showError(
+      {
+        summary: $t('user_settings.email.error.toast_title'),
+        group: $t('user_settings.email.error.toast_group'),
+        detail: $t('user_settings.email.error.toast_message')
+      })
   }
 })
 
