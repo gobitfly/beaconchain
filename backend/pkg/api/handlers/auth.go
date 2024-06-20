@@ -65,10 +65,10 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 		return 0, newUnauthorizedErr("missing api key")
 	}
 	userId, err := h.dai.GetUserIdByApiKey(apiKey)
-	if err != nil {
-		return userId, newUnauthorizedErr("invalid api key")
+	if errors.Is(err, dataaccess.ErrNotFound) {
+		err = newUnauthorizedErr("api key not found")
 	}
-	return userId, nil
+	return userId, err
 }
 
 // Handlers
