@@ -606,6 +606,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 		totalProposals += row.BlocksScheduled
 		if row.BlocksScheduled > 0 {
+			if ret.ProposalValidators == nil {
+				ret.ProposalValidators = make([]t.VDBValidator, 0, 10)
+			}
 			ret.ProposalValidators = append(ret.ProposalValidators, t.VDBValidator(row.ValidatorIndex))
 		}
 
