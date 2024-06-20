@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
-import { useUserStore } from '~/stores/useUserStore'
 import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
+import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
-const { doLogin } = useUserStore()
+const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
 useBcSeo('login_and_register.title_register')
@@ -21,7 +21,7 @@ function validateAddress (value: string) : true|string {
   if (!value) {
     return $t('login_and_register.no_email')
   }
-  if (!REGEXP_VALID_EMAIL.test(value)) {
+  if (value.length > 100 || !REGEXP_VALID_EMAIL.test(value)) {
     return $t('login_and_register.invalid_email')
   }
   return true
@@ -31,7 +31,8 @@ function validatePassword1 (value: string) : true|string {
   if (!value) {
     return $t('login_and_register.no_password')
   }
-  if (value.length < 5) {
+  // TODO: ask for a complex password with special characters and son on?
+  if (value.length < 5 || value.length > 256) {
     return $t('login_and_register.invalid_password')
   }
   return true
@@ -56,10 +57,17 @@ function validateAgreement (value : boolean) : true|string {
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    await doLogin(values.email, values.password)
+    await fetch(API_PATH.REGISTER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        email: values.email,
+        password: values.password1
+      }
+    })
     await navigateTo('/')
   } catch (error) {
-    toast.showError({ summary: $t('login_and_register.error_toast_title'), group: $t('login_and_register.error_toast_group'), detail: $t('login_and_register.error_toast_message') })
+    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_register_group'), detail: $t('login_and_register.error_register_message') })
   }
 })
 
@@ -182,6 +190,7 @@ const agreementError = ref<string|undefined>(undefined)
     margin-right: auto;
     .title {
       font-size: 26px;
+      margin-bottom: 4px;
     }
     .purpose {
       font-size: 20px;
@@ -191,7 +200,7 @@ const agreementError = ref<string|undefined>(undefined)
   .container {
     position: relative;
     width: 355px;
-    height: 400px;
+    height: 410px;
     margin: auto;
     margin-top: 30px;
     margin-bottom: 30px;
@@ -211,6 +220,9 @@ const agreementError = ref<string|undefined>(undefined)
         display: flex;
         flex-direction: column;
         height: 100px;
+        .label {
+          margin-bottom: 4px;
+        }
         .agreement {
           display: flex;
           flex-direction: row;

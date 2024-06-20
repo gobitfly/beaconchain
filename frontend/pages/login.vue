@@ -18,7 +18,7 @@ function validateAddress (value: string) : true|string {
   if (!value) {
     return $t('login_and_register.no_email')
   }
-  if (!REGEXP_VALID_EMAIL.test(value)) {
+  if (value.length > 100 || !REGEXP_VALID_EMAIL.test(value)) {
     return $t('login_and_register.invalid_email')
   }
   return true
@@ -28,7 +28,7 @@ function validatePassword (value: string) : true|string {
   if (!value) {
     return $t('login_and_register.no_password')
   }
-  if (value.length < 5) {
+  if (value.length < 5 || value.length > 256) {
     return $t('login_and_register.invalid_password')
   }
   return true
@@ -40,7 +40,7 @@ const onSubmit = handleSubmit(async (values) => {
     await navigateTo('/')
   } catch (error) {
     password.value = ''
-    toast.showError({ summary: $t('login_and_register.error_toast_title'), group: $t('login_and_register.error_toast_group'), detail: $t('login_and_register.error_toast_message') })
+    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_login_group'), detail: $t('login_and_register.error_login_message') })
   }
 })
 
