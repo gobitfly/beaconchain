@@ -59,7 +59,6 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     await fetch(API_PATH.REGISTER, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: {
         email: values.email,
         password: values.password1
