@@ -86,6 +86,7 @@ const canSubmit = computed(() => oldPassword.value && newPassword.value && confi
         id="confirm-password"
         v-model="confirmPassword"
         type="password"
+        :class="{ 'p-invalid': errors?.confirmPassword }"
         aria-describedby="text-error"
         @focusin="confirmPasswordError = undefined"
         @focusout="confirmPasswordError = errors?.confirmPassword"
