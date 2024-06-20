@@ -710,6 +710,7 @@
     }
   },
   "user_settings": {
+    "title": "User Settings",
     "subscriptions": {
       "title": "Subscriptions",
       "explanation": "Premium features for web and beaconcha.in mobile app experience."
