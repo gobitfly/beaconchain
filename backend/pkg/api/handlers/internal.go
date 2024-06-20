@@ -731,12 +731,17 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBSummaryColumn](&v, q.Get("sort"))
+
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardSummary(*dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -757,12 +762,16 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 		return
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
+	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
+	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupSummary(*dashboardId, groupId)
+	data, err := h.dai.GetValidatorDashboardGroupSummary(*dashboardId, groupId, period)
 	if err != nil {
 		handleErr(w, err)
 		return
