@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 const { isLoggedIn } = useUserStore()
 
+useBcSeo('user_settings.title')
+
 if (!isLoggedIn.value) {
   // only users that are logged in can view this page
   await navigateTo('../login')
