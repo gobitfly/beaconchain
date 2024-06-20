@@ -125,9 +125,7 @@ const openDuties = () => {
     <div v-if="details" class="details-container">
       <div>
         <div class="small-screen-value">
-          <div class="label">
-            <b>{{ $t('common.age') }}</b>
-          </div>
+          <b><BcTableAgeHeader class="label" /></b>
           <div class="value">
             <BcFormatTimePassed :value="row.epoch" />
           </div>

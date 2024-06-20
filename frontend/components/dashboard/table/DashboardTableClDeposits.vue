@@ -186,14 +186,13 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age">
+            <Column field="age" body-class="age-field">
               <template #header>
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
                   v-if="slotProps.data.index !== undefined"
-                  class="time-passed"
                   :value="slotProps.data.slot"
                   type="slot"
                 />
@@ -320,9 +319,6 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   >.p-datatable-wrapper {
     min-height: 335px;
   }
-  .time-passed {
-    white-space: nowrap;
-  }
 
   .withdrawal-credentials {
     @include utils.truncate-text;
@@ -338,6 +334,14 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
       font-weight: var(--standard_text_medium_font_weight);
       border-bottom-color: var(--primary-color);
     }
+  }
+
+  .age-field {
+    white-space: nowrap;
+  }
+  tr>td.age-field {
+    padding: 0 7px;
+    @include utils.set-all-width(151px);
   }
 }
 
