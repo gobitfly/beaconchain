@@ -718,7 +718,12 @@
     "email": {
       "title": "Email",
       "new": "New Email Address",
-      "confirm": "Confirm Email Address"
+      "confirm": "Confirm Email Address",
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Cannot update email",
+        "toast_message": "something went wrong."
+      }
     },
     "password": {
       "title": "Password",
