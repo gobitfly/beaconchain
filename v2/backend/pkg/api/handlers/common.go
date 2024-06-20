@@ -82,6 +82,7 @@ var (
 	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
+	errForbidden    = errors.New("forbidden")
 )
 
 type Paging struct {
@@ -559,6 +560,10 @@ func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }
 
+func returnForbidden(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusForbidden, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -574,6 +579,9 @@ func handleErr(w http.ResponseWriter, err error) {
 		return
 	} else if errors.Is(err, errUnauthorized) {
 		returnUnauthorized(w, err)
+		return
+	} else if errors.Is(err, errForbidden) {
+		returnForbidden(w, err)
 		return
 	}
 	returnInternalServerError(w, err)
@@ -593,6 +601,10 @@ func newBadRequestErr(format string, args ...interface{}) error {
 //nolint:unparam
 func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
+}
+
+func newForbiddenErr(format string, args ...interface{}) error {
+	return errWithMsg(errForbidden, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {
