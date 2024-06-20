@@ -6,17 +6,31 @@ import (
 	"math"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 )
 
 type UserRepository interface {
+	GetUserExists(email string) (bool, error)
+	AddUser(email, password string) error
 	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(apiKey string) (uint64, error)
 	GetUserInfo(id uint64) (*t.UserInfo, error)
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+}
+
+func (d *DataAccessService) GetUserExists(email string) (bool, error) {
+	// TODO @patrick
+	return d.dummy.GetUserExists(email)
+}
+
+func (d *DataAccessService) AddUser(email, password string) error {
+	// TODO @patrick
+	d.services.QueueEmail(services.EMail{Recipient: email, Message: "Click to confirm email"}, 60*5)
+	return d.dummy.AddUser(email, password)
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
