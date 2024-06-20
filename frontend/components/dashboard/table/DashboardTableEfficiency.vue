@@ -23,9 +23,9 @@ const data = computed(() => {
       <DashboardTableEfficiency v-bind="props" :absolute="!absolute" :is-tooltip="true" />
     </template>
     <span v-if="absolute">
-      <BcFormatNumber class="positive" :value="props.success " />
+      <BcFormatNumber class="positive" :value="props.success" />
       <span class="slash"> / </span>
-      <BcFormatNumber :class="data.failedClass" :value="props.failed " />
+      <BcFormatNumber :class="data.failedClass" :value="props.failed" />
     </span>
     <BcFormatPercent
       v-else

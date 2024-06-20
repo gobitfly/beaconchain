@@ -45,9 +45,9 @@ watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
-watch(query, (q) => {
+watch([query, selectedTimeFrame], ([q, timeFrame]) => {
   if (q) {
-    getSummary(dashboardKey.value, q)
+    getSummary(dashboardKey.value, timeFrame, q)
   }
 }, { immediate: true })
 
@@ -187,7 +187,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" />
+              <DashboardTableSummaryDetails :row="slotProps.data" :time-frame="selectedTimeFrame" />
             </template>
             <template #empty>
               <DashboardTableAddValidator v-if="!hasValidators" />
