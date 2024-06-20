@@ -729,7 +729,12 @@
       "title": "Password",
       "old": "Old password",
       "new": "New password",
-      "confirm": "Confirm new password"
+      "confirm": "Confirm new password",
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Cannot update password",
+        "toast_message": "something went wrong."
+      }
     },
     "delete_account": {
       "title": "Delete Account",
