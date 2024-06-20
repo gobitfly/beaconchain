@@ -396,6 +396,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
 	// TODO: implement data retrieval for the following new field
+	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
 	// TotalMissedRewards
 
 	var err error
@@ -678,6 +679,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil, err
 	}
 
+	if len(validators) > 0 {
+		validatorArr = validators
+	}
 	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period < $1 AND validatorindex = ANY($2)`, currentSyncPeriod, validatorArr)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving past sync committee count: %v", err)
