@@ -45,6 +45,7 @@ export interface VDBSummaryTableRow {
   status: VDBSummaryStatus;
   validators: VDBSummaryValidators;
   efficiency: number /* float64 */;
+  average_network_efficiency: number /* float64 */;
   attestations: StatusCount;
   proposals: StatusCount;
   reward: ClElValue<string /* decimal.Decimal */>;
@@ -54,15 +55,22 @@ export interface VDBGroupSummaryColumnItem {
   status_count: StatusCount;
   validators?: number /* uint64 */[];
 }
+export interface VDBGroupSummarySyncCount {
+  current_validators: number /* uint64 */;
+  upcoming_validators: number /* uint64 */;
+  past_periods: number /* uint64 */;
+}
 export interface VDBGroupSummaryData {
-  attestations_head: VDBGroupSummaryColumnItem;
-  attestations_source: VDBGroupSummaryColumnItem;
-  attestations_target: VDBGroupSummaryColumnItem;
+  attestations_head: StatusCount;
+  attestations_source: StatusCount;
+  attestations_target: StatusCount;
   attestation_efficiency: number /* float64 */;
   attestation_avg_incl_dist: number /* float64 */;
   sync: VDBGroupSummaryColumnItem;
+  sync_count: VDBGroupSummarySyncCount;
   slashings: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
   proposal_validators: number /* uint64 */[];
+  total_missed_rewards: string /* decimal.Decimal */; // probably EL only?
   apr: ClElValue<number /* float64 */>;
   income: ClElValue<string /* decimal.Decimal */>;
   luck: Luck;
