@@ -42,7 +42,7 @@ const data = computed(() => {
   const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2, addPositiveSign: props.addPositiveSign }
   label = formatPercent(percent, config)
   if (props.comparePercent !== undefined) {
-    if (props.comparePercent.toFixed(1) === percent.toFixed(1)) {
+    if (Math.abs(props.comparePercent - percent) <= 0.5) {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
     } else if (percent > props.comparePercent) {
