@@ -226,7 +226,7 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.REGISTER]: {
-    path: '/register',
+    path: '/users',
     method: 'POST',
     mock: true
   },
