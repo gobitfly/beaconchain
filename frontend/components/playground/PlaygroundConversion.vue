@@ -141,15 +141,15 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
   </div>
   <div>
     percent equal
-    <BcFormatPercent :percent="85.123" :compare-percent="85.134" />
+    <BcFormatPercent :percent="85.123" :compare-percent="85.43" />
   </div>
   <div>
     percent lower
-    <BcFormatPercent :percent="85.123" :compare-percent="85.2" />
+    <BcFormatPercent :percent="85.123" :compare-percent="85.7" />
   </div>
   <div>
     percent lower
-    <BcFormatPercent :percent="85.123" :compare-percent="85.0" />
+    <BcFormatPercent :percent="85.123" :compare-percent="84.50" />
   </div>
   <b>
     Format Epochs time {{ setting }} <BcTableAgeHeader />
