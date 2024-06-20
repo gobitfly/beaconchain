@@ -22,10 +22,13 @@ if (!isLoggedIn.value) {
 
 <style lang="scss" scoped>
 .settings-container {
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
   width: 750px;
 
   display: flex;
   flex-direction: column;
-  gap: var(--padding)
+  gap: var(--padding);
 }
 </style>
