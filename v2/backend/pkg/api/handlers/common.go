@@ -62,6 +62,7 @@ var (
 	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 )
 
 const (
@@ -151,6 +152,10 @@ func (v *validationError) checkNameNotEmpty(name string) string {
 
 func (v *validationError) checkEmail(email string) string {
 	return v.checkRegex(reEmail, email, "email")
+}
+
+func (v *validationError) checkPassword(password string) string {
+	return v.checkRegex(rePassword, password, "password")
 }
 
 // check request structure (body contains valid json and all required parameters are present)

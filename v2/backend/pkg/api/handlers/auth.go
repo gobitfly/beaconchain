@@ -85,6 +85,60 @@ func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Requ
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Request) {
+	// validate request
+	var v validationError
+	req := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate email
+	email := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userExists, err := h.dai.GetUserExists(email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if userExists {
+		returnConflict(w, errors.New("email already registered"))
+		return
+	}
+
+	// validate password
+	password := v.checkPassword(req.Password)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
+
+	// add user
+	err = h.dai.AddUser(email, string(passwordHash))
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// queue confirmation email for sending
+	// TODO who should manage sender service, who should've access?
+
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
 	// validate request
 	var v validationError
