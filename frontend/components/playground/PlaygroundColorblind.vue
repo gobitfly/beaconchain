@@ -8,24 +8,27 @@ const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the definti
 
 enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormJ }
 
-/** Classic color space in two variants (depending on the parameter given to the constructor) :
+/** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
  *  - or the values are between 0-255 and include a gamma (the standard way to store images). */
 class RGB {
   readonly space: CS
   readonly chans: number[]
 
-  /** @param valuesAreLinear if `true` is given, the values will be between 0-1 and linear with respect to light intensity,
-   *  otherwise the values will be between 0-255 and include a gamma (the standard way to store images). */
-  constructor (valuesAreLinear: boolean) {
-    this.space = valuesAreLinear ? CS.RGBlinear : CS.RGBgamma
+  /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light intensity;
+   *  if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma (the standard way to store images). */
+  constructor (space: CS) {
+    if (space !== CS.RGBlinear && space !== CS.RGBgamma) {
+      throw new Error('a RGB object can carry RGB information only')
+    }
+    this.space = space
     this.chans = [0, 0, 0]
   }
 
-  /** Copy color from another RGB or Eye object, or even from a regular array of 3 values.
-   * Color spaces are automatically converted if they are different.
-   * However, when an array of numbers is given, its values are expected to be compatible with this instance of RGB (either linear or gamma-shaped). */
-  import (from: number[] | RGB | Eye) : void {
+  /** Copy a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
+   * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance if they differ.
+   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the current instance (either linear RGB or gamma-shaped RGB). */
+  import (from: number[] | RGB | Eye) : RGB {
     if (Array.isArray(from) || from.space === this.space) {
       if (!Array.isArray(from)) {
         from = (from as RGB).chans
@@ -51,14 +54,22 @@ class RGB {
           break
       }
     }
+    return this
   }
 
-  /** Copy the color of this object to another RGB or Eye object.
-   * Color spaces are automatically converted if they are different. */
-  export (to: RGB | Eye) : void {
+  /** Copy this RGB instance into another RGB or Eye instance.
+   * The color space of the current instance is automatically converted into the color space of the target instance if needed.
+   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
+   * @returns target instance (same as `to` if `to` was an instance) */
+  export (to: RGB | Eye | CS) : RGB | Eye {
+    if (typeof to !== 'object') {
+      to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
+    }
     to.import(this)
+    return to
   }
 
+  /** corrects channel values that are not within the limits of the format (0-1 or 0-255) */
   limit () : void {
     const max = (this.space === CS.RGBlinear) ? 1 : 255
     for (let i = R; i < B; i++) {
@@ -73,7 +84,7 @@ class RGB {
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
-  /** Perceived wavelength indicating where the color is on the rainbow. Key values: 0 is pure red. 1/3 is pure green. 2/3 is pure blue. 1 is pure red again. */
+  /** Perceived wavelength indicating where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
   w: number
   /** Perceived purity indicating how much light not contributing to the perceived wavelength is present. */
   p: number
@@ -104,9 +115,11 @@ class Eye {
     pOfValue: 0
   }
 
-  protected static rgbLinear = new RGB(true)
+  protected static rgbLinear = new RGB(CS.RGBlinear)
 
-  import (from: RGB | Eye) : void {
+  /** Copy a RGB or Eye instance into the current Eye instance.
+   * Color spaces are automatically converted into the color space of the current Eye instance if they differ. */
+  import (from: RGB | Eye) : Eye {
     if (from.space === CS.RGBgamma) {
       Eye.rgbLinear.import(from)
       from = Eye.rgbLinear
@@ -119,20 +132,20 @@ class Eye {
         // the color is black
         this.w = this.p = this.i = this.j = 0
         this.snapshotImax(0)
-        return
+        return this
       } else if (rgb[l] >= 1) {
         // the lowest channel has a value of 1 so the color is white
         this.w = this.p = 0
         this.i = this.j = 1
         this.snapshotImax(1)
-        return
+        return this
       }
       const [h1, h2] = Eye.RGBtoAnchors(l)
       const sumOfAnchors = rgb[h1] + rgb[h2]
       this.w = (rgb[h2] / sumOfAnchors + h1) / 3
       this.p = 1 - (2 * rgb[l]) / sumOfAnchors
       this.fillIntensityFromRGB(rgb)
-      return
+      return this
     }
     from = from as Eye // for the static checker
     this.w = from.w
@@ -147,9 +160,17 @@ class Eye {
       this.export(Eye.rgbLinear)
       this.fillIntensityFromRGB(Eye.rgbLinear.chans)
     }
+    return this
   }
 
-  export (to: RGB | Eye) : void {
+  /** Copy this Eye instance into another RGB or Eye instance.
+   * The color space of the current instance is automatically converted into the color space of the target instance if needed.
+   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
+   * @returns target instance (same as `to` if `to` was an instance) */
+  export (to: RGB | Eye | CS) : RGB | Eye {
+    if (typeof to !== 'object') {
+      to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
+    }
     if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
       to.import(this)
     } else {
@@ -186,6 +207,7 @@ class Eye {
         }
       }
     }
+    return to
   }
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
@@ -207,6 +229,7 @@ class Eye {
     this.Imax.wOfValue = this.w
   }
 
+  /** @returns the channel carrying the lowest value */
   protected static RGBtoLowestChannel (rgb : number[]) : Channel {
     if (rgb[R] < rgb[G]) {
       if (rgb[R] < rgb[B]) { return R }
@@ -215,6 +238,7 @@ class Eye {
     return B
   }
 
+  /** @returns the channel carrying the highest value */
   protected static RGBtoHighestChannel (rgb : number[]) : Channel {
     if (rgb[R] > rgb[G]) {
       if (rgb[R] > rgb[B]) { return R }
@@ -223,6 +247,7 @@ class Eye {
     return B
   }
 
+  /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
   protected static RGBtoAnchors (lowestChan: Channel) : Order {
     switch (lowestChan) {
       case R : return [G, B]
@@ -232,19 +257,17 @@ class Eye {
     return [] // impossible but the static checker believes it can happen
   }
 
+  /** @returns the anchor having the lowest value followed by the highest-value anchor */
   protected static RGBtoAnchorOrder (rgb : number[]) : Order {
     if (rgb[R] < rgb[G]) {
-      if (rgb[G] < rgb[B]) {
-        return [G, B]
-      }
+      if (rgb[G] < rgb[B]) { return [G, B] }
       return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
     }
-    if (rgb[R] < rgb[B]) {
-      return [R, B]
-    }
+    if (rgb[R] < rgb[B]) { return [R, B] }
     return (rgb[G] < rgb[B]) ? [B, R] : [G, R]
   }
 
+  /** @returns the order of the channels from the lowest value to the highest-value */
   protected static wToChannelOrder (w : number) : Order {
     if (w < 1 / 3) {
       return (w < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
@@ -255,10 +278,13 @@ class Eye {
     return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
   }
 
-  /** @param intensityAsPerceived if `true` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives,
-   * otherwise it will be stored in `j` and normalized so it can take any value between 0 and 1. */
-  constructor (intensityAsPerceived: boolean) {
-    this.space = intensityAsPerceived ? CS.EyePercI : CS.EyeNormJ
+  /** @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
+   * if `CS.EyeNormJ` is given, it will be stored in `j` and normalized so it can take any value between 0 and 1. */
+  constructor (space: CS) {
+    if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
+      throw new Error('an Eye object can carry WPI/J information only')
+    }
+    this.space = space
     this.w = this.p = this.i = this.j = 0
   }
 }
