@@ -6,6 +6,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -102,4 +104,61 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 	}
 
 	return efficiency
+}
+
+func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64]enums.ValidatorStatus, error) {
+	validatorStatuses := make(map[uint64]enums.ValidatorStatus, len(validators))
+
+	// Get the current validator state
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the validator duties to check the last fulfilled attestation
+	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
+	defer releaseValDutiesLock()
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the threshold for "online" => "offline" to 2 epochs without attestation
+	attestationThresholdSlot := uint64(0)
+	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	if dutiesInfo.LatestSlot >= twoEpochs {
+		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
+	}
+
+	// Fill the data
+	for _, validator := range validators {
+		metadata := validatorMapping.ValidatorMetadata[validator]
+
+		switch constypes.ValidatorStatus(metadata.Status) {
+		case constypes.PendingInitialized:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
+		case constypes.PendingQueued:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
+		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
+			var lastAttestionSlot uint32
+			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
+				if attested && slot > lastAttestionSlot {
+					lastAttestionSlot = slot
+				}
+			}
+			if lastAttestionSlot < uint32(attestationThresholdSlot) {
+				validatorStatuses[validator] = enums.ValidatorStatuses.Offline
+			} else {
+				validatorStatuses[validator] = enums.ValidatorStatuses.Online
+			}
+		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
+			if metadata.Slashed {
+				validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
+			} else {
+				validatorStatuses[validator] = enums.ValidatorStatuses.Exited
+			}
+		}
+	}
+
+	return validatorStatuses, nil
 }
