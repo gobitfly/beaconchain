@@ -15,7 +15,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	/* // TODO: implement sorting & paging
 	ret := make(map[int64]*t.VDBSummaryTableRow) // map of group id to result row
 	retMux := &sync.Mutex{}
@@ -393,7 +393,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, cu
 	return nil, nil, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, period enums.TimePeriod, groupId int64) (*t.VDBGroupSummaryData, error) {
 	/* ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
