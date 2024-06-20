@@ -4,9 +4,9 @@ const R: Channel = 0
 const G: Channel = 1
 const B: Channel = 2
 type Order = Channel[]
-const contributionToI = [0.3, 0.6, 0.1]
+const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the defintion of "relative luminance" in the ITU-R Recommendation BT.601
 
-enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormI }
+enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormJ }
 
 /** Classic color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -46,7 +46,7 @@ class RGB {
           }
           break
         case CS.EyePercI :
-        case CS.EyeNormI :
+        case CS.EyeNormJ :
           from.export(this)
           break
       }
@@ -88,7 +88,12 @@ class Eye {
    * This value is kept up-to-date automatically. */
   get iMax () : number {
     if (this.Imax.wOfValue !== this.w || this.Imax.pOfValue !== this.p) {
-      this.snapshotImax(this.i / rgb[z])
+      if (this.space !== CS.EyePercI) {
+        return 0
+      }
+      this.export(Eye.rgbLinear)
+      const z = Eye.RGBtoHighestChannel(Eye.rgbLinear.chans)
+      this.snapshotImax(this.i / Eye.rgbLinear.chans[z])
     }
     return this.Imax.value
   }
@@ -103,48 +108,49 @@ class Eye {
 
   import (from: RGB | Eye) : void {
     if (from.space === CS.RGBgamma) {
-      Eye.rgbLinear.import(from as RGB)
+      Eye.rgbLinear.import(from)
       from = Eye.rgbLinear
     }
     if (from.space === CS.RGBlinear) {
+      // conversion of RGB into Eye
       const rgb = (from as RGB).chans
-      const [a, b, c] = Eye.orderRGB(rgb)
-      if (rgb[c] <= 0) {
-        // the highest channel has a value of 0 so the color is black
+      const l = Eye.RGBtoLowestChannel(rgb)
+      if (rgb[R] + rgb[G] + rgb[B] <= 0.002) {
+        // the color is black
         this.w = this.p = this.i = this.j = 0
         this.snapshotImax(0)
         return
-      } else if (rgb[a] >= 1) {
+      } else if (rgb[l] >= 1) {
         // the lowest channel has a value of 1 so the color is white
         this.w = this.p = 0
         this.i = this.j = 1
         this.snapshotImax(1)
         return
       }
-      const sumOfDominants = rgb[b] + rgb[c] // sum of the two channels surrounding the color
-      const { anchor, left } = Eye.spectralPosition(a)
-      this.w = (rgb[anchor] / sumOfDominants + left) / 3
-      this.p = 1 - (2 * rgb[a]) / sumOfDominants
-      this.j = rgb[c] // due to our definitions of w and p, this value turns out to be the ratio between I (no matter how I is calculated) and the maximum I that could be reached with w and p constant
-      const [, y, z] = Eye.orderRGB([contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]])
-      this.i = contributionToI[y] * rgb[y] + contributionToI[z] * rgb[z]
-      this.snapshotImax(this.i / rgb[z])
+      const [h1, h2] = Eye.RGBtoHueAnchors(l)
+      const sumOfAnchors = rgb[h1] + rgb[h2]
+      this.w = (rgb[h2] / sumOfAnchors + h1) / 3
+      this.p = 1 - (2 * rgb[l]) / sumOfAnchors
+      this.fillIntensityFromRGB(rgb)
       return
     }
     from = from as Eye // for the static checker
+    this.w = from.w
+    this.p = from.p
     if (from.space === this.space) {
-      this.w = from.w
-      this.p = from.p
+      // we copy an Eye into our Eye of the same variant
       this.i = from.i
       this.j = from.j
       this.snapshotImax(from.Imax.value)
     } else {
-      // either we convert  EyePercI into EyeNormI  or  EyeNormI into EyePercI
+      // we must convert an Eye variant into our variant (EyePercI <-> EyeNormJ)
+      this.export(Eye.rgbLinear)
+      this.fillIntensityFromRGB(Eye.rgbLinear.chans)
     }
   }
 
   export (to: RGB | Eye) : void {
-    if (to.space === CS.EyePercI || to.space === CS.EyeNormI) {
+    if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
       to.import(this)
     } else {
       to = to as RGB // for the static checker
@@ -152,8 +158,45 @@ class Eye {
         this.export(Eye.rgbLinear)
         to.import(Eye.rgbLinear)
       } else {
-        // convert Eye into RGBlinear
+        // convert Eye (EyePercI or EyeNormJ) into RGBlinear
+        let sumOfAnchors: number
+        const [l, m, h] = Eye.wToChannelOrder(this.w)
+        const [h1, h2] = Eye.RGBtoHueAnchors(l)
+        const ratio = [0, 0, 0]
+        ratio[l] = (1 - this.p) / 2
+        ratio[h2] = 3 * this.w - h1
+        if (this.space === CS.EyePercI) {
+          ratio[h1] = 1 - ratio[h2]
+          const pIr = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
+          const [y, z] = Eye.RGBtoAnchorOrder(pIr)
+          sumOfAnchors = this.i / (pIr[y] + pIr[z])
+          for (let i = R; i < B; i++) {
+            to.chans[i] = ratio[i] * sumOfAnchors
+          }
+        } else { // (this.space === CS.EyeNormJ)
+          to.chans[h] = this.j
+          if (h2 === h) {
+            sumOfAnchors = this.j / ratio[h2]
+            to.chans[m] = sumOfAnchors - this.j
+          } else {
+            sumOfAnchors = this.j + to.chans[h2]
+            to.chans[m] = this.j / (1 / ratio[h2] - 1)
+          }
+          to.chans[l] = sumOfAnchors * ratio[l]
+        }
       }
+    }
+  }
+
+  protected fillIntensityFromRGB (rgb : number[]) : void {
+    if (this.space === CS.EyePercI) {
+      const pI = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
+      const [y, z] = Eye.RGBtoAnchorOrder(pI)
+      this.i = pI[y] + pI[z]
+      this.snapshotImax(this.i / rgb[z])
+    } else {
+      // due to our definitions of w and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with w and p constant
+      this.j = rgb[Eye.RGBtoHighestChannel(rgb)]
     }
   }
 
@@ -163,46 +206,44 @@ class Eye {
     this.Imax.wOfValue = this.w
   }
 
-  protected static orderRGB (rgb : number[]) : Order {
+  protected static RGBtoLowestChannel (rgb : number[]) : Channel {
     if (rgb[R] < rgb[G]) {
-      if (rgb[G] < rgb[B]) {
-        return [R, G, B]
-      }
-      return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
-    }
-    if (rgb[R] < rgb[B]) {
-      return [G, R, B]
-    }
-    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R]
+      if (rgb[R] < rgb[B]) { return R }
+    } else
+      if (rgb[G] < rgb[B]) { return G }
+    return B
   }
 
-  protected static spectralPosition (weakestChan: Channel) {
-    switch (weakestChan) {
-      case R : // the dominant channels are G and B
-        return { anchor: B, left: 1 }
-      case G : // the dominant channels are B and R
-        return { anchor: R, left: 2 }
-      case B : // the dominant channels are R and G
-        return { anchor: G, left: 0 }
+  protected static RGBtoHighestChannel (rgb : number[]) : Channel {
+    if (rgb[R] > rgb[G]) {
+      if (rgb[R] > rgb[B]) { return R }
+    } else
+      if (rgb[G] > rgb[B]) { return G }
+    return B
+  }
+
+  protected static RGBtoHueAnchors (lowestChan: Channel) : Order {
+    switch (lowestChan) {
+      case R : return [G, B]
+      case G : return [B, R]
+      case B : return [R, G]
     }
     // impossible but the static checker believes it can happen:
-    return { anchor: R, left: 0 }
+    return []
   }
 
-  protected static wToOrder (w : number) : Order {
-    if (w < 1 / 3) {
-      return (w < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
-    }
-    if (w < 2 / 3) {
-      return (w < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
-    }
-    return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
+  protected static RGBtoAnchorOrder (rgb : number[]) : Order {
+
+  }
+
+  protected static wToChannelOrder (w : number) : Order {
+
   }
 
   /** @param intensityAsPerceived if `true` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives,
    * otherwise it will be stored in `j` and normalized so it can take any value between 0 and 1. */
   constructor (intensityAsPerceived: boolean) {
-    this.space = intensityAsPerceived ? CS.EyePercI : CS.EyeNormI
+    this.space = intensityAsPerceived ? CS.EyePercI : CS.EyeNormJ
     this.w = this.p = this.i = this.j = 0
   }
 }
