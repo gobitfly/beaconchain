@@ -9,6 +9,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
@@ -398,11 +399,41 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	// SyncCommitteeCount
 	// TotalMissedRewards
 
+	var err error
 	ret := &t.VDBGroupSummaryData{}
 
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
 		groupId = t.AllGroups
+	}
+
+	// retrieve the members of the current, previous & upcoming sync committees
+	currentSyncCommitteeMembers := map[uint32]bool{}
+	previousSyncCommitteeMembers := map[uint32]bool{}
+	upcomingSyncCommitteeMembers := map[uint32]bool{}
+
+	type syncCommitteeQueryResultType struct {
+		Period         int    `db:"period"`
+		ValidatorIndex uint32 `db:"validatorindex"`
+	}
+
+	latestEpoch := cache.LatestEpoch.Get()
+	currentSyncPeriod := int(utils.SyncPeriodOfEpoch(latestEpoch))
+	upcomingSyncPeriod := currentSyncPeriod + 1
+
+	var syncCommitteeQueryResult []syncCommitteeQueryResultType
+	err = d.readerDb.Select(&syncCommitteeQueryResult, `SELECT period, validatorindex FROM sync_committees WHERE period >= $1 AND period <= $2`, currentSyncPeriod, upcomingSyncPeriod)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range syncCommitteeQueryResult {
+		switch row.Period {
+		case currentSyncPeriod:
+			currentSyncCommitteeMembers[row.ValidatorIndex] = true
+		case upcomingSyncPeriod:
+			upcomingSyncCommitteeMembers[row.ValidatorIndex] = true
+		}
 	}
 
 	table := ""
@@ -561,7 +592,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	var rows []*queryResult
-	var err error
 
 	if len(validators) > 0 {
 		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
@@ -620,6 +650,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 				ret.SyncCommittee.Validators = make([]t.VDBValidator, 0, 10)
 			}
 			ret.SyncCommittee.Validators = append(ret.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
+
+			if currentSyncCommitteeMembers[row.ValidatorIndex] {
+				ret.SyncCommitteeCount.CurrentValidators++
+			}
+			if previousSyncCommitteeMembers[row.ValidatorIndex] {
+				ret.SyncCommitteeCount.UpcomingValidators++
+			}
 		}
 
 		if row.SlashedInPeriod {
@@ -638,6 +675,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	ret.Income.El, ret.Apr.El, ret.Income.Cl, ret.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
+	if err != nil {
+		return nil, err
+	}
+
+	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period < $1 AND valdiatorindex = ANY($2)`, currentSyncPeriod, validatorArr)
 	if err != nil {
 		return nil, err
 	}
