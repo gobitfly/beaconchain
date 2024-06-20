@@ -7,6 +7,7 @@ const { handleSubmit, errors } = useForm()
 const { value: newEmail } = useField<string>('newEmail', validateEmail)
 const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
 
+// TODO: This duplicates code from login.vue. Move to a shared file.
 function validateEmail (value: string) : true | string {
   if (!value) {
     return $t('login.no_email')
@@ -48,7 +49,7 @@ const canSubmit = computed(() => newEmail.value && confirmEmail.value && newEmai
       <InputText
         id="new-email"
         v-model="newEmail"
-        :class="{ 'p-invalid': errors?.email }"
+        :class="{ 'p-invalid': errors?.newEmail }"
         aria-describedby="text-error"
         @focusin="newEmailError = undefined"
         @focusout="newEmailError = errors?.newEmail"
@@ -64,6 +65,7 @@ const canSubmit = computed(() => newEmail.value && confirmEmail.value && newEmai
       <InputText
         id="confirm-email"
         v-model="confirmEmail"
+        :class="{ 'p-invalid': errors?.confirmEmail }"
         aria-describedby="text-error"
         @focusin="confirmEmailError = undefined"
         @focusout="confirmEmailError = errors?.confirmEmail"
