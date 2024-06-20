@@ -424,7 +424,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	var syncCommitteeQueryResult []syncCommitteeQueryResultType
 	err = d.readerDb.Select(&syncCommitteeQueryResult, `SELECT period, validatorindex FROM sync_committees WHERE period >= $1 AND period <= $2`, currentSyncPeriod, upcomingSyncPeriod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving sync committee current and next period data: %v", err)
 	}
 
 	for _, row := range syncCommitteeQueryResult {
@@ -600,7 +600,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
 	}
 
 	totalAttestationRewards := int64(0)
@@ -679,9 +679,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		return nil, err
 	}
 
-	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period < $1 AND valdiatorindex = ANY($2)`, currentSyncPeriod, validatorArr)
+	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period < $1 AND validatorindex = ANY($2)`, currentSyncPeriod, validatorArr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving past sync committee count: %v", err)
 	}
 
 	ret.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
