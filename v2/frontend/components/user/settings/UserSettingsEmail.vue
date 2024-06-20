@@ -25,7 +25,7 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     await fetch(API_PATH.USER_CHANGE_EMAIL, {
       body: {
-        email: values.email
+        email: values.newEmail
       }
     })
   } catch (error) {
