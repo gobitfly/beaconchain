@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTimeFrame } from '~/types/dashboard/summary'
-import { TimeFrames, type TimeFrame } from '~/types/value'
 
 interface Props {
   row: VDBSummaryTableRow
@@ -24,16 +23,16 @@ watch(() => props.timeFrame, () => {
 const data = computed<SummaryRow[][]>(() => {
   const tableCount = isWideEnough.value ? 1 : 4
   const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
-
-  const addToList = (detail: TimeFrame, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
+  /*
+  const addToList = (prop: SummaryDetailsEfficiencyCombinedProp) => {
     let row: SummaryRow | undefined
-    if (tableIndex && isWideEnough.value) {
+    if (isWideEnough.value) {
       row = list[0].find(row => row.prop === prop)
     }
     if (!row) {
       let title = $t(`dashboard.validator.summary.row.${prop}`)
-      if (prop === 'efficiency_all_time') {
-        title = `${title} (${$t(`statistics.${detail}`)})`
+      if (prop === 'efficiency') {
+        title = `${title}`
       }
       row = { title, prop, details: [] }
       list[tableIndex].push(row)
@@ -41,25 +40,24 @@ const data = computed<SummaryRow[][]>(() => {
     row?.details.push(detail)
   }
 
-  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_all_time', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashed', 'validators_slashings', 'apr', 'luck']
-  TimeFrames.forEach((detail, index) => {
-    props.forEach((prop, propIndex) => {
-      if (!isWideEnough.value || propIndex) {
-        addToList(detail, index, prop)
-      }
-    })
-  })
+  const list: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings', 'apr', 'luck']
 
+  list.forEach((prop, propIndex) => {
+    if (!isWideEnough.value || propIndex) {
+      addToList(prop)
+    }
+  })
+*/
   return list
 })
 
 const rowClass = (data:SummaryRow) => {
   const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
-    efficiency_all_time: 'bold',
+    efficiency: 'bold',
     attestation_total: 'bold',
     sync: 'bold spacing-top',
     proposals: 'bold spacing-top',
-    slashed: 'bold spacing-top',
+    slashings: 'bold spacing-top',
     apr: 'bold',
     luck: 'bold spacing-top',
     attestations_head: 'spacing-top'
@@ -70,7 +68,7 @@ const rowClass = (data:SummaryRow) => {
 </script>
 <template>
   <div v-if="summary" class="table-container">
-    <BcTable
+    <!--BcTable
       v-for="(table, index) in data"
       :key="index"
       :row-class="rowClass"
@@ -104,7 +102,7 @@ const rowClass = (data:SummaryRow) => {
           </template>
         </Column>
       </template>
-    </BcTable>
+    </BcTable-->
   </div>
   <div v-else>
     <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />

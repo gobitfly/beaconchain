@@ -4,19 +4,18 @@ import {
   faArrowUpRightFromSquare,
   faPowerOff
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
-import type { TimeFrame } from '~/types/value'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
-import type { VDBOverviewValidators } from '~/types/api/validator_dashboard'
+import type { VDBSummaryValidators } from '~/types/api/validator_dashboard'
 
 interface Props {
   // TODO: replace with v2.5 structs
-  validators: VDBOverviewValidators,
+  validators: VDBSummaryValidators,
   absolute: boolean,
   groupId?: number,
-  timeFrame?: TimeFrame
+  timeFrame?: SummaryTimeFrame
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
   isTooltip?: boolean
@@ -55,10 +54,10 @@ const mapped = computed(() => {
   // TODO: replace with v2.5 logic (once we got the api structs)
   addCount('online', props.validators?.online)
   if (props.absolute || props.isTooltip) {
-    addCount('offline', props.validators?.offline + props.validators?.pending + props.validators?.slashed)
+    addCount('offline', props.validators?.offline)
     addCount('exited', props.validators?.exited)
   }
-  const total = props.validators?.offline + props.validators?.pending + props.validators?.slashed + props.validators?.online
+  const total = props.validators?.offline + props.validators?.online
 
   return {
     list,

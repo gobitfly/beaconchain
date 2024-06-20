@@ -7,24 +7,24 @@ import {
   faCube,
   faSync
 } from '@fortawesome/pro-solid-svg-icons'
-
-import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
   SummaryDetailsEfficiencyValidatorProps,
   type SummaryDetailsEfficiencyValidatorProp,
   type SummaryDetailsEfficiencyProp,
   type SummaryDetailsEfficiencyCombinedProp,
-  type DashboardValidatorContext
+  type DashboardValidatorContext,
+  type SummaryTimeFrame
 } from '~/types/dashboard/summary'
-import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { TimeFrame } from '~/types/value'
+import type { VDBGroupSummaryColumnItem, VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { StatusCount } from '~/types/api/common'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
-  detail: TimeFrame,
-  data: VDBGroupSummaryData,
-  row: VDBSummaryTableRow
+  timeFrame: SummaryTimeFrame,
+  data?: VDBGroupSummaryData,
+  row: VDBSummaryTableRow,
+  absolute?: boolean,
 }
 const props = defineProps<Props>()
 
@@ -32,48 +32,56 @@ const { tm: $tm } = useI18n()
 const { dashboardKey } = useDashboardKey()
 
 const data = computed(() => {
-  const col = props.data?.[props.detail]
-  if (!col) {
-    return null
-  }
-  if (props.property === 'attestation_total') {
+  const col = props.data
+  const row = props.row
+  if (row && props.property === 'attestation_total') {
     return {
       efficiency: {
-        status_count: col.attestation_count
+        status_count: row.attestations
       }
     }
-  } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
+  } else if (row && props.property === 'proposals') {
     const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
     return {
-      efficiency: col[props.property as SummaryDetailsEfficiencyProp],
+      efficiency: {
+        status_count: row.proposals
+      },
       tooltip
     }
-  } else if (SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
+  } else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
+    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
+    const prop = col[props.property as SummaryDetailsEfficiencyProp]
+
+    return {
+      efficiency: {
+        status_count: (prop as VDBGroupSummaryColumnItem).status_count || prop as StatusCount
+      },
+      tooltip
+    }
+  } else if (col && SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
     let validators: number[] = []
     let context: DashboardValidatorContext = 'attestation'
-    if (props.property === 'validators_attestation') {
-      validators = union(col.attestations_head.validators, col.attestations_source.validators, col.attestations_target.validators)
-    } else if (props.property === 'validators_proposal') {
-      validators = col.proposals.validators ?? []
+    if (props.property === 'validators_proposal') {
+      validators = col.proposal_validators
       context = 'proposal'
     } else if (props.property === 'validators_sync') {
       validators = col.sync.validators ?? []
       context = 'sync'
     } else if (props.property === 'validators_slashings') {
-      validators = col.slashed.validators ?? []
+      validators = col.slashings?.validators ?? []
       context = 'slashings'
     }
     return {
       validators,
       context
     }
-  } else if (props.property === 'attestation_efficiency') {
+  } else if (col && props.property === 'attestation_efficiency') {
     const tooltip: { title: string, text: string } | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip
     }
-  } else if (props.property === 'apr') {
+  } else if (col && props.property === 'apr') {
     return {
       apr: {
         apr: col.apr,
@@ -81,33 +89,26 @@ const data = computed(() => {
         income: col.income
       }
     }
-  } else if (props.property === 'luck') {
+  } else if (col && props.property === 'luck') {
     return {
       luck: col.luck
     }
-  } else if (props.property === 'efficiency_all_time') {
-    let efficiencyTotal = props.row.efficiency.all_time
-    switch (props.detail) {
-      case 'last_30d':
-        efficiencyTotal = props.row.efficiency.last_30d
-        break
-      case 'last_7d':
-        efficiencyTotal = props.row.efficiency.last_7d
-        break
-      case 'last_24h':
-        efficiencyTotal = props.row.efficiency.last_24h
-        break
-    }
+  } else if (row && props.property === 'efficiency') {
     return {
       efficiencyTotal: {
-        total: efficiencyTotal
+        value: row.efficiency,
+        compare: row.average_network_efficiency
       }
     }
-  } else if (props.property === 'attestation_avg_incl_dist') {
+  } else if (col && props.property === 'attestation_avg_incl_dist') {
     return {
       simple: {
         value: trim(col.attestation_avg_incl_dist, 2, 2)
       }
+    }
+  } else if (row && props.property === 'reward') {
+    return {
+      reward: row.reward
     }
   }
 })
@@ -115,8 +116,10 @@ const data = computed(() => {
 </script>
 
 <template>
-  <div v-if="data?.efficiency" class="info_row">
+  <DashboardTableSummaryReward v-if="data?.reward" :reward="data.reward" />
+  <div v-else-if="data?.efficiency" class="info_row">
     <DashboardTableEfficiency
+      :absolute="absolute"
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
     />
@@ -127,7 +130,7 @@ const data = computed(() => {
   <DashboardTableValidators
     v-else-if="data?.validators"
     :validators="data.validators"
-    :time-frame="props.detail"
+    :time-frame="props.timeFrame"
     :context="data.context"
     :dashboard-key="dashboardKey"
     :group-id="props.row.group_id"
@@ -210,7 +213,7 @@ const data = computed(() => {
     </BcTooltip>
   </div>
 
-  <BcFormatPercent v-else-if="data?.efficiencyTotal" :percent="data.efficiencyTotal.total" :color-break-point="80" />
+  <BcFormatPercent v-else-if="data?.efficiencyTotal" :percent="data.efficiencyTotal.value" :compare-percent="data.efficiencyTotal.compare" :color-break-point="80" />
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}
   </span>

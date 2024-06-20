@@ -6,6 +6,7 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { SummaryTimeFrames, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import type { DashboardTableSummaryValidators } from '#build/components'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -17,7 +18,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const useAbsoluteValues = ref(true)
+const showAbsoluteValues = ref(true)
 
 const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
@@ -85,7 +86,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <template>
   <div>
     <BcTableControl
-      v-model="useAbsoluteValues"
+      v-model="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
@@ -133,42 +134,29 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
-              field="efficiency_last_24h"
+              field="status"
               :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_24h')"
+              :header="$t('dashboard.validator.col.status')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_24h" :color-break-point="80" />
+                <DashboardTableSummaryStatus
+                  :class="slotProps.data.className"
+                  :status="slotProps.data.status"
+                />
               </template>
             </Column>
             <Column
-              v-if="colsVisible.efficiency_last_7d"
-              field="efficiency_last_7d"
+              field="efficiency"
               :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_7d')"
+              :header="$t('dashboard.validator.col.efficiency')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_7d" :color-break-point="80" />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.efficiency_last_30d"
-              field="efficiency_last_30d"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_30d')"
-            >
-              <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_30d" :color-break-point="80" />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.efficiency_all_time"
-              field="efficiency_all_time"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_all_time')"
-            >
-              <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.all_time" :color-break-point="80" />
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="efficiency"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
               </template>
             </Column>
             <Column
@@ -178,11 +166,57 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               :header="$t('dashboard.validator.col.validators')"
             >
               <template #body="slotProps">
-                <DashboardTableValidators
+                <DashboardTableSummaryValidators
+                  :absolute="showAbsoluteValues"
                   :validators="slotProps.data.validators"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
                   context="group"
+                />
+              </template>
+            </Column>
+            <Column
+              field="attestions"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.summary.row.attestations')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="attestation_total"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
+            <Column
+              field="proposals"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.summary.row.proposals')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="proposals"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
+            <Column
+              field="reward"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.col.rewards')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="reward"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
                 />
               </template>
             </Column>

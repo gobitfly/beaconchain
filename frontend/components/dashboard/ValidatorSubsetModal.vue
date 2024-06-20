@@ -4,8 +4,7 @@ import {
   faCopy
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
-import type { TimeFrame } from '~/types/value'
+import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import type { DashboardKey } from '~/types/dashboard'
 import { sortValidatorIds } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
@@ -16,7 +15,7 @@ const { fetch } = useCustomFetch()
 
 interface Props {
   context: DashboardValidatorContext;
-  timeFrame?: TimeFrame;
+  timeFrame?: SummaryTimeFrame;
   dashboardName?: string,
   dashboardKey?: DashboardKey,
   groupName?: string, // overruled by dashboardName

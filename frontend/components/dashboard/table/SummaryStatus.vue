@@ -1,11 +1,10 @@
 <script setup lang="ts">
+import type { VDBSummaryStatus } from '~/types/api/validator_dashboard'
 import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 // TODO: replace with v2.5 summary data
 interface Props {
-  scheduledSyncCount: number,
-  currentSyncCount: number,
-  slashedCount: number
+  status: VDBSummaryStatus
 }
 const props = defineProps<Props>()
 
@@ -22,9 +21,9 @@ const mapped = computed(() => {
   }
 
   // TODO: replace with v2.5 logic (once we got the api structs)
-  const scheduledSyncCount = props.scheduledSyncCount
-  const currentSyncCount = props.currentSyncCount
-  const slashedCount = props.slashedCount
+  const scheduledSyncCount = props.status?.next_sync_count
+  const currentSyncCount = props.status?.current_sync_count
+  const slashedCount = props.status?.slashed_count
 
   return [
     mapCount(currentSyncCount, 'current_sync', 'sync'),
