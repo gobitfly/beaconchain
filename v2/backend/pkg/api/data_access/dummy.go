@@ -211,14 +211,14 @@ func (d *DummyService) GetValidatorDashboardSlotViz(dashboardId t.VDBId, groupId
 	return r.Epochs, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummary(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64) (*t.VDBGroupSummaryData, error) {
+func (d *DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
 	r := t.VDBGroupSummaryData{}
 	err := commonFakeData(&r)
 	return &r, err

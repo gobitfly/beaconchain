@@ -338,6 +338,7 @@ type TimePeriod int
 
 const (
 	AllTime TimePeriod = iota
+	Last1h
 	Last24h
 	Last7d
 	Last30d
@@ -352,6 +353,8 @@ func (TimePeriod) NewFromString(s string) TimePeriod {
 	switch s {
 	case "", "all_time":
 		return AllTime
+	case "1h":
+		return Last1h
 	case "24h":
 		return Last24h
 	case "7d":
@@ -367,12 +370,14 @@ func (TimePeriod) NewFromString(s string) TimePeriod {
 
 var TimePeriods = struct {
 	AllTime  TimePeriod
+	Last1h   TimePeriod
 	Last24h  TimePeriod
 	Last7d   TimePeriod
 	Last30d  TimePeriod
 	Last365d TimePeriod
 }{
 	AllTime,
+	Last1h,
 	Last24h,
 	Last7d,
 	Last30d,
@@ -382,6 +387,8 @@ var TimePeriods = struct {
 func (t TimePeriod) Duration() time.Duration {
 	day := 24 * time.Hour
 	switch t {
+	case Last1h:
+		return time.Hour
 	case Last24h:
 		return day
 	case Last7d:

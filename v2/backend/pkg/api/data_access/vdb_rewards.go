@@ -291,7 +291,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	totalEpochInfo := make(map[uint64]*TotalEpochInfo, 0)
 
 	for _, res := range queryResult {
-		duty := t.VDBRewardesTableDuty{}
+		duty := t.VDBRewardsTableDuty{}
 		if res.AttestationsScheduled > 0 {
 			attestationPercentage := (float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled)) * 100.0
 			duty.Attestation = &attestationPercentage
@@ -349,7 +349,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			continue
 		}
 
-		duty := t.VDBRewardesTableDuty{}
+		duty := t.VDBRewardsTableDuty{}
 		if totalInfo.AttestationsScheduled > 0 {
 			attestationPercentage := (float64(totalInfo.AttestationsExecuted) / float64(totalInfo.AttestationsScheduled)) * 100.0
 			duty.Attestation = &attestationPercentage
