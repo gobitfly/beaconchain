@@ -720,7 +720,12 @@
       "new": "New Email Address",
       "confirm": "Confirm Email Address"
     },
-    "password": "Password",
+    "password": {
+      "title": "Password",
+      "old": "Old password",
+      "new": "New password",
+      "confirm": "Confirm new password"
+    },
     "delete_account": "Delete Account"
   },
   "time_duration": {
