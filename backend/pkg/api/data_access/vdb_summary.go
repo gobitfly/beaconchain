@@ -393,7 +393,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	return nil, nil, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, period enums.TimePeriod, groupId int64) (*t.VDBGroupSummaryData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
 	/* ret := &t.VDBGroupSummaryData{}
 	wg := errgroup.Group{}
 
