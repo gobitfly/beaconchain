@@ -396,7 +396,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
 	// TODO: implement data retrieval for the following new field
-	// SyncCommitteeCount
 	// TotalMissedRewards
 
 	var err error
