@@ -13,6 +13,7 @@ enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormJ }
  *  - or the values are between 0-255 and include a gamma (the standard way to store images). */
 class RGB {
   readonly space: CS
+  /** read and write the values of the color channels here */
   readonly chans: number[]
 
   /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light intensity;
@@ -84,18 +85,18 @@ class RGB {
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
-  /** Perceived wavelength indicating where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
+  /** Read and write the perceived wavelength here. It indicates where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
   w: number
-  /** Perceived purity indicating how much light not contributing to the perceived wavelength is present. */
+  /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived wavelength is present. */
   p: number
-  /** Perceived intensity of the light, so not normalized (given `w` and `p`, the maximum perceived intensity that can be reached with `w` and `p` is often less than 1).
-   * Property `iMax` tells the maximum value that `i` can take for the current values of `w` and `p`.
-   * `i` is considered only if `true` has been passed to the constructor, otherwise its value is undefined and giving it a value has no effect. */
+  /** Read and write the perceived intensity of the light here. It is not normalized because `w` and `p` constrain the maximum intensity that can be perceived and it is often less than 1.
+   * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `w` and `p`.
+   * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   i: number
-  /** Normalized intensity of the light, any value between 0 and 1 is possible.
-   * `j` is considered only if `false` has been passed to the constructor, otherwise its value is undefined and giving it a value has no effect. */
+  /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
+   * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   j: number
-  /** Maximum value that `i` can have under the constraint set by `w` and `p`.
+  /** Maximum value that `i` can have under the constraint of `w` and `p`.
    * This value is kept up-to-date automatically. */
   get iMax () : number {
     if (this.Imax.wOfValue !== this.w || this.Imax.pOfValue !== this.p) {
@@ -107,6 +108,16 @@ class Eye {
       this.snapshotImax(this.i / Eye.rgbLinear.chans[z])
     }
     return this.Imax.value
+  }
+
+  /** @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
+ * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
+  constructor (space: CS) {
+    if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
+      throw new Error('an Eye object can carry WPI/J information only')
+    }
+    this.space = space
+    this.w = this.p = this.i = this.j = 0
   }
 
   private Imax = {
@@ -276,16 +287,6 @@ class Eye {
       return (w < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
     }
     return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
-  }
-
-  /** @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
-   * if `CS.EyeNormJ` is given, it will be stored in `j` and normalized so it can take any value between 0 and 1. */
-  constructor (space: CS) {
-    if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
-      throw new Error('an Eye object can carry WPI/J information only')
-    }
-    this.space = space
-    this.w = this.p = this.i = this.j = 0
   }
 }
 </script>
