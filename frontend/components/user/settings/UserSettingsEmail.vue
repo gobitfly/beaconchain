@@ -1,15 +1,12 @@
 <script lang="ts" setup>
-import { useField } from 'vee-validate'
+import { useField, useForm } from 'vee-validate'
 
 const { t: $t } = useI18n()
-
+const toast = useBcToast()
+const { handleSubmit, errors } = useForm()
 const { value: newEmail } = useField<string>('newEmail', validateEmail)
 const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
-const saveDisabled = computed(() => {
-  return newEmail.value === '' || confirmEmail.value === '' || newEmail.value !== confirmEmail.value
-})
 
-// TODO: implement properly (also use vor saveDisabled)
 function validateEmail (value: string) : true | string {
   if (!value) {
     return $t('login.no_email')
@@ -20,25 +17,65 @@ function validateEmail (value: string) : true | string {
   return true
 }
 
+const onSubmit = handleSubmit(async (values) => {
+  // TODO: remove
+  console.log('submitting email form with values:', values)
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  try {
+    // TODO: implement
+  } catch (error) {
+    toast.showError({ summary: $t('login.error_toast_title'), group: $t('login.error_toast_group'), detail: $t('login.error_toast_message') })
+  }
+})
+
+const newEmailError = ref<string|undefined>(undefined)
+const confirmEmailError = ref<string|undefined>(undefined)
+
+const canSubmit = computed(() => newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && !Object.keys(errors.value).length)
+
 </script>
 
 <template>
-  <div class="email-container">
+  <form class="email-container" @submit="onSubmit">
     <div class="title">
       {{ $t('user_settings.email.title') }}
     </div>
     <label for="new-email">
       {{ $t('user_settings.email.new') }}
     </label>
-    <InputText id="new-email" v-model="newEmail" />
+    <div class="input-row">
+      <InputText
+        id="new-email"
+        v-model="newEmail"
+        :class="{ 'p-invalid': errors?.email }"
+        aria-describedby="text-error"
+        @focusin="newEmailError = undefined"
+        @focusout="newEmailError = errors?.newEmail"
+      />
+      <div class="p-error">
+        {{ newEmailError || '&nbsp;' }}
+      </div>
+    </div>
     <label for="confirm-email">
       {{ $t('user_settings.email.confirm') }}
     </label>
-    <InputText id="confirm-email" v-model="confirmEmail" />
-    <div class="button-row">
-      <Button :disabled="saveDisabled" :label="$t('navigation.save')" />
+    <div class="input-row">
+      <InputText
+        id="confirm-email"
+        v-model="confirmEmail"
+        aria-describedby="text-error"
+        @focusin="confirmEmailError = undefined"
+        @focusout="confirmEmailError = errors?.confirmEmail"
+      />
+      <div class="p-error">
+        {{ confirmEmailError || '&nbsp;' }}
+      </div>
     </div>
-  </div>
+    <div class="button-row">
+      <Button type="submit" :disabled="!canSubmit" :label="$t('navigation.save')" />
+    </div>
+  </form>
 </template>
 
 <style lang="scss" scoped>
@@ -62,8 +99,14 @@ function validateEmail (value: string) : true | string {
     @include fonts.small_text;
   }
 
-  input {
-    margin-bottom: 9px;
+  .input-row {
+    input {
+      width: 100%;
+    }
+
+    .p-error {
+      @include fonts.small_text;
+    }
   }
 
   .button-row {
