@@ -19,6 +19,7 @@ interface Props {
   timeFrame?: TimeFrame
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
+  isTooltip?: boolean
 }
 const props = defineProps<Props>()
 
@@ -53,9 +54,11 @@ const mapped = computed(() => {
 
   // TODO: replace with v2.5 logic (once we got the api structs)
   addCount('online', props.validators?.online)
-  addCount('offline', props.validators?.offline + props.validators?.pending + props.validators?.slashed)
-  addCount('exited', props.validators?.exited)
-  const total = props.validators?.offline + props.validators?.pending + props.validators?.slashed + props.validators?.online + props.validators?.exited
+  if (props.absolute || props.isTooltip) {
+    addCount('offline', props.validators?.offline + props.validators?.pending + props.validators?.slashed)
+    addCount('exited', props.validators?.exited)
+  }
+  const total = props.validators?.offline + props.validators?.pending + props.validators?.slashed + props.validators?.online
 
   return {
     list,
@@ -65,7 +68,10 @@ const mapped = computed(() => {
 
 </script>
 <template>
-  <div v-if="mapped.list.length" class="validator-status-column">
+  <BcTooltip v-if="mapped.list.length" class="validator-status-column">
+    <template v-if="!isTooltip" #tooltip>
+      <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
+    </template>
     <div class="status-list">
       <div v-for="status in mapped.list" :key="status.key" class="status" :class="status.key">
         <div class="icon">
@@ -75,8 +81,8 @@ const mapped = computed(() => {
         <BcFormatPercent v-else :value="status.count" :base="mapped.total" />
       </div>
     </div>
-    <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
-  </div>
+    <FontAwesomeIcon v-if="!isTooltip" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
+  </BcTooltip>
   <div v-else>
     -
   </div>
@@ -110,8 +116,8 @@ const mapped = computed(() => {
         background-color: var(--text-color-disabled);
 
         svg {
-          height: 10px;
-          width: 10px;
+          height: 8px;
+          width: 8px;
         }
       }
 
@@ -122,7 +128,6 @@ const mapped = computed(() => {
         }
 
         span {
-
           color: var(--positive-color);
         }
       }

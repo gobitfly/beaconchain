@@ -49,14 +49,6 @@ a {
   @include container;
 }
 
-.text-positive {
-  color: var(--positive-color);
-}
-
-.text-negative {
-  color: var(--negative-color);
-}
-
 /***
   * Scrollbar styling
 ***/
