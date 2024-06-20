@@ -127,7 +127,7 @@ class Eye {
         this.snapshotImax(1)
         return
       }
-      const [h1, h2] = Eye.RGBtoHueAnchors(l)
+      const [h1, h2] = Eye.RGBtoAnchors(l)
       const sumOfAnchors = rgb[h1] + rgb[h2]
       this.w = (rgb[h2] / sumOfAnchors + h1) / 3
       this.p = 1 - (2 * rgb[l]) / sumOfAnchors
@@ -161,7 +161,7 @@ class Eye {
         // convert Eye (EyePercI or EyeNormJ) into RGBlinear
         let sumOfAnchors: number
         const [l, m, h] = Eye.wToChannelOrder(this.w)
-        const [h1, h2] = Eye.RGBtoHueAnchors(l)
+        const [h1, h2] = Eye.RGBtoAnchors(l)
         const ratio = [0, 0, 0]
         ratio[l] = (1 - this.p) / 2
         ratio[h2] = 3 * this.w - h1
@@ -191,12 +191,13 @@ class Eye {
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
       const pI = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
-      const [y, z] = Eye.RGBtoAnchorOrder(pI)
-      this.i = pI[y] + pI[z]
-      this.snapshotImax(this.i / rgb[z])
+      const [m, h] = Eye.RGBtoAnchorOrder(pI)
+      this.i = pI[m] + pI[h]
+      this.snapshotImax(this.i / rgb[h])
     } else {
       // due to our definitions of w and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with w and p constant
-      this.j = rgb[Eye.RGBtoHighestChannel(rgb)]
+      const h = Eye.RGBtoHighestChannel(rgb)
+      this.j = rgb[h]
     }
   }
 
@@ -222,22 +223,36 @@ class Eye {
     return B
   }
 
-  protected static RGBtoHueAnchors (lowestChan: Channel) : Order {
+  protected static RGBtoAnchors (lowestChan: Channel) : Order {
     switch (lowestChan) {
       case R : return [G, B]
       case G : return [B, R]
       case B : return [R, G]
     }
-    // impossible but the static checker believes it can happen:
-    return []
+    return [] // impossible but the static checker believes it can happen
   }
 
   protected static RGBtoAnchorOrder (rgb : number[]) : Order {
-
+    if (rgb[R] < rgb[G]) {
+      if (rgb[G] < rgb[B]) {
+        return [G, B]
+      }
+      return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
+    }
+    if (rgb[R] < rgb[B]) {
+      return [R, B]
+    }
+    return (rgb[G] < rgb[B]) ? [B, R] : [G, R]
   }
 
   protected static wToChannelOrder (w : number) : Order {
-
+    if (w < 1 / 3) {
+      return (w < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
+    }
+    if (w < 2 / 3) {
+      return (w < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
+    }
+    return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
   }
 
   /** @param intensityAsPerceived if `true` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives,
