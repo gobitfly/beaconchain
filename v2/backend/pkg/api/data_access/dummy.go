@@ -49,7 +49,27 @@ func (d *DummyService) GetUserExists(email string) (bool, error) {
 	return r, err
 }
 
-func (d *DummyService) AddUser(email, password string) error {
+func (d *DummyService) CreateUser(email, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(email string) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationTime(email string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationHash(email string) (string, error) {
+	r := ""
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
 	return nil
 }
 
