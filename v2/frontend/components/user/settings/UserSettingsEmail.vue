@@ -14,10 +14,10 @@ const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 // TODO: Use userValidation.ts
 function validateEmail (value: string) : true | string {
   if (!value) {
-    return $t('login.no_email')
+    return $t('login_and_register.no_email')
   }
   if (!REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login.invalid_email')
+    return $t('login_and_register.invalid_email')
   }
   return true
 }
