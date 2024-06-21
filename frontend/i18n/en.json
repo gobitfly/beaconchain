@@ -76,7 +76,9 @@
     "save": "Save",
     "publish": "Publish",
     "unpublish": "Unpublish",
-    "update": "Update"
+    "update": "Update",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "error": {
     "multiple_times": "The error {error} happened {count} times",
@@ -739,7 +741,12 @@
     "delete_account": {
       "title": "Delete Account",
       "warning": "Warning! You will not be able to recover your account!",
-      "button": "Delete My Account"
+      "button": "Delete My Account",
+      "dialog": {
+        "title": "Delete Account",
+        "warning": "This will delete your accound from the archive and is irreversible.",
+        "yes_label": "Delete Account"
+      }
     }
   },
   "time_duration": {
