@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
-import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
+import { setTranslator, validateAddress, validatePassword, validateAgreement } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -13,44 +13,18 @@ useBcSeo('login_and_register.title_register')
 
 const { handleSubmit, errors } = useForm()
 const { value: email } = useField<string>('email', validateAddress)
-const { value: password1 } = useField<string>('password1', validatePassword1)
-const { value: password2 } = useField<string>('password2', validatePassword2)
+const { value: password } = useField<string>('password', validatePassword)
+const { value: passwordConfirm } = useField<string>('passwordConfirm', validatePasswordConfirmation)
 const { value: agreement } = useField<boolean>('agreement', validateAgreement)
 
-function validateAddress (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.no_email')
-  }
-  if (value.length > 100 || !REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login_and_register.invalid_email')
-  }
-  return true
-}
+setTranslator($t)
 
-function validatePassword1 (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.no_password')
-  }
-  // TODO: ask for a complex password with special characters and son on?
-  if (value.length < 5 || value.length > 256) {
-    return $t('login_and_register.invalid_password')
-  }
-  return true
-}
-
-function validatePassword2 (value: string) : true|string {
+function validatePasswordConfirmation (value: string) : true|string {
   if (!value) {
     return $t('login_and_register.retype_password')
   }
-  if (value !== password1.value) {
+  if (value !== password.value) {
     return $t('login_and_register.passwords_dont_match')
-  }
-  return true
-}
-
-function validateAgreement (value : boolean) : true|string {
-  if (!value) {
-    return $t('login_and_register.not_agreed')
   }
   return true
 }
@@ -61,7 +35,7 @@ const onSubmit = handleSubmit(async (values) => {
       method: 'POST',
       body: {
         email: values.email,
-        password: values.password1
+        password: values.password
       }
     })
     await navigateTo('/')
@@ -70,10 +44,10 @@ const onSubmit = handleSubmit(async (values) => {
   }
 })
 
-const canSubmit = computed(() => email.value && password1.value && password2.value && agreement.value && !Object.keys(errors.value).length)
+const canSubmit = computed(() => email.value && password.value && passwordConfirm.value && agreement.value && !Object.keys(errors.value).length)
 const addressError = ref<string|undefined>(undefined)
-const password1Error = ref<string|undefined>(undefined)
-const password2Error = ref<string|undefined>(undefined)
+const passwordError = ref<string|undefined>(undefined)
+const passwordConfirmError = ref<string|undefined>(undefined)
 const agreementError = ref<string|undefined>(undefined)
 </script>
 
@@ -82,10 +56,10 @@ const agreementError = ref<string|undefined>(undefined)
     <div class="content">
       <div class="caption">
         <div class="title">
-          Sign up to beaconcha.in
+          {{ $t('login_and_register.text1_register') }}
         </div>
         <div class="purpose">
-          to manage and monitor your validators.
+          {{ $t('login_and_register.text2_register') }}
         </div>
       </div>
       <div class="container">
@@ -106,33 +80,33 @@ const agreementError = ref<string|undefined>(undefined)
             </div>
           </div>
           <div class="input-row">
-            <label for="password1" class="label">{{ $t('login_and_register.choose_password') }}</label>
+            <label for="password" class="label">{{ $t('login_and_register.choose_password') }}</label>
             <InputText
-              id="password1"
-              v-model="password1"
+              id="password"
+              v-model="password"
               type="password"
-              :class="{ 'p-invalid': errors?.password1 }"
+              :class="{ 'p-invalid': errors?.password }"
               aria-describedby="text-error"
-              @focus="password1Error = undefined"
-              @blur="password1Error = errors?.password1"
+              @focus="passwordError = undefined"
+              @blur="passwordError = errors?.password"
             />
             <div class="p-error">
-              {{ password1Error || '&nbsp;' }}
+              {{ passwordError || '&nbsp;' }}
             </div>
           </div>
           <div class="input-row">
-            <label for="password2" class="label">{{ $t('login_and_register.confirm_password') }}</label>
+            <label for="passwordConfirm" class="label">{{ $t('login_and_register.confirm_password') }}</label>
             <InputText
-              id="password2"
-              v-model="password2"
+              id="passwordConfirm"
+              v-model="passwordConfirm"
               type="password"
-              :class="{ 'p-invalid': errors?.password2 }"
+              :class="{ 'p-invalid': errors?.passwordConfirm }"
               aria-describedby="text-error"
-              @focus="password2Error = undefined"
-              @blur="password2Error = errors?.password2"
+              @focus="passwordConfirmError = undefined"
+              @blur="passwordConfirmError = errors?.passwordConfirm"
             />
             <div class="p-error">
-              {{ password2Error || '&nbsp;' }}
+              {{ passwordConfirmError || '&nbsp;' }}
             </div>
           </div>
           <div class="input-row">
@@ -189,7 +163,7 @@ const agreementError = ref<string|undefined>(undefined)
     margin-right: auto;
     .title {
       font-size: 26px;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
     }
     .purpose {
       font-size: 20px;
@@ -199,7 +173,7 @@ const agreementError = ref<string|undefined>(undefined)
   .container {
     position: relative;
     width: 355px;
-    height: 410px;
+    height: 420px;
     margin: auto;
     margin-top: 30px;
     margin-bottom: 30px;
@@ -220,7 +194,7 @@ const agreementError = ref<string|undefined>(undefined)
         flex-direction: column;
         height: 100px;
         .label {
-          margin-bottom: 4px;
+          margin-bottom: 8px;
         }
         .agreement {
           display: flex;
