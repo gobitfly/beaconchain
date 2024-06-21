@@ -10,6 +10,8 @@ const { value: oldPassword } = useField<string>('oldPassword', validatePassword)
 const { value: newPassword } = useField<string>('newPassword', validatePassword)
 const { value: confirmPassword } = useField<string>('confirmPassword', validatePassword)
 
+const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
+
 // TODO: This duplicates code from login.vue. Move to a shared file.
 // Shared file will be created in a different PR. Wait until it can be merged.
 function validatePassword (value: string) : true | string {
@@ -23,6 +25,7 @@ function validatePassword (value: string) : true | string {
 }
 
 const onSubmit = handleSubmit(async (values) => {
+  buttonsDisabled.value = true
   try {
     await fetch(API_PATH.USER_CHANGE_PASSWORD, {
       body: {
@@ -37,13 +40,14 @@ const onSubmit = handleSubmit(async (values) => {
         detail: $t('user_settings.password.error.toast_message')
       })
   }
+  buttonsDisabled.value = false
 })
 
 const oldPasswordError = ref<string|undefined>(undefined)
 const newPasswordError = ref<string|undefined>(undefined)
 const confirmPasswordError = ref<string|undefined>(undefined)
 
-const canSubmit = computed(() => oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
+const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
 
 </script>
 

@@ -6,6 +6,8 @@ const dialog = useDialog()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
+const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
+
 const onDelete = () => {
   dialog.open(BcDialogDelete, {
     data: {
@@ -18,8 +20,9 @@ const onDelete = () => {
 }
 
 const deleteAction = async () => {
+  buttonsDisabled.value = true
   await fetch(API_PATH.USER_DELETE)
-  await navigateTo('../../')
+  await navigateTo('/')
 }
 
 </script>
@@ -33,7 +36,7 @@ const deleteAction = async () => {
       <div class="warning">
         {{ $t('user_settings.delete_account.warning') }}
       </div>
-      <Button :label="$t('user_settings.delete_account.button')" class="delete-button" @click="onDelete" />
+      <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" class="delete-button" @click="onDelete" />
     </div>
   </div>
 </template>
