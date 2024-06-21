@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
-import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
 import { Target } from '~/types/links'
+import { setTranslator, validateAddress, validatePassword } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
@@ -14,25 +14,7 @@ const { handleSubmit, errors } = useForm()
 const { value: email } = useField<string>('email', validateAddress)
 const { value: password } = useField<string>('password', validatePassword)
 
-function validateAddress (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.no_email')
-  }
-  if (value.length > 100 || !REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login_and_register.invalid_email')
-  }
-  return true
-}
-
-function validatePassword (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.no_password')
-  }
-  if (value.length < 5 || value.length > 256) {
-    return $t('login_and_register.invalid_password')
-  }
-  return true
-}
+setTranslator($t)
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -103,7 +85,7 @@ const passwordError = ref<string|undefined>(undefined)
 .container {
   position: relative;
   width: 300px;
-  height: 230px;
+  height: 240px;
   margin: auto;
   margin-top: 100px;
   margin-bottom: 50px;
@@ -125,10 +107,10 @@ const passwordError = ref<string|undefined>(undefined)
       width: 80%;
 
       &:first-child {
-        padding-top: var(--padding-small)
+        padding-top: 5px;
       }
       .label {
-        margin-bottom: var(--padding-small);
+        margin-bottom: 8px;
       }
     }
 
