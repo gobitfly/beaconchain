@@ -1,5 +1,25 @@
 <script lang="ts" setup>
+import { BcDialogDelete } from '#components'
+
+const dialog = useDialog()
 const { t: $t } = useI18n()
+
+const onDelete = () => {
+  dialog.open(BcDialogDelete, {
+    data: {
+      title: $t('user_settings.delete_account.dialog.title'),
+      warning: $t('user_settings.delete_account.dialog.warning'),
+      yesLabel: $t('user_settings.delete_account.dialog.yes_label')
+    },
+    onClose: response => response?.data && deleteAction()
+  })
+}
+
+const deleteAction = async () => {
+  // TODO: Implement
+  console.log('Deleting account')
+  await new Promise(resolve => setTimeout(resolve, 1000))
+}
 
 </script>
 
@@ -12,7 +32,7 @@ const { t: $t } = useI18n()
       <div class="warning">
         {{ $t('user_settings.delete_account.warning') }}
       </div>
-      <Button :label="$t('user_settings.delete_account.button')" class="delete-button" />
+      <Button :label="$t('user_settings.delete_account.button')" class="delete-button" @click="onDelete" />
     </div>
   </div>
 </template>
