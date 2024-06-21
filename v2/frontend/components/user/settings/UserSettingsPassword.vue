@@ -7,7 +7,7 @@ const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
 const { value: oldPassword } = useField<string>('oldPassword', validatePassword)
-const { value: newPassword } = useField<string>('newPassword', validatePassword)
+const { value: newPassword } = useField<string>('newPassword', validatePassword) // TODO: This should also validate that new != old (wait for shared file, see below)
 const { value: confirmPassword } = useField<string>('confirmPassword', validatePassword)
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
