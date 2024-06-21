@@ -31,6 +31,7 @@ const closeDialog = (response: boolean) => {
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/main.scss';
 @use '~/assets/css/fonts.scss';
 
 .content {
@@ -64,9 +65,7 @@ const closeDialog = (response: boolean) => {
     }
 
     .delete {
-      color: var(--button-text-color-disabled);
-      background-color: var(--flashy-red);
-      border-color: var(--flashy-red);
+      @include main.button-dangerous;
     }
   }
 }

@@ -64,9 +64,7 @@ const deleteAction = async () => {
     }
 
     .delete-button {
-      color: var(--button-text-color-disabled);
-      background-color: var(--flashy-red);
-      border-color: var(--flashy-red);
+      @include main.button-dangerous;
     }
   }
 }
