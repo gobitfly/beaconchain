@@ -49,6 +49,16 @@ a {
   @include container;
 }
 
+@mixin button-dangerous {
+  color: var(--button-text-color-disabled);
+  background-color: var(--flashy-red);
+  border-color: var(--flashy-red);
+}
+
+.button-dangerous {
+  @include button-dangerous;
+}
+
 .text-positive {
   color: var(--positive-color);
 }
