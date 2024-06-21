@@ -1,11 +1,26 @@
 <script lang="ts" setup>
 const { t: $t } = useI18n()
 const { currentPremiumSubscription } = useProductsStore()
+const { stripeCustomerPortal, isStripeDisabled } = useStripe()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-// TODO: Only show a sinlge button based on "user is premium"
-// TODO: Implement button logic and set buttonsDisabled accordingly
+async function buttonCallback () {
+  if (planButton.value.disabled) {
+    return
+  }
+
+  buttonsDisabled.value = true
+  await stripeCustomerPortal()
+  buttonsDisabled.value = false
+}
+
+const planButton = computed(() => {
+  const text = currentPremiumSubscription.value ? $t('pricing.premium_product.button.manage_plan') : $t('pricing.premium_product.button.select_plan')
+  const disabled = isStripeDisabled.value || buttonsDisabled.value || undefined
+
+  return { text, disabled }
+})
 
 </script>
 
@@ -21,10 +36,7 @@ const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
       {{ $t('user_settings.subscriptions.explanation') }}
     </div>
     <div class="button-row">
-      <div class="manage-button">
-        {{ $t('pricing.premium_product.button.manage_plan') }}
-      </div>
-      <Button :label="$t('pricing.premium_product.button.upgrade')" :disabled="buttonsDisabled" />
+      <Button :label="planButton.text" :disabled="planButton.disabled" @click="buttonCallback()" />
     </div>
   </div>
 </template>
@@ -60,11 +72,6 @@ const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
     justify-content: flex-end;
     align-items: center;
     gap: 30px;
-
-    .manage-button {
-      @include fonts.button_text;
-      cursor: pointer;
-    }
   }
 }
 </style>
