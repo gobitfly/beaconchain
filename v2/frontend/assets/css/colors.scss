@@ -27,6 +27,7 @@
   --green: #7dc382;
   --flashy-red: #f3454a;
   --light-red: #d42127;
+  --dark-red: #ce3438;
   --yellow: #ffd600;
   --purple: #9747ff;
   --light-orange: #e77f27;
@@ -55,8 +56,11 @@
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
   --button-color-dark-pattern: var(--light-grey-2);
+  --button-color-dangerous: var(--flashy-red);
+  --button-color-dangerous-hover: var(--dark-red);
   --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
+  --button-text-color-dangerous: var(--grey-4);
 
   --checkbox-background-color: var(--light-grey-4);
 
@@ -138,6 +142,7 @@
     --button-color-disabled: var(--grey);
     --button-color-dark-pattern: var(--light-grey);
     --button-text-color-disabled: var(--light-grey);
+    --button-text-color-dangerous: var(--light-grey);
 
     --checkbox-background-color: var(--light-grey);
 
