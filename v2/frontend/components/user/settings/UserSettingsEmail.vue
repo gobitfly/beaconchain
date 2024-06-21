@@ -11,8 +11,7 @@ const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-// TODO: This duplicates code from login.vue. Move to a shared file.
-// Shared file will be created in a different PR. Wait until it can be merged.
+// TODO: Use userValidation.ts
 function validateEmail (value: string) : true | string {
   if (!value) {
     return $t('login.no_email')
