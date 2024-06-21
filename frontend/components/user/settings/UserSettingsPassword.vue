@@ -7,13 +7,12 @@ const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
 const { value: oldPassword } = useField<string>('oldPassword', validatePassword)
-const { value: newPassword } = useField<string>('newPassword', validatePassword) // TODO: This should also validate that new != old (wait for shared file, see below)
+const { value: newPassword } = useField<string>('newPassword', validatePassword) // TODO: This should also validate that new != old, add to userValidation.ts
 const { value: confirmPassword } = useField<string>('confirmPassword', validatePassword)
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-// TODO: This duplicates code from login.vue. Move to a shared file.
-// Shared file will be created in a different PR. Wait until it can be merged.
+// TODO: Use userValidation.ts
 function validatePassword (value: string) : true | string {
   if (!value) {
     return $t('login.no_password')
