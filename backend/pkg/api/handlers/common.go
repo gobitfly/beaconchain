@@ -151,7 +151,7 @@ func (v *validationError) checkNameNotEmpty(name string) string {
 }
 
 func (v *validationError) checkEmail(email string) string {
-	return v.checkRegex(reEmail, email, "email")
+	return v.checkRegex(reEmail, strings.ToLower(email), "email")
 }
 
 func (v *validationError) checkPassword(password string) string {
