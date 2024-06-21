@@ -50,9 +50,17 @@ a {
 }
 
 @mixin button-dangerous {
-  color: var(--button-text-color-disabled);
-  background-color: var(--flashy-red);
-  border-color: var(--flashy-red);
+  color: var(--button-text-color-dangerous);
+  
+  &:not(:disabled) {
+    background-color: var(--button-color-dangerous);
+    border-color: var(--button-color-dangerous);
+
+    &:hover {
+      background-color: var(--button-color-dangerous-hover);
+      border-color: var(--button-color-dangerous-hover);
+    }
+  }
 }
 
 .button-dangerous {
