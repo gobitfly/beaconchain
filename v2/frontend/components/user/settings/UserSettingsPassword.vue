@@ -15,6 +15,7 @@ const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 // TODO: Use userValidation.ts
 function validatePassword (value: string) : true | string {
   if (!value) {
+    // TODO: Create validation in language file and put stuff like "no_password" in there
     return $t('login_and_register.no_password')
   }
   if (value.length < 5) {
