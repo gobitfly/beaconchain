@@ -5,7 +5,7 @@ useBcSeo('user_settings.title')
 const { stripeInit } = useStripeProvider()
 const { products, getProducts } = useProductsStore()
 
-const buttonsDisabled = ref(false) // TODO: Add check for this to all callbacks to be sure
+const buttonsDisabled = ref(false)
 
 await useAsyncData('get_products', () => getProducts())
 watch(products, () => {

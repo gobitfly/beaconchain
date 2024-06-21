@@ -25,6 +25,10 @@ function validatePassword (value: string) : true | string {
 }
 
 const onSubmit = handleSubmit(async (values) => {
+  if (!canSubmit.value) {
+    return
+  }
+
   buttonsDisabled.value = true
   try {
     await fetch(API_PATH.USER_CHANGE_PASSWORD, {

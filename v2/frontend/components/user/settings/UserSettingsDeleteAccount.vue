@@ -20,6 +20,10 @@ const onDelete = () => {
 }
 
 const deleteAction = async () => {
+  if (buttonsDisabled.value) {
+    return
+  }
+
   buttonsDisabled.value = true
   await fetch(API_PATH.USER_DELETE)
   await navigateTo('/')
