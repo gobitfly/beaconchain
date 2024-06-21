@@ -2,8 +2,17 @@
 const { isLoggedIn } = useUserStore()
 
 useBcSeo('user_settings.title')
+const { stripeInit } = useStripeProvider()
+const { products, getProducts } = useProductsStore()
 
-const buttonsDisabled = ref(false)
+const buttonsDisabled = ref(false) // TODO: Add check for this to all callbacks to be sure
+
+await useAsyncData('get_products', () => getProducts())
+watch(products, () => {
+  if (products.value?.stripe_public_key) {
+    stripeInit(products.value.stripe_public_key)
+  }
+}, { immediate: true })
 
 // TODO: This seems to be triggered to soon
 if (!isLoggedIn.value) {
