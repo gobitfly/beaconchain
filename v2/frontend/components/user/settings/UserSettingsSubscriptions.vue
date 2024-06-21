@@ -2,6 +2,11 @@
 const { t: $t } = useI18n()
 const { currentPremiumSubscription } = useProductsStore()
 
+const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
+
+// TODO: Only show a sinlge button based on "user is premium"
+// TODO: Implement button logic and set buttonsDisabled accordingly
+
 </script>
 
 <template>
@@ -19,7 +24,7 @@ const { currentPremiumSubscription } = useProductsStore()
       <div class="manage-button">
         {{ $t('pricing.premium_product.button.manage_plan') }}
       </div>
-      <Button :label="$t('pricing.premium_product.button.upgrade')" />
+      <Button :label="$t('pricing.premium_product.button.upgrade')" :disabled="buttonsDisabled" />
     </div>
   </div>
 </template>

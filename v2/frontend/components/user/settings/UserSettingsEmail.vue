@@ -9,6 +9,8 @@ const { handleSubmit, errors } = useForm()
 const { value: newEmail } = useField<string>('newEmail', validateEmail)
 const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
 
+const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
+
 // TODO: This duplicates code from login.vue. Move to a shared file.
 // Shared file will be created in a different PR. Wait until it can be merged.
 function validateEmail (value: string) : true | string {
@@ -22,6 +24,7 @@ function validateEmail (value: string) : true | string {
 }
 
 const onSubmit = handleSubmit(async (values) => {
+  buttonsDisabled.value = true
   try {
     await fetch(API_PATH.USER_CHANGE_EMAIL, {
       body: {
@@ -36,12 +39,13 @@ const onSubmit = handleSubmit(async (values) => {
         detail: $t('user_settings.email.error.toast_message')
       })
   }
+  buttonsDisabled.value = false
 })
 
 const newEmailError = ref<string|undefined>(undefined)
 const confirmEmailError = ref<string|undefined>(undefined)
 
-const canSubmit = computed(() => newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && !Object.keys(errors.value).length)
+const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && !Object.keys(errors.value).length)
 
 </script>
 
