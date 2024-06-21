@@ -4,9 +4,9 @@ enum CS {
   RGBlinear,
   /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
   RGBgamma,
-  /** WPI values whose `i` follows the intensity of the light that a human eye perceives (for a given `j`, different `w` and `p` values produce the same intensity for the human eye, but some values of `j` do not exist for certain values of w` and `p`) */
+  /** RPI values whose `i` follows the intensity of the light that a human eye perceives (for a given `j`, different `r` and `p` values produce the same intensity for the human eye, but some values of `j` do not exist for certain values of r` and `p`) */
   EyePercI,
-  /** WPJ values whose `j` normalizes the light intensity (for a given `j`, different `w` and `p` values produce different intensities for the human eye, but this format is easier to handle because `j` is free to take any value between 0 and 1) */
+  /** RPJ values whose `j` normalizes the light intensity (for a given `j`, different `r` and `p` values produce different intensities for the human eye, but this format is easier to handle because `j` is free to take any value between 0 and 1) */
   EyeNormJ
 }
 
@@ -95,21 +95,21 @@ class RGB {
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
-  /** Read and write the perceived wavelength here. It indicates where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
-  w: number
-  /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived wavelength is present. */
+  /** Read and write the perceived rainbow color here. It indicates where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
+  r: number
+  /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived rainbow color is present. */
   p: number
-  /** Read and write the perceived intensity of the light here. It is not normalized because `w` and `p` constrain the maximum intensity that can be perceived and it is often less than 1.
-   * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `w` and `p`.
+  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` constrain the maximum intensity that can be perceived and it is often less than 1.
+   * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `r` and `p`.
    * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   i: number
   /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
    * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   j: number
-  /** Maximum value that `i` can have under the constraint of `w` and `p`.
+  /** Maximum value that `i` can have under the constraint of `r` and `p`.
    * This value is kept up-to-date automatically. */
   get iMax () : number {
-    if (this.Imax.wOfValue !== this.w || this.Imax.pOfValue !== this.p) {
+    if (this.Imax.wOfValue !== this.r || this.Imax.pOfValue !== this.p) {
       if (this.space !== CS.EyePercI) {
         return 0
       }
@@ -124,10 +124,10 @@ class Eye {
  * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
   constructor (space: CS) {
     if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
-      throw new Error('an Eye object can carry WPI/J information only')
+      throw new Error('an Eye object can carry RPI/J information only')
     }
     this.space = space
-    this.w = this.p = this.i = this.j = 0
+    this.r = this.p = this.i = this.j = 0
   }
 
   private Imax = {
@@ -151,23 +151,25 @@ class Eye {
       const l = Eye.RGBtoLowestChannel(rgb)
       if (rgb[R] + rgb[G] + rgb[B] <= 0.002) {
         // the color is black
-        this.w = this.p = this.i = this.j = 0
+        this.r = 0.5
+        this.p = this.i = this.j = 0
         this.snapshotImax(0)
       } else if (rgb[l] >= 1) {
         // the lowest channel has a value of 1 so the color is white
-        this.w = this.p = 0
+        this.r = 0.5
+        this.p = 0
         this.i = this.j = 1
         this.snapshotImax(1)
       } else {
         const [h1, h2] = Eye.RGBtoAnchors(l)
         const sumOfAnchors = rgb[h1] + rgb[h2]
-        this.w = (rgb[h2] / sumOfAnchors + h1) / 3
+        this.r = ((rgb[h2] - rgb[l]) / (sumOfAnchors - 2 * rgb[l]) + h1) / 3
         this.p = 1 - (2 * rgb[l]) / sumOfAnchors
         this.fillIntensityFromRGB(rgb)
       }
     } else {
       from = from as Eye // for the static checker
-      this.w = from.w
+      this.r = from.r
       this.p = from.p
       if (from.space === this.space) {
       // we copy an Eye into our Eye of the same variant
@@ -198,32 +200,24 @@ class Eye {
       if (to.space === CS.RGBgamma) {
         this.export(Eye.rgbLinear).export(to)
       } else {
-        let sumOfAnchors: number
-        if (this.w < 0.001) { this.w = 1 }
-        const [l, m, h] = Eye.wToChannelOrder(this.w)
+        if (this.r < 0.001) { this.r = 1 }
+        const [l, m, h] = Eye.rToChannelOrder(this.r)
         const [h1, h2] = Eye.RGBtoAnchors(l)
         const ratio = [0, 0, 0]
-        ratio[l] = (1 - this.p) / 2
-        ratio[h2] = 3 * this.w - h1
+        const q = this.p / (1 - this.p)
+        ratio[l] = 1
+        ratio[h2] = 2 * (3 * this.r - h1) * q + 1
+        ratio[h1] = 2 * q - ratio[h2] + 2
         if (this.space === CS.EyePercI) {
-          ratio[h1] = 1 - ratio[h2]
           const pIr = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
           const [y, z] = Eye.RGBtoAnchorOrder(pIr)
-          sumOfAnchors = this.i / (pIr[y] + pIr[z])
-          for (let i = R; i <= B; i++) {
-            to.chans[i] = ratio[i] * sumOfAnchors
-          }
+          to.chans[l] = this.i / (pIr[y] + pIr[z])
+          to.chans[h] = to.chans[l] * ratio[h]
         } else { // (this.space === CS.EyeNormJ)
           to.chans[h] = this.j
-          if (h2 === h) {
-            sumOfAnchors = this.j / ratio[h2]
-            to.chans[m] = sumOfAnchors - this.j
-          } else {
-            sumOfAnchors = this.j + to.chans[h2]
-            to.chans[m] = this.j / (1 / ratio[h2] - 1)
-          }
-          to.chans[l] = sumOfAnchors * ratio[l]
+          to.chans[l] = to.chans[h] / ratio[h]
         }
+        to.chans[m] = to.chans[l] * ratio[m]
       }
     }
     return to
@@ -236,7 +230,7 @@ class Eye {
       this.i = pI[m] + pI[h]
       this.snapshotImax(this.i / rgb[h])
     } else {
-      // due to our definitions of w and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with w and p constant
+      // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
       this.j = rgb[h]
     }
@@ -245,7 +239,7 @@ class Eye {
   protected snapshotImax (iMax: number) : void {
     this.Imax.value = iMax
     this.Imax.pOfValue = this.p
-    this.Imax.wOfValue = this.w
+    this.Imax.wOfValue = this.r
   }
 
   /** @returns the channel carrying the lowest value */
@@ -287,14 +281,14 @@ class Eye {
   }
 
   /** @returns the order of the channels from the lowest value to the highest-value */
-  protected static wToChannelOrder (w : number) : Order {
-    if (w < 1 / 3) {
-      return (w < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
+  protected static rToChannelOrder (r : number) : Order {
+    if (r < 1 / 3) {
+      return (r < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
     }
-    if (w < 2 / 3) {
-      return (w < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
+    if (r < 2 / 3) {
+      return (r < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
     }
-    return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
+    return (r < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
   }
 }
 
