@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { VDBRewardesTableDuty } from '~/types/api/validator_dashboard'
+import type { VDBRewardsTableDuty } from '~/types/api/validator_dashboard'
 
 interface Props {
-  duty: VDBRewardesTableDuty;
+  duty: VDBRewardsTableDuty;
 }
 defineProps<Props>()
 
