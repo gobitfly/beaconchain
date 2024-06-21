@@ -36,11 +36,13 @@ const deleteAction = async () => {
     <div class="title">
       {{ $t('user_settings.delete_account.title') }}
     </div>
-    <div class="warning-row">
+    <div class="content-container">
       <div class="warning">
         {{ $t('user_settings.delete_account.warning') }}
       </div>
-      <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" class="delete-button" @click="onDelete" />
+      <div class="button-container">
+        <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" class="delete-button" @click="onDelete" />
+      </div>
     </div>
   </div>
 </template>
@@ -62,7 +64,7 @@ const deleteAction = async () => {
     margin-bottom: 9px;
   }
 
-  .warning-row {
+  .content-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -71,8 +73,23 @@ const deleteAction = async () => {
       @include fonts.subtitle_text;
     }
 
-    .delete-button {
-      @include main.button-dangerous;
+    .button-container {
+      .delete-button {
+        @include main.button-dangerous;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (max-width: 730px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--padding-large);
+
+      .button-container {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+      }
     }
   }
 }

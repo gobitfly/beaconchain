@@ -37,7 +37,7 @@ if (!isLoggedIn.value) {
   position: relative;
   margin-left: auto;
   margin-right: auto;
-  width: 750px;
+  max-width: 750px;
 
   display: flex;
   flex-direction: column;
