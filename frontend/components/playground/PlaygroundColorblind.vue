@@ -1,4 +1,15 @@
 <script lang="ts" setup>
+enum CS {
+  /** RGB values between 0-1 and linear with respect to light intensity */
+  RGBlinear,
+  /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
+  RGBgamma,
+  /** WPI values whose `i` follows the intensity of the light that a human eye perceives (for a given `j`, different `w` and `p` values produce the same intensity for the human eye, but some values of `j` do not exist for certain values of w` and `p`) */
+  EyePercI,
+  /** WPJ values whose `j` normalizes the light intensity (for a given `j`, different `w` and `p` values produce different intensities for the human eye, but this format is easier to handle because `j` is free to take any value between 0 and 1) */
+  EyeNormJ
+}
+
 type Channel = 0 | 1 | 2
 const R: Channel = 0
 const G: Channel = 1
@@ -6,18 +17,16 @@ const B: Channel = 2
 type Order = Channel[]
 const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the defintion of "relative luminance" in the ITU-R Recommendation BT.601
 
-enum CS { RGBlinear, RGBgamma, EyePercI, EyeNormJ }
-
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
- *  - or the values are between 0-255 and include a gamma (the standard way to store images). */
+ *  - or the values are between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
 class RGB {
   readonly space: CS
-  /** read and write the values of the color channels here */
+  /** Read and write individually the values of the color channels here. You cannot assign an array directly. To assign a whole array, use method `import()`. */
   readonly chans: number[]
 
   /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light intensity;
-   *  if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma (the standard way to store images). */
+   *  if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
   constructor (space: CS) {
     if (space !== CS.RGBlinear && space !== CS.RGBgamma) {
       throw new Error('a RGB object can carry RGB information only')
@@ -28,24 +37,25 @@ class RGB {
 
   /** Copy a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
    * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance if they differ.
-   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the current instance (either linear RGB or gamma-shaped RGB). */
+   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the current instance (either linear RGB or gamma-shaped RGB).
+   * @returns the instance that you import into (so not the parameter) */
   import (from: number[] | RGB | Eye) : RGB {
     if (Array.isArray(from) || from.space === this.space) {
       if (!Array.isArray(from)) {
         from = (from as RGB).chans
       }
-      for (let i = R; i < B; i++) {
+      for (let i = R; i <= B; i++) {
         this.chans[i] = from[i]
       }
     } else {
       switch (from.space) {
         case CS.RGBlinear :
-          for (let i = R; i < B; i++) {
+          for (let i = R; i <= B; i++) {
             this.chans[i] = Math.round(((from as RGB).chans[i] ** 0.454545) * 255)
           }
           break
         case CS.RGBgamma :
-          for (let i = R; i < B; i++) {
+          for (let i = R; i <= B; i++) {
             this.chans[i] = ((from as RGB).chans[i] / 255) ** 2.2
           }
           break
@@ -73,7 +83,7 @@ class RGB {
   /** corrects channel values that are not within the limits of the format (0-1 or 0-255) */
   limit () : void {
     const max = (this.space === CS.RGBlinear) ? 1 : 255
-    for (let i = R; i < B; i++) {
+    for (let i = R; i <= B; i++) {
       if (this.chans[i] < 0) { this.chans[i] = 0 }
       if (this.chans[i] > max) { this.chans[i] = max }
     }
@@ -129,11 +139,11 @@ class Eye {
   protected static rgbLinear = new RGB(CS.RGBlinear)
 
   /** Copy a RGB or Eye instance into the current Eye instance.
-   * Color spaces are automatically converted into the color space of the current Eye instance if they differ. */
+   * Color spaces are automatically converted into the color space of the current Eye instance if they differ.
+   * @returns the instance that you import into (so not the parameter) */
   import (from: RGB | Eye) : Eye {
     if (from.space === CS.RGBgamma) {
-      Eye.rgbLinear.import(from)
-      from = Eye.rgbLinear
+      from = Eye.rgbLinear.import(from)
     }
     if (from.space === CS.RGBlinear) {
       // conversion of RGB into Eye
@@ -143,33 +153,32 @@ class Eye {
         // the color is black
         this.w = this.p = this.i = this.j = 0
         this.snapshotImax(0)
-        return this
       } else if (rgb[l] >= 1) {
         // the lowest channel has a value of 1 so the color is white
         this.w = this.p = 0
         this.i = this.j = 1
         this.snapshotImax(1)
-        return this
+      } else {
+        const [h1, h2] = Eye.RGBtoAnchors(l)
+        const sumOfAnchors = rgb[h1] + rgb[h2]
+        this.w = (rgb[h2] / sumOfAnchors + h1) / 3
+        this.p = 1 - (2 * rgb[l]) / sumOfAnchors
+        this.fillIntensityFromRGB(rgb)
       }
-      const [h1, h2] = Eye.RGBtoAnchors(l)
-      const sumOfAnchors = rgb[h1] + rgb[h2]
-      this.w = (rgb[h2] / sumOfAnchors + h1) / 3
-      this.p = 1 - (2 * rgb[l]) / sumOfAnchors
-      this.fillIntensityFromRGB(rgb)
-      return this
-    }
-    from = from as Eye // for the static checker
-    this.w = from.w
-    this.p = from.p
-    if (from.space === this.space) {
-      // we copy an Eye into our Eye of the same variant
-      this.i = from.i
-      this.j = from.j
-      this.snapshotImax(from.Imax.value)
     } else {
+      from = from as Eye // for the static checker
+      this.w = from.w
+      this.p = from.p
+      if (from.space === this.space) {
+      // we copy an Eye into our Eye of the same variant
+        this.i = from.i
+        this.j = from.j
+        this.snapshotImax(from.Imax.value)
+      } else {
       // we must convert an Eye variant into our variant (EyePercI <-> EyeNormJ)
-      this.export(Eye.rgbLinear)
-      this.fillIntensityFromRGB(Eye.rgbLinear.chans)
+        from.export(Eye.rgbLinear)
+        this.fillIntensityFromRGB(Eye.rgbLinear.chans)
+      }
     }
     return this
   }
@@ -187,11 +196,10 @@ class Eye {
     } else {
       to = to as RGB // for the static checker
       if (to.space === CS.RGBgamma) {
-        this.export(Eye.rgbLinear)
-        to.import(Eye.rgbLinear)
+        this.export(Eye.rgbLinear).export(to)
       } else {
-        // convert Eye (EyePercI or EyeNormJ) into RGBlinear
         let sumOfAnchors: number
+        if (this.w < 0.001) { this.w = 1 }
         const [l, m, h] = Eye.wToChannelOrder(this.w)
         const [h1, h2] = Eye.RGBtoAnchors(l)
         const ratio = [0, 0, 0]
@@ -202,7 +210,7 @@ class Eye {
           const pIr = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
           const [y, z] = Eye.RGBtoAnchorOrder(pIr)
           sumOfAnchors = this.i / (pIr[y] + pIr[z])
-          for (let i = R; i < B; i++) {
+          for (let i = R; i <= B; i++) {
             to.chans[i] = ratio[i] * sumOfAnchors
           }
         } else { // (this.space === CS.EyeNormJ)
@@ -289,6 +297,19 @@ class Eye {
     return (w < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
   }
 }
+
+const cons = console
+
+const x = new RGB(CS.RGBgamma)
+x.import([255, 255, 255])
+
+const X = x.export(CS.EyeNormJ)
+const Y = x.export(CS.EyePercI)
+
+cons.log(X)
+cons.log(X.export(CS.RGBgamma))
+cons.log(Y)
+cons.log(Y.export(CS.RGBgamma))
 </script>
 
 <template>
