@@ -335,9 +335,15 @@
       }
     },
     "deletion": {
-      "title": "Delete Dashboard",
-      "delete_text": "Do you want to delete dashboard {dashboard}?",
-      "clear_text": "Do you want to clear this {dashboard}?"
+      "delete": {
+        "title": "Delete Dashboard",
+        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "yes_label": "Delete Dashboard"
+      },
+      "clear": {
+        "title": "Clear Dashboard",
+        "text": "Do you want to clear this {dashboard}?"
+      }
     },
     "validator": {
       "manage_validators": "Manage Validators",
@@ -744,7 +750,7 @@
       "button": "Delete My Account",
       "dialog": {
         "title": "Delete Account",
-        "warning": "This will delete your accound from the archive and is irreversible.",
+        "warning": "This will delete your account from the archive and is irreversible.",
         "yes_label": "Delete Account"
       }
     }

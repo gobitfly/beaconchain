@@ -7,7 +7,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
+import { BcDialogConfirm, BcDialogDelete, DashboardShareModal, DashboardShareCodeModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -119,17 +119,26 @@ const deleteButtonOptions = computed(() => {
 })
 
 const onDelete = () => {
-  const languageKey = deleteButtonOptions.value.deleteDashboard ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
-
-  dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.deletion.title')
-    },
-    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
-    data: {
-      question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
-    }
-  })
+  if (deleteButtonOptions.value.deleteDashboard) {
+    dialog.open(BcDialogDelete, {
+      data: {
+        title: $t('dashboard.deletion.delete.title'),
+        warning: $t('dashboard.deletion.delete.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
+        yesLabel: $t('dashboard.deletion.delete.yes_label')
+      },
+      onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward)
+    })
+  } else {
+    dialog.open(BcDialogConfirm, {
+      props: {
+        header: $t('dashboard.deletion.clear.title')
+      },
+      onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
+      data: {
+        question: $t('dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
+      }
+    })
+  }
 }
 
 const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
