@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { BcDialogDelete } from '#components'
+import { API_PATH } from '~/types/customFetch'
 
 const dialog = useDialog()
 const { t: $t } = useI18n()
+const { fetch } = useCustomFetch()
 
 const onDelete = () => {
   dialog.open(BcDialogDelete, {
@@ -16,9 +18,8 @@ const onDelete = () => {
 }
 
 const deleteAction = async () => {
-  // TODO: Implement
-  console.log('Deleting account')
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  await fetch(API_PATH.USER_DELETE)
+  await navigateTo('../../')
 }
 
 </script>
