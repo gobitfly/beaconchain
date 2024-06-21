@@ -36,6 +36,7 @@ export enum API_PATH {
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
+  REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
   SEARCH = '/search',
@@ -241,6 +242,11 @@ export const mapping: Record<string, MappingData> = {
     path: '/latest-state',
     mockFunction: mockLatestState,
     mock: false
+  },
+  [API_PATH.REGISTER]: {
+    path: '/users',
+    method: 'POST',
+    mock: true
   },
   [API_PATH.LOGIN]: {
     path: '/login',
