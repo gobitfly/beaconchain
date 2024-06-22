@@ -22,8 +22,8 @@ const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the definti
  *  - or the values are between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
 class RGB {
   readonly space: CS
-  /** Read and write individually the values of the color channels here. You cannot assign an array directly. To assign a whole array, use method `import()`. */
-  readonly chans: number[]
+  /** Read and write individually the values of the primary channels here. You cannot assign an array directly. To assign a whole array, use method `import()`. */
+  readonly chan: number[]
 
   /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light intensity;
    *  if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
@@ -32,7 +32,7 @@ class RGB {
       throw new Error('a RGB object can carry RGB information only')
     }
     this.space = space
-    this.chans = [0, 0, 0]
+    this.chan = [0, 0, 0]
   }
 
   /** Copy a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
@@ -42,21 +42,21 @@ class RGB {
   import (from: number[] | RGB | Eye) : RGB {
     if (Array.isArray(from) || from.space === this.space) {
       if (!Array.isArray(from)) {
-        from = (from as RGB).chans
+        from = (from as RGB).chan
       }
       for (let i = R; i <= B; i++) {
-        this.chans[i] = from[i]
+        this.chan[i] = from[i]
       }
     } else {
       switch (from.space) {
         case CS.RGBlinear :
           for (let i = R; i <= B; i++) {
-            this.chans[i] = Math.round(((from as RGB).chans[i] ** 0.454545) * 255)
+            this.chan[i] = Math.round(((from as RGB).chan[i] ** 0.454545) * 255)
           }
           break
         case CS.RGBgamma :
           for (let i = R; i <= B; i++) {
-            this.chans[i] = ((from as RGB).chans[i] / 255) ** 2.2
+            this.chan[i] = ((from as RGB).chan[i] / 255) ** 2.2
           }
           break
         case CS.EyePercI :
@@ -84,8 +84,8 @@ class RGB {
   limit () : void {
     const max = (this.space === CS.RGBlinear) ? 1 : 255
     for (let i = R; i <= B; i++) {
-      if (this.chans[i] < 0) { this.chans[i] = 0 }
-      if (this.chans[i] > max) { this.chans[i] = max }
+      if (this.chan[i] < 0) { this.chan[i] = 0 }
+      if (this.chan[i] > max) { this.chan[i] = max }
     }
   }
 }
@@ -114,8 +114,8 @@ class Eye {
         return 0
       }
       this.export(Eye.rgbLinear)
-      const z = Eye.RGBtoHighestChannel(Eye.rgbLinear.chans)
-      this.snapshotImax(this.i / Eye.rgbLinear.chans[z])
+      const z = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
+      this.snapshotImax(this.i / Eye.rgbLinear.chan[z])
     }
     return this.Imax.value
   }
@@ -147,26 +147,19 @@ class Eye {
     }
     if (from.space === CS.RGBlinear) {
       // conversion of RGB into Eye
-      const rgb = (from as RGB).chans
+      const rgb = (from as RGB).chan
       const l = Eye.RGBtoLowestChannel(rgb)
-      if (rgb[R] + rgb[G] + rgb[B] <= 0.002) {
-        // the color is black
-        this.r = 0.5
-        this.p = this.i = this.j = 0
-        this.snapshotImax(0)
-      } else if (rgb[l] >= 1) {
-        // the lowest channel has a value of 1 so the color is white
+      const [h1, h2] = Eye.lowestChanToAnchors(l)
+      const anchorSum = rgb[h1] + rgb[h2]
+      const anchorContributions = anchorSum - 2 * rgb[l]
+      if (anchorContributions <= 0) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
-        this.i = this.j = 1
-        this.snapshotImax(1)
       } else {
-        const [h1, h2] = Eye.RGBtoAnchors(l)
-        const sumOfAnchors = rgb[h1] + rgb[h2]
-        this.r = ((rgb[h2] - rgb[l]) / (sumOfAnchors - 2 * rgb[l]) + h1) / 3
-        this.p = 1 - (2 * rgb[l]) / sumOfAnchors
-        this.fillIntensityFromRGB(rgb)
+        this.r = ((rgb[h2] - rgb[l]) / anchorContributions + h1) / 3
+        this.p = anchorContributions / (anchorSum + rgb[l])
       }
+      this.fillIntensityFromRGB(rgb)
     } else {
       from = from as Eye // for the static checker
       this.r = from.r
@@ -179,7 +172,7 @@ class Eye {
       } else {
       // we must convert an Eye variant into our variant (EyePercI <-> EyeNormJ)
         from.export(Eye.rgbLinear)
-        this.fillIntensityFromRGB(Eye.rgbLinear.chans)
+        this.fillIntensityFromRGB(Eye.rgbLinear.chan)
       }
     }
     return this
@@ -200,24 +193,32 @@ class Eye {
       if (to.space === CS.RGBgamma) {
         this.export(Eye.rgbLinear).export(to)
       } else {
-        if (this.r < 0.001) { this.r = 1 }
         const [l, m, h] = Eye.rToChannelOrder(this.r)
-        const [h1, h2] = Eye.RGBtoAnchors(l)
-        const ratio = [0, 0, 0]
-        const q = this.p / (1 - this.p)
-        ratio[l] = 1
-        ratio[h2] = 2 * (3 * this.r - h1) * q + 1
-        ratio[h1] = 2 * q - ratio[h2] + 2
-        if (this.space === CS.EyePercI) {
-          const pIr = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
-          const [y, z] = Eye.RGBtoAnchorOrder(pIr)
-          to.chans[l] = this.i / (pIr[y] + pIr[z])
-          to.chans[h] = to.chans[l] * ratio[h]
-        } else { // (this.space === CS.EyeNormJ)
-          to.chans[h] = this.j
-          to.chans[l] = to.chans[h] / ratio[h]
+        const [h1, h2] = Eye.lowestChanToAnchors(l)
+        const q = 1 + (3 * (3 * this.r - h1) - 1) * this.p
+        if (q <= 0) { // `q == 0` is possible only if `3r-h1 == 0` and `p == 1`, which implies that `rgb[h2] == rgb[l]` (see the definition of `r` in the `import` method) with the highest purity (primary color), so `rgb[h2]=0` and `rgb[l]=0` and only `rgb[h1]` has a value
+          to.chan[l] = to.chan[m] = 0
+          to.chan[h] = (this.space === CS.EyePercI) ? this.i / contributionToI[h] : this.j
+        } else {
+          const ratio = [0, 0, 0]
+          ratio[l] = (1 - this.p) / q
+          ratio[h1] = (2 + this.p) / q - 1
+          ratio[h2] = 1
+          if (this.space === CS.EyePercI) {
+            const Ir = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
+            const [y, z] = Eye.RGBtoAnchorOrder(Ir)
+            to.chan[h2] = this.i / (Ir[y] + Ir[z])
+            to.chan[h1] = to.chan[h2] * ratio[h1]
+          } else { // (this.space === CS.EyeNormJ)
+            to.chan[h] = this.j
+            if (h === h2) {
+              to.chan[h1] = to.chan[h2] * ratio[h1]
+            } else {
+              to.chan[h2] = to.chan[h1] / ratio[h1] // If ratio[h1]=0, we cannot reach this point. Proof: (2+p)/q-1=0 => q=2+p => r=(h1+(2+1/p)/3)/3 and noticing that 2+1/p is at least 3 we obtain r>=(h1+1)/3, so h1=R:r>=1/3 , h1=G:r>=2/3, h1=B:r=1. The first two cases are impossible because lowestChanToAnchors(rToChannelOrder(1/3 or 2/3)[0]) returns [G,B] or [B,R] whose h1 is respectively G or B, thus contradicting the first two assumptions. Regarding the third assumption: lowestChanToAnchors(rToChannelOrder(1)[0]) returns [B,R] (so the assumption holds) whose h2 is R, and the h in rToChannelOrder(1) is R, so h2=h.
+            }
+          }
+          to.chan[l] = to.chan[h2] * ratio[l]
         }
-        to.chans[m] = to.chans[l] * ratio[m]
       }
     }
     return to
@@ -225,10 +226,10 @@ class Eye {
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      const pI = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
-      const [m, h] = Eye.RGBtoAnchorOrder(pI)
-      this.i = pI[m] + pI[h]
-      this.snapshotImax(this.i / rgb[h])
+      const I = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
+      const [m, h] = Eye.RGBtoAnchorOrder(I)
+      this.i = I[m] + I[h]
+      this.snapshotImax(rgb[h] <= 0 ? contributionToI[R] + contributionToI[G] : this.i / rgb[h]) // the r and p values of black constrain i to stay below 0.9
     } else {
       // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
@@ -261,7 +262,7 @@ class Eye {
   }
 
   /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
-  protected static RGBtoAnchors (lowestChan: Channel) : Order {
+  protected static lowestChanToAnchors (lowestChan: Channel) : Order {
     switch (lowestChan) {
       case R : return [G, B]
       case G : return [B, R]
@@ -277,7 +278,7 @@ class Eye {
       return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
     }
     if (rgb[R] < rgb[B]) { return [R, B] }
-    return (rgb[G] < rgb[B]) ? [B, R] : [G, R]
+    return (rgb[G] < rgb[B]) ? [B, R] : [G, R] // note that white, grey and black return [G, R], which is what we want (they are the primaries bringing the most brightness to the human eye)
   }
 
   /** @returns the order of the channels from the lowest value to the highest-value */
@@ -294,16 +295,21 @@ class Eye {
 
 const cons = console
 
-const x = new RGB(CS.RGBgamma)
-x.import([255, 255, 255])
+const p = new RGB(CS.RGBgamma)
+p.import([255, 1, 255])
 
-const X = x.export(CS.EyeNormJ)
-const Y = x.export(CS.EyePercI)
-
+const X = p.export(CS.EyeNormJ)
+const X2 = X.export(CS.EyePercI)
+const Y = p.export(CS.EyePercI)
+const Y2 = Y.export(CS.EyeNormJ)
 cons.log(X)
-cons.log(X.export(CS.RGBgamma))
+cons.log(Y2)
 cons.log(Y)
+cons.log(X2)
+
+cons.log(X.export(CS.RGBgamma))
 cons.log(Y.export(CS.RGBgamma))
+
 </script>
 
 <template>
