@@ -4,7 +4,7 @@ enum CS {
   RGBlinear,
   /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
   RGBgamma,
-  /** RPI values whose `i` follows the intensity of the light that a human eye perceives (for a given `j`, different `r` and `p` values produce the same intensity for the human eye, but some values of `j` do not exist for certain values of r` and `p`) */
+  /** RPI values whose `i` follows the intensity of the light that a human eye perceives (for a given `j`, different `r` and `p` values produce the same intensity for the human eye, but some values of `j` are out-of-range (meaning that they would correspond to RGB values greater than 255) for certain r` and `p` values) */
   EyePercI,
   /** RPJ values whose `j` normalizes the light intensity (for a given `j`, different `r` and `p` values produce different intensities for the human eye, but this format is easier to handle because `j` is free to take any value between 0 and 1) */
   EyeNormJ
@@ -14,12 +14,6 @@ type Channel = 0 | 1 | 2
 const R: Channel = 0
 const G: Channel = 1
 const B: Channel = 2
-type Order = Channel[]
-
-// constants of our perception model
-const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the defintion of "relative luminance" in the ITU-R Recommendation BT.601
-const iota = 0.5
-const iotaInv = 1 / iota
 
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -39,7 +33,7 @@ class RGB {
     this.chan = [0, 0, 0]
   }
 
-  /** Copy a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
+  /** Copies a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
    * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance if they differ.
    * If a regular array of numbers is given, its values are expected to be compatible with the color space of the current instance (either linear RGB or gamma-shaped RGB).
    * @returns the instance that you import into (so not the parameter) */
@@ -72,7 +66,7 @@ class RGB {
     return this
   }
 
-  /** Copy this RGB instance into another RGB or Eye instance.
+  /** Copies this RGB instance into another RGB or Eye instance.
    * The color space of the current instance is automatically converted into the color space of the target instance if needed.
    * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
    * @returns target instance (same as `to` if `to` was an instance) */
@@ -95,11 +89,11 @@ class RGB {
 }
 
 /** Color space supposedly close to human perception, in two variants (depending on the parameter given to the constructor) :
- * - either the intensity of the light is stored in `i` and follows what a human eye perceives,
+ * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue thing and a green thing having the same `i` will feel as luminous as each other),
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
-  /** Read and write the perceived rainbow color here. It indicates where the color is on the rainbow. Key values: 0 is red. 1/3 is green. 2/3 is blue. 1 is red again. */
+  /** Read and write the perceived rainbow color here. It indicates where the color is on the rainbow. */
   r: number
   /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived rainbow color is present. */
   p: number
@@ -110,7 +104,8 @@ class Eye {
   /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
    * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   j: number
-  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives depend on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so the `iMax` of blue is lower than the `iMax` of green.
+  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives depends on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so the `iMax` of blue is lower than the `iMax` of green.
+   *  If you set `i` to a value higher than `iMax`, the color will correspond to RGB values greater than 255.
    * `iMax` is kept up-to-date automatically when you change `r` or `p`. */
   get iMax () : number {
     if (this.Imax.rOfValue !== this.r || this.Imax.pOfValue !== this.p) {
@@ -119,22 +114,41 @@ class Eye {
       }
       this.convertToRGB(Eye.rgbLinear, Eye.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = (Eye.lowestImaxIotaIinv / Eye.rgbLinear.chan[h]) ** iota
+      this.Imax.value = Math.sqrt(Eye.lowestImaxIotaIinv / Eye.rgbLinear.chan[h])
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
     return this.Imax.value
   }
 
-  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  static readonly lowestImax = contributionToI[B] ** iota
-  protected static readonly lowestImaxIotaIinv = contributionToI[B]
+  // constants of our perception model
+  protected static intCoeff = [0.30, 0.55, 0.15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the defintion of "relative luminance" in the ITU-R Recommendation BT.601)
+  protected static mixCoeff = [12, 15, 7] // coeffients to calculate the perceived result when mixing primaries together or a pure hue with white (obtained empiricially)
+  // const iota = 0.5                     (obtained empirically) so for performance we rather use sqrt()
+  // const iotaInv = 1/iota               (obtained empirically) so for performance we rather use *
+  protected static rKey = [0, 0, 0, 0, 0, 0, 0]
 
-  /** @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
- * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
+  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
+  static readonly lowestImax = Math.sqrt(Eye.intCoeff[B])
+  protected static readonly lowestImaxIotaIinv = Eye.intCoeff[B]
+
+  /**
+   * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
+   * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
   constructor (space: CS) {
     if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
       throw new Error('an Eye object can carry RPI/J information only')
+    }
+    if (!Eye.rKey[1]) {
+      const lSequence = [B, R, G]
+      for (let k = 0; k <= 6; k++) {
+        if (k % 2) {
+          const [h1, h2] = Eye.lowestChanToAnchors(lSequence[Math.floor(k / 2)])
+          Eye.rKey[k] = (h1 + 1 * Eye.mixCoeff[h2] / (Eye.mixCoeff[h1] + Eye.mixCoeff[h2])) / 3
+        } else {
+          Eye.rKey[k] = k / 6
+        }
+      }
     }
     this.space = space
     this.r = this.p = this.i = this.j = 0
@@ -148,7 +162,7 @@ class Eye {
 
   protected static rgbLinear = new RGB(CS.RGBlinear)
 
-  /** Copy a RGB or Eye instance into the current Eye instance.
+  /** Copies a RGB or Eye instance into the current Eye instance.
    * Color spaces are automatically converted into the color space of the current Eye instance if they differ.
    * @returns the instance that you import into (so not the parameter) */
   import (from: RGB | Eye) : Eye {
@@ -160,14 +174,14 @@ class Eye {
       const rgb = (from as RGB).chan
       const l = Eye.RGBtoLowestChannel(rgb)
       const [h1, h2] = Eye.lowestChanToAnchors(l)
-      const anchorSum = rgb[h1] + rgb[h2]
-      const anchorContributions = anchorSum - 2 * rgb[l]
-      if (anchorContributions <= 0) { // the 3 channels are equal, so we have black, grey or white
+      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.mixCoeff[h2]
+      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.mixCoeff[h1] + anchor2Contribution
+      if (anchors12Contributions <= 0) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
       } else {
-        this.r = ((rgb[h2] - rgb[l]) / anchorContributions + h1) / 3
-        this.p = anchorContributions / (anchorSum + rgb[l])
+        this.r = (h1 + anchor2Contribution / anchors12Contributions) / 3
+        this.p = anchors12Contributions / (rgb[l] * Eye.mixCoeff[l] + rgb[h1] * Eye.mixCoeff[h1] + rgb[h2] * Eye.mixCoeff[h2])
       }
       this.fillIntensityFromRGB(rgb)
     } else {
@@ -190,7 +204,7 @@ class Eye {
     return this
   }
 
-  /** Copy this Eye instance into another RGB or Eye instance.
+  /** Copies this Eye instance into another RGB or Eye instance.
    * The color space of the current instance is automatically converted into the color space of the target instance if needed.
    * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
    * @returns target instance (same as `to` if `to` was an instance) */
@@ -212,22 +226,22 @@ class Eye {
   protected convertToRGB (to: RGB, i: number, j: number) {
     const [l, m, h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
-    const q = 1 + (3 * (3 * this.r - h1) - 1) * this.p
+    const q = this.p * ((3 * this.r - h1) * ((Eye.mixCoeff[l] + Eye.mixCoeff[h1]) / Eye.mixCoeff[h2] + 1) - 1) + 1
     if (q <= 0) { // `q == 0` is possible only if `3r-h1 == 0` and `p == 1`, which implies that `rgb[h2] == rgb[l]` (see the definition of `r` in the `import` method) with the highest purity (primary color), so `rgb[h2]=0` and `rgb[l]=0` and only `rgb[h1]` has a value
       to.chan[l] = to.chan[m] = 0
-      to.chan[h] = (this.space === CS.EyePercI) ? i ** iotaInv / contributionToI[h] : j ** iotaInv
+      to.chan[h] = (this.space === CS.EyePercI) ? i * i / Eye.intCoeff[h] : j * j
     } else {
       const ratio = [0, 0, 0]
       ratio[l] = (1 - this.p) / q
-      ratio[h1] = (2 + this.p) / q - 1
+      ratio[h1] = (Eye.mixCoeff[l] * this.p + Eye.mixCoeff[h1] + Eye.mixCoeff[h2] * (1 - q)) / (Eye.mixCoeff[h1] * q)
       ratio[h2] = 1
       if (this.space === CS.EyePercI) {
-        const Ir = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
+        const Ir = [Eye.intCoeff[R] * ratio[R], Eye.intCoeff[G] * ratio[G], Eye.intCoeff[B] * ratio[B]]
         const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-        to.chan[h2] = i ** iotaInv / (Ir[y] + Ir[z])
+        to.chan[h2] = i * i / (Ir[y] + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
       } else { // (this.space === CS.EyeNormJ)
-        to.chan[h] = j ** iotaInv
+        to.chan[h] = j * j
         if (h === h2) {
           to.chan[h1] = to.chan[h2] * ratio[h1]
         } else {
@@ -240,13 +254,13 @@ class Eye {
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      const I = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
+      const I = [Eye.intCoeff[R] * rgb[R], Eye.intCoeff[G] * rgb[G], Eye.intCoeff[B] * rgb[B]]
       const [y, z] = Eye.RGBtoAnchorOrder(I)
-      this.i = (I[y] + I[z]) ** iota
+      this.i = Math.sqrt(I[y] + I[z])
     } else {
       // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
-      this.j = rgb[h] ** iota
+      this.j = Math.sqrt(rgb[h])
     }
   }
 
@@ -269,7 +283,7 @@ class Eye {
   }
 
   /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
-  protected static lowestChanToAnchors (lowestChan: Channel) : Order {
+  protected static lowestChanToAnchors (lowestChan: Channel) : Channel[] {
     switch (lowestChan) {
       case R : return [G, B]
       case G : return [B, R]
@@ -279,7 +293,7 @@ class Eye {
   }
 
   /** @returns the anchor having the lowest value followed by the highest-value anchor */
-  protected static RGBtoAnchorOrder (rgb : number[]) : Order {
+  protected static RGBtoAnchorOrder (rgb : number[]) : Channel[] {
     if (rgb[R] < rgb[G]) {
       if (rgb[G] < rgb[B]) { return [G, B] }
       return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
@@ -289,14 +303,14 @@ class Eye {
   }
 
   /** @returns the order of the channels from the lowest value to the highest-value */
-  protected static rToChannelOrder (r : number) : Order {
-    if (r < 1 / 3) {
-      return (r < 1 / 3 - 1 / 6) ? [B, G, R] : [B, R, G]
+  protected static rToChannelOrder (r : number) : Channel[] {
+    if (r < Eye.rKey[2]) {
+      return (r < Eye.rKey[1]) ? [B, G, R] : [B, R, G]
     }
-    if (r < 2 / 3) {
-      return (r < 2 / 3 - 1 / 6) ? [R, B, G] : [R, G, B]
+    if (r < Eye.rKey[4]) {
+      return (r < Eye.rKey[3]) ? [R, B, G] : [R, G, B]
     }
-    return (r < 3 / 3 - 1 / 6) ? [G, R, B] : [G, B, R]
+    return (r < Eye.rKey[5]) ? [G, R, B] : [G, B, R]
   }
 }
 
@@ -324,6 +338,16 @@ for (let r = 0; r <= numR; r++) {
       color.p = p / numP
       color.i = i / numI
       colors[r][p].push({ rgb: color.export(CS.RGBgamma) as RGB, eye: color.export(CS.EyePercI) as Eye })
+      const rgb = (colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma) as RGB).chan
+      if (colors[r][p][i].rgb.chan[0] !== rgb[0] || colors[r][p][i].rgb.chan[1] !== rgb[1] || colors[r][p][i].rgb.chan[2] !== rgb[2]) {
+        cons.log(colors[r][p][i].rgb.chan, rgb)
+        cons.log(colors[r][p][i].eye, colors[r][p][i].eye.export(CS.EyeNormJ))
+      }
+      const rgb2 = ((new Eye(CS.EyePercI)).import(colors[r][p][i].rgb)).export(CS.RGBgamma) as RGB
+      if (colors[r][p][i].rgb.chan[0] !== rgb2.chan[0] || colors[r][p][i].rgb.chan[1] !== rgb2.chan[1] || colors[r][p][i].rgb.chan[2] !== rgb2.chan[2]) {
+        cons.log(colors[r][p][i].rgb, rgb)
+        cons.log(colors[r][p][i].eye, colors[r][p][i].eye.export(CS.EyeNormJ))
+      }
     }
   }
 }
@@ -367,19 +391,18 @@ for (let k = 0; k <= 4; k++) {
 </script>
 
 <template>
-  <div style="background-color: rgb(186,186,186)">
+  <div style="background-color: rgb(126,126,126)">
     <br><br>
-    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 3px; height: 20px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
-    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 3px; height: 20px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-    <br>
+    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <br><br>
 
-    <div v-for="(rRow,r) of colors" :key="r">
-      <br>
+    <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
       <span v-for="(pRow,p) of rRow" :key="p">
-        <div style="display: inline-block; width: 10px; height: 20px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div style="display: inline-block; width: 20px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
       </span>
-      <span style="display: inline-block; width: 10px; height: 20px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+      <span style="display: inline-block; width: 20px; height: 40px; border: 0px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
     </div>
     <br>
 
@@ -395,7 +418,9 @@ for (let k = 0; k <= 4; k++) {
       <br>
     </div>
 
-    <h1>Iota adjustement: each middle square must feel as different from its left square as from its right square. It cannot be perfect in each case but find the iota that makes it as good as possible overall.</h1>
+    <h1>Iota adjustement: each middle square must feel as different from its left square as from its right square.</h1>
+    The better this criterion is approched, the more linear the scale of intensity is.
+    <br><br>
     <div v-for="k of linearCount4" :key="k" style="text-align: center; background-color: #7030f0">
       <br>
       <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
@@ -420,7 +445,26 @@ for (let k = 0; k <= 4; k++) {
       <br>
     </div>
 
-    <h1>Screen calibration: Verify that the light intensity produced by your screen is linear in the RGB input.</h1>
+    <h1>mixCoeff adjustement:</h1>
+    1. Each middle square must feel as different from its left square as from its right square.
+    The better this criterion is approched, the more linear in `p` the perceived purity is.
+    <div style="background-color: rgb(160,160,160)">
+      <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
+        <br>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <br>
+      </div>
+    </div>
+    <br>
+    2. At the same time, try to balance the widths of the color domains on the rainbow.
+    The better this criterion is approched, the more linear in `r` the perceived hue is.
+    <br><br>
+    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <br><br>
+
+    <h1>Screen calibration (to verify that the light intensity produced by your screen is linear in the RGB input).</h1>
     This is true if the following squares look plain (the center parts must not look brighter or dimmer).<br>
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
