@@ -123,10 +123,12 @@ class Eye {
 
   // constants of our perception model
   protected static intCoeff = [0.30, 0.55, 0.15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the defintion of "relative luminance" in the ITU-R Recommendation BT.601)
-  protected static mixCoeff = [12, 15, 7] // coeffients to calculate the perceived result when mixing primaries together or a pure hue with white (obtained empiricially)
+  protected static rhoG = 0.45 // coeffients to...
+  protected static rhoB = 0.20 // ... adjust the perceived result when mixing primaries together or a pure color with white (obtained empiricially)
   // const iota = 0.5                     (obtained empirically) so for performance we rather use sqrt()
   // const iotaInv = 1/iota               (obtained empirically) so for performance we rather use *
-  protected static rKey = [0, 0, 0, 0, 0, 0, 0]
+  protected static mixCoeff = [0, 0, 0]
+  protected static rKey = [0, 0, 0, 0, 0, 0, 0] // coordinates of the primaries and secondaries on the rainbow (will be filled by the constructor from mixCoeff)
 
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
   static readonly lowestImax = Math.sqrt(Eye.intCoeff[B])
@@ -140,6 +142,7 @@ class Eye {
       throw new Error('an Eye object can carry RPI/J information only')
     }
     if (!Eye.rKey[1]) {
+      Eye.mixCoeff[0] = 1 - Eye.rhoG - Eye.rhoB; Eye.mixCoeff[1] = Eye.rhoG; Eye.mixCoeff[2] = Eye.rhoB
       const lSequence = [B, R, G]
       for (let k = 0; k <= 6; k++) {
         if (k % 2) {
@@ -418,7 +421,8 @@ for (let k = 0; k <= 4; k++) {
       <br>
     </div>
 
-    <h1>Iota adjustement: each middle square must feel as different from its left square as from its right square.</h1>
+    <h1>Adjustement of iota</h1>
+    Each middle square must feel as different from its left square as from its right square.
     The better this criterion is approched, the more linear the scale of intensity is.
     <br><br>
     <div v-for="k of linearCount4" :key="k" style="text-align: center; background-color: #7030f0">
@@ -445,7 +449,7 @@ for (let k = 0; k <= 4; k++) {
       <br>
     </div>
 
-    <h1>mixCoeff adjustement:</h1>
+    <h1>Adjustement of rhoG and rhoB</h1>
     1. Each middle square must feel as different from its left square as from its right square.
     The better this criterion is approched, the more linear in `p` the perceived purity is.
     <div style="background-color: rgb(160,160,160)">
@@ -465,7 +469,7 @@ for (let k = 0; k <= 4; k++) {
     <br><br>
 
     <h1>Screen calibration (to verify that the light intensity produced by your screen is linear in the RGB input).</h1>
-    This is true if the following squares look plain (the center parts must not look brighter or dimmer).<br>
+    Your screen is perfectly linear if the following squares look plain (the center parts must not look brighter or dimmer).<br>
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
