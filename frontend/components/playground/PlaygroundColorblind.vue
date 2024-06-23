@@ -15,7 +15,11 @@ const R: Channel = 0
 const G: Channel = 1
 const B: Channel = 2
 type Order = Channel[]
+
+// constants of our perception model
 const contributionToI = [0.3, 0.6, 0.1] // rounded coefficients from the defintion of "relative luminance" in the ITU-R Recommendation BT.601
+const iota = 0.5
+const iotaInv = 1 / iota
 
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -99,28 +103,32 @@ class Eye {
   r: number
   /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived rainbow color is present. */
   p: number
-  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` constrain the maximum intensity that can be perceived and it is often less than 1.
+  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` determine the maximum intensity that can be perceived and it is often less than 1.
    * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `r` and `p`.
    * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   i: number
   /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
    * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
   j: number
-  /** Maximum value that `i` can have under the constraint of `r` and `p`.
-   * This value is kept up-to-date automatically. */
+  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives depend on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so the `iMax` of blue is lower than the `iMax` of green.
+   * `iMax` is kept up-to-date automatically when you change `r` or `p`. */
   get iMax () : number {
     if (this.Imax.rOfValue !== this.r || this.Imax.pOfValue !== this.p) {
       if (this.space !== CS.EyePercI) {
         return 1
       }
-      this.convertToRGB(Eye.rgbLinear, contributionToI[B]) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible, which is 0.1 when this comment was written) so the RGB cannot be black
+      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = contributionToI[B] / Eye.rgbLinear.chan[h]
+      this.Imax.value = (Eye.lowestImaxIotaIinv / Eye.rgbLinear.chan[h]) ** iota
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
     return this.Imax.value
   }
+
+  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
+  static readonly lowestImax = contributionToI[B] ** iota
+  protected static readonly lowestImaxIotaIinv = contributionToI[B]
 
   /** @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
  * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
@@ -196,18 +204,18 @@ class Eye {
       if (to.space === CS.RGBgamma) {
         this.export(Eye.rgbLinear).export(to)
       } else {
-        this.convertToRGB(to as RGB, this.i)
+        this.convertToRGB(to as RGB, this.i, this.j)
       }
     return to
   }
 
-  protected convertToRGB (to: RGB, i: number) {
+  protected convertToRGB (to: RGB, i: number, j: number) {
     const [l, m, h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const q = 1 + (3 * (3 * this.r - h1) - 1) * this.p
     if (q <= 0) { // `q == 0` is possible only if `3r-h1 == 0` and `p == 1`, which implies that `rgb[h2] == rgb[l]` (see the definition of `r` in the `import` method) with the highest purity (primary color), so `rgb[h2]=0` and `rgb[l]=0` and only `rgb[h1]` has a value
       to.chan[l] = to.chan[m] = 0
-      to.chan[h] = (this.space === CS.EyePercI) ? i / contributionToI[h] : this.j
+      to.chan[h] = (this.space === CS.EyePercI) ? i ** iotaInv / contributionToI[h] : j ** iotaInv
     } else {
       const ratio = [0, 0, 0]
       ratio[l] = (1 - this.p) / q
@@ -216,10 +224,10 @@ class Eye {
       if (this.space === CS.EyePercI) {
         const Ir = [contributionToI[R] * ratio[R], contributionToI[G] * ratio[G], contributionToI[B] * ratio[B]]
         const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-        to.chan[h2] = i / (Ir[y] + Ir[z])
+        to.chan[h2] = i ** iotaInv / (Ir[y] + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
       } else { // (this.space === CS.EyeNormJ)
-        to.chan[h] = this.j
+        to.chan[h] = j ** iotaInv
         if (h === h2) {
           to.chan[h1] = to.chan[h2] * ratio[h1]
         } else {
@@ -234,11 +242,11 @@ class Eye {
     if (this.space === CS.EyePercI) {
       const I = [contributionToI[R] * rgb[R], contributionToI[G] * rgb[G], contributionToI[B] * rgb[B]]
       const [y, z] = Eye.RGBtoAnchorOrder(I)
-      this.i = I[y] + I[z]
+      this.i = (I[y] + I[z]) ** iota
     } else {
       // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
-      this.j = rgb[h]
+      this.j = rgb[h] ** iota
     }
   }
 
@@ -292,18 +300,26 @@ class Eye {
   }
 }
 
+//
+// TESTS AND ADJUSTEMENTS
+//
+
+const cons = console
 const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
-const numR = 10
-const numP = 20
+const numR = 6
+const numP = 45
 const numI = 40
 const color = new Eye(CS.EyePercI)
-
+let maxIntensityMinIndex = 1000
 for (let r = 0; r <= numR; r++) {
   colors.push([])
   for (let p = 0; p <= numP; p++) {
     colors[r].push([])
     for (let i = 0; i <= numI; i++) {
-      if (i > 0 && (i / numI) > color.iMax) { break }
+      if (i > 0 && (i / numI) > color.iMax) {
+        if (i - 1 < maxIntensityMinIndex) { maxIntensityMinIndex = i - 1 }
+        break
+      }
       color.r = r / numR
       color.p = p / numP
       color.i = i / numI
@@ -312,26 +328,166 @@ for (let r = 0; r <= numR; r++) {
   }
 }
 
-const values: number[] = []
-
-for (let i = 0; i < 1; i += 0.05) {
-  values.push(Math.round((i ** 0.4545) * 255))
+const rainbowSameI: Array<RGB> = []
+const rainbowSameJ: Array<RGB> = []
+for (let r = 0; r <= 200; r++) {
+  color.r = r / 200
+  color.p = 1
+  color.i = Eye.lowestImax
+  rainbowSameI.push(color.export(CS.RGBgamma) as RGB)
+  color.i = color.iMax
+  rainbowSameJ.push(color.export(CS.RGBgamma) as RGB)
+  if (rainbowSameJ[r].chan[R] > 255 || rainbowSameJ[r].chan[G] > 255 || rainbowSameJ[r].chan[B] > 255) { cons.log('ERROR', rainbowSameJ[r].chan, color) }
 }
 
+const linearCount80: number[] = []
+for (let k = 0; k < 80; k++) {
+  linearCount80.push(k)
+}
+
+const linearCount4: number[] = []
+for (let k = 0; k <= 4; k++) {
+  linearCount4.push(k)
+}
+
+const iotaIadjuster: Array<RGB> = []
+color.p = 0
+for (let k = 0; k <= 6; k++) {
+  color.i = color.iMax * k / 6
+  iotaIadjuster.push(color.export(CS.RGBgamma) as RGB)
+}
+
+const iotaJadjuster: Array<RGB> = []
+const colorJ = new Eye(CS.EyeNormJ)
+for (let k = 0; k <= 6; k++) {
+  colorJ.p = 0
+  colorJ.j = k / 6
+  iotaJadjuster.push(colorJ.export(CS.RGBgamma) as RGB)
+}
 </script>
 
 <template>
   <div style="background-color: rgb(186,186,186)">
+    <br><br>
+    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 3px; height: 20px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 3px; height: 20px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <br>
+
+    <div v-for="(rRow,r) of colors" :key="r">
+      <br>
+      <span v-for="(pRow,p) of rRow" :key="p">
+        <div style="display: inline-block; width: 10px; height: 20px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
+      </span>
+      <span style="display: inline-block; width: 10px; height: 20px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+    </div>
+    <br>
+
     <div v-for="(rRow,r) of colors" :key="r">
       <div v-for="(pRow,p) of rRow" :key="p">
-        <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'" />
+        <div v-if="!(p%3)">
+          <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'">
+            {{ (c.rgb.chan[R] > 255 || c.rgb.chan[G] > 255 || c.rgb.chan[B] > 255) ? 'E+' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
+            {{ (c.rgb.chan[R] < 0 || c.rgb.chan[G] < 0 || c.rgb.chan[B] < 0) ? 'E-' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
+          </div>
+        </div>
       </div>
       <br>
     </div>
-    <br>
-    <span style="border: 1px solid black">
-      <div v-for="i of values" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + i + ',' + i + ',' + i + ')'" />
-    </span>
+
+    <h1>IotaI and iotaJ adjustements: each middle square must feel as different from its left square as from its right square.</h1>
+    <div v-for="k of linearCount4" :key="k" style="text-align: center; background-color: #7030f0">
+      <br>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
+        I
+      </div>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[1+k].chan[R] + ',' + iotaIadjuster[1+k].chan[G] + ',' + iotaIadjuster[1+k].chan[B] + ')'">
+        I
+      </div>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[2+k].chan[R] + ',' + iotaIadjuster[2+k].chan[G] + ',' + iotaIadjuster[2+k].chan[B] + ')'">
+        I
+      </div>
+      <br>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[0+k].chan[R] + ',' + iotaJadjuster[0+k].chan[G] + ',' + iotaJadjuster[0+k].chan[B] + ')'">
+        J
+      </div>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[1+k].chan[R] + ',' + iotaJadjuster[1+k].chan[G] + ',' + iotaJadjuster[1+k].chan[B] + ')'">
+        J
+      </div>
+      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[2+k].chan[R] + ',' + iotaJadjuster[2+k].chan[G] + ',' + iotaJadjuster[2+k].chan[B] + ')'">
+        J
+      </div>
+      <br>
+    </div>
+
+    <h1>Screen calibration: Verify that the light intensity produced by your screen is linear in the RGB input.</h1>
+    This is true if the following squares look plain (the center parts must not look brighter or dimmer).<br>
+    For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
+    <br><br>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*186 + ',' + ((k+1)%2)*186 + ',' + ((k+1)%2)*186 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,186,186)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*255 + ',' + ((k+1)%2)*255 + ',' + ((k+1)%2)*255 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,223,223)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-((k+1)%2)*69) + ',' + (255-((k+1)%2)*69) + ',' + (255-((k+1)%2)*69) + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" />
+    </div>
+    <br><br>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,0,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,0,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,0,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-((k+1)%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" />
+    </div>
+    <br><br>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,135,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + ((k+1)%2)*186 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,186,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + ((k+1)%2)*255 + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,223,0)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-((k+1)%2)*69) + ',' + 0 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" />
+    </div>
+    <br><br>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,135)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + ((k+1)%2)*186 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,186)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + ((k+1)%2)*255 + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" />
+    </div>
+    <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,223)">
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-((k+1)%2)*69) + ')'" /><br>
+      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" />
+    </div>
+    <br><br>
   </div>
 </template>
 
