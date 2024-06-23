@@ -346,22 +346,22 @@ for (let k = 0; k < 80; k++) {
 }
 
 const linearCount4: number[] = []
-for (let k = 0; k <= 4; k++) {
+for (let k = 0; k <= 2; k++) {
   linearCount4.push(k)
 }
 
 const iotaIadjuster: Array<RGB> = []
 color.p = 0
-for (let k = 0; k <= 6; k++) {
-  color.i = color.iMax * k / 6
+for (let k = 0; k <= 4; k++) {
+  color.i = color.iMax * k / 4
   iotaIadjuster.push(color.export(CS.RGBgamma) as RGB)
 }
 
 const iotaJadjuster: Array<RGB> = []
 const colorJ = new Eye(CS.EyeNormJ)
-for (let k = 0; k <= 6; k++) {
+for (let k = 0; k <= 4; k++) {
   colorJ.p = 0
-  colorJ.j = k / 6
+  colorJ.j = k / 4
   iotaJadjuster.push(colorJ.export(CS.RGBgamma) as RGB)
 }
 </script>
@@ -395,7 +395,7 @@ for (let k = 0; k <= 6; k++) {
       <br>
     </div>
 
-    <h1>IotaI and iotaJ adjustements: each middle square must feel as different from its left square as from its right square.</h1>
+    <h1>Iota adjustement: each middle square must feel as different from its left square as from its right square. It cannot be perfect in each case but find the iota that makes it as good as possible overall.</h1>
     <div v-for="k of linearCount4" :key="k" style="text-align: center; background-color: #7030f0">
       <br>
       <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
