@@ -4,9 +4,9 @@ enum CS {
   RGBlinear,
   /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
   RGBgamma,
-  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye perceives (for a given `i`, different `r` and `p` values produce the same intensity for the human eye, but some values of `i` are out-of-range (meaning that they would correspond to RGB values greater than 255) for certain r` and `p` values) */
+  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye perceives (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would correspond to RGB values greater than 255). */
   EyePercI,
-  /** RPJ values (rainbow color, purity, intensity) whose `j` normalizes the light intensity (for a given `j`, different `r` and `p` values produce different intensities for the human eye, but this format is easier to handle because `j` is free to take any value between 0 and 1) */
+  /** RPJ values (rainbow color, purity, intensity) whose `j` normalizes the light intensity (for a given `j`, the colors that you get with various `r` and `p` produce different intensities for the human eye, but this format is easier to handle than `CS.EyePercI` because `j` is free to take any value between 0 and 1) */
   EyeNormJ
 }
 
