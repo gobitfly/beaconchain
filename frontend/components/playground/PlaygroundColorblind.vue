@@ -142,7 +142,7 @@ class Eye {
       throw new Error('an Eye object can carry RPI/J information only')
     }
     if (!Eye.rKey[1]) {
-      Eye.mixCoeff[0] = 1 - Eye.rhoG - Eye.rhoB; Eye.mixCoeff[1] = Eye.rhoG; Eye.mixCoeff[2] = Eye.rhoB
+      Eye.mixCoeff[R] = 1 - Eye.rhoG - Eye.rhoB; Eye.mixCoeff[G] = Eye.rhoG; Eye.mixCoeff[B] = Eye.rhoB
       const lSequence = [B, R, G]
       for (let k = 0; k <= 6; k++) {
         if (k % 2) {
