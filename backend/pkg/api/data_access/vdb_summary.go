@@ -902,9 +902,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 
 // allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
 
-func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGeneralValidatorIndices, error) {
+func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetValidatorDashboardValidatorIndices(dashboardId, groupId, period)
+	return d.dummy.GetValidatorDashboardValidatorIndices(dashboardId, groupId)
 }
 func (d *DataAccessService) GetValidatorDashboardSyncValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncValidatorIndices, error) {
 	// TODO @DATA-ACCESS

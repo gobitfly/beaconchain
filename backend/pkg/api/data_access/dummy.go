@@ -230,7 +230,7 @@ func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGeneralValidatorIndices, error) {
+func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error) {
 	r := t.VDBGeneralValidatorIndices{}
 	err := commonFakeData(&r)
 	return &r, err

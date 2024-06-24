@@ -633,15 +633,15 @@ func mapVDBIndices(indices interface{}) ([]types.VDBValidatorIndices, error) {
 		appendData("pending", v.Pending)
 		appendData("deposited", v.Deposed)
 	case *types.VDBSyncValidatorIndices:
-		appendData("current", v.Current)
-		appendData("upcoming", v.Upcoming)
-		appendData("past", v.Past)
+		appendData("sync_current", v.Current)
+		appendData("sync_upcoming", v.Upcoming)
+		appendData("sync_past", v.Past)
 	case *types.VDBSlashingsValidatorIndices:
 		appendData("has_slashed", v.HasSlashed)
 		appendData("got_slashed", v.GotSlashed)
 	case *types.VDBProposalValidatorIndices:
-		appendData("proposed", v.Proposed)
-		appendData("missed", v.Missed)
+		appendData("proposal_proposed", v.Proposed)
+		appendData("proposal_missed", v.Missed)
 	default:
 		return nil, fmt.Errorf("unsupported indices type")
 	}

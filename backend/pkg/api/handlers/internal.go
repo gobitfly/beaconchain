@@ -823,7 +823,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	duties := enums.ValidatorDuties
 	switch duty {
 	case duties.None:
-		indices, err = h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, period)
+		indices, err = h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId)
 	case duties.Sync:
 		indices, err = h.dai.GetValidatorDashboardSyncValidatorIndices(*dashboardId, groupId, period)
 	case duties.Slashed:

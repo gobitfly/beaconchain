@@ -47,7 +47,7 @@ type ValidatorDashboardRepository interface {
 	GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error)
 	GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error)
 	GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error)
-	GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGeneralValidatorIndices, error)
+	GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error)
 	GetValidatorDashboardSyncValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncValidatorIndices, error)
 	GetValidatorDashboardSlashingsValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsValidatorIndices, error)
 	GetValidatorDashboardProposalValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalValidatorIndices, error)
