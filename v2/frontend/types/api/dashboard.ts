@@ -12,9 +12,8 @@ export interface AccountDashboard {
 export interface ValidatorDashboard {
   id: number /* uint64 */;
   name: string;
-  public_ids?: VDBPublicId[];
   archived: boolean;
-  archived_reason?: string; // dashboard_limit, validator_limit, (not present = can be restored)
+  public_ids?: VDBPublicId[];
 }
 export interface UserDashboardsData {
   validator_dashboards: ValidatorDashboard[];

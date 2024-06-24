@@ -180,6 +180,16 @@ func (d *DataAccessService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary)
 	return nil
 }
 
+func (d *DataAccessService) GetValidatorDashboardArchiving(dashboardId t.VDBIdPrimary) (*t.VDBArchivedData, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetValidatorDashboardArchiving(dashboardId)
+}
+
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateValidatorDashboardArchiving(dashboardId, archived)
+}
+
 func (d *DataAccessService) UpdateValidatorDashboardName(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 

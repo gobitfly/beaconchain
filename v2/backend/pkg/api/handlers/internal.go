@@ -276,6 +276,49 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 	returnNoContent(w)
 }
 
+func (h *HandlerService) InternalGetValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardArchiving(dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardArchivingResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	req := struct {
+		Archived bool `json:"archived"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.UpdateValidatorDashboardArchiving(dashboardId, req.Archived)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.VDBPostArchivingReturnData]{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
 func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
