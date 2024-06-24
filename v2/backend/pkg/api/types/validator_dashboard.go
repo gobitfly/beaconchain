@@ -89,7 +89,15 @@ type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupS
 
 type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
-type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
+// ------------------------------------------------------------
+// Validator Indices
+
+type VDBValidatorIndices struct {
+	Category   string   `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
+	Validators []uint64 `json:"validators"`
+}
+
+type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]VDBValidatorIndices]
 
 // ------------------------------------------------------------
 // Rewards Tab

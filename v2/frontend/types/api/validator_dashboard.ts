@@ -77,7 +77,11 @@ export interface VDBGroupSummaryData {
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
-export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<number /* uint64 */[]>;
+export interface VDBValidatorIndices {
+  category: 'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
+  validators: number /* uint64 */[];
+}
+export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<VDBValidatorIndices[]>;
 /**
  * ------------------------------------------------------------
  * Rewards Tab
