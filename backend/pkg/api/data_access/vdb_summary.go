@@ -900,21 +900,22 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	return ret, nil
 }
 
-// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-
 func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error) {
 	// TODO @DATA-ACCESS
 	return d.dummy.GetValidatorDashboardValidatorIndices(dashboardId, groupId)
 }
 func (d *DataAccessService) GetValidatorDashboardSyncValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncValidatorIndices, error) {
 	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	return d.dummy.GetValidatorDashboardSyncValidatorIndices(dashboardId, groupId, period)
 }
 func (d *DataAccessService) GetValidatorDashboardSlashingsValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsValidatorIndices, error) {
 	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	return d.dummy.GetValidatorDashboardSlashingsValidatorIndices(dashboardId, groupId, period)
 }
 func (d *DataAccessService) GetValidatorDashboardProposalValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalValidatorIndices, error) {
 	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	return d.dummy.GetValidatorDashboardProposalValidatorIndices(dashboardId, groupId, period)
 }
