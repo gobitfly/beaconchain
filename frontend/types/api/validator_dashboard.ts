@@ -60,6 +60,11 @@ export interface VDBGroupSummarySyncCount {
   upcoming_validators: number /* uint64 */;
   past_periods: number /* uint64 */;
 }
+export interface VDBGroupSummaryMissedRewards {
+  proposer_rewards: ClElValue<string /* decimal.Decimal */>;
+  attestations: string /* decimal.Decimal */;
+  sync: string /* decimal.Decimal */;
+}
 export interface VDBGroupSummaryData {
   attestations_head: StatusCount;
   attestations_source: StatusCount;
@@ -70,7 +75,7 @@ export interface VDBGroupSummaryData {
   sync_count: VDBGroupSummarySyncCount;
   slashings: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
   proposal_validators: number /* uint64 */[];
-  total_missed_rewards: string /* decimal.Decimal */; // probably EL only?
+  missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
   income: ClElValue<string /* decimal.Decimal */>;
   luck: Luck;
