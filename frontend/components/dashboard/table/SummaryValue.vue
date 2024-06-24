@@ -39,7 +39,7 @@ const { groups } = useValidatorDashboardGroups()
 const data = computed(() => {
   const col = props.data
   const row = props.row
-  if (row && props.property === 'attestation_total') {
+  if (row && props.property === 'attestations') {
     return {
       efficiency: {
         status_count: row.attestations
@@ -113,6 +113,10 @@ const data = computed(() => {
   } else if (row && props.property === 'reward') {
     return {
       reward: row.reward
+    }
+  } else if (col && props.property === 'missed_rewards') {
+    return {
+      missedRewards: col.total_missed_rewards
     }
   }
 })

@@ -436,7 +436,6 @@
       },
       "col": {
         "duty": "Duty",
-        "total_rewards": "Total Rewards",
         "el_rewards": "El Rewards",
         "cl_rewards": "Cl Rewards",
         "index": "Index",
@@ -464,20 +463,21 @@
         "row": {
           "efficiency": "Efficiency",
           "attestations": "Attestations",
-          "attestation_total": "Total Attestations",
           "attestations_head": "Head",
           "attestations_source": "Source",
           "attestations_target": "Target",
           "attestation_efficiency": "Att. Efficiency",
           "attestation_avg_incl_dist": "Avg. Incl. Distance",
-          "sync": "Sync Committee",
+          "sync": "Sync Committee Efficiency ",
           "validators_sync": "Validators",
           "proposals": "Proposals",
           "validators_proposal": "Validators",
           "slashings": "Slashings",
           "validators_slashings": "Slashed Validators",
           "apr": "APR",
-          "luck": "Luck"
+          "luck": "Luck",
+          "reward": "Reward",
+          "missed_rewards": "Total missed rewards"
         },
         "status": {
           "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",

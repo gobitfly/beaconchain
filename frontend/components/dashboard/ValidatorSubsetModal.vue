@@ -56,7 +56,9 @@ watch(props, async (p) => {
       }
 
       const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
-      validators.value = sortValidatorIds(res.data)
+      const ids: number[] = []
+      // TODO: replace this quickfix with the real refactoring
+      validators.value = sortValidatorIds(res.data.reduce((ids, data) => ids.concat(data.validators), ids))
       shownValidators.value = validators.value
       isLoading.value = false
     }

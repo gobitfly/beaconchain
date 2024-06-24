@@ -203,7 +203,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               <template #body="slotProps">
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
-                  property="attestation_total"
+                  property="attestations"
                   :absolute="showAbsoluteValues"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
