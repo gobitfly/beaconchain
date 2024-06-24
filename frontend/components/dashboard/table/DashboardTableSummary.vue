@@ -243,7 +243,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :table-visiblity="colsVisible" :row="slotProps.data" :time-frame="selectedTimeFrame" />
+              <DashboardTableSummaryDetails :table-visibility="colsVisible" :row="slotProps.data" :time-frame="selectedTimeFrame" />
             </template>
             <template #empty>
               <DashboardTableAddValidator v-if="!hasValidators" />
