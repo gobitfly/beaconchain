@@ -62,6 +62,7 @@ var (
 	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 )
 
 const (
@@ -150,7 +151,11 @@ func (v *validationError) checkNameNotEmpty(name string) string {
 }
 
 func (v *validationError) checkEmail(email string) string {
-	return v.checkRegex(reEmail, email, "email")
+	return v.checkRegex(reEmail, strings.ToLower(email), "email")
+}
+
+func (v *validationError) checkPassword(password string) string {
+	return v.checkRegex(rePassword, password, "password")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -609,6 +614,44 @@ func newForbiddenErr(format string, args ...interface{}) error {
 
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+// --------------------------------------
+// misc. helper functions
+
+// maps different types of validator dashboard indices to a common format
+func mapVDBIndices(indices interface{}) ([]types.VDBValidatorIndices, error) {
+	var data []types.VDBValidatorIndices
+
+	// Helper function to create a VDBValidatorIndices and append to data
+	appendData := func(category string, validators []uint64) {
+		data = append(data, types.VDBValidatorIndices{
+			Category:   category,
+			Validators: validators,
+		})
+	}
+
+	switch v := indices.(type) {
+	case *types.VDBGeneralValidatorIndices:
+		appendData("online", v.Online)
+		appendData("offline", v.Offline)
+		appendData("pending", v.Pending)
+		appendData("deposited", v.Deposed)
+	case *types.VDBSyncValidatorIndices:
+		appendData("sync_current", v.Current)
+		appendData("sync_upcoming", v.Upcoming)
+		appendData("sync_past", v.Past)
+	case *types.VDBSlashingsValidatorIndices:
+		appendData("has_slashed", v.HasSlashed)
+		appendData("got_slashed", v.GotSlashed)
+	case *types.VDBProposalValidatorIndices:
+		appendData("proposal_proposed", v.Proposed)
+		appendData("proposal_missed", v.Missed)
+	default:
+		return nil, fmt.Errorf("unsupported indices type")
+	}
+
+	return data, nil
 }
 
 // --------------------------------------

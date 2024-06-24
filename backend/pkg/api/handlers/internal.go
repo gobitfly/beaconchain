@@ -810,15 +810,33 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_24h, last_7d, last_30d
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last24h, enums.TimePeriods.Last7d, enums.TimePeriods.Last30d}
+	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
+	// get indices based on duty
+	var indices interface{}
+	duties := enums.ValidatorDuties
+	switch duty {
+	case duties.None:
+		indices, err = h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId)
+	case duties.Sync:
+		indices, err = h.dai.GetValidatorDashboardSyncValidatorIndices(*dashboardId, groupId, period)
+	case duties.Slashed:
+		indices, err = h.dai.GetValidatorDashboardSlashingsValidatorIndices(*dashboardId, groupId, period)
+	case duties.Proposal:
+		indices, err = h.dai.GetValidatorDashboardProposalValidatorIndices(*dashboardId, groupId, period)
+	}
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	// map indices to response format
+	data, err := mapVDBIndices(indices)
 	if err != nil {
 		handleErr(w, err)
 		return

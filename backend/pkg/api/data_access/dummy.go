@@ -43,6 +43,36 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
+func (d *DummyService) GetUserExists(email string) (bool, error) {
+	r := false
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) CreateUser(email, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(email string) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationTime(email string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationHash(email string) (string, error) {
+	r := ""
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+	return nil
+}
+
 func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	r := t.UserInfo{}
 	err := commonFakeData(&r)
@@ -230,10 +260,25 @@ func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
-	r := []uint64{}
+func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error) {
+	r := t.VDBGeneralValidatorIndices{}
 	err := commonFakeData(&r)
-	return r, err
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardSyncValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncValidatorIndices, error) {
+	r := t.VDBSyncValidatorIndices{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardSlashingsValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsValidatorIndices, error) {
+	r := t.VDBSlashingsValidatorIndices{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardProposalValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalValidatorIndices, error) {
+	r := t.VDBProposalValidatorIndices{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {

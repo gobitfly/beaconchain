@@ -92,8 +92,10 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
 
 		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
-		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 
+		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
+
+		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
