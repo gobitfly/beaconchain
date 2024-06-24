@@ -5,7 +5,8 @@ import {
 } from '@fortawesome/pro-regular-svg-icons'
 import {
   faCube,
-  faSync
+  faSync,
+  faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   SummaryDetailsEfficiencyProps,
@@ -16,8 +17,10 @@ import {
   type DashboardValidatorContext,
   type SummaryTimeFrame
 } from '~/types/dashboard/summary'
+import { getGroupLabel } from '~/utils/dashboard/group'
 import type { VDBGroupSummaryColumnItem, VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { StatusCount } from '~/types/api/common'
+import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
@@ -28,8 +31,10 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { tm: $tm } = useI18n()
+const { tm: $tm, t: $t } = useI18n()
 const { dashboardKey } = useDashboardKey()
+const dialog = useDialog()
+const { groups } = useValidatorDashboardGroups()
 
 const data = computed(() => {
   const col = props.data
@@ -41,12 +46,11 @@ const data = computed(() => {
       }
     }
   } else if (row && props.property === 'proposals') {
-    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
     return {
       efficiency: {
         status_count: row.proposals
       },
-      tooltip
+      context: 'propsal'
     }
   } else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
     const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
@@ -113,6 +117,22 @@ const data = computed(() => {
   }
 })
 
+const groupName = computed(() => {
+  return getGroupLabel($t, props.row.group_id, groups.value)
+})
+
+const openValidatorModal = () => {
+  dialog.open(DashboardValidatorSubsetModal, {
+    data: {
+      context: data.value?.context,
+      timeFrame: props.timeFrame,
+      groupName: groupName.value,
+      groupId: props.row.group_id,
+      dashboardKey: dashboardKey.value
+    }
+  })
+}
+
 </script>
 
 <template>
@@ -124,8 +144,14 @@ const data = computed(() => {
       :failed="data.efficiency.status_count.failed"
     />
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
-      <FontAwesomeIcon v-if="data.tooltip?.title" class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon v-if="data.tooltip?.title" :icon="faInfoCircle" />
     </BcTooltip>
+    <FontAwesomeIcon
+      v-if="data?.context"
+      class="link popout"
+      :icon="faArrowUpRightFromSquare"
+      @click="openValidatorModal"
+    />
   </div>
   <DashboardTableValidators
     v-else-if="data?.validators"
@@ -138,13 +164,13 @@ const data = computed(() => {
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
     </BcTooltip>
   </div>
   <div v-else-if="data?.apr" class="info_row">
     <BcFormatPercent :percent="data.apr.total" />
     <BcTooltip position="top">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div class="row">
           <b>{{ $t('common.execution_layer') }}:</b>
@@ -172,7 +198,7 @@ const data = computed(() => {
       </span>
     </span>
     <BcTooltip position="top">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div class="row">
           <b>
@@ -189,7 +215,7 @@ const data = computed(() => {
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t)}) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t) }) }}
         </div>
         <br>
         <div class="row next_chapter">
@@ -207,13 +233,18 @@ const data = computed(() => {
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t)}) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t) }) }}
         </div>
       </template>
     </BcTooltip>
   </div>
 
-  <BcFormatPercent v-else-if="data?.efficiencyTotal" :percent="data.efficiencyTotal.value" :compare-percent="data.efficiencyTotal.compare" :color-break-point="80" />
+  <BcFormatPercent
+    v-else-if="data?.efficiencyTotal"
+    :percent="data.efficiencyTotal.value"
+    :compare-percent="data.efficiencyTotal.compare"
+    :color-break-point="80"
+  />
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}
   </span>

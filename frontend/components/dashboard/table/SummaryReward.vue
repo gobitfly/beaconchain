@@ -16,8 +16,8 @@ const total = computed(() => props.reward ? totalElCl(props.reward) : undefined)
 <template>
   <div v-if="total && !total.isZero()" class="summary-reward">
     <BcFormatValue :value="total" :no-tooltip="true" :use-colors="true" />
-    <BcTooltip>
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+    <BcTooltip :fit-content="true">
+      <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div>
           <div class="tt-row">

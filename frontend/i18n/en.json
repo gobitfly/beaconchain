@@ -44,7 +44,8 @@
     "false": "False",
     "coming_soon": "Coming soon",
     "soon": "Soon",
-    "and_more": "and {count} more"
+    "and_more": "and {count} more",
+    "live": "Live"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -486,6 +487,9 @@
         "chart": {
           "all_groups": "All Groups",
           "efficiency": "Efficiency"
+        },
+        "tooltip":{
+          "live": "Validators missing three consecutive attestations are considered offline."
         }
       },
       "tabs": {

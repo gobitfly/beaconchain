@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
 
 interface Props {
   row: VDBSummaryTableRow
   timeFrame: SummaryTimeFrame
+  tableVisibilty: SummaryTableVisibility
 }
 const props = defineProps<Props>()
 
@@ -14,44 +15,35 @@ const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
-const isWideEnough = computed(() => width.value >= 1400)
-
 watch(() => props.timeFrame, () => {
   getDetails(props.timeFrame)
 }, { deep: true, immediate: true })
 
 const data = computed<SummaryRow[][]>(() => {
-  const tableCount = isWideEnough.value ? 1 : 4
-  const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
-  /*
-  const addToList = (prop: SummaryDetailsEfficiencyCombinedProp) => {
-    let row: SummaryRow | undefined
-    if (isWideEnough.value) {
-      row = list[0].find(row => row.prop === prop)
-    }
-    if (!row) {
-      let title = $t(`dashboard.validator.summary.row.${prop}`)
-      if (prop === 'efficiency') {
-        title = `${title}`
-      }
-      row = { title, prop, details: [] }
-      list[tableIndex].push(row)
-    }
-    row?.details.push(detail)
+  const list: SummaryRow[][] = [[], [], []]
+  
+  const addToList = (index: number, prop?: SummaryDetailsEfficiencyCombinedProp, titleKey?: string) => {
+    const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
+    const row = { title, prop }
+    list[index].push(row)
   }
 
-  const list: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings', 'apr', 'luck']
+  if()
 
-  list.forEach((prop, propIndex) => {
-    if (!isWideEnough.value || propIndex) {
-      addToList(prop)
-    }
+
+  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings', 'apr', 'luck']
+
+  props.forEach((prop) => {
+
   })
-*/
+
   return list
 })
 
 const rowClass = (data:SummaryRow) => {
+  if (!data.prop) {
+    return 'bold' // headline without prop
+  }
   const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
     efficiency: 'bold',
     attestation_total: 'bold',
