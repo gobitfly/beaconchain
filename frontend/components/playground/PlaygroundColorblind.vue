@@ -4,9 +4,9 @@ enum CS {
   RGBlinear,
   /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
   RGBgamma,
-  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye perceives (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would correspond to RGB values greater than 255). */
+  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye perceive (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would correspond to RGB values greater than 255). */
   EyePercI,
-  /** RPJ values (rainbow color, purity, intensity) whose `j` normalizes the light intensity (for a given `j`, the colors that you get with various `r` and `p` produce different intensities for the human eye, but this format is easier to handle than `CS.EyePercI` because `j` is free to take any value between 0 and 1) */
+  /** RPJ values (rainbow color, purity, intensity) whose `j` is equivalent to `i/iMax` in the `CS.EyePercI` variant, so `j` is free to take any value between 0 and 1 (so, for a given `j`, the colors that you get with various `r` and `p` produce different intensities for the human eye, whereas the `CS.EyePercI` variant ensures that `i` represents a constant perceived intensity whatever the color is) */
   EyeNormJ
 }
 
@@ -123,12 +123,12 @@ class Eye {
 
   // constants of our perception model
   protected static intCoeff = [0.30, 0.55, 0.15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the defintion of "relative luminance" in the ITU-R Recommendation BT.601)
-  protected static rhoG = 0.45 // coeffients to...
-  protected static rhoB = 0.20 // ... adjust the perceived result when mixing primaries together or a pure color with white (obtained empiricially)
+  protected static rhoG = 0.45 // this coeffient and its brother just below are used to adjust the perceived result when mixing primaries together (obtained empiricially)
+  protected static rhoB = 0.20 // they are correlated with the relative strengh of the green and blue primaries, thus changing the position of the secondaries (and all intermediaries) in the rainbow. Their sum must be below 1 to live room for red.
   // const iota = 0.5                     (obtained empirically) so for performance we rather use sqrt()
-  // const iotaInv = 1/iota               (obtained empirically) so for performance we rather use *
-  protected static mixCoeff = [0, 0, 0]
-  protected static rKey = [0, 0, 0, 0, 0, 0, 0] // coordinates of the primaries and secondaries on the rainbow (will be filled by the constructor from mixCoeff)
+  // const iotaInv = 1/iota               (obtained empirically) so for performance we rather use * to square
+  protected static mixCoeff = [0, 0, 0] // (will be filled by the constructor) storage of all rho coefficients
+  protected static rKey = [0, 0, 0, 0, 0, 0, 0] // (will be filled by the constructor) coordinates of the primaries and secondaries on the rainbow
 
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
   static readonly lowestImax = Math.sqrt(Eye.intCoeff[B])
