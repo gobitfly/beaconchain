@@ -67,6 +67,12 @@ type VDBGroupSummarySyncCount struct {
 	UpcomingValidators uint64 `json:"upcoming_validators"`
 	PastPeriods        uint64 `json:"past_periods"`
 }
+
+type VDBGroupSummaryMissedRewards struct {
+	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards"`
+	Attestations    decimal.Decimal            `json:"attestations"`
+	Syncs           decimal.Decimal            `json:"syncs"`
+}
 type VDBGroupSummaryData struct {
 	AttestationsHead       StatusCount `json:"attestations_head"`
 	AttestationsSource     StatusCount `json:"attestations_source"`
@@ -74,11 +80,11 @@ type VDBGroupSummaryData struct {
 	AttestationEfficiency  float64     `json:"attestation_efficiency"`
 	AttestationAvgInclDist float64     `json:"attestation_avg_incl_dist"`
 
-	SyncCommittee      VDBGroupSummaryColumnItem `json:"sync"`
-	SyncCommitteeCount VDBGroupSummarySyncCount  `json:"sync_count"`
-	Slashings          VDBGroupSummaryColumnItem `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
-	ProposalValidators []uint64                  `json:"proposal_validators"`
-	TotalMissedRewards decimal.Decimal           `json:"total_missed_rewards"` // probably EL only?
+	SyncCommittee      VDBGroupSummaryColumnItem    `json:"sync"`
+	SyncCommitteeCount VDBGroupSummarySyncCount     `json:"sync_count"`
+	Slashings          VDBGroupSummaryColumnItem    `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
+	ProposalValidators []uint64                     `json:"proposal_validators"`
+	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
 	Apr    ClElValue[float64]         `json:"apr"`
 	Income ClElValue[decimal.Decimal] `json:"income"`
