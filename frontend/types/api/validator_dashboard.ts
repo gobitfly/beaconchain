@@ -30,6 +30,16 @@ export interface VDBOverviewData {
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
+export interface VDBPostArchivingReturnData {
+  id: number /* uint64 */;
+  archived: boolean;
+}
+export interface VDBArchivedData {
+  reason: string; // dashboard_limit, validator_limit, group_limit, none
+  validator_count: number /* uint64 */;
+  group_count: number /* uint64 */;
+}
+export type InternalGetValidatorDashboardArchivingResponse = ApiDataResponse<VDBArchivedData>;
 export interface VDBSummaryStatus {
   next_sync_count: number /* uint64 */;
   current_sync_count: number /* uint64 */;

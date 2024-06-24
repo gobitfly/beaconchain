@@ -16,6 +16,9 @@ type ValidatorDashboardRepository interface {
 	CreateValidatorDashboard(userId uint64, name string, network uint64) (*t.VDBPostReturnData, error)
 	RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) error
 
+	GetValidatorDashboardArchiving(dashboardId t.VDBIdPrimary) (*t.VDBArchivedData, error)
+	UpdateValidatorDashboardArchiving(dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error)
+
 	UpdateValidatorDashboardName(dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error)
 
 	GetValidatorDashboardOverview(dashboardId t.VDBId) (*t.VDBOverviewData, error)
