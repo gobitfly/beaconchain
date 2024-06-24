@@ -43,6 +43,36 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
+func (d *DummyService) GetUserExists(email string) (bool, error) {
+	r := false
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) CreateUser(email, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(email string) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationTime(email string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationHash(email string) (string, error) {
+	r := ""
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+	return nil
+}
+
 func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	r := t.UserInfo{}
 	err := commonFakeData(&r)
