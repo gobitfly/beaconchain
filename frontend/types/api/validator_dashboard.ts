@@ -77,7 +77,11 @@ export interface VDBGroupSummaryData {
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
-export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<number /* uint64 */[]>;
+export interface VDBValidatorIndices {
+  category: string;
+  validators: number /* uint64 */[];
+}
+export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<VDBValidatorIndices[]>;
 /**
  * ------------------------------------------------------------
  * Rewards Tab
