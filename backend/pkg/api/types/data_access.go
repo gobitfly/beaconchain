@@ -123,3 +123,29 @@ type NetworkInfo struct {
 	ChainId uint64
 	Name    string
 }
+
+// -------------------------
+// validator indices structs, only used between data access and api layer
+
+type VDBGeneralValidatorIndices struct {
+	Online  []uint64
+	Offline []uint64
+	Pending []uint64
+	Deposed []uint64
+}
+
+type VDBSyncValidatorIndices struct {
+	Upcoming []uint64
+	Current  []uint64
+	Past     []uint64
+}
+
+type VDBSlashingsValidatorIndices struct {
+	HasSlashed []uint64
+	GotSlashed []uint64
+}
+
+type VDBProposalValidatorIndices struct {
+	Proposed []uint64
+	Missed   []uint64
+}
