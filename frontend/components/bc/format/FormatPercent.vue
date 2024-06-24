@@ -6,6 +6,7 @@ import {
   faArrowDown,
   faArrowsLeftRight
 } from '@fortawesome/pro-solid-svg-icons'
+import { type CompareResult } from '~/types/value'
 
 interface Props {
   percent?: number
@@ -24,6 +25,7 @@ const props = defineProps<Props>()
 
 const data = computed(() => {
   let label: string | null = null
+  let compareResult: CompareResult | null = null
   let className = ''
   if (props.base === 0 && props.fullOnEmptyBase) {
     return {
@@ -45,12 +47,15 @@ const data = computed(() => {
     if (Math.abs(props.comparePercent - percent) <= 0.5) {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
+      compareResult = 'equal'
     } else if (percent > props.comparePercent) {
       className = 'text-positive'
       leadingIcon = faArrowUp
+      compareResult = 'higher'
     } else {
       className = 'text-negative'
       leadingIcon = faArrowDown
+      compareResult = 'lower'
     }
   } else if (props.colorBreakPoint) {
     if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
@@ -59,15 +64,18 @@ const data = computed(() => {
       className = 'text-negative'
     }
   }
-  return { label, className, leadingIcon }
+  return { label, className, leadingIcon, compareResult }
 })
 
 </script>
 <template>
   <span :class="data.className" class="format-percent">
-    <span v-if="data.leadingIcon" class="direction-icon">
+    <BcTooltip v-if="data.leadingIcon" class="direction-icon">
+      <template #tooltip>
+        <slot name="leading-tooltip" v-bind="{compare: data.compareResult}" />
+      </template>
       <FontAwesomeIcon :icon="data.leadingIcon" />
-    </span>
+    </BcTooltip>
     <BcFormatNumber v-if="data.label" :text="data.label" />
   </span>
 </template>

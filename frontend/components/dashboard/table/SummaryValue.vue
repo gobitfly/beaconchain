@@ -58,7 +58,8 @@ const data = computed(() => {
 
     return {
       efficiency: {
-        status_count: (prop as VDBGroupSummaryColumnItem).status_count || prop as StatusCount
+        status_count: (prop as VDBGroupSummaryColumnItem).status_count || prop as StatusCount,
+        sync_count: props.property === 'sync' ? col.sync_count : undefined
       },
       tooltip
     }
@@ -85,12 +86,12 @@ const data = computed(() => {
       attestationEfficiency: col.attestation_efficiency,
       tooltip
     }
-  } else if (col && props.property === 'apr') {
+  } else if (row && col && props.property === 'apr') {
     return {
       apr: {
         apr: col.apr,
         total: col.apr.cl + col.apr.el,
-        income: col.income
+        income: row.reward
       }
     }
   } else if (col && props.property === 'luck') {
@@ -116,7 +117,7 @@ const data = computed(() => {
     }
   } else if (col && props.property === 'missed_rewards') {
     return {
-      missedRewards: col.total_missed_rewards
+      missedRewards: col.missed_rewards
     }
   }
 })
@@ -140,13 +141,48 @@ const openValidatorModal = () => {
 </script>
 
 <template>
-  <DashboardTableSummaryReward v-if="data?.reward" :reward="data.reward" />
+  <DashboardTableSummaryMissedRewards v-if="data?.missedRewards" :missed-rewards="data.missedRewards" />
+  <DashboardTableSummaryReward v-else-if="data?.reward" :reward="data.reward" />
   <div v-else-if="data?.efficiency" class="info_row">
     <DashboardTableEfficiency
       :absolute="absolute"
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
-    />
+    >
+      <template v-if="data.efficiency.sync_count" #tooltip>
+        <div>
+          <div class="row">
+            <b>{{ $t('dashboard.validator.summary.row.sync_committee') }}: </b>
+            <DashboardTableEfficiency
+              :absolute="true"
+              :is-tooltip="true"
+              :success="data.efficiency.status_count.success"
+              :failed="data.efficiency.status_count.failed"
+            />
+            (
+            <DashboardTableEfficiency
+              :absolute="false"
+              :is-tooltip="true"
+              :success="data.efficiency.status_count.success"
+              :failed="data.efficiency.status_count.failed"
+            />
+            )
+          </div>
+          <div class="row next_chapter">
+            <b>{{ $t('common.current') }}: </b>
+            <span>{{ data.efficiency.sync_count.current_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+          </div>
+          <div class="row">
+            <b>{{ $t('common.upcoming') }}: </b>
+            <span>{{ data.efficiency.sync_count.upcoming_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+          </div>
+          <div class="row">
+            <b>{{ $t('common.past') }}: </b>
+            <span>{{ data.efficiency.sync_count.past_periods }} {{ $t('dashboard.validator.summary.tooltip.amount_of_rounds') }}</span>
+          </div>
+        </div>
+      </template>
+    </DashboardTableEfficiency>
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
       <FontAwesomeIcon v-if="data.tooltip?.title" :icon="faInfoCircle" />
     </BcTooltip>
@@ -248,7 +284,13 @@ const openValidatorModal = () => {
     :percent="data.efficiencyTotal.value"
     :compare-percent="data.efficiencyTotal.compare"
     :color-break-point="80"
-  />
+  >
+    <template #leading-tooltip="{compare}">
+      <span class="efficiency-total-tooltip">
+        {{ $t(`dashboard.validator.summary.tooltip.${compare}`, {name: groupName, average: formatPercent(row.average_network_efficiency)}) }}
+      </span>
+    </template>
+  </BcFormatPercent>
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}
   </span>
@@ -275,5 +317,9 @@ const openValidatorModal = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.efficiency-total-tooltip{
+  width: 155px;
 }
 </style>

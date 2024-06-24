@@ -20,7 +20,9 @@ const data = computed(() => {
 <template>
   <BcTooltip class="efficiency" :fit-content="true">
     <template v-if="!isTooltip" #tooltip>
-      <DashboardTableEfficiency v-bind="props" :absolute="!absolute" :is-tooltip="true" />
+      <slot name="tooltip">
+        <DashboardTableEfficiency v-bind="props" :absolute="!absolute" :is-tooltip="true" />
+      </slot>
     </template>
     <span v-if="absolute">
       <BcFormatNumber class="positive" :value="props.success" />

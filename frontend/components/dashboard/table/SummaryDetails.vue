@@ -5,6 +5,7 @@ import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type Summar
 interface Props {
   row: VDBSummaryTableRow
   timeFrame: SummaryTimeFrame
+  absolute: boolean,
   tableVisibility: SummaryTableVisibility
 }
 const props = defineProps<Props>()
@@ -90,6 +91,7 @@ const rowClass = (data: SummaryRow) => {
           v-if="prop.prop"
           class="value"
           :data="summary"
+          :absolute="absolute"
           :property="prop.prop"
           :time-frame="timeFrame"
           :row-x="props.row"

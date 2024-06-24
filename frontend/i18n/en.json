@@ -45,7 +45,10 @@
     "coming_soon": "Coming soon",
     "soon": "Soon",
     "and_more": "and {count} more",
-    "live": "Live"
+    "live": "Live",
+    "current": "Current",
+    "upcoming": "Upcoming", 
+    "past": "Past"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -469,6 +472,7 @@
           "attestation_efficiency": "Att. Efficiency",
           "attestation_avg_incl_dist": "Avg. Incl. Distance",
           "sync": "Sync Committee Efficiency ",
+          "sync_committee": "Sync Committee",
           "validators_sync": "Validators",
           "proposals": "Proposals",
           "validators_proposal": "Validators",
@@ -489,6 +493,12 @@
           "efficiency": "Efficiency"
         },
         "tooltip":{
+          "lower": "{name}'s efficiency is below the network average of {average}",
+          "higher": "{name}'s efficiency is above the network average of {average}",
+          "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
+          "amount_of_validators": "(<amount-of-validators>)",
+          "amount_of_rounds": "(<amount-of-rounds>)",
+          "estimated_loss": "Estimated loss based on avg. network performance.",
           "live": "Validators missing three consecutive attestations are considered offline."
         }
       },
