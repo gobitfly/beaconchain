@@ -165,6 +165,7 @@ const rowClass = (data: SummaryRow) => {
       gap: var(--padding);
 
       .label {
+        flex-shrink: 0;
         width: 170px;
         @include utils.truncate-text;
 
