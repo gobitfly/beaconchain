@@ -63,7 +63,7 @@ export interface VDBGroupSummarySyncCount {
 export interface VDBGroupSummaryMissedRewards {
   proposer_rewards: ClElValue<string /* decimal.Decimal */>;
   attestations: string /* decimal.Decimal */;
-  syncs: string /* decimal.Decimal */;
+  sync: string /* decimal.Decimal */;
 }
 export interface VDBGroupSummaryData {
   attestations_head: StatusCount;

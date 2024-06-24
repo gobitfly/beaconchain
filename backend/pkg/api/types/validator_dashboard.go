@@ -71,7 +71,7 @@ type VDBGroupSummarySyncCount struct {
 type VDBGroupSummaryMissedRewards struct {
 	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards"`
 	Attestations    decimal.Decimal            `json:"attestations"`
-	Syncs           decimal.Decimal            `json:"syncs"`
+	Sync            decimal.Decimal            `json:"sync"`
 }
 type VDBGroupSummaryData struct {
 	AttestationsHead       StatusCount `json:"attestations_head"`
