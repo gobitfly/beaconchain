@@ -30,10 +30,27 @@ const data = ref<VDBSummaryValidatorsData[]>([])
 
 watch(props, async (p) => {
   if (p) {
+    let text = 'Validators'
+    switch (p.context) {
+      case 'attestation':
+        text = $t('dashboard.validator.summary.row.attestations')
+        break
+      case 'sync':
+        text = $t('dashboard.validator.summary.row.sync_committee')
+        break
+      case 'slashings':
+        text = $t('dashboard.validator.summary.row.slashings')
+        break
+      case 'proposal':
+        text = $t('dashboard.validator.summary.row.proposals')
+        break
+      case 'group':
+        text = $t('dashboard.validator.col.validators')
+        break
+    }
+
     setHeader(
-      p?.groupName
-        ? $t('dashboard.validator.col.group') + ` "${p.groupName}"`
-        : $t('dashboard.title') + (p.dashboardName ? ` "${p.dashboardName}"` : '')
+      text
     )
 
     isLoading.value = true
@@ -55,39 +72,6 @@ watch(props, async (p) => {
     isLoading.value = false
   }
 }, { immediate: true })
-
-const caption = computed(() => {
-  let text = 'Validators'
-  switch (props.value?.context) {
-    case 'attestation':
-      text = $t('dashboard.validator.summary.row.attestations')
-      break
-    case 'sync':
-      text = $t('dashboard.validator.summary.row.sync')
-      break
-    case 'slashings':
-      text = $t('dashboard.validator.summary.row.slashed')
-      break
-    case 'proposal':
-      text = $t('dashboard.validator.summary.row.proposals')
-      break
-    case 'group':
-      text = $t('dashboard.validator.col.validators')
-      break
-  }
-
-  switch (props.value?.timeFrame) {
-    case 'last_24h':
-      return text + ' ' + $t('statistics.last_24h')
-    case 'last_7d':
-      return text + ' ' + $t('statistics.last_7d')
-    case 'last_30d':
-      return text + ' ' + $t('statistics.last_30d')
-    case 'all_time':
-      return text + ' ' + $t('statistics.all')
-  }
-  return text
-})
 
 const mapped = computed<ValidatorSubset[]>(() => {
   const sortAndFilter = (validators:VDBSummaryValidator[]):VDBSummaryValidator[] => {
@@ -128,7 +112,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
   <div class="validator_subset_modal_container">
     <div class="top_line_container">
       <span class="subtitle_text">
-        {{ caption }}
+        {{ props?.groupName }}
       </span>
       <BcContentFilter v-model="filter" class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
