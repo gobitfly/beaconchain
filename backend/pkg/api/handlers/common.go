@@ -619,10 +619,13 @@ func newNotFoundErr(format string, args ...interface{}) error {
 // --------------------------------------
 // misc. helper functions
 
-// maps different types of validator dashboard indices to a common format
+// maps different types of validator dashboard summary validators to a common format
 func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error) {
-	var data []types.VDBSummaryValidatorsData
+	if indices == nil {
+		return nil, errors.New("no data found when mapping")
+	}
 
+	var data []types.VDBSummaryValidatorsData
 	// Helper function to create a VDBValidatorIndices and append to data
 	appendData := func(category string, validators []uint64) {
 		validatorsData := make([]types.VDBSummaryValidator, len(validators))
@@ -637,68 +640,73 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 
 	switch v := indices.(type) {
 	case *types.VDBGeneralSummaryValidators:
-		if v == nil {
-			return nil, errors.New("no data found when mapping")
-		}
 		appendData("online", v.Online)
 		appendData("offline", v.Offline)
 		appendData("pending", v.Pending)
 		appendData("deposited", v.Deposed)
+		return data, nil
 
 	case *types.VDBSyncSummaryValidators:
-		if v == nil {
-			return nil, errors.New("no data found when mapping")
-		}
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
 		appendData("sync_past", v.Past)
+		return data, nil
+
 	case *types.VDBSlashingsSummaryValidators:
-		if v == nil {
-			return nil, errors.New("no data found when mapping")
-		}
-		gotSlashedValidators := make([]types.VDBSummaryValidator, len(v.GotSlashed))
-		for i, gotSlashed := range v.GotSlashed {
-			gotSlashedValidators[i] = types.VDBSummaryValidator{Index: gotSlashed.Index, DutyObjects: []uint64{gotSlashed.SlashedBy}}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "got_slashed",
-			Validators: gotSlashedValidators,
-		})
-		hasSlashedValidators := make([]types.VDBSummaryValidator, len(v.HasSlashed))
-		for i, hasSlashed := range v.HasSlashed {
-			hasSlashedValidators[i] = types.VDBSummaryValidator{Index: hasSlashed.Index, DutyObjects: hasSlashed.SlashedIndices}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "has_slashed",
-			Validators: hasSlashedValidators,
-		})
+		return mapVDBSummarySlashings(v), nil
 
 	case *types.VDBProposalSummaryValidators:
-		if v == nil {
-			return nil, errors.New("no data found when mapping")
-		}
-		proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
-		for i, proposed := range v.Proposed {
-			proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.ProposedBlocks}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "proposed",
-			Validators: proposedValidators,
-		})
-		missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
-		for i, missed := range v.Missed {
-			missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.MissedBlocks}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "missed",
-			Validators: missedValidators,
-		})
+		return mapVDBSummaryProposals(v), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported indices type")
 	}
+}
 
-	return data, nil
+func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBSummaryValidatorsData {
+	gotSlashedValidators := make([]types.VDBSummaryValidator, len(v.GotSlashed))
+	for i, gotSlashed := range v.GotSlashed {
+		gotSlashedValidators[i] = types.VDBSummaryValidator{Index: gotSlashed.Index, DutyObjects: []uint64{gotSlashed.SlashedBy}}
+	}
+
+	hasSlashedValidators := make([]types.VDBSummaryValidator, len(v.HasSlashed))
+	for i, hasSlashed := range v.HasSlashed {
+		hasSlashedValidators[i] = types.VDBSummaryValidator{Index: hasSlashed.Index, DutyObjects: hasSlashed.SlashedIndices}
+	}
+
+	return []types.VDBSummaryValidatorsData{
+		{
+			Category:   "got_slashed",
+			Validators: gotSlashedValidators,
+		},
+		{
+			Category:   "has_slashed",
+			Validators: hasSlashedValidators,
+		},
+	}
+}
+
+func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
+	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
+	for i, proposed := range v.Proposed {
+		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.ProposedBlocks}
+	}
+
+	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
+	for i, missed := range v.Missed {
+		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.MissedBlocks}
+	}
+
+	return []types.VDBSummaryValidatorsData{
+		{
+			Category:   "proposed",
+			Validators: proposedValidators,
+		},
+		{
+			Category:   "missed",
+			Validators: missedValidators,
+		},
+	}
 }
 
 // --------------------------------------
