@@ -21,6 +21,7 @@ type DummyService struct {
 var _ DataAccessor = (*DummyService)(nil)
 
 func NewDummyService() *DummyService {
+	// define custom tags for faker
 	_ = faker.AddProvider("cl_el_eth", func(v reflect.Value) (interface{}, error) {
 		return t.ClElValue[decimal.Decimal]{
 			Cl: randomDecimal(),
@@ -40,7 +41,9 @@ func NewDummyService() *DummyService {
 	return &DummyService{}
 }
 
+// generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
 func randomDecimal() decimal.Decimal {
+	//nolint:gosec
 	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int63n(10000000)))
 	return decimal
 }
