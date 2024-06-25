@@ -92,19 +92,19 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query and get the data
 	type QueryResult struct {
-		GroupId                int64            `db:"group_id"`
-		GroupName              string           `db:"group_name"`
-		ValidatorIndices       pq.Int64Array    `db:"validator_indices"`
-		ClRewards              *int64           `db:"cl_rewards"`
-		ElRewards              *decimal.Decimal `db:"el_rewards"`
-		AttestationReward      *decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward *decimal.Decimal `db:"attestations_ideal_reward"`
-		AttestationsExecuted   *uint64          `db:"attestations_executed"`
-		AttestationsScheduled  *uint64          `db:"attestations_scheduled"`
-		BlocksProposed         *uint64          `db:"blocks_proposed"`
-		BlocksScheduled        *uint64          `db:"blocks_scheduled"`
-		SyncExecuted           *uint64          `db:"sync_executed"`
-		SyncScheduled          *uint64          `db:"sync_scheduled"`
+		GroupId                int64           `db:"group_id"`
+		GroupName              string          `db:"group_name"`
+		ValidatorIndices       pq.Int64Array   `db:"validator_indices"`
+		ClRewards              int64           `db:"cl_rewards"`
+		ElRewards              decimal.Decimal `db:"el_rewards"`
+		AttestationReward      decimal.Decimal `db:"attestations_reward"`
+		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+		AttestationsExecuted   uint64          `db:"attestations_executed"`
+		AttestationsScheduled  uint64          `db:"attestations_scheduled"`
+		BlocksProposed         uint64          `db:"blocks_proposed"`
+		BlocksScheduled        uint64          `db:"blocks_scheduled"`
+		SyncExecuted           uint64          `db:"sync_executed"`
+		SyncScheduled          uint64          `db:"sync_scheduled"`
 	}
 
 	var queryResult []QueryResult
@@ -115,16 +115,16 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 			Select(
 				goqu.L("group_id"),
 				goqu.L("ARRAY_AGG(validator_index) AS validator_indices"),
-				goqu.L("SUM(cl_rewards) AS cl_rewards"),
-				goqu.L("SUM(el_rewards) AS el_rewards"),
-				goqu.L("SUM(attestations_reward)::decimal AS attestations_reward"),
-				goqu.L("SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward"),
-				goqu.L("SUM(attestations_executed) AS attestations_executed"),
-				goqu.L("SUM(attestations_scheduled) AS attestations_scheduled"),
-				goqu.L("SUM(blocks_proposed) AS blocks_proposed"),
-				goqu.L("SUM(blocks_scheduled) AS blocks_scheduled"),
-				goqu.L("SUM(sync_executed) AS sync_executed"),
-				goqu.L("SUM(sync_scheduled) AS sync_scheduled")).
+				goqu.L("COALESCE(SUM(cl_rewards), 0) AS cl_rewards"),
+				goqu.L("COALESCE(SUM(el_rewards), 0) AS el_rewards"),
+				goqu.L("COALESCE(SUM(attestations_reward)::decimal, 0) AS attestations_reward"),
+				goqu.L("COALESCE(SUM(attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
+				goqu.L("COALESCE(SUM(attestations_executed), 0) AS attestations_executed"),
+				goqu.L("COALESCE(SUM(attestations_scheduled), 0) AS attestations_scheduled"),
+				goqu.L("COALESCE(SUM(blocks_proposed), 0) AS blocks_proposed"),
+				goqu.L("COALESCE(SUM(blocks_scheduled), 0) AS blocks_scheduled"),
+				goqu.L("COALESCE(SUM(sync_executed), 0) AS sync_executed"),
+				goqu.L("COALESCE(SUM(sync_scheduled), 0) AS sync_scheduled")).
 			GroupBy(goqu.L("group_id"))
 
 		subDs := goqu.Dialect("postgres").
@@ -291,14 +291,14 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		GroupId                int64
 		Status                 t.VDBSummaryStatus
 		ValidatorStatusCount   t.VDBSummaryValidators
-		AttestationReward      *decimal.Decimal
-		AttestationIdealReward *decimal.Decimal
-		AttestationsExecuted   *uint64
-		AttestationsScheduled  *uint64
-		BlocksProposed         *uint64
-		BlocksScheduled        *uint64
-		SyncExecuted           *uint64
-		SyncScheduled          *uint64
+		AttestationReward      decimal.Decimal
+		AttestationIdealReward decimal.Decimal
+		AttestationsExecuted   uint64
+		AttestationsScheduled  uint64
+		BlocksProposed         uint64
+		BlocksScheduled        uint64
+		SyncExecuted           uint64
+		SyncScheduled          uint64
 		Reward                 t.ClElValue[decimal.Decimal]
 	}{
 		GroupId: t.AllGroups,
@@ -348,56 +348,44 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		total.Status.SlashedCount += resultEntry.Status.SlashedCount
 
 		// Attestations
-		if queryEntry.AttestationsScheduled != nil {
-			if queryEntry.AttestationsExecuted != nil {
-				resultEntry.Attestations.Success = *queryEntry.AttestationsExecuted
-			}
-			resultEntry.Attestations.Failed = *queryEntry.AttestationsScheduled - resultEntry.Attestations.Success
-		}
+		resultEntry.Attestations.Success = queryEntry.AttestationsExecuted
+		resultEntry.Attestations.Failed = queryEntry.AttestationsScheduled - queryEntry.AttestationsExecuted
 
 		// Proposals
-		if queryEntry.BlocksScheduled != nil {
-			if queryEntry.BlocksProposed != nil {
-				resultEntry.Proposals.Success = *queryEntry.BlocksProposed
-			}
-			resultEntry.Proposals.Failed = *queryEntry.BlocksScheduled - resultEntry.Proposals.Success
-		}
+		resultEntry.Proposals.Success = queryEntry.BlocksProposed
+		resultEntry.Proposals.Failed = queryEntry.BlocksScheduled - queryEntry.BlocksProposed
 
 		// Reward
-		if queryEntry.ClRewards != nil {
-			resultEntry.Reward.Cl = utils.GWeiToWei(big.NewInt(*queryEntry.ClRewards))
-		}
-		if queryEntry.ElRewards != nil {
-			resultEntry.Reward.El = *queryEntry.ElRewards
-		}
+		resultEntry.Reward.Cl = utils.GWeiToWei(big.NewInt(queryEntry.ClRewards))
+		resultEntry.Reward.El = queryEntry.ElRewards
 		total.Reward.Cl = total.Reward.Cl.Add(resultEntry.Reward.Cl)
 		total.Reward.El = total.Reward.El.Add(resultEntry.Reward.El)
 
-		// Add the duties info to the total
-		addDecimalFields(&total.AttestationReward, queryEntry.AttestationReward)
-		addDecimalFields(&total.AttestationIdealReward, queryEntry.AttestationIdealReward)
-		addUint64Fields(&total.AttestationsExecuted, queryEntry.AttestationsExecuted)
-		addUint64Fields(&total.AttestationsScheduled, queryEntry.AttestationsScheduled)
-		addUint64Fields(&total.BlocksProposed, queryEntry.BlocksProposed)
-		addUint64Fields(&total.BlocksScheduled, queryEntry.BlocksScheduled)
-		addUint64Fields(&total.SyncExecuted, queryEntry.SyncExecuted)
-		addUint64Fields(&total.SyncScheduled, queryEntry.SyncScheduled)
-
 		// Efficiency
 		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if queryEntry.AttestationReward != nil && queryEntry.AttestationIdealReward != nil && !queryEntry.AttestationIdealReward.IsZero() {
-			attestationEfficiency.Float64 = queryEntry.AttestationReward.Div(*queryEntry.AttestationIdealReward).InexactFloat64()
+		if !queryEntry.AttestationIdealReward.IsZero() {
+			attestationEfficiency.Float64 = queryEntry.AttestationReward.Div(queryEntry.AttestationIdealReward).InexactFloat64()
 			attestationEfficiency.Valid = true
 		}
-		if queryEntry.BlocksProposed != nil && queryEntry.BlocksScheduled != nil && *queryEntry.BlocksScheduled != 0 {
-			proposerEfficiency.Float64 = float64(*queryEntry.BlocksProposed) / float64(*queryEntry.BlocksScheduled)
+		if queryEntry.BlocksScheduled > 0 {
+			proposerEfficiency.Float64 = float64(queryEntry.BlocksProposed) / float64(queryEntry.BlocksScheduled)
 			proposerEfficiency.Valid = true
 		}
-		if queryEntry.SyncExecuted != nil && queryEntry.SyncScheduled != nil && *queryEntry.SyncScheduled != 0 {
-			syncEfficiency.Float64 = float64(*queryEntry.SyncExecuted) / float64(*queryEntry.SyncScheduled)
+		if queryEntry.SyncScheduled > 0 {
+			syncEfficiency.Float64 = float64(queryEntry.SyncExecuted) / float64(queryEntry.SyncScheduled)
 			syncEfficiency.Valid = true
 		}
 		resultEntry.Efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+
+		// Add the duties info to the total
+		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
+		total.AttestationIdealReward = total.AttestationIdealReward.Add(queryEntry.AttestationIdealReward)
+		total.AttestationsExecuted += queryEntry.AttestationsExecuted
+		total.AttestationsScheduled += queryEntry.AttestationsScheduled
+		total.BlocksProposed += queryEntry.BlocksProposed
+		total.BlocksScheduled += queryEntry.BlocksScheduled
+		total.SyncExecuted += queryEntry.SyncExecuted
+		total.SyncScheduled += queryEntry.SyncScheduled
 
 		if search != "" {
 			prefixSearch := strings.ToLower(search)
@@ -472,33 +460,25 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 
 		// Attestations
-		if total.AttestationsScheduled != nil {
-			if total.AttestationsExecuted != nil {
-				totalEntry.Attestations.Success = *total.AttestationsExecuted
-			}
-			totalEntry.Attestations.Failed = *total.AttestationsScheduled - totalEntry.Attestations.Success
-		}
+		totalEntry.Attestations.Success = total.AttestationsExecuted
+		totalEntry.Attestations.Failed = total.AttestationsScheduled - total.AttestationsExecuted
 
 		// Proposals
-		if total.BlocksScheduled != nil {
-			if total.BlocksProposed != nil {
-				totalEntry.Proposals.Success = *total.BlocksProposed
-			}
-			totalEntry.Proposals.Failed = *total.BlocksScheduled - totalEntry.Proposals.Success
-		}
+		totalEntry.Proposals.Success = total.BlocksProposed
+		totalEntry.Proposals.Failed = total.BlocksScheduled - total.BlocksProposed
 
 		// Efficiency
 		var totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency sql.NullFloat64
-		if total.AttestationReward != nil && total.AttestationIdealReward != nil && !total.AttestationIdealReward.IsZero() {
-			totalAttestationEfficiency.Float64 = total.AttestationReward.Div(*total.AttestationIdealReward).InexactFloat64()
+		if !total.AttestationIdealReward.IsZero() {
+			totalAttestationEfficiency.Float64 = total.AttestationReward.Div(total.AttestationIdealReward).InexactFloat64()
 			totalAttestationEfficiency.Valid = true
 		}
-		if total.BlocksProposed != nil && total.BlocksScheduled != nil && *total.BlocksScheduled != 0 {
-			totalProposerEfficiency.Float64 = float64(*total.BlocksProposed) / float64(*total.BlocksScheduled)
+		if total.BlocksScheduled > 0 {
+			totalProposerEfficiency.Float64 = float64(total.BlocksProposed) / float64(total.BlocksScheduled)
 			totalProposerEfficiency.Valid = true
 		}
-		if total.SyncExecuted != nil && total.SyncScheduled != nil && *total.SyncScheduled != 0 {
-			totalSyncEfficiency.Float64 = float64(*total.SyncExecuted) / float64(*total.SyncScheduled)
+		if total.SyncScheduled > 0 {
+			totalSyncEfficiency.Float64 = float64(total.SyncExecuted) / float64(total.SyncScheduled)
 			totalSyncEfficiency.Valid = true
 		}
 		totalEntry.Efficiency = d.calculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
@@ -509,25 +489,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	paging.TotalCount = uint64(len(result))
 
 	return result, &paging, nil
-}
-
-func addDecimalFields(dest **decimal.Decimal, src *decimal.Decimal) {
-	if src != nil {
-		if *dest == nil {
-			zero := decimal.Zero
-			*dest = &zero
-		}
-		**dest = (*dest).Add(*src)
-	}
-}
-
-func addUint64Fields(dest **uint64, src *uint64) {
-	if src != nil {
-		if *dest == nil {
-			*dest = new(uint64)
-		}
-		**dest += *src
-	}
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
