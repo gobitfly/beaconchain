@@ -127,25 +127,39 @@ type NetworkInfo struct {
 // -------------------------
 // validator indices structs, only used between data access and api layer
 
-type VDBGeneralValidatorIndices struct {
+type VDBGeneralSummaryValidators struct {
 	Online  []uint64
 	Offline []uint64
 	Pending []uint64
 	Deposed []uint64
 }
 
-type VDBSyncValidatorIndices struct {
+type VDBSyncSummaryValidators struct {
 	Upcoming []uint64
 	Current  []uint64
 	Past     []uint64
 }
 
-type VDBSlashingsValidatorIndices struct {
-	HasSlashed []uint64
-	GotSlashed []uint64
+type VDBSlashingsSummaryValidators struct {
+	// fill with the validator index that got slashed and the index of the validator that slashed it
+	GotSlashed []struct {
+		Index     uint64
+		SlashedBy uint64
+	}
+	// fill with the validator index that slashed and the index of the validators that got slashed
+	HasSlashed []struct {
+		Index          uint64
+		SlashedIndices []uint64
+	}
 }
 
-type VDBProposalValidatorIndices struct {
-	Proposed []uint64
-	Missed   []uint64
+type VDBProposalSummaryValidators struct {
+	Proposed []struct {
+		Index          uint64
+		ProposedBlocks []uint64
+	}
+	Missed []struct {
+		Index        uint64
+		MissedBlocks []uint64
+	}
 }

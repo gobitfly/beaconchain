@@ -799,7 +799,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -823,13 +823,13 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	duties := enums.ValidatorDuties
 	switch duty {
 	case duties.None:
-		indices, err = h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId)
+		indices, err = h.dai.GetValidatorDashboardSummaryValidators(*dashboardId, groupId)
 	case duties.Sync:
-		indices, err = h.dai.GetValidatorDashboardSyncValidatorIndices(*dashboardId, groupId, period)
+		indices, err = h.dai.GetValidatorDashboardSyncSummaryValidators(*dashboardId, groupId, period)
 	case duties.Slashed:
-		indices, err = h.dai.GetValidatorDashboardSlashingsValidatorIndices(*dashboardId, groupId, period)
+		indices, err = h.dai.GetValidatorDashboardSlashingsSummaryValidators(*dashboardId, groupId, period)
 	case duties.Proposal:
-		indices, err = h.dai.GetValidatorDashboardProposalValidatorIndices(*dashboardId, groupId, period)
+		indices, err = h.dai.GetValidatorDashboardProposalSummaryValidators(*dashboardId, groupId, period)
 	}
 	if err != nil {
 		handleErr(w, err)
@@ -842,7 +842,7 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 		return
 	}
 
-	response := types.InternalGetValidatorDashboardValidatorIndicesResponse{
+	response := types.InternalGetValidatorDashboardSummaryValidatorsResponse{
 		Data: data,
 	}
 

@@ -86,8 +86,7 @@ type VDBGroupSummaryData struct {
 	ProposalValidators []uint64                     `json:"proposal_validators"`
 	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
-	Apr    ClElValue[float64]         `json:"apr"`
-	Income ClElValue[decimal.Decimal] `json:"income"`
+	Apr ClElValue[float64] `json:"apr"`
 
 	Luck Luck `json:"luck"`
 }
@@ -96,14 +95,17 @@ type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupS
 type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
 // ------------------------------------------------------------
-// Validator Indices
-
-type VDBValidatorIndices struct {
-	Category   string   `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
-	Validators []uint64 `json:"validators"`
+// Summary Validators
+type VDBSummaryValidator struct {
+	Index       uint64   `json:"index"`
+	DutyObjects []uint64 `json:"duty_objects,omitempty"`
+}
+type VDBSummaryValidatorsData struct {
+	Category   string                `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
+	Validators []VDBSummaryValidator `json:"validators"`
 }
 
-type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]VDBValidatorIndices]
+type InternalGetValidatorDashboardSummaryValidatorsResponse ApiDataResponse[[]VDBSummaryValidatorsData]
 
 // ------------------------------------------------------------
 // Rewards Tab
