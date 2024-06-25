@@ -99,6 +99,7 @@ const mapped = computed(() => {
     display: flex;
     align-items: center;
     gap: var(--padding-small);
+    flex-wrap: wrap;
 
     .status {
       display: flex;
