@@ -8,7 +8,7 @@ import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashbo
 import type { DashboardKey } from '~/types/dashboard'
 import { sortValidatorIds } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
-import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/types/api/validator_dashboard'
+import { type InternalGetValidatorDashboardSummaryValidatorsResponse } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -55,10 +55,10 @@ watch(props, async (p) => {
           break
       }
 
-      const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
+      const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
       const ids: number[] = []
       // TODO: replace this quickfix with the real refactoring
-      validators.value = sortValidatorIds(res.data.reduce((ids, data) => ids.concat(data.validators), ids))
+      validators.value = sortValidatorIds(res.data.reduce((ids, data) => ids.concat(data.validators.map(v => v.index)), ids))
       shownValidators.value = validators.value
       isLoading.value = false
     }
