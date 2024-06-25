@@ -1,4 +1,5 @@
 import type { ValidatorHistoryDuties } from '~/types/api/common'
+import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 
 export function totalDutyRewards (duties?: ValidatorHistoryDuties) {
   if (!duties) {
@@ -16,4 +17,11 @@ export function sortValidatorIds (list?: number[]): number[] {
     return []
   }
   return [...list].sort((a, b) => a - b)
+}
+
+export function sortSummaryValidators (list?: VDBSummaryValidator[]): VDBSummaryValidator[] {
+  if (!list) {
+    return []
+  }
+  return [...list].sort((a, b) => a.index - b.index)
 }

@@ -369,6 +369,10 @@
       "el_deposits": {
         "title": "Execution Layer"
       },
+      "subset_dialog": {
+        "slashed": "Slashed",
+        "got_slashed": "Slashed by"
+      },
       "blocks": {
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
