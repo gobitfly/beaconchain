@@ -152,8 +152,10 @@ function mapDutyLinks (dutyObjects?: number[]) {
   padding: var(--padding) var(--padding) 7px var(--padding);
   border: 1px solid var(--container-border-color);
   border-radius: var(--border-radius);
-  min-height: 40px;
   word-break: break-all;
+  .list{
+    min-height: 40px;
+  }
 
   .round-brackets >span:last-child:not(.label),
   .list >span:last-child {

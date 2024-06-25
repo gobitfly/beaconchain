@@ -174,6 +174,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                   :validators="slotProps.data.validators"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
+                  :time-frame="selectedTimeFrame"
                   context="group"
                 />
               </template>

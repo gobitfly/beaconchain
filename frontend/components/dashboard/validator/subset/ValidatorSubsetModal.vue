@@ -50,7 +50,7 @@ watch(props, async (p) => {
         break
     }
 
-    const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
+    const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame?.replace('last_', ''), duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
     data.value = res.data
     isLoading.value = false
   }
@@ -133,17 +133,18 @@ const mapped = computed<ValidatorSubset[]>(() => {
       <BcContentFilter v-model="filter" class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
 
-    <div class="container">
-      <Accordion :value="0" class="accordion">
-        <AccordionTab v-for="subset in mapped" :key="subset.category" :header="'TBD'">
-          <template #headericon>
-            <FontAwesomeIcon :icon="faCaretRight" />
-          </template>
-          <DashboardValidatorSubsetList :category="subset.category" :validators="subset.validators" />
-        </AccordionTab>
-      </Accordion>
+    <Accordion :active-index="0" class="accordion basic">
+      <AccordionTab v-for="subset in mapped" :key="subset.category">
+        <template #headericon>
+          <FontAwesomeIcon :icon="faCaretRight" />
+        </template>
+        <template #header>
+          <DashboardValidatorSubsetHeader :category="subset.category" :validators="subset.validators" />
+        </template>
+        <DashboardValidatorSubsetList :category="subset.category" :validators="subset.validators" />
+      </AccordionTab>
       <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
-    </div>
+    </Accordion>
   </div>
 </template>
 
@@ -181,13 +182,9 @@ const mapped = computed<ValidatorSubset[]>(() => {
     position: absolute;
   }
 
-  .container {
+  .accordion {
     position: relative;
     flex-grow: 1;
-    background-color: var(--subcontainer-background);
-    padding: var(--padding) var(--padding) 7px var(--padding);
-    border: 1px solid var(--container-border-color);
-    border-radius: var(--border-radius);
     height: 453px;
     overflow-y: auto;
     overflow-x: hidden;

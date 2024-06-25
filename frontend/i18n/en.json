@@ -371,7 +371,21 @@
       },
       "subset_dialog": {
         "slashed": "Slashed",
-        "got_slashed": "Slashed by"
+        "got_slashed": "Slashed by",
+        "category": {
+          "all": "All",
+          "online": "Online",
+          "offline": "Offline",
+          "pending": "Pending",
+          "deposited": "Deposited",
+          "sync_current": "Current Sync Committee",
+          "sync_upcoming": "Upcoming Sync Committee",
+          "sync_past": "Past Sync Committee",
+          "has_slashed": "Slashed",
+          "got_slashed": "Got slashed",
+          "proposal_proposed": "Proposed",
+          "proposal_missed": "Missed"
+        }
       },
       "blocks": {
         "title": "Blocks",

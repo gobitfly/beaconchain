@@ -67,11 +67,11 @@ const mapped = computed(() => {
 
 </script>
 <template>
-  <BcTooltip v-if="mapped.list.length" class="validator-status-column">
-    <template v-if="!isTooltip" #tooltip>
-      <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
-    </template>
-    <div class="status-list">
+  <div v-if="mapped.list.length" class="validator-status-column">
+    <BcTooltip class="status-list">
+      <template v-if="!isTooltip" #tooltip>
+        <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
+      </template>
       <div v-for="status in mapped.list" :key="status.key" class="status" :class="status.key">
         <div class="icon">
           <FontAwesomeIcon :icon="faPowerOff" />
@@ -79,9 +79,9 @@ const mapped = computed(() => {
         <BcFormatNumber v-if="absolute" :value="status.count" />
         <BcFormatPercent v-else :value="status.count" :base="mapped.total" />
       </div>
-    </div>
+    </BcTooltip>
     <FontAwesomeIcon v-if="!isTooltip" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
-  </BcTooltip>
+  </div>
   <div v-else>
     -
   </div>
@@ -94,12 +94,13 @@ const mapped = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: nowrap;
 
   .status-list {
     display: flex;
     align-items: center;
-    gap: var(--padding-small);
     flex-wrap: wrap;
+    gap: var(--padding-small);
 
     .status {
       display: flex;
