@@ -128,13 +128,18 @@ type NetworkInfo struct {
 // validator indices structs, only used between data access and api layer
 
 type VDBGeneralSummaryValidators struct {
-	Online  []uint64
-	Offline []uint64
-	Pending []uint64
-	Deposed []uint64
+	// fill slices with indices of validators
+	Online    []uint64
+	Offline   []uint64
+	Deposited []uint64
+	Pending   []struct {
+		Index               uint64
+		ActivationTimestamp uint64
+	}
 }
 
 type VDBSyncSummaryValidators struct {
+	// fill slices with indices of validators
 	Upcoming []uint64
 	Current  []uint64
 	Past     []uint64
