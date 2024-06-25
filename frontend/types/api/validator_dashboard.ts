@@ -77,16 +77,23 @@ export interface VDBGroupSummaryData {
   proposal_validators: number /* uint64 */[];
   missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
-  income: ClElValue<string /* decimal.Decimal */>;
   luck: Luck;
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
-export interface VDBValidatorIndices {
-  category: 'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
-  validators: number /* uint64 */[];
+/**
+ * ------------------------------------------------------------
+ * Summary Validators
+ */
+export interface VDBSummaryValidator {
+  index: number /* uint64 */;
+  duty_objects?: number /* uint64 */[];
 }
-export type InternalGetValidatorDashboardValidatorIndicesResponse = ApiDataResponse<VDBValidatorIndices[]>;
+export interface VDBSummaryValidatorsData {
+  category: 'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
+  validators: VDBSummaryValidator[];
+}
+export type InternalGetValidatorDashboardSummaryValidatorsResponse = ApiDataResponse<VDBSummaryValidatorsData[]>;
 /**
  * ------------------------------------------------------------
  * Rewards Tab

@@ -260,23 +260,23 @@ func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralValidatorIndices, error) {
-	r := t.VDBGeneralValidatorIndices{}
+func (d *DummyService) GetValidatorDashboardSummaryValidators(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
+	r := t.VDBGeneralSummaryValidators{}
 	err := commonFakeData(&r)
 	return &r, err
 }
-func (d *DummyService) GetValidatorDashboardSyncValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncValidatorIndices, error) {
-	r := t.VDBSyncValidatorIndices{}
+func (d *DummyService) GetValidatorDashboardSyncSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
+	r := t.VDBSyncSummaryValidators{}
 	err := commonFakeData(&r)
 	return &r, err
 }
-func (d *DummyService) GetValidatorDashboardSlashingsValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsValidatorIndices, error) {
-	r := t.VDBSlashingsValidatorIndices{}
+func (d *DummyService) GetValidatorDashboardSlashingsSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
+	r := t.VDBSlashingsSummaryValidators{}
 	err := commonFakeData(&r)
 	return &r, err
 }
-func (d *DummyService) GetValidatorDashboardProposalValidatorIndices(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalValidatorIndices, error) {
-	r := t.VDBProposalValidatorIndices{}
+func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
+	r := t.VDBProposalSummaryValidators{}
 	err := commonFakeData(&r)
 	return &r, err
 }
