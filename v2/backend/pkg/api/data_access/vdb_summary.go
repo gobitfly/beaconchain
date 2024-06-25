@@ -14,15 +14,19 @@ import (
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging
+
+	wg := errgroup.Group{}
 
 	// Searching for a group name is not supported when aggregating groups or for guest dashboards
 	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
@@ -87,11 +91,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query and get the data
-
 	type QueryResult struct {
 		GroupId                int64            `db:"group_id"`
 		GroupName              string           `db:"group_name"`
-		ValidatorIndices       []uint64         `db:"validator_indices"`
+		ValidatorIndices       pq.Int64Array    `db:"validator_indices"`
 		ClRewards              *int64           `db:"cl_rewards"`
 		ElRewards              *decimal.Decimal `db:"el_rewards"`
 		AttestationReward      *decimal.Decimal `db:"attestations_reward"`
@@ -104,94 +107,170 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		SyncScheduled          *uint64          `db:"sync_scheduled"`
 	}
 
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("group_id"),
-			goqu.L("ARRAY_AGG(validator_index) AS validator_indices"),
-			goqu.L("SUM(cl_rewards) AS cl_rewards"),
-			goqu.L("SUM(el_rewards) AS el_rewards"),
-			goqu.L("SUM(attestations_reward)::decimal AS attestations_reward"),
-			goqu.L("SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward"),
-			goqu.L("SUM(attestations_executed) AS attestations_executed"),
-			goqu.L("SUM(attestations_scheduled) AS attestations_scheduled"),
-			goqu.L("SUM(blocks_proposed) AS blocks_proposed"),
-			goqu.L("SUM(blocks_scheduled) AS blocks_scheduled"),
-			goqu.L("SUM(sync_executed) AS sync_executed"),
-			goqu.L("SUM(sync_scheduled) AS sync_scheduled")).
-		GroupBy(goqu.L("group_id"))
-
-	subDs := goqu.Dialect("postgres").
-		Select(
-			goqu.L("r.validator_index"),
-			goqu.L("(COALESCE(attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards"),
-			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18)) AS el_rewards"),
-			goqu.L("r.attestations_reward"),
-			goqu.L("r.attestations_ideal_reward"),
-			goqu.L("r.attestations_executed"),
-			goqu.L("r.attestations_scheduled"),
-			goqu.L("r.blocks_proposed"),
-			goqu.L("r.blocks_scheduled"),
-			goqu.L("r.sync_executed"),
-			goqu.L("r.sync_scheduled")).
-		From(goqu.T(tableName).As("r")).
-		LeftJoin(goqu.L("LEFT JOIN blocks b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer AND b.status = '1'"))).
-		LeftJoin(goqu.L("LEFT JOIN execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("LEFT JOIN relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
-		GroupBy(
-			goqu.L("r.validator_index"),
-			goqu.L("group_id"),
-			goqu.L("cl_rewards"),
-			goqu.L("r.attestations_reward"),
-			goqu.L("r.attestations_ideal_reward"),
-			goqu.L("r.attestations_scheduled"),
-			goqu.L("r.attestations_executed"),
-			goqu.L("r.blocks_proposed"),
-			goqu.L("r.blocks_scheduled"),
-			goqu.L("r.sync_executed"),
-			goqu.L("r.sync_scheduled"))
-
-	if len(validators) > 0 {
-		subDs = subDs.
-			SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId)).
-			Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
-	} else {
-		if dashboardId.AggregateGroups {
-			subDs = subDs.
-				SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId))
-		} else {
-			subDs = subDs.
-				SelectAppend(goqu.L("v.group_id"))
-		}
-
-		subDs = subDs.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ?", dashboardId))
-
-		if search != "" {
-			// Get the group names since we can filter for them
-			subDs = subDs.
-				SelectAppend(goqu.L("g.name AS group_name")).
-				InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
-				GroupByAppend(goqu.L("group_name"))
-
-			ds = ds.
-				SelectAppend(goqu.L("group_name")).
-				GroupByAppend(goqu.L("group_name"))
-		}
-	}
-
-	ds = ds.
-		From(subDs.As("sub"))
-
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %v", err)
-	}
-
 	var queryResult []QueryResult
-	err = d.alloyReader.Select(&queryResult, query, args...)
+	var networkEfficiency float64
+
+	wg.Go(func() error {
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("group_id"),
+				goqu.L("ARRAY_AGG(validator_index) AS validator_indices"),
+				goqu.L("SUM(cl_rewards) AS cl_rewards"),
+				goqu.L("SUM(el_rewards) AS el_rewards"),
+				goqu.L("SUM(attestations_reward)::decimal AS attestations_reward"),
+				goqu.L("SUM(attestations_ideal_reward)::decimal AS attestations_ideal_reward"),
+				goqu.L("SUM(attestations_executed) AS attestations_executed"),
+				goqu.L("SUM(attestations_scheduled) AS attestations_scheduled"),
+				goqu.L("SUM(blocks_proposed) AS blocks_proposed"),
+				goqu.L("SUM(blocks_scheduled) AS blocks_scheduled"),
+				goqu.L("SUM(sync_executed) AS sync_executed"),
+				goqu.L("SUM(sync_scheduled) AS sync_scheduled")).
+			GroupBy(goqu.L("group_id"))
+
+		subDs := goqu.Dialect("postgres").
+			Select(
+				goqu.L("r.validator_index"),
+				goqu.L("(COALESCE(r.attestations_reward, 0) + COALESCE(r.blocks_cl_reward, 0) + COALESCE(r.sync_rewards, 0) + COALESCE(r.slasher_reward, 0)) AS cl_rewards"),
+				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18)) AS el_rewards"),
+				goqu.L("r.attestations_reward"),
+				goqu.L("r.attestations_ideal_reward"),
+				goqu.L("r.attestations_executed"),
+				goqu.L("r.attestations_scheduled"),
+				goqu.L("r.blocks_proposed"),
+				goqu.L("r.blocks_scheduled"),
+				goqu.L("r.sync_executed"),
+				goqu.L("r.sync_scheduled")).
+			From(goqu.T(tableName).As("r")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer AND b.status = '1'"))).
+			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+			GroupBy(
+				goqu.L("r.validator_index"),
+				goqu.L("group_id"),
+				goqu.L("cl_rewards"),
+				goqu.L("r.attestations_reward"),
+				goqu.L("r.attestations_ideal_reward"),
+				goqu.L("r.attestations_scheduled"),
+				goqu.L("r.attestations_executed"),
+				goqu.L("r.blocks_proposed"),
+				goqu.L("r.blocks_scheduled"),
+				goqu.L("r.sync_executed"),
+				goqu.L("r.sync_scheduled"))
+
+		if len(validators) > 0 {
+			subDs = subDs.
+				SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId)).
+				Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
+		} else {
+			if dashboardId.AggregateGroups {
+				subDs = subDs.
+					SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId))
+			} else {
+				subDs = subDs.
+					SelectAppend(goqu.L("v.group_id"))
+			}
+
+			subDs = subDs.
+				InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+				Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+			if search != "" {
+				// Get the group names since we can filter for them
+				subDs = subDs.
+					SelectAppend(goqu.L("g.name AS group_name")).
+					InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
+					GroupByAppend(goqu.L("group_name"))
+
+				ds = ds.
+					SelectAppend(goqu.L("group_name")).
+					GroupByAppend(goqu.L("group_name"))
+			}
+		}
+
+		ds = ds.
+			From(subDs.As("sub"))
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.alloyReader.Select(&queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+		}
+		return nil
+	})
+
+	latestEpoch := cache.LatestEpoch.Get()
+	currentSyncCommitteeValidators := make(map[uint64]bool)
+	upcomingSyncCommitteeValidators := make(map[uint64]bool)
+	wg.Go(func() error {
+		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("validatorindex"),
+				goqu.L("period")).
+			From("sync_committees").
+			Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
+
+		var queryResult []struct {
+			ValidatorIndex uint64 `db:"validatorindex"`
+			Period         uint64 `db:"period"`
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.readerDb.Select(&queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+		}
+
+		for _, queryEntry := range queryResult {
+			if queryEntry.Period == currentSyncPeriod {
+				currentSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
+			} else {
+				upcomingSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
+			}
+		}
+
+		return nil
+	})
+
+	wg.Go(func() error {
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency"),
+				goqu.L("SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency"),
+				goqu.L("SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency")).
+			From(goqu.T(tableName))
+
+		var queryResult struct {
+			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
+			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.alloyReader.Get(&queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+		}
+
+		networkEfficiency = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+		return nil
+	})
+
+	err := wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %v", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -210,6 +289,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	// Calculate the result
 	total := struct {
 		GroupId                int64
+		Status                 t.VDBSummaryStatus
 		ValidatorStatusCount   t.VDBSummaryValidators
 		AttestationReward      *decimal.Decimal
 		AttestationIdealReward *decimal.Decimal
@@ -225,12 +305,28 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	}
 
 	for _, queryEntry := range queryResult {
+		uiValidatorIndices := make([]uint64, len(queryEntry.ValidatorIndices))
+		for i, validatorIndex := range queryEntry.ValidatorIndices {
+			uiValidatorIndices[i] = uint64(validatorIndex)
+		}
+
 		resultEntry := t.VDBSummaryTableRow{
-			GroupId: queryEntry.GroupId,
+			GroupId:                  queryEntry.GroupId,
+			AverageNetworkEfficiency: networkEfficiency,
+		}
+
+		// Status
+		for _, validatorIndex := range uiValidatorIndices {
+			if currentSyncCommitteeValidators[validatorIndex] {
+				resultEntry.Status.CurrentSyncCount++
+			}
+			if upcomingSyncCommitteeValidators[validatorIndex] {
+				resultEntry.Status.UpcomingSyncCount++
+			}
 		}
 
 		// Validator statuses
-		validatorStatuses, err := d.getValidatorStatuses(queryEntry.ValidatorIndices)
+		validatorStatuses, err := d.getValidatorStatuses(uiValidatorIndices)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -240,12 +336,16 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 			} else if status == enums.ValidatorStatuses.Offline {
 				resultEntry.Validators.Offline++
 			} else {
+				if status == enums.ValidatorStatuses.Slashed {
+					resultEntry.Status.SlashedCount++
+				}
 				resultEntry.Validators.Exited++
 			}
 		}
 		total.ValidatorStatusCount.Online += resultEntry.Validators.Online
 		total.ValidatorStatusCount.Offline += resultEntry.Validators.Offline
 		total.ValidatorStatusCount.Exited += resultEntry.Validators.Exited
+		total.Status.SlashedCount += resultEntry.Status.SlashedCount
 
 		// Attestations
 		if queryEntry.AttestationsScheduled != nil {
@@ -264,8 +364,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 
 		// Reward
-		resultEntry.Reward.Cl = utils.GWeiToWei(big.NewInt(*queryEntry.ClRewards))
-		resultEntry.Reward.El = *queryEntry.ElRewards
+		if queryEntry.ClRewards != nil {
+			resultEntry.Reward.Cl = utils.GWeiToWei(big.NewInt(*queryEntry.ClRewards))
+		}
+		if queryEntry.ElRewards != nil {
+			resultEntry.Reward.El = *queryEntry.ElRewards
+		}
 		total.Reward.Cl = total.Reward.Cl.Add(resultEntry.Reward.Cl)
 		total.Reward.El = total.Reward.El.Add(resultEntry.Reward.El)
 
@@ -297,7 +401,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 		if search != "" {
 			prefixSearch := strings.ToLower(search)
-			for _, validatorIndex := range queryEntry.ValidatorIndices {
+			for _, validatorIndex := range uiValidatorIndices {
 				if searchValidator != -1 && validatorIndex == uint64(searchValidator) ||
 					(groupNameSearchEnabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), prefixSearch)) {
 					result = append(result, resultEntry)
@@ -316,7 +420,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	switch colSort.Column {
 	case enums.VDBSummaryColumns.Validators:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
-			return float64(resultEntry.Validators.Online) / float64(resultEntry.Validators.Online+resultEntry.Validators.Offline+resultEntry.Validators.Exited)
+			return float64(resultEntry.Validators.Online) / float64(resultEntry.Validators.Online+resultEntry.Validators.Offline)
 		}
 	case enums.VDBSummaryColumns.Efficiency:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
@@ -361,9 +465,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	if len(queryResult) > 1 && len(result) > 0 {
 		// We have more than one group and at least one group remains after the filtering so we need to show the total row
 		totalEntry := t.VDBSummaryTableRow{
-			GroupId:    total.GroupId,
-			Validators: total.ValidatorStatusCount,
-			Reward:     total.Reward,
+			GroupId:                  total.GroupId,
+			Validators:               total.ValidatorStatusCount,
+			AverageNetworkEfficiency: networkEfficiency,
+			Reward:                   total.Reward,
 		}
 
 		// Attestations
