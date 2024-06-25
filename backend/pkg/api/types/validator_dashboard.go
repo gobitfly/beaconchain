@@ -69,9 +69,9 @@ type VDBGroupSummarySyncCount struct {
 }
 
 type VDBGroupSummaryMissedRewards struct {
-	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards"`
-	Attestations    decimal.Decimal            `json:"attestations"`
-	Sync            decimal.Decimal            `json:"sync"`
+	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards" faker:"cl_el_eth"`
+	Attestations    decimal.Decimal            `json:"attestations" faker:"eth"`
+	Sync            decimal.Decimal            `json:"sync" faker:"eth"`
 }
 type VDBGroupSummaryData struct {
 	AttestationsHead       StatusCount `json:"attestations_head"`
@@ -84,7 +84,7 @@ type VDBGroupSummaryData struct {
 	SyncCommitteeCount VDBGroupSummarySyncCount     `json:"sync_count"`
 	Slashings          VDBGroupSummaryColumnItem    `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
 	ProposalValidators []uint64                     `json:"proposal_validators"`
-	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards" faker:"missed_rewards"`
+	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
 	Apr ClElValue[float64] `json:"apr"`
 

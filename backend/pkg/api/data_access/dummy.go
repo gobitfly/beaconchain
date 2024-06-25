@@ -22,27 +22,20 @@ var _ DataAccessor = (*DummyService)(nil)
 
 func NewDummyService() *DummyService {
 	// define custom tags for faker
+	_ = faker.AddProvider("eth", func(v reflect.Value) (interface{}, error) {
+		return randomEthDecimal(), nil
+	})
 	_ = faker.AddProvider("cl_el_eth", func(v reflect.Value) (interface{}, error) {
 		return t.ClElValue[decimal.Decimal]{
-			Cl: randomDecimal(),
-			El: randomDecimal(),
-		}, nil
-	})
-	_ = faker.AddProvider("missed_rewards", func(v reflect.Value) (interface{}, error) {
-		return t.VDBGroupSummaryMissedRewards{
-			ProposerRewards: t.ClElValue[decimal.Decimal]{
-				Cl: randomDecimal(),
-				El: randomDecimal(),
-			},
-			Attestations: randomDecimal(),
-			Sync:         randomDecimal(),
+			Cl: randomEthDecimal(),
+			El: randomEthDecimal(),
 		}, nil
 	})
 	return &DummyService{}
 }
 
 // generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
-func randomDecimal() decimal.Decimal {
+func randomEthDecimal() decimal.Decimal {
 	//nolint:gosec
 	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int63n(10000000)))
 	return decimal
