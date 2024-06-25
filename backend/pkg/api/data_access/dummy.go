@@ -41,8 +41,7 @@ func NewDummyService() *DummyService {
 }
 
 func randomDecimal() decimal.Decimal {
-	random := rand.Uint64() % 10000000
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", random))
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int63n(10000000)))
 	return decimal
 }
 
