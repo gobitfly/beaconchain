@@ -2,6 +2,9 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
+	"reflect"
 	"time"
 
 	"github.com/go-faker/faker/v4"
@@ -18,7 +21,29 @@ type DummyService struct {
 var _ DataAccessor = (*DummyService)(nil)
 
 func NewDummyService() *DummyService {
+	_ = faker.AddProvider("cl_el_eth", func(v reflect.Value) (interface{}, error) {
+		return t.ClElValue[decimal.Decimal]{
+			Cl: randomDecimal(),
+			El: randomDecimal(),
+		}, nil
+	})
+	_ = faker.AddProvider("missed_rewards", func(v reflect.Value) (interface{}, error) {
+		return t.VDBGroupSummaryMissedRewards{
+			ProposerRewards: t.ClElValue[decimal.Decimal]{
+				Cl: randomDecimal(),
+				El: randomDecimal(),
+			},
+			Attestations: randomDecimal(),
+			Sync:         randomDecimal(),
+		}, nil
+	})
 	return &DummyService{}
+}
+
+func randomDecimal() decimal.Decimal {
+	random := rand.Uint64() % 10000000
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", random))
+	return decimal
 }
 
 // must pass a pointer to the data

@@ -53,7 +53,7 @@ type VDBSummaryTableRow struct {
 	AverageNetworkEfficiency float64                    `json:"average_network_efficiency"`
 	Attestations             StatusCount                `json:"attestations"`
 	Proposals                StatusCount                `json:"proposals"`
-	Reward                   ClElValue[decimal.Decimal] `json:"reward"`
+	Reward                   ClElValue[decimal.Decimal] `json:"reward" faker:"cl_el_eth"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
@@ -84,7 +84,7 @@ type VDBGroupSummaryData struct {
 	SyncCommitteeCount VDBGroupSummarySyncCount     `json:"sync_count"`
 	Slashings          VDBGroupSummaryColumnItem    `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
 	ProposalValidators []uint64                     `json:"proposal_validators"`
-	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
+	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards" faker:"missed_rewards"`
 
 	Apr ClElValue[float64] `json:"apr"`
 
