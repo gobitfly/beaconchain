@@ -75,12 +75,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	}
 
 	// Get the table name based on the period
+	// TODO: validator_dashboard_data_rolling_hourly does not exist yet
 	tableName := ""
 	switch period {
 	case enums.TimePeriods.AllTime:
 		tableName = "validator_dashboard_data_rolling_total"
 	case enums.TimePeriods.Last1h:
-		tableName = "validator_dashboard_data_rolling_daily"
+		fallthrough
 	case enums.TimePeriods.Last24h:
 		tableName = "validator_dashboard_data_rolling_daily"
 	case enums.TimePeriods.Last7d:
@@ -174,8 +175,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 				Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
-			if search != "" {
-				// Get the group names since we can filter for them
+			if search != "" || colSort.Column == enums.VDBSummaryColumns.Group {
+				// Get the group names since we can filter and/or sort for them
 				subDs = subDs.
 					SelectAppend(goqu.L("g.name AS group_name")).
 					InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
@@ -393,6 +394,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				if searchValidator != -1 && validatorIndex == uint64(searchValidator) ||
 					(groupNameSearchEnabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), prefixSearch)) {
 					result = append(result, resultEntry)
+					break
 				}
 			}
 		} else {
@@ -408,7 +410,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	switch colSort.Column {
 	case enums.VDBSummaryColumns.Validators:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
-			return float64(resultEntry.Validators.Online) / float64(resultEntry.Validators.Online+resultEntry.Validators.Offline)
+			divisor := float64(resultEntry.Validators.Online + resultEntry.Validators.Offline)
+			if divisor == 0 {
+				return 0
+			}
+			return float64(resultEntry.Validators.Online) / divisor
 		}
 	case enums.VDBSummaryColumns.Efficiency:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
@@ -416,11 +422,19 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 	case enums.VDBSummaryColumns.Attestations:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
-			return float64(resultEntry.Attestations.Success) / float64(resultEntry.Attestations.Success+resultEntry.Attestations.Failed)
+			divisor := float64(resultEntry.Attestations.Success + resultEntry.Attestations.Failed)
+			if divisor == 0 {
+				return 0
+			}
+			return float64(resultEntry.Attestations.Success) / divisor
 		}
 	case enums.VDBSummaryColumns.Proposals:
 		sortParam = func(resultEntry t.VDBSummaryTableRow) float64 {
-			return float64(resultEntry.Proposals.Success) / float64(resultEntry.Proposals.Success+resultEntry.Proposals.Failed)
+			divisor := float64(resultEntry.Proposals.Success + resultEntry.Proposals.Failed)
+			if divisor == 0 {
+				return 0
+			}
+			return float64(resultEntry.Proposals.Success) / divisor
 		}
 	case enums.VDBSummaryColumns.Reward:
 		rewardSortParam := func(resultEntry t.VDBSummaryTableRow) decimal.Decimal {
@@ -428,9 +442,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 		sort.Slice(result, func(i, j int) bool {
 			if colSort.Desc {
-				return rewardSortParam(result[i]).LessThan(rewardSortParam(result[j]))
-			} else {
 				return rewardSortParam(result[i]).GreaterThan(rewardSortParam(result[j]))
+			} else {
+				return rewardSortParam(result[i]).LessThan(rewardSortParam(result[j]))
 			}
 		})
 	case enums.VDBSummaryColumns.Group:
