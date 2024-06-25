@@ -12,13 +12,13 @@ interface Props {
   percent?: number
   base?: number
   value?: number
-  comparePercent?: number
+  comparePercent?: number // if set it adds the compare sign in front and colors the values accordingly
   hideEmptyValue?: boolean
   precision?: number
   fixed?: number
   fullOnEmptyBase?: boolean
   addPositiveSign?: boolean
-  colorBreakPoint?: number // if set then the percentage will be colored accordingly
+  colorBreakPoint?: number // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
 }
 
 const props = defineProps<Props>()

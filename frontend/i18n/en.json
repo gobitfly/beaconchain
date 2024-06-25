@@ -481,7 +481,7 @@
           "proposals": "Proposals",
           "validators_proposal": "Validators",
           "slashings": "Slashings",
-          "validators_slashings": "Slashed Validators",
+          "validators_slashings": "Validators",
           "apr": "APR",
           "luck": "Luck",
           "reward": "Reward",

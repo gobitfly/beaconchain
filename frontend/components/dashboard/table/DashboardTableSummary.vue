@@ -119,7 +119,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
-            :add-spacer="true"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             :hide-pager="true"
