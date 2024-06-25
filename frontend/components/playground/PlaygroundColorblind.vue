@@ -14,6 +14,7 @@ type Channel = 0 | 1 | 2
 const R: Channel = 0
 const G: Channel = 1
 const B: Channel = 2
+const gamma = 2.2
 
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -49,12 +50,12 @@ class RGB {
       switch (from.space) {
         case CS.RGBlinear :
           for (let i = R; i <= B; i++) {
-            this.chan[i] = Math.round(((from as RGB).chan[i] ** 0.454545) * 255)
+            this.chan[i] = Math.round(((from as RGB).chan[i] ** (1 / gamma)) * 255)
           }
           break
         case CS.RGBgamma :
           for (let i = R; i <= B; i++) {
-            this.chan[i] = ((from as RGB).chan[i] / 255) ** 2.2
+            this.chan[i] = ((from as RGB).chan[i] / 255) ** gamma
           }
           break
         case CS.EyePercI :
@@ -114,7 +115,7 @@ class Eye {
       }
       this.convertToRGB(Eye.rgbLinear, Eye.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = Math.sqrt(Eye.lowestImaxIotaIinv / Eye.rgbLinear.chan[h])
+      this.Imax.value = (Eye.lowestImaxIotaInv / Eye.rgbLinear.chan[h]) ** (1 / gamma)
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
@@ -122,17 +123,19 @@ class Eye {
   }
 
   // constants of our perception model
-  protected static intCoeff = [0.30, 0.55, 0.15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the defintion of "relative luminance" in the ITU-R Recommendation BT.601)
-  protected static rhoG = 0.45 // this coeffient and its brother just below are used to adjust the perceived result when mixing primaries together (obtained empiricially)
-  protected static rhoB = 0.20 // they are correlated with the relative strengh of the green and blue primaries, thus changing the position of the secondaries (and all intermediaries) in the rainbow. Their sum must be below 1 to live room for red.
-  // const iota = 0.5                     (obtained empirically) so for performance we rather use sqrt()
-  // const iotaInv = 1/iota               (obtained empirically) so for performance we rather use * to square
-  protected static mixCoeff = [0, 0, 0] // (will be filled by the constructor) storage of all rho coefficients
+  protected static readonly relLum = [30, 55, 15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the definition of "relative luminance" in the ITU-R Recommendation BT.601)
+  protected static readonly mix = [35, 45, 20] // This coeffients are correlated with the relative strengh of the primaries when they are mixed by pair to obtain a pure intermediate color (this coeffs are obtained empiricially). Their effect is to shift the position of the 3 secondaries (and all intermediaries) in the rainbow.
+  protected static readonly phi = 0.55 // This coeffient and its brother just below are correlated with the strengh of the green and blue primaries relative to white when they are mixed to white light thus altering their purity saturation (this coeffs are obtained empiricially).
+  protected static readonly phi = 0.15 //
+
+  // the following constants will be filled by the constructor
+  protected static relLumNorm = [0, 0, 0]
+  protected static phi = [0, 0, 0]
   protected static rKey = [0, 0, 0, 0, 0, 0, 0] // (will be filled by the constructor) coordinates of the primaries and secondaries on the rainbow
+  protected static readonly lowestImaxIotaInv = Eye.relLum[B]
 
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  static readonly lowestImax = Math.sqrt(Eye.intCoeff[B])
-  protected static readonly lowestImaxIotaIinv = Eye.intCoeff[B]
+  static readonly lowestImax = Eye.relLum[B] ** (1 / gamma)
 
   /**
    * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
@@ -142,12 +145,14 @@ class Eye {
       throw new Error('an Eye object can carry RPI/J information only')
     }
     if (!Eye.rKey[1]) {
-      Eye.mixCoeff[R] = 1 - Eye.rhoG - Eye.rhoB; Eye.mixCoeff[G] = Eye.rhoG; Eye.mixCoeff[B] = Eye.rhoB
+      for (let k = R; k <= B; k++) {
+        Eye.relLumNorm[k] = Eye.relLum[k] / (Eye.relLum[R] + Eye.relLum[G] + Eye.relLum[B])
+      }
       const lSequence = [B, R, G]
       for (let k = 0; k <= 6; k++) {
         if (k % 2) {
           const [h1, h2] = Eye.lowestChanToAnchors(lSequence[Math.floor(k / 2)])
-          Eye.rKey[k] = (h1 + 1 * Eye.mixCoeff[h2] / (Eye.mixCoeff[h1] + Eye.mixCoeff[h2])) / 3
+          Eye.rKey[k] = (h1 + 1 * Eye.mix[h2] / (Eye.mix[h1] + Eye.mix[h2])) / 3
         } else {
           Eye.rKey[k] = k / 6
         }
@@ -177,14 +182,14 @@ class Eye {
       const rgb = (from as RGB).chan
       const l = Eye.RGBtoLowestChannel(rgb)
       const [h1, h2] = Eye.lowestChanToAnchors(l)
-      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.mixCoeff[h2]
-      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.mixCoeff[h1] + anchor2Contribution
+      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.mix[h2]
+      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.mix[h1] + anchor2Contribution
       if (anchors12Contributions <= 0) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
       } else {
         this.r = (h1 + anchor2Contribution / anchors12Contributions) / 3
-        this.p = anchors12Contributions / (rgb[l] * Eye.mixCoeff[l] + rgb[h1] * Eye.mixCoeff[h1] + rgb[h2] * Eye.mixCoeff[h2])
+        this.p = anchors12Contributions / (rgb[l] * Eye.mix[l] + rgb[h1] * Eye.mix[h1] + rgb[h2] * Eye.mix[h2])
       }
       this.fillIntensityFromRGB(rgb)
     } else {
@@ -229,22 +234,22 @@ class Eye {
   protected convertToRGB (to: RGB, i: number, j: number) {
     const [l, m, h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
-    const q = this.p * ((3 * this.r - h1) * ((Eye.mixCoeff[l] + Eye.mixCoeff[h1]) / Eye.mixCoeff[h2] + 1) - 1) + 1
+    const q = this.p * ((3 * this.r - h1) * ((Eye.mix[l] + Eye.mix[h1]) / Eye.mix[h2] + 1) - 1) + 1
     if (q <= 0) { // `q == 0` is possible only if `3r-h1 == 0` and `p == 1`, which implies that `rgb[h2] == rgb[l]` (see the definition of `r` in the `import` method) with the highest purity (primary color), so `rgb[h2]=0` and `rgb[l]=0` and only `rgb[h1]` has a value
       to.chan[l] = to.chan[m] = 0
-      to.chan[h] = (this.space === CS.EyePercI) ? i * i / Eye.intCoeff[h] : j * j
+      to.chan[h] = (this.space === CS.EyePercI) ? i ** gamma / Eye.relLumNorm[h] : j ** gamma
     } else {
       const ratio = [0, 0, 0]
       ratio[l] = (1 - this.p) / q
-      ratio[h1] = (Eye.mixCoeff[l] * this.p + Eye.mixCoeff[h1] + Eye.mixCoeff[h2] * (1 - q)) / (Eye.mixCoeff[h1] * q)
+      ratio[h1] = (Eye.mix[l] * this.p + Eye.mix[h1] + Eye.mix[h2] * (1 - q)) / (Eye.mix[h1] * q)
       ratio[h2] = 1
       if (this.space === CS.EyePercI) {
-        const Ir = [Eye.intCoeff[R] * ratio[R], Eye.intCoeff[G] * ratio[G], Eye.intCoeff[B] * ratio[B]]
+        const Ir = [Eye.relLumNorm[R] * ratio[R], Eye.relLumNorm[G] * ratio[G], Eye.relLumNorm[B] * ratio[B]]
         const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-        to.chan[h2] = i * i / (Ir[y] + Ir[z])
+        to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
       } else { // (this.space === CS.EyeNormJ)
-        to.chan[h] = j * j
+        to.chan[h] = j ** gamma
         if (h === h2) {
           to.chan[h1] = to.chan[h2] * ratio[h1]
         } else {
@@ -257,13 +262,13 @@ class Eye {
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      const I = [Eye.intCoeff[R] * rgb[R], Eye.intCoeff[G] * rgb[G], Eye.intCoeff[B] * rgb[B]]
+      const I = [Eye.relLumNorm[R] * rgb[R], Eye.relLumNorm[G] * rgb[G], Eye.relLumNorm[B] * rgb[B]]
       const [y, z] = Eye.RGBtoAnchorOrder(I)
-      this.i = Math.sqrt(I[y] + I[z])
+      this.i = (I[y] + I[z]) ** (1 / gamma)
     } else {
       // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
-      this.j = Math.sqrt(rgb[h])
+      this.j = rgb[h] ** (1 / gamma)
     }
   }
 
@@ -372,23 +377,23 @@ for (let k = 0; k < 80; k++) {
   linearCount80.push(k)
 }
 
-const linearCount4: number[] = []
-for (let k = 0; k <= 2; k++) {
-  linearCount4.push(k)
+const linearCount14: number[] = []
+for (let k = 0; k <= 14; k++) {
+  linearCount14.push(k)
 }
 
 const iotaIadjuster: Array<RGB> = []
 color.p = 0
-for (let k = 0; k <= 4; k++) {
-  color.i = color.iMax * k / 4
+for (let k = 0; k <= 16; k++) {
+  color.i = color.iMax * k / 16
   iotaIadjuster.push(color.export(CS.RGBgamma) as RGB)
 }
 
 const iotaJadjuster: Array<RGB> = []
 const colorJ = new Eye(CS.EyeNormJ)
-for (let k = 0; k <= 4; k++) {
+for (let k = 0; k <= 16; k++) {
   colorJ.p = 0
-  colorJ.j = k / 4
+  colorJ.j = k / 16
   iotaJadjuster.push(colorJ.export(CS.RGBgamma) as RGB)
 }
 </script>
@@ -421,34 +426,6 @@ for (let k = 0; k <= 4; k++) {
       <br>
     </div>
 
-    <h1>Adjustement of iota</h1>
-    Each middle square must feel as different from its left square as from its right square.
-    The better this criterion is approched, the more linear the scale of intensity is.
-    <br><br>
-    <div v-for="k of linearCount4" :key="k" style="text-align: center; background-color: #7030f0">
-      <br>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
-        I
-      </div>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[1+k].chan[R] + ',' + iotaIadjuster[1+k].chan[G] + ',' + iotaIadjuster[1+k].chan[B] + ')'">
-        I
-      </div>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[2+k].chan[R] + ',' + iotaIadjuster[2+k].chan[G] + ',' + iotaIadjuster[2+k].chan[B] + ')'">
-        I
-      </div>
-      <br>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[0+k].chan[R] + ',' + iotaJadjuster[0+k].chan[G] + ',' + iotaJadjuster[0+k].chan[B] + ')'">
-        J
-      </div>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[1+k].chan[R] + ',' + iotaJadjuster[1+k].chan[G] + ',' + iotaJadjuster[1+k].chan[B] + ')'">
-        J
-      </div>
-      <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[2+k].chan[R] + ',' + iotaJadjuster[2+k].chan[G] + ',' + iotaJadjuster[2+k].chan[B] + ')'">
-        J
-      </div>
-      <br>
-    </div>
-
     <h1>Adjustement of rhoG and rhoB</h1>
     1. Each middle square must feel as different from its left square as from its right square.
     The better this criterion is approched, the more linear in `p` the perceived purity is.
@@ -462,14 +439,46 @@ for (let k = 0; k <= 4; k++) {
       </div>
     </div>
     <br>
+    // test separé pour ajuster la linearité de r
     2. At the same time, try to balance the widths of the color domains on the rainbow.
     The better this criterion is approched, the more linear in `r` the perceived hue is.
     <br><br>
     <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    <h1>Screen calibration (to verify that the light intensity produced by your screen is linear in the RGB input).</h1>
-    Your screen is perfectly linear if the following squares look plain (the center parts must not look brighter or dimmer).<br>
+    // TODO: test de balance des primaires (les secondaires doivent etre au milieu)
+
+    <h1>Screen calibration of extremes greys</h1>
+    Your screen has a good linearity in extreme greys (near black and white) if each middle square feels as different from its left square as from its right square.
+    <br><br>
+    <div v-for="k of linearCount14" :key="k" style="text-align: center; background-color: #7030f0">
+      <span v-if="k == 0 || k==1 || k==2 || k==12 || k==13 || k==14">
+        <br>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
+          I
+        </div>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[1+k].chan[R] + ',' + iotaIadjuster[1+k].chan[G] + ',' + iotaIadjuster[1+k].chan[B] + ')'">
+          I
+        </div>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[2+k].chan[R] + ',' + iotaIadjuster[2+k].chan[G] + ',' + iotaIadjuster[2+k].chan[B] + ')'">
+          I
+        </div>
+        <br>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[0+k].chan[R] + ',' + iotaJadjuster[0+k].chan[G] + ',' + iotaJadjuster[0+k].chan[B] + ')'">
+          J
+        </div>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[1+k].chan[R] + ',' + iotaJadjuster[1+k].chan[G] + ',' + iotaJadjuster[1+k].chan[B] + ')'">
+          J
+        </div>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[2+k].chan[R] + ',' + iotaJadjuster[2+k].chan[G] + ',' + iotaJadjuster[2+k].chan[B] + ')'">
+          J
+        </div>
+        <br>
+      </span>
+    </div>
+
+    <h1>Screen calibration of middle greys.</h1>
+    Your screen is perfectly linear in mid-greys if the following squares look plain (the center parts must not look brighter or dimmer).<br>
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
