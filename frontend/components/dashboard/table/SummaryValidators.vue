@@ -8,10 +8,10 @@ import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashbo
 import { DashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
-import type { VDBSummaryValidators } from '~/types/api/validator_dashboard'
+import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 
 interface Props {
-  validators: VDBSummaryValidators,
+  row: VDBSummaryTableRow,
   absolute: boolean,
   groupId?: number,
   timeFrame?: SummaryTimeFrame
@@ -33,7 +33,10 @@ const openValidatorModal = () => {
       timeFrame: props.timeFrame,
       groupName: groupName.value,
       groupId: props.groupId,
-      dashboardKey: props.dashboardKey
+      dashboardKey: props.dashboardKey,
+      summary: {
+        row: props.row
+      }
     }
   })
 }
@@ -50,12 +53,12 @@ const mapped = computed(() => {
     }
   }
 
-  addCount('online', props.validators?.online)
-  if (props.absolute || props.isTooltip || !props.validators?.online) {
-    addCount('offline', props.validators?.offline)
-    addCount('exited', props.validators?.exited)
+  addCount('online', props.row?.validators.online)
+  if (props.absolute || props.isTooltip || !props.row?.validators.online) {
+    addCount('offline', props.row?.validators.offline)
+    addCount('exited', props.row?.validators.exited)
   }
-  const total = props.validators?.offline + props.validators?.online
+  const total = props.row?.validators.offline + props.row?.validators.online
 
   return {
     list,
@@ -65,11 +68,11 @@ const mapped = computed(() => {
 
 </script>
 <template>
-  <BcTooltip v-if="mapped.list.length" class="validator-status-column">
-    <template v-if="!isTooltip" #tooltip>
-      <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
-    </template>
-    <div class="status-list">
+  <div v-if="mapped.list.length" class="validator-status-column">
+    <BcTooltip class="status-list">
+      <template v-if="!isTooltip" #tooltip>
+        <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
+      </template>
       <div v-for="status in mapped.list" :key="status.key" class="status" :class="status.key">
         <div class="icon">
           <FontAwesomeIcon :icon="faPowerOff" />
@@ -77,9 +80,9 @@ const mapped = computed(() => {
         <BcFormatNumber v-if="absolute" :value="status.count" />
         <BcFormatPercent v-else :value="status.count" :base="mapped.total" />
       </div>
-    </div>
+    </BcTooltip>
     <FontAwesomeIcon v-if="!isTooltip" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
-  </BcTooltip>
+  </div>
   <div v-else>
     -
   </div>
@@ -90,14 +93,15 @@ const mapped = computed(() => {
 
 .validator-status-column {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--padding);
 
   .status-list {
     display: flex;
     align-items: center;
-    gap: var(--padding-small);
     flex-wrap: wrap;
+    gap: var(--padding-small);
 
     .status {
       display: flex;

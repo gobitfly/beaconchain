@@ -474,23 +474,33 @@
 .p-accordion {
   .p-accordion-tab {
     .p-accordion-header {
-      color: var(--container-color);
-      background-color: var(--container-background);
-      border: 1px solid var(--container-border-color);
-      border-radius: var(--border-radius);
-      padding: 16px;
+      padding: 16px 16px 16px 2px;
       .p-accordion-header-link {
         display: flex;
-        justify-content: space-between;
-        flex-direction: row-reverse;
         align-items: center;
+        gap: var(--padding);
       }
     }
 
     &.p-accordion-tab-active {
       .p-accordion-header {
-        svg {
+        .fa-caret-right {
           transform: rotate(90deg);
+        }
+      }
+    }
+  }
+  &:not(.basic) {
+    .p-accordion-tab {
+      .p-accordion-header {
+        padding: 16px;
+        color: var(--container-color);
+        background-color: var(--container-background);
+        border: 1px solid var(--container-border-color);
+        border-radius: var(--border-radius);
+        .p-accordion-header-link {
+          justify-content: space-between;
+          flex-direction: row-reverse;
         }
       }
     }
