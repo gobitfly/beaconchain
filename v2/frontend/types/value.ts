@@ -25,3 +25,5 @@ export const TimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as con
 export type TimeFrame = typeof TimeFrames[number]
 
 export type WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions) => ExtendedLabel
+
+export type CompareResult = 'higher' | 'equal' | 'lower'

@@ -2,6 +2,9 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
+	"reflect"
 	"time"
 
 	"github.com/go-faker/faker/v4"
@@ -18,7 +21,24 @@ type DummyService struct {
 var _ DataAccessor = (*DummyService)(nil)
 
 func NewDummyService() *DummyService {
+	// define custom tags for faker
+	_ = faker.AddProvider("eth", func(v reflect.Value) (interface{}, error) {
+		return randomEthDecimal(), nil
+	})
+	_ = faker.AddProvider("cl_el_eth", func(v reflect.Value) (interface{}, error) {
+		return t.ClElValue[decimal.Decimal]{
+			Cl: randomEthDecimal(),
+			El: randomEthDecimal(),
+		}, nil
+	})
 	return &DummyService{}
+}
+
+// generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
+func randomEthDecimal() decimal.Decimal {
+	//nolint:gosec
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int63n(10000000)))
+	return decimal
 }
 
 // must pass a pointer to the data
@@ -41,6 +61,36 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	r := []t.EthConversionRate{}
 	err := commonFakeData(&r)
 	return r, err
+}
+
+func (d *DummyService) GetUserExists(email string) (bool, error) {
+	r := false
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) CreateUser(email, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(email string) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationTime(email string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationHash(email string) (string, error) {
+	r := ""
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+	return nil
 }
 
 func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
@@ -230,10 +280,25 @@ func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]uint64, error) {
-	r := []uint64{}
+func (d *DummyService) GetValidatorDashboardSummaryValidators(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
+	r := t.VDBGeneralSummaryValidators{}
 	err := commonFakeData(&r)
-	return r, err
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardSyncSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
+	r := t.VDBSyncSummaryValidators{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardSlashingsSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
+	r := t.VDBSlashingsSummaryValidators{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
+	r := t.VDBProposalSummaryValidators{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {

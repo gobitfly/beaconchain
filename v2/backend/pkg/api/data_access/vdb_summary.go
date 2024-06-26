@@ -17,7 +17,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -1011,80 +1010,22 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	return ret, nil
 }
 
-// allowed periods are: all_time, last_24h, last_7d, last_30d
-func (d *DataAccessService) GetValidatorDashboardValidatorIndices(dashboardId t.VDBId, groupId int64, duty enums.ValidatorDuty, period enums.TimePeriod) ([]t.VDBValidator, error) {
-	var validators []t.VDBValidator
-
-	if dashboardId.AggregateGroups {
-		// If we are aggregating groups then ignore the group id and sum up everything
-		groupId = t.AllGroups
-	}
-
-	if dashboardId.Validators == nil {
-		// Get the validators in case a dashboard id is provided
-		validatorsQuery := `
-		SELECT 
-			validator_index
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1
-		`
-		validatorsParams := []interface{}{dashboardId.Id}
-
-		if groupId != t.AllGroups {
-			validatorsQuery += " AND group_id = $2"
-			validatorsParams = append(validatorsParams, groupId)
-		}
-		err := d.alloyReader.Select(&validators, validatorsQuery, validatorsParams...)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// In case a list of validators is provided use them
-		validators = dashboardId.Validators
-	}
-
-	if len(validators) == 0 {
-		// Return if there are no validators
-		return []t.VDBValidator{}, nil
-	}
-
-	if duty == enums.ValidatorDuties.None {
-		// If we don't need to filter by duty return all validators in the dashboard and group
-		return validators, nil
-	}
-
-	// Get the table name based on the period
-	tableName := ""
-	switch period {
-	case enums.TimePeriods.AllTime:
-		tableName = "validator_dashboard_data_rolling_total"
-	case enums.TimePeriods.Last24h:
-		tableName = "validator_dashboard_data_rolling_daily"
-	case enums.TimePeriods.Last7d:
-		tableName = "validator_dashboard_data_rolling_weekly"
-	case enums.TimePeriods.Last30d:
-		tableName = "validator_dashboard_data_rolling_monthly"
-	}
-
-	// Get the column condition based on the duty
-	columnCond := ""
-	switch duty {
-	case enums.ValidatorDuties.Sync:
-		columnCond = "sync_scheduled > 0"
-	case enums.ValidatorDuties.Proposal:
-		columnCond = "blocks_scheduled > 0"
-	case enums.ValidatorDuties.Slashed:
-		columnCond = "slashed_by IS NOT NULL"
-	}
-
-	// Get ALL validator indices for the given filters
-	query := fmt.Sprintf(`
-		SELECT
-			validator_index
-		FROM %s
-		WHERE validator_index = ANY($1) AND %s`, tableName, columnCond)
-
-	var result []t.VDBValidator
-	err := d.alloyReader.Select(&result, query, pq.Array(validators))
-	return result, err
+func (d *DataAccessService) GetValidatorDashboardSummaryValidators(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetValidatorDashboardSummaryValidators(dashboardId, groupId)
+}
+func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
+	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	return d.dummy.GetValidatorDashboardSyncSummaryValidators(dashboardId, groupId, period)
+}
+func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
+	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	return d.dummy.GetValidatorDashboardSlashingsSummaryValidators(dashboardId, groupId, period)
+}
+func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
+	// TODO @DATA-ACCESS
+	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	return d.dummy.GetValidatorDashboardProposalSummaryValidators(dashboardId, groupId, period)
 }
