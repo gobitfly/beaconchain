@@ -97,15 +97,6 @@ const data: ValidatorHistoryDuties[] = [
       <DashboardTableSummaryReward :reward="{el:'213129312312', cl:'18293791237'}" />
     </div>
     <div class="item">
-      <DashboardTableSummaryValidators :absolute="true" :validators="{online:12093,offline:123,exited:2134}" context="group" />
-    </div>
-    <div class="item">
-      <DashboardTableSummaryValidators :absolute="false" :validators="{online:12093,offline:123,exited:2134}" context="group" />
-    </div>
-    <div class="item">
-      <DashboardTableSummaryValidators :absolute="true" :validators="{online:12093,offline:0,exited:0}" context="group" />
-    </div>
-    <div class="item">
       <DashboardTableSummaryStatus :status="{next_sync_count: 123,current_sync_count:0, slashed_count: 1}" />
     </div>
     <div class="item">

@@ -35,9 +35,6 @@ const data = computed<SummaryRow[][]>(() => {
   if (!props.tableVisibility.efficiency) {
     addToList(0, 'efficiency')
   }
-  if (!props.tableVisibility.proposals) {
-    addToList(0, 'proposals')
-  }
   if (!props.tableVisibility.attestations) {
     addToList(0, 'attestations')
   } else {
