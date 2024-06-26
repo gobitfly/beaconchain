@@ -9,18 +9,21 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { ValidatorSubset } from '~/types/validator'
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
-import { type InternalGetValidatorDashboardSummaryValidatorsResponse, type VDBSummaryValidator, type VDBSummaryValidatorsData } from '~/types/api/validator_dashboard'
+import { type InternalGetValidatorDashboardSummaryValidatorsResponse, type VDBGroupSummaryData, type VDBSummaryTableRow, type VDBSummaryValidator, type VDBSummaryValidatorsData } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
 interface Props {
-  context: DashboardValidatorContext;
-  timeFrame?: SummaryTimeFrame;
-  dashboardName?: string,
+  context: DashboardValidatorContext,
+  timeFrame?: SummaryTimeFrame,
   dashboardKey?: DashboardKey,
-  groupName?: string, // overruled by dashboardName
+  groupName?: string,
   groupId?: number,
+  summary?: {
+    data?: VDBGroupSummaryData,
+    row: VDBSummaryTableRow
+  }
 }
 const { props, setHeader } = useBcDialog<Props>(undefined)
 
@@ -111,9 +114,12 @@ const mapped = computed<ValidatorSubset[]>(() => {
 <template>
   <div class="validator_subset_modal_container">
     <div class="top_line_container">
-      <span class="subtitle_text">
-        {{ props?.groupName }}
-      </span>
+      <DashboardValidatorSubsetSubHeader
+        v-if="props"
+        :context="props.context"
+        :group-name="props.groupName"
+        :summary="props.summary"
+      />
       <BcContentFilter v-model="filter" class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
 
@@ -123,7 +129,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
           <FontAwesomeIcon :icon="faCaretRight" />
         </template>
         <template #header>
-          <DashboardValidatorSubsetHeader :category="subset.category" :validators="subset.validators" />
+          <DashboardValidatorSubsetListHeader :category="subset.category" :validators="subset.validators" />
         </template>
         <DashboardValidatorSubsetList :category="subset.category" :validators="subset.validators" />
       </AccordionTab>
@@ -156,6 +162,11 @@ const mapped = computed<ValidatorSubset[]>(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    .subtitle{
+      display: flex;
+      align-items: center;
+      gap: var(--padding-small);
+    }
   }
 
   .content_filter {

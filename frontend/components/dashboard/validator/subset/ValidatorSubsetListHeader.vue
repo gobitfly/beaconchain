@@ -79,7 +79,7 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <div class="subset-header">
+  <div class="subset--list-header">
     <FontAwesomeIcon v-if="icon.icon" :icon="icon.icon" :class="icon.className" />
     <SlotVizIcon v-else-if="icon.slotVizCategory" :icon="icon.slotVizCategory" :class="icon.className" />
     <span>{{ $t(`dashboard.validator.subset_dialog.category.${category}`) }}</span>
@@ -88,7 +88,7 @@ const icon = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.subset-header {
+.subset--list-header {
   display: flex;
   align-items: center;
   gap: var(--padding);
