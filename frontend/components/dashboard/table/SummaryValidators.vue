@@ -11,7 +11,6 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { VDBSummaryValidators } from '~/types/api/validator_dashboard'
 
 interface Props {
-  // TODO: replace with v2.5 structs
   validators: VDBSummaryValidators,
   absolute: boolean,
   groupId?: number,
