@@ -4,19 +4,18 @@ import {
   faCopy
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
-import type { TimeFrame } from '~/types/value'
+import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import type { DashboardKey } from '~/types/dashboard'
 import { sortValidatorIds } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
-import { type InternalGetValidatorDashboardValidatorIndicesResponse } from '~/types/api/validator_dashboard'
+import { type InternalGetValidatorDashboardSummaryValidatorsResponse } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
 interface Props {
   context: DashboardValidatorContext;
-  timeFrame?: TimeFrame;
+  timeFrame?: SummaryTimeFrame;
   dashboardName?: string,
   dashboardKey?: DashboardKey,
   groupName?: string, // overruled by dashboardName
@@ -56,8 +55,10 @@ watch(props, async (p) => {
           break
       }
 
-      const res = await fetch<InternalGetValidatorDashboardValidatorIndicesResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
-      validators.value = sortValidatorIds(res.data)
+      const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
+      const ids: number[] = []
+      // TODO: replace this quickfix with the real refactoring
+      validators.value = sortValidatorIds(res.data.reduce((ids, data) => ids.concat(data.validators.map(v => v.index)), ids))
       shownValidators.value = validators.value
       isLoading.value = false
     }

@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faInfoCircle
+} from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { SummaryTimeFrames, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import type { DashboardTableSummaryValidators } from '#build/components'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
@@ -16,16 +22,22 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
+const showAbsoluteValues = ref(true)
+
 const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
+const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
+const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
+
 const { width } = useWindowSize()
-const colsVisible = computed(() => {
+const colsVisible = computed<SummaryTableVisibility>(() => {
   return {
-    validator: width.value >= 1400,
-    efficiency_all_time: width.value >= 1180,
-    efficiency_last_30d: width.value >= 964,
-    efficiency_last_7d: width.value >= 748
+    proposals: width.value >= 1194,
+    attestations: width.value >= 1015,
+    reward: width.value >= 933,
+    efficiency: width.value >= 730,
+    validatorsSortable: width.value >= 571
   }
 })
 const loadData = (q?: TableQueryParams) => {
@@ -39,9 +51,9 @@ watch([dashboardKey, overview], () => {
   loadData()
 }, { immediate: true })
 
-watch(query, (q) => {
+watch([query, selectedTimeFrame], ([q, timeFrame]) => {
   if (q) {
-    getSummary(dashboardKey.value, q)
+    getSummary(dashboardKey.value, timeFrame, q)
   }
 }, { immediate: true })
 
@@ -79,11 +91,24 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <template>
   <div>
     <BcTableControl
-      :title="$t('dashboard.validator.summary.title')"
+      v-model="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
+      <template #header-center>
+        <h1 class="summary_title">
+          {{ $t('dashboard.validator.summary.title') }}
+        </h1>
+        <BcDropdown
+          v-model="selectedTimeFrame"
+          :options="timeFrames"
+          option-value="id"
+          option-label="name"
+          class="small"
+          :placeholder="$t('dashboard.group.selection.placeholder')"
+        />
+      </template>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
@@ -94,7 +119,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             :cursor="cursor"
             :page-size="pageSize"
             :row-class="getRowClass"
-            :add-spacer="true"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             :hide-pager="true"
@@ -105,8 +129,8 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               field="group_id"
               :sortable="showInDevelopment"
-              body-class="group-id bold"
-              header-class="group-id"
+              body-class="group-id-column bold"
+              header-class="group-id-column"
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
@@ -114,52 +138,39 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
-              field="efficiency_last_24h"
+              field="status"
               :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_24h')"
+              header-class="status-column"
+              body-class="status-column"
+              :header="$t('dashboard.validator.col.status')"
             >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_24h" :color-break-point="80" />
+                <DashboardTableSummaryStatus :class="slotProps.data.className" :status="slotProps.data.status" />
               </template>
             </Column>
             <Column
-              v-if="colsVisible.efficiency_last_7d"
-              field="efficiency_last_7d"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_7d')"
+              body-class="validator-column"
+              header-class="validator-column header"
+              :sortable="showInDevelopment && colsVisible.validatorsSortable"
             >
-              <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_7d" :color-break-point="80" />
+              <template #header>
+                <div>
+                  <div>{{ $t('dashboard.validator.col.validators') }}</div>
+                  <div class="sub-header">
+                    {{ $t('common.live') }}
+                  </div>
+                </div>
+                <BcTooltip
+                  class="info"
+                  tooltip-class="summary-info-tooltip"
+                  :text="$t('dashboard.validator.summary.tooltip.live')"
+                >
+                  <FontAwesomeIcon :icon="faInfoCircle" />
+                </BcTooltip>
               </template>
-            </Column>
-            <Column
-              v-if="colsVisible.efficiency_last_30d"
-              field="efficiency_last_30d"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_last_30d')"
-            >
               <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.last_30d" :color-break-point="80" />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.efficiency_all_time"
-              field="efficiency_all_time"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.efficiency_all_time')"
-            >
-              <template #body="slotProps">
-                <BcFormatPercent :percent="slotProps.data.efficiency.all_time" :color-break-point="80" />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.validator"
-              class="validator_column"
-              :sortable="showInDevelopment"
-              :header="$t('dashboard.validator.col.validators')"
-            >
-              <template #body="slotProps">
-                <DashboardTableValidators
+                <DashboardTableSummaryValidators
+                  :absolute="showAbsoluteValues"
                   :validators="slotProps.data.validators"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
@@ -167,8 +178,71 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 />
               </template>
             </Column>
+            <Column
+              v-if="colsVisible.efficiency"
+              field="efficiency"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.col.efficiency')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="efficiency"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.attestations"
+              field="attestions"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.summary.row.attestations')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="attestations"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.proposals"
+              field="proposals"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.summary.row.proposals')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="proposals"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
+            <Column
+              v-if="colsVisible.reward"
+              field="reward"
+              :sortable="showInDevelopment"
+              :header="$t('dashboard.validator.col.rewards')"
+            >
+              <template #body="slotProps">
+                <DashboardTableSummaryValue
+                  :class="slotProps.data.className"
+                  property="reward"
+                  :absolute="showAbsoluteValues"
+                  :time-frame="selectedTimeFrame"
+                  :row="slotProps.data"
+                />
+              </template>
+            </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :row="slotProps.data" />
+              <DashboardTableSummaryDetails :table-visibility="colsVisible" :row="slotProps.data" :time-frame="selectedTimeFrame" :absolute="showAbsoluteValues" />
             </template>
             <template #empty>
               <DashboardTableAddValidator v-if="!hasValidators" />
@@ -188,30 +262,56 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
 
+.summary_title {
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+.sub-header {
+  color: var(--text-color-disabled);
+  font-size: var(--tiny_text_font_size);
+}
+
+:global(.summary-info-tooltip .bc-tooltip) {
+  width: 120px;
+}
+
 :deep(.summary_table) {
-  --col-width: 216px;
 
   >.p-datatable-wrapper {
     min-height: 529px;
   }
 
-  .group-id {
+  .group-id-column {
     @include utils.truncate-text;
-  }
+    @include utils.set-all-width(200px);
 
-  td:has(.validator_column) {
-    @include utils.set-all-width(var(--col-width));
-  }
-
-  td,
-  th {
-    &:not(.expander):not(:last-child) {
-      @include utils.set-all-width(var(--col-width));
+    @media (max-width: 570px) {
+      @include utils.set-all-width(80px);
     }
   }
 
-  @media (max-width: 600px) {
-    --col-width: 140px;
+  .status-column {
+    @include utils.set-all-width(90px);
+  }
+
+  .validator-column {
+    @include utils.set-all-width(200px);
+    padding: 3px 7px !important;
+
+    &.header {
+      position: relative;
+
+      .info {
+        position: absolute;
+        right: 7px;
+      }
+    }
+
+    @media (max-width: 570px) {
+      @include utils.set-all-width(120px);
+    }
   }
 
   .total-row {
