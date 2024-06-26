@@ -82,6 +82,18 @@
   color: var(--light-tag-contrast-color);
 }
 
+.text-positive {
+  color: var(--positive-color);
+}
+
+.text-negative {
+  color: var(--negative-color);
+}
+
+.text-equal {
+  color: var(--equal-color);
+}
+
 .comma {
   &:before {
     content: ",";

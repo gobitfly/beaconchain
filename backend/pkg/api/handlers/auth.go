@@ -3,12 +3,18 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/mail"
+	commontsTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,6 +25,8 @@ const (
 	subscriptionKey  = "subscription"
 	userGroupKey     = "user_group"
 )
+
+const authConfirmEmailRateLimit time.Duration = time.Minute * 2
 
 type ctxKet string
 
@@ -41,6 +49,48 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
+}
+
+// TODO move to service?
+func (h *HandlerService) sendConfirmationEmail(email string) error {
+	// 1. check last confirmation time to enforce ratelimit
+	lastTs, err := h.dai.GetEmailConfirmationTime(email)
+	if err != nil {
+		return errors.New("error getting confirmation-ts")
+	}
+	if lastTs.Add(authConfirmEmailRateLimit).After(time.Now()) {
+		return errors.New("rate limit reached, try again later")
+	}
+
+	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
+	confirmationHash := utils.RandomString(40)
+	err = h.dai.UpdateEmailConfirmationHash(email, confirmationHash)
+	if err != nil {
+		return errors.New("error updating confirmation hash")
+	}
+
+	// 3. send confirmation email
+	subject := fmt.Sprintf("%s: Verify your email-address", utils.Config.Frontend.SiteDomain)
+	msg := fmt.Sprintf(`Please verify your email on %[1]s by clicking this link:
+
+https://%[1]s/confirm/%[2]s
+
+Best regards,
+
+%[1]s
+`, utils.Config.Frontend.SiteDomain, confirmationHash)
+	err = mail.SendTextMail(email, subject, msg, []commontsTypes.EmailAttachment{})
+	if err != nil {
+		return errors.New("error sending confirmation email, try again later")
+	}
+
+	// 4. update confirmation time (only after mail was sent)
+	err = h.dai.UpdateEmailConfirmationTime(email)
+	if err != nil {
+		// shouldn't present this as error to user, confirmation works fine
+		log.Error(err, "error updating email confirmation time, rate limiting won't be enforced", 0, nil)
+	}
+	return nil
 }
 
 func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
@@ -82,6 +132,64 @@ func (h *HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.R
 }
 
 func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Request) {
+	// validate request
+	var v validationError
+	req := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate email
+	email := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userExists, err := h.dai.GetUserExists(email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if userExists {
+		returnConflict(w, errors.New("email already registered"))
+		return
+	}
+
+	// validate password
+	password := v.checkPassword(req.Password)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
+
+	// add user
+	err = h.dai.CreateUser(email, string(passwordHash))
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// email confirmation
+	err = h.sendConfirmationEmail(email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	returnOk(w, nil)
 }
 
