@@ -63,7 +63,8 @@
   --container-background: var(--grey-4);
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
-
+  --container-border: 1px solid var(--container-border-color);
+  
   --subcontainer-background: var(--light-grey-2);
 
   --input-background: var(--grey-4);
@@ -90,6 +91,7 @@
 
   --link-color: var(--blue);
 
+  --equal-color: var(--yellow);
   --negative-color: var(--light-red);
   --negative-contrast-color: var(--text-color-inverted);
   --positive-color: var(--light-green);

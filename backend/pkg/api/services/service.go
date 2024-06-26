@@ -35,6 +35,7 @@ func (s *Services) InitServices() {
 	go s.startSlotVizDataService()
 	go s.startIndexMappingService()
 	go s.startEfficiencyDataService()
+	go s.startEmailSenderService()
 
 	log.Infof("initializing prices...")
 	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)

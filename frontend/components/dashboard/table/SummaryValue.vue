@@ -5,129 +5,198 @@ import {
 } from '@fortawesome/pro-regular-svg-icons'
 import {
   faCube,
-  faSync
+  faSync,
+  faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
-
-import { union } from 'lodash-es'
 import {
   SummaryDetailsEfficiencyProps,
   SummaryDetailsEfficiencyValidatorProps,
   type SummaryDetailsEfficiencyValidatorProp,
   type SummaryDetailsEfficiencyProp,
   type SummaryDetailsEfficiencyCombinedProp,
-  type DashboardValidatorContext
+  type DashboardValidatorContext,
+  type SummaryTimeFrame
 } from '~/types/dashboard/summary'
-import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { TimeFrame } from '~/types/value'
+import { getGroupLabel } from '~/utils/dashboard/group'
+import type { VDBGroupSummaryColumnItem, VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type { StatusCount } from '~/types/api/common'
+import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
   property: SummaryDetailsEfficiencyCombinedProp,
-  detail: TimeFrame,
-  data: VDBGroupSummaryData,
-  row: VDBSummaryTableRow
+  timeFrame: SummaryTimeFrame,
+  data?: VDBGroupSummaryData,
+  row: VDBSummaryTableRow,
+  absolute?: boolean,
 }
 const props = defineProps<Props>()
 
-const { tm: $tm } = useI18n()
+const { tm: $tm, t: $t } = useI18n()
 const { dashboardKey } = useDashboardKey()
+const dialog = useDialog()
+const { groups } = useValidatorDashboardGroups()
 
 const data = computed(() => {
-  const col = props.data?.[props.detail]
-  if (!col) {
-    return null
-  }
-  if (props.property === 'attestation_total') {
+  const col = props.data
+  const row = props.row
+  if (row && props.property === 'attestations') {
     return {
       efficiency: {
-        status_count: col.attestation_count
+        status_count: row.attestations
       }
     }
-  } else if (SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
-    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
+  } else if (row && props.property === 'proposals') {
     return {
-      efficiency: col[props.property as SummaryDetailsEfficiencyProp],
+      efficiency: {
+        status_count: row.proposals
+      },
+      context: 'propsal'
+    }
+  } else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
+    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
+    const prop = col[props.property as SummaryDetailsEfficiencyProp]
+
+    return {
+      efficiency: {
+        status_count: (prop as VDBGroupSummaryColumnItem).status_count || prop as StatusCount,
+        sync_count: props.property === 'sync' ? col.sync_count : undefined
+      },
       tooltip
     }
-  } else if (SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
+  } else if (col && SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
     let validators: number[] = []
     let context: DashboardValidatorContext = 'attestation'
-    if (props.property === 'validators_attestation') {
-      validators = union(col.attestations_head.validators, col.attestations_source.validators, col.attestations_target.validators)
-    } else if (props.property === 'validators_proposal') {
-      validators = col.proposals.validators ?? []
+    if (props.property === 'validators_proposal') {
+      validators = col.proposal_validators
       context = 'proposal'
     } else if (props.property === 'validators_sync') {
       validators = col.sync.validators ?? []
       context = 'sync'
     } else if (props.property === 'validators_slashings') {
-      validators = col.slashed.validators ?? []
+      validators = col.slashings?.validators ?? []
       context = 'slashings'
     }
     return {
       validators,
       context
     }
-  } else if (props.property === 'attestation_efficiency') {
+  } else if (col && props.property === 'attestation_efficiency') {
     const tooltip: { title: string, text: string } | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip
     }
-  } else if (props.property === 'apr') {
+  } else if (row && col && props.property === 'apr') {
     return {
       apr: {
         apr: col.apr,
         total: col.apr.cl + col.apr.el,
-        income: col.income
+        income: row.reward
       }
     }
-  } else if (props.property === 'luck') {
+  } else if (col && props.property === 'luck') {
     return {
       luck: col.luck
     }
-  } else if (props.property === 'efficiency_all_time') {
-    let efficiencyTotal = props.row.efficiency.all_time
-    switch (props.detail) {
-      case 'last_30d':
-        efficiencyTotal = props.row.efficiency.last_30d
-        break
-      case 'last_7d':
-        efficiencyTotal = props.row.efficiency.last_7d
-        break
-      case 'last_24h':
-        efficiencyTotal = props.row.efficiency.last_24h
-        break
-    }
+  } else if (row && props.property === 'efficiency') {
     return {
       efficiencyTotal: {
-        total: efficiencyTotal
+        value: row.efficiency,
+        compare: row.average_network_efficiency
       }
     }
-  } else if (props.property === 'attestation_avg_incl_dist') {
+  } else if (col && props.property === 'attestation_avg_incl_dist') {
     return {
       simple: {
         value: trim(col.attestation_avg_incl_dist, 2, 2)
       }
     }
+  } else if (row && props.property === 'reward') {
+    return {
+      reward: row.reward
+    }
+  } else if (col && props.property === 'missed_rewards') {
+    return {
+      missedRewards: col.missed_rewards
+    }
   }
 })
+
+const groupName = computed(() => {
+  return getGroupLabel($t, props.row.group_id, groups.value)
+})
+
+const openValidatorModal = () => {
+  dialog.open(DashboardValidatorSubsetModal, {
+    data: {
+      context: data.value?.context,
+      timeFrame: props.timeFrame,
+      groupName: groupName.value,
+      groupId: props.row.group_id,
+      dashboardKey: dashboardKey.value
+    }
+  })
+}
 
 </script>
 
 <template>
-  <div v-if="data?.efficiency" class="info_row">
+  <DashboardTableSummaryMissedRewards v-if="data?.missedRewards" :missed-rewards="data.missedRewards" />
+  <DashboardTableSummaryReward v-else-if="data?.reward" :reward="data.reward" />
+  <div v-else-if="data?.efficiency" class="info_row">
     <DashboardTableEfficiency
+      :absolute="absolute"
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
-    />
+    >
+      <template v-if="data.efficiency.sync_count" #tooltip>
+        <div>
+          <div class="row">
+            <b>{{ $t('dashboard.validator.summary.row.sync_committee') }}: </b>
+            <DashboardTableEfficiency
+              :absolute="true"
+              :is-tooltip="true"
+              :success="data.efficiency.status_count.success"
+              :failed="data.efficiency.status_count.failed"
+            />
+            (
+            <DashboardTableEfficiency
+              :absolute="false"
+              :is-tooltip="true"
+              :success="data.efficiency.status_count.success"
+              :failed="data.efficiency.status_count.failed"
+            />
+            )
+          </div>
+          <div class="row next_chapter">
+            <b>{{ $t('common.current') }}: </b>
+            <span>{{ data.efficiency.sync_count.current_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+          </div>
+          <div class="row">
+            <b>{{ $t('common.upcoming') }}: </b>
+            <span>{{ data.efficiency.sync_count.upcoming_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+          </div>
+          <div class="row">
+            <b>{{ $t('common.past') }}: </b>
+            <span>{{ data.efficiency.sync_count.past_periods }} {{ $t('dashboard.validator.summary.tooltip.amount_of_rounds') }}</span>
+          </div>
+        </div>
+      </template>
+    </DashboardTableEfficiency>
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
-      <FontAwesomeIcon v-if="data.tooltip?.title" class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon v-if="data.tooltip?.title" :icon="faInfoCircle" />
     </BcTooltip>
+    <FontAwesomeIcon
+      v-if="data?.context"
+      class="link popout"
+      :icon="faArrowUpRightFromSquare"
+      @click="openValidatorModal"
+    />
   </div>
   <DashboardTableValidators
     v-else-if="data?.validators"
     :validators="data.validators"
-    :time-frame="props.detail"
+    :time-frame="props.timeFrame"
     :context="data.context"
     :dashboard-key="dashboardKey"
     :group-id="props.row.group_id"
@@ -135,13 +204,13 @@ const data = computed(() => {
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />
     <BcTooltip position="top" :text="data.tooltip?.text" :title="data.tooltip?.title">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
     </BcTooltip>
   </div>
   <div v-else-if="data?.apr" class="info_row">
     <BcFormatPercent :percent="data.apr.total" />
     <BcTooltip position="top">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div class="row">
           <b>{{ $t('common.execution_layer') }}:</b>
@@ -169,7 +238,7 @@ const data = computed(() => {
       </span>
     </span>
     <BcTooltip position="top">
-      <FontAwesomeIcon class="link" :icon="faInfoCircle" />
+      <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div class="row">
           <b>
@@ -186,7 +255,7 @@ const data = computed(() => {
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t)}) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t) }) }}
         </div>
         <br>
         <div class="row next_chapter">
@@ -204,13 +273,24 @@ const data = computed(() => {
           <b>
             {{ $t('common.average') }}:
           </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t)}) }}
+          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t) }) }}
         </div>
       </template>
     </BcTooltip>
   </div>
 
-  <BcFormatPercent v-else-if="data?.efficiencyTotal" :percent="data.efficiencyTotal.total" :color-break-point="80" />
+  <BcFormatPercent
+    v-else-if="data?.efficiencyTotal"
+    :percent="data.efficiencyTotal.value"
+    :compare-percent="data.efficiencyTotal.compare"
+    :color-break-point="80"
+  >
+    <template #leading-tooltip="{compare}">
+      <span class="efficiency-total-tooltip">
+        {{ $t(`dashboard.validator.summary.tooltip.${compare}`, {name: groupName, average: formatPercent(row.average_network_efficiency)}) }}
+      </span>
+    </template>
+  </BcFormatPercent>
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}
   </span>
@@ -237,5 +317,9 @@ const data = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.efficiency-total-tooltip{
+  width: 155px;
 }
 </style>

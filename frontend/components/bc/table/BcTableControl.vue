@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {
-  faTable
+  faTable,
+  faHashtag,
+  faPercent
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   faChartColumn
@@ -18,6 +20,8 @@ const emit = defineEmits<{(e: 'setSearch', value?: string): void }>()
 
 const tableIsShown = ref(true)
 
+const useAbsoluteValues = defineModel<boolean | null>({ default: null })
+
 const onInput = (value: string) => {
   emit('setSearch', value)
 }
@@ -26,8 +30,9 @@ const onInput = (value: string) => {
 <template>
   <slot name="bc-table-header">
     <div class="bc-table-header">
-      <div class="side">
+      <div class="side left">
         <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" :disabled="chartDisabled" />
+        <BcIconToggle v-if="useAbsoluteValues !== null" v-model="useAbsoluteValues" :true-icon="faHashtag" :false-icon="faPercent" />
         <slot name="header-left" />
       </div>
 
@@ -42,6 +47,7 @@ const onInput = (value: string) => {
           v-if="props.searchPlaceholder && tableIsShown"
           :search-placeholder="props.searchPlaceholder"
           :disabled-filter="disabledFilter"
+          class="search"
           @filter-changed="onInput"
         />
       </div>
@@ -65,13 +71,20 @@ const onInput = (value: string) => {
   .side {
     flex-grow: 1;
     flex-basis: 0;
+      display: flex;
     &+h1 {
       width: 180px;
     }
 
+    &.left{
+      gap: var(--padding);
+    }
+
     &.right {
-      display: flex;
       justify-content: flex-end;
+      .search{
+        z-index: 3;
+      }
     }
   }
 }

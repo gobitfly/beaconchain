@@ -188,7 +188,7 @@ const wrappedRewards = computed(() => {
               field="reward"
               body-class="reward"
               header-class="reward"
-              :header="$t('dashboard.validator.col.total_rewards')"
+              :header="$t('dashboard.validator.summary.row.reward')"
             >
               <template #body="slotProps">
                 <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
