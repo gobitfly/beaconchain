@@ -66,13 +66,18 @@ const infos = computed(() => {
       :is-tooltip="true"
       :context="props.context"
       :absolute="true"
-      :validators="props.summary.row.validators"
+      :row="props.summary.row"
     />
-    <div v-for="(info, index) in infos.list" :key="index" :class="info.className">
+    <div v-for="(info, index) in infos.list" :key="index" :class="info.className" class="info">
       <SlotVizIcon v-if="info.slotVizCategory" :icon="info.slotVizCategory" />
       <BcFormatNumber :value="info.value" />
     </div>
-    <BcFormatPercent v-if="infos.percent.total" :total="infos.percent.total" :value="infos.percent.value" :color-break-point="80" />
+    <BcFormatPercent
+      v-if="infos.percent.total"
+      :base="infos.percent.total"
+      :value="infos.percent.value"
+      :color-break-point="80"
+    />
   </div>
 </template>
 
@@ -81,5 +86,16 @@ const infos = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--padding);
+
+  .info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    svg {
+      height: 14px;
+      width: auto;
+    }
+  }
 }
 </style>

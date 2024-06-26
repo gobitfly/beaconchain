@@ -120,7 +120,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
         :group-name="props.groupName"
         :summary="props.summary"
       />
-      <BcContentFilter v-model="filter" class="content_filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
+      <BcContentFilter v-model="filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
 
     <Accordion :active-index="0" class="accordion basic">
@@ -162,15 +162,6 @@ const mapped = computed<ValidatorSubset[]>(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    .subtitle{
-      display: flex;
-      align-items: center;
-      gap: var(--padding-small);
-    }
-  }
-
-  .content_filter {
-    width: 169px;
   }
 
   .spinner {

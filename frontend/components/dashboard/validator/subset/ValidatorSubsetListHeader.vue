@@ -53,11 +53,11 @@ const icon = computed(() => {
       slotVizCategory = 'sync'
       break
     case 'has_slashed':
-      className = 'negative'
+      className = 'positive'
       slotVizCategory = 'slashing'
       break
     case 'got_slashed':
-      className = 'positive'
+      className = 'negative'
       slotVizCategory = 'slashing'
       break
     case 'proposal_proposed':

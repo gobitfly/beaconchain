@@ -171,7 +171,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               <template #body="slotProps">
                 <DashboardTableSummaryValidators
                   :absolute="showAbsoluteValues"
-                  :validators="slotProps.data.validators"
+                  :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
                   :time-frame="selectedTimeFrame"

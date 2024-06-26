@@ -77,6 +77,7 @@ function mapDutyLinks (dutyObjects?: number[]) {
   }
   const links: { to: string, label: string }[] = []
   let path = ''
+  let formatValue = true
   switch (props.category) {
     case 'proposal_proposed':
       path = '/block/'
@@ -87,12 +88,13 @@ function mapDutyLinks (dutyObjects?: number[]) {
     case 'has_slashed':
     case 'got_slashed':
       path = '/validator/'
+      formatValue = false
       break
   }
   if (path) {
     return dutyObjects.map(o => ({
       to: `${path}${o}`,
-      label: `${o}`
+      label: `${formatValue ? formatNumber(o) : o}`
     }))
   }
   return links
@@ -102,6 +104,9 @@ function mapDutyLinks (dutyObjects?: number[]) {
 
 <template>
   <div class="validator-list">
+    <div class="copy_button" @click="copyValidatorsToClipboard">
+      <FontAwesomeIcon :icon="faCopy" />
+    </div>
     <div class="list">
       <template v-for="v in currentPage" :key="v.index">
         <BcLink :to="`/validator/${v.index}`" target="_blank" class="link">
@@ -110,15 +115,8 @@ function mapDutyLinks (dutyObjects?: number[]) {
         <template v-if="mapDutyLabel(v.duty_objects)">
           <span class="round-brackets">
             <span class="label">{{ mapDutyLabel(v.duty_objects) }}</span>
-            <template
-              v-for="link in mapDutyLinks(v.duty_objects)"
-              :key="link.label"
-            >
-              <BcLink
-                :to="link.to"
-                target="_blank"
-                class="link"
-              >
+            <template v-for="link in mapDutyLinks(v.duty_objects)" :key="link.label">
+              <BcLink :to="link.to" target="_blank" class="link">
                 {{ link.label }}
               </BcLink>
               <span>, </span>
@@ -138,13 +136,12 @@ function mapDutyLinks (dutyObjects?: number[]) {
         @set-cursor="(c: Cursor) => cursor = c"
       />
     </div>
-    <Button class="p-button-icon-only copy_button" @click="copyValidatorsToClipboard">
-      <FontAwesomeIcon :icon="faCopy" />
-    </Button>
   </div>
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/main.scss';
+
 .validator-list {
   position: relative;
   flex-grow: 1;
@@ -153,19 +150,21 @@ function mapDutyLinks (dutyObjects?: number[]) {
   border: 1px solid var(--container-border-color);
   border-radius: var(--border-radius);
   word-break: break-all;
-  .list{
-    min-height: 40px;
+
+  .list {
+    min-height: 30px;
   }
 
-  .round-brackets >span:last-child:not(.label),
-  .list >span:last-child {
+  .round-brackets>span:last-child:not(.label),
+  .list>span:last-child {
     display: none;
   }
 
   .round-brackets {
     margin-left: 3px;
-    &:has(a){
-      .label{
+
+    &:has(a) {
+      .label {
         margin-right: 3px;
       }
     }
@@ -175,6 +174,7 @@ function mapDutyLinks (dutyObjects?: number[]) {
     width: 100%;
     height: 52px;
     margin-top: var(--padding);
+    padding-top: var(--padding);
     border-top: var(--container-border);
     display: flex;
     justify-content: center;
@@ -182,9 +182,22 @@ function mapDutyLinks (dutyObjects?: number[]) {
   }
 
   .copy_button {
+    @include main.container;
     position: absolute;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     bottom: var(--padding);
     right: var(--padding);
+
+    cursor: pointer;
+
+    svg {
+      height: 14px;
+      width: auto;
+    }
   }
 }
 </style>
