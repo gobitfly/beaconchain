@@ -225,7 +225,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 			return nil
 		})
 	}
-	validators, err := d.getDashboardValidators(dashboardId)
+	validators, err := d.getDashboardValidators(dashboardId, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
 	}
