@@ -669,6 +669,89 @@
     "network_filter_label": "Networks:",
     "all_networks": "All"
   },
+  "notifications": {
+    "TODO: INSERT HERE":" THE TRANSLATIONS FOR THE PARENT DIALOG",
+
+    "subscriptions": {
+      "dialog_title": "Edit Subscriptions",
+      "validators" : {
+        "explanation": "All notifications are sent after network finality (~20mins).",
+        "offlineValidator": {
+          "option": "Validator is offline",
+          "hint": ["We will trigger a notification:", "Once the validator has been offline for 3 epochs.", "Every 32 Epochs (~3 hours) during your downtime.", "Once you are back online again."]
+        },
+        "offlineGroup": {
+          "option":"Group is offline",
+          "hint": ["We will trigger a notification:", "Once 10% of your group is offline.", "Once you have been offline for 3 epochs.", "Every 32 Epochs (~3 hours) during your downtime.", "Once you are back online.", "Note:", " Notification resets if you do not meet the threshold of 10%."]
+        },
+        "missedAttestations": {
+          "option":"Attestations missed",
+          "hint": "We will trigger every epoch (6.4 minutes) during downtime."
+        },
+        "proposedBlock": {
+          "option":"Block proposal (missed & success)",
+          "hint": ""
+        },
+        "upcomingProposal": {
+          "option":"Upcoming block proposal",
+          "hint": "May trigger false positive notifications during reorgs."
+        },
+        "syncCommittee": {
+          "option":"Sync committee",
+          "hint": ""
+        },
+        "withdrawed": {
+          "option":"Withdrawal processed",
+          "hint": ""
+        },
+        "shlashed": {
+          "option":"Validator got slashed",
+          "hint": ""
+        },
+        "realTime": {
+          "option":"Realtime mode",
+          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
+        },
+        "all": "All events"
+      },
+      "accounts": {
+        "explanation": "",
+        "incoming": {
+          "option":"Incoming Transactions",
+          "hint": ""
+        },
+        "outgoing": {
+          "option":"Outgoing Transactions",
+          "hint": ""
+        },
+        "erc20": {
+          "option":"Track ERC20 Token Transfers",
+          "hint": ""
+        },
+        "erc721": {
+          "option":"Track ERC721 Token Transfers",
+          "hint": ""
+        },
+        "erc1155": {
+          "option":"Track ERC1155 Token Transfers",
+          "hint": ""
+        },
+        "all": {
+          "option":"All events",
+          "hint": ""
+        },
+        "networks": {
+          "option":"Networks",
+          "hint": ""
+        },
+        "ignoreSpam": {
+          "option":"Ignore spam transactions",
+          "hint": ["Ignores ", "zero value transfer tx's ", "and token tx's that have the ", "\"hidden\" token label ", "."]
+        }
+      },
+      "save":"Save"
+    }
+  },
   "pricing": {
     "seo_title": "Premium Pricing",
     "compare": "Compare Plans",
