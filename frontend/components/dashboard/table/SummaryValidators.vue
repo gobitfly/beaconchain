@@ -93,9 +93,9 @@ const mapped = computed(() => {
 
 .validator-status-column {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
+  gap: var(--padding);
 
   .status-list {
     display: flex;
