@@ -94,8 +94,7 @@ const rowClass = (data: SummaryRow) => {
           :absolute="absolute"
           :property="prop.prop"
           :time-frame="timeFrame"
-          :row-x="props.row"
-          :row="{ ...props.row, reward: { el: '1239082134123213', cl: '02394' } }"
+          :row="props.row"
         />
       </div>
     </div>
