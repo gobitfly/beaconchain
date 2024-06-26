@@ -91,6 +91,18 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
+	// Get the average network efficiency
+	d.services.GetCurrentEfficiencyInfo()
+	efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+	if err != nil {
+		releaseEfficiencyLock()
+		return nil, nil, err
+	}
+	averageNetworkEfficiency := d.calculateTotalEfficiency(
+		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
+	releaseEfficiencyLock()
+
+	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query and get the data
 	type QueryResult struct {
 		GroupId                int64           `db:"result_group_id"`
@@ -109,7 +121,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 	elRewards := make(map[int64]decimal.Decimal)
 	var queryResult []QueryResult
-	var networkEfficiency float64
 
 	wg.Go(func() error {
 		ds := goqu.Dialect("postgres").
@@ -252,35 +263,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		return nil
 	})
 
-	wg.Go(func() error {
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency"),
-				goqu.L("SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency"),
-				goqu.L("SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency")).
-			From(goqu.T(tableName))
-
-		var queryResult struct {
-			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
-			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
-			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
-
-		err = d.alloyReader.Get(&queryResult, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
-		}
-
-		networkEfficiency = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
-		return nil
-	})
-
-	err := wg.Wait()
+	err = wg.Wait()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %v", err)
 	}
@@ -302,7 +285,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	total := struct {
 		GroupId                int64
 		Status                 t.VDBSummaryStatus
-		ValidatorStatusCount   t.VDBSummaryValidators
+		Validators             t.VDBSummaryValidators
 		AttestationReward      decimal.Decimal
 		AttestationIdealReward decimal.Decimal
 		AttestationsExecuted   uint64
@@ -324,7 +307,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 		resultEntry := t.VDBSummaryTableRow{
 			GroupId:                  queryEntry.GroupId,
-			AverageNetworkEfficiency: networkEfficiency,
+			AverageNetworkEfficiency: averageNetworkEfficiency,
 		}
 
 		// Status
@@ -354,9 +337,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				resultEntry.Validators.Exited++
 			}
 		}
-		total.ValidatorStatusCount.Online += resultEntry.Validators.Online
-		total.ValidatorStatusCount.Offline += resultEntry.Validators.Offline
-		total.ValidatorStatusCount.Exited += resultEntry.Validators.Exited
+		total.Validators.Online += resultEntry.Validators.Online
+		total.Validators.Offline += resultEntry.Validators.Offline
+		total.Validators.Exited += resultEntry.Validators.Exited
 		total.Status.SlashedCount += resultEntry.Status.SlashedCount
 
 		// Attestations
@@ -480,8 +463,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		// We have more than one group and at least one group remains after the filtering so we need to show the total row
 		totalEntry := t.VDBSummaryTableRow{
 			GroupId:                  total.GroupId,
-			Validators:               total.ValidatorStatusCount,
-			AverageNetworkEfficiency: networkEfficiency,
+			Validators:               total.Validators,
+			AverageNetworkEfficiency: averageNetworkEfficiency,
 			Reward:                   total.Reward,
 		}
 
