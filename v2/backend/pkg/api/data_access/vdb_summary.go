@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
