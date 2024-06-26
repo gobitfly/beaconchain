@@ -13,13 +13,13 @@ function onClose (answer: boolean) {
 
 const openQuestion = (yesLabel?: string, noLabel?: string) => {
   dialog.open(BcDialogConfirm, {
-    onClose: response => onClose(response?.data),
     data: {
       title: 'My super question',
       question: 'Are you ready to rumble, or do you have second thoughts?',
       yesLabel,
       noLabel
-    }
+    },
+    onClose: response => onClose(response?.data)
   })
 }
 
@@ -47,8 +47,8 @@ const accountSub: AccountSubscriptionState = {
 
 function openSubscriptions (props: any) {
   dialog.open(NotificationsSubscriptionModal, {
-    onClose: changements => onClose(changements?.data),
-    data: props
+    data: props,
+    onClose: changes => onClose(changes?.data)
   })
 }
 </script>
