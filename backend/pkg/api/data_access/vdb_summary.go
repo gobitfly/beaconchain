@@ -28,6 +28,22 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 	wg := errgroup.Group{}
 
+	// Get the table name based on the period
+	// TODO: validator_dashboard_data_rolling_hourly does not exist yet
+	tableName := ""
+	switch period {
+	case enums.TimePeriods.AllTime:
+		tableName = "validator_dashboard_data_rolling_total"
+	case enums.TimePeriods.Last1h:
+		fallthrough
+	case enums.TimePeriods.Last24h:
+		tableName = "validator_dashboard_data_rolling_daily"
+	case enums.TimePeriods.Last7d:
+		tableName = "validator_dashboard_data_rolling_weekly"
+	case enums.TimePeriods.Last30d:
+		tableName = "validator_dashboard_data_rolling_monthly"
+	}
+
 	// Searching for a group name is not supported when aggregating groups or for guest dashboards
 	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
 
@@ -58,6 +74,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 	}
 
+	// ------------------------------------------------------------------------------------------------------------------
 	// Fill the validators list if we have a guest dashboard
 	validators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
@@ -74,25 +91,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 	}
 
-	// Get the table name based on the period
-	// TODO: validator_dashboard_data_rolling_hourly does not exist yet
-	tableName := ""
-	switch period {
-	case enums.TimePeriods.AllTime:
-		tableName = "validator_dashboard_data_rolling_total"
-	case enums.TimePeriods.Last1h:
-		fallthrough
-	case enums.TimePeriods.Last24h:
-		tableName = "validator_dashboard_data_rolling_daily"
-	case enums.TimePeriods.Last7d:
-		tableName = "validator_dashboard_data_rolling_weekly"
-	case enums.TimePeriods.Last30d:
-		tableName = "validator_dashboard_data_rolling_monthly"
-	}
-
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the average network efficiency
-	d.services.GetCurrentEfficiencyInfo()
 	efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
 	if err != nil {
 		releaseEfficiencyLock()
@@ -103,8 +103,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	releaseEfficiencyLock()
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Build the query and get the data
-	type QueryResult struct {
+	// Build the main query and get the data
+	var queryResult []struct {
 		GroupId                int64           `db:"result_group_id"`
 		GroupName              string          `db:"group_name"`
 		ValidatorIndices       pq.Int64Array   `db:"validator_indices"`
@@ -118,9 +118,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		SyncExecuted           uint64          `db:"sync_executed"`
 		SyncScheduled          uint64          `db:"sync_scheduled"`
 	}
-
-	elRewards := make(map[int64]decimal.Decimal)
-	var queryResult []QueryResult
 
 	wg.Go(func() error {
 		ds := goqu.Dialect("postgres").
@@ -176,6 +173,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		return nil
 	})
 
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the EL rewards
+	elRewards := make(map[int64]decimal.Decimal)
 	wg.Go(func() error {
 		ds := goqu.Dialect("postgres").
 			Select(
@@ -225,6 +225,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		return nil
 	})
 
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the current and next sync committee validators
 	latestEpoch := cache.LatestEpoch.Get()
 	currentSyncCommitteeValidators := make(map[uint64]bool)
 	upcomingSyncCommitteeValidators := make(map[uint64]bool)
@@ -350,7 +352,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		resultEntry.Proposals.Success = queryEntry.BlocksProposed
 		resultEntry.Proposals.Failed = queryEntry.BlocksScheduled - queryEntry.BlocksProposed
 
-		// Reward
+		// Rewards
 		resultEntry.Reward.Cl = utils.GWeiToWei(big.NewInt(queryEntry.ClRewards))
 		if _, ok := elRewards[queryEntry.GroupId]; ok {
 			resultEntry.Reward.El = elRewards[queryEntry.GroupId]
@@ -384,6 +386,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		total.SyncExecuted += queryEntry.SyncExecuted
 		total.SyncScheduled += queryEntry.SyncScheduled
 
+		// If the search permits it add the entry to the result
 		if search != "" {
 			prefixSearch := strings.ToLower(search)
 			for _, validatorIndex := range uiValidatorIndices {
