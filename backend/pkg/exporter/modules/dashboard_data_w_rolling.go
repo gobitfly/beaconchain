@@ -51,9 +51,15 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
+		err = db.AlloyWriter.GetContext(func() context.Context {
+			a, _ := context.WithDeadline(context.Background(), time.Now().Add(5*time.Minute))
+			return a
+		}(), &bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	} else {
-		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
+		err = tx.GetContext(func() context.Context {
+			a, _ := context.WithDeadline(context.Background(), time.Now().Add(5*time.Minute))
+			return a
+		}(), &bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	}
 	return bounds, err
 }
@@ -77,7 +83,10 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) aggregateInternal(days int, tableName string, currentEpochHead uint64, forceBootstrap bool) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
@@ -613,7 +622,10 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		cancel()
 		metrics.Errors.WithLabelValues("exporter_v2dash_bandaid").Inc()
 		if debugDeadlockBandaid {
-			_, err := db.AlloyWriter.Exec(`SELECT pg_cancel_backend(pid)
+			_, err := db.AlloyWriter.ExecContext(func() context.Context {
+				a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+				return a
+			}(), `SELECT pg_cancel_backend(pid)
 			FROM pg_stat_activity
 			WHERE pid = ANY(pg_blocking_pids(pg_backend_pid()))
 			AND state = 'active'
@@ -643,7 +655,10 @@ func (d *RollingAggregator) removeFromRolling(tx *sqlx.Tx, tableName string, sta
 		endEpoch = 0 // since its inclusive make it -1 so it stored 0 in table
 	}
 
-	result, err := tx.Exec(fmt.Sprintf(`
+	result, err := tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		WITH
 			footer_balance_starts as (
 				SELECT validator_index, balance_end as balance_start FROM %[2]s WHERE epoch = $2 -1 -- end balance of epoch we want to remove = start epoch of epoch we start from

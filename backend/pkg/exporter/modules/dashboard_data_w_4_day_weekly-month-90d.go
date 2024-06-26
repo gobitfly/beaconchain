@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -167,12 +168,18 @@ func (d *MultipleDaysRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tab
 
 	d.log.Infof("agg %dd | latestDay: %v, oldDay: %v", days, latestDay, xDayOldDay)
 
-	_, err = tx.Exec(fmt.Sprintf(`TRUNCATE %s`, tableName))
+	_, err = tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`TRUNCATE %s`, tableName))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete old rolling aggregate")
 	}
 
-	_, err = tx.Exec(fmt.Sprintf(`
+	_, err = tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		WITH
 			epoch_starts as (
 				SELECT min(epoch_start) as epoch_start FROM %[2]s WHERE day = $1 LIMIT 1

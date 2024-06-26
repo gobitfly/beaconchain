@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -226,7 +227,10 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 }
 
 func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[1]s_%d_%d 
 		PARTITION OF %[1]s
 			FOR VALUES FROM (%[2]d) TO (%[3]d)
@@ -237,7 +241,10 @@ func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
 }
 
 func (d *epochWriter) deleteEpochPartition(epochFrom, epochTo uint64) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%d_%d
 		`,
 		edb.EpochWriterTableName, epochFrom, epochTo,
