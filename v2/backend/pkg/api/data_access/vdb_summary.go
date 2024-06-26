@@ -93,7 +93,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query and get the data
 	type QueryResult struct {
-		GroupId                int64           `db:"group_id"`
+		GroupId                int64           `db:"result_group_id"`
 		GroupName              string          `db:"group_name"`
 		ValidatorIndices       pq.Int64Array   `db:"validator_indices"`
 		ClRewards              int64           `db:"cl_rewards"`
@@ -125,26 +125,26 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
 				goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled")).
 			From(goqu.T(tableName).As("r")).
-			GroupBy(goqu.L("group_id"))
+			GroupBy(goqu.L("result_group_id"))
 
 		if len(validators) > 0 {
 			ds = ds.
-				SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId)).
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 				Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
 		} else {
 			if dashboardId.AggregateGroups {
 				ds = ds.
-					SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId))
+					SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 			} else {
 				ds = ds.
-					SelectAppend(goqu.L("v.group_id"))
+					SelectAppend(goqu.L("v.group_id AS result_group_id"))
 			}
 
 			ds = ds.
 				InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 				Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
-			if search != "" || colSort.Column == enums.VDBSummaryColumns.Group {
+			if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
 				// Get the group names since we can filter and/or sort for them
 				ds = ds.
 					SelectAppend(goqu.L("g.name AS group_name")).
@@ -173,19 +173,19 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer AND b.status = '1'"))).
 			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
-			GroupBy(goqu.L("group_id"))
+			GroupBy(goqu.L("result_group_id"))
 
 		if len(validators) > 0 {
 			ds = ds.
-				SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId)).
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 				Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
 		} else {
 			if dashboardId.AggregateGroups {
 				ds = ds.
-					SelectAppend(goqu.L("?::smallint AS group_id", t.DefaultGroupId))
+					SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 			} else {
 				ds = ds.
-					SelectAppend(goqu.L("v.group_id"))
+					SelectAppend(goqu.L("v.group_id AS result_group_id"))
 			}
 
 			ds = ds.
@@ -194,7 +194,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		}
 
 		var queryResult []struct {
-			GroupId   int64           `db:"group_id"`
+			GroupId   int64           `db:"result_group_id"`
 			ElRewards decimal.Decimal `db:"el_rewards"`
 		}
 
@@ -287,7 +287,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Sort by group name, after this the name is no longer relevant
-	if colSort.Column == enums.VDBSummaryColumns.Group {
+	if groupNameSearchEnabled && colSort.Column == enums.VDBSummaryColumns.Group {
 		sort.Slice(queryResult, func(i, j int) bool {
 			if colSort.Desc {
 				return queryResult[i].GroupName > queryResult[j].GroupName
