@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	enum "github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
@@ -39,7 +39,7 @@ func (s *Services) updateEfficiencyData() error {
 		efficiencyInfo = s.initEfficiencyInfo()
 	}
 
-	setEfficiencyData := func(tableName string, period enum.TimePeriod) error {
+	setEfficiencyData := func(tableName string, period enums.TimePeriod) error {
 		var queryResult struct {
 			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
 			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
@@ -76,19 +76,19 @@ func (s *Services) updateEfficiencyData() error {
 	wg := &errgroup.Group{}
 
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_total", enum.TimePeriods.AllTime)
+		err := setEfficiencyData("validator_dashboard_data_rolling_total", enums.TimePeriods.AllTime)
 		return err
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_daily", enum.TimePeriods.Last24h)
+		err := setEfficiencyData("validator_dashboard_data_rolling_daily", enums.TimePeriods.Last24h)
 		return err
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_weekly", enum.TimePeriods.Last7d)
+		err := setEfficiencyData("validator_dashboard_data_rolling_weekly", enums.TimePeriods.Last7d)
 		return err
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_monthly", enum.TimePeriods.Last30d)
+		err := setEfficiencyData("validator_dashboard_data_rolling_monthly", enums.TimePeriods.Last30d)
 		return err
 	})
 
@@ -122,14 +122,14 @@ func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {
 	efficiencyInfo := EfficiencyData{}
-	efficiencyInfo.AttestationEfficiency = make(map[enum.TimePeriod]sql.NullFloat64)
-	efficiencyInfo.ProposalEfficiency = make(map[enum.TimePeriod]sql.NullFloat64)
-	efficiencyInfo.SyncEfficiency = make(map[enum.TimePeriod]sql.NullFloat64)
+	efficiencyInfo.AttestationEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
+	efficiencyInfo.ProposalEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
+	efficiencyInfo.SyncEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
 	return &efficiencyInfo
 }
 
 type EfficiencyData struct {
-	AttestationEfficiency map[enum.TimePeriod]sql.NullFloat64 // period -> efficiency
-	ProposalEfficiency    map[enum.TimePeriod]sql.NullFloat64 // period -> efficiency
-	SyncEfficiency        map[enum.TimePeriod]sql.NullFloat64 // period -> efficiency
+	AttestationEfficiency map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
+	ProposalEfficiency    map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
+	SyncEfficiency        map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
 }
