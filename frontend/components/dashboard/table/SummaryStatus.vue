@@ -2,7 +2,6 @@
 import type { VDBSummaryStatus } from '~/types/api/validator_dashboard'
 import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
-// TODO: replace with v2.5 summary data
 interface Props {
   status: VDBSummaryStatus
 }
@@ -20,10 +19,9 @@ const mapped = computed(() => {
     }
   }
 
-  // TODO: replace with v2.5 logic (once we got the api structs)
-  const scheduledSyncCount = props.status?.next_sync_count
-  const currentSyncCount = props.status?.current_sync_count
-  const slashedCount = props.status?.slashed_count
+  const scheduledSyncCount = props.status.next_sync_count
+  const currentSyncCount = props.status.current_sync_count
+  const slashedCount = props.status.slashed_count
 
   return [
     mapCount(currentSyncCount, 'current_sync', 'sync'),

@@ -51,9 +51,8 @@ const mapped = computed(() => {
     }
   }
 
-  // TODO: replace with v2.5 logic (once we got the api structs)
   addCount('online', props.validators?.online)
-  if (props.absolute || props.isTooltip) {
+  if (props.absolute || props.isTooltip || !props.validators?.online) {
     addCount('offline', props.validators?.offline)
     addCount('exited', props.validators?.exited)
   }
