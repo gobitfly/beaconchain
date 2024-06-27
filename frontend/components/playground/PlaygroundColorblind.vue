@@ -9,7 +9,6 @@ enum CS {
   /** RPJ values (rainbow color, purity, intensity) whose `j` is equivalent to `i/iMax` in the `CS.EyePercI` variant, so `j` is free to take any value between 0 and 1 (so, for a given `j`, the colors that you get with various `r` and `p` produce different intensities for the human eye, whereas the `CS.EyePercI` variant ensures that `i` represents a constant perceived intensity whatever the color is) */
   EyeNormJ
 }
-
 type Channel = 0 | 1 | 2
 const R: Channel = 0
 const G: Channel = 1
@@ -89,14 +88,14 @@ class RGB {
   }
 }
 
-/** Color space supposedly close to human perception, in two variants (depending on the parameter given to the constructor) :
- * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue thing and a green thing having the same `i` will feel as luminous as each other),
+/** Color space close to human perception, in two variants (depending on the parameter given to the constructor) :
+ * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue and a green having the same `i` will feel as luminous as each other),
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
   /** Read and write the perceived rainbow color here. It indicates where the color is on the rainbow. */
   r: number
-  /** Read and write the perceived purity here. It indicates how much light not contributing to the perceived rainbow color is present. */
+  /** Read and write the perceived purity here. It indicates how much of the pure color `r` is added to white. */
   p: number
   /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` determine the maximum intensity that can be perceived and it is often less than 1.
    * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `r` and `p`.
@@ -113,29 +112,26 @@ class Eye {
       if (this.space !== CS.EyePercI) {
         return 1
       }
-      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
+      this.convertToRGB(Eye.rgbLinear, this.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = (Eye.lowestImaxIotaInv / Eye.rgbLinear.chan[h]) ** (1 / gamma)
+      this.Imax.value = (Eye.lumNorm[B] / Eye.rgbLinear.chan[h]) ** (1 / gamma)
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
     return this.Imax.value
   }
 
+  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
+  readonly lowestImax: number
+
   // constants of our perception model
-  protected static readonly relLum = [30, 55, 15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the definition of "relative luminance" in the ITU-R Recommendation BT.601)
-  protected static readonly mix = [35, 45, 20] // This coeffients are correlated with the relative strengh of the primaries when they are mixed by pair to obtain a pure intermediate color (this coeffs are obtained empiricially). Their effect is to shift the position of the 3 secondaries (and all intermediaries) in the rainbow.
-  protected static readonly phi = 0.55 // This coeffient and its brother just below are correlated with the strengh of the green and blue primaries relative to white when they are mixed to white light thus altering their purity saturation (this coeffs are obtained empiricially).
-  protected static readonly phi = 0.15 //
+  protected static readonly lum = [30, 55, 15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the definition of "relative luminance" in the ITU-R Recommendation BT.601)
+  protected static readonly mix = [35, 45, 20] // This coeffients are correlated with the relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (this coeffs are obtained empiricially). Their effect is to shift the position of the 3 secondaries (and all intermediaries) in the rainbow.
 
   // the following constants will be filled by the constructor
-  protected static relLumNorm = [0, 0, 0]
+  protected static lumNorm = [0, 0, 0]
   protected static phi = [0, 0, 0]
   protected static rKey = [0, 0, 0, 0, 0, 0, 0] // (will be filled by the constructor) coordinates of the primaries and secondaries on the rainbow
-  protected static readonly lowestImaxIotaInv = Eye.relLum[B]
-
-  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  static readonly lowestImax = Eye.relLum[B] ** (1 / gamma)
 
   /**
    * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
@@ -146,7 +142,7 @@ class Eye {
     }
     if (!Eye.rKey[1]) {
       for (let k = R; k <= B; k++) {
-        Eye.relLumNorm[k] = Eye.relLum[k] / (Eye.relLum[R] + Eye.relLum[G] + Eye.relLum[B])
+        Eye.lumNorm[k] = Eye.lum[k] / (Eye.lum[R] + Eye.lum[G] + Eye.lum[B])
       }
       const lSequence = [B, R, G]
       for (let k = 0; k <= 6; k++) {
@@ -158,6 +154,7 @@ class Eye {
         }
       }
     }
+    this.lowestImax = Eye.lumNorm[B] ** (1 / gamma)
     this.space = space
     this.r = this.p = this.i = this.j = 0
   }
@@ -189,7 +186,7 @@ class Eye {
         this.p = 0
       } else {
         this.r = (h1 + anchor2Contribution / anchors12Contributions) / 3
-        this.p = anchors12Contributions / (rgb[l] * Eye.mix[l] + rgb[h1] * Eye.mix[h1] + rgb[h2] * Eye.mix[h2])
+        this.p = ((rgb[h1] - rgb[l]) * Eye.lumNorm[h1] + (rgb[h2] - rgb[l]) * Eye.lumNorm[h2]) / (rgb[l] * Eye.lumNorm[l] + rgb[h1] * Eye.lumNorm[h1] + rgb[h2] * Eye.lumNorm[h2])
       }
       this.fillIntensityFromRGB(rgb)
     } else {
@@ -232,37 +229,42 @@ class Eye {
   }
 
   protected convertToRGB (to: RGB, i: number, j: number) {
-    const [l, m, h] = Eye.rToChannelOrder(this.r)
+    const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
-    const q = this.p * ((3 * this.r - h1) * ((Eye.mix[l] + Eye.mix[h1]) / Eye.mix[h2] + 1) - 1) + 1
-    if (q <= 0) { // `q == 0` is possible only if `3r-h1 == 0` and `p == 1`, which implies that `rgb[h2] == rgb[l]` (see the definition of `r` in the `import` method) with the highest purity (primary color), so `rgb[h2]=0` and `rgb[l]=0` and only `rgb[h1]` has a value
-      to.chan[l] = to.chan[m] = 0
-      to.chan[h] = (this.space === CS.EyePercI) ? i ** gamma / Eye.relLumNorm[h] : j ** gamma
+    const ratio = [0, 0, 0]
+    const D = 3 * this.r - h1
+    if (D > 0.999 || this.p < 0.001) {
+      ratio[l] = ratio[h1] = (1 - this.p) / (1 + this.p * (Eye.lumNorm[l] + Eye.lumNorm[h1]) / Eye.lumNorm[h2])
     } else {
-      const ratio = [0, 0, 0]
-      ratio[l] = (1 - this.p) / q
-      ratio[h1] = (Eye.mix[l] * this.p + Eye.mix[h1] + Eye.mix[h2] * (1 - q)) / (Eye.mix[h1] * q)
-      ratio[h2] = 1
-      if (this.space === CS.EyePercI) {
-        const Ir = [Eye.relLumNorm[R] * ratio[R], Eye.relLumNorm[G] * ratio[G], Eye.relLumNorm[B] * ratio[B]]
-        const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-        to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
-        to.chan[h1] = to.chan[h2] * ratio[h1]
-      } else { // (this.space === CS.EyeNormJ)
-        to.chan[h] = j ** gamma
-        if (h === h2) {
-          to.chan[h1] = to.chan[h2] * ratio[h1]
-        } else {
-          to.chan[h2] = to.chan[h1] / ratio[h1] // If ratio[h1]=0, we cannot reach this point. Proof: (2+p)/q-1=0 => q=2+p => r=(h1+(2+1/p)/3)/3 and noticing that 2+1/p is at least 3 we obtain r>=(h1+1)/3, so h1=R:r>=1/3 , h1=G:r>=2/3, h1=B:r=1. The first two cases are impossible because lowestChanToAnchors(rToChannelOrder(1/3 or 2/3)[0]) returns [G,B] or [B,R] whose h1 is respectively G or B, thus contradicting the first two assumptions. Regarding the third assumption: lowestChanToAnchors(rToChannelOrder(1)[0]) returns [B,R] (so the assumption holds) whose h2 is R, and the h in rToChannelOrder(1) is R, so h2=h.
-        }
-      }
-      to.chan[l] = to.chan[h2] * ratio[l]
+      const A = D * Eye.mix[h1] / ((1 - D) * Eye.mix[h2])
+      const B = (1 - this.p) / this.p * (Eye.lumNorm[h1] + A * Eye.lumNorm[h2])
+      const Q = 1 / (A + B)
+      ratio[l] = B * Q
+      ratio[h1] = Q + ratio[l]
     }
+    ratio[h2] = 1
+    if (this.space === CS.EyePercI) {
+      const Ir = [Eye.lumNorm[R] * ratio[R], Eye.lumNorm[G] * ratio[G], Eye.lumNorm[B] * ratio[B]]
+      const [y, z] = Eye.RGBtoAnchorOrder(Ir)
+      to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
+      to.chan[h1] = to.chan[h2] * ratio[h1]
+    } else { // (this.space === CS.EyeNormJ)
+      to.chan[h] = j ** gamma
+      if (h === h2) {
+        to.chan[h1] = to.chan[h2] * ratio[h1]
+      } else {
+        if (Math.abs(ratio[h1]) < 0.001) {
+          console.log('UH OH')
+        }
+        to.chan[h2] = to.chan[h1] / ratio[h1] // If ratio[h1]=0, we cannot reach this point. Proof: (2+p)/q-1=0 => q=2+p => r=(h1+(2+1/p)/3)/3 and noticing that 2+1/p is at least 3 we obtain r>=(h1+1)/3, so h1=R:r>=1/3 , h1=G:r>=2/3, h1=B:r=1. The first two cases are impossible because lowestChanToAnchors(rToChannelOrder(1/3 or 2/3)[0]) returns [G,B] or [B,R] whose h1 is respectively G or B, thus contradicting the first two assumptions. Regarding the third assumption: lowestChanToAnchors(rToChannelOrder(1)[0]) returns [B,R] (so the assumption holds) whose h2 is R, and the h in rToChannelOrder(1) is R, so h2=h.
+      }
+    }
+    to.chan[l] = to.chan[h2] * ratio[l]
   }
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      const I = [Eye.relLumNorm[R] * rgb[R], Eye.relLumNorm[G] * rgb[G], Eye.relLumNorm[B] * rgb[B]]
+      const I = [Eye.lumNorm[R] * rgb[R], Eye.lumNorm[G] * rgb[G], Eye.lumNorm[B] * rgb[B]]
       const [y, z] = Eye.RGBtoAnchorOrder(I)
       this.i = (I[y] + I[z]) ** (1 / gamma)
     } else {
@@ -365,7 +367,7 @@ const rainbowSameJ: Array<RGB> = []
 for (let r = 0; r <= 200; r++) {
   color.r = r / 200
   color.p = 1
-  color.i = Eye.lowestImax
+  color.i = color.lowestImax
   rainbowSameI.push(color.export(CS.RGBgamma) as RGB)
   color.i = color.iMax
   rainbowSameJ.push(color.export(CS.RGBgamma) as RGB)
@@ -439,14 +441,14 @@ for (let k = 0; k <= 16; k++) {
       </div>
     </div>
     <br>
-    // test separé pour ajuster la linearité de r
+    TODO: test separé pour ajuster la linearité de r
     2. At the same time, try to balance the widths of the color domains on the rainbow.
     The better this criterion is approched, the more linear in `r` the perceived hue is.
     <br><br>
     <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    // TODO: test de balance des primaires (les secondaires doivent etre au milieu)
+    TODO: test de balance des primaires (les secondaires doivent etre au milieu)
 
     <h1>Screen calibration of extremes greys</h1>
     Your screen has a good linearity in extreme greys (near black and white) if each middle square feels as different from its left square as from its right square.
