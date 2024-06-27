@@ -379,13 +379,18 @@
           "offline": "Offline",
           "pending": "Pending",
           "deposited": "Deposited",
+          "depositing": "Depositing",
           "sync_current": "Current Sync Committee",
           "sync_upcoming": "Upcoming Sync Committee",
           "sync_past": "Past Sync Committee",
           "has_slashed": "Slashed",
           "got_slashed": "Got slashed",
           "proposal_proposed": "Proposed",
-          "proposal_missed": "Missed"
+          "proposal_missed": "Missed",
+          "exiting": "Exiting",
+          "exited":"Exited",
+          "withdrawing":"Withdrawing",
+          "withdrawn":"Withdrawn"
         }
       },
       "blocks": {
