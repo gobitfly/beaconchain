@@ -673,7 +673,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		}
 	}
 
-	ret.Income.El, ret.Apr.El, ret.Income.Cl, ret.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
+	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
 	if err != nil {
 		return nil, err
 	}
