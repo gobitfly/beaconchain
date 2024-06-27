@@ -340,7 +340,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
   }
 
   .validator-column {
-    @include utils.set-all-width(200px);
+    @include utils.set-all-width(240px);
     padding: 3px 7px !important;
 
     @media (max-width: 570px) {
