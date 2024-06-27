@@ -28,7 +28,6 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
       return
     }
     event.stopImmediatePropagation()
-    event.preventDefault()
     isSwiping.value = true
     touchStartX.value = event.changedTouches[0].screenX
     touchStartY.value = event.changedTouches[0].screenY
@@ -38,7 +37,6 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
       return
     }
     event.stopImmediatePropagation()
-    event.preventDefault()
     isSwiping.value = false
     touchEndX.value = event.changedTouches[0].screenX
     touchEndY.value = event.changedTouches[0].screenY
@@ -53,7 +51,6 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
       return
     }
     event.stopImmediatePropagation()
-    event.preventDefault()
     if (!bounce || !touchableElement.value) {
       return
     }
@@ -109,6 +106,10 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     }
   }
 
+  const onPointerDown = (event: PointerEvent) => {
+    event.stopImmediatePropagation()
+  }
+
   const setElement = (elem: HTMLElement, callback: SwipeCallback) => {
     clearElement()
     touchableElement.value = elem
@@ -118,6 +119,7 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
       touchableElement.value.addEventListener('touchend', onTouchEnd, false)
       touchableElement.value.addEventListener('touchcancel', onTouchEnd, false)
       touchableElement.value.addEventListener('touchmove', onTouchMove, false)
+      touchableElement.value.addEventListener('pointerdown', onPointerDown, false)
     }
   }
 
@@ -125,8 +127,9 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (touchableElement.value) {
       touchableElement.value.removeEventListener('touchstart', onTouchStart)
       touchableElement.value.removeEventListener('touchend', onTouchEnd)
-      touchableElement.value.removeEventListener('touchcancel', onTouchEnd, false)
+      touchableElement.value.removeEventListener('touchcancel', onTouchEnd)
       touchableElement.value.removeEventListener('touchmove', onTouchMove)
+      touchableElement.value.removeEventListener('pointerdown', onPointerDown)
       touchableElement.value = undefined
     }
   }

@@ -54,7 +54,8 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  min-width: 375px;  
+  min-width: 375px; 
+  max-height: calc(100vh - 60px);
   touch-action: pan-x pan-y;
 
   .p-dialog-header {

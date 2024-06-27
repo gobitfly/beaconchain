@@ -142,7 +142,6 @@ const mapped = computed<ValidatorSubset[]>(() => {
 <style lang="scss" scoped>
 .validator_subset_modal_container {
   width: 410px;
-  height: 489px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
@@ -174,7 +173,8 @@ const mapped = computed<ValidatorSubset[]>(() => {
   .accordion {
     position: relative;
     flex-grow: 1;
-    height: 453px;
+    max-height: 453px;
+    min-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
     word-break: break-all;
