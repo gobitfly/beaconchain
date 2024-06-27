@@ -22,9 +22,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const showAbsoluteValues = ref(true)
+const showAbsoluteValues = ref<boolean | null>(null)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators, validatorCount } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
@@ -46,6 +46,12 @@ const loadData = (q?: TableQueryParams) => {
   }
   setQuery(q, true, true)
 }
+
+watch(validatorCount, (count) => {
+  if (count !== undefined && showAbsoluteValues.value === null) {
+    showAbsoluteValues.value = count < 100_000
+  }
+}, { immediate: true })
 
 watch([dashboardKey, overview], () => {
   loadData()
@@ -91,7 +97,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <template>
   <div>
     <BcTableControl
-      v-model="showAbsoluteValues"
+      v-model:="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
@@ -172,7 +178,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
               <template #body="slotProps">
                 <DashboardTableSummaryValidators
-                  :absolute="showAbsoluteValues"
+                  :absolute="showAbsoluteValues ?? true"
                   :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
@@ -207,7 +213,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="attestations"
-                  :absolute="showAbsoluteValues"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -224,7 +230,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                   :class="slotProps.data.className"
                   property="proposals"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValues"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -241,7 +247,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                   :class="slotProps.data.className"
                   property="reward"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValues"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -252,7 +258,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 :table-visibility="colsVisible"
                 :row="slotProps.data"
                 :time-frame="selectedTimeFrame"
-                :absolute="showAbsoluteValues"
+                :absolute="showAbsoluteValues ?? true"
               />
             </template>
             <template #empty>
