@@ -5,7 +5,7 @@ import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 
 interface Props {
   context: DashboardValidatorContext,
-  groupName?: string,
+  subTitle?: string,
   summary?: {
     data?: VDBGroupSummaryData,
     row: VDBSummaryTableRow
@@ -60,7 +60,7 @@ const infos = computed(() => {
 
 <template>
   <div class="subset-header">
-    {{ props?.groupName }}
+    <span class="sub-title">{{ props?.subTitle }}</span>
     <DashboardTableSummaryValidators
       v-if="props.summary && (context === 'group' || context === 'dashboard')"
       :is-tooltip="true"
@@ -82,10 +82,19 @@ const infos = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
+
 .subset-header {
   display: flex;
   align-items: center;
   gap: var(--padding);
+  overflow: hidden;
+
+  .sub-title {
+    @include fonts.subtitle_text;
+    @include utils.truncate-text
+  }
 
   .info {
     display: flex;

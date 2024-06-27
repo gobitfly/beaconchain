@@ -33,7 +33,8 @@ const dataList = computed(() => {
   const v = overview.value
 
   const active: OverviewTableData = {
-    label: $t(`${tPath}your_online_validators`)
+    label: $t(`${tPath}your_online_validators`),
+    addValidatorModal: true
   }
   const efficiency: OverviewTableData = {
     label: $t(`${tPath}24h_efficiency`)
