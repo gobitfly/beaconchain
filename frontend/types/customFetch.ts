@@ -203,7 +203,7 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_OVERVIEW]: {
     path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: false
+    mock: true
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',

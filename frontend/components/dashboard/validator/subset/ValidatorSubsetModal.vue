@@ -163,7 +163,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   .spinner {

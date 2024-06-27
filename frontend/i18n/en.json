@@ -48,7 +48,8 @@
     "live": "Live",
     "current": "Current",
     "upcoming": "Upcoming", 
-    "past": "Past"
+    "past": "Past",
+    "total": "Total"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",

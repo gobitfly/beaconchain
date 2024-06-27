@@ -89,7 +89,7 @@ const infos = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--padding);
-  overflow-x: hidden;
+  overflow: hidden;
 
   .sub-title {
     @include fonts.subtitle_text;
