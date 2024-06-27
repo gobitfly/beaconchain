@@ -30,7 +30,7 @@ const validatorSub: ValidatorSubscriptionState = {
   proposedBlock: true,
   upcomingProposal: false,
   syncCommittee: true,
-  withdrawed: true,
+  withdrawn: true,
   shlashed: false,
   realTime: false
 }
