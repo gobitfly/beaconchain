@@ -13,6 +13,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// TODO: As a service this will not scale well as it is running once on every instance of the api.
+// Instead of service this should be moved to the exporter.
+
 var currentEfficiencyInfo *EfficiencyData
 var currentEfficiencyMutex = &sync.RWMutex{}
 
