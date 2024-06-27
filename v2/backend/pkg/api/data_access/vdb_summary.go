@@ -518,7 +518,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 	// retrieve the members of the current, previous & upcoming sync committees
 	currentSyncCommitteeMembers := map[uint32]bool{}
-	previousSyncCommitteeMembers := map[uint32]bool{}
 	upcomingSyncCommitteeMembers := map[uint32]bool{}
 
 	type syncCommitteeQueryResultType struct {
@@ -573,30 +572,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	query := `select
 			users_val_dashboards_validators.validator_index,
 			epoch_start,
-			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
-			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
-			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
-			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
-			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
 			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
-			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
-			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
-			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
-			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
 			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
 			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestations_executed, 0) as attestations_executed,
 			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
 			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
 			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
 			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
-			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(sync_rewards, 0) as sync_rewards,
 			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
 			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
@@ -614,30 +599,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		query = `select
 			validator_index,
 			epoch_start,
-			COALESCE(attestations_source_reward, 0) as attestations_source_reward,
-			COALESCE(attestations_target_reward, 0) as attestations_target_reward,
-			COALESCE(attestations_head_reward, 0) as attestations_head_reward,
-			COALESCE(attestations_inactivity_reward, 0) as attestations_inactivity_reward,
-			COALESCE(attestations_inclusion_reward, 0) as attestations_inclusion_reward,
 			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_source_reward, 0) as attestations_ideal_source_reward,
-			COALESCE(attestations_ideal_target_reward, 0) as attestations_ideal_target_reward,
-			COALESCE(attestations_ideal_head_reward, 0) as attestations_ideal_head_reward,
-			COALESCE(attestations_ideal_inactivity_reward, 0) as attestations_ideal_inactivity_reward,
-			COALESCE(attestations_ideal_inclusion_reward, 0) as attestations_ideal_inclusion_reward,
 			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
 			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestations_executed, 0) as attestations_executed,
 			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
 			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
 			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
 			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(blocks_cl_reward, 0) as blocks_cl_reward,
-			COALESCE(blocks_el_reward, 0) as blocks_el_reward,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(sync_rewards, 0) as sync_rewards,
 			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
 			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
 			COALESCE(deposits_count, 0) as deposits_count,
@@ -657,42 +628,24 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	}
 
 	type queryResult struct {
-		ValidatorIndex                    uint32 `db:"validator_index"`
-		EpochStart                        int    `db:"epoch_start"`
-		AttestationSourceReward           int64  `db:"attestations_source_reward"`
-		AttestationTargetReward           int64  `db:"attestations_target_reward"`
-		AttestationHeadReward             int64  `db:"attestations_head_reward"`
-		AttestationInactivitytReward      int64  `db:"attestations_inactivity_reward"`
-		AttestationInclusionReward        int64  `db:"attestations_inclusion_reward"`
-		AttestationReward                 int64  `db:"attestations_reward"`
-		AttestationIdealSourceReward      int64  `db:"attestations_ideal_source_reward"`
-		AttestationIdealTargetReward      int64  `db:"attestations_ideal_target_reward"`
-		AttestationIdealHeadReward        int64  `db:"attestations_ideal_head_reward"`
-		AttestationIdealInactivitytReward int64  `db:"attestations_ideal_inactivity_reward"`
-		AttestationIdealInclusionReward   int64  `db:"attestations_ideal_inclusion_reward"`
-		AttestationIdealReward            int64  `db:"attestations_ideal_reward"`
+		ValidatorIndex         uint32 `db:"validator_index"`
+		EpochStart             int    `db:"epoch_start"`
+		AttestationReward      int64  `db:"attestations_reward"`
+		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
-		AttestationsExecuted      int64 `db:"attestations_executed"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
 		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
 		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
 
-		BlocksScheduled uint32          `db:"blocks_scheduled"`
-		BlocksProposed  uint32          `db:"blocks_proposed"`
-		BlocksClReward  uint64          `db:"blocks_cl_reward"`
-		BlocksElReward  decimal.Decimal `db:"blocks_el_reward"`
+		BlocksScheduled uint32 `db:"blocks_scheduled"`
+		BlocksProposed  uint32 `db:"blocks_proposed"`
 
 		SyncScheduled uint32 `db:"sync_scheduled"`
 		SyncExecuted  uint32 `db:"sync_executed"`
-		SyncRewards   int64  `db:"sync_rewards"`
 
 		SlashedInPeriod bool   `db:"slashed_in_period"`
 		SlashedAmount   uint32 `db:"slashed_amount"`
-
-		DepositsCount uint32 `db:"deposits_count"`
-
-		WithdrawalsCount uint32 `db:"withdrawals_count"`
 
 		BlockChance            float64 `db:"blocks_expected"`
 		SyncCommitteesExpected float64 `db:"sync_committees_expected"`
@@ -705,7 +658,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if len(validators) > 0 {
 		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
 	} else {
-		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId, groupId)
+		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
 	}
 
 	if err != nil {
@@ -763,7 +716,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			if currentSyncCommitteeMembers[row.ValidatorIndex] {
 				ret.SyncCommitteeCount.CurrentValidators++
 			}
-			if previousSyncCommitteeMembers[row.ValidatorIndex] {
+			if upcomingSyncCommitteeMembers[row.ValidatorIndex] {
 				ret.SyncCommitteeCount.UpcomingValidators++
 			}
 		}
@@ -772,7 +725,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			ret.Slashings.StatusCount.Failed++
 			ret.Slashings.Validators = append(ret.Slashings.Validators, t.VDBValidator(row.ValidatorIndex))
 		}
-		ret.Slashings.StatusCount.Success += uint64(row.SlashedAmount)
+		if row.SlashedAmount > 0 {
+			ret.Slashings.StatusCount.Success += uint64(row.SlashedAmount)
+			ret.Slashings.Validators = append(ret.Slashings.Validators, t.VDBValidator(row.ValidatorIndex))
+		}
 
 		totalBlockChance += row.BlockChance
 		totalInclusionDelaySum += row.InclusionDelaySum
@@ -813,7 +769,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		ret.Luck.Proposal.Percent = (float64(totalProposals)) / totalBlockChance * 100
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
-		ret.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * 24 * float64(time.Hour))
+		ret.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * float64(utils.Day))
 	} else {
 		ret.Luck.Proposal.Percent = 0
 	}
@@ -827,7 +783,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
-		ret.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * 24 * float64(time.Hour))
+		ret.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * float64(utils.Day))
 	}
 
 	if totalInclusionDelayDivisor > 0 {
