@@ -33,6 +33,7 @@ export enum API_PATH {
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   LATEST_STATE = '/latestState',
+  REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
   SEARCH = '/search',
@@ -215,14 +216,19 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
-    path: '/validator-dashboards/{dashboard_id}/validator-indices',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validator-indices`,
+    path: '/validator-dashboards/{dashboard_id}/summary/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',
     mockFunction: mockLatestState,
     mock: false
+  },
+  [API_PATH.REGISTER]: {
+    path: '/users',
+    method: 'POST',
+    mock: true
   },
   [API_PATH.LOGIN]: {
     path: '/login',

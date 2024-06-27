@@ -3,19 +3,21 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowUpRightFromSquare
 } from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
-import type { TimeFrame } from '~/types/value'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { sortValidatorIds } from '~/utils/dashboard/validator'
 import type { DashboardKey } from '~/types/dashboard'
+import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 
 interface Props {
   validators: number[],
   groupId?: number,
-  timeFrame?: TimeFrame
+  timeFrame?: SummaryTimeFrame
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
+  data?: VDBGroupSummaryData,
+  row: VDBSummaryTableRow,
 }
 const props = defineProps<Props>()
 
@@ -32,7 +34,11 @@ const openValidatorModal = () => {
       groupName: groupName.value,
       validators: props.validators,
       groupId: props.groupId,
-      dashboardKey: props.dashboardKey
+      dashboardKey: props.dashboardKey,
+      summary: {
+        row: props.row,
+        data: props.data
+      }
     }
   })
 }
