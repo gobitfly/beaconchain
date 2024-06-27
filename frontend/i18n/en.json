@@ -678,11 +678,20 @@
         "explanation": "All notifications are sent after network finality (~20mins).",
         "offlineValidator": {
           "option": "Validator is offline",
-          "hint": ["We will trigger a notification:", "Once the validator has been offline for 3 epochs.", "Every 32 Epochs (~3 hours) during your downtime.", "Once you are back online again."]
+          "hint": ["We will trigger a notification:",
+            "-Once the validator has been offline for 3 epochs.",
+            "-Every 32 Epochs (~3 hours) during your downtime.",
+            "-Once you are back online again."]
         },
         "offlineGroup": {
           "option":"Group is offline",
-          "hint": ["We will trigger a notification:", "Once 10% of your group is offline.", "Once you have been offline for 3 epochs.", "Every 32 Epochs (~3 hours) during your downtime.", "Once you are back online.", "Note:", " Notification resets if you do not meet the threshold of 10%."]
+          "hint": ["We will trigger a notification:",
+            "-Once {count}% of your group is offline.",
+            "-Once you have been offline for 3 epochs.",
+            "-Every 32 Epochs (~3 hours) during your downtime.",
+            "-Once you are back online.",
+            "*Note: ", "Notification resets if you do not meet the threshold of {count}%."],
+          "placeholder": "10"
         },
         "missedAttestations": {
           "option":"Attestations missed",
@@ -700,7 +709,7 @@
           "option":"Sync committee",
           "hint": ""
         },
-        "withdrawed": {
+        "withdrawn": {
           "option":"Withdrawal processed",
           "hint": ""
         },
@@ -726,7 +735,8 @@
         },
         "erc20": {
           "option":"Track ERC20 Token Transfers",
-          "hint": ""
+          "hint": "",
+          "placeholder": "value > $0"
         },
         "erc721": {
           "option":"Track ERC721 Token Transfers",
@@ -746,7 +756,7 @@
         },
         "ignoreSpam": {
           "option":"Ignore spam transactions",
-          "hint": ["Ignores ", "zero value transfer tx's ", "and token tx's that have the ", "\"hidden\" token label ", "."]
+          "hint": ["Ignores ", "*zero value transfer tx's ", "and token tx's that have the ", "*\"hidden\" token label", "."]
         }
       },
       "save":"Save"
