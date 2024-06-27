@@ -27,6 +27,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (!isValidTarget(event)) {
       return
     }
+    event.stopImmediatePropagation()
+    event.preventDefault()
     isSwiping.value = true
     touchStartX.value = event.changedTouches[0].screenX
     touchStartY.value = event.changedTouches[0].screenY
@@ -35,6 +37,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (!isSwiping.value) {
       return
     }
+    event.stopImmediatePropagation()
+    event.preventDefault()
     isSwiping.value = false
     touchEndX.value = event.changedTouches[0].screenX
     touchEndY.value = event.changedTouches[0].screenY
@@ -48,6 +52,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (!isSwiping.value) {
       return
     }
+    event.stopImmediatePropagation()
+    event.preventDefault()
     if (!bounce || !touchableElement.value) {
       return
     }
