@@ -89,12 +89,11 @@ const data = computed(() => {
   }
 
   .direction-icon {
-    width: 13px;
     display: inline-flex;
     justify-content: center;
 
     svg {
-      height: 8px;
+      height: 14px;
       width: auto;
     }
   }

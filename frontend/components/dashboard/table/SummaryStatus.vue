@@ -99,12 +99,12 @@ const mapped = computed(() => {
 
     &.current-sync {
       color: var(--positive-color);
-      animation: pulse-animation 1s linear infinite;
+      animation: status-rotation 2s linear infinite;
     }
 
     &.scheduled-sync {
       color: var(--positive-color);
-      animation: status-rotation .75s linear infinite;
+      animation: pulse-animation 2s linear infinite;
     }
   }
 }
