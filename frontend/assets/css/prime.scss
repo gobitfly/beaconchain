@@ -55,7 +55,7 @@
   border-radius: var(--border-radius);
   padding: var(--padding-large);
   min-width: 375px;  
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 
   .p-dialog-header {
     color: var(--text-color);
