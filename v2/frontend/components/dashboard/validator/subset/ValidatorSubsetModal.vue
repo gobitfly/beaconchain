@@ -18,6 +18,7 @@ interface Props {
   context: DashboardValidatorContext,
   timeFrame?: SummaryTimeFrame,
   dashboardKey?: DashboardKey,
+  dashboardName?: string,
   groupName?: string,
   groupId?: number,
   summary?: {
@@ -117,7 +118,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
       <DashboardValidatorSubsetSubHeader
         v-if="props"
         :context="props.context"
-        :group-name="props.groupName"
+        :sub-title="props.groupName || props.dashboardName"
         :summary="props.summary"
       />
       <BcContentFilter v-model="filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
@@ -141,7 +142,6 @@ const mapped = computed<ValidatorSubset[]>(() => {
 <style lang="scss" scoped>
 .validator_subset_modal_container {
   width: 410px;
-  height: 489px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
@@ -162,6 +162,8 @@ const mapped = computed<ValidatorSubset[]>(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--padding);
+    overflow: hidden;
   }
 
   .spinner {
@@ -171,7 +173,8 @@ const mapped = computed<ValidatorSubset[]>(() => {
   .accordion {
     position: relative;
     flex-grow: 1;
-    height: 453px;
+    max-height: 453px;
+    min-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
     word-break: break-all;

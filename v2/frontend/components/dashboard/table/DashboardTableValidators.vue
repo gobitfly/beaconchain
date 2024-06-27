@@ -44,7 +44,7 @@ const openValidatorModal = () => {
 }
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.groupId, groups.value)
+  return getGroupLabel($t, props.groupId, groups.value, $t('common.total'))
 })
 
 const cappedValidators = computed(() => sortValidatorIds(props.validators).slice(0, 10))

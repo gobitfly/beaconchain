@@ -123,7 +123,7 @@ const data = computed(() => {
 })
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.row.group_id, groups.value)
+  return getGroupLabel($t, props.row.group_id, groups.value, $t('common.total'))
 })
 
 const openValidatorModal = () => {

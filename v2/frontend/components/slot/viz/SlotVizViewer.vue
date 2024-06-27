@@ -154,7 +154,11 @@ watch(() => props, () => {
     @media (max-width: 800px) {
       column-gap: var(--padding-small);
       grid-template:
-        [row1-start] "network network network"[row1-end] [row2-start] "info filter-row header-right"[row2-end] / max-content 1fr max-content;
+        [row1-start] "network network network"[row1-end] [row2-start] "info filter-row header-right"[row2-end] / max-content max-content 1fr;
+    }
+
+    @media (max-width: 490px) {
+      padding-right: var(--padding);
     }
 
     .network {
@@ -183,9 +187,10 @@ watch(() => props, () => {
       width: 196px;
       margin-top: auto;
       margin-bottom: auto;
+      margin-left: auto;
 
       @media (max-width: 490px) {
-        width: 87px;
+        width: 104px;
       }
     }
 
@@ -210,6 +215,10 @@ watch(() => props, () => {
     overflow-y: hidden;
     min-height: 180px;
     grid-template-columns: 49px max-content;
+
+    @media (max-width: 490px) {
+      padding-right: var(--padding);
+    }
 
     .row {
       display: flex;
