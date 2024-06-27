@@ -14,7 +14,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -509,18 +508,9 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return nil, nil, err
 	}
 
-	// Get the validator duties to check the last fulfilled attestation
-	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock()
+	validatorStatuses, err := d.getValidatorStatuses(validators)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// Set the threshold for "online" => "offline" to 2 epochs without attestation
-	attestationThresholdSlot := uint64(0)
-	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	if dutiesInfo.LatestSlot >= twoEpochs {
-		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
 	}
 
 	// Fill the data
@@ -536,36 +526,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
 		}
 
-		status := ""
-		switch constypes.ValidatorStatus(metadata.Status) {
-		case constypes.PendingInitialized:
-			status = "deposited"
-		case constypes.PendingQueued:
-			status = "pending"
-			if metadata.Queues.ActivationIndex.Valid {
-				activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
-				row.QueuePosition = &activationIndex
-			}
-		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
-				if attested && slot > lastAttestionSlot {
-					lastAttestionSlot = slot
-				}
-			}
-			if lastAttestionSlot < uint32(attestationThresholdSlot) {
-				status = "offline"
-			} else {
-				status = "online"
-			}
-		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-			if metadata.Slashed {
-				status = "slashed"
-			} else {
-				status = "exited"
-			}
+		row.Status = validatorStatuses[validator].ToString()
+		if validatorStatuses[validator] == enums.ValidatorStatuses.Pending && metadata.Queues.ActivationIndex.Valid {
+			activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
+			row.QueuePosition = &activationIndex
 		}
-		row.Status = status
 
 		if search == "" {
 			data = append(data, row)

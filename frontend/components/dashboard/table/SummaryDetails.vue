@@ -32,29 +32,14 @@ const data = computed<SummaryRow[][]>(() => {
     props.forEach(p => addToList(index, p))
   }
 
-  if (!props.tableVisibility.efficiency) {
-    addToList(0, 'efficiency')
-  }
-  if (!props.tableVisibility.attestations) {
-    addToList(0, 'attestations')
-  } else {
-    addToList(0, undefined, 'attestations')
-  }
-  addPropsTolist(0, ['attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist'])
+  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = ['reward', 'missed_rewards']
+  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility.attestations ? [] : rewardCols
+  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist'])
 
-  addPropsTolist(1, ['sync', 'validators_sync'])
+  addPropsTolist(1, ['sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings'])
 
-  if (!props.tableVisibility.proposals) {
-    addToList(1, 'proposals')
-  } else {
-    addToList(1, undefined, 'proposals')
-  }
-  addPropsTolist(1, ['validators_proposal', 'slashings', 'validators_slashings'])
-
-  addPropsTolist(2, ['apr', 'luck', 'missed_rewards'])
-  if (!props.tableVisibility.reward) {
-    addToList(2, 'reward')
-  }
+  addCols = !props.tableVisibility.attestations ? [] : rewardCols
+  addPropsTolist(2, ['apr', 'luck', ...addCols])
 
   return list
 })
@@ -66,11 +51,11 @@ const rowClass = (data: SummaryRow) => {
   const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
     efficiency: 'bold',
     attestations: 'bold',
-    sync: 'bold spacing-top',
+    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
     proposals: 'bold spacing-top',
     slashings: 'bold spacing-top',
-    apr: 'bold',
-    luck: 'bold spacing-top',
+    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
+    luck: 'spacing-top',
     attestations_head: 'spacing-top'
   }
   return classNames[data.prop]
@@ -134,7 +119,7 @@ const rowClass = (data: SummaryRow) => {
     }
 
     @media (max-width: 1014px) {
-      width: 344px;
+      width: 50%;
 
       &:last-child {
         border-top: var(--container-border);
