@@ -81,7 +81,12 @@ const mapped = computed(() => {
         <BcFormatPercent v-else :value="status.count" :base="mapped.total" />
       </div>
     </BcTooltip>
-    <FontAwesomeIcon v-if="!isTooltip" class="link popout" :icon="faArrowUpRightFromSquare" @click="openValidatorModal" />
+    <FontAwesomeIcon
+      v-if="!isTooltip"
+      class="link popout"
+      :icon="faArrowUpRightFromSquare"
+      @click="openValidatorModal"
+    />
   </div>
   <div v-else>
     -
@@ -96,6 +101,11 @@ const mapped = computed(() => {
   align-items: center;
   flex-wrap: nowrap;
   gap: var(--padding);
+
+  @media (max-width: 729px) {
+    justify-content: space-between;
+    padding-right: 13px;
+  }
 
   .status-list {
     display: flex;

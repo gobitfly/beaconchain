@@ -185,6 +185,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               v-if="colsVisible.efficiency"
               field="efficiency"
               :sortable="showInDevelopment"
+              body-class="efficiency-column"
               :header="$t('dashboard.validator.col.efficiency')"
             >
               <template #body="slotProps">
@@ -288,16 +289,24 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
   gap: var(--padding);
 }
 
-.validators-header{
-  position: relative;
+.validators-header {
   .info {
     position: absolute;
-    top: 8px;
-    right: -50px;
+    top: 16px;
+    right: var(--padding-large);
 
     svg {
       width: 14px;
       height: 14px;
+    }
+  }
+
+  @media (min-width: 730px) {
+    position: relative;
+
+    .info {
+      top: 8px;
+      right: -50px;
     }
   }
 }
@@ -323,6 +332,11 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 
   .status-column {
     @include utils.set-all-width(90px);
+  }
+
+  .status-column,
+  .efficiency-column {
+    padding: 7px !important;
   }
 
   .validator-column {

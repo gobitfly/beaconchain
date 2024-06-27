@@ -499,7 +499,7 @@
           "apr": "APR",
           "luck": "Luck",
           "reward": "Reward",
-          "missed_rewards": "Total missed rewards"
+          "missed_rewards": "Missed rewards"
         },
         "status": {
           "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",
