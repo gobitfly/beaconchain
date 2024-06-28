@@ -129,13 +129,21 @@ type NetworkInfo struct {
 
 type VDBGeneralSummaryValidators struct {
 	// fill slices with indices of validators
-	Online    []uint64
-	Offline   []uint64
-	Deposited []uint64
-	Pending   []struct {
-		Index               uint64
-		ActivationTimestamp uint64
-	}
+	Deposited   []uint64
+	Pending     []IndexTimestamp
+	Online      []uint64
+	Offline     []uint64
+	Slashing    []uint64
+	Exiting     []IndexTimestamp
+	Slashed     []uint64
+	Exited      []uint64
+	Withdrawing []IndexTimestamp
+	Withdrawn   []uint64
+}
+
+type IndexTimestamp struct {
+	Index     uint64
+	Timestamp uint64
 }
 
 type VDBSyncSummaryValidators struct {

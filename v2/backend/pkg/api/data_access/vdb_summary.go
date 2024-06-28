@@ -16,6 +16,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -29,19 +30,18 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	// TODO: validator_dashboard_data_rolling_hourly does not exist yet
-	tableName := ""
+	table := ""
 	switch period {
-	case enums.TimePeriods.AllTime:
-		tableName = "validator_dashboard_data_rolling_total"
-	case enums.TimePeriods.Last1h:
-		fallthrough
 	case enums.TimePeriods.Last24h:
-		tableName = "validator_dashboard_data_rolling_daily"
+		table = "validator_dashboard_data_rolling_daily"
 	case enums.TimePeriods.Last7d:
-		tableName = "validator_dashboard_data_rolling_weekly"
+		table = "validator_dashboard_data_rolling_weekly"
 	case enums.TimePeriods.Last30d:
-		tableName = "validator_dashboard_data_rolling_monthly"
+		table = "validator_dashboard_data_rolling_monthly"
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+	default:
+		return nil, nil, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
 	// Searching for a group name is not supported when aggregating groups or for guest dashboards
@@ -132,7 +132,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
 				goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
 				goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled")).
-			From(goqu.T(tableName).As("r")).
+			From(goqu.T(table).As("r")).
 			GroupBy(goqu.L("result_group_id"))
 
 		if len(validators) > 0 {
@@ -168,7 +168,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 		err = d.alloyReader.Select(&queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
 		return nil
 	})
@@ -180,7 +180,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-			From(goqu.T(tableName).As("r")).
+			From(goqu.T(table).As("r")).
 			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer AND b.status = '1'"))).
 			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
@@ -216,7 +216,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 
 		err = d.alloyReader.Select(&queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
+			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
 
 		for _, entry := range queryResult {
@@ -231,38 +231,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	currentSyncCommitteeValidators := make(map[uint64]bool)
 	upcomingSyncCommitteeValidators := make(map[uint64]bool)
 	wg.Go(func() error {
-		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("validatorindex"),
-				goqu.L("period")).
-			From("sync_committees").
-			Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
-
-		var queryResult []struct {
-			ValidatorIndex uint64 `db:"validatorindex"`
-			Period         uint64 `db:"period"`
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
-
-		err = d.readerDb.Select(&queryResult, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", tableName, err)
-		}
-
-		for _, queryEntry := range queryResult {
-			if queryEntry.Period == currentSyncPeriod {
-				currentSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-			} else {
-				upcomingSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-			}
-		}
-
-		return nil
+		var err error
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err = d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+		return err
 	})
 
 	err = wg.Wait()
@@ -516,32 +487,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		groupId = t.AllGroups
 	}
 
-	// retrieve the members of the current, previous & upcoming sync committees
-	currentSyncCommitteeMembers := map[uint32]bool{}
-	upcomingSyncCommitteeMembers := map[uint32]bool{}
-
-	type syncCommitteeQueryResultType struct {
-		Period         int    `db:"period"`
-		ValidatorIndex uint32 `db:"validatorindex"`
-	}
-
+	// Get the current and next sync committee validators
 	latestEpoch := cache.LatestEpoch.Get()
-	currentSyncPeriod := int(utils.SyncPeriodOfEpoch(latestEpoch))
-	upcomingSyncPeriod := currentSyncPeriod + 1
-
-	var syncCommitteeQueryResult []syncCommitteeQueryResultType
-	err = d.readerDb.Select(&syncCommitteeQueryResult, `SELECT period, validatorindex FROM sync_committees WHERE period >= $1 AND period <= $2`, currentSyncPeriod, upcomingSyncPeriod)
+	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving sync committee current and next period data: %v", err)
-	}
-
-	for _, row := range syncCommitteeQueryResult {
-		switch row.Period {
-		case currentSyncPeriod:
-			currentSyncCommitteeMembers[row.ValidatorIndex] = true
-		case upcomingSyncPeriod:
-			upcomingSyncCommitteeMembers[row.ValidatorIndex] = true
-		}
+		return nil, err
 	}
 
 	table := ""
@@ -625,7 +575,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 
 	type queryResult struct {
 		ValidatorIndex         uint32 `db:"validator_index"`
-		EpochStart             int    `db:"epoch_start"`
+		EpochStart             uint64 `db:"epoch_start"`
 		AttestationReward      int64  `db:"attestations_reward"`
 		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
@@ -670,11 +620,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	totalProposals := uint32(0)
 
 	validatorArr := make([]t.VDBValidator, 0)
-	startEpoch := math.MaxUint32
 	for _, row := range rows {
-		if row.EpochStart < startEpoch { // set the start epoch for querying the EL APR
-			startEpoch = row.EpochStart
-		}
 		validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
 		totalAttestationRewards += row.AttestationReward
 		totalIdealAttestationRewards += row.AttestationIdealReward
@@ -709,10 +655,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			}
 			ret.SyncCommittee.Validators = append(ret.SyncCommittee.Validators, t.VDBValidator(row.ValidatorIndex))
 
-			if currentSyncCommitteeMembers[row.ValidatorIndex] {
+			if currentSyncCommitteeValidators[uint64(row.ValidatorIndex)] {
 				ret.SyncCommitteeCount.CurrentValidators++
 			}
-			if upcomingSyncCommitteeMembers[row.ValidatorIndex] {
+			if upcomingSyncCommitteeValidators[uint64(row.ValidatorIndex)] {
 				ret.SyncCommitteeCount.UpcomingValidators++
 			}
 		}
@@ -743,7 +689,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	if len(validators) > 0 {
 		validatorArr = validators
 	}
-	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period < $1 AND validatorindex = ANY($2)`, currentSyncPeriod, validatorArr)
+
+	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(rows[0].EpochStart)
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving past sync committee count: %v", err)
 	}
@@ -978,21 +927,279 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 }
 
 func (d *DataAccessService) GetValidatorDashboardSummaryValidators(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetValidatorDashboardSummaryValidators(dashboardId, groupId)
+	result := &t.VDBGeneralSummaryValidators{}
+
+	// Get the validator indices
+	var groupIds []uint64
+	if !dashboardId.AggregateGroups && groupId != t.AllGroups {
+		groupIds = append(groupIds, uint64(groupId))
+	}
+
+	validatorIndices, err := d.getDashboardValidators(dashboardId /*, groupIds*/)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the validator statuses
+	validatorStatuses, err := d.getValidatorStatuses(validatorIndices)
+	if err != nil {
+		return nil, err
+	}
+
+	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+	defer releaseValMapLock()
+	if err != nil {
+		return nil, err
+	}
+
+	latestEpoch := cache.LatestFinalizedEpoch.Get()
+	latestStats := cache.LatestStats.Get()
+	var activationChurnRate uint64
+
+	if latestStats.ValidatorActivationChurnLimit == nil {
+		activationChurnRate = 4
+		log.Warnf("Activation Churn rate not set in config using 4 as default")
+	} else {
+		activationChurnRate = *latestStats.ValidatorActivationChurnLimit
+	}
+
+	type PendingValidator struct {
+		Index               uint64
+		ActivationTimestamp uint64
+	}
+
+	for _, validatorIndex := range validatorIndices {
+		metadata := validatorMapping.ValidatorMetadata[validatorIndex]
+
+		switch validatorStatuses[validatorIndex] {
+		case enums.ValidatorStatuses.Deposited:
+			result.Deposited = append(result.Deposited, validatorIndex)
+		case enums.ValidatorStatuses.Pending:
+			validatorInfo := t.IndexTimestamp{
+				Index: validatorIndex,
+			}
+			if metadata.ActivationEpoch.Valid {
+				validatorInfo.Timestamp = uint64(utils.EpochToTime(uint64(metadata.ActivationEpoch.Int64)).Unix())
+			} else if metadata.Queues.ActivationIndex.Valid {
+				queuePosition := uint64(metadata.Queues.ActivationIndex.Int64)
+				epochsToWait := (queuePosition - 1) / activationChurnRate
+				// calculate dequeue epoch
+				estimatedActivationEpoch := latestEpoch + epochsToWait + 1
+				// add activation offset
+				estimatedActivationEpoch += utils.Config.Chain.ClConfig.MaxSeedLookahead + 1
+				validatorInfo.Timestamp = uint64(utils.EpochToTime(estimatedActivationEpoch).Unix())
+			}
+			result.Pending = append(result.Pending, validatorInfo)
+		case enums.ValidatorStatuses.Online:
+			result.Online = append(result.Online, validatorIndex)
+		case enums.ValidatorStatuses.Offline:
+			result.Offline = append(result.Offline, validatorIndex)
+		}
+	}
+
+	return result, nil
 }
+
 func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
-	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardSyncSummaryValidators(dashboardId, groupId, period)
+	result := &t.VDBSyncSummaryValidators{}
+
+	// Get the table name based on the period
+	table := ""
+	switch period {
+	case enums.TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_daily"
+	case enums.TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_weekly"
+	case enums.TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_monthly"
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+	default:
+		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	}
+
+	// Get the validator indices
+	var groupIds []uint64
+	if !dashboardId.AggregateGroups && groupId != t.AllGroups {
+		groupIds = append(groupIds, uint64(groupId))
+	}
+
+	validatorIndices, err := d.getDashboardValidators(dashboardId /*, groupIds*/)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the current and next sync committee validators
+	latestEpoch := cache.LatestEpoch.Get()
+	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, validatorIndex := range validatorIndices {
+		if currentSyncCommitteeValidators[validatorIndex] {
+			result.Current = append(result.Current, validatorIndex)
+		}
+		if upcomingSyncCommitteeValidators[validatorIndex] {
+			result.Upcoming = append(result.Upcoming, validatorIndex)
+		}
+	}
+
+	// Get the cutoff period for past sync committees
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("epoch_start")).
+		From(table).
+		Limit(1)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	var epochStart uint64
+	err = d.alloyReader.Get(&epochStart, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
+	}
+	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
+
+	// Get the past sync committee validators
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+	ds = goqu.Dialect("postgres").
+		Select(
+			goqu.L("sc.validatorindex")).
+		From("sync_committees sc").
+		LeftJoin(goqu.I(table).As("r"), goqu.On(goqu.L("sc.validatorindex = r.validator_index"))).
+		Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
+
+	query, args, err = ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.readerDb.Select(&result.Past, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving data for past sync committees: %w", err)
+	}
+
+	return result, nil
 }
+
 func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
-	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardSlashingsSummaryValidators(dashboardId, groupId, period)
+	result := &t.VDBSlashingsSummaryValidators{}
+
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
+	type queryResult struct {
+		SlashedInEpoch bool   `db:"slashed_in_epoch"`
+		SlashedAmount  uint32 `db:"slashed_amount"`
+	}
+
+	// Build the query
+	ds := goqu.Dialect("postgres").Select(
+		goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
+		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"))
+
+	// handle the case when we have a list of validators
+	if len(dashboardId.Validators) > 0 {
+		ds = ds.
+			From(goqu.L("validator_dashboard_data_epoch AS e")).
+			Where(goqu.L("e.validator_index = ANY(?) AND e.epoch = ?", pq.Array(dashboardId.Validators), epoch))
+	} else { // handle the case when we have a dashboard id and an optional group id
+		ds = ds.
+			From(goqu.L("users_val_dashboards_validators AS v")).
+			InnerJoin(goqu.L("validator_dashboard_data_epoch AS e"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ? AND e.epoch = ?", dashboardId.Id, epoch))
+
+		if groupId != t.AllGroups {
+			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	ds = ds.
+		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
+		LeftJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*queryResult
+	err = d.alloyReader.Select(&rows, query, args...)
+	if err != nil {
+		log.Error(err, "error while getting validator dashboard group rewards", 0)
+		return nil, err
+	}
+
+	return result, nil
 }
+
 func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
-	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardProposalSummaryValidators(dashboardId, groupId, period)
+	result := &t.VDBProposalSummaryValidators{}
+
+	if dashboardId.AggregateGroups {
+		// If we are aggregating groups then ignore the group id and sum up everything
+		groupId = t.AllGroups
+	}
+
+	// Get the validator indices
+	var groupIds []uint64
+	if groupId != t.AllGroups {
+		groupIds = append(groupIds, uint64(groupId))
+	}
+
+	validatorIndices, err := d.getDashboardValidators(dashboardId /*, groupIds*/)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
+	currentSyncCommitteeValidators := make(map[uint64]bool)
+	upcomingSyncCommitteeValidators := make(map[uint64]bool)
+
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("validatorindex"),
+			goqu.L("period")).
+		From("sync_committees").
+		Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
+
+	var queryResult []struct {
+		ValidatorIndex uint64 `db:"validatorindex"`
+		Period         uint64 `db:"period"`
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.readerDb.Select(&queryResult, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving sync committee current and next period data: %w", err)
+	}
+
+	for _, queryEntry := range queryResult {
+		if queryEntry.Period == currentSyncPeriod {
+			currentSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
+		} else {
+			upcomingSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
+		}
+	}
+
+	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
 }
