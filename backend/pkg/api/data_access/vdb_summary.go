@@ -584,8 +584,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
 			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
-			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
@@ -611,8 +609,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 			COALESCE(sync_executed, 0) as sync_executed,
 			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
 			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
-			COALESCE(deposits_count, 0) as deposits_count,
-			COALESCE(withdrawals_count, 0) as withdrawals_count,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
