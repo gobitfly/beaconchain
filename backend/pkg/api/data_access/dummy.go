@@ -49,27 +49,41 @@ func (d *DummyService) GetUserExists(email string) (bool, error) {
 	return r, err
 }
 
-func (d *DummyService) CreateUser(email, password string) error {
+func (d *DummyService) CreateUser(email, password string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) RemoveUser(userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationTime(email string) (time.Time, error) {
+func (d *DummyService) UpdateUserEmail(userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) UpdateUserPassword(userId uint64, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(userId uint64) (time.Time, error) {
 	r := time.Time{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) UpdateEmailConfirmationTime(email string) error {
+func (d *DummyService) UpdateEmailConfirmationTime(userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationHash(email string) (string, error) {
+func (d *DummyService) GetEmailConfirmationHash(userId uint64) (string, error) {
 	r := ""
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+func (d *DummyService) UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error {
 	return nil
 }
 
@@ -86,6 +100,12 @@ func (d *DummyService) GetUserCredentialInfo(email string) (*t.UserCredentialInf
 }
 
 func (d *DummyService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
