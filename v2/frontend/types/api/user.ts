@@ -8,6 +8,7 @@ import type { ApiDataResponse } from './common'
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;
+  email_confirmed: boolean;
   api_keys: string[];
   api_perks: ApiPerks;
   premium_perks: PremiumPerks;
@@ -22,6 +23,12 @@ export interface UserSubscription {
   end: number /* int64 */;
 }
 export type InternalGetUserInfoResponse = ApiDataResponse<UserInfo>;
+export interface EmailUpdate {
+  id: number /* uint64 */;
+  current_email: string;
+  pending_email: string;
+}
+export type InternalPutUserEmailResponse = ApiDataResponse<EmailUpdate>;
 export type ProductCategory = string;
 export const ProductCategoryApi: ProductCategory = "api";
 export const ProductCategoryPremium: ProductCategory = "premium";
