@@ -42,7 +42,7 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
 })
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'efficiency:desc' }
   }
   setQuery(q, true, true)
 }
@@ -134,7 +134,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
           >
             <Column
               field="group_id"
-              :sortable="showInDevelopment"
+              :sortable="true"
               body-class="group-id-column bold"
               header-class="group-id-column"
               :header="$t('dashboard.validator.col.group')"
@@ -145,7 +145,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             </Column>
             <Column
               field="status"
-              :sortable="showInDevelopment"
               header-class="status-column"
               body-class="status-column"
               :header="$t('dashboard.validator.col.status')"
@@ -158,7 +157,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               field="validators"
               body-class="validator-column"
               header-class="validator-column"
-              :sortable="showInDevelopment && colsVisible.validatorsSortable"
+              :sortable="colsVisible.validatorsSortable"
             >
               <template #header>
                 <div class="validators-header">
@@ -190,7 +189,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.efficiency"
               field="efficiency"
-              :sortable="showInDevelopment"
+              :sortable="true"
               body-class="efficiency-column"
               :header="$t('dashboard.validator.col.efficiency')"
             >
@@ -205,8 +204,8 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             </Column>
             <Column
               v-if="colsVisible.attestations"
-              field="attestions"
-              :sortable="showInDevelopment"
+              field="attestations"
+              :sortable="true"
               :header="$t('dashboard.validator.summary.row.attestations')"
             >
               <template #body="slotProps">
@@ -222,7 +221,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.proposals"
               field="proposals"
-              :sortable="showInDevelopment"
+              :sortable="true"
               :header="$t('dashboard.validator.summary.row.proposals')"
             >
               <template #body="slotProps">
@@ -239,7 +238,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.reward"
               field="reward"
-              :sortable="showInDevelopment"
+              :sortable="true"
               :header="$t('dashboard.validator.col.rewards')"
             >
               <template #body="slotProps">
