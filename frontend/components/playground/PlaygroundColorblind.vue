@@ -14,6 +14,7 @@ const R: Channel = 0
 const G: Channel = 1
 const B: Channel = 2
 const gamma = 2.2
+const gammaInv = 1 / gamma
 
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -49,7 +50,7 @@ class RGB {
       switch (from.space) {
         case CS.RGBlinear :
           for (let i = R; i <= B; i++) {
-            this.chan[i] = Math.round(((from as RGB).chan[i] ** (1 / gamma)) * 255)
+            this.chan[i] = Math.round(((from as RGB).chan[i] ** gammaInv) * 255)
           }
           break
         case CS.RGBgamma :
@@ -114,7 +115,7 @@ class Eye {
       }
       this.convertToRGB(Eye.rgbLinear, this.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = (Eye.lumNorm[B] / Eye.rgbLinear.chan[h]) ** (1 / gamma)
+      this.Imax.value = (Eye.sensicolNorm[B] / Eye.rgbLinear.chan[h]) ** gammaInv
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
@@ -124,14 +125,16 @@ class Eye {
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
   readonly lowestImax: number
 
-  // constants of our perception model
-  protected static readonly lum = [30, 55, 15] // coefficients to calculate the perceived intensity when channels add (obtained empiricially by tweaking the definition of "relative luminance" in the ITU-R Recommendation BT.601)
-  protected static readonly mix = [35, 45, 20] // This coeffients are correlated with the relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (this coeffs are obtained empiricially). Their effect is to shift the position of the 3 secondaries (and all intermediaries) in the rainbow.
-
+  // constants of our perception model, all obtained empirically
+  protected static readonly sensicol = [30, 55, 15] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
+  protected static readonly intercol = [35, 45, 20] // coeffients correlated with the relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (their effect is to shift the position of the 3 secondaries (and all intermediaries) on the rainbow)
+  protected static readonly overwhite = [10, 20, 5] // ability of the primaries to tint a white light when added to it
+  protected static readonly phi = 1.5
   // the following constants will be filled by the constructor
-  protected static lumNorm = [0, 0, 0]
-  protected static phi = [0, 0, 0]
-  protected static rKey = [0, 0, 0, 0, 0, 0, 0] // (will be filled by the constructor) coordinates of the primaries and secondaries on the rainbow
+  protected static readonly sensicolNorm = [0, 0, 0]
+  protected static readonly rKey = [0, 0, 0, 0, 0, 0, 0] // coordinates of the primaries and secondaries on the rainbow
+  protected static readonly overwhiteNorm = [0, 0, 0]
+  protected static readonly phiInv = 1 / Eye.phi
 
   /**
    * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
@@ -142,19 +145,20 @@ class Eye {
     }
     if (!Eye.rKey[1]) {
       for (let k = R; k <= B; k++) {
-        Eye.lumNorm[k] = Eye.lum[k] / (Eye.lum[R] + Eye.lum[G] + Eye.lum[B])
+        Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
+        Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B])
       }
       const lSequence = [B, R, G]
       for (let k = 0; k <= 6; k++) {
         if (k % 2) {
           const [h1, h2] = Eye.lowestChanToAnchors(lSequence[Math.floor(k / 2)])
-          Eye.rKey[k] = (h1 + 1 * Eye.mix[h2] / (Eye.mix[h1] + Eye.mix[h2])) / 3
+          Eye.rKey[k] = (h1 + 1 * Eye.intercol[h2] / (Eye.intercol[h1] + Eye.intercol[h2])) / 3
         } else {
           Eye.rKey[k] = k / 6
         }
       }
     }
-    this.lowestImax = Eye.lumNorm[B] ** (1 / gamma)
+    this.lowestImax = Eye.sensicolNorm[B] ** gammaInv
     this.space = space
     this.r = this.p = this.i = this.j = 0
   }
@@ -179,14 +183,15 @@ class Eye {
       const rgb = (from as RGB).chan
       const l = Eye.RGBtoLowestChannel(rgb)
       const [h1, h2] = Eye.lowestChanToAnchors(l)
-      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.mix[h2]
-      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.mix[h1] + anchor2Contribution
-      if (anchors12Contributions <= 0) { // the 3 channels are equal, so we have black, grey or white
+      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.intercol[h2]
+      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.intercol[h1] + anchor2Contribution
+      if (anchors12Contributions < 0.001) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
       } else {
         this.r = (h1 + anchor2Contribution / anchors12Contributions) / 3
-        this.p = ((rgb[h1] - rgb[l]) * Eye.lumNorm[h1] + (rgb[h2] - rgb[l]) * Eye.lumNorm[h2]) / (rgb[l] * Eye.lumNorm[l] + rgb[h1] * Eye.lumNorm[h1] + rgb[h2] * Eye.lumNorm[h2])
+        this.p = ((rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]) / (rgb[l] * Eye.overwhiteNorm[l] + rgb[h1] * Eye.overwhiteNorm[h1] + rgb[h2] * Eye.overwhiteNorm[h2])
+        this.p **= Eye.phiInv
       }
       this.fillIntensityFromRGB(rgb)
     } else {
@@ -228,49 +233,61 @@ class Eye {
     return to
   }
 
+  static alpha = 0.5
   protected convertToRGB (to: RGB, i: number, j: number) {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
     const D = 3 * this.r - h1
-    if (D > 0.999 || this.p < 0.001) {
-      ratio[l] = ratio[h1] = (1 - this.p) / (1 + this.p * (Eye.lumNorm[l] + Eye.lumNorm[h1]) / Eye.lumNorm[h2])
+    const p = this.p ** Eye.phi
+    if (D < 0.001 && p > 0.999) {
+      to.chan[l] = 0
+      to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : j ** gamma
+      to.chan[h2] = 0
     } else {
-      const A = D * Eye.mix[h1] / ((1 - D) * Eye.mix[h2])
-      const B = (1 - this.p) / this.p * (Eye.lumNorm[h1] + A * Eye.lumNorm[h2])
-      const Q = 1 / (A + B)
-      ratio[l] = B * Q
-      ratio[h1] = Q + ratio[l]
-    }
-    ratio[h2] = 1
-    if (this.space === CS.EyePercI) {
-      const Ir = [Eye.lumNorm[R] * ratio[R], Eye.lumNorm[G] * ratio[G], Eye.lumNorm[B] * ratio[B]]
-      const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-      to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
-      to.chan[h1] = to.chan[h2] * ratio[h1]
-    } else { // (this.space === CS.EyeNormJ)
-      to.chan[h] = j ** gamma
-      if (h === h2) {
-        to.chan[h1] = to.chan[h2] * ratio[h1]
+      if (D > 0.999 || p < 0.001) {
+        ratio[l] = (1 - p) / (1 + p * (Eye.overwhiteNorm[l] + Eye.overwhiteNorm[h1]) / Eye.overwhiteNorm[h2])
+        ratio[h1] = ratio[l]
       } else {
-        if (Math.abs(ratio[h1]) < 0.001) {
-          console.log('UH OH')
-        }
-        to.chan[h2] = to.chan[h1] / ratio[h1] // If ratio[h1]=0, we cannot reach this point. Proof: (2+p)/q-1=0 => q=2+p => r=(h1+(2+1/p)/3)/3 and noticing that 2+1/p is at least 3 we obtain r>=(h1+1)/3, so h1=R:r>=1/3 , h1=G:r>=2/3, h1=B:r=1. The first two cases are impossible because lowestChanToAnchors(rToChannelOrder(1/3 or 2/3)[0]) returns [G,B] or [B,R] whose h1 is respectively G or B, thus contradicting the first two assumptions. Regarding the third assumption: lowestChanToAnchors(rToChannelOrder(1)[0]) returns [B,R] (so the assumption holds) whose h2 is R, and the h in rToChannelOrder(1) is R, so h2=h.
+        const A = D * Eye.intercol[h1] / ((1 - D) * Eye.intercol[h2])
+        const B = (1 - p) / p * (Eye.overwhiteNorm[h1] + A * Eye.overwhiteNorm[h2])
+        const Q = 1 / (A + B)
+        ratio[l] = B * Q
+        ratio[h1] = Q + ratio[l]
       }
+      ratio[h2] = 1
+      if (this.space === CS.EyePercI) {
+        // const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
+        // const [y, z] = Eye.RGBtoAnchorOrder(Ir)
+        // to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
+        const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
+        const [x, y, z] = Eye.RGBtoOrder(Ir)
+        to.chan[h2] = i ** gamma / (Ir[x] * Eye.alpha * Eye.alpha + Ir[y] * Eye.alpha + Ir[z])
+        to.chan[h1] = to.chan[h2] * ratio[h1]
+      } else { // (this.space === CS.EyeNormJ)
+        to.chan[h] = j ** gamma
+        if (h === h2) {
+          to.chan[h1] = to.chan[h2] * ratio[h1]
+        } else {
+          to.chan[h2] = to.chan[h1] / ratio[h1]
+        }
+      }
+      to.chan[l] = to.chan[h2] * ratio[l]
     }
-    to.chan[l] = to.chan[h2] * ratio[l]
   }
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      const I = [Eye.lumNorm[R] * rgb[R], Eye.lumNorm[G] * rgb[G], Eye.lumNorm[B] * rgb[B]]
-      const [y, z] = Eye.RGBtoAnchorOrder(I)
-      this.i = (I[y] + I[z]) ** (1 / gamma)
+      // const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
+      // const [y, z] = Eye.RGBtoAnchorOrder(I)
+      // this.i = (I[y] + I[z]) ** gammaInv
+      const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
+      const [x, y, z] = Eye.RGBtoOrder(I)
+      this.i = (I[x] * Eye.alpha * Eye.alpha + I[y] * Eye.alpha + I[z]) ** gammaInv
     } else {
       // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
-      this.j = rgb[h] ** (1 / gamma)
+      this.j = rgb[h] ** gammaInv
     }
   }
 
@@ -290,6 +307,15 @@ class Eye {
     } else
       if (rgb[G] > rgb[B]) { return G }
     return B
+  }
+
+  protected static RGBtoOrder (rgb : number[]) : Channel[] {
+    if (rgb[R] < rgb[G]) {
+      if (rgb[G] < rgb[B]) { return [R, G, B] }
+      return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
+    }
+    if (rgb[R] < rgb[B]) { return [G, R, B] }
+    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R] // note that white, grey and black return [G, R], which is what we want (they are the primaries bringing the most brightness to the human eye)
   }
 
   /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
@@ -330,7 +356,7 @@ class Eye {
 
 const cons = console
 const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
-const numR = 6
+const numR = 3
 const numP = 45
 const numI = 40
 const color = new Eye(CS.EyePercI)
@@ -410,9 +436,9 @@ for (let k = 0; k <= 16; k++) {
 
     <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
       <span v-for="(pRow,p) of rRow" :key="p">
-        <div style="display: inline-block; width: 20px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
       </span>
-      <span style="display: inline-block; width: 20px; height: 40px; border: 0px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+      <span style="display: inline-block; width: 10px; height: 40px; border: 0px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
     </div>
     <br>
 
