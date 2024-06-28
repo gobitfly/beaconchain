@@ -3,11 +3,29 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faInfoCircle
 } from '@fortawesome/pro-regular-svg-icons'
+import {
+  faArrowUpRightFromSquare
+} from '@fortawesome/pro-solid-svg-icons'
 import { type OverviewTableData } from '~/types/dashboard/overview'
+import { DashboardValidatorSubsetModal } from '#components'
 interface Props {
   data: OverviewTableData
 }
 const props = defineProps<Props>()
+const dialog = useDialog()
+
+const { dashboardKey } = useDashboardKey()
+const { getDashboardLabel } = useUserDashboardStore()
+
+const openValidatorModal = () => {
+  dialog.open(DashboardValidatorSubsetModal, {
+    data: {
+      context: 'dashboard',
+      dashboardName: getDashboardLabel(dashboardKey.value, 'validator'),
+      dashboardKey: dashboardKey.value
+    }
+  })
+}
 
 </script>
 <template>
@@ -21,6 +39,12 @@ const props = defineProps<Props>()
           <!-- eslint-disable-next-line vue/no-v-html -->
           <span v-html="props.data.value?.label" />
         </BcTooltip>
+        <FontAwesomeIcon
+          v-if="data?.addValidatorModal"
+          class="link popout"
+          :icon="faArrowUpRightFromSquare"
+          @click="openValidatorModal"
+        />
       </div>
     </div>
     <div v-for="(infos, index) in props.data.additonalValues" :key="index" class="additional">
@@ -49,6 +73,12 @@ const props = defineProps<Props>()
   display: flex;
   align-items: center;
 
+  .popout {
+    width: 14px;
+    margin-left: var(--padding);
+    flex-shrink: 0;
+  }
+
   .main,
   .additional {
     display: flex;
@@ -71,7 +101,7 @@ const props = defineProps<Props>()
 
 }
 
-.info-label-list{
+.info-label-list {
   text-align: left;
 }
 
