@@ -34,7 +34,7 @@ const groups = computed(() => {
   if (!overview.value?.groups) {
     return []
   }
-  return orderBy(overview.value.groups, [g => g.name.toLowerCase()], 'asc')
+  return orderBy(overview.value.groups.filter(g => !!g.count), [g => g.name.toLowerCase()], 'asc')
 })
 
 const selectAll = () => {

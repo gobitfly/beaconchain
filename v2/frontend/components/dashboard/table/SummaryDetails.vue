@@ -77,6 +77,7 @@ const rowClass = (data: SummaryRow) => {
           :property="prop.prop"
           :time-frame="timeFrame"
           :row="props.row"
+          :in-detail-view="true"
         />
       </div>
     </div>

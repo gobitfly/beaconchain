@@ -28,6 +28,7 @@ interface Props {
   data?: VDBGroupSummaryData,
   row: VDBSummaryTableRow,
   absolute?: boolean,
+  inDetailView?: boolean,
 }
 const props = defineProps<Props>()
 
@@ -50,7 +51,7 @@ const data = computed(() => {
       efficiency: {
         status_count: row.proposals
       },
-      context: 'proposal'
+      context: !props.inDetailView ? 'proposal' : undefined
     }
   } else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
     const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
