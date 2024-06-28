@@ -50,7 +50,7 @@ const data = computed(() => {
       efficiency: {
         status_count: row.proposals
       },
-      context: 'propsal'
+      context: 'proposal'
     }
   } else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
     const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
@@ -123,7 +123,7 @@ const data = computed(() => {
 })
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.row.group_id, groups.value)
+  return getGroupLabel($t, props.row.group_id, groups.value, $t('common.total'))
 })
 
 const openValidatorModal = () => {
@@ -133,7 +133,11 @@ const openValidatorModal = () => {
       timeFrame: props.timeFrame,
       groupName: groupName.value,
       groupId: props.row.group_id,
-      dashboardKey: dashboardKey.value
+      dashboardKey: dashboardKey.value,
+      summary: {
+        row: props.row,
+        data: props.data
+      }
     }
   })
 }
@@ -200,6 +204,8 @@ const openValidatorModal = () => {
     :context="data.context"
     :dashboard-key="dashboardKey"
     :group-id="props.row.group_id"
+    :data="props.data"
+    :row="props.row"
   />
   <div v-else-if="data?.attestationEfficiency !== undefined" class="info_row">
     <BcFormatPercent :percent="data?.attestationEfficiency" :color-break-point="80" />

@@ -706,11 +706,11 @@ func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSu
 
 	return []types.VDBSummaryValidatorsData{
 		{
-			Category:   "proposed",
+			Category:   "proposal_proposed",
 			Validators: proposedValidators,
 		},
 		{
-			Category:   "missed",
+			Category:   "proposal_missed",
 			Validators: missedValidators,
 		},
 	}

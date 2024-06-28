@@ -48,7 +48,8 @@
     "live": "Live",
     "current": "Current",
     "upcoming": "Upcoming", 
-    "past": "Past"
+    "past": "Past",
+    "total": "Total"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -369,6 +370,29 @@
       "el_deposits": {
         "title": "Execution Layer"
       },
+      "subset_dialog": {
+        "slashed": "Slashed",
+        "got_slashed": "Slashed by",
+        "category": {
+          "all": "All",
+          "online": "Online",
+          "offline": "Offline",
+          "pending": "Pending",
+          "deposited": "Deposited",
+          "depositing": "Depositing",
+          "sync_current": "Current Sync Committee",
+          "sync_upcoming": "Upcoming Sync Committee",
+          "sync_past": "Past Sync Committee",
+          "has_slashed": "Slashed",
+          "got_slashed": "Got slashed",
+          "proposal_proposed": "Proposed",
+          "proposal_missed": "Missed",
+          "exiting": "Exiting",
+          "exited":"Exited",
+          "withdrawing":"Withdrawing",
+          "withdrawn":"Withdrawn"
+        }
+      },
       "blocks": {
         "title": "Blocks",
         "search_placeholder": "Index, Public Key, Group",
@@ -481,7 +505,7 @@
           "apr": "APR",
           "luck": "Luck",
           "reward": "Reward",
-          "missed_rewards": "Total missed rewards"
+          "missed_rewards": "Missed rewards"
         },
         "status": {
           "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",
@@ -496,8 +520,8 @@
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
           "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
-          "amount_of_validators": "(<amount-of-validators>)",
-          "amount_of_rounds": "(<amount-of-rounds>)",
+          "amount_of_validators": "(amount of validators)",
+          "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
           "live": "Validators missing three consecutive attestations are considered offline."
         }

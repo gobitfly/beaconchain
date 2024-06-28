@@ -22,9 +22,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const showAbsoluteValues = ref(true)
+const showAbsoluteValues = ref<boolean | null>(null)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators, validatorCount } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
@@ -46,6 +46,12 @@ const loadData = (q?: TableQueryParams) => {
   }
   setQuery(q, true, true)
 }
+
+watch(validatorCount, (count) => {
+  if (count !== undefined && showAbsoluteValues.value === null) {
+    showAbsoluteValues.value = count < 100_000
+  }
+}, { immediate: true })
 
 watch([dashboardKey, overview], () => {
   loadData()
@@ -91,7 +97,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 <template>
   <div>
     <BcTableControl
-      v-model="showAbsoluteValues"
+      v-model:="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
@@ -149,31 +155,34 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               </template>
             </Column>
             <Column
+              field="validators"
               body-class="validator-column"
-              header-class="validator-column header"
+              header-class="validator-column"
               :sortable="showInDevelopment && colsVisible.validatorsSortable"
             >
               <template #header>
-                <div>
+                <div class="validators-header">
                   <div>{{ $t('dashboard.validator.col.validators') }}</div>
                   <div class="sub-header">
                     {{ $t('common.live') }}
                   </div>
+                  <BcTooltip
+                    class="info"
+                    tooltip-class="summary-info-tooltip"
+                    :text="$t('dashboard.validator.summary.tooltip.live')"
+                    @click.stop.prevent="() => { }"
+                  >
+                    <FontAwesomeIcon :icon="faInfoCircle" />
+                  </BcTooltip>
                 </div>
-                <BcTooltip
-                  class="info"
-                  tooltip-class="summary-info-tooltip"
-                  :text="$t('dashboard.validator.summary.tooltip.live')"
-                >
-                  <FontAwesomeIcon :icon="faInfoCircle" />
-                </BcTooltip>
               </template>
               <template #body="slotProps">
                 <DashboardTableSummaryValidators
-                  :absolute="showAbsoluteValues"
-                  :validators="slotProps.data.validators"
+                  :absolute="showAbsoluteValues ?? true"
+                  :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key="dashboardKey"
+                  :time-frame="selectedTimeFrame"
                   context="group"
                 />
               </template>
@@ -182,6 +191,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               v-if="colsVisible.efficiency"
               field="efficiency"
               :sortable="showInDevelopment"
+              body-class="efficiency-column"
               :header="$t('dashboard.validator.col.efficiency')"
             >
               <template #body="slotProps">
@@ -203,7 +213,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="attestations"
-                  :absolute="showAbsoluteValues"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -219,7 +229,8 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="proposals"
-                  :absolute="showAbsoluteValues"
+                  class="no-space-between-value"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -235,14 +246,20 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="reward"
-                  :absolute="showAbsoluteValues"
+                  class="no-space-between-value"
+                  :absolute="showAbsoluteValues ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
               </template>
             </Column>
             <template #expansion="slotProps">
-              <DashboardTableSummaryDetails :table-visibility="colsVisible" :row="slotProps.data" :time-frame="selectedTimeFrame" :absolute="showAbsoluteValues" />
+              <DashboardTableSummaryDetails
+                :table-visibility="colsVisible"
+                :row="slotProps.data"
+                :time-frame="selectedTimeFrame"
+                :absolute="showAbsoluteValues ?? true"
+              />
             </template>
             <template #empty>
               <DashboardTableAddValidator v-if="!hasValidators" />
@@ -273,6 +290,33 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
   font-size: var(--tiny_text_font_size);
 }
 
+.no-space-between-value {
+  justify-content: unset;
+  gap: var(--padding);
+}
+
+.validators-header {
+  .info {
+    position: absolute;
+    top: 16px;
+    right: var(--padding-large);
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  @media (min-width: 730px) {
+    position: relative;
+
+    .info {
+      top: 8px;
+      right: -50px;
+    }
+  }
+}
+
 :global(.summary-info-tooltip .bc-tooltip) {
   width: 120px;
 }
@@ -296,18 +340,14 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
     @include utils.set-all-width(90px);
   }
 
+  .status-column,
+  .efficiency-column {
+    padding: 7px !important;
+  }
+
   .validator-column {
-    @include utils.set-all-width(200px);
+    @include utils.set-all-width(240px);
     padding: 3px 7px !important;
-
-    &.header {
-      position: relative;
-
-      .info {
-        position: absolute;
-        right: 7px;
-      }
-    }
 
     @media (max-width: 570px) {
       @include utils.set-all-width(120px);

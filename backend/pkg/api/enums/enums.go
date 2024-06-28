@@ -444,3 +444,77 @@ var ValidatorDuties = struct {
 	DutyProposal,
 	DutySlashed,
 }
+
+// ----------------
+// Validator Dashboard Summary Table
+
+type ValidatorStatus int
+
+var _ EnumFactory[ValidatorStatus] = ValidatorStatus(0)
+
+const (
+	ValidatorStatusDeposited ValidatorStatus = iota
+	ValidatorStatusPending
+	ValidatorStatusOffline
+	ValidatorStatusOnline
+	ValidatorStatusSlashed
+	ValidatorStatusExited
+)
+
+func (vs ValidatorStatus) Int() int {
+	return int(vs)
+}
+
+func (ValidatorStatus) NewFromString(s string) ValidatorStatus {
+	switch s {
+	case "deposited":
+		return ValidatorStatusDeposited
+	case "pending":
+		return ValidatorStatusPending
+	case "offline":
+		return ValidatorStatusOffline
+	case "online":
+		return ValidatorStatusOnline
+	case "slashed":
+		return ValidatorStatusSlashed
+	case "exited":
+		return ValidatorStatusExited
+	default:
+		return ValidatorStatus(-1)
+	}
+}
+
+func (vs ValidatorStatus) ToString() string {
+	switch vs {
+	case ValidatorStatusDeposited:
+		return "deposited"
+	case ValidatorStatusPending:
+		return "pending"
+	case ValidatorStatusOffline:
+		return "offline"
+	case ValidatorStatusOnline:
+		return "online"
+	case ValidatorStatusSlashed:
+		return "slashed"
+	case ValidatorStatusExited:
+		return "exited"
+	default:
+		return ""
+	}
+}
+
+var ValidatorStatuses = struct {
+	Deposited ValidatorStatus
+	Pending   ValidatorStatus
+	Offline   ValidatorStatus
+	Online    ValidatorStatus
+	Slashed   ValidatorStatus
+	Exited    ValidatorStatus
+}{
+	ValidatorStatusDeposited,
+	ValidatorStatusPending,
+	ValidatorStatusOffline,
+	ValidatorStatusOnline,
+	ValidatorStatusSlashed,
+	ValidatorStatusExited,
+}
