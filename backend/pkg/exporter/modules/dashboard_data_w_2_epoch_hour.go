@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -150,7 +151,10 @@ func (d *epochToHourAggregator) getHourRetentionDurationEpochs() uint64 {
 }
 
 func (d *epochToHourAggregator) createHourlyPartition(epochStartFrom, epochStartTo uint64) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[3]s_%[1]d_%[2]d 
 		PARTITION OF %[3]s
 			FOR VALUES FROM (%[1]d) TO (%[2]d)
@@ -161,7 +165,10 @@ func (d *epochToHourAggregator) createHourlyPartition(epochStartFrom, epochStart
 }
 
 func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStartTo uint64) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%d_%d
 		`,
 		edb.HourWriterTableName, epochStartFrom, epochStartTo,
@@ -172,7 +179,10 @@ func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStart
 
 // epochStart incl, epochEnd excl
 func (d *epochToHourAggregator) aggregate1hWithBounds(epochStart, epochEnd uint64) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}

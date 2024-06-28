@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -64,7 +65,10 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 
 // epochStart incl, epochEnd excl
 func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uint64) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return err
 	}

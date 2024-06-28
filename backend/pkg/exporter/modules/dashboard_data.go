@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -41,9 +42,9 @@ const debugAddToColumnEngine = false // prod: true?
 
 // During backfill we can attempt to bootstrap the rolling tables on each UTC boundary day (as no tail fetching is needed here). So setting this will update the rolling tables every
 // 225 epochs (for ETH mainnet) but at the slight cost of increased aggregation time for this particular boundary epoch.
-const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = true // prod: true
+const debugAggregateRollingWindowsDuringBackfillUTCBoundEpoch = false // prod: true
 
-const debugDeadlockBandaid = true // prod: fix root cause then set to false
+const debugDeadlockBandaid = false // prod: fix root cause then set to false
 
 // This flag can be used to force a bootstrap of the rolling tables. This is done once, after the bootstrap completes it switches back to off and normal rolling aggregation.
 // Can be used to fix a corrupted rolling table.
@@ -118,7 +119,10 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
-		_, err := db.AlloyWriter.Exec("SET work_mem TO '128MB';")
+		_, err := db.AlloyWriter.ExecContext(func() context.Context {
+			a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+			return a
+		}(), "SET work_mem TO '128MB';")
 		if err != nil {
 			d.log.Fatal(err, "failed to set work_mem", 0)
 		}
@@ -1578,14 +1582,20 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 }
 
 func storeClBlockRewards(data map[uint64]*constypes.StandardBlockRewardsResponse) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to start cl blocks transaction")
 	}
 	defer utils.Rollback(tx)
 
 	for slot, rewards := range data {
-		_, err := tx.Exec(`
+		_, err := tx.ExecContext(func() context.Context {
+			a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+			return a
+		}(), `
 			INSERT INTO consensus_payloads (slot, cl_attestations_reward, cl_sync_aggregate_reward, cl_slashing_inclusion_reward)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (slot) DO NOTHING
@@ -1722,13 +1732,19 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 }
 
 func refreshMaterializedSlashedByCounts() error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
 	defer utils.Rollback(tx)
 
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), `
 		CREATE MATERIALIZED VIEW IF NOT EXISTS validator_dashboard_data_rolling_total_slashedby_count AS
 		SELECT slashed_by, COUNT(*) as slashed_amount
 		FROM validator_dashboard_data_rolling_total
