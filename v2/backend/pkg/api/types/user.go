@@ -3,6 +3,7 @@ package types
 type UserInfo struct {
 	Id            uint64             `json:"id"`
 	Email         string             `json:"email"`
+	Confirmed     bool               `json:"email_confirmed"`
 	ApiKeys       []string           `json:"api_keys"`
 	ApiPerks      ApiPerks           `json:"api_perks"`
 	PremiumPerks  PremiumPerks       `json:"premium_perks"`
@@ -19,6 +20,14 @@ type UserSubscription struct {
 }
 
 type InternalGetUserInfoResponse ApiDataResponse[UserInfo]
+
+type EmailUpdate struct {
+	Id           uint64 `json:"id"`
+	CurrentEmail string `json:"current_email"`
+	PendingEmail string `json:"pending_email"`
+}
+
+type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
 
 type ProductCategory string
 
