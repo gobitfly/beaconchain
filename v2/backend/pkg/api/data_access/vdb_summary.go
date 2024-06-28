@@ -549,19 +549,19 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	days := 0
 
 	switch period {
-	case enums.Last24h:
+	case enums.TimePeriods.Last24h:
 		table = "validator_dashboard_data_rolling_daily"
 		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
 		days = 1
-	case enums.Last7d:
+	case enums.TimePeriods.Last7d:
 		table = "validator_dashboard_data_rolling_weekly"
 		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
 		days = 7
-	case enums.Last30d:
+	case enums.TimePeriods.Last30d:
 		table = "validator_dashboard_data_rolling_monthly"
 		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
 		days = 30
-	case enums.AllTime:
+	case enums.TimePeriods.AllTime:
 		table = "validator_dashboard_data_rolling_total"
 		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
 		days = -1
