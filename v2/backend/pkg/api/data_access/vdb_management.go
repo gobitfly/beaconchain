@@ -14,7 +14,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -284,18 +283,18 @@ func (d *DataAccessService) GetValidatorDashboardOverview(dashboardId t.VDBId) (
 	})
 
 	query := `SELECT
-		SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-		SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-		SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+		COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+		COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+		COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 	FROM %[1]s v
 	INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
 	WHERE uvdv.dashboard_id = $1`
 
 	if dashboardId.Validators != nil {
 		query = `SELECT
-			SUM(attestations_reward)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-			SUM(blocks_proposed)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-			SUM(sync_executed)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
+			COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
+			COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
+			COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
 		FROM %[1]s
 		WHERE validator_index = ANY($1)`
 	}
@@ -509,18 +508,9 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 		return nil, nil, err
 	}
 
-	// Get the validator duties to check the last fulfilled attestation
-	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock()
+	validatorStatuses, err := d.getValidatorStatuses(validators)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// Set the threshold for "online" => "offline" to 2 epochs without attestation
-	attestationThresholdSlot := uint64(0)
-	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	if dutiesInfo.LatestSlot >= twoEpochs {
-		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
 	}
 
 	// Fill the data
@@ -536,36 +526,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(dashboardId t.VDBId,
 			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
 		}
 
-		status := ""
-		switch constypes.ValidatorStatus(metadata.Status) {
-		case constypes.PendingInitialized:
-			status = "deposited"
-		case constypes.PendingQueued:
-			status = "pending"
-			if metadata.Queues.ActivationIndex.Valid {
-				activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
-				row.QueuePosition = &activationIndex
-			}
-		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
-				if attested && slot > lastAttestionSlot {
-					lastAttestionSlot = slot
-				}
-			}
-			if lastAttestionSlot < uint32(attestationThresholdSlot) {
-				status = "offline"
-			} else {
-				status = "online"
-			}
-		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-			if metadata.Slashed {
-				status = "slashed"
-			} else {
-				status = "exited"
-			}
+		row.Status = validatorStatuses[validator].ToString()
+		if validatorStatuses[validator] == enums.ValidatorStatuses.Pending && metadata.Queues.ActivationIndex.Valid {
+			activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
+			row.QueuePosition = &activationIndex
 		}
-		row.Status = status
 
 		if search == "" {
 			data = append(data, row)
