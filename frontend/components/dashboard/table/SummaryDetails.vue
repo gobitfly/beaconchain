@@ -158,6 +158,7 @@ const rowClass = (data: SummaryRow) => {
 
       .value {
         flex-grow: 1;
+        overflow: hidden;
       }
     }
   }
