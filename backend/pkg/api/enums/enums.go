@@ -351,17 +351,17 @@ func (t TimePeriod) Int() int {
 
 func (TimePeriod) NewFromString(s string) TimePeriod {
 	switch s {
-	case "", "all_time":
+	case "all_time":
 		return AllTime
-	case "1h":
+	case "last_1h":
 		return Last1h
-	case "24h":
+	case "last_24h":
 		return Last24h
-	case "7d":
+	case "last_7d":
 		return Last7d
-	case "30d":
+	case "last_30d":
 		return Last30d
-	case "365d":
+	case "last_365d":
 		return Last365d
 	default:
 		return TimePeriod(-1)
