@@ -700,36 +700,40 @@
       "dialog_title": "Edit Subscriptions",
       "validators" : {
         "explanation": "All notifications are sent after network finality (~20mins).",
-        "offlineValidator": {
+        "offline_validator": {
           "option": "Validator is offline",
-          "hint": ["We will trigger a notification:",
-            "-Once the validator has been offline for 3 epochs.",
-            "-Every 32 Epochs (~3 hours) during your downtime.",
-            "-Once you are back online again."]
+          "hint": [
+            "We will trigger a notification:",
+            "- Once the validator has been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online again."
+          ]
         },
-        "offlineGroup": {
+        "offline_group": {
           "option":"Group is offline",
-          "hint": ["We will trigger a notification:",
-            "-Once {count}% of your group is offline.",
-            "-Once you have been offline for 3 epochs.",
-            "-Every 32 Epochs (~3 hours) during your downtime.",
-            "-Once you are back online.",
-            "*Note: ", "Notification resets if you do not meet the threshold of {count}%."],
-          "placeholder": "10"
+          "hint": [
+            "We will trigger a notification:",
+            "- Once {count}% of your group is offline.",
+            "- Once you have been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online.",
+            "*Note:* Notification resets if you do not meet the threshold of {count}%."
+          ],
+          "placeholder": ""
         },
-        "missedAttestations": {
+        "missed_attestations": {
           "option":"Attestations missed",
           "hint": "We will trigger every epoch (6.4 minutes) during downtime."
         },
-        "proposedBlock": {
+        "proposed_block": {
           "option":"Block proposal (missed & success)",
           "hint": ""
         },
-        "upcomingProposal": {
+        "upcoming_proposal": {
           "option":"Upcoming block proposal",
           "hint": "May trigger false positive notifications during reorgs."
         },
-        "syncCommittee": {
+        "sync_committee": {
           "option":"Sync committee",
           "hint": ""
         },
@@ -741,7 +745,7 @@
           "option":"Validator got slashed",
           "hint": ""
         },
-        "realTime": {
+        "real_time": {
           "option":"Realtime mode",
           "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
         },
@@ -750,24 +754,24 @@
       "accounts": {
         "explanation": "",
         "incoming": {
-          "option":"Incoming Transactions",
+          "option":"Incoming transactions",
           "hint": ""
         },
         "outgoing": {
-          "option":"Outgoing Transactions",
+          "option":"Outgoing transactions",
           "hint": ""
         },
         "erc20": {
-          "option":"Track ERC20 Token Transfers",
+          "option":"Track ERC20 token transfers",
           "hint": "",
           "placeholder": "value > $0"
         },
         "erc721": {
-          "option":"Track ERC721 Token Transfers",
+          "option":"Track ERC721 token transfers",
           "hint": ""
         },
         "erc1155": {
-          "option":"Track ERC1155 Token Transfers",
+          "option":"Track ERC1155 token transfers",
           "hint": ""
         },
         "all": {
@@ -778,9 +782,9 @@
           "option":"Networks",
           "hint": ""
         },
-        "ignoreSpam": {
+        "ignore_spam": {
           "option":"Ignore spam transactions",
-          "hint": ["Ignores ", "*zero value transfer tx's ", "and token tx's that have the ", "*\"hidden\" token label", "."]
+          "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
         }
       },
       "save":"Save"

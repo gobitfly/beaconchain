@@ -28,7 +28,7 @@ watch(props, (props) => {
   newDataReceived.value++
   if (props.validatorSub) {
     tPath = 'notifications.subscriptions.validators.'
-    validatorSubModifiable.value = { offlineGroup: -1, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
+    validatorSubModifiable.value = { offlineGroup: 10, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
   } else {
     tPath = 'notifications.subscriptions.accounts.'
     accountSubModifiable.value = structuredClone(toRaw(props.accountSub!))
@@ -36,8 +36,8 @@ watch(props, (props) => {
 }, { immediate: true })
 
 const closeDialog = () => {
-  const changements = true
-  dialogRef?.value.close(changements)
+  const modified = true
+  dialogRef?.value.close(modified)
 }
 </script>
 
@@ -47,32 +47,30 @@ const closeDialog = () => {
       {{ t('notifications.subscriptions.dialog_title') }}
     </div>
 
+    <div v-if="t(tPath+'explanation')" class="explanation">
+      {{ t(tPath+'explanation') }}
+    </div>
+
     <div v-if="props?.validatorSub">
-      <div class="explanation">
-        {{ t(tPath+'explanation') }}
-      </div>
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineValidator" :t-path="tPath+'offlineValidator'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineGroup" :t-path="tPath+'offlineGroup'" :lacks-premium-subscription="!props.premiumUser" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.missedAttestations" :t-path="tPath+'missedAttestations'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.proposedBlock" :t-path="tPath+'proposedBlock'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.upcomingProposal" :t-path="tPath+'upcomingProposal'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.syncCommittee" :t-path="tPath+'syncCommittee'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineValidator" :t-path="tPath+'offline_validator'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineGroup" :t-path="tPath+'offline_group'" :lacks-premium-subscription="!props.premiumUser" input-type="percent" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.missedAttestations" :t-path="tPath+'missed_attestations'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.proposedBlock" :t-path="tPath+'proposed_block'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.upcomingProposal" :t-path="tPath+'upcoming_proposal'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.syncCommittee" :t-path="tPath+'sync_committee'" :lacks-premium-subscription="false" />
       <NotificationsSubscriptionRow v-model="validatorSubModifiable.withdrawn" :t-path="tPath+'withdrawn'" :lacks-premium-subscription="false" />
       <NotificationsSubscriptionRow v-model="validatorSubModifiable.shlashed" :t-path="tPath+'shlashed'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.realTime" :t-path="tPath+'realTime'" :lacks-premium-subscription="!props.premiumUser" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!props.premiumUser" />
     </div>
 
     <div v-else-if="props?.accountSub">
-      <div class="explanation">
-        {{ t(tPath+'explanation') }}
-      </div>
       <NotificationsSubscriptionRow v-model="accountSubModifiable.incoming" :t-path="tPath+'incoming'" :lacks-premium-subscription="false" />
       <NotificationsSubscriptionRow v-model="accountSubModifiable.outgoing" :t-path="tPath+'outgoing'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="false" input-type="number" />
       <NotificationsSubscriptionRow v-model="accountSubModifiable.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="false" />
       <NotificationsSubscriptionRow v-model="accountSubModifiable.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.ignoreSpam" :t-path="tPath+'ignoreSpam'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="false" input-type="networks" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="false" />
     </div>
 
     <div class="footer">
@@ -89,13 +87,15 @@ const closeDialog = () => {
   flex-direction: column;
 
   .title {
-    @include fonts.subtitle_text;
-    color: var(--primary-color);
-    margin-bottom: var(--padding-small);
+    @include fonts.dialog_header;
+    text-align: center;
+    margin-bottom: var(--padding-large);
   }
 
   .explanation {
     color: var(--text-color-disabled);
+    margin-bottom: var(--padding-large);
+    @include fonts.small_text;
   }
 
   .footer {
