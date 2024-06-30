@@ -48,7 +48,7 @@ const accountSub: AccountSubscriptionState = {
 function openSubscriptions (props: any) {
   dialog.open(NotificationsSubscriptionModal, {
     data: props,
-    onClose: changes => onClose(changes?.data)
+    onClose: modified => onClose(modified?.data)
   })
 }
 </script>
