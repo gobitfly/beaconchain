@@ -11,6 +11,7 @@
  *
  *  Example of input:
  *
+ *    # About chocolate
  *    We will eat `chocolate` in 2 cases:
  *    - If your *validator* is online
  *    - During *the _nice_ days* of Easter\*.
@@ -21,7 +22,8 @@
  *
  *    The input can be either a string (that can hold several lines of text) or an array of strings (each element is a single line of text).
  *    For each line:
- *    `-` at the beginning transforms the line into a list item.
+ *      # or ## or ### at the beginning will show the line as a title (respectively h1, h2, h3)
+ *      - at the beginning will show the line as an item in a list.
  *      words surrounded with _ will be shown in italic
  *      words surrounded with * will be shown in bold
  *      words surrounded with ` will be shown with a type-writter font and not parsed (formatting tags inside ` and ` are ineffective)
