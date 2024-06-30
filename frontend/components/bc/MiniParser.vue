@@ -28,7 +28,7 @@
  *      words surrounded with * will be shown in bold
  *      words surrounded with ` will be shown with a type-writter font and not parsed (formatting tags inside ` and ` are ineffective)
  *      a link can be created by writing [a caption](and-a-url). The url can written directly or tell the name of a member of the object in props links.
- *    Mixes are possible: italic inside bold or bold inside italic.
+ *    Mixes are possible: italic inside bold or bold inside italic, code in italic or bold (if you surround ` and ` with the tags)...
  *
  *    If you need to display a character that is a tag, escape it with `\` and the parser will not interpret it.
  *    As Javascript itself uses `\` as an escaping mark, you will need to type `\\` and `\\\\` to express respectively `\` and `\\` when you
@@ -52,9 +52,9 @@ const parsingResult = computed(() => {
   return parse()
 })
 
+const Escapement = '\\'
 enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*', Code = '`', LinkStart = '[', LinkMid = '](', LinkEnd = ')' }
 const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart]
-const Escapement = '\\'
 const FormatToStyle: Record<string, string> = { italic: 'font-style: italic;', bold: 'font-weight: bold;', code: 'font-family: monospace;' }
 
 type Formatting = { italic: boolean, bold: boolean, code: boolean }
@@ -112,7 +112,7 @@ function parseList (output: List) : List {
 }
 
 function parseText (output: Block, text: string, format: Formatting = { italic: false, bold: false, code: false }) : Block {
-  const { pos: openingTagPos, tag: openingTag } = findFirstTag(text, 0)
+  const { pos: openingTagPos, tag: openingTag } = findTag(text, 0)
   if (openingTagPos < 0) { // no tag found
     addTextPart(output, text, format)
     return output
@@ -128,7 +128,7 @@ function parseText (output: Block, text: string, format: Formatting = { italic: 
     case Tag.LinkStart : middleIsAlink = true; closingTag = Tag.LinkEnd; break
     default: return output
   }
-  const { pos: closingTagPos } = findFirstTag(text, openingTagPos + openingTag.length, closingTag)
+  const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, closingTag)
   if (closingTagPos < 0) { // syntax error: either the closing tag has been forgotten or nested tags have their closure swapped
     addTextPart(output, text, format) // so we output the text without parsing it
     return output
@@ -152,7 +152,7 @@ function parseLeftMiddleRightTexts (output: Block, text: string, innerEnds: numb
 
 function parseLink (output: Block, text: string, format: Formatting) {
   // note: param `text` is of the form  `caption of the link](urlRef`  (both ends have been removed by the calling function)
-  const { pos: middleTagPos } = findFirstTag(text, 0, Tag.LinkMid)
+  const { pos: middleTagPos } = findTag(text, 0, Tag.LinkMid)
   const caption = parseText([], text.slice(0, middleTagPos), format) as Text[]
   const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
   const link = props.links && urlRef in props.links ? props.links[urlRef] : urlRef
@@ -170,19 +170,19 @@ const isLineAnItemInList = (line: string) => line.startsWith(Tag.Item)
 
 const ESC = '\u001B'
 
-/** @param wanted If given, finds the first occurence of this tag (this mode is used for closing tags). If omitted, finds the first opening tag that the parser recognises.
+/** @param wanted If given, finds the first valid occurence of this tag (this mode is used for closing tags). If omitted, finds the first opening tag that the parser recognises.
  *  @returns -1 if not found */
-function findFirstTag (text: string, start: number, wanted?: Tag) : { pos: number, tag: Tag } {
+function findTag (text: string, start: number, wanted?: Tag) : { pos: number, tag: Tag } {
   if (wanted !== undefined) {
     let pos = start - wanted.length
     do {
       pos = text.indexOf(wanted, pos + wanted.length)
-    } while (pos >= 1 && text[pos - 1] === ESC) // escaped tags are ignored
+    } while (pos >= 1 && (text[pos - 1] === ESC || text.slice(start, pos).split(Tag.Code).length % 2 === 0)) // are ignored: escaped tags and tags between ` and `
     return { pos, tag: wanted }
   }
   let closest = { pos: -1, tag: Tag.Italic }
   for (const tag of OpeningTags) {
-    const found = findFirstTag(text, start, tag)
+    const found = findTag(text, start, tag)
     if (found.pos >= 0 && (found.pos < closest.pos || closest.pos < 0)) {
       closest = found
     }
@@ -220,7 +220,7 @@ function getLineStatus (parsed: Parsed, line: Block, pos: number) : 'skip'|'blan
   if (line.length > 1 || !('text' in line[0]) || (line[0] as Text).text) {
     return 'ok'
   }
-  for (const skippingReasons of ['title']) {
+  for (const skippingReasons of ['title']) { // in the future, if new structures allow surrounding blank lines to be skipped, add them to this list
     if ((pos === 0 || pos === parsed.length - 1 || skippingReasons in parsed[pos - 1] || skippingReasons in parsed[pos + 1])) { return 'skip' }
   }
   return 'blank'
