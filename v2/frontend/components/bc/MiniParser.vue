@@ -67,7 +67,7 @@ type Parsed = Array<Title|List|Block>
 
 const inputArray = { lines: [] as string[], pos: 0 as number }
 
-/** converts the input into a structure that will be very easy to output in `<template>` */
+/** converts the input into a tree that will be very easy to browse afterwards to generate a v-DOM */
 function parse () : Parsed {
   const output: Parsed = []
   if (!inputArray.lines.length || (inputArray.lines.length === 1 && !inputArray.lines[0])) {
