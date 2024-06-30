@@ -55,6 +55,13 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
+    <Button @click="openSubscriptions({validatorSub, premiumUser: false})">
+      Subscribe to notifications for your validators
+    </Button>
+    <Button @click="openSubscriptions({accountSub, premiumUser: false})">
+      Subscribe to notifications for your accounts
+    </Button>
+    <br>
     <Button @click="openQuestion()">
       Open Question
     </Button>
@@ -63,12 +70,6 @@ function openSubscriptions (props: any) {
     </Button>
     <Button @click="openQuestion(undefined, 'cancel')">
       Open Question cancel?
-    </Button>
-    <Button @click="openSubscriptions({validatorSub, premiumUser: false})">
-      Subscribe to notifications for your validators
-    </Button>
-    <Button @click="openSubscriptions({accountSub, premiumUser: false})">
-      Subscribe to notifications for your accounts
     </Button>
   </div>
 </template>
