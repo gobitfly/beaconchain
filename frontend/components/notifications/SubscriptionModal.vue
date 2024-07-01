@@ -19,6 +19,7 @@ const newDataReceived = ref<number>(0) // used in <template> to trigger Vue to r
 let tPath: string
 const validatorSubModifiable = ref({} as ValidatorSubscriptionStateComplete)
 const accountSubModifiable = ref({} as AccountSubscriptionState)
+const all = ref(false)
 
 watch(props, (props) => {
   if (!props || (!props.validatorSub && !props.accountSub)) {
@@ -28,7 +29,7 @@ watch(props, (props) => {
   newDataReceived.value++
   if (props.validatorSub) {
     tPath = 'notifications.subscriptions.validators.'
-    validatorSubModifiable.value = { offlineGroup: 10, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
+    validatorSubModifiable.value = { offlineGroup: -1, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
   } else {
     tPath = 'notifications.subscriptions.accounts.'
     accountSubModifiable.value = structuredClone(toRaw(props.accountSub!))
@@ -52,25 +53,36 @@ const closeDialog = () => {
     </div>
 
     <div v-if="props?.validatorSub">
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineValidator" :t-path="tPath+'offline_validator'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineGroup" :t-path="tPath+'offline_group'" :lacks-premium-subscription="!props.premiumUser" input-type="percent" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.missedAttestations" :t-path="tPath+'missed_attestations'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.proposedBlock" :t-path="tPath+'proposed_block'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.upcomingProposal" :t-path="tPath+'upcoming_proposal'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.syncCommittee" :t-path="tPath+'sync_committee'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.withdrawn" :t-path="tPath+'withdrawn'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.shlashed" :t-path="tPath+'shlashed'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="validatorSubModifiable.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!props.premiumUser" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineValidator" :t-path="tPath+'offline_validator'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow
+        v-model="validatorSubModifiable.offlineGroup"
+        :t-path="tPath+'offline_group'"
+        :lacks-premium-subscription="!props.premiumUser"
+        input-type="percent"
+        :default="10"
+        class="row"
+      />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.missedAttestations" :t-path="tPath+'missed_attestations'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.proposedBlock" :t-path="tPath+'proposed_block'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.upcomingProposal" :t-path="tPath+'upcoming_proposal'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.syncCommittee" :t-path="tPath+'sync_committee'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.withdrawn" :t-path="tPath+'withdrawn'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.slashed" :t-path="tPath+'slashed'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="validatorSubModifiable.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!props.premiumUser" class="row" />
+      <hr>
+      <NotificationsSubscriptionRow v-model="all" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
     </div>
 
     <div v-else-if="props?.accountSub">
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.incoming" :t-path="tPath+'incoming'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.outgoing" :t-path="tPath+'outgoing'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="false" input-type="number" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="false" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="false" input-type="networks" />
-      <NotificationsSubscriptionRow v-model="accountSubModifiable.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="false" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.incoming" :t-path="tPath+'incoming'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.outgoing" :t-path="tPath+'outgoing'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="false" input-type="amount" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="false" class="row" />
+      <hr>
+      <NotificationsSubscriptionRow v-model="all" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="false" input-type="networks" class="row" />
+      <NotificationsSubscriptionRow v-model="accountSubModifiable.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="false" class="row" />
     </div>
 
     <div class="footer">
@@ -93,9 +105,14 @@ const closeDialog = () => {
   }
 
   .explanation {
-    color: var(--text-color-disabled);
-    margin-bottom: var(--padding-large);
+    margin-bottom: var(--padding);
     @include fonts.small_text;
+    opacity: 0.6;
+  }
+
+  .row {
+    margin-top: 14px;
+    margin-bottom: 14px;
   }
 
   .footer {
