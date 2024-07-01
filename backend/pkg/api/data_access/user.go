@@ -471,6 +471,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 }
 
 func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+	// TODO @DATA-ACCESS Adjust to api changes: return ValidatorDashboard Archived
 	result := &t.UserDashboardsData{}
 
 	dbReturn := []struct {

@@ -12,6 +12,7 @@ export interface AccountDashboard {
 export interface ValidatorDashboard {
   id: number /* uint64 */;
   name: string;
+  archived: boolean;
   public_ids?: VDBPublicId[];
 }
 export interface UserDashboardsData {
