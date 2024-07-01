@@ -1152,15 +1152,99 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(dashb
 		groupId = t.AllGroups
 	}
 
-	// Get the validator indices
-	var groupIds []uint64
-	if groupId != t.AllGroups {
-		groupIds = append(groupIds, uint64(groupId))
+	// Get the table name based on the period
+	table := ""
+	switch period {
+	case enums.TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_daily"
+	case enums.TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_weekly"
+	case enums.TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_monthly"
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+	default:
+		return nil, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	validatorIndices, err := d.getDashboardValidators(dashboardId /*, groupIds*/)
+	// Build the query and get the data
+	var queryResult []struct {
+		Slot           uint64        `db:"slot"`
+		Block          sql.NullInt64 `db:"exec_block_number"`
+		Status         string        `db:"status"`
+		ValidatorIndex uint64        `db:"validator_index"`
+	}
+
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.status"),
+			goqu.L("r.validator_index")).
+		From(goqu.T(table).As("r")).
+		InnerJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer")))
+
+	if len(dashboardId.Validators) > 0 {
+		ds = ds.
+			Where(goqu.L("r.validator_index = ANY(?)", pq.Array(dashboardId.Validators)))
+	} else {
+		ds = ds.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != t.AllGroups {
+			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = d.alloyReader.Select(&queryResult, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving data from table %s: %v", table, err)
+	}
+
+	// Process the data
+	proposedValidatorMap := make(map[uint64][]uint64)
+	missedValidatorMap := make(map[uint64][]uint64)
+	for _, row := range queryResult {
+		if row.Status == "1" {
+			if _, ok := proposedValidatorMap[row.ValidatorIndex]; !ok {
+				proposedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
+			}
+			if !row.Block.Valid {
+				return nil, fmt.Errorf("error no block number for slot %v found", row.Slot)
+			}
+			proposedValidatorMap[row.ValidatorIndex] = append(proposedValidatorMap[row.ValidatorIndex], uint64(row.Block.Int64))
+		} else {
+			if _, ok := missedValidatorMap[row.ValidatorIndex]; !ok {
+				missedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
+			}
+			missedValidatorMap[row.ValidatorIndex] = append(missedValidatorMap[row.ValidatorIndex], uint64(row.Slot))
+		}
+	}
+
+	type Proposed struct {
+		Index          uint64
+		ProposedBlocks []uint64
+	}
+	type Missed struct {
+		Index        uint64
+		MissedBlocks []uint64
+	}
+
+	for validatorIndex, blockNumbers := range proposedValidatorMap {
+		result.Proposed = append(result.Proposed, Proposed{
+			Index:          validatorIndex,
+			ProposedBlocks: blockNumbers,
+		})
+	}
+	for validatorIndex, slotNumbers := range missedValidatorMap {
+		result.Missed = append(result.Missed, Missed{
+			Index:        validatorIndex,
+			MissedBlocks: slotNumbers,
+		})
 	}
 
 	return result, nil
