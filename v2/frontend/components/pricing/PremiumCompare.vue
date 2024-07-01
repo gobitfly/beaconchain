@@ -251,7 +251,8 @@ const rows = computed(() => {
 
           @media (max-width: 1360px) {
             font-size: 12px;
-            margin-bottom: unset;
+            //margin-bottom: unset;
+            margin-bottom: 4px;
           }
         }
 
@@ -261,6 +262,7 @@ const rows = computed(() => {
           align-content: baseline;
           align-self: center;
           padding-left: 21px;
+          gap: 0;
         }
       }
 
