@@ -70,9 +70,6 @@ const inputArray = { lines: [] as string[], pos: 0 as number }
 /** converts the input into a tree that will be very easy to browse afterwards to generate a v-DOM */
 function parse () : Parsed {
   const output: Parsed = []
-  if (!inputArray.lines.length || (inputArray.lines.length === 1 && !inputArray.lines[0])) {
-    return []
-  }
   for (let i = 0; i < inputArray.lines.length; i++) {
     inputArray.lines[i] = replaceEscapements(inputArray.lines[i])
   }
@@ -177,7 +174,7 @@ function findTag (text: string, start: number, wanted?: Tag) : { pos: number, ta
     let pos = start - wanted.length
     do {
       pos = text.indexOf(wanted, pos + wanted.length)
-    } while (pos >= 1 && (text[pos - 1] === ESC || text.slice(start, pos).split(Tag.Code).length % 2 === 0)) // are ignored: escaped tags and tags between ` and `
+    } while (pos >= 1 && (text[pos - 1] === ESC || (text.slice(start, pos).split(Tag.Code).length - text.slice(start, pos).split(ESC + Tag.Code).length) % 2)) // are ignored: escaped tags and tags between ` and `
     return { pos, tag: wanted }
   }
   let closest = { pos: -1, tag: Tag.Italic }

@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
-const { availableNetworks } = useNetworkStore()
+import { IconNetwork } from '#components'
+import { ChainInfo } from '~/types/network'
 
-const { t } = useI18n()
+const { availableNetworks } = useNetworkStore()
 
 const selection = ref<string[]>(['1'])
 
-const buttons: MultiBarItem[] = [
-  {
-    component: undefined,
-    value: String(1),
-    tooltip: t('slotViz.filter.proposal')
-  }
-]
-
+const buttons = computed(() => {
+  const list: MultiBarItem[] = []
+  availableNetworks.value.forEach(chainId => list.push({
+    component: IconNetwork,
+    componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
+    value: String(chainId),
+    tooltip: ChainInfo[chainId].name + ' ' + ChainInfo[chainId].description
+  }))
+  return list
+})
 </script>
 
 <template>

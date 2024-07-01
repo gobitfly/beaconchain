@@ -42,10 +42,13 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       </template>
     </BcTooltip>
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
-    <div class="right">
+    <div v-if="type != 'networks'" class="right">
       <InputText v-if="type == 'number' || type == 'percent'" v-model="inputted" :placeholder="t(tPath + '.placeholder')" :class="[deactivationClass,type]" />
       <span v-if="type == 'percent'" :class="deactivationClass">%</span>
-      <Checkbox v-if="type != 'networks'" v-model="checked" :binary="true" class="checkbox" :class="deactivationClass" />
+      <Checkbox v-model="checked" :binary="true" class="checkbox" :class="deactivationClass" />
+    </div>
+    <div v-else class="right">
+      <NotificationsNetworkSelector />
     </div>
   </div>
 </template>
