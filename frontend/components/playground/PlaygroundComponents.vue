@@ -1,9 +1,15 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Dialogs">
+      <PlaygroundDialog />
+    </TabPanel>
+    <TabPanel header="MiniParser">
+      <PlaygroundMiniParser />
+    </TabPanel>
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
-    <TabPanel header="Clipping in the middle">
+    <TabPanel header="MiddleEllipsis">
       <PlaygroundMiddleEllipsisTests />
     </TabPanel>
     <TabPanel header="Tags">
@@ -20,9 +26,6 @@
     </TabPanel>
     <TabPanel header="Input">
       <PlaygroundInput />
-    </TabPanel>
-    <TabPanel header="Dialog">
-      <PlaygroundDialog />
     </TabPanel>
   </TabView>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BcDialogConfirm } from '#components'
+import { BcDialogConfirm, NotificationsSubscriptionModal } from '#components'
+import type { ValidatorSubscriptionState, AccountSubscriptionState } from '~/types/subscriptionModal'
 
 const dialog = useDialog()
 
@@ -12,19 +13,55 @@ function onClose (answer: boolean) {
 
 const openQuestion = (yesLabel?: string, noLabel?: string) => {
   dialog.open(BcDialogConfirm, {
-    onClose: response => onClose(response?.data),
     data: {
       title: 'My super question',
       question: 'Are you ready to rumble, or do you have second thoughts?',
       yesLabel,
       noLabel
-    }
+    },
+    onClose: response => onClose(response?.data)
+  })
+}
+
+const validatorSub: ValidatorSubscriptionState = {
+  offlineValidator: true,
+  offlineGroup: 40,
+  missedAttestations: true,
+  proposedBlock: true,
+  upcomingProposal: false,
+  syncCommittee: true,
+  withdrawn: true,
+  slashed: false,
+  realTime: false
+}
+
+const accountSub: AccountSubscriptionState = {
+  incoming: true,
+  outgoing: true,
+  erc20: -1,
+  erc721: true,
+  erc1155: false,
+  networks: [1, 100, 8453],
+  ignoreSpam: true
+}
+
+function openSubscriptions (props: any) {
+  dialog.open(NotificationsSubscriptionModal, {
+    data: props,
+    onClose: modified => onClose(modified?.data)
   })
 }
 </script>
 
 <template>
   <div class="container">
+    <Button @click="openSubscriptions({validatorSub, premiumUser: true})">
+      Subscribe to notifications for your validators
+    </Button>
+    <Button @click="openSubscriptions({accountSub, premiumUser: true})">
+      Subscribe to notifications for your accounts
+    </Button>
+    <br>
     <Button @click="openQuestion()">
       Open Question
     </Button>

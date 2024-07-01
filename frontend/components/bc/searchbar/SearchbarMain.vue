@@ -35,7 +35,6 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const MinimumTimeBetweenAPIcalls = 400 // ms
 const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
