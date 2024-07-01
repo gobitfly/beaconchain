@@ -26,7 +26,8 @@ const (
 	userGroupKey     = "user_group"
 )
 
-const authConfirmEmailRateLimit time.Duration = time.Minute * 2
+const authConfirmEmailRateLimit = time.Minute * 2
+const authEmailExpireTime = time.Minute * 30
 
 type ctxKet string
 
@@ -52,9 +53,9 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 }
 
 // TODO move to service?
-func (h *HandlerService) sendConfirmationEmail(email string) error {
+func (h *HandlerService) sendConfirmationEmail(userId uint64, email string) error {
 	// 1. check last confirmation time to enforce ratelimit
-	lastTs, err := h.dai.GetEmailConfirmationTime(email)
+	lastTs, err := h.dai.GetEmailConfirmationTime(userId)
 	if err != nil {
 		return errors.New("error getting confirmation-ts")
 	}
@@ -64,7 +65,7 @@ func (h *HandlerService) sendConfirmationEmail(email string) error {
 
 	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
 	confirmationHash := utils.RandomString(40)
-	err = h.dai.UpdateEmailConfirmationHash(email, confirmationHash)
+	err = h.dai.UpdateEmailConfirmationHash(userId, email, confirmationHash)
 	if err != nil {
 		return errors.New("error updating confirmation hash")
 	}
@@ -73,7 +74,7 @@ func (h *HandlerService) sendConfirmationEmail(email string) error {
 	subject := fmt.Sprintf("%s: Verify your email-address", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please verify your email on %[1]s by clicking this link:
 
-https://%[1]s/confirm/%[2]s
+https://%[1]s/api/i/users/confirm/%[2]s
 
 Best regards,
 
@@ -85,7 +86,7 @@ Best regards,
 	}
 
 	// 4. update confirmation time (only after mail was sent)
-	err = h.dai.UpdateEmailConfirmationTime(email)
+	err = h.dai.UpdateEmailConfirmationTime(userId)
 	if err != nil {
 		// shouldn't present this as error to user, confirmation works fine
 		log.Error(err, "error updating email confirmation time, rate limiting won't be enforced", 0, nil)
@@ -177,18 +178,53 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 	}
 
 	// add user
-	err = h.dai.CreateUser(email, string(passwordHash))
+	userId, err := h.dai.CreateUser(email, string(passwordHash))
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
 	// email confirmation
-	err = h.sendConfirmationEmail(email)
+	err = h.sendConfirmationEmail(userId, email)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+
+	returnOk(w, nil)
+}
+
+// email confirmations + changes
+func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	confirmationHash := v.checkConfirmationHash(mux.Vars(r)["token"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userId, err := h.dai.GetUserIdByConfirmationHash(confirmationHash)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	confirmationTime, err := h.dai.GetEmailConfirmationTime(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if confirmationTime.Add(authEmailExpireTime).Before(time.Now()) {
+		handleErr(w, errors.New("confirmation link expired"))
+		return
+	}
+
+	err = h.dai.UpdateUserEmail(userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// TODO: purge all user sessions
 
 	returnOk(w, nil)
 }
@@ -251,6 +287,146 @@ func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// TODO allow if user has any subsciptions etc?
+	err = h.dai.RemoveUser(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	returnNoContent(w)
+}
+
+func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Request) {
+	// validate user
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	userInfo, err := h.dai.GetUserInfo(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if !userInfo.Confirmed {
+		handleErr(w, errors.New("cannot update email for an unconfirmed address"))
+		return
+	}
+
+	// validate request
+	var v validationError
+	req := struct {
+		Email    string `json:"new_email"`
+		Password string `json:"password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate new email
+	newEmail := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	if newEmail == userInfo.Email {
+		handleErr(w, errors.New("can't reuse current email"))
+		return
+	}
+
+	userExists, err := h.dai.GetUserExists(newEmail)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if userExists {
+		handleErr(w, errors.New("email already registered"))
+		return
+	}
+
+	// validate password
+	password := v.checkPassword(req.Password)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		handleErr(w, newUnauthorizedErr("invalid password"))
+		return
+	}
+
+	// email confirmation
+	err = h.sendConfirmationEmail(userInfo.Id, newEmail)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalPutUserEmailResponse{
+		Data: types.EmailUpdate{
+			Id:           userInfo.Id,
+			CurrentEmail: userInfo.Email,
+			PendingEmail: newEmail,
+		},
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.Request) {
+	// validate user
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate request
+	var v validationError
+	req := struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate passwords
+	oldPassword := v.checkPassword(req.OldPassword)
+	newPassword := v.checkPassword(req.NewPassword)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
+	if err != nil {
+		handleErr(w, errors.New("invalid password"))
+		return
+	}
+
+	// change password
+	err = h.dai.UpdateUserPassword(user.Id, newPassword)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// TODO: purge all user sessions
+
+	returnNoContent(w)
 }
 
 // Middlewares

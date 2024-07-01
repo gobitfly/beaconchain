@@ -13,13 +13,17 @@ import (
 
 type UserRepository interface {
 	GetUserExists(email string) (bool, error)
-	CreateUser(email, password string) error
-	GetEmailConfirmationTime(email string) (time.Time, error)
-	UpdateEmailConfirmationTime(email string) error
-	GetEmailConfirmationHash(email string) (string, error)
-	UpdateEmailConfirmationHash(email, confirmationHash string) error
+	CreateUser(email, password string) (uint64, error)
+	RemoveUser(userId uint64) error
+	UpdateUserEmail(userId uint64) error
+	UpdateUserPassword(userId uint64, password string) error
+	GetEmailConfirmationTime(userId uint64) (time.Time, error)
+	UpdateEmailConfirmationTime(userId uint64) error
+	GetEmailConfirmationHash(userId uint64) (string, error)
+	UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error
 	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(apiKey string) (uint64, error)
+	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(id uint64) (*t.UserInfo, error)
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
@@ -30,29 +34,49 @@ func (d *DataAccessService) GetUserExists(email string) (bool, error) {
 	return d.dummy.GetUserExists(email)
 }
 
-func (d *DataAccessService) CreateUser(email, password string) error {
+func (d *DataAccessService) CreateUser(email, password string) (uint64, error) {
 	// TODO @DATA-ACCESS
+	// (password is already hashed)
 	return d.dummy.CreateUser(email, password)
 }
 
-func (d *DataAccessService) GetEmailConfirmationTime(email string) (time.Time, error) {
+func (d *DataAccessService) RemoveUser(userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationTime(email)
+	return d.dummy.RemoveUser(userId)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationTime(email string) error {
+func (d *DataAccessService) UpdateUserEmail(userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationTime(email)
+	// Called after user clicked link for email confirmations + changes, so:
+	// set user_confirmed true, set email (from email_change_to_value), update stripe email
+	// unset email_confirmation_hash
+	return d.dummy.UpdateUserEmail(userId)
 }
 
-func (d *DataAccessService) GetEmailConfirmationHash(email string) (string, error) {
+func (d *DataAccessService) UpdateUserPassword(userId uint64, password string) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationHash(email)
+	// (password is already hashed)
+	return d.dummy.UpdateUserPassword(userId, password)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+func (d *DataAccessService) GetEmailConfirmationTime(userId uint64) (time.Time, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationHash(email, confirmationHash)
+	return d.dummy.GetEmailConfirmationTime(userId)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationTime(userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationTime(userId)
+}
+
+func (d *DataAccessService) GetEmailConfirmationHash(userId uint64) (string, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationHash(userId)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationHash(userId, email, confirmationHash)
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
@@ -96,8 +120,14 @@ func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
 	return userId, err
 }
 
+func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByConfirmationHash(hash)
+}
+
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
+	// TODO @DATA-ACCESS fill Confirmed field
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},
