@@ -40,7 +40,7 @@ watch(modelValues, () => {
     >
       <template #icon>
         <slot :name="icon.value">
-          <component :is="icon.component" v-if="icon.component" />
+          <component :is="icon.component" v-if="icon.component" v-bind="icon.componentProps" class="max" />
           <FontAwesomeIcon v-else-if="icon.icon" :icon="icon.icon" />
         </slot>
       </template>
@@ -57,5 +57,9 @@ watch(modelValues, () => {
   background-color: var(--container-background);
   border: solid 1px var(--container-border-color);
   border-radius: var(--border-radius);
+}
+.max {
+  width: 100%;
+  height: 100%;
 }
 </style>
