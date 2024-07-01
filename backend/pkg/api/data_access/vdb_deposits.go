@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.ELDepositsCursor
@@ -177,7 +178,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(dashboardId t.VDBId,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.CLDepositsCursor
@@ -317,7 +318,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(dashboardId t.VDBId,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
 	responseData := t.VDBTotalExecutionDepositsData{
 		TotalAmount: decimal.Zero,
 	}
@@ -363,7 +364,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(dashboardId t.V
 	return &responseData, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
 	responseData := t.VDBTotalConsensusDepositsData{
 		TotalAmount: decimal.Zero,
 	}

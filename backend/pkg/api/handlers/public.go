@@ -32,7 +32,7 @@ func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetUserDashboards(userId)
+	data, err := h.dai.GetUserDashboards(r.Context(), userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -157,8 +157,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 
+	ctx := r.Context()
 	groupId := req.GroupId
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -172,7 +173,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, errors.New("error getting user id from context"))
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(userId)
+	userInfo, err := h.dai.GetUserInfo(ctx, userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -193,7 +194,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			return
 		}
 		// check if adding more validators than allowed
-		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(dashboardId, validators)
+		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(ctx, dashboardId, validators)
 		if err != nil {
 			handleErr(w, err)
 			return
@@ -202,7 +203,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
+		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
 
 	case req.DepositAddress != "":
 		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
@@ -210,7 +211,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, depositAddress, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
 
 	case req.WithdrawalAddress != "":
 		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
@@ -218,7 +219,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, withdrawalAddress, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
 		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
@@ -226,7 +227,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
 	}
 
 	if dataErr != nil {
@@ -261,7 +262,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, err)
 		return
 	}
-	err = h.dai.RemoveValidatorDashboardValidators(dashboardId, validators)
+	err = h.dai.RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
 	if err != nil {
 		handleErr(w, err)
 		return
