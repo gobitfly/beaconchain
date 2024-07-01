@@ -726,61 +726,52 @@
           "hint": "We will trigger every epoch (6.4 minutes) during downtime."
         },
         "proposed_block": {
-          "option":"Block proposal (missed & success)",
-          "hint": ""
+          "option":"Block proposal (missed & success)"
         },
         "upcoming_proposal": {
           "option":"Upcoming block proposal",
           "hint": "May trigger false positive notifications during reorgs."
         },
         "sync_committee": {
-          "option":"Sync committee",
-          "hint": ""
+          "option":"Sync committee"
         },
         "withdrawn": {
-          "option":"Withdrawal processed",
-          "hint": ""
+          "option":"Withdrawal processed"
         },
-        "shlashed": {
-          "option":"Validator got slashed",
-          "hint": ""
+        "slashed": {
+          "option":"Validator got slashed"
         },
         "real_time": {
           "option":"Realtime mode",
           "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
         },
-        "all": "All events"
+        "all": {
+          "option":"All events"
+        }
       },
       "accounts": {
         "explanation": "",
         "incoming": {
-          "option":"Incoming transactions",
-          "hint": ""
+          "option":"Incoming transactions"
         },
         "outgoing": {
-          "option":"Outgoing transactions",
-          "hint": ""
+          "option":"Outgoing transactions"
         },
         "erc20": {
           "option":"Track ERC20 token transfers",
-          "hint": "",
           "placeholder": "value > $0"
         },
         "erc721": {
-          "option":"Track ERC721 token transfers",
-          "hint": ""
+          "option":"Track ERC721 token transfers"
         },
         "erc1155": {
-          "option":"Track ERC1155 token transfers",
-          "hint": ""
+          "option":"Track ERC1155 token transfers"
         },
         "all": {
-          "option":"All events",
-          "hint": ""
+          "option":"All events"
         },
         "networks": {
-          "option":"Networks",
-          "hint": ""
+          "option":"Networks"
         },
         "ignore_spam": {
           "option":"Ignore spam transactions",

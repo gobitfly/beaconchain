@@ -8,7 +8,7 @@ export type ValidatorSubscriptionState = {
   upcomingProposal: boolean,
   syncCommittee: boolean,
   withdrawn: boolean,
-  shlashed: boolean,
+  slashed: boolean,
   realTime?: boolean
 }
 

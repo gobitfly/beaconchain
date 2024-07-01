@@ -31,14 +31,14 @@ const validatorSub: ValidatorSubscriptionState = {
   upcomingProposal: false,
   syncCommittee: true,
   withdrawn: true,
-  shlashed: false,
+  slashed: false,
   realTime: false
 }
 
 const accountSub: AccountSubscriptionState = {
   incoming: true,
   outgoing: true,
-  erc20: 303,
+  erc20: -1,
   erc721: true,
   erc1155: false,
   networks: [1, 100, 8453],
@@ -55,10 +55,10 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({validatorSub, premiumUser: false})">
+    <Button @click="openSubscriptions({validatorSub, premiumUser: true})">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({accountSub, premiumUser: false})">
+    <Button @click="openSubscriptions({accountSub, premiumUser: true})">
       Subscribe to notifications for your accounts
     </Button>
     <br>
