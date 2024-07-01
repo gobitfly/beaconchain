@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -22,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging
 
@@ -503,7 +504,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 	return result, &paging, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error) {
 	// TODO: implement data retrieval for the following new field
 	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
 	// TotalMissedRewards
@@ -735,7 +736,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 		}
 	}
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(validatorArr, days)
+	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, validatorArr, days)
 	if err != nil {
 		return nil, err
 	}
@@ -791,7 +792,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(dashboardId t.VDBI
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
+func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	var reward sql.NullInt64
 	table := ""
 
@@ -858,7 +859,7 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 
 // for summary charts: series id is group id, no stack
 
-func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
 	ret := &t.ChartData[int, float64]{}
 
 	type queryResult struct {
@@ -977,22 +978,22 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBI
 	return ret, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardSummaryValidators(dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
+func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetValidatorDashboardSummaryValidators(dashboardId, groupId)
+	return d.dummy.GetValidatorDashboardSummaryValidators(ctx, dashboardId, groupId)
 }
-func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
+func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
 	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardSyncSummaryValidators(dashboardId, groupId, period)
+	return d.dummy.GetValidatorDashboardSyncSummaryValidators(ctx, dashboardId, groupId, period)
 }
-func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
+func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
 	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardSlashingsSummaryValidators(dashboardId, groupId, period)
+	return d.dummy.GetValidatorDashboardSlashingsSummaryValidators(ctx, dashboardId, groupId, period)
 }
-func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
+func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
 	// TODO @DATA-ACCESS
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	return d.dummy.GetValidatorDashboardProposalSummaryValidators(dashboardId, groupId, period)
+	return d.dummy.GetValidatorDashboardProposalSummaryValidators(ctx, dashboardId, groupId, period)
 }
