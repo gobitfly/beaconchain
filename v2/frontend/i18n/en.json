@@ -749,6 +749,7 @@
       "share_custom_dashboards": "Share custom dashboards",
       "manage_dashboard_via_api": "Manage dashboard via API",
       "bulk_adding": "Bulk adding",
+      "bulk_adding_subtext": "(deposit address, withdrawal credentials, graffiti)",
       "heatmap_history_seconds": "Heatmap history",
       "summary_chart_history_seconds": "Summary chart history",
       "email_notifications_per_day": "Email notifications per day",
@@ -759,7 +760,8 @@
       "mobile_app_widget": "App widget",
       "monitor_machines": "Monitor machines",
       "machine_monitoring_history_seconds": "Machine monitoring history",
-      "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
+      "custom_machine_alerts": "Custom machine alerts",
+      "custom_machine_alerts_subtext": "(CPU, RAM,...)"
     },
     "view_addons": "View Add-Ons",
     "addons": {
