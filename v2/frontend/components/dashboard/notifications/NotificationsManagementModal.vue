@@ -60,7 +60,7 @@ const visible = defineModel<boolean>()
         Network coming soon!
       </TabPanel>
     </TabView>
-    <Button class="done-button" label="Done" />
+    <Button class="done-button" :label="$t('navigation.done')" @click="visible=false" />
   </BcDialog>
 </template>
 
@@ -70,18 +70,18 @@ const visible = defineModel<boolean>()
   height: 786px;
 }
 
-.done-button{
-  position: absolute;
-  bottom: calc(var(--padding-large) + var(--padding));
-  right: calc(var(--padding-large) + var(--padding));
-}
-
 :global(.notifications-management-tab-view >.p-tabview-panels) {
   min-height: 652px;
 }
 
 .p-tabview {
   margin-top: var(--padding-large);
+}
+
+.done-button{
+  position: absolute;
+  bottom: calc(var(--padding-large) + var(--padding));
+  right: calc(var(--padding-large) + var(--padding));
 }
 
 </style>
