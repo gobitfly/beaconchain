@@ -7,6 +7,7 @@ const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
+const { value: password } = useField<string>('password', value => validatePassword(value))
 const { value: newEmail } = useField<string>('newEmail', value => validateEmailAddress(value))
 const { value: confirmEmail } = useField<string>('confirmEmail', value => validateEmailAddress(value, newEmail.value))
 
@@ -23,6 +24,7 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     await fetch(API_PATH.USER_CHANGE_EMAIL, {
       body: {
+        password: values.password,
         email: values.newEmail
       }
     })
@@ -37,10 +39,11 @@ const onSubmit = handleSubmit(async (values) => {
   buttonsDisabled.value = false
 })
 
+const passwordError = ref<string|undefined>(undefined)
 const newEmailError = ref<string|undefined>(undefined)
 const confirmEmailError = ref<string|undefined>(undefined)
 
-const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && !Object.keys(errors.value).length)
+const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && password.value && !Object.keys(errors.value).length)
 
 </script>
 
@@ -48,6 +51,23 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
   <form class="email-container" @submit="onSubmit">
     <div class="title">
       {{ $t('user_settings.email.title') }}
+    </div>
+    <label for="password">
+      {{ $t('user_settings.email.password') }}
+    </label>
+    <div class="input-row">
+      <InputText
+        id="password"
+        v-model="password"
+        type="password"
+        :class="{ 'p-invalid': errors?.password }"
+        aria-describedby="text-error"
+        @focusin="passwordError = undefined"
+        @focusout="passwordError = errors?.password"
+      />
+      <div class="p-error">
+        {{ passwordError || '&nbsp;' }}
+      </div>
     </div>
     <label for="new-email">
       {{ $t('user_settings.email.new') }}
