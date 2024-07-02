@@ -40,7 +40,7 @@ const icon = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.button-tooltip{
+.button-tooltip {
   width: max-content;
   text-align: left;
   .individual{

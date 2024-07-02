@@ -15,27 +15,31 @@ interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
 export function useRefBridge () {
   const stoppers: WatchStopHandle[] = []
 
-  /** Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the empty ref.
-   * @param AtoB (optional) Call-back function that converts the first value into the type of the second value. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
-   * @param BtoA (optional) Call-back function that converts the second value into the type of the first value. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
+  /** Bridges two reactive variables of primitive types (string, boolean, number, enum, etc).
+   *
+   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
+   * @param AtoB (optional) Callback/Arrow function that converts the first value into the type of the second value. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+   * @param BtoA (optional) Callback/Arrow function that converts the second value into the type of the first value. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
   function bridgePrimitiveRefs<Ta, Tb> (refA: vRef<Ta>, refB: vRef<Tb>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
     stoppers.push(watch(refA, () => {
       const AasB = (refA.value !== undefined) ? (AtoB ? AtoB(refA.value) : <Tb>(refA.value as unknown)) : undefined
-      if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
+      if (AasB !== refB.value) {
         refB.value = AasB
       }
     }, { immediate: true }))
     stoppers.push(watch(refB, () => {
       const BasA = (refB.value !== undefined) ? (BtoA ? BtoA(refB.value) : <Ta>(refB.value as unknown)) : undefined
-      if (JSON.stringify(BasA) !== JSON.stringify(refA.value)) {
+      if (BasA !== refA.value) {
         refA.value = BasA
       }
     }))
   }
 
-  /** Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the empty ref.
-   * @param AtoB (optional) Call-back function that converts the elements of the first array into elements compatibles with the second array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
-   * @param BtoA (optional) Call-back function that converts the elements of the second array into elements compatibles with the first array. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
+  /** Bridges two reactive arrays.
+   *
+   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
+   * @param AtoB (optional) Callback/Arrow function that converts the elements of the first array into elements compatibles with the second array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+   * @param BtoA (optional) Callback/Arrow function that converts the elements of the second array into elements compatibles with the first array. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
   function bridgeArraysRefs<Ta, Tb> (refA: vRef<Ta[]>, refB: vRef<Tb[]>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
     stoppers.push(watch(refA, () => {
       const AasB = refA.value ? refA.value.map(el => AtoB ? AtoB(el) : <Tb>(el as unknown)) : undefined
@@ -51,9 +55,11 @@ export function useRefBridge () {
     }))
   }
 
-  /** Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the empty ref.
-   * @param AtoB Call-back function that converts the first object into the type of the second object.
-   * @param BtoA Call-back function that converts the second object into the type of the first object. */
+  /** Bridges two reactive objects.
+   *
+   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
+   * @param AtoB Callback/Arrow function that converts the first object into the type of the second object.
+   * @param BtoA Callback/Arrow function that converts the second object into the type of the first object. */
   function bridgeObjectRefs<Ta, Tb> (refA: vRef<Ta>, refB: vRef<Tb>, AtoB: ConverterCallback<Ta, Tb>, BtoA: ConverterCallback<Tb, Ta>) : void {
     stoppers.push(watch(refA, () => {
       const AasB = (refA.value !== undefined) ? AtoB(refA.value) : undefined
