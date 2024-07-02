@@ -12,7 +12,7 @@ import (
 )
 
 type UserRepository interface {
-	GetUserExists(email string) (bool, error)
+	GetUserByEmail(email string) (uint64, error)
 	CreateUser(email, password string) (uint64, error)
 	RemoveUser(userId uint64) error
 	UpdateUserEmail(userId uint64) error
@@ -21,7 +21,7 @@ type UserRepository interface {
 	UpdateEmailConfirmationTime(userId uint64) error
 	GetEmailConfirmationHash(userId uint64) (string, error)
 	UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error
-	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
+	GetUserCredentialInfo(userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(apiKey string) (uint64, error)
 	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(id uint64) (*t.UserInfo, error)
@@ -29,9 +29,10 @@ type UserRepository interface {
 	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
 }
 
-func (d *DataAccessService) GetUserExists(email string) (bool, error) {
+func (d *DataAccessService) GetUserByEmail(email string) (uint64, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetUserExists(email)
+	// return dataaccess.ErrNotFound if not present
+	return d.dummy.GetUserByEmail(email)
 }
 
 func (d *DataAccessService) CreateUser(email, password string) (uint64, error) {
@@ -79,13 +80,14 @@ func (d *DataAccessService) UpdateEmailConfirmationHash(userId uint64, email, co
 	return d.dummy.UpdateEmailConfirmationHash(userId, email, confirmationHash)
 }
 
-func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+func (d *DataAccessService) GetUserCredentialInfo(userId uint64) (*t.UserCredentialInfo, error) {
 	// TODO @patrick post-beta improve product-mgmt
-	result := &t.UserCredentialInfo{}
+	// TODO @DATA-ACCESS adjust to return struct changes (email + email_confirmed)
+	/*result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
 			latest_and_greatest_sub AS (
-				SELECT user_id, product_id FROM users_app_subscriptions 
+				SELECT user_id, product_id FROM users_app_subscriptions
 				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
@@ -101,14 +103,15 @@ func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredenti
 					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group 
+		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group
 		FROM users
-		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id  
+		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id
 		WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
 	}
-	return result, err
+	return result, err*/
+	return d.dummy.GetUserCredentialInfo(userId)
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
@@ -127,7 +130,6 @@ func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, er
 
 func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
-	// TODO @DATA-ACCESS fill Confirmed field
 	userInfo := &t.UserInfo{
 		Id:      userId,
 		ApiKeys: []string{},

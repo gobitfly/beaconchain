@@ -43,8 +43,8 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
-func (d *DummyService) GetUserExists(email string) (bool, error) {
-	r := false
+func (d *DummyService) GetUserByEmail(email string) (uint64, error) {
+	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
 }
@@ -93,7 +93,7 @@ func (d *DummyService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	return &r, err
 }
 
-func (d *DummyService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+func (d *DummyService) GetUserCredentialInfo(userId uint64) (*t.UserCredentialInfo, error) {
 	r := t.UserCredentialInfo{}
 	err := commonFakeData(&r)
 	return &r, err

@@ -74,7 +74,7 @@ func (h *HandlerService) sendConfirmationEmail(userId uint64, email string) erro
 	subject := fmt.Sprintf("%s: Verify your email-address", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please verify your email on %[1]s by clicking this link:
 
-https://%[1]s/api/i/users/confirm/%[2]s
+https://%[1]s/api/i/users/email-confirmations/%[2]s
 
 Best regards,
 
@@ -155,13 +155,13 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userExists, err := h.dai.GetUserExists(email)
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	if userExists {
-		returnConflict(w, errors.New("email already registered"))
+	_, err := h.dai.GetUserByEmail(email)
+	if !errors.Is(err, dataaccess.ErrNotFound) {
+		if err == nil {
+			returnConflict(w, errors.New("email already registered"))
+		} else {
+			handleErr(w, err)
+		}
 		return
 	}
 
@@ -249,12 +249,21 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
-	user, err := h.dai.GetUserCredentialInfo(email)
+	userId, err := h.dai.GetUserByEmail(email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	user, err := h.dai.GetUserCredentialInfo(userId)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = badCredentialsErr
 		}
 		handleErr(w, err)
+		return
+	}
+	if !user.EmailConfirmed {
+		handleErr(w, newUnauthorizedErr("email not confirmed"))
 		return
 	}
 
@@ -313,13 +322,13 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		handleErr(w, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(user.Id)
+	userInfo, err := h.dai.GetUserCredentialInfo(user.Id)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if !userInfo.Confirmed {
-		handleErr(w, errors.New("cannot update email for an unconfirmed address"))
+	if !userInfo.EmailConfirmed {
+		handleErr(w, newConflictErr("email not confirmed"))
 		return
 	}
 
@@ -341,17 +350,17 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if newEmail == userInfo.Email {
-		handleErr(w, errors.New("can't reuse current email"))
+		handleErr(w, newConflictErr("can't reuse current email"))
 		return
 	}
 
-	userExists, err := h.dai.GetUserExists(newEmail)
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	if userExists {
-		handleErr(w, errors.New("email already registered"))
+	_, err = h.dai.GetUserByEmail(newEmail)
+	if !errors.Is(err, dataaccess.ErrNotFound) {
+		if err == nil {
+			handleErr(w, newConflictErr("email already registered"))
+		} else {
+			handleErr(w, err)
+		}
 		return
 	}
 

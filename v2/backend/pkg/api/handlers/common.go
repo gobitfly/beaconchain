@@ -85,6 +85,7 @@ var (
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
 	errForbidden    = errors.New("forbidden")
+	errConflict     = errors.New("conflict")
 )
 
 type Paging struct {
@@ -593,6 +594,9 @@ func handleErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, errForbidden) {
 		returnForbidden(w, err)
 		return
+	} else if errors.Is(err, errConflict) {
+		returnConflict(w, err)
+		return
 	}
 	returnInternalServerError(w, err)
 }
@@ -615,6 +619,10 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
+}
+
+func newConflictErr(format string, args ...interface{}) error {
+	return errWithMsg(errConflict, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {
