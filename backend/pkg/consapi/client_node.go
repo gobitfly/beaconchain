@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/donovanhide/eventsource"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi/utils"
@@ -150,10 +149,7 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 	requestURL := fmt.Sprintf("%s/eth/v1/events?topics=%v", r.Endpoint, joinedTopics)
 	responseCh := make(chan *types.EventResponse, 32)
 
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
-	if err != nil {
-		log.Fatal(err, "error initializing event sse request", 0)
-	}
+	req, _ := http.NewRequest(http.MethodGet, requestURL, nil)
 	// disable gzip compression for sse
 	req.Header.Set("accept-encoding", "identity")
 
