@@ -22,7 +22,7 @@ const inputted = ref('')
 refreshUIfromState() // initial loading
 
 if (props.inputType === 'networks') {
-  pipeObjectRefs(networkSelectorState, state)
+  pipeObjectRefs(state, networkSelectorState)
 }
 
 const tooltipLines = computed(() => {
