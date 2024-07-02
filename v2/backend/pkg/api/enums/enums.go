@@ -407,6 +407,8 @@ func (t TimePeriod) Duration() time.Duration {
 
 type ValidatorDuty int
 
+var _ EnumFactory[ValidatorDuty] = ValidatorDuty(0)
+
 const (
 	DutyNone ValidatorDuty = iota
 	DutySync
@@ -517,4 +519,48 @@ var ValidatorStatuses = struct {
 	ValidatorStatusOnline,
 	ValidatorStatusSlashed,
 	ValidatorStatusExited,
+}
+
+// Validator Reward Chart Efficiency Filter
+
+type VDBSummaryChartEfficiency int
+
+var _ EnumFactory[VDBSummaryChartEfficiency] = VDBSummaryChartEfficiency(0)
+
+const (
+	VDBSummaryChartAll VDBSummaryChartEfficiency = iota
+	VDBSummaryChartAttestation
+	VDBSummaryChartSync
+	VDBSummaryChartProposal
+)
+
+func (c VDBSummaryChartEfficiency) Int() int {
+	return int(c)
+}
+
+func (VDBSummaryChartEfficiency) NewFromString(s string) VDBSummaryChartEfficiency {
+	switch s {
+	case "", "all":
+		return VDBSummaryChartAll
+	case "attestation":
+		return VDBSummaryChartAttestation
+	case "sync":
+		return VDBSummaryChartSync
+	case "proposal":
+		return VDBSummaryChartProposal
+	default:
+		return VDBSummaryChartEfficiency(-1)
+	}
+}
+
+var VDBSummaryChartEfficiencyFilters = struct {
+	All         VDBSummaryChartEfficiency
+	Attestation VDBSummaryChartEfficiency
+	Sync        VDBSummaryChartEfficiency
+	Proposal    VDBSummaryChartEfficiency
+}{
+	VDBSummaryChartAll,
+	VDBSummaryChartAttestation,
+	VDBSummaryChartSync,
+	VDBSummaryChartProposal,
 }

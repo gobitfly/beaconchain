@@ -100,9 +100,9 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdBySession(r)
-	if err != nil {
-		handleErr(w, err)
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
 		return
 	}
 	data, err := h.dai.GetUserDashboards(userId)
@@ -180,9 +180,9 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, err := h.GetUserIdBySession(r)
-	if err != nil {
-		handleErr(w, err)
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
 		return
 	}
 	req := struct {
@@ -783,12 +783,21 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
+	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId)
+	q := r.URL.Query()
+	groupIds := v.checkGroupIdList(q.Get("group_ids"))
+	efficiency := checkEnum[enums.VDBSummaryChartEfficiency](&v, q.Get("filter"), "filter")
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiency)
 	if err != nil {
 		handleErr(w, err)
 		return
