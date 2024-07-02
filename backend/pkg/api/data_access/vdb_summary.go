@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/juliangruber/go-intersect"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -292,6 +293,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				resultEntry.Status.UpcomingSyncCount++
 			}
 		}
+		total.Status.CurrentSyncCount += resultEntry.Status.CurrentSyncCount
+		total.Status.UpcomingSyncCount += resultEntry.Status.UpcomingSyncCount
 
 		// Validator statuses
 		validatorStatuses, err := d.getValidatorStatuses(uiValidatorIndices)
@@ -437,6 +440,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		// We have more than one group and at least one group remains after the filtering so we need to show the total row
 		totalEntry := t.VDBSummaryTableRow{
 			GroupId:                  total.GroupId,
+			Status:                   total.Status,
 			Validators:               total.Validators,
 			AverageNetworkEfficiency: averageNetworkEfficiency,
 			Reward:                   total.Reward,
@@ -1091,53 +1095,211 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dash
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSlashingsSummaryValidators{}
 
+	type GotSlashedStruct struct {
+		Index     uint64
+		SlashedBy uint64
+	}
+	type HasSlashedStruct struct {
+		Index          uint64
+		SlashedIndices []uint64
+	}
+
+	// Get the table names based on the period
+	table := ""
+	slashedByCountTable := ""
+	switch period {
+	case enums.TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_daily"
+		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
+	case enums.TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_weekly"
+		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
+	case enums.TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_monthly"
+		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
+	default:
+		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	}
+
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
 		groupId = t.AllGroups
 	}
 
-	type queryResult struct {
-		SlashedInEpoch bool   `db:"slashed_in_epoch"`
-		SlashedAmount  uint32 `db:"slashed_amount"`
+	var queryResult []struct {
+		EpochStart     uint64        `db:"epoch_start"`
+		EpochEnd       uint64        `db:"epoch_end"`
+		ValidatorIndex uint64        `db:"validator_index"`
+		SlashedBy      sql.NullInt64 `db:"slashed_by"`
+		SlashedAmount  uint32        `db:"slashed_amount"`
 	}
 
 	// Build the query
 	ds := goqu.Dialect("postgres").Select(
-		goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
-		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"))
+		goqu.L("r.epoch_start"),
+		goqu.L("r.epoch_end"),
+		goqu.L("r.validator_index"),
+		goqu.L("r.slashed_by"),
+		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount")).
+		From(goqu.T(table).As("r")).
+		LeftJoin(goqu.T(slashedByCountTable).As("s"), goqu.On(goqu.L("r.validator_index = s.slashed_by"))).
+		Where(goqu.L("r.slashed_by IS NOT NULL OR s.slashed_amount > 0"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
 		ds = ds.
-			From(goqu.L("validator_dashboard_data_epoch AS e")).
-			Where(goqu.L("e.validator_index = ANY(?) AND e.epoch = ?", pq.Array(dashboardId.Validators), epoch))
-	} else { // handle the case when we have a dashboard id and an optional group id
+			Where(goqu.L("r.validator_index = ANY(?)", pq.Array(dashboardId.Validators)))
+	} else {
 		ds = ds.
-			From(goqu.L("users_val_dashboards_validators AS v")).
-			InnerJoin(goqu.L("validator_dashboard_data_epoch AS e"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ? AND e.epoch = ?", dashboardId.Id, epoch))
-
-		if groupId != t.AllGroups {
-			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
-		}
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 	}
-
-	ds = ds.
-		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
-		LeftJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
-		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks AS r"), goqu.On(goqu.L("r.exec_block_hash = b.exec_block_hash")))
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
 
-	var rows []*queryResult
-	err = d.alloyReader.Select(&rows, query, args...)
+	err = d.alloyReader.Select(&queryResult, query, args...)
 	if err != nil {
-		log.Error(err, "error while getting validator dashboard group rewards", 0)
+		log.Error(err, "error while getting validator dashboard slashed validators list", 0)
 		return nil, err
+	}
+
+	// Process the data and get the slashing validators
+	var slashingValidators []uint64
+	for _, queryEntry := range queryResult {
+		if queryEntry.SlashedBy.Valid {
+			result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+				Index:     queryEntry.ValidatorIndex,
+				SlashedBy: uint64(queryEntry.SlashedBy.Int64),
+			})
+		}
+
+		if queryEntry.SlashedAmount > 0 {
+			slashingValidators = append(slashingValidators, queryEntry.ValidatorIndex)
+		}
+	}
+
+	if len(slashingValidators) == 0 {
+		// We don't have any slashing validators so we can return early
+		return result, nil
+	}
+
+	// If we have slashing validators then get the validators that got slashed
+	proposalSlashings := make(map[uint64][]uint64)
+	attestationSlashings := make(map[uint64][]uint64)
+
+	slotStart := queryResult[0].EpochStart * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	slotEnd := (queryResult[0].EpochEnd+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
+
+	wg := errgroup.Group{}
+
+	// Get the proposal slashings
+	wg.Go(func() error {
+		var queryResult []struct {
+			ProposerSlashing uint64 `db:"proposer"`
+			ProposerSlashed  uint64 `db:"proposerindex"`
+		}
+
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("b.proposer"),
+				goqu.L("ps.proposerindex")).
+			From(goqu.L("blocks_proposerslashings ps")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = ps.block_slot"))).
+			Where(goqu.L("ps.block_slot >= ? AND ps.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.alloyReader.Select(&queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
+		}
+
+		for _, queryEntry := range queryResult {
+			if _, ok := proposalSlashings[queryEntry.ProposerSlashing]; !ok {
+				proposalSlashings[queryEntry.ProposerSlashing] = make([]uint64, 0)
+			}
+			proposalSlashings[queryEntry.ProposerSlashing] = append(proposalSlashings[queryEntry.ProposerSlashing], queryEntry.ProposerSlashed)
+		}
+		return nil
+	})
+
+	// Get the attestation slashings
+	wg.Go(func() error {
+		var queryResult []struct {
+			Proposer               uint64        `db:"proposer"`
+			Attestestation1Indices pq.Int64Array `db:"attestation1_indices"`
+			Attestestation2Indices pq.Int64Array `db:"attestation2_indices"`
+		}
+
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("b.proposer"),
+				goqu.L("as.attestation1_indices"),
+				goqu.L("as.attestation2_indices")).
+			From(goqu.L("blocks_attesterslashings as")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = as.block_slot"))).
+			Where(goqu.L("as.block_slot >= ? AND as.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.alloyReader.Select(&queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
+		}
+
+		for _, queryEntry := range queryResult {
+			inter := intersect.Simple(queryEntry.Attestestation1Indices, queryEntry.Attestestation2Indices)
+			if len(inter) == 0 {
+				log.WarnWithStackTrace(nil, "No intersection found for attestation violation", 0)
+			}
+			for _, v := range inter {
+				if _, ok := attestationSlashings[queryEntry.Proposer]; !ok {
+					attestationSlashings[queryEntry.Proposer] = make([]uint64, 0)
+				}
+				attestationSlashings[queryEntry.Proposer] = append(attestationSlashings[queryEntry.Proposer], uint64(v.(int64)))
+			}
+		}
+		return nil
+	})
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine the proposal and attestation slashings
+	slashings := make(map[uint64][]uint64)
+	for slashingIdx, slashedIdxs := range proposalSlashings {
+		if _, ok := slashings[slashingIdx]; !ok {
+			slashings[slashingIdx] = make([]uint64, 0)
+		}
+		slashings[slashingIdx] = append(slashings[slashingIdx], slashedIdxs...)
+	}
+	for slashingIdx, slashedIdxs := range attestationSlashings {
+		if _, ok := slashings[slashingIdx]; !ok {
+			slashings[slashingIdx] = make([]uint64, 0)
+		}
+		slashings[slashingIdx] = append(slashings[slashingIdx], slashedIdxs...)
+	}
+
+	// Process the data
+	for slashingIdx, slashedIdxs := range slashings {
+		result.HasSlashed = append(result.HasSlashed, HasSlashedStruct{
+			Index:          slashingIdx,
+			SlashedIndices: slashedIdxs,
+		})
 	}
 
 	return result, nil
