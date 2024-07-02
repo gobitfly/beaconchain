@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+import type { ModelRef } from 'vue'
 import type { ChainID } from '~/types/network'
 
 const props = defineProps<{
@@ -11,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const { pipeObjectRefs } = useRefPipe()
+const { bridgeArraysRefs } = useRefBridge()
 
 const type = computed(() => props.inputType || 'binary')
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
@@ -22,7 +23,7 @@ const inputted = ref('')
 refreshUIfromState() // initial loading
 
 if (props.inputType === 'networks') {
-  pipeObjectRefs(state, networkSelectorState)
+  bridgeArraysRefs(state as ModelRef<ChainID[]>, networkSelectorState)
 }
 
 const tooltipLines = computed(() => {
