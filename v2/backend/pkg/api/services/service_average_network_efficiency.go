@@ -38,7 +38,7 @@ func (s *Services) updateEfficiencyData() error {
 	var efficiencyInfo *EfficiencyData
 	efficiencyMutex := &sync.RWMutex{}
 
-	if currentDutiesInfo == nil {
+	if currentEfficiencyInfo == nil {
 		efficiencyInfo = s.initEfficiencyInfo()
 	}
 
@@ -111,7 +111,7 @@ func (s *Services) updateEfficiencyData() error {
 	return nil
 }
 
-// GetCurrentEfficiencyInfo returns the current duties info and a function to release the lock
+// GetCurrentEfficiencyInfo returns the current efficiency info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the efficiency service from updating
 func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
 	currentEfficiencyMutex.RLock()
