@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
+import { getAllExistingChainIDs, ChainID } from '~/types/network'
 </script>
 
 <template>
@@ -41,7 +41,7 @@ import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
     <IconNetwork
       v-for="id of getAllExistingChainIDs(false)"
       :key="id"
-      :chain-id="id as ChainIDs"
+      :chain-id="id as ChainID"
       :colored="false"
       :harmonize-perceived-size="false"
       class="icon-size"
@@ -50,7 +50,7 @@ import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
     <IconNetwork
       v-for="id of getAllExistingChainIDs(false)"
       :key="id"
-      :chain-id="id as ChainIDs"
+      :chain-id="id as ChainID"
       :colored="true"
       :harmonize-perceived-size="false"
       class="icon-size"
@@ -59,7 +59,7 @@ import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
     <IconNetwork
       v-for="id of getAllExistingChainIDs(false)"
       :key="id"
-      :chain-id="id as ChainIDs"
+      :chain-id="id as ChainID"
       :colored="true"
       :harmonize-perceived-size="true"
       class="icon-size"

@@ -3,7 +3,7 @@
  * If you want to change the behavior of the component or the information it displays, it is possible that you simply need to change a few parameters
  * in searchbar.ts rather than altering the code of the component. The possibilities offered by this configuration file are explanined in readme.md
  */
-import { ChainIDs } from '~/types/network'
+import { ChainID } from '~/types/network'
 import {
   CategoryInfo,
   SubCategoryInfo,
@@ -71,7 +71,7 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
   >
     <!-- In this mode, all possible cells are shown (this was the very first design on Figma) -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
+    <div v-if="props.suggestion.chainId !== ChainID.Any" class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork
         :chain-id="props.suggestion.chainId"
@@ -121,7 +121,7 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
   >
     <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,deactivationClass]">
+    <div v-if="props.suggestion.chainId !== ChainID.Any" class="cell-icons" :class="[barShape,deactivationClass]">
       <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
       <IconNetwork
         :chain-id="props.suggestion.chainId"

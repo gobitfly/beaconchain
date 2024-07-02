@@ -33,7 +33,7 @@ import {
   type CategoryFilter,
   type NetworkFilter
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/network'
+import { ChainID, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const MinimumTimeBetweenAPIcalls = 400 // ms
@@ -52,7 +52,7 @@ const props = defineProps<{
   colorTheme: SearchbarColors, // colors of the bar and its dropdown
   barPurpose: SearchbarPurpose, // what the bar will be used for
   screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
-  onlyNetworks?: ChainIDs[], // the bar will search on these networks only
+  onlyNetworks?: ChainID[], // the bar will search on these networks only
   rowLacksPremiumSubscription?: PremiumRowCallBackFunction, // the bar calls this function for each row and deactivates the row if it returns `true`
   pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
   keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
@@ -89,7 +89,7 @@ const textFieldAndButton = ref<HTMLDivElement>()
 const textField = ref<HTMLInputElement>()
 
 let userInputNonce = 0
-const userInputNetworks = ref<NetworkFilter>(new Map<ChainIDs, boolean>()) // each entry will have a chain ID as key and the state of the option as value
+const userInputNetworks = ref<NetworkFilter>(new Map<ChainID, boolean>()) // each entry will have a chain ID as key and the state of the option as value
 const userInputCategories = ref<CategoryFilter>(new Map<Category, boolean>()) // each entry will have a Category as key and the state of the button as value
 let userInputNoNetworkIsSelected = true
 let userInputNoCategoryIsSelected = true
@@ -97,7 +97,7 @@ const userInputText = ref<string>('')
 let lastKnownText = ''
 
 const nextSearchScope = {
-  networks: new Set<ChainIDs>(),
+  networks: new Set<ChainID>(),
   categories: new Set<Category>()
 }
 
@@ -107,7 +107,7 @@ watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
 const results = {
   raw: {
     stringifyiedList: new Set<string>(), // List of results returned by the API, without structure nor order. The list can be built in serveral steps (for a same text input, if the user selects new filters, the list can augment).
-    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>> // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
+    scopeMatrix: {} as Record<ChainID, Record<Category, boolean>> // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
   },
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered-in results, organized
@@ -140,7 +140,7 @@ function empty () {
 function clearRawResults () {
   results.raw.stringifyiedList.clear()
   for (const nw in results.raw.scopeMatrix) {
-    const network = nw as unknown as ChainIDs
+    const network = nw as unknown as ChainID
     for (const cat in results.raw.scopeMatrix[network]) {
       const category = cat as unknown as Category
       results.raw.scopeMatrix[network][category] = false
@@ -470,11 +470,11 @@ function filterAndOrganizeResults () {
     }
     // discarding findings that our configuration (given in the props) forbids
     const category = TypeInfo[toBeAdded.type].category
-    if ((toBeAdded.chainId !== ChainIDs.Any && !userInputNetworks.value.has(toBeAdded.chainId)) || !userInputCategories.value.has(category)) {
+    if ((toBeAdded.chainId !== ChainID.Any && !userInputNetworks.value.has(toBeAdded.chainId)) || !userInputCategories.value.has(category)) {
       continue
     }
     // determining whether the finding is filtered in or out, sending it to the corresponding list
-    const acceptTheChainID = userInputNetworks.value.get(toBeAdded.chainId) || userInputNoNetworkIsSelected || toBeAdded.chainId === ChainIDs.Any
+    const acceptTheChainID = userInputNetworks.value.get(toBeAdded.chainId) || userInputNoNetworkIsSelected || toBeAdded.chainId === ChainID.Any
     const acceptTheCategory = userInputCategories.value.get(category) || userInputNoCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       resultsIn.push(toBeAdded)
@@ -533,11 +533,11 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   }
 
   const type = apiResponseElement.type as ResultType
-  let chainId : ChainIDs
+  let chainId : ChainID
   if (TypeInfo[type].belongsToAllNetworks) {
-    chainId = ChainIDs.Any
+    chainId = ChainID.Any
   } else {
-    chainId = apiResponseElement.chain_id as ChainIDs
+    chainId = apiResponseElement.chain_id as ChainID
   }
 
   const howToFillresultSuggestionOutput = TypeInfo[type].howToFillresultSuggestionOutput

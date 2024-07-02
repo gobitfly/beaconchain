@@ -4,17 +4,17 @@ import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
 interface ApiChainInfo {
-  chain_id: networkTs.ChainIDs,
+  chain_id: networkTs.ChainID,
   name: string
 }
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: networkTs.ChainIDs[],
-    currentNetwork: networkTs.ChainIDs
+    availableNetworks: networkTs.ChainID[],
+    currentNetwork: networkTs.ChainID
   }>({
-    availableNetworks: [networkTs.ChainIDs.Ethereum],
-    currentNetwork: networkTs.ChainIDs.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
+    availableNetworks: [networkTs.ChainID.Ethereum],
+    currentNetwork: networkTs.ChainID.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
   })
   return { data }
 })
@@ -43,7 +43,12 @@ export function useNetworkStore () {
   const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
-  function setCurrentNetwork (chainId: networkTs.ChainIDs) {
+  function isNetworkDisabled (chainId: networkTs.ChainID) : boolean {
+    // TODO: return `true` for everything once we are ready
+    return !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
+  }
+
+  function setCurrentNetwork (chainId: networkTs.ChainID) {
     data.value.currentNetwork = chainId
   }
 
@@ -55,29 +60,30 @@ export function useNetworkStore () {
     return networkTs.isL1(currentNetwork.value)
   }
 
-  function epochsPerDay (): number {
+  function epochsPerDay () : number {
     return networkTs.epochsPerDay(currentNetwork.value)
   }
 
-  function epochToTs (epoch: number): number | undefined {
+  function epochToTs (epoch: number) : number | undefined {
     return networkTs.epochToTs(currentNetwork.value, epoch)
   }
 
-  function slotToTs (slot: number): number | undefined {
+  function slotToTs (slot: number) : number | undefined {
     return networkTs.slotToTs(currentNetwork.value, slot)
   }
 
-  function tsToSlot (ts: number): number {
+  function tsToSlot (ts: number) : number {
     return networkTs.tsToSlot(currentNetwork.value, ts)
   }
 
-  function slotToEpoch (slot: number): number {
+  function slotToEpoch (slot: number) : number {
     return networkTs.slotToEpoch(currentNetwork.value, slot)
   }
 
   return {
     loadAvailableNetworks,
     availableNetworks,
+    isNetworkDisabled,
     currentNetwork,
     networkInfo,
     setCurrentNetwork,

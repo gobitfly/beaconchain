@@ -4,7 +4,9 @@ export type MultiBarItem = {
   icon?: IconDefinition
   component?: Component,
   componentProps?: any,
+  componentClass?: string,
   value: string,
   tooltip?: string,
-  className?: string
+  className?: string,
+  disabled?: boolean
 }

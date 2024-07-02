@@ -1,30 +1,21 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import { ChainInfo, ChainID } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { currentNetwork, isMainNet } = useNetworkStore()
+const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
 
-// TODO: get the list from the API...
-let ValidatorDashboardNetworkList: ChainIDs[]
-if (isMainNet()) {
-  ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Gnosis]
-} else {
-  ValidatorDashboardNetworkList = [ChainIDs.Holesky, ChainIDs.Chiado]
-}
-// ... and remove this.
-
-const network = defineModel<ChainIDs>('network')
+const network = defineModel<ChainID>('network')
 const selection = ref<string>('')
 
-watch(selection, (value) => { network.value = Number(value) as ChainIDs })
+watch(selection, (value) => { network.value = Number(value) as ChainID })
 
-const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
+const buttonList = availableNetworks.value.map((chainId) => {
   return {
     value: String(chainId),
     text: ChainInfo[chainId].family as string,
     subText: (ChainInfo[chainId].name !== ChainInfo[chainId].family as string) ? ChainInfo[chainId].name : ChainInfo[chainId].description,
-    disabled: !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value, // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
+    disabled: isNetworkDisabled(chainId),
     component: IconNetwork,
     componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
     componentClass: 'dashboard-creation-button-network-icon'

@@ -24,8 +24,8 @@
  *    For each line:
  *      # or ## or ### at the beginning will show the line as a title (respectively h1, h2, h3)
  *      - at the beginning will show the line as an item in a list.
- *      words surrounded with _ will be shown in italic
- *      words surrounded with * will be shown in bold
+ *      words surrounded with _ will be surrounded with <i> tags
+ *      words surrounded with * will be surrounded with <b> tags
  *      words surrounded with ` will be shown with a type-writter font and not parsed (formatting tags inside ` and ` are ineffective)
  *      a link can be created by writing [a caption](and-a-url). The url can written directly or tell the name of a member of the object in props links.
  *    Mixes are possible: italic inside bold or bold inside italic, code in italic or bold (if you surround ` and ` with the tags)...
@@ -34,24 +34,34 @@
  *    As Javascript itself uses `\` as an escaping mark, you will need to type `\\` and `\\\\` to express respectively `\` and `\\` when you
  *    hard-code the input in JS.
  *
+ *  About <i> and <b>:
+ *
+ *    Depending on the stylesheet of your website, those tags might not display your text in italic and bold.
+ *    If you want to force them to display italic and bold text against the style preferences of your website, you can define a class like so:
+ *      .my-own-bi {
+ *        :deep(b) { font-weight: bold }
+ *        :deep(i) { font-style: italic }
+ *      }
+ *    and assign it to the parser:
+ *      <BcMiniParser ... class="my-own-bi" />
 */
 
 import { type VNode } from 'vue'
 import { BcLink } from '#components'
 import { Target } from '~/types/links'
 
-const props = defineProps<{ input: string|string[], links?: Record<string, string> }>()
-
 const Escapement = '\\'
 enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*', Code = '`', LinkStart = '[', LinkMid = '](', LinkEnd = ')' }
 const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart]
 const ClosingTags: Record<string, Tag> = { [Tag.Italic]: Tag.Italic, [Tag.Bold]: Tag.Bold, [Tag.Code]: Tag.Code, [Tag.LinkStart]: Tag.LinkEnd }
 
-type VDOMnodes = Array<VNode|string>
+const props = defineProps<{ input: string|string[], links?: Record<string, string> }>()
 
+type VDOMnodes = Array<VNode|string>
+enum LineType { Useless, Blank, Title, List, Div }
+const ESC = '\u001B'
 const inputArray = { lines: [] as string[], pos: 0 as number }
 
-/** converts the input into a tree that will be very easy to browse afterwards to generate a v-DOM */
 function parse (props: {input: string|string[]}) : VDOMnodes {
   if (!Array.isArray(props.input)) {
     if (typeof props.input !== 'string') { return [] }
@@ -63,41 +73,39 @@ function parse (props: {input: string|string[]}) : VDOMnodes {
   inputArray.pos = 0
   const output: VDOMnodes = []
   while (inputArray.pos < inputArray.lines.length) {
-    if (isLineATitle(inputArray.lines[inputArray.pos])) {
-      output.push(parseTitle())
-    } else
-      if (isLineAnItemInList(inputArray.lines[inputArray.pos])) {
-        output.push(parseList())
-      } else
-        if (lineType() !== 'none') {
-          output.push(parseLine(lineType()))
-        } else {
-          inputArray.pos++
-        }
+    switch (getLineType()) {
+      case LineType.Title : output.push(parseTitle()); break
+      case LineType.List : output.push(parseList()); break
+      case LineType.Blank :
+      case LineType.Div : output.push(parseTextLine()); break
+      default: inputArray.pos++
+    }
   }
   return output
 }
 
 function parseTitle () : VNode {
-  const { height, tag } = isLineATitle(inputArray.lines[inputArray.pos])!
+  const { height, tag } = getTitleType(inputArray.pos)!
   return h('h' + height, {}, parseText(inputArray.lines[inputArray.pos++].slice(tag.length)))
 }
 
 function parseList () : VNode {
   const items : VDOMnodes = []
-  while (inputArray.pos < inputArray.lines.length && isLineAnItemInList(inputArray.lines[inputArray.pos])) {
+  while (inputArray.pos < inputArray.lines.length && getLineType() === LineType.List) {
     items.push(h('li', {}, parseText(inputArray.lines[inputArray.pos].slice(Tag.Item.length)))) // new item
     inputArray.pos++
   }
   return h('ul', {}, items)
 }
 
-function parseLine (lineType: 'full'|'blank'|'none') : VNode {
-  const pos = inputArray.pos++
-  switch (lineType) {
-    case 'full' : return h('div', {}, parseText(inputArray.lines[pos]))
-    default : return h('br', {})
+function parseTextLine () : VNode|string {
+  let output: VNode|string = ''
+  switch (getLineType()) {
+    case LineType.Div : output = h('div', {}, parseText(inputArray.lines[inputArray.pos])); break
+    case LineType.Blank : output = h('br', {}); break
   }
+  inputArray.pos++
+  return output
 }
 
 function parseText (text: string) : VDOMnodes {
@@ -135,8 +143,6 @@ function parseLink (text: string) : VNode|string {
   const target = (to.includes('://') || to.startsWith('www.')) ? Target.External : Target.Internal // correct 99% of the time I suppose
   return h(BcLink, { to, target, class: 'link' }, () => parseText(text.slice(0, middleTagPos)))
 }
-
-const ESC = '\u001B'
 
 /** @param wanted If given, finds the first valid occurence of this tag (this mode is used for closing tags). If omitted, finds the first opening tag that the parser recognises.
  *  @returns -1 if not found */
@@ -187,19 +193,21 @@ function cleanText (raw: string, forceSpaces = false) {
   return raw.replaceAll(ESC, '')
 }
 
-function isLineATitle (line: string) : { height: number, tag: Tag } | undefined {
+function getTitleType (pos: number) : { height: number, tag: Tag } | undefined {
   for (const title of [{ height: 3, tag: Tag.H3 }, { height: 2, tag: Tag.H2 }, { height: 1, tag: Tag.H1 }]) {
-    if (line.startsWith(title.tag)) { return title }
+    if (inputArray.lines[pos].startsWith(title.tag)) { return title }
   }
 }
 
-const isLineAnItemInList = (line: string) => line.startsWith(Tag.Item)
-
-function lineType () : 'full'|'blank'|'none' {
+function getLineType () : LineType {
   const pos = inputArray.pos
-  if (inputArray.lines[pos].length > 0) { return 'full' }
-  if (pos === 0 || pos === inputArray.lines.length - 1 || isLineATitle(inputArray.lines[pos - 1]) || isLineATitle(inputArray.lines[pos + 1])) { return 'none' }
-  return 'blank'
+  if (inputArray.lines[pos].length > 0) {
+    if (getTitleType(pos)) { return LineType.Title }
+    if (inputArray.lines[pos].startsWith(Tag.Item)) { return LineType.List }
+    return LineType.Div
+  }
+  if (pos === 0 || pos === inputArray.lines.length - 1 || getTitleType(pos - 1) || getTitleType(pos + 1)) { return LineType.Useless }
+  return LineType.Blank
 }
 </script>
 
