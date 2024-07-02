@@ -1,58 +1,58 @@
-import { type WatchStopHandle } from 'vue'
+import { type ModelRef, type WatchStopHandle } from 'vue'
 
-export interface ConverterCallBack<Tx, Ty> { (x: Tx) : Ty}
+type MetaRef<T> = ModelRef<T|undefined> | Ref<T|undefined>
 
 export function useRefPipe () {
   const stoppers: WatchStopHandle[] = []
 
-  function pipePrimitiveRefs<T> (refA: Ref<T>, refB: Ref<T>) {
-    stoppers.push(watch(refA, (a: T) => {
+  function pipePrimitiveRefs<T> (refA: MetaRef<T>, refB: MetaRef<T>) {
+    stoppers.push(watch(refA, (a) => {
       if (a !== refB.value) {
         refB.value = a
       }
     }, { immediate: true }))
-    stoppers.push(watch(refB, (b: T) => {
+    stoppers.push(watch(refB, (b) => {
       if (b !== refA.value) {
         refA.value = b
       }
     }, { immediate: true }))
   }
 
-  function pipePrimitiveRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta>, refB: Ref<Tb>) {
-    stoppers.push(watch(refA, (a: Ta) => {
+  function pipePrimitiveRefsOfDifferentTypes<Ta, Tb> (refA: MetaRef<Ta>, refB: MetaRef<Tb>) {
+    stoppers.push(watch(refA, (a) => {
       if (JSON.stringify(a) !== JSON.stringify(refB.value)) {
         refB.value = <Tb>(a as unknown)
       }
     }, { immediate: true }))
-    stoppers.push(watch(refB, (b: Tb) => {
+    stoppers.push(watch(refB, (b) => {
       if (JSON.stringify(b) !== JSON.stringify(refA.value)) {
         refA.value = <Ta>(b as unknown)
       }
     }, { immediate: true }))
   }
 
-  function pipeObjectRefs<T> (refA: Ref<T>, refB: Ref<T>) {
-    stoppers.push(watch(refA, (a: T) => {
+  function pipeObjectRefs<T> (refA: MetaRef<T>, refB: MetaRef<T>) {
+    stoppers.push(watch(refA, (a) => {
       if (JSON.stringify(a) !== JSON.stringify(refB.value)) {
         refB.value = a
       }
     }, { immediate: true }))
-    stoppers.push(watch(refB, (b: T) => {
+    stoppers.push(watch(refB, (b) => {
       if (JSON.stringify(b) !== JSON.stringify(refA.value)) {
         refA.value = b
       }
     }, { immediate: true }))
   }
 
-  function pipeArraysRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta[]>, refB: Ref<Tb[]>, AtoB: ConverterCallBack<Ta, Tb>, BtoA: ConverterCallBack<Tb, Ta>) {
-    stoppers.push(watch(refA, (a: Ta[]) => {
-      const AasB = a.map(el => AtoB(el))
+  function pipeArraysRefsOfDifferentTypes<Ta, Tb> (refA: MetaRef<Ta[]>, refB: MetaRef<Tb[]>) {
+    stoppers.push(watch(refA, (a) => {
+      const AasB = a ? a.map(el => <Tb>(el as unknown)) : undefined
       if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
         refB.value = AasB
       }
     }, { immediate: true }))
-    stoppers.push(watch(refB, (b: Tb[]) => {
-      const BasA = b.map(el => BtoA(el))
+    stoppers.push(watch(refB, (b) => {
+      const BasA = b ? b.map(el => <Ta>(el as unknown)) : undefined
       if (JSON.stringify(BasA) !== JSON.stringify(refA.value)) {
         refA.value = BasA
       }

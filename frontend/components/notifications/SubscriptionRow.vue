@@ -11,13 +11,19 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const { pipeObjectRefs } = useRefPipe()
 
 const type = computed(() => props.inputType || 'binary')
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
+const networkSelectorState = ref<ChainID[]>([])
 const checked = ref<boolean>(false)
 const inputted = ref('')
 
 refreshUIfromState() // initial loading
+
+if (props.inputType === 'networks') {
+  pipeObjectRefs(networkSelectorState, state)
+}
 
 const tooltipLines = computed(() => {
   let options
@@ -134,7 +140,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       />
     </div>
     <div v-else class="right">
-      <BcNetworkSelector /><!--v-model:multiselect="state" -->
+      <BcNetworkSelector v-model="networkSelectorState" />
     </div>
   </div>
 </template>
