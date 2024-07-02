@@ -12,11 +12,47 @@ import (
 )
 
 type UserRepository interface {
+	GetUserExists(email string) (bool, error)
+	CreateUser(email, password string) error
+	GetEmailConfirmationTime(email string) (time.Time, error)
+	UpdateEmailConfirmationTime(email string) error
+	GetEmailConfirmationHash(email string) (string, error)
+	UpdateEmailConfirmationHash(email, confirmationHash string) error
 	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(apiKey string) (uint64, error)
 	GetUserInfo(id uint64) (*t.UserInfo, error)
 	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+}
+
+func (d *DataAccessService) GetUserExists(email string) (bool, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserExists(email)
+}
+
+func (d *DataAccessService) CreateUser(email, password string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.CreateUser(email, password)
+}
+
+func (d *DataAccessService) GetEmailConfirmationTime(email string) (time.Time, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationTime(email)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationTime(email string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationTime(email)
+}
+
+func (d *DataAccessService) GetEmailConfirmationHash(email string) (string, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationHash(email)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationHash(email, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationHash(email, confirmationHash)
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
@@ -306,6 +342,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     1,
 					ShareCustomDashboards:           false,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      false,
 					HeatmapHistorySeconds:           0,
 					SummaryChartHistorySeconds:      3600 * 12,
 					EmailNotificationsPerDay:        5,
@@ -332,6 +369,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     3,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 7,
 					SummaryChartHistorySeconds:      3600 * 24 * 7,
 					EmailNotificationsPerDay:        15,
@@ -360,6 +398,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     10,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 30,
 					SummaryChartHistorySeconds:      3600 * 24 * 14,
 					EmailNotificationsPerDay:        20,
@@ -388,6 +427,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     30,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           true,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 365,
 					SummaryChartHistorySeconds:      3600 * 24 * 365,
 					EmailNotificationsPerDay:        50,
