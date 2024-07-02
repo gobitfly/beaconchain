@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {
-  faUser,
+  faGaugeSimpleMax,
   faMonitorWaveform,
   faBolt,
   faNetworkWired
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
+import NotificationsManagementModal from '~/components/dashboard/notifications/NotificationsManagementModal.vue'
 
 useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
@@ -17,6 +18,8 @@ const { t: $t } = useI18n()
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] })
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+const manageNotificationsModalVisisble = ref(false)
 
 const tabs: HashTabs = {
   dashboards: {
@@ -60,7 +63,7 @@ const openManageNotifications = () => {
       }
     })
   } else {
-    alert('TODO: Open Manage Notifications')
+    manageNotificationsModalVisisble.value = true
   }
 }
 
@@ -75,13 +78,14 @@ const openManageNotifications = () => {
           TODO: Overview
         </div>
       </template>
+      <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
       <div class="button-row">
         <Button :label="$t('notifications.manage')" @click="openManageNotifications" />
       </div>
       <TabView lazy class="notifications-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faUser" />
+            <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
           </template>
           <div>TODO: Dashboards Table</div>
         </TabPanel>
