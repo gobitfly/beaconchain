@@ -1,11 +1,20 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 export default function ({ name, params }: RouteLocationNormalizedLoaded) {
-  const v1Domain = useRuntimeConfig().public.v1Domain || 'https://beaconcha.in'
+  const config = useRuntimeConfig()
+  const showInDevelopment = Boolean(config.public.showInDevelopment)
+  const v1Domain = config.public.v1Domain || 'https://beaconcha.in'
   if (name === 'slug') {
     name = params.slug?.[0]
   }
   switch (name) {
+    case 'notifications':
+      if (!showInDevelopment) {
+        return navigateTo(`${v1Domain}/user/notifications`, {
+          external: true
+        })
+      }
+      break
     case 'block':
       return navigateTo(`${v1Domain}/block/${params.id || params.slug?.[1]}`, {
         external: true

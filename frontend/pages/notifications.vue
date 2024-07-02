@@ -96,7 +96,9 @@ const openManageNotifications = () => {
         <TabPanel :disabled="tabs.rocketpool.disabled">
           <template #header>
             <BcTabHeader :header="$t('notifications.tabs.rocketpool')">
-              <IconRocketPool />
+              <template #icon>
+                <IconRocketPool />
+              </template>
             </BcTabHeader>
           </template>
           Rocketpool coming soon!
