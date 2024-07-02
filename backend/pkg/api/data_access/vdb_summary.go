@@ -321,6 +321,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 				resultEntry.Status.UpcomingSyncCount++
 			}
 		}
+		total.Status.CurrentSyncCount += resultEntry.Status.CurrentSyncCount
+		total.Status.UpcomingSyncCount += resultEntry.Status.UpcomingSyncCount
 
 		// Validator statuses
 		validatorStatuses, err := d.getValidatorStatuses(uiValidatorIndices)
@@ -466,6 +468,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(dashboardId t.VDBId, pe
 		// We have more than one group and at least one group remains after the filtering so we need to show the total row
 		totalEntry := t.VDBSummaryTableRow{
 			GroupId:                  total.GroupId,
+			Status:                   total.Status,
 			Validators:               total.Validators,
 			AverageNetworkEfficiency: averageNetworkEfficiency,
 			Reward:                   total.Reward,
