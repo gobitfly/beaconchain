@@ -14,7 +14,6 @@ watch(products, () => {
   }
 }, { immediate: true })
 
-// TODO: This seems to be triggered to soon
 if (!isLoggedIn.value) {
   // only users that are logged in can view this page
   await navigateTo('/login')
